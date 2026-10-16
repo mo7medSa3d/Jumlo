@@ -26,6 +26,9 @@
 
     <!-- Home (home_01) -->
     <string name="home_search_placeholder">Search tools or local files…</string>
+    <string name="home_hero_title">Powerful file tools</string>
+    <string name="home_hero_subtitle">PDF, images, archives and downloads, processed on your device.</string>
+    <string name="transfer_activity_title">Transfer activity</string>
     <string name="pillar_pdf_title">PDF Tools</string>
     <string name="pillar_pdf_sub">Merge, split, organize</string>
     <string name="pillar_images_title">Image Tools</string>

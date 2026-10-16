@@ -5,8 +5,8 @@ code actually does today, not a future target.
 
 ## Palette (`ui/theme/Color.kt`)
 
-- Brand primary: light `#340DE9`, dark `#8F86FF`. Light background `#F9F9F8`,
-  dark background `#0B0B0D` / surface `#131316`.
+- Brand primary: light `#5B4CF5`, dark `#C5BDFF`. Light background `#F6F5FB`,
+  dark background/surface `#0D0D14`. (Aurora retheme; token names unchanged.)
 - Semantic pillar colors per feature family (PDF red, Images amber, Downloads
   teal, Files blue, Vault violet) plus success/warning, each with light and
   dark values in `PillarColors`.

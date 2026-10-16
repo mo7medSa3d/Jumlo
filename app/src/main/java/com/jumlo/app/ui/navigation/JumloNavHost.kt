@@ -143,7 +143,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 if(route=="home" || route=="tools_catalog") {
                                     item { CandidateNotice() }
                                     if(route=="home") {
-                                        item { QuietHero(title=if(settings.language.isRtl) "أدوات ملفات قوية" else "Powerful file tools",subtitle=if(settings.language.isRtl) "PDF والصور والأرشيفات والتنزيلات، تتم معالجتها على جهازك." else "PDF, images, archives and downloads, processed on your device.",icon=Icons.Rounded.Bolt) }
+                                        item { QuietHero(title=stringResource(R.string.home_hero_title),subtitle=stringResource(R.string.home_hero_subtitle),icon=Icons.Rounded.Bolt) }
                                         item { QuietPrimaryButton(stringResource(R.string.import_device_files),::importFiles,Modifier.fillMaxWidth(),leadingIcon=Icons.Rounded.Add,enabled=!busy) }
                                         item { TextButton(onClick={ route="workspace" }) { Text("Resume saved workspace (${form.sourceIds.size} files)") } }
                                     }
@@ -162,7 +162,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 if(route=="downloads") {
                                     item { CandidateNotice() }
                                     items(CapabilityRegistry.tools.filter { it.id in setOf("dl_02","dl_03","dl_media") },key={it.id}) { tool ->ToolCard(tool,settings.language,{openTool(tool)}) }
-                                    item { QuietSectionTitle("Transfer activity") }
+                                    item { QuietSectionTitle(stringResource(R.string.transfer_activity_title)) }
                                     val downloads=jobs.filter { it.request.toolId.startsWith("dl_") }
                                     if(downloads.isEmpty()) item { Text("No transfers. Network failures are reported, never replaced by sample files.") }
                                     items(downloads,key={it.request.id}) { job -> JobCard(job,{ selectedJob=job.request.id;route="activity" },{viewModel.cancel(job.request.id)},{viewModel.retry(job)}) }
