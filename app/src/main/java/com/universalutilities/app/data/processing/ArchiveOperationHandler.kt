@@ -94,10 +94,11 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
         val settings=Json.decodeFromString<HashSettings>(job.settingsJson)
         val expected=settings.expectedSha256?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
         require(expected==null || Regex("[0-9a-f]{64}").matches(expected)) { "INVALID_SHA256" }
-        return job.sourceIds.mapIndexed { index,id ->
+        val outcomes=mutableListOf<ItemOutcome>()
+        for ((index, id) in job.sourceIds.withIndex()) {
             val key="sha256:$index"
             ctx.checkCancellation()
-            ctx.outputs.find(job.id,key)?.let { return@mapIndexed ItemOutcome(key,ItemStatus.CREATED,it.id) }
+            ctx.outputs.find(job.id,key)?.let { outcomes+=ItemOutcome(key,ItemStatus.CREATED,it.id) }
             try {
                 val source=ctx.sources.get(id)
                 val digest=ctx.sources.openRead(id).use { Hashing.sha256(it,ctx.checkCancellation) }
@@ -107,9 +108,10 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
                 FileOutputStream(ticket.stageFile).use { stream -> stream.write("$digest  $base\n".toByteArray(Charsets.UTF_8)); stream.fd.sync() }
                 val result=ctx.outputs.publish(ticket) { OutputMetadata() }
                 ctx.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),job.sourceIds.size.toLong()))
-                ItemOutcome(key,ItemStatus.CREATED,result.id)
+                outcomes+=ItemOutcome(key,ItemStatus.CREATED,result.id)
             } catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(error)) }
+            catch(error:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(error)) }
         }
+        return outcomes
     }
 }
