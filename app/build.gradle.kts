@@ -27,8 +27,10 @@ android {
         applicationId = "com.jumlo.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10842
-        versionName = "1.4-media-candidate"
+        // Release versioning: pass -PversionCode / -PversionName at build time
+        // (or set them in gradle.properties); defaults keep local builds working.
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
+        versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
         buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
