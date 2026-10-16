@@ -134,7 +134,6 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.androidx.biometric)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.window)
