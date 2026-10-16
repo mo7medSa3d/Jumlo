@@ -8,17 +8,17 @@
       "gradle/wrapper/gradle-wrapper.properties",
       "gradle/libs.versions.toml",
       "app/build.gradle.kts",
-      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+      "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt"
     ],
     "create": [
       "gradle/wrapper/gradle-wrapper.jar",
       "scripts/verify-local.sh",
       "docs/dependencies.md",
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "tests": [
       "scripts/tests/test-verify-local.sh",
-      "app/src/test/java/com/universalutilities/app/data/jobs/CapabilityRegistryTest.kt"
+      "app/src/test/java/com/jumlo/app/data/jobs/CapabilityRegistryTest.kt"
     ],
     "covers": [
       "build",
@@ -30,25 +30,25 @@
     "id": "F02",
     "title": "Real intake, source persistence and recoverable drafts",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/MainActivity.kt",
-      "app/src/main/java/com/universalutilities/app/data/local/AppDatabase.kt",
-      "app/src/main/java/com/universalutilities/app/data/preferences/UserPreferencesRepository.kt",
-      "app/src/main/java/com/universalutilities/app/model/Models.kt",
-      "app/src/main/java/com/universalutilities/app/di/AppModule.kt",
+      "app/src/main/java/com/jumlo/app/MainActivity.kt",
+      "app/src/main/java/com/jumlo/app/data/local/AppDatabase.kt",
+      "app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt",
+      "app/src/main/java/com/jumlo/app/model/Models.kt",
+      "app/src/main/java/com/jumlo/app/di/AppModule.kt",
       "app/src/main/AndroidManifest.xml"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/model/OperationContracts.kt",
-      "app/src/main/java/com/universalutilities/app/data/source/SourceStore.kt",
-      "app/src/main/java/com/universalutilities/app/data/source/SourceEntity.kt",
-      "app/src/main/java/com/universalutilities/app/data/jobs/DraftStore.kt",
-      "app/src/main/java/com/universalutilities/app/ui/intake/IntakeController.kt",
+      "app/src/main/java/com/jumlo/app/model/OperationContracts.kt",
+      "app/src/main/java/com/jumlo/app/data/source/SourceStore.kt",
+      "app/src/main/java/com/jumlo/app/data/source/SourceEntity.kt",
+      "app/src/main/java/com/jumlo/app/data/jobs/DraftStore.kt",
+      "app/src/main/java/com/jumlo/app/ui/intake/IntakeController.kt",
       "app/schemas/.gitkeep",
-      "app/src/main/java/com/universalutilities/app/data/source/EphemeralSecretStore.kt"
+      "app/src/main/java/com/jumlo/app/data/source/EphemeralSecretStore.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/data/SourceIntakeTest.kt",
-      "app/src/androidTest/java/com/universalutilities/app/data/LegacyMigrationTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/data/SourceIntakeTest.kt",
+      "app/src/androidTest/java/com/jumlo/app/data/LegacyMigrationTest.kt"
     ],
     "covers": [
       "IMPORT-01",
@@ -66,23 +66,23 @@
     "id": "F03",
     "title": "Transactional results, truthful jobs and cancellation",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/repository/UniversalRepository.kt",
-      "app/src/main/java/com/universalutilities/app/ui/AppViewModel.kt",
-      "app/src/main/java/com/universalutilities/app/worker/EngineOperationWorker.kt",
-      "app/src/main/java/com/universalutilities/app/UniversalUtilitiesApplication.kt",
-      "app/src/main/java/com/universalutilities/app/data/local/AppDatabase.kt",
-      "app/src/main/java/com/universalutilities/app/di/AppModule.kt"
+      "app/src/main/java/com/jumlo/app/data/repository/UniversalRepository.kt",
+      "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt",
+      "app/src/main/java/com/jumlo/app/worker/EngineOperationWorker.kt",
+      "app/src/main/java/com/jumlo/app/JumloApplication.kt",
+      "app/src/main/java/com/jumlo/app/data/local/AppDatabase.kt",
+      "app/src/main/java/com/jumlo/app/di/AppModule.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/JobStore.kt",
-      "app/src/main/java/com/universalutilities/app/data/jobs/OperationDispatcher.kt",
-      "app/src/main/java/com/universalutilities/app/data/output/OutputStore.kt",
-      "app/src/main/java/com/universalutilities/app/data/output/PublicationJournal.kt",
-      "app/src/main/java/com/universalutilities/app/data/jobs/WorkBudget.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/JobStore.kt",
+      "app/src/main/java/com/jumlo/app/data/jobs/OperationDispatcher.kt",
+      "app/src/main/java/com/jumlo/app/data/output/OutputStore.kt",
+      "app/src/main/java/com/jumlo/app/data/output/PublicationJournal.kt",
+      "app/src/main/java/com/jumlo/app/data/jobs/WorkBudget.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/data/PublicationRecoveryTest.kt",
-      "app/src/test/java/com/universalutilities/app/data/jobs/JobStateTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/data/PublicationRecoveryTest.kt",
+      "app/src/test/java/com/jumlo/app/data/jobs/JobStateTest.kt"
     ],
     "covers": [
       "TASK-01",
@@ -104,17 +104,17 @@
     "id": "F04",
     "title": "First end-to-end Images-to-PDF feature",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/pdf/PdfWorkspaceScreens.kt",
-      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/PdfEngine.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/pdf/PdfWorkspaceScreens.kt",
+      "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/images/SourceImageDecoder.kt",
-      "app/src/main/java/com/universalutilities/app/model/ImagesToPdfSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/pdf/ImagesToPdfViewModel.kt"
+      "app/src/main/java/com/jumlo/app/data/images/SourceImageDecoder.kt",
+      "app/src/main/java/com/jumlo/app/model/ImagesToPdfSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/pdf/ImagesToPdfViewModel.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/pdf/ImagesToPdfRoundTripTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/pdf/ImagesToPdfRoundTripTest.kt"
     ],
     "covers": [
       "PDF-02",
@@ -128,17 +128,17 @@
     "modify": [
       "gradle/libs.versions.toml",
       "app/build.gradle.kts",
-      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/PdfEngine.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/pdf/PdfBackend.kt",
-      "app/src/main/java/com/universalutilities/app/data/pdf/PdfBoxBackend.kt",
-      "app/src/main/java/com/universalutilities/app/data/pdf/PdfCapabilityPolicy.kt",
+      "app/src/main/java/com/jumlo/app/data/pdf/PdfBackend.kt",
+      "app/src/main/java/com/jumlo/app/data/pdf/PdfBoxBackend.kt",
+      "app/src/main/java/com/jumlo/app/data/pdf/PdfCapabilityPolicy.kt",
       "docs/PDF_SUPPORT_MATRIX.md",
       "docs/DEPENDENCY_NOTICES.md"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/pdf/PdfBackendQualificationTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/pdf/PdfBackendQualificationTest.kt"
     ],
     "covers": [
       "PDF-backend",
@@ -150,19 +150,19 @@
     "id": "P02",
     "title": "Real viewer, merge, organize, split and extract",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt",
-      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/pdf/PdfWorkspaceScreens.kt",
-      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/PdfEngine.kt",
+      "app/src/main/java/com/jumlo/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/pdf/PdfWorkspaceScreens.kt",
+      "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/model/PdfOperationSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/pdf/PdfWorkspaceViewModel.kt",
-      "app/src/main/java/com/universalutilities/app/ui/pdf/PdfViewerViewModel.kt"
+      "app/src/main/java/com/jumlo/app/model/PdfOperationSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/pdf/PdfWorkspaceViewModel.kt",
+      "app/src/main/java/com/jumlo/app/ui/pdf/PdfViewerViewModel.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/pdf/PdfStructuralRoundTripTest.kt",
-      "app/src/test/java/com/universalutilities/app/pdf/PdfPageSelectionTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/pdf/PdfStructuralRoundTripTest.kt",
+      "app/src/test/java/com/jumlo/app/pdf/PdfPageSelectionTest.kt"
     ],
     "covers": [
       "PDF-01",
@@ -177,14 +177,14 @@
     "id": "P03",
     "title": "Actual PDF page-image exports and resource controls",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/pdf/PdfWorkspaceScreens.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/PdfEngine.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/pdf/PdfWorkspaceScreens.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/model/PdfRasterSettings.kt"
+      "app/src/main/java/com/jumlo/app/model/PdfRasterSettings.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/pdf/PdfRasterExportTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/pdf/PdfRasterExportTest.kt"
     ],
     "covers": [
       "PDF-07"
@@ -195,15 +195,15 @@
     "id": "I01",
     "title": "Real format conversion, metadata and compression",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/ImageEngine.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/images/ImageWorkspaceScreens.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/ImageEngine.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/images/ImageWorkspaceScreens.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/model/ImageOperationSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/images/ImageWorkspaceViewModel.kt"
+      "app/src/main/java/com/jumlo/app/model/ImageOperationSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/images/ImageWorkspaceViewModel.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/images/ImageEncodingTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/images/ImageEncodingTest.kt"
     ],
     "covers": [
       "IMG-01",
@@ -216,16 +216,16 @@
     "id": "I02",
     "title": "Resize, crop, rotation, flip and per-image overrides",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/ImageEngine.kt",
-      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/images/ImageWorkspaceScreens.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/ImageEngine.kt",
+      "app/src/main/java/com/jumlo/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/images/ImageWorkspaceScreens.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/images/ImageGeometry.kt"
+      "app/src/main/java/com/jumlo/app/data/images/ImageGeometry.kt"
     ],
     "tests": [
-      "app/src/test/java/com/universalutilities/app/images/ImageGeometryTest.kt",
-      "app/src/androidTest/java/com/universalutilities/app/images/ImageTransformTest.kt"
+      "app/src/test/java/com/jumlo/app/images/ImageGeometryTest.kt",
+      "app/src/androidTest/java/com/jumlo/app/images/ImageTransformTest.kt"
     ],
     "covers": [
       "IMG-02",
@@ -237,18 +237,18 @@
     "id": "A01",
     "title": "Actual browsing, provider-aware mutation and export",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/repository/UniversalRepository.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/files/FilesAndVaultScreens.kt",
+      "app/src/main/java/com/jumlo/app/data/repository/UniversalRepository.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/files/FilesAndVaultScreens.kt",
       "app/src/main/res/xml/file_paths.xml"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/files/DocumentOperations.kt",
-      "app/src/main/java/com/universalutilities/app/ui/files/FilesViewModel.kt",
-      "app/src/main/java/com/universalutilities/app/data/files/SafeNames.kt"
+      "app/src/main/java/com/jumlo/app/data/files/DocumentOperations.kt",
+      "app/src/main/java/com/jumlo/app/ui/files/FilesViewModel.kt",
+      "app/src/main/java/com/jumlo/app/data/files/SafeNames.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/files/DocumentOperationsTest.kt",
-      "app/src/test/java/com/universalutilities/app/files/SafeNamesTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/files/DocumentOperationsTest.kt",
+      "app/src/test/java/com/jumlo/app/files/SafeNamesTest.kt"
     ],
     "covers": [
       "FILE-01",
@@ -269,17 +269,17 @@
     "id": "A02",
     "title": "Bounded real ZIP creation and extraction",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/ArchiveAndFileEngine.kt",
-      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/files/FilesAndVaultScreens.kt"
+      "app/src/main/java/com/jumlo/app/data/engine/ArchiveAndFileEngine.kt",
+      "app/src/main/java/com/jumlo/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/files/FilesAndVaultScreens.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/files/ArchiveBudget.kt",
-      "app/src/main/java/com/universalutilities/app/model/ArchiveSettings.kt"
+      "app/src/main/java/com/jumlo/app/data/files/ArchiveBudget.kt",
+      "app/src/main/java/com/jumlo/app/model/ArchiveSettings.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/files/ArchiveRoundTripTest.kt",
-      "app/src/test/java/com/universalutilities/app/files/ArchivePathPolicyTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/files/ArchiveRoundTripTest.kt",
+      "app/src/test/java/com/jumlo/app/files/ArchivePathPolicyTest.kt"
     ],
     "covers": [
       "FILE-07",
@@ -293,16 +293,16 @@
     "id": "D01",
     "title": "Streamed GET, secure redirects and representation-safe resume",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/engine/DownloadEngine.kt",
-      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/jumlo/app/data/engine/DownloadEngine.kt",
+      "app/src/main/java/com/jumlo/app/data/engine/PureDomainAlgorithms.kt",
       "app/src/main/res/xml/network_security_config.xml"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/download/HttpTransfer.kt",
-      "app/src/main/java/com/universalutilities/app/model/DownloadSettings.kt"
+      "app/src/main/java/com/jumlo/app/data/download/HttpTransfer.kt",
+      "app/src/main/java/com/jumlo/app/model/DownloadSettings.kt"
     ],
     "tests": [
-      "app/src/test/java/com/universalutilities/app/downloads/HttpTransferTest.kt"
+      "app/src/test/java/com/jumlo/app/downloads/HttpTransferTest.kt"
     ],
     "covers": [
       "DL-02",
@@ -317,19 +317,19 @@
     "id": "D02",
     "title": "Durable queue, OS scheduling, notifications and UI",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/service/TransferForegroundService.kt",
-      "app/src/main/java/com/universalutilities/app/worker/EngineOperationWorker.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/downloads/DownloadsWorkspaceScreens.kt",
+      "app/src/main/java/com/jumlo/app/service/TransferForegroundService.kt",
+      "app/src/main/java/com/jumlo/app/worker/EngineOperationWorker.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/downloads/DownloadsWorkspaceScreens.kt",
       "app/src/main/AndroidManifest.xml"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/data/download/DownloadCoordinator.kt",
-      "app/src/main/java/com/universalutilities/app/service/UserTransferJobService.kt",
-      "app/src/main/java/com/universalutilities/app/ui/downloads/DownloadsViewModel.kt"
+      "app/src/main/java/com/jumlo/app/data/download/DownloadCoordinator.kt",
+      "app/src/main/java/com/jumlo/app/service/UserTransferJobService.kt",
+      "app/src/main/java/com/jumlo/app/ui/downloads/DownloadsViewModel.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/downloads/DownloadRecoveryTest.kt",
-      "app/src/test/java/com/universalutilities/app/downloads/DownloadQueueTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/downloads/DownloadRecoveryTest.kt",
+      "app/src/test/java/com/jumlo/app/downloads/DownloadQueueTest.kt"
     ],
     "covers": [
       "DL-01",
@@ -348,15 +348,15 @@
       "XP-01"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfOptimizer.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfOptimizerSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfOptimizerScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfOptimizer.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfOptimizerSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfOptimizerScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion01Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion01Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -367,15 +367,15 @@
       "XP-02"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfPageGeometry.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfPageGeometrySettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfPageGeometryScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfPageGeometry.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfPageGeometrySettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfPageGeometryScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion02Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion02Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -386,15 +386,15 @@
       "XP-03"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfAnnotations.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfAnnotationsSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfAnnotationsScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfAnnotations.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfAnnotationsSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfAnnotationsScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion03Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion03Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -405,15 +405,15 @@
       "XP-04"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfStamping.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfStampingSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfStampingScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfStamping.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfStampingSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfStampingScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion04Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion04Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -424,15 +424,15 @@
       "XP-05"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfDrawnSignature.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfDrawnSignatureSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfDrawnSignatureScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfDrawnSignature.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfDrawnSignatureSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfDrawnSignatureScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion05Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion05Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -443,15 +443,15 @@
       "XP-06"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfProtection.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfProtectionSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfProtectionScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfProtection.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfProtectionSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfProtectionScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion06Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion06Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -462,15 +462,15 @@
       "XP-07"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfMetadataAndInsertion.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfMetadataAndInsertionSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfMetadataAndInsertionScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfMetadataAndInsertion.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfMetadataAndInsertionSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfMetadataAndInsertionScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion07Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion07Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -481,15 +481,15 @@
       "XP-08"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/ManualDocumentCapture.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ManualDocumentCaptureSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/ManualDocumentCaptureScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/ManualDocumentCapture.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ManualDocumentCaptureSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/ManualDocumentCaptureScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion08Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion08Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -500,15 +500,15 @@
       "XP-09"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfForms.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfFormsSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfFormsScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfForms.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfFormsSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfFormsScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion09Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion09Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -519,15 +519,15 @@
       "XP-10"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfCompare.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfCompareSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfCompareScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfCompare.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfCompareSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfCompareScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion10Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion10Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -538,15 +538,15 @@
       "XP-11"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfRedaction.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/PdfRedactionSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfRedactionScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/pdf/PdfRedaction.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/PdfRedactionSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/pdf/PdfRedactionScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion11Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion11Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -557,15 +557,15 @@
       "XI-01"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/images/ImageMetadata.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ImageMetadataSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageMetadataScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/images/ImageMetadata.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ImageMetadataSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/images/ImageMetadataScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion12Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion12Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -576,15 +576,15 @@
       "XI-02"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/images/ImageWatermark.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ImageWatermarkSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageWatermarkScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/images/ImageWatermark.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ImageWatermarkSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/images/ImageWatermarkScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion13Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion13Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -595,15 +595,15 @@
       "XI-03"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/images/ImageComposition.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ImageCompositionSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageCompositionScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/images/ImageComposition.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ImageCompositionSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/images/ImageCompositionScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion14Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion14Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -614,15 +614,15 @@
       "XI-04"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/images/ImageAdjustments.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ImageAdjustmentsSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageAdjustmentsScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/images/ImageAdjustments.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ImageAdjustmentsSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/images/ImageAdjustmentsScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion15Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion15Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -633,15 +633,15 @@
       "XI-05"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/images/ImageTargetAndCompare.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ImageTargetAndCompareSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageTargetAndCompareScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/images/ImageTargetAndCompare.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ImageTargetAndCompareSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/images/ImageTargetAndCompareScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion16Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion16Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -652,15 +652,15 @@
       "XI-06"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/images/ImageStitching.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ImageStitchingSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageStitchingScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/images/ImageStitching.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ImageStitchingSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/images/ImageStitchingScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion17Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion17Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -671,15 +671,15 @@
       "XD-01"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/downloads/ChecksumVerification.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/ChecksumVerificationSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/downloads/ChecksumVerificationScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/downloads/ChecksumVerification.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/ChecksumVerificationSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/downloads/ChecksumVerificationScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion18Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion18Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -690,15 +690,15 @@
       "XD-02"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/downloads/AdvancedTransfer.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/AdvancedTransferSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/downloads/AdvancedTransferScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/downloads/AdvancedTransfer.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/AdvancedTransferSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/downloads/AdvancedTransferScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion19Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion19Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -709,15 +709,15 @@
       "XD-03"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/downloads/BrowserCapture.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/BrowserCaptureSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/downloads/BrowserCaptureScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/downloads/BrowserCapture.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/BrowserCaptureSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/downloads/BrowserCaptureScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion20Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion20Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -728,15 +728,15 @@
       "XF-01"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/files/BatchRename.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/BatchRenameSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/files/BatchRenameScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/files/BatchRename.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/BatchRenameSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/files/BatchRenameScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion21Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion21Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -747,15 +747,15 @@
       "XF-02"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/files/DuplicateAndStorageScan.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/DuplicateAndStorageScanSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/files/DuplicateAndStorageScanScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/files/DuplicateAndStorageScan.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/DuplicateAndStorageScanSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/files/DuplicateAndStorageScanScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion22Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion22Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -766,15 +766,15 @@
       "XF-03"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/files/FavoritesAndTrash.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/FavoritesAndTrashSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/files/FavoritesAndTrashScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/files/FavoritesAndTrash.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/FavoritesAndTrashSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/files/FavoritesAndTrashScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion23Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion23Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -785,15 +785,15 @@
       "XF-04"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/files/EncryptedArchives.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/EncryptedArchivesSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/files/EncryptedArchivesScreen.kt"
+      "app/src/main/java/com/jumlo/app/expansions/files/EncryptedArchives.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/EncryptedArchivesSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/files/EncryptedArchivesScreen.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion24Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion24Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -804,21 +804,21 @@
       "XF-05"
     ],
     "modify": [
-      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt",
-      "app/src/main/java/com/universalutilities/app/data/engine/CryptoVaultEngine.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/files/FilesAndVaultScreens.kt",
+      "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt",
+      "app/src/main/java/com/jumlo/app/data/engine/CryptoVaultEngine.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/files/FilesAndVaultScreens.kt",
       "app/src/main/AndroidManifest.xml",
-      "app/src/main/java/com/universalutilities/app/MainActivity.kt"
+      "app/src/main/java/com/jumlo/app/MainActivity.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/expansions/files/VaultOperations.kt",
-      "app/src/main/java/com/universalutilities/app/model/expansions/VaultOperationsSettings.kt",
-      "app/src/main/java/com/universalutilities/app/ui/expansions/files/VaultOperationsScreen.kt",
-      "app/src/main/java/com/universalutilities/app/data/vault/VaultKeyAccess.kt",
-      "app/src/main/java/com/universalutilities/app/data/vault/VaultSessionStore.kt"
+      "app/src/main/java/com/jumlo/app/expansions/files/VaultOperations.kt",
+      "app/src/main/java/com/jumlo/app/model/expansions/VaultOperationsSettings.kt",
+      "app/src/main/java/com/jumlo/app/ui/expansions/files/VaultOperationsScreen.kt",
+      "app/src/main/java/com/jumlo/app/data/vault/VaultKeyAccess.kt",
+      "app/src/main/java/com/jumlo/app/data/vault/VaultSessionStore.kt"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion25Test.kt"
+      "app/src/androidTest/java/com/jumlo/app/expansions/Expansion25Test.kt"
     ],
     "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
   },
@@ -826,28 +826,28 @@
     "id": "U01",
     "title": "Replace fixture-backed screens and reconcile the design system",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/ui/AppViewModel.kt",
-      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt",
-      "app/src/main/java/com/universalutilities/app/ui/components/QuietPrecisionComponents.kt",
-      "app/src/main/java/com/universalutilities/app/ui/theme/Color.kt",
-      "app/src/main/java/com/universalutilities/app/ui/theme/Type.kt",
-      "app/src/main/java/com/universalutilities/app/ui/theme/Shape.kt",
-      "app/src/main/java/com/universalutilities/app/ui/theme/Theme.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/home/HomeAndOnboardingScreens.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/tools/ToolsCatalogScreen.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/results/OperationAndResultScreens.kt",
-      "app/src/main/java/com/universalutilities/app/ui/screens/settings/SettingsScreens.kt"
+      "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt",
+      "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt",
+      "app/src/main/java/com/jumlo/app/ui/components/QuietPrecisionComponents.kt",
+      "app/src/main/java/com/jumlo/app/ui/theme/Color.kt",
+      "app/src/main/java/com/jumlo/app/ui/theme/Type.kt",
+      "app/src/main/java/com/jumlo/app/ui/theme/Shape.kt",
+      "app/src/main/java/com/jumlo/app/ui/theme/Theme.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/home/HomeAndOnboardingScreens.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/tools/ToolsCatalogScreen.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/results/OperationAndResultScreens.kt",
+      "app/src/main/java/com/jumlo/app/ui/screens/settings/SettingsScreens.kt"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/ui/catalog/ToolRegistry.kt",
-      "app/src/main/java/com/universalutilities/app/ui/results/ResultsViewModel.kt",
-      "app/src/main/java/com/universalutilities/app/ui/tasks/TaskCenterViewModel.kt",
+      "app/src/main/java/com/jumlo/app/ui/catalog/ToolRegistry.kt",
+      "app/src/main/java/com/jumlo/app/ui/results/ResultsViewModel.kt",
+      "app/src/main/java/com/jumlo/app/ui/tasks/TaskCenterViewModel.kt",
       "docs/SCREEN_COVERAGE.md",
       "scripts/check-ui-assets.sh"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/ui/RealNavigationTest.kt",
-      "app/src/test/java/com/universalutilities/app/ui/ToolRegistryTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/ui/RealNavigationTest.kt",
+      "app/src/test/java/com/jumlo/app/ui/ToolRegistryTest.kt"
     ],
     "covers": [
       "APP-01",
@@ -874,9 +874,9 @@
     "id": "U02",
     "title": "Actual locale switching, permissions, backups and accessibility",
     "modify": [
-      "app/src/main/java/com/universalutilities/app/MainActivity.kt",
-      "app/src/main/java/com/universalutilities/app/data/preferences/UserPreferencesRepository.kt",
-      "app/src/main/java/com/universalutilities/app/ui/theme/Theme.kt",
+      "app/src/main/java/com/jumlo/app/MainActivity.kt",
+      "app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt",
+      "app/src/main/java/com/jumlo/app/ui/theme/Theme.kt",
       "app/src/main/res/values/strings.xml",
       "app/src/main/res/values-ar/strings.xml",
       "app/src/main/res/xml/locales_config.xml",
@@ -885,12 +885,12 @@
       "app/src/main/AndroidManifest.xml"
     ],
     "create": [
-      "app/src/main/java/com/universalutilities/app/ui/settings/LocaleController.kt",
+      "app/src/main/java/com/jumlo/app/ui/settings/LocaleController.kt",
       "docs/DEVICE_TEST_MATRIX.md"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/ui/LocaleAccessibilityTest.kt",
-      "app/src/androidTest/java/com/universalutilities/app/security/BackupAndGrantTest.kt"
+      "app/src/androidTest/java/com/jumlo/app/ui/LocaleAccessibilityTest.kt",
+      "app/src/androidTest/java/com/jumlo/app/security/BackupAndGrantTest.kt"
     ],
     "covers": [
       "SET-02",
@@ -919,7 +919,7 @@
       "verification/manifest.json"
     ],
     "tests": [
-      "app/src/androidTest/java/com/universalutilities/app/integration/RealFileAcceptanceTest.kt",
+      "app/src/androidTest/java/com/jumlo/app/integration/RealFileAcceptanceTest.kt",
       "scripts/tests/test-package-source.py"
     ],
     "covers": [

@@ -1,6 +1,6 @@
-package com.universalutilities.app.hosttest
+package com.jumlo.app.hosttest
 
-import com.universalutilities.app.core.*
+import com.jumlo.app.core.*
 import java.io.*
 import java.nio.file.Files
 import java.util.UUID
@@ -100,14 +100,14 @@ fun main() {
     } }
     test("HTTP scheme normalization cannot bypass cleartext policy") { check(HttpPolicy.url("HTTP://example.org/file",true).scheme=="http");check(HttpPolicy.url("HTTPS://example.org/file").scheme=="https") }
     test("legacy batch parser never claims an HTTP response or size") {
-        val result=com.universalutilities.app.data.engine.PureDomainAlgorithms.parseBatchUrls("https://example.org/q1.zip").single()
+        val result=com.jumlo.app.data.engine.PureDomainAlgorithms.parseBatchUrls("https://example.org/q1.zip").single()
         check(result.estimatedSizeLabel=="Unknown");check(result.statusReason=="Not requested")
     }
     test("legacy batch parser validates host not just a prefix") {
-        val result=com.universalutilities.app.data.engine.PureDomainAlgorithms.parseBatchUrls("https://").single()
-        check(result.status==com.universalutilities.app.model.UrlValidationStatus.MALFORMED)
+        val result=com.jumlo.app.data.engine.PureDomainAlgorithms.parseBatchUrls("https://").single()
+        check(result.status==com.jumlo.app.model.UrlValidationStatus.MALFORMED)
     }
-    test("legacy page parser rejects reversed ranges") { check(com.universalutilities.app.data.engine.PureDomainAlgorithms.parsePageRangeSyntax("3-1",4).isFailure) }
+    test("legacy page parser rejects reversed ranges") { check(com.jumlo.app.data.engine.PureDomainAlgorithms.parsePageRangeSyntax("3-1",4).isFailure) }
     test("publication recovery retains validated metadata without guessing from MIME") { tmp { root ->
         val p=DurablePublication(root)
         val metadata="{\"pageCount\":3}"

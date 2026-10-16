@@ -20,7 +20,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual URI intake, immutable source snapshots, versioned drafts and explicit migration source.",
       "remaining": "Provider/grant/process-stop and Room migration qualification remain; source cleanup unfinished.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/source/SourceStore.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/source/SourceStore.kt"
     },
     {
       "id": "F03",
@@ -28,7 +28,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Journaled publication/metadata recovery, Room jobs/leases/outcomes, cancellation and foreground wiring.",
       "remaining": "Only core journal and actual DAO SQL are host-tested; no full native fault-injection/OS qualification.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/jobs/JobStore.kt; app/src/main/java/com/universalutilities/app/core/Publication.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/jobs/JobStore.kt; app/src/main/java/com/jumlo/app/core/Publication.kt"
     },
     {
       "id": "F04",
@@ -36,7 +36,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Real Images-to-PDF adapter and typed workspace connected to source/job/output pipeline.",
       "remaining": "Native round-trip test implementation/execution and end-to-end device evidence incomplete.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/processing/PdfOperationHandler.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt"
     },
     {
       "id": "P01",
@@ -52,7 +52,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual bounded PDF preview and tested page selection parser.",
       "remaining": "Merge/organize/split/extract structural operations and full viewer parity not implemented.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/ui/AppViewModel.kt; app/src/main/java/com/universalutilities/app/core/Validation.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt; app/src/main/java/com/jumlo/app/core/Validation.kt"
     },
     {
       "id": "P03",
@@ -60,7 +60,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Real selected-page PNG/JPEG raster adapter, DPI/grayscale controls and resource guards.",
       "remaining": "Native raster export tests and device/resource qualification incomplete.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/processing/PdfOperationHandler.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt"
     },
     {
       "id": "I01",
@@ -68,7 +68,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual format encoding and measured-size outcomes; orientation normalization and metadata stripping.",
       "remaining": "Metadata-preservation/profile policy, encoder tests and device codec matrix unqualified.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/processing/BitmapTransforms.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/processing/BitmapTransforms.kt"
     },
     {
       "id": "I02",
@@ -76,7 +76,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Resize, crop, rotation, flip and padding; geometry tests run on production core.",
       "remaining": "Per-image overrides/full editor gestures incomplete; native pixel tests authored but not executed.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/processing/ImageOperationHandler.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/processing/ImageOperationHandler.kt"
     },
     {
       "id": "A01",
@@ -84,7 +84,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual SAF listing, create folder, guarded rename, confirmed delete and hash-verified Save As source.",
       "remaining": "Complete copy/move/conflict/provider matrix, managed outputs cleanup and advanced browser behavior incomplete.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/data/files/DocumentTreeStore.kt; app/src/main/java/com/universalutilities/app/ui/AppViewModel.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/data/files/DocumentTreeStore.kt; app/src/main/java/com/jumlo/app/ui/AppViewModel.kt"
     },
     {
       "id": "A02",
@@ -92,7 +92,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Host-tested real ZIP creation/extraction, path/count/byte budgets and source/job/output adapters.",
       "remaining": "Native adapter test authored but not run; provider tree/folder export parity incomplete.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/core/FileProcessing.kt; app/src/main/java/com/universalutilities/app/data/processing/ArchiveOperationHandler.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/core/FileProcessing.kt; app/src/main/java/com/jumlo/app/data/processing/ArchiveOperationHandler.kt"
     },
     {
       "id": "D01",
@@ -100,7 +100,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual streamed GET, secure redirect policy, range/validator/length/final-URL-bound resume. Eleven real HTTP loopback cases run.",
       "remaining": "External TLS/server matrix and Android transport/device behavior unqualified; immediate blocking-call cancellation not implemented.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/core/StreamTransfer.kt; app/src/main/java/com/universalutilities/app/data/processing/DownloadOperationHandler.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/core/StreamTransfer.kt; app/src/main/java/com/jumlo/app/data/processing/DownloadOperationHandler.kt"
     },
     {
       "id": "D02",
@@ -108,7 +108,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Persistent WorkManager queue, actual progress, network constraints, retry and foreground notification/cancel source. Shared two-transfer dispatcher, exact media selections, bounded native process control and duplicate-enqueue protection added.",
       "remaining": "Full pause/resume UX, OS-version/quota/timeout tests and scheduling feature matrix incomplete.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/worker/EngineOperationWorker.kt; app/src/main/java/com/universalutilities/app/data/jobs/JobStore.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/worker/EngineOperationWorker.kt; app/src/main/java/com/jumlo/app/data/jobs/JobStore.kt"
     },
     {
       "id": "E01",
@@ -252,7 +252,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual streaming SHA-256 and optional expected-hash comparison, with file result publication.",
       "remaining": "Native/UI/device acceptance cases not executed.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/core/FileProcessing.kt; app/src/main/java/com/universalutilities/app/data/processing/ArchiveOperationHandler.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/core/FileProcessing.kt; app/src/main/java/com/jumlo/app/data/processing/ArchiveOperationHandler.kt"
     },
     {
       "id": "E19",
@@ -268,7 +268,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Native HTTPS WebView with explicit page/media analysis, bounded candidate discovery and direct-file handoff; no automatic cookie export.",
       "remaining": "Webpage PDF capture is missing. Android UI/WebView/device behavior and authenticated/session extraction are not qualified.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/ui/downloads/MediaBrowser.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/ui/downloads/MediaBrowser.kt"
     },
     {
       "id": "E21",
@@ -316,7 +316,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Removed fixture-backed production routes; connected live source/job/output workspaces using original theme/components.",
       "remaining": "Approved detailed layout/screen behavior parity incomplete; no rendered UI/device visual verification.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+      "source_paths": "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt"
     },
     {
       "id": "U02",
@@ -324,7 +324,7 @@
       "status": "PARTIAL_UNQUALIFIED",
       "implemented": "Actual theme/locale preferences, picker/notification permission flows, backup exclusions, private cancel notice. All 46 new media resource keys have English and Arabic translations.",
       "remaining": "Older new controls are not fully localized; full accessibility, recreation, permissions and backup/device matrix incomplete. Media UI has not been rendered or device-tested.",
-      "source_paths": "app/src/main/java/com/universalutilities/app/MainActivity.kt; app/src/main/AndroidManifest.xml"
+      "source_paths": "app/src/main/java/com/jumlo/app/MainActivity.kt; app/src/main/AndroidManifest.xml"
     },
     {
       "id": "U03",

@@ -1,4 +1,4 @@
-# Universal Utilities Complete Implementation Plan
+# Jumlo Complete Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans for inline implementation after this plan is reviewed. Steps use checkbox (`- [ ]`) syntax for tracking. If an independent reviewer is available later, use it; do not invent subagent execution or independent review.
 
@@ -54,7 +54,7 @@ Run U01's shared visual work alongside F04 only after its dependencies exist; fi
 
 ## Source-aware file map
 
-All Kotlin paths below are under `app/src/main/java/com/universalutilities/app/` unless explicitly rooted elsewhere.
+All Kotlin paths below are under `app/src/main/java/com/jumlo/app/` unless explicitly rooted elsewhere.
 
 | Existing area | Planned ownership/change |
 |---|---|
@@ -67,7 +67,7 @@ All Kotlin paths below are under `app/src/main/java/com/universalutilities/app/`
 | `data/engine/CryptoVaultEngine.kt` | Replace UI-flag security with authenticated key access and reviewed streaming file encryption |
 | `ui/AppViewModel.kt` | Stop unconditional completion callbacks; feature state holders observe persisted job/result IDs |
 | `worker/EngineOperationWorker.kt`, `service/TransferForegroundService.kt` | Real dispatch and progress; no timed simulated success |
-| `ui/screens/*`, `ui/navigation/UniversalUtilitiesNavHost.kt` | Preserve visual investment; replace fixture-backed controls and result routing |
+| `ui/screens/*`, `ui/navigation/JumloNavHost.kt` | Preserve visual investment; replace fixture-backed controls and result routing |
 | `ui/theme/*`, `ui/components/QuietPrecisionComponents.kt` | Reconcile exact approved tokens, scalable controls and authentic filled symbol assets |
 | `MainActivity.kt`, manifest, preferences, resources | Real share intake, permissions, app locales, first launch and backup exclusions |
 | `gradlew*`, `gradle/*`, build scripts | Official verified wrapper and compatible locked graph; buildable from CLI |

@@ -19,12 +19,12 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.universalutilities.app"
+    namespace = "com.jumlo.app"
     compileSdk = 36
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
-        applicationId = "com.universalutilities.app"
+        applicationId = "com.jumlo.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 10842

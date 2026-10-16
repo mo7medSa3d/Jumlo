@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">الأدوات الشاملة</string>
+    <string name="app_name">Jumlo</string>
     <string name="tagline">ملفاتك. أدواتك.</string>
     <string name="tagline_subtitle">ملفاتك. أدواتك. معالجة محلية 100% بدون سحابة.</string>
     <string name="offline_pledge_short">معالجة محلية 100%: مزامنة سحابية منعدمة • الملفات لا تغادر جهازك إطلاقاً</string>
@@ -14,7 +14,7 @@
     <string name="nav_files">الملفات</string>
 
     <!-- Welcome Launch -->
-    <string name="welcome_title">مرحباً بك في الأدوات الشاملة</string>
+    <string name="welcome_title">مرحباً بك في Jumlo</string>
     <string name="welcome_badge">معالجة محلية آمنة 100% • بيئة معزولة</string>
     <string name="welcome_card_title">معالجة محلية 100% على الجهاز</string>
     <string name="welcome_card_body">تتم معالجة جميع الملفات محلياً داخل بيئة الهاتف المعزولة. بدون حسابات سحابية وبدون تتبع.</string>
@@ -136,7 +136,7 @@
     <string name="settings_privacy_permissions">الخصوصية والأذونات</string>
     <string name="settings_offline_help">الدليل والمساعدة بدون اتصال</string>
     <string name="settings_diagnostic_report">تقرير التشخيص الآمن</string>
-    <string name="settings_about">حول الأدوات الشاملة</string>
+    <string name="settings_about">حول Jumlo</string>
     <string name="processing_channel">معالجة الملفات</string>
     <string name="processing_title">جاري معالجة الملفات على هذا الجهاز</string>
     <string name="processing_body">افتح التطبيق لرؤية التقدم والنتائج.</string>

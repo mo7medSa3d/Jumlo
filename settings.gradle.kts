@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "UniversalUtilities"
+rootProject.name = "Jumlo"
 include(":app")

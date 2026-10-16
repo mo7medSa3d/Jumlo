@@ -1,6 +1,6 @@
-package com.universalutilities.app.hosttest
+package com.jumlo.app.hosttest
 
-import com.universalutilities.app.core.*
+import com.jumlo.app.core.*
 import com.sun.net.httpserver.HttpServer
 import java.io.*
 import java.net.*

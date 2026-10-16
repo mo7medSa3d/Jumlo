@@ -6,7 +6,7 @@ import sqlite3
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE = ROOT / 'app/src/main/java/com/universalutilities/app/data/local'
+PACKAGE = ROOT / 'app/src/main/java/com/jumlo/app/data/local'
 DAO = (PACKAGE / 'ProcessingEntities.kt').read_text()
 MIGRATIONS = re.findall(r'db\.execSQL\("([^"\n]+)"\)', (PACKAGE / 'DatabaseMigrations.kt').read_text())
 

@@ -1,4 +1,4 @@
-# Universal Utilities - Android real-processing candidate
+# Jumlo - Android real-processing candidate
 
 **Status: partial implementation; NOT Android-build-verified, NOT device-verified, NOT release-ready.**
 

@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 ROOT=Path(__file__).resolve().parents[1]
 MAIN=ROOT/'app/src/main'
-CODE=MAIN/'java/com/universalutilities/app'
+CODE=MAIN/'java/com/jumlo/app'
 
 class SourceConsistencyTests(unittest.TestCase):
     def test_xml_files_parse(self):
