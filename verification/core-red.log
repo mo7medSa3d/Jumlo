@@ -1,0 +1,161 @@
+app/src/main/java/com/universalutilities/app/core/Core.kt:4:34: warning: parameter 'value' is never used
+object PageSelection { fun parse(value:String,count:Int): List<Int> = throw UnsupportedOperationException("PageSelection not implemented") }
+                                 ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:4:47: warning: parameter 'count' is never used
+object PageSelection { fun parse(value:String,count:Int): List<Int> = throw UnsupportedOperationException("PageSelection not implemented") }
+                                              ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:5:33: warning: parameter 'value' is never used
+object SafeNames { fun basename(value:String): String = throw UnsupportedOperationException("SafeNames not implemented"); fun entry(root:File,value:String):File = throw UnsupportedOperationException("SafeNames not implemented") }
+                                ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:5:133: warning: parameter 'root' is never used
+object SafeNames { fun basename(value:String): String = throw UnsupportedOperationException("SafeNames not implemented"); fun entry(root:File,value:String):File = throw UnsupportedOperationException("SafeNames not implemented") }
+                                                                                                                                    ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:5:143: warning: parameter 'value' is never used
+object SafeNames { fun basename(value:String): String = throw UnsupportedOperationException("SafeNames not implemented"); fun entry(root:File,value:String):File = throw UnsupportedOperationException("SafeNames not implemented") }
+                                                                                                                                              ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:6:42: warning: parameter 'w' is never used
+object MemoryBudget { fun requireBitmaps(w:Int,h:Int,n:Int,b:Long) { throw UnsupportedOperationException("Budget not implemented") } }
+                                         ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:6:48: warning: parameter 'h' is never used
+object MemoryBudget { fun requireBitmaps(w:Int,h:Int,n:Int,b:Long) { throw UnsupportedOperationException("Budget not implemented") } }
+                                               ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:6:54: warning: parameter 'n' is never used
+object MemoryBudget { fun requireBitmaps(w:Int,h:Int,n:Int,b:Long) { throw UnsupportedOperationException("Budget not implemented") } }
+                                                     ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:6:60: warning: parameter 'b' is never used
+object MemoryBudget { fun requireBitmaps(w:Int,h:Int,n:Int,b:Long) { throw UnsupportedOperationException("Budget not implemented") } }
+                                                           ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:10:36: warning: parameter 'sw' is never used
+object ImageGeometry { fun resolve(sw:Int,sh:Int,w:Int,h:Int,mode:FitMode,upscale:Boolean):Geometry = throw UnsupportedOperationException("Geometry not implemented") }
+                                   ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:10:43: warning: parameter 'sh' is never used
+object ImageGeometry { fun resolve(sw:Int,sh:Int,w:Int,h:Int,mode:FitMode,upscale:Boolean):Geometry = throw UnsupportedOperationException("Geometry not implemented") }
+                                          ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:10:50: warning: parameter 'w' is never used
+object ImageGeometry { fun resolve(sw:Int,sh:Int,w:Int,h:Int,mode:FitMode,upscale:Boolean):Geometry = throw UnsupportedOperationException("Geometry not implemented") }
+                                                 ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:10:56: warning: parameter 'h' is never used
+object ImageGeometry { fun resolve(sw:Int,sh:Int,w:Int,h:Int,mode:FitMode,upscale:Boolean):Geometry = throw UnsupportedOperationException("Geometry not implemented") }
+                                                       ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:10:62: warning: parameter 'mode' is never used
+object ImageGeometry { fun resolve(sw:Int,sh:Int,w:Int,h:Int,mode:FitMode,upscale:Boolean):Geometry = throw UnsupportedOperationException("Geometry not implemented") }
+                                                             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:10:75: warning: parameter 'upscale' is never used
+object ImageGeometry { fun resolve(sw:Int,sh:Int,w:Int,h:Int,mode:FitMode,upscale:Boolean):Geometry = throw UnsupportedOperationException("Geometry not implemented") }
+                                                                          ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:14:13: warning: parameter 'out' is never used
+ fun create(out:File,inputs:List<ArchiveInput>,level:Int,limits:ArchiveLimits,checkCancel:()->Unit={}):Unit = throw UnsupportedOperationException("ZIP IO not implemented")
+            ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:14:22: warning: parameter 'inputs' is never used
+ fun create(out:File,inputs:List<ArchiveInput>,level:Int,limits:ArchiveLimits,checkCancel:()->Unit={}):Unit = throw UnsupportedOperationException("ZIP IO not implemented")
+                     ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:14:48: warning: parameter 'level' is never used
+ fun create(out:File,inputs:List<ArchiveInput>,level:Int,limits:ArchiveLimits,checkCancel:()->Unit={}):Unit = throw UnsupportedOperationException("ZIP IO not implemented")
+                                               ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:14:58: warning: parameter 'limits' is never used
+ fun create(out:File,inputs:List<ArchiveInput>,level:Int,limits:ArchiveLimits,checkCancel:()->Unit={}):Unit = throw UnsupportedOperationException("ZIP IO not implemented")
+                                                         ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:14:79: warning: parameter 'checkCancel' is never used
+ fun create(out:File,inputs:List<ArchiveInput>,level:Int,limits:ArchiveLimits,checkCancel:()->Unit={}):Unit = throw UnsupportedOperationException("ZIP IO not implemented")
+                                                                              ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:15:14: warning: parameter 'input' is never used
+ fun extract(input:File,out:File,limits:ArchiveLimits,checkCancel:()->Unit={}):List<File> = throw UnsupportedOperationException("ZIP IO not implemented")
+             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:15:25: warning: parameter 'out' is never used
+ fun extract(input:File,out:File,limits:ArchiveLimits,checkCancel:()->Unit={}):List<File> = throw UnsupportedOperationException("ZIP IO not implemented")
+                        ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:15:34: warning: parameter 'limits' is never used
+ fun extract(input:File,out:File,limits:ArchiveLimits,checkCancel:()->Unit={}):List<File> = throw UnsupportedOperationException("ZIP IO not implemented")
+                                 ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:15:55: warning: parameter 'checkCancel' is never used
+ fun extract(input:File,out:File,limits:ArchiveLimits,checkCancel:()->Unit={}):List<File> = throw UnsupportedOperationException("ZIP IO not implemented")
+                                                      ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:17:29: warning: parameter 'f' is never used
+object Hashing { fun sha256(f:File):String = throw UnsupportedOperationException("Hash not implemented"); fun matches(f:File,digest:String):Boolean = throw UnsupportedOperationException("Hash not implemented") }
+                            ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:17:119: warning: parameter 'f' is never used
+object Hashing { fun sha256(f:File):String = throw UnsupportedOperationException("Hash not implemented"); fun matches(f:File,digest:String):Boolean = throw UnsupportedOperationException("Hash not implemented") }
+                                                                                                                      ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:17:126: warning: parameter 'digest' is never used
+object Hashing { fun sha256(f:File):String = throw UnsupportedOperationException("Hash not implemented"); fun matches(f:File,digest:String):Boolean = throw UnsupportedOperationException("Hash not implemented") }
+                                                                                                                             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:21:14: warning: parameter 'job' is never used
+ fun reserve(job:String,key:String,name:String,mime:String):PublicationTicket = throw UnsupportedOperationException("Publication not implemented")
+             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:21:25: warning: parameter 'key' is never used
+ fun reserve(job:String,key:String,name:String,mime:String):PublicationTicket = throw UnsupportedOperationException("Publication not implemented")
+                        ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:21:36: warning: parameter 'name' is never used
+ fun reserve(job:String,key:String,name:String,mime:String):PublicationTicket = throw UnsupportedOperationException("Publication not implemented")
+                                   ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:21:48: warning: parameter 'mime' is never used
+ fun reserve(job:String,key:String,name:String,mime:String):PublicationTicket = throw UnsupportedOperationException("Publication not implemented")
+                                               ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:22:14: warning: parameter 'ticket' is never used
+ fun publish(ticket:PublicationTicket):PublishedFile = throw UnsupportedOperationException("Publication not implemented")
+             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:23:14: warning: parameter 'ticket' is never used
+ fun prepare(ticket:PublicationTicket):PublishedFile = throw UnsupportedOperationException("Publication not implemented")
+             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:26:29: warning: parameter 'url' is never used
+object HttpPolicy { fun url(url:String,cleartext:Boolean=false):URI = throw UnsupportedOperationException("URL policy not implemented") }
+                            ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:26:40: warning: parameter 'cleartext' is never used
+object HttpPolicy { fun url(url:String,cleartext:Boolean=false):URI = throw UnsupportedOperationException("URL policy not implemented") }
+                                       ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:28:36: warning: parameter 'offset' is never used
+object ResumePolicy { fun validate(offset:Long,etag:String?,modified:String?,total:Long?,status:Int,headers:Map<String,String>) { throw UnsupportedOperationException("Resume validation not implemented") } }
+                                   ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:28:48: warning: parameter 'etag' is never used
+object ResumePolicy { fun validate(offset:Long,etag:String?,modified:String?,total:Long?,status:Int,headers:Map<String,String>) { throw UnsupportedOperationException("Resume validation not implemented") } }
+                                               ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:28:61: warning: parameter 'modified' is never used
+object ResumePolicy { fun validate(offset:Long,etag:String?,modified:String?,total:Long?,status:Int,headers:Map<String,String>) { throw UnsupportedOperationException("Resume validation not implemented") } }
+                                                            ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:28:78: warning: parameter 'total' is never used
+object ResumePolicy { fun validate(offset:Long,etag:String?,modified:String?,total:Long?,status:Int,headers:Map<String,String>) { throw UnsupportedOperationException("Resume validation not implemented") } }
+                                                                             ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:28:90: warning: parameter 'status' is never used
+object ResumePolicy { fun validate(offset:Long,etag:String?,modified:String?,total:Long?,status:Int,headers:Map<String,String>) { throw UnsupportedOperationException("Resume validation not implemented") } }
+                                                                                         ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:28:101: warning: parameter 'headers' is never used
+object ResumePolicy { fun validate(offset:Long,etag:String?,modified:String?,total:Long?,status:Int,headers:Map<String,String>) { throw UnsupportedOperationException("Resume validation not implemented") } }
+                                                                                                    ^
+app/src/main/java/com/universalutilities/app/core/Core.kt:29:37: warning: parameter 'tool' is never used
+object Capabilities { fun isEnabled(tool:String):Boolean = true }
+                                    ^
+FAIL pages preserve requested order and remove duplicates: UnsupportedOperationException: PageSelection not implemented
+FAIL reversed pages are rejected: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL Arabic and Persian digits normalize: UnsupportedOperationException: PageSelection not implemented
+FAIL empty and out-of-range pages fail: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL archive paths reject both platform traversal forms: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL safe names never escape result folder: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL memory budgets fail instead of downscaling: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL invalid geometry is rejected: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL fit preserves aspect: UnsupportedOperationException: Geometry not implemented
+FAIL pad retains requested canvas: UnsupportedOperationException: Geometry not implemented
+FAIL fill crops only the excess axis: UnsupportedOperationException: Geometry not implemented
+FAIL no-upscale applies to one growing axis: UnsupportedOperationException: Geometry not implemented
+FAIL zip roundtrip reads original bytes: UnsupportedOperationException: ZIP IO not implemented
+FAIL zip traversal failure leaves no files: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL zip expanded byte budget is measured: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL zip entry count and depth are bounded: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL archive cancellation removes incomplete archive: IllegalStateException: Expected class java.io.InterruptedIOException, got class java.lang.UnsupportedOperationException
+FAIL archive creation rejects duplicate normalized names: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL hash verification handles case and whitespace: UnsupportedOperationException: Hash not implemented
+FAIL hash rejects invalid digest: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL publication is idempotent and metadata is measured: UnsupportedOperationException: Publication not implemented
+FAIL different bytes for same output key are integrity failure: UnsupportedOperationException: Publication not implemented
+FAIL journal recovery completes rename once: UnsupportedOperationException: Publication not implemented
+FAIL missing staged output cannot publish success: UnsupportedOperationException: Publication not implemented
+FAIL URL validation never invents network metadata: UnsupportedOperationException: URL policy not implemented
+FAIL cleartext needs explicit consent: IllegalStateException: Expected class java.lang.IllegalArgumentException, got class java.lang.UnsupportedOperationException
+FAIL valid resume requires exact representation range: UnsupportedOperationException: Resume validation not implemented
+FAIL 200 to range never appends: IllegalStateException: Expected class com.universalutilities.app.core.RestartRequired, got class java.lang.UnsupportedOperationException
+FAIL wrong range and changed validator are rejected: IllegalStateException: Expected class com.universalutilities.app.core.RestartRequired, got class java.lang.UnsupportedOperationException
+FAIL missing and weak resume validators are rejected: IllegalStateException: Expected class com.universalutilities.app.core.RestartRequired, got class java.lang.UnsupportedOperationException
+FAIL legacy and security gates stay closed: IllegalStateException: Check failed.
+RESULT passed=0 failed=31
+Exception in thread "main" java.lang.IllegalStateException: 31 tests failed
+	at com.universalutilities.app.hosttest.CoreTestsKt.main(CoreTests.kt:92)
+	at com.universalutilities.app.hosttest.CoreTestsKt.main(CoreTests.kt)

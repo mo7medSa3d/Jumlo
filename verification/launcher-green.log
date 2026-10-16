@@ -1,0 +1,2 @@
+PASS missing wrapper fails before JVM or downloads
+PASS invalid wrapper fails before JVM execution from a spaced path

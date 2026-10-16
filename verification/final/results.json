@@ -1,0 +1,130 @@
+[
+  {
+    "name": "core-domain-http",
+    "command": [
+      "bash",
+      "scripts/test-core.sh"
+    ],
+    "scope": "Production dependency-free Kotlin/domain sources and real loopback HTTP",
+    "exit_code": 0,
+    "status": "PASS",
+    "log": "verification/final/core-domain-http.log"
+  },
+  {
+    "name": "storage-sql",
+    "command": [
+      "python3",
+      "scripts/test-storage-sql.py"
+    ],
+    "scope": "Exact production DAO/migration SQL in host SQLite; not Room",
+    "exit_code": 0,
+    "status": "PASS",
+    "log": "verification/final/storage-sql.log"
+  },
+  {
+    "name": "source-static",
+    "command": [
+      "python3",
+      "scripts/test-source-static.py"
+    ],
+    "scope": "Narrow static consistency checks; not Android lint/compilation",
+    "exit_code": 0,
+    "status": "PASS",
+    "log": "verification/final/source-static.log"
+  },
+  {
+    "name": "offline-preflight",
+    "command": [
+      "bash",
+      "scripts/tests/test-verify-local.sh"
+    ],
+    "scope": "Offline/no-download preflight regression",
+    "exit_code": 0,
+    "status": "PASS",
+    "log": "verification/final/offline-preflight.log"
+  },
+  {
+    "name": "launcher-safety",
+    "command": [
+      "bash",
+      "scripts/tests/test-launcher.sh"
+    ],
+    "scope": "Missing/unverified JAR cannot execute JVM",
+    "exit_code": 0,
+    "status": "PASS",
+    "log": "verification/final/launcher-safety.log"
+  },
+  {
+    "name": "assemble-debug",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      ":app:assembleDebug"
+    ],
+    "scope": "Android build requested through offline preflight",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "verification/final/assemble-debug.log"
+  },
+  {
+    "name": "gradle-unit-tests",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      ":app:testDebugUnitTest"
+    ],
+    "scope": "Gradle-managed JVM unit tests requested through offline preflight",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "verification/final/gradle-unit-tests.log"
+  },
+  {
+    "name": "android-lint",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      ":app:lintDebug"
+    ],
+    "scope": "Android lint requested through offline preflight",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "verification/final/android-lint.log"
+  },
+  {
+    "name": "android-instrumentation",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      ":app:connectedDebugAndroidTest"
+    ],
+    "scope": "Device tests requested through offline preflight",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "verification/final/android-instrumentation.log"
+  },
+  {
+    "name": "wrapper-launch",
+    "command": [
+      "bash",
+      "gradlew",
+      "--offline",
+      "--version"
+    ],
+    "scope": "Wrapper launch requested; integrity check precedes execution",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "verification/final/wrapper-launch.log"
+  },
+  {
+    "name": "source-whitespace",
+    "command": [
+      "bash",
+      "-c",
+      "git diff --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts && git diff --cached --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts"
+    ],
+    "scope": "Staged and unstaged source diff whitespace only; excludes documentation/evidence",
+    "exit_code": 0,
+    "status": "PASS",
+    "log": "verification/final/source-whitespace.log"
+  }
+]

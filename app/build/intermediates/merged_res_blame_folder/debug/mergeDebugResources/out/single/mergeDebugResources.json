@@ -1,0 +1,34 @@
+[
+    {
+        "merged": "com.universalutilities.app-debug-79:/xml_file_paths.xml.flat",
+        "source": "com.universalutilities.app-main-81:/xml/file_paths.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/drawable_ic_launcher_background.xml.flat",
+        "source": "com.universalutilities.app-main-81:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.universalutilities.app-main-81:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/xml_locales_config.xml.flat",
+        "source": "com.universalutilities.app-main-81:/xml/locales_config.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/xml_data_extraction_rules.xml.flat",
+        "source": "com.universalutilities.app-main-81:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.universalutilities.app-main-81:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.universalutilities.app-main-81:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.universalutilities.app-debug-79:/xml_network_security_config.xml.flat",
+        "source": "com.universalutilities.app-main-81:/xml/network_security_config.xml"
+    }
+]

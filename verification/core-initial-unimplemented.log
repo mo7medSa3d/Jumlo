@@ -1,0 +1,192 @@
+app/src/hostTest/kotlin/CoreTests.kt:3:35: error: unresolved reference: core
+import com.universalutilities.app.core.*
+                                  ^
+app/src/hostTest/kotlin/CoreTests.kt:30:74: error: unresolved reference: PageSelection
+    test("pages preserve requested order and remove duplicates") { check(PageSelection.parse("3,1-2,3", 3) == listOf(3,1,2)) }
+                                                                         ^
+app/src/hostTest/kotlin/CoreTests.kt:31:79: error: unresolved reference: PageSelection
+    test("reversed pages are rejected") { rejects<IllegalArgumentException> { PageSelection.parse("5-2", 8) } }
+                                                                              ^
+app/src/hostTest/kotlin/CoreTests.kt:32:57: error: unresolved reference: PageSelection
+    test("Arabic and Persian digits normalize") { check(PageSelection.parse("\u0661\u060c\u06f3-\u06f4", 4) == listOf(1,3,4)) }
+                                                        ^
+app/src/hostTest/kotlin/CoreTests.kt:33:134: error: unresolved reference: PageSelection
+    test("empty and out-of-range pages fail") { for (s in listOf("", "0", "4", "1,,2", "1-2-3")) rejects<IllegalArgumentException> { PageSelection.parse(s,3) } }
+                                                                                                                                     ^
+app/src/hostTest/kotlin/CoreTests.kt:34:186: error: unresolved reference: SafeNames
+    test("archive paths reject both platform traversal forms") { tmp { root -> for (s in listOf("../x", "/x", "C:/x", "a\\..\\x", "a/../x", "a//x")) rejects<IllegalArgumentException> { SafeNames.entry(root,s) } } }
+                                                                                                                                                                                         ^
+app/src/hostTest/kotlin/CoreTests.kt:35:89: error: unresolved reference: SafeNames
+    test("safe names never escape result folder") { rejects<IllegalArgumentException> { SafeNames.basename("../../owned.pdf") }; check(SafeNames.basename("notes.pdf") == "notes.pdf") }
+                                                                                        ^
+app/src/hostTest/kotlin/CoreTests.kt:35:136: error: unresolved reference: SafeNames
+    test("safe names never escape result folder") { rejects<IllegalArgumentException> { SafeNames.basename("../../owned.pdf") }; check(SafeNames.basename("notes.pdf") == "notes.pdf") }
+                                                                                                                                       ^
+app/src/hostTest/kotlin/CoreTests.kt:36:94: error: unresolved reference: MemoryBudget
+    test("memory budgets fail instead of downscaling") { rejects<IllegalArgumentException> { MemoryBudget.requireBitmaps(100,100,1,1024) }; MemoryBudget.requireBitmaps(10,10,2,800) }
+                                                                                             ^
+app/src/hostTest/kotlin/CoreTests.kt:36:141: error: unresolved reference: MemoryBudget
+    test("memory budgets fail instead of downscaling") { rejects<IllegalArgumentException> { MemoryBudget.requireBitmaps(100,100,1,1024) }; MemoryBudget.requireBitmaps(10,10,2,800) }
+                                                                                                                                            ^
+app/src/hostTest/kotlin/CoreTests.kt:37:80: error: unresolved reference: ImageGeometry
+    test("invalid geometry is rejected") { rejects<IllegalArgumentException> { ImageGeometry.resolve(0,10,20,20,FitMode.FIT,false) } }
+                                                                               ^
+app/src/hostTest/kotlin/CoreTests.kt:37:113: error: unresolved reference: FitMode
+    test("invalid geometry is rejected") { rejects<IllegalArgumentException> { ImageGeometry.resolve(0,10,20,20,FitMode.FIT,false) } }
+                                                                                                                ^
+app/src/hostTest/kotlin/CoreTests.kt:38:42: error: unresolved reference: ImageGeometry
+    test("fit preserves aspect") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.FIT,true); check(g.width==100 && g.height==50) }
+                                         ^
+app/src/hostTest/kotlin/CoreTests.kt:38:80: error: unresolved reference: FitMode
+    test("fit preserves aspect") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.FIT,true); check(g.width==100 && g.height==50) }
+                                                                               ^
+app/src/hostTest/kotlin/CoreTests.kt:39:50: error: unresolved reference: ImageGeometry
+    test("pad retains requested canvas") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.PAD,true); check(g.width==100 && g.height==100); check(g.draw.top==25.0 && g.draw.bottom==75.0) }
+                                                 ^
+app/src/hostTest/kotlin/CoreTests.kt:39:88: error: unresolved reference: FitMode
+    test("pad retains requested canvas") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.PAD,true); check(g.width==100 && g.height==100); check(g.draw.top==25.0 && g.draw.bottom==75.0) }
+                                                                                       ^
+app/src/hostTest/kotlin/CoreTests.kt:40:53: error: unresolved reference: ImageGeometry
+    test("fill crops only the excess axis") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.FILL,true); check(g.crop.left==0.25 && g.crop.right==0.75) }
+                                                    ^
+app/src/hostTest/kotlin/CoreTests.kt:40:91: error: unresolved reference: FitMode
+    test("fill crops only the excess axis") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.FILL,true); check(g.crop.left==0.25 && g.crop.right==0.75) }
+                                                                                          ^
+app/src/hostTest/kotlin/CoreTests.kt:41:60: error: unresolved reference: ImageGeometry
+    test("no-upscale applies to one growing axis") { val g=ImageGeometry.resolve(400,200,100,1000,FitMode.STRETCH,false); check(g.width<=400 && g.height<=200) }
+                                                           ^
+app/src/hostTest/kotlin/CoreTests.kt:41:99: error: unresolved reference: FitMode
+    test("no-upscale applies to one growing axis") { val g=ImageGeometry.resolve(400,200,100,1000,FitMode.STRETCH,false); check(g.width<=400 && g.height<=200) }
+                                                                                                  ^
+app/src/hostTest/kotlin/CoreTests.kt:44:9: error: unresolved reference: ArchiveCore
+        ArchiveCore.create(z,listOf(ArchiveInput("folder/a.bin") { ByteArrayInputStream(a) }),6,ArchiveLimits(100000,20,32))
+        ^
+app/src/hostTest/kotlin/CoreTests.kt:44:37: error: unresolved reference: ArchiveInput
+        ArchiveCore.create(z,listOf(ArchiveInput("folder/a.bin") { ByteArrayInputStream(a) }),6,ArchiveLimits(100000,20,32))
+                                    ^
+app/src/hostTest/kotlin/CoreTests.kt:44:97: error: unresolved reference: ArchiveLimits
+        ArchiveCore.create(z,listOf(ArchiveInput("folder/a.bin") { ByteArrayInputStream(a) }),6,ArchiveLimits(100000,20,32))
+                                                                                                ^
+app/src/hostTest/kotlin/CoreTests.kt:45:46: error: unresolved reference: ArchiveCore
+        val dest=File(root,"out"); val files=ArchiveCore.extract(z,dest,ArchiveLimits(100000,20,32))
+                                             ^
+app/src/hostTest/kotlin/CoreTests.kt:45:73: error: unresolved reference: ArchiveLimits
+        val dest=File(root,"out"); val files=ArchiveCore.extract(z,dest,ArchiveLimits(100000,20,32))
+                                                                        ^
+app/src/hostTest/kotlin/CoreTests.kt:50:72: error: unresolved reference: ArchiveCore
+        val dest=File(root,"out"); rejects<IllegalArgumentException> { ArchiveCore.extract(z,dest,ArchiveLimits(100,10,32)) }; check(!dest.exists()); check(!File(root,"outside").exists())
+                                                                       ^
+app/src/hostTest/kotlin/CoreTests.kt:50:99: error: unresolved reference: ArchiveLimits
+        val dest=File(root,"out"); rejects<IllegalArgumentException> { ArchiveCore.extract(z,dest,ArchiveLimits(100,10,32)) }; check(!dest.exists()); check(!File(root,"outside").exists())
+                                                                                                  ^
+app/src/hostTest/kotlin/CoreTests.kt:54:72: error: unresolved reference: ArchiveCore
+        val dest=File(root,"out"); rejects<IllegalArgumentException> { ArchiveCore.extract(z,dest,ArchiveLimits(100,10,32)) }; check(!dest.exists())
+                                                                       ^
+app/src/hostTest/kotlin/CoreTests.kt:54:99: error: unresolved reference: ArchiveLimits
+        val dest=File(root,"out"); rejects<IllegalArgumentException> { ArchiveCore.extract(z,dest,ArchiveLimits(100,10,32)) }; check(!dest.exists())
+                                                                                                  ^
+app/src/hostTest/kotlin/CoreTests.kt:58:45: error: unresolved reference: ArchiveCore
+        rejects<IllegalArgumentException> { ArchiveCore.extract(z,File(root,"out"),ArchiveLimits(100,10,2)) }
+                                            ^
+app/src/hostTest/kotlin/CoreTests.kt:58:84: error: unresolved reference: ArchiveLimits
+        rejects<IllegalArgumentException> { ArchiveCore.extract(z,File(root,"out"),ArchiveLimits(100,10,2)) }
+                                                                                   ^
+app/src/hostTest/kotlin/CoreTests.kt:60:45: error: unresolved reference: ArchiveCore
+        rejects<IllegalArgumentException> { ArchiveCore.extract(z,File(root,"out"),ArchiveLimits(100,1,32)) }
+                                            ^
+app/src/hostTest/kotlin/CoreTests.kt:60:84: error: unresolved reference: ArchiveLimits
+        rejects<IllegalArgumentException> { ArchiveCore.extract(z,File(root,"out"),ArchiveLimits(100,1,32)) }
+                                                                                   ^
+app/src/hostTest/kotlin/CoreTests.kt:63:77: error: unresolved reference: ArchiveCore
+        val out=File(root,"partial.zip"); rejects<InterruptedIOException> { ArchiveCore.create(out,listOf(ArchiveInput("a") { ByteArrayInputStream(ByteArray(10000)) }),6,ArchiveLimits(100000,10,32),{ throw InterruptedIOException() }) }; check(!out.exists())
+                                                                            ^
+app/src/hostTest/kotlin/CoreTests.kt:63:107: error: unresolved reference: ArchiveInput
+        val out=File(root,"partial.zip"); rejects<InterruptedIOException> { ArchiveCore.create(out,listOf(ArchiveInput("a") { ByteArrayInputStream(ByteArray(10000)) }),6,ArchiveLimits(100000,10,32),{ throw InterruptedIOException() }) }; check(!out.exists())
+                                                                                                          ^
+app/src/hostTest/kotlin/CoreTests.kt:63:171: error: unresolved reference: ArchiveLimits
+        val out=File(root,"partial.zip"); rejects<InterruptedIOException> { ArchiveCore.create(out,listOf(ArchiveInput("a") { ByteArrayInputStream(ByteArray(10000)) }),6,ArchiveLimits(100000,10,32),{ throw InterruptedIOException() }) }; check(!out.exists())
+                                                                                                                                                                          ^
+app/src/hostTest/kotlin/CoreTests.kt:66:9: error: unresolved reference: ArchiveCore
+        ArchiveCore.create(File(root,"a.zip"),listOf(ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(1)) },ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(2)) }),6,ArchiveLimits(1000,10,32))
+        ^
+app/src/hostTest/kotlin/CoreTests.kt:66:54: error: unresolved reference: ArchiveInput
+        ArchiveCore.create(File(root,"a.zip"),listOf(ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(1)) },ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(2)) }),6,ArchiveLimits(1000,10,32))
+                                                     ^
+app/src/hostTest/kotlin/CoreTests.kt:66:113: error: unresolved reference: ArchiveInput
+        ArchiveCore.create(File(root,"a.zip"),listOf(ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(1)) },ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(2)) }),6,ArchiveLimits(1000,10,32))
+                                                                                                                ^
+app/src/hostTest/kotlin/CoreTests.kt:66:175: error: unresolved reference: ArchiveLimits
+        ArchiveCore.create(File(root,"a.zip"),listOf(ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(1)) },ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(2)) }),6,ArchiveLimits(1000,10,32))
+                                                                                                                                                                              ^
+app/src/hostTest/kotlin/CoreTests.kt:68:123: error: unresolved reference: Hashing
+    test("hash verification handles case and whitespace") { tmp { root -> val f=File(root,"a"); f.writeText("abc"); check(Hashing.sha256(f)=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"); check(Hashing.matches(f,Hashing.sha256(f).uppercase())) } }
+                                                                                                                          ^
+app/src/hostTest/kotlin/CoreTests.kt:68:217: error: unresolved reference: Hashing
+    test("hash verification handles case and whitespace") { tmp { root -> val f=File(root,"a"); f.writeText("abc"); check(Hashing.sha256(f)=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"); check(Hashing.matches(f,Hashing.sha256(f).uppercase())) } }
+                                                                                                                                                                                                                        ^
+app/src/hostTest/kotlin/CoreTests.kt:68:235: error: unresolved reference: Hashing
+    test("hash verification handles case and whitespace") { tmp { root -> val f=File(root,"a"); f.writeText("abc"); check(Hashing.sha256(f)=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"); check(Hashing.matches(f,Hashing.sha256(f).uppercase())) } }
+                                                                                                                                                                                                                                          ^
+app/src/hostTest/kotlin/CoreTests.kt:69:135: error: unresolved reference: Hashing
+    test("hash rejects invalid digest") { tmp { root -> val f=File(root,"a"); f.writeText("abc"); rejects<IllegalArgumentException> { Hashing.matches(f,"abc") } } }
+                                                                                                                                      ^
+app/src/hostTest/kotlin/CoreTests.kt:71:15: error: unresolved reference: DurablePublication
+        val p=DurablePublication(root); val job=UUID.randomUUID().toString(); val t=p.reserve(job,"one","result.bin","application/octet-stream"); t.stageFile.writeText("real bytes")
+              ^
+app/src/hostTest/kotlin/CoreTests.kt:76:15: error: unresolved reference: DurablePublication
+        val p=DurablePublication(root); val job=UUID.randomUUID().toString(); val t=p.reserve(job,"one","r.bin","application/octet-stream"); t.stageFile.writeText("a"); p.publish(t); t.stageFile.parentFile.mkdirs(); t.stageFile.writeText("b")
+              ^
+app/src/hostTest/kotlin/CoreTests.kt:80:15: error: unresolved reference: DurablePublication
+        val p=DurablePublication(root); val t=p.reserve(UUID.randomUUID().toString(),"one","r.bin","application/octet-stream"); t.stageFile.writeText("recover"); p.prepare(t)
+              ^
+app/src/hostTest/kotlin/CoreTests.kt:81:22: error: unresolved reference: DurablePublication
+        val restored=DurablePublication(root); check(restored.reconcile().single().file.readText()=="recover"); check(restored.reconcile().size==1)
+                     ^
+app/src/hostTest/kotlin/CoreTests.kt:83:80: error: unresolved reference: DurablePublication
+    test("missing staged output cannot publish success") { tmp { root -> val p=DurablePublication(root); val t=p.reserve(UUID.randomUUID().toString(),"a","r.bin","application/octet-stream"); rejects<IllegalArgumentException> { p.publish(t) }; check(p.reconcile().isEmpty()) } }
+                                                                               ^
+app/src/hostTest/kotlin/CoreTests.kt:84:69: error: unresolved reference: HttpPolicy
+    test("URL validation never invents network metadata") { val url=HttpPolicy.url("https://example.org/file?q=signed"); check(url.scheme=="https"); rejects<IllegalArgumentException> { HttpPolicy.url("https://") }; rejects<IllegalArgumentException> { HttpPolicy.url("https://user:pass@example.org/x") } }
+                                                                    ^
+app/src/hostTest/kotlin/CoreTests.kt:84:186: error: unresolved reference: HttpPolicy
+    test("URL validation never invents network metadata") { val url=HttpPolicy.url("https://example.org/file?q=signed"); check(url.scheme=="https"); rejects<IllegalArgumentException> { HttpPolicy.url("https://") }; rejects<IllegalArgumentException> { HttpPolicy.url("https://user:pass@example.org/x") } }
+                                                                                                                                                                                         ^
+app/src/hostTest/kotlin/CoreTests.kt:84:252: error: unresolved reference: HttpPolicy
+    test("URL validation never invents network metadata") { val url=HttpPolicy.url("https://example.org/file?q=signed"); check(url.scheme=="https"); rejects<IllegalArgumentException> { HttpPolicy.url("https://") }; rejects<IllegalArgumentException> { HttpPolicy.url("https://user:pass@example.org/x") } }
+                                                                                                                                                                                                                                                           ^
+app/src/hostTest/kotlin/CoreTests.kt:85:84: error: unresolved reference: HttpPolicy
+    test("cleartext needs explicit consent") { rejects<IllegalArgumentException> { HttpPolicy.url("http://example.org/f") }; check(HttpPolicy.url("http://example.org/f",true).scheme=="http") }
+                                                                                   ^
+app/src/hostTest/kotlin/CoreTests.kt:85:132: error: unresolved reference: HttpPolicy
+    test("cleartext needs explicit consent") { rejects<IllegalArgumentException> { HttpPolicy.url("http://example.org/f") }; check(HttpPolicy.url("http://example.org/f",true).scheme=="http") }
+                                                                                                                                   ^
+app/src/hostTest/kotlin/CoreTests.kt:86:64: error: unresolved reference: ResumePolicy
+    test("valid resume requires exact representation range") { ResumePolicy.validate(10,"\"v1\"",null,20,206,mapOf("content-range" to "bytes 10-19/20","etag" to "\"v1\"","content-length" to "10")) }
+                                                               ^
+app/src/hostTest/kotlin/CoreTests.kt:87:50: error: unresolved reference: RestartRequired
+    test("200 to range never appends") { rejects<RestartRequired> { ResumePolicy.validate(10,"\"v1\"",null,20,200,emptyMap()) } }
+                                                 ^
+app/src/hostTest/kotlin/CoreTests.kt:87:69: error: unresolved reference: ResumePolicy
+    test("200 to range never appends") { rejects<RestartRequired> { ResumePolicy.validate(10,"\"v1\"",null,20,200,emptyMap()) } }
+                                                                    ^
+app/src/hostTest/kotlin/CoreTests.kt:88:212: error: unresolved reference: RestartRequired
+    test("wrong range and changed validator are rejected") { for (h in listOf(mapOf("content-range" to "bytes 9-19/20","etag" to "\"v1\""),mapOf("content-range" to "bytes 10-19/20","etag" to "\"v2\""))) rejects<RestartRequired> { ResumePolicy.validate(10,"\"v1\"",null,20,206,h) } }
+                                                                                                                                                                                                                   ^
+app/src/hostTest/kotlin/CoreTests.kt:88:231: error: unresolved reference: ResumePolicy
+    test("wrong range and changed validator are rejected") { for (h in listOf(mapOf("content-range" to "bytes 9-19/20","etag" to "\"v1\""),mapOf("content-range" to "bytes 10-19/20","etag" to "\"v2\""))) rejects<RestartRequired> { ResumePolicy.validate(10,"\"v1\"",null,20,206,h) } }
+                                                                                                                                                                                                                                      ^
+app/src/hostTest/kotlin/CoreTests.kt:89:108: error: unresolved reference: RestartRequired
+    test("missing and weak resume validators are rejected") { for (tag in listOf(null,"W/\"v1\"")) rejects<RestartRequired> { ResumePolicy.validate(10,tag,null,20,206,mapOf("content-range" to "bytes 10-19/20")) } }
+                                                                                                           ^
+app/src/hostTest/kotlin/CoreTests.kt:89:127: error: unresolved reference: ResumePolicy
+    test("missing and weak resume validators are rejected") { for (tag in listOf(null,"W/\"v1\"")) rejects<RestartRequired> { ResumePolicy.validate(10,tag,null,20,206,mapOf("content-range" to "bytes 10-19/20")) } }
+                                                                                                                              ^
+app/src/hostTest/kotlin/CoreTests.kt:90:60: error: unresolved reference: Capabilities
+    test("legacy and security gates stay closed") { check(!Capabilities.isEnabled("legacy_demo_engine")); check(!Capabilities.isEnabled("xf_05")); check(!Capabilities.isEnabled("xp_redaction")) }
+                                                           ^
+app/src/hostTest/kotlin/CoreTests.kt:90:114: error: unresolved reference: Capabilities
+    test("legacy and security gates stay closed") { check(!Capabilities.isEnabled("legacy_demo_engine")); check(!Capabilities.isEnabled("xf_05")); check(!Capabilities.isEnabled("xp_redaction")) }
+                                                                                                                 ^
+app/src/hostTest/kotlin/CoreTests.kt:90:155: error: unresolved reference: Capabilities
+    test("legacy and security gates stay closed") { check(!Capabilities.isEnabled("legacy_demo_engine")); check(!Capabilities.isEnabled("xf_05")); check(!Capabilities.isEnabled("xp_redaction")) }
+                                                                                                                                                          ^

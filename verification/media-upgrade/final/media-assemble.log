@@ -1,0 +1,7 @@
+command: ["bash", "scripts/verify-local.sh", "-PextendedMedia=true", ":app:assembleDebug"]
+started_at_utc: 2026-10-16T14:26:58.927615+00:00
+
+BLOCKED: Trusted cached Gradle 8.14 missing; set GRADLE_BIN. No download was attempted.
+
+exit_code: 2
+status: BLOCKED

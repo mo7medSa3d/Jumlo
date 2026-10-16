@@ -1,0 +1,932 @@
+[
+  {
+    "id": "F01",
+    "title": "Restore a trustworthy build and isolate the unsafe prototype",
+    "modify": [
+      "gradlew",
+      "gradlew.bat",
+      "gradle/wrapper/gradle-wrapper.properties",
+      "gradle/libs.versions.toml",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+    ],
+    "create": [
+      "gradle/wrapper/gradle-wrapper.jar",
+      "scripts/verify-local.sh",
+      "docs/dependencies.md",
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "tests": [
+      "scripts/tests/test-verify-local.sh",
+      "app/src/test/java/com/universalutilities/app/data/jobs/CapabilityRegistryTest.kt"
+    ],
+    "covers": [
+      "build",
+      "audit-01"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/01-foundation.md"
+  },
+  {
+    "id": "F02",
+    "title": "Real intake, source persistence and recoverable drafts",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/MainActivity.kt",
+      "app/src/main/java/com/universalutilities/app/data/local/AppDatabase.kt",
+      "app/src/main/java/com/universalutilities/app/data/preferences/UserPreferencesRepository.kt",
+      "app/src/main/java/com/universalutilities/app/model/Models.kt",
+      "app/src/main/java/com/universalutilities/app/di/AppModule.kt",
+      "app/src/main/AndroidManifest.xml"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/model/OperationContracts.kt",
+      "app/src/main/java/com/universalutilities/app/data/source/SourceStore.kt",
+      "app/src/main/java/com/universalutilities/app/data/source/SourceEntity.kt",
+      "app/src/main/java/com/universalutilities/app/data/jobs/DraftStore.kt",
+      "app/src/main/java/com/universalutilities/app/ui/intake/IntakeController.kt",
+      "app/schemas/.gitkeep",
+      "app/src/main/java/com/universalutilities/app/data/source/EphemeralSecretStore.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/data/SourceIntakeTest.kt",
+      "app/src/androidTest/java/com/universalutilities/app/data/LegacyMigrationTest.kt"
+    ],
+    "covers": [
+      "IMPORT-01",
+      "IMPORT-02",
+      "IMPORT-03",
+      "EDIT-03",
+      "EDIT-04",
+      "HOME-04",
+      "audit-03",
+      "audit-08"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/01-foundation.md"
+  },
+  {
+    "id": "F03",
+    "title": "Transactional results, truthful jobs and cancellation",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/repository/UniversalRepository.kt",
+      "app/src/main/java/com/universalutilities/app/ui/AppViewModel.kt",
+      "app/src/main/java/com/universalutilities/app/worker/EngineOperationWorker.kt",
+      "app/src/main/java/com/universalutilities/app/UniversalUtilitiesApplication.kt",
+      "app/src/main/java/com/universalutilities/app/data/local/AppDatabase.kt",
+      "app/src/main/java/com/universalutilities/app/di/AppModule.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/JobStore.kt",
+      "app/src/main/java/com/universalutilities/app/data/jobs/OperationDispatcher.kt",
+      "app/src/main/java/com/universalutilities/app/data/output/OutputStore.kt",
+      "app/src/main/java/com/universalutilities/app/data/output/PublicationJournal.kt",
+      "app/src/main/java/com/universalutilities/app/data/jobs/WorkBudget.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/data/PublicationRecoveryTest.kt",
+      "app/src/test/java/com/universalutilities/app/data/jobs/JobStateTest.kt"
+    ],
+    "covers": [
+      "TASK-01",
+      "TASK-02",
+      "EDIT-02",
+      "EDIT-05",
+      "RESULT-01",
+      "RESULT-02",
+      "RESULT-03",
+      "RESULT-04",
+      "SYS-02",
+      "audit-02",
+      "audit-09",
+      "audit-10"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/01-foundation.md"
+  },
+  {
+    "id": "F04",
+    "title": "First end-to-end Images-to-PDF feature",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/pdf/PdfWorkspaceScreens.kt",
+      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/images/SourceImageDecoder.kt",
+      "app/src/main/java/com/universalutilities/app/model/ImagesToPdfSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/pdf/ImagesToPdfViewModel.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/pdf/ImagesToPdfRoundTripTest.kt"
+    ],
+    "covers": [
+      "PDF-02",
+      "audit-04"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/01-foundation.md"
+  },
+  {
+    "id": "P01",
+    "title": "Qualify the structural PDF adapter and preservation policy",
+    "modify": [
+      "gradle/libs.versions.toml",
+      "app/build.gradle.kts",
+      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/pdf/PdfBackend.kt",
+      "app/src/main/java/com/universalutilities/app/data/pdf/PdfBoxBackend.kt",
+      "app/src/main/java/com/universalutilities/app/data/pdf/PdfCapabilityPolicy.kt",
+      "docs/PDF_SUPPORT_MATRIX.md",
+      "docs/DEPENDENCY_NOTICES.md"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/pdf/PdfBackendQualificationTest.kt"
+    ],
+    "covers": [
+      "PDF-backend",
+      "audit-02"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/02-pdf.md"
+  },
+  {
+    "id": "P02",
+    "title": "Real viewer, merge, organize, split and extract",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt",
+      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/pdf/PdfWorkspaceScreens.kt",
+      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/model/PdfOperationSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/pdf/PdfWorkspaceViewModel.kt",
+      "app/src/main/java/com/universalutilities/app/ui/pdf/PdfViewerViewModel.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/pdf/PdfStructuralRoundTripTest.kt",
+      "app/src/test/java/com/universalutilities/app/pdf/PdfPageSelectionTest.kt"
+    ],
+    "covers": [
+      "PDF-01",
+      "PDF-03",
+      "PDF-04",
+      "PDF-05",
+      "PDF-06"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/02-pdf.md"
+  },
+  {
+    "id": "P03",
+    "title": "Actual PDF page-image exports and resource controls",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/PdfEngine.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/pdf/PdfWorkspaceScreens.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/model/PdfRasterSettings.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/pdf/PdfRasterExportTest.kt"
+    ],
+    "covers": [
+      "PDF-07"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/02-pdf.md"
+  },
+  {
+    "id": "I01",
+    "title": "Real format conversion, metadata and compression",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/ImageEngine.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/images/ImageWorkspaceScreens.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/model/ImageOperationSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/images/ImageWorkspaceViewModel.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/images/ImageEncodingTest.kt"
+    ],
+    "covers": [
+      "IMG-01",
+      "IMG-04",
+      "audit-04"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/03-images.md"
+  },
+  {
+    "id": "I02",
+    "title": "Resize, crop, rotation, flip and per-image overrides",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/ImageEngine.kt",
+      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/images/ImageWorkspaceScreens.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/images/ImageGeometry.kt"
+    ],
+    "tests": [
+      "app/src/test/java/com/universalutilities/app/images/ImageGeometryTest.kt",
+      "app/src/androidTest/java/com/universalutilities/app/images/ImageTransformTest.kt"
+    ],
+    "covers": [
+      "IMG-02",
+      "IMG-03"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/03-images.md"
+  },
+  {
+    "id": "A01",
+    "title": "Actual browsing, provider-aware mutation and export",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/repository/UniversalRepository.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/files/FilesAndVaultScreens.kt",
+      "app/src/main/res/xml/file_paths.xml"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/files/DocumentOperations.kt",
+      "app/src/main/java/com/universalutilities/app/ui/files/FilesViewModel.kt",
+      "app/src/main/java/com/universalutilities/app/data/files/SafeNames.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/files/DocumentOperationsTest.kt",
+      "app/src/test/java/com/universalutilities/app/files/SafeNamesTest.kt"
+    ],
+    "covers": [
+      "FILE-01",
+      "FILE-02",
+      "FILE-03",
+      "FILE-04",
+      "FILE-05",
+      "FILE-06",
+      "FILE-09",
+      "FILE-10",
+      "SYS-03",
+      "audit-10",
+      "audit-11"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/04-files.md"
+  },
+  {
+    "id": "A02",
+    "title": "Bounded real ZIP creation and extraction",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/ArchiveAndFileEngine.kt",
+      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/files/FilesAndVaultScreens.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/files/ArchiveBudget.kt",
+      "app/src/main/java/com/universalutilities/app/model/ArchiveSettings.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/files/ArchiveRoundTripTest.kt",
+      "app/src/test/java/com/universalutilities/app/files/ArchivePathPolicyTest.kt"
+    ],
+    "covers": [
+      "FILE-07",
+      "FILE-08",
+      "audit-06",
+      "audit-11"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/04-files.md"
+  },
+  {
+    "id": "D01",
+    "title": "Streamed GET, secure redirects and representation-safe resume",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/engine/DownloadEngine.kt",
+      "app/src/main/java/com/universalutilities/app/data/engine/PureDomainAlgorithms.kt",
+      "app/src/main/res/xml/network_security_config.xml"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/download/HttpTransfer.kt",
+      "app/src/main/java/com/universalutilities/app/model/DownloadSettings.kt"
+    ],
+    "tests": [
+      "app/src/test/java/com/universalutilities/app/downloads/HttpTransferTest.kt"
+    ],
+    "covers": [
+      "DL-02",
+      "DL-03",
+      "DL-04",
+      "DL-05",
+      "audit-05"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/05-downloads.md"
+  },
+  {
+    "id": "D02",
+    "title": "Durable queue, OS scheduling, notifications and UI",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/service/TransferForegroundService.kt",
+      "app/src/main/java/com/universalutilities/app/worker/EngineOperationWorker.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/downloads/DownloadsWorkspaceScreens.kt",
+      "app/src/main/AndroidManifest.xml"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/data/download/DownloadCoordinator.kt",
+      "app/src/main/java/com/universalutilities/app/service/UserTransferJobService.kt",
+      "app/src/main/java/com/universalutilities/app/ui/downloads/DownloadsViewModel.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/downloads/DownloadRecoveryTest.kt",
+      "app/src/test/java/com/universalutilities/app/downloads/DownloadQueueTest.kt"
+    ],
+    "covers": [
+      "DL-01",
+      "DL-06",
+      "SYS-01",
+      "SYS-02",
+      "audit-08",
+      "audit-09"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/05-downloads.md"
+  },
+  {
+    "id": "E01",
+    "title": "PDF optimization without flattening the document",
+    "covers": [
+      "XP-01"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfOptimizer.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfOptimizerSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfOptimizerScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion01Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E02",
+    "title": "PDF crop and page geometry",
+    "covers": [
+      "XP-02"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfPageGeometry.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfPageGeometrySettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfPageGeometryScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion02Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E03",
+    "title": "PDF annotations and overlay text",
+    "covers": [
+      "XP-03"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfAnnotations.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfAnnotationsSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfAnnotationsScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion03Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E04",
+    "title": "PDF watermark and page numbering",
+    "covers": [
+      "XP-04"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfStamping.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfStampingSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfStampingScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion04Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E05",
+    "title": "Drawn and imported signature appearance",
+    "covers": [
+      "XP-05"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfDrawnSignature.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfDrawnSignatureSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfDrawnSignatureScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion05Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E06",
+    "title": "Authorized PDF protection and removal",
+    "covers": [
+      "XP-06"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfProtection.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfProtectionSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfProtectionScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion06Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E07",
+    "title": "PDF metadata and page insertion",
+    "covers": [
+      "XP-07"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfMetadataAndInsertion.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfMetadataAndInsertionSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfMetadataAndInsertionScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion07Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E08",
+    "title": "Manual camera document capture",
+    "covers": [
+      "XP-08"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/ManualDocumentCapture.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ManualDocumentCaptureSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/ManualDocumentCaptureScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion08Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E09",
+    "title": "Supported AcroForms and explicit flattening",
+    "covers": [
+      "XP-09"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfForms.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfFormsSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfFormsScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion09Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E10",
+    "title": "Non-AI PDF comparison",
+    "covers": [
+      "XP-10"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfCompare.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfCompareSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfCompareScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion10Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E11",
+    "title": "Content-removing PDF redaction with strict qualification",
+    "covers": [
+      "XP-11"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/pdf/PdfRedaction.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/PdfRedactionSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/pdf/PdfRedactionScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion11Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E12",
+    "title": "Image metadata inspector and selective removal",
+    "covers": [
+      "XI-01"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/images/ImageMetadata.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ImageMetadataSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageMetadataScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion12Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E13",
+    "title": "Image text/logo watermark",
+    "covers": [
+      "XI-02"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/images/ImageWatermark.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ImageWatermarkSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageWatermarkScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion13Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E14",
+    "title": "Image joining and collage",
+    "covers": [
+      "XI-03"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/images/ImageComposition.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ImageCompositionSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageCompositionScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion14Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E15",
+    "title": "Image adjustments, padding and canvas",
+    "covers": [
+      "XI-04"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/images/ImageAdjustments.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ImageAdjustmentsSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageAdjustmentsScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion15Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E16",
+    "title": "Best-effort target size and image comparison",
+    "covers": [
+      "XI-05"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/images/ImageTargetAndCompare.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ImageTargetAndCompareSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageTargetAndCompareScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion16Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E17",
+    "title": "Manual screenshot stitching and codec capabilities",
+    "covers": [
+      "XI-06"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/images/ImageStitching.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ImageStitchingSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/images/ImageStitchingScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion17Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E18",
+    "title": "SHA-256 file verification",
+    "covers": [
+      "XD-01"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/downloads/ChecksumVerification.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/ChecksumVerificationSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/downloads/ChecksumVerificationScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion18Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E19",
+    "title": "Scheduled transfer rules and bounded multipart",
+    "covers": [
+      "XD-02"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/downloads/AdvancedTransfer.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/AdvancedTransferSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/downloads/AdvancedTransferScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion19Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E20",
+    "title": "Authorized browser download and webpage PDF capture",
+    "covers": [
+      "XD-03"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/downloads/BrowserCapture.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/BrowserCaptureSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/downloads/BrowserCaptureScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion20Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E21",
+    "title": "Batch rename with preview and conflict safety",
+    "covers": [
+      "XF-01"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/files/BatchRename.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/BatchRenameSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/files/BatchRenameScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion21Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E22",
+    "title": "Exact duplicates and scoped storage analysis",
+    "covers": [
+      "XF-02"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/files/DuplicateAndStorageScan.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/DuplicateAndStorageScanSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/files/DuplicateAndStorageScanScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion22Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E23",
+    "title": "Favorites and real managed trash",
+    "covers": [
+      "XF-03"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/files/FavoritesAndTrash.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/FavoritesAndTrashSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/files/FavoritesAndTrashScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion23Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E24",
+    "title": "Encrypted archives and explicit archive format support",
+    "covers": [
+      "XF-04"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/files/EncryptedArchives.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/EncryptedArchivesSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/files/EncryptedArchivesScreen.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion24Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "E25",
+    "title": "Authenticated local encrypted vault",
+    "covers": [
+      "XF-05"
+    ],
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/data/jobs/CapabilityRegistry.kt",
+      "app/src/main/java/com/universalutilities/app/data/engine/CryptoVaultEngine.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/files/FilesAndVaultScreens.kt",
+      "app/src/main/AndroidManifest.xml",
+      "app/src/main/java/com/universalutilities/app/MainActivity.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/expansions/files/VaultOperations.kt",
+      "app/src/main/java/com/universalutilities/app/model/expansions/VaultOperationsSettings.kt",
+      "app/src/main/java/com/universalutilities/app/ui/expansions/files/VaultOperationsScreen.kt",
+      "app/src/main/java/com/universalutilities/app/data/vault/VaultKeyAccess.kt",
+      "app/src/main/java/com/universalutilities/app/data/vault/VaultSessionStore.kt"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/expansions/Expansion25Test.kt"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/06-expansions.md"
+  },
+  {
+    "id": "U01",
+    "title": "Replace fixture-backed screens and reconcile the design system",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/ui/AppViewModel.kt",
+      "app/src/main/java/com/universalutilities/app/ui/navigation/UniversalUtilitiesNavHost.kt",
+      "app/src/main/java/com/universalutilities/app/ui/components/QuietPrecisionComponents.kt",
+      "app/src/main/java/com/universalutilities/app/ui/theme/Color.kt",
+      "app/src/main/java/com/universalutilities/app/ui/theme/Type.kt",
+      "app/src/main/java/com/universalutilities/app/ui/theme/Shape.kt",
+      "app/src/main/java/com/universalutilities/app/ui/theme/Theme.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/home/HomeAndOnboardingScreens.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/tools/ToolsCatalogScreen.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/results/OperationAndResultScreens.kt",
+      "app/src/main/java/com/universalutilities/app/ui/screens/settings/SettingsScreens.kt"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/ui/catalog/ToolRegistry.kt",
+      "app/src/main/java/com/universalutilities/app/ui/results/ResultsViewModel.kt",
+      "app/src/main/java/com/universalutilities/app/ui/tasks/TaskCenterViewModel.kt",
+      "docs/SCREEN_COVERAGE.md",
+      "scripts/check-ui-assets.sh"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/ui/RealNavigationTest.kt",
+      "app/src/test/java/com/universalutilities/app/ui/ToolRegistryTest.kt"
+    ],
+    "covers": [
+      "APP-01",
+      "HOME-01",
+      "HOME-02",
+      "HOME-03",
+      "HOME-04",
+      "TOOLS-01",
+      "TOOLS-02",
+      "TOOLS-03",
+      "TASK-01",
+      "TASK-02",
+      "SET-01",
+      "SET-03",
+      "SET-04",
+      "SET-05",
+      "audit-12",
+      "audit-13",
+      "EDIT-01"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/07-handoff.md"
+  },
+  {
+    "id": "U02",
+    "title": "Actual locale switching, permissions, backups and accessibility",
+    "modify": [
+      "app/src/main/java/com/universalutilities/app/MainActivity.kt",
+      "app/src/main/java/com/universalutilities/app/data/preferences/UserPreferencesRepository.kt",
+      "app/src/main/java/com/universalutilities/app/ui/theme/Theme.kt",
+      "app/src/main/res/values/strings.xml",
+      "app/src/main/res/values-ar/strings.xml",
+      "app/src/main/res/xml/locales_config.xml",
+      "app/src/main/res/xml/data_extraction_rules.xml",
+      "app/src/main/res/xml/network_security_config.xml",
+      "app/src/main/AndroidManifest.xml"
+    ],
+    "create": [
+      "app/src/main/java/com/universalutilities/app/ui/settings/LocaleController.kt",
+      "docs/DEVICE_TEST_MATRIX.md"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/ui/LocaleAccessibilityTest.kt",
+      "app/src/androidTest/java/com/universalutilities/app/security/BackupAndGrantTest.kt"
+    ],
+    "covers": [
+      "SET-02",
+      "SYS-01",
+      "SYS-02",
+      "SYS-03",
+      "audit-14"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/07-handoff.md"
+  },
+  {
+    "id": "U03",
+    "title": "Fault injection, release evidence and final ZIP",
+    "modify": [
+      ".gitignore",
+      "app/proguard-rules.pro",
+      "app/build.gradle.kts"
+    ],
+    "create": [
+      "README.md",
+      "VERIFICATION.md",
+      "FEATURE_STATUS.md",
+      "THIRD_PARTY_NOTICES.md",
+      "scripts/package-source.py",
+      "scripts/verify-release.sh",
+      "verification/manifest.json"
+    ],
+    "tests": [
+      "app/src/androidTest/java/com/universalutilities/app/integration/RealFileAcceptanceTest.kt",
+      "scripts/tests/test-package-source.py"
+    ],
+    "covers": [
+      "all-verification",
+      "final-zip",
+      "audit-15"
+    ],
+    "plan": "docs/superpowers/plans/subsystems/07-handoff.md"
+  }
+]

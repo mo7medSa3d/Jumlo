@@ -1,0 +1,722 @@
+{
+  "status": "planned, not implemented or tested",
+  "source_zip_sha256": "0b4b618f2a003fd66abe801cd2369b75eaf064a7d94389c4bf28db9efd9e4c99",
+  "design_approved": true,
+  "implementation_plan_review_pending": true,
+  "execution_method_recommended": "inline in isolated workspace; no independent subagent claimed",
+  "tasks": {
+    "F01": {
+      "title": "Restore a trustworthy build and isolate the unsafe prototype",
+      "plan": "docs/superpowers/plans/subsystems/01-foundation.md",
+      "covers": [
+        "build",
+        "audit-01"
+      ]
+    },
+    "F02": {
+      "title": "Real intake, source persistence and recoverable drafts",
+      "plan": "docs/superpowers/plans/subsystems/01-foundation.md",
+      "covers": [
+        "IMPORT-01",
+        "IMPORT-02",
+        "IMPORT-03",
+        "EDIT-03",
+        "EDIT-04",
+        "HOME-04",
+        "audit-03",
+        "audit-08"
+      ]
+    },
+    "F03": {
+      "title": "Transactional results, truthful jobs and cancellation",
+      "plan": "docs/superpowers/plans/subsystems/01-foundation.md",
+      "covers": [
+        "TASK-01",
+        "TASK-02",
+        "EDIT-02",
+        "EDIT-05",
+        "RESULT-01",
+        "RESULT-02",
+        "RESULT-03",
+        "RESULT-04",
+        "SYS-02",
+        "audit-02",
+        "audit-09",
+        "audit-10"
+      ]
+    },
+    "F04": {
+      "title": "First end-to-end Images-to-PDF feature",
+      "plan": "docs/superpowers/plans/subsystems/01-foundation.md",
+      "covers": [
+        "PDF-02",
+        "audit-04"
+      ]
+    },
+    "P01": {
+      "title": "Qualify the structural PDF adapter and preservation policy",
+      "plan": "docs/superpowers/plans/subsystems/02-pdf.md",
+      "covers": [
+        "PDF-backend",
+        "audit-02"
+      ]
+    },
+    "P02": {
+      "title": "Real viewer, merge, organize, split and extract",
+      "plan": "docs/superpowers/plans/subsystems/02-pdf.md",
+      "covers": [
+        "PDF-01",
+        "PDF-03",
+        "PDF-04",
+        "PDF-05",
+        "PDF-06"
+      ]
+    },
+    "P03": {
+      "title": "Actual PDF page-image exports and resource controls",
+      "plan": "docs/superpowers/plans/subsystems/02-pdf.md",
+      "covers": [
+        "PDF-07"
+      ]
+    },
+    "I01": {
+      "title": "Real format conversion, metadata and compression",
+      "plan": "docs/superpowers/plans/subsystems/03-images.md",
+      "covers": [
+        "IMG-01",
+        "IMG-04",
+        "audit-04"
+      ]
+    },
+    "I02": {
+      "title": "Resize, crop, rotation, flip and per-image overrides",
+      "plan": "docs/superpowers/plans/subsystems/03-images.md",
+      "covers": [
+        "IMG-02",
+        "IMG-03"
+      ]
+    },
+    "A01": {
+      "title": "Actual browsing, provider-aware mutation and export",
+      "plan": "docs/superpowers/plans/subsystems/04-files.md",
+      "covers": [
+        "FILE-01",
+        "FILE-02",
+        "FILE-03",
+        "FILE-04",
+        "FILE-05",
+        "FILE-06",
+        "FILE-09",
+        "FILE-10",
+        "SYS-03",
+        "audit-10",
+        "audit-11"
+      ]
+    },
+    "A02": {
+      "title": "Bounded real ZIP creation and extraction",
+      "plan": "docs/superpowers/plans/subsystems/04-files.md",
+      "covers": [
+        "FILE-07",
+        "FILE-08",
+        "audit-06",
+        "audit-11"
+      ]
+    },
+    "D01": {
+      "title": "Streamed GET, secure redirects and representation-safe resume",
+      "plan": "docs/superpowers/plans/subsystems/05-downloads.md",
+      "covers": [
+        "DL-02",
+        "DL-03",
+        "DL-04",
+        "DL-05",
+        "audit-05"
+      ]
+    },
+    "D02": {
+      "title": "Durable queue, OS scheduling, notifications and UI",
+      "plan": "docs/superpowers/plans/subsystems/05-downloads.md",
+      "covers": [
+        "DL-01",
+        "DL-06",
+        "SYS-01",
+        "SYS-02",
+        "audit-08",
+        "audit-09"
+      ]
+    },
+    "E01": {
+      "title": "PDF optimization without flattening the document",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-01"
+      ]
+    },
+    "E02": {
+      "title": "PDF crop and page geometry",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-02"
+      ]
+    },
+    "E03": {
+      "title": "PDF annotations and overlay text",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-03"
+      ]
+    },
+    "E04": {
+      "title": "PDF watermark and page numbering",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-04"
+      ]
+    },
+    "E05": {
+      "title": "Drawn and imported signature appearance",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-05"
+      ]
+    },
+    "E06": {
+      "title": "Authorized PDF protection and removal",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-06"
+      ]
+    },
+    "E07": {
+      "title": "PDF metadata and page insertion",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-07"
+      ]
+    },
+    "E08": {
+      "title": "Manual camera document capture",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-08"
+      ]
+    },
+    "E09": {
+      "title": "Supported AcroForms and explicit flattening",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-09"
+      ]
+    },
+    "E10": {
+      "title": "Non-AI PDF comparison",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-10"
+      ]
+    },
+    "E11": {
+      "title": "Content-removing PDF redaction with strict qualification",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XP-11"
+      ]
+    },
+    "E12": {
+      "title": "Image metadata inspector and selective removal",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XI-01"
+      ]
+    },
+    "E13": {
+      "title": "Image text/logo watermark",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XI-02"
+      ]
+    },
+    "E14": {
+      "title": "Image joining and collage",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XI-03"
+      ]
+    },
+    "E15": {
+      "title": "Image adjustments, padding and canvas",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XI-04"
+      ]
+    },
+    "E16": {
+      "title": "Best-effort target size and image comparison",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XI-05"
+      ]
+    },
+    "E17": {
+      "title": "Manual screenshot stitching and codec capabilities",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XI-06"
+      ]
+    },
+    "E18": {
+      "title": "SHA-256 file verification",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XD-01"
+      ]
+    },
+    "E19": {
+      "title": "Scheduled transfer rules and bounded multipart",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XD-02"
+      ]
+    },
+    "E20": {
+      "title": "Authorized browser download and webpage PDF capture",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XD-03"
+      ]
+    },
+    "E21": {
+      "title": "Batch rename with preview and conflict safety",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XF-01"
+      ]
+    },
+    "E22": {
+      "title": "Exact duplicates and scoped storage analysis",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XF-02"
+      ]
+    },
+    "E23": {
+      "title": "Favorites and real managed trash",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XF-03"
+      ]
+    },
+    "E24": {
+      "title": "Encrypted archives and explicit archive format support",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XF-04"
+      ]
+    },
+    "E25": {
+      "title": "Authenticated local encrypted vault",
+      "plan": "docs/superpowers/plans/subsystems/06-expansions.md",
+      "covers": [
+        "XF-05"
+      ]
+    },
+    "U01": {
+      "title": "Replace fixture-backed screens and reconcile the design system",
+      "plan": "docs/superpowers/plans/subsystems/07-handoff.md",
+      "covers": [
+        "APP-01",
+        "HOME-01",
+        "HOME-02",
+        "HOME-03",
+        "HOME-04",
+        "TOOLS-01",
+        "TOOLS-02",
+        "TOOLS-03",
+        "TASK-01",
+        "TASK-02",
+        "SET-01",
+        "SET-03",
+        "SET-04",
+        "SET-05",
+        "audit-12",
+        "audit-13",
+        "EDIT-01"
+      ]
+    },
+    "U02": {
+      "title": "Actual locale switching, permissions, backups and accessibility",
+      "plan": "docs/superpowers/plans/subsystems/07-handoff.md",
+      "covers": [
+        "SET-02",
+        "SYS-01",
+        "SYS-02",
+        "SYS-03",
+        "audit-14"
+      ]
+    },
+    "U03": {
+      "title": "Fault injection, release evidence and final ZIP",
+      "plan": "docs/superpowers/plans/subsystems/07-handoff.md",
+      "covers": [
+        "all-verification",
+        "final-zip",
+        "audit-15"
+      ]
+    }
+  },
+  "spec_sections": {
+    "1": [
+      "U01",
+      "U03"
+    ],
+    "2": [
+      "F01",
+      "F03"
+    ],
+    "3": [
+      "P01"
+    ],
+    "4": [
+      "F02",
+      "F03",
+      "A01"
+    ],
+    "5": [
+      "F04",
+      "P02",
+      "P03",
+      "I01",
+      "I02",
+      "A01",
+      "A02",
+      "D01",
+      "D02"
+    ],
+    "6": [
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "E06",
+      "E07",
+      "E08",
+      "E09",
+      "E10",
+      "E11",
+      "E12",
+      "E13",
+      "E14",
+      "E15",
+      "E16",
+      "E17",
+      "E18",
+      "E19",
+      "E20",
+      "E21",
+      "E22",
+      "E23",
+      "E24",
+      "E25"
+    ],
+    "7": [
+      "U01",
+      "U02"
+    ],
+    "8": [
+      "F01",
+      "U03"
+    ],
+    "9": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "P01",
+      "P02",
+      "P03",
+      "I01",
+      "I02",
+      "A01",
+      "A02",
+      "D01",
+      "D02",
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "E06",
+      "E07",
+      "E08",
+      "E09",
+      "E10",
+      "E11",
+      "E12",
+      "E13",
+      "E14",
+      "E15",
+      "E16",
+      "E17",
+      "E18",
+      "E19",
+      "E20",
+      "E21",
+      "E22",
+      "E23",
+      "E24",
+      "E25",
+      "U01",
+      "U02",
+      "U03"
+    ],
+    "10": [
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "P01",
+      "P02",
+      "P03",
+      "I01",
+      "I02",
+      "A01",
+      "A02",
+      "D01",
+      "D02",
+      "U03"
+    ],
+    "11": [
+      "U03"
+    ],
+    "12": [
+      "PLAN_REVIEW"
+    ]
+  },
+  "expansion_families": {
+    "XP-01": "E01",
+    "XP-02": "E02",
+    "XP-03": "E03",
+    "XP-04": "E04",
+    "XP-05": "E05",
+    "XP-06": "E06",
+    "XP-07": "E07",
+    "XP-08": "E08",
+    "XP-09": "E09",
+    "XP-10": "E10",
+    "XP-11": "E11",
+    "XI-01": "E12",
+    "XI-02": "E13",
+    "XI-03": "E14",
+    "XI-04": "E15",
+    "XI-05": "E16",
+    "XI-06": "E17",
+    "XD-01": "E18",
+    "XD-02": "E19",
+    "XD-03": "E20",
+    "XF-01": "E21",
+    "XF-02": "E22",
+    "XF-03": "E23",
+    "XF-04": "E24",
+    "XF-05": "E25"
+  },
+  "screen_family_owners": {
+    "APP-01": [
+      "U01"
+    ],
+    "HOME-01": [
+      "U01"
+    ],
+    "HOME-02": [
+      "U01"
+    ],
+    "HOME-03": [
+      "U01"
+    ],
+    "HOME-04": [
+      "F02",
+      "U01"
+    ],
+    "TOOLS-01": [
+      "U01"
+    ],
+    "TOOLS-02": [
+      "U01"
+    ],
+    "TOOLS-03": [
+      "U01"
+    ],
+    "TASK-01": [
+      "F03",
+      "U01"
+    ],
+    "TASK-02": [
+      "F03",
+      "U01"
+    ],
+    "IMPORT-01": [
+      "F02"
+    ],
+    "IMPORT-02": [
+      "F02"
+    ],
+    "IMPORT-03": [
+      "F02"
+    ],
+    "EDIT-01": [
+      "U01"
+    ],
+    "EDIT-02": [
+      "F03"
+    ],
+    "EDIT-03": [
+      "F02"
+    ],
+    "EDIT-04": [
+      "F02"
+    ],
+    "EDIT-05": [
+      "F03"
+    ],
+    "RESULT-01": [
+      "F03"
+    ],
+    "RESULT-02": [
+      "F03"
+    ],
+    "RESULT-03": [
+      "F03"
+    ],
+    "RESULT-04": [
+      "F03"
+    ],
+    "PDF-01": [
+      "P02"
+    ],
+    "PDF-02": [
+      "F04"
+    ],
+    "PDF-03": [
+      "P02"
+    ],
+    "PDF-04": [
+      "P02"
+    ],
+    "PDF-05": [
+      "P02"
+    ],
+    "PDF-06": [
+      "P02"
+    ],
+    "PDF-07": [
+      "P03"
+    ],
+    "IMG-01": [
+      "I01"
+    ],
+    "IMG-02": [
+      "I02"
+    ],
+    "IMG-03": [
+      "I02"
+    ],
+    "IMG-04": [
+      "I01"
+    ],
+    "DL-01": [
+      "D02"
+    ],
+    "DL-02": [
+      "D01"
+    ],
+    "DL-03": [
+      "D01"
+    ],
+    "DL-04": [
+      "D01"
+    ],
+    "DL-05": [
+      "D01"
+    ],
+    "DL-06": [
+      "D02"
+    ],
+    "FILE-01": [
+      "A01"
+    ],
+    "FILE-02": [
+      "A01"
+    ],
+    "FILE-03": [
+      "A01"
+    ],
+    "FILE-04": [
+      "A01"
+    ],
+    "FILE-05": [
+      "A01"
+    ],
+    "FILE-06": [
+      "A01"
+    ],
+    "FILE-07": [
+      "A02"
+    ],
+    "FILE-08": [
+      "A02"
+    ],
+    "FILE-09": [
+      "A01"
+    ],
+    "FILE-10": [
+      "A01"
+    ],
+    "SET-01": [
+      "U01"
+    ],
+    "SET-02": [
+      "U02"
+    ],
+    "SET-03": [
+      "U01"
+    ],
+    "SET-04": [
+      "U01"
+    ],
+    "SET-05": [
+      "U01"
+    ],
+    "SYS-01": [
+      "D02",
+      "U02"
+    ],
+    "SYS-02": [
+      "F03",
+      "D02",
+      "U02"
+    ],
+    "SYS-03": [
+      "A01",
+      "U02"
+    ]
+  },
+  "v1_tool_entries": {
+    "PDF-01": "P02",
+    "PDF-02": "F04",
+    "PDF-03": "P02",
+    "PDF-04": "P02",
+    "PDF-05": "P02",
+    "PDF-06": "P02",
+    "PDF-07": "P03",
+    "IMG-01": "I01",
+    "IMG-02": "I02",
+    "IMG-03": "I02",
+    "IMG-04": "I01",
+    "DL-02": "D01",
+    "DL-03": "D01",
+    "FILE-01": "A01",
+    "FILE-07": "A02",
+    "FILE-08": "A02"
+  }
+}

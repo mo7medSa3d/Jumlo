@@ -1,0 +1,79 @@
+[
+  {
+    "name": "base-assemble",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      ":app:assembleDebug"
+    ],
+    "started_at_utc": "2026-10-16T14:26:58.924181+00:00",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "base-assemble.log"
+  },
+  {
+    "name": "media-assemble",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      "-PextendedMedia=true",
+      ":app:assembleDebug"
+    ],
+    "started_at_utc": "2026-10-16T14:26:58.927615+00:00",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "media-assemble.log"
+  },
+  {
+    "name": "media-gradle-unit",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      "-PextendedMedia=true",
+      ":app:testDebugUnitTest"
+    ],
+    "started_at_utc": "2026-10-16T14:26:58.930696+00:00",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "media-gradle-unit.log"
+  },
+  {
+    "name": "media-android-lint",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      "-PextendedMedia=true",
+      ":app:lintDebug"
+    ],
+    "started_at_utc": "2026-10-16T14:26:58.934401+00:00",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "media-android-lint.log"
+  },
+  {
+    "name": "media-instrumentation",
+    "command": [
+      "bash",
+      "scripts/verify-local.sh",
+      "-PextendedMedia=true",
+      ":app:connectedDebugAndroidTest"
+    ],
+    "started_at_utc": "2026-10-16T14:26:58.937917+00:00",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "media-instrumentation.log"
+  },
+  {
+    "name": "wrapper-launch",
+    "command": [
+      "bash",
+      "gradlew",
+      "--offline",
+      "--version"
+    ],
+    "started_at_utc": "2026-10-16T14:26:58.940921+00:00",
+    "exit_code": 2,
+    "status": "BLOCKED",
+    "log": "wrapper-launch.log"
+  }
+]

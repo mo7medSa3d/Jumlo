@@ -1,0 +1,32 @@
+PASS pages preserve requested order and remove duplicates
+PASS reversed pages are rejected
+PASS Arabic and Persian digits normalize
+PASS empty and out-of-range pages fail
+PASS archive paths reject both platform traversal forms
+PASS safe names never escape result folder
+PASS memory budgets fail instead of downscaling
+PASS invalid geometry is rejected
+PASS fit preserves aspect
+PASS pad retains requested canvas
+PASS fill crops only the excess axis
+PASS no-upscale applies to one growing axis
+PASS zip roundtrip reads original bytes
+PASS zip traversal failure leaves no files
+PASS zip expanded byte budget is measured
+PASS zip entry count and depth are bounded
+PASS archive cancellation removes incomplete archive
+PASS archive creation rejects duplicate normalized names
+PASS hash verification handles case and whitespace
+PASS hash rejects invalid digest
+PASS publication is idempotent and metadata is measured
+PASS different bytes for same output key are integrity failure
+PASS journal recovery completes rename once
+PASS missing staged output cannot publish success
+PASS URL validation never invents network metadata
+PASS cleartext needs explicit consent
+PASS valid resume requires exact representation range
+PASS 200 to range never appends
+PASS wrong range and changed validator are rejected
+PASS missing and weak resume validators are rejected
+PASS legacy and security gates stay closed
+RESULT passed=31 failed=0

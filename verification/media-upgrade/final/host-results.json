@@ -1,0 +1,26 @@
+{
+  "command": [
+    "bash",
+    "scripts/verify-host.sh",
+    "--with-media"
+  ],
+  "exit_code": 0,
+  "status": "PASS",
+  "counts": {
+    "kotlin_core_http_process_real_media": 97,
+    "python_network_guard": 8,
+    "host_sql": 8,
+    "static": 8,
+    "shell_regressions": 4
+  },
+  "log": "../json-guard-green-full.log",
+  "log_sha256": "9e85b83d0a23d9fe6951f9a41409123911fe73bace027a3bdda7147b40e15d02",
+  "not_tested": [
+    "Android compilation",
+    "actual bundled extractor/native runtime",
+    "live platforms",
+    "device UI",
+    "Room/KSP",
+    "release qualification"
+  ]
+}

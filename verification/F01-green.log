@@ -1,0 +1,2 @@
+PASS uncachedDistributionDoesNotAccessNetwork
+PASS missingPrerequisitesAreBlockedNotPassed

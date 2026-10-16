@@ -1,0 +1,8 @@
+command: ["bash", "scripts/verify-local.sh", ":app:assembleDebug"]
+started_at_utc: 2026-10-16T12:40:10.538757+00:00
+scope: Android build requested through offline preflight
+
+BLOCKED: Trusted cached Gradle 8.14 missing; set GRADLE_BIN. No download was attempted.
+
+exit_code: 2
+status: BLOCKED

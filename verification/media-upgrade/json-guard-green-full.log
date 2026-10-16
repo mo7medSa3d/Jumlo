@@ -1,0 +1,144 @@
+app/src/hostTest/kotlin/TransferTests.kt:34:28: warning: 'constructor URL(String!)' is deprecated. Deprecated in Java
+            val connection=URL(url).openConnection() as HttpURLConnection
+                           ^
+PASS pages preserve requested order and remove duplicates
+PASS reversed pages are rejected
+PASS Arabic and Persian digits normalize
+PASS empty and out-of-range pages fail
+PASS archive paths reject both platform traversal forms
+PASS safe names never escape result folder
+PASS memory budgets fail instead of downscaling
+PASS invalid geometry is rejected
+PASS fit preserves aspect
+PASS pad retains requested canvas
+PASS fill crops only the excess axis
+PASS no-upscale applies to one growing axis
+PASS zip roundtrip reads original bytes
+PASS zip traversal failure leaves no files
+PASS zip expanded byte budget is measured
+PASS zip entry count and depth are bounded
+PASS archive cancellation removes incomplete archive
+PASS archive creation rejects duplicate normalized names
+PASS hash verification handles case and whitespace
+PASS hash rejects invalid digest
+PASS publication is idempotent and metadata is measured
+PASS different bytes for same output key are integrity failure
+PASS journal recovery completes rename once
+PASS missing staged output cannot publish success
+PASS URL validation never invents network metadata
+PASS cleartext needs explicit consent
+PASS valid resume requires exact representation range
+PASS 200 to range never appends
+PASS wrong range and changed validator are rejected
+PASS missing and weak resume validators are rejected
+PASS legacy and security gates stay closed
+PASS keep both respects case-insensitive filesystem names
+PASS padding without upscaling keeps requested canvas
+PASS ZIP directory entries cannot hide unaccounted payload
+PASS HTTP scheme normalization cannot bypass cleartext policy
+PASS legacy batch parser never claims an HTTP response or size
+PASS legacy batch parser validates host not just a prefix
+PASS legacy page parser rejects reversed ranges
+PASS publication recovery retains validated metadata without guessing from MIME
+PASS publication identity rejects changed metadata for the same output
+PASS page range overflow is rejected rather than coerced to a single page
+PASS media downloader capability has a real dispatch candidate
+PASS media selection identity detects changed dimensions behind the same ID
+PASS media selection identity excludes rotating signed transport state
+PASS reserved format names are treated as literal IDs rather than selector aliases
+PASS an uncertain media enqueue retries the same prepared identity
+PASS changed choices and explicit new copies obtain new identities
+PASS deep extractor JSON is rejected before invoking the recursive parser
+PASS JSON guard distinguishes escaped strings from structural brackets
+PASS media exposes measured qualities only, sorted by resolution
+PASS media pairs silent video with a compatible audio track
+PASS media does not download video when separate audio is available
+PASS audio can be extracted from an actually muxed source
+PASS silent media does not advertise an audio-only download
+PASS encrypted representations are excluded rather than advertised
+PASS storyboards and unsafe native protocols are not playable options
+PASS format-selector injection is rejected
+PASS live and playlist resources cannot masquerade as a single finite file
+PASS unknown size remains unknown and approximate size stays marked
+PASS size overflow cannot become a tiny or negative media allocation
+PASS mixed codec families use a lossless compatible merge container
+PASS media identity binds the extractor id and the submitted URL
+PASS shared text resolves a single actual HTTP resource and removes anchors
+PASS media probe arguments do not download, execute a shell or bypass TLS
+PASS selected video format is exact without silent best-quality fallback
+PASS MP3 M4A and Opus audio choices invoke real extraction options
+PASS original audio keeps its available codec rather than inventing MP3 quality
+PASS output publication rejects partial files and ambiguous multiple outputs
+PASS renamed HTML cannot pass media-container inspection
+PASS remote titles cannot control output directories or exceed UTF8 limits
+PASS media progress distinguishes measured size from estimated size
+PASS media runner executes actual child argv without shell interpretation
+PASS media runner reports a real subprocess failure without changing it to success
+PASS media probe output is bounded before JSON parsing
+PASS long download diagnostics retain a bounded tail without exhausting memory
+PASS media watchdog terminates an actual hung process
+PASS media cancellation is checked even when no progress is emitted
+PASS progress callback receives actual complete lines from a running child
+PASS process environment is supplied without serializing it into a command line
+PASS non-bootstrap stdout cannot spoof process control messages later
+PASS stderr is drained independently without pipe deadlock
+PASS real FFmpeg merges separate video and audio without changing resolution
+PASS real MP3 audio-only export contains audio and no video track
+PASS real M4A source-codec output retains AAC without a video track
+PASS real Opus encoding produces a verified Ogg container
+PASS real FFmpeg malformed-input failure cannot produce a finished media output
+PASS real HTTP GET writes exact bytes and measured size
+PASS unknown HTTP size stays unknown
+PASS real HTTP resume validates range and appends once
+PASS real changed ETag leaves prior partial bytes untouched
+PASS real 200 response to Range does not append
+PASS HTTP redirects resolve relative locations
+PASS HTTP error cannot create successful output
+PASS truncated HTTP body is a failure
+PASS streamed HTTP enforces actual byte budget
+PASS HTTP metadata binds resume to the observed final URL without storing its secret
+PASS resume rejects a changed redirect target even with the same ETag and length
+RESULT passed=97 failed=0
+test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) ... ok
+test_downgrade_redirect_is_rejected_even_with_consent (__main__.GuardTests.test_downgrade_redirect_is_rejected_even_with_consent) ... ok
+test_https_is_allowed (__main__.GuardTests.test_https_is_allowed) ... ok
+test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) ... ok
+test_plain_http_requires_consent (__main__.GuardTests.test_plain_http_requires_consent) ... ok
+test_redirect_port_counts_as_origin (__main__.GuardTests.test_redirect_port_counts_as_origin) ... ok
+test_redirect_strips_cross_origin_credentials (__main__.GuardTests.test_redirect_strips_cross_origin_credentials) ... ok
+test_same_origin_preserves_authorization_but_not_cookie (__main__.GuardTests.test_same_origin_preserves_authorization_but_not_cookie) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.001s
+
+OK
+test_cancelled_job_cannot_claim_or_be_marked_complete (__main__.ActualSqlTests.test_cancelled_job_cannot_claim_or_be_marked_complete) ... ok
+test_claim_does_not_steal_a_live_lease (__main__.ActualSqlTests.test_claim_does_not_steal_a_live_lease) ... ok
+test_migration_sql_retains_preexisting_table_rows (__main__.ActualSqlTests.test_migration_sql_retains_preexisting_table_rows) ... ok
+test_old_owner_cannot_write_after_lease_takeover (__main__.ActualSqlTests.test_old_owner_cannot_write_after_lease_takeover) ... ok
+test_output_logical_identity_is_unique (__main__.ActualSqlTests.test_output_logical_identity_is_unique) ... ok
+test_retry_waits_for_prior_worker_cleanup (__main__.ActualSqlTests.test_retry_waits_for_prior_worker_cleanup) ... ok
+test_source_uri_can_have_distinct_immutable_snapshot_ids (__main__.ActualSqlTests.test_source_uri_can_have_distinct_immutable_snapshot_ids) ... ok
+test_worker_start_failure_never_overwrites_cancelled_state (__main__.ActualSqlTests.test_worker_start_failure_never_overwrites_cancelled_state) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.004s
+
+OK
+test_cancel_receiver_is_not_exported (__main__.SourceConsistencyTests.test_cancel_receiver_is_not_exported) ... ok
+test_candidate_gate_is_enforced_at_dispatch (__main__.SourceConsistencyTests.test_candidate_gate_is_enforced_at_dispatch) ... ok
+test_default_strings_exist_for_all_code_references (__main__.SourceConsistencyTests.test_default_strings_exist_for_all_code_references) ... ok
+test_legacy_simulated_engines_are_not_in_production (__main__.SourceConsistencyTests.test_legacy_simulated_engines_are_not_in_production) ... ok
+test_no_font_binaries_in_project_sources (__main__.SourceConsistencyTests.test_no_font_binaries_in_project_sources) ... ok
+test_only_published_files_have_fileprovider_paths (__main__.SourceConsistencyTests.test_only_published_files_have_fileprovider_paths) ... ok
+test_resource_names_are_unique_per_locale (__main__.SourceConsistencyTests.test_resource_names_are_unique_per_locale) ... ok
+test_xml_files_parse (__main__.SourceConsistencyTests.test_xml_files_parse) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.085s
+
+OK
+PASS uncachedDistributionDoesNotAccessNetwork
+PASS missingPrerequisitesAreBlockedNotPassed
+PASS missing wrapper fails before JVM or downloads
+PASS invalid wrapper fails before JVM execution from a spaced path

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "network-guard",
+    "command": [
+      "python3",
+      "scripts/test-media-bootstrap.py"
+    ],
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "storage-sql",
+    "command": [
+      "python3",
+      "scripts/test-storage-sql.py"
+    ],
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "static",
+    "command": [
+      "python3",
+      "scripts/test-source-static.py"
+    ],
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "preflight-regression",
+    "command": [
+      "bash",
+      "scripts/tests/test-verify-local.sh"
+    ],
+    "exit_code": 0,
+    "status": "PASS"
+  },
+  {
+    "name": "launcher-regression",
+    "command": [
+      "bash",
+      "scripts/tests/test-launcher.sh"
+    ],
+    "exit_code": 0,
+    "status": "PASS"
+  }
+]

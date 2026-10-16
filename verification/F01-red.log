@@ -1,0 +1,2 @@
+FAIL missing explicit BLOCKED state
+bash: /mnt/data/UniversalUtilities/scripts/verify-local.sh: No such file or directory

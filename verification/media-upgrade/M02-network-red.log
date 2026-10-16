@@ -1,0 +1,140 @@
+test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) ... 
+  test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) (url='https://a:b@example.org/a') ... FAIL
+  test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) (url='https://example.org/\n') ... FAIL
+  test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) (url='https://example.org:bad/a') ... FAIL
+test_downgrade_redirect_is_rejected_even_with_consent (__main__.GuardTests.test_downgrade_redirect_is_rejected_even_with_consent) ... FAIL
+test_https_is_allowed (__main__.GuardTests.test_https_is_allowed) ... ok
+test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) ... 
+  test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='file:///etc/passwd') ... FAIL
+  test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='data:text/plain,abc') ... FAIL
+  test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='ftp://example.org/a') ... FAIL
+  test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='javascript:alert(1)') ... FAIL
+test_plain_http_requires_consent (__main__.GuardTests.test_plain_http_requires_consent) ... FAIL
+test_redirect_port_counts_as_origin (__main__.GuardTests.test_redirect_port_counts_as_origin) ... FAIL
+test_redirect_strips_cross_origin_credentials (__main__.GuardTests.test_redirect_strips_cross_origin_credentials) ... FAIL
+test_same_origin_preserves_authorization_but_not_cookie (__main__.GuardTests.test_same_origin_preserves_authorization_but_not_cookie) ... FAIL
+
+======================================================================
+FAIL: test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) (url='https://a:b@example.org/a')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 23, in test_credentials_and_controls_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) (url='https://example.org/\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 23, in test_credentials_and_controls_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_credentials_and_controls_are_rejected (__main__.GuardTests.test_credentials_and_controls_are_rejected) (url='https://example.org:bad/a')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 23, in test_credentials_and_controls_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_downgrade_redirect_is_rejected_even_with_consent (__main__.GuardTests.test_downgrade_redirect_is_rejected_even_with_consent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 26, in test_downgrade_redirect_is_rejected_even_with_consent
+    with self.assertRaises(ValueError): guard.redirect(req, 'http://example.org/a', True)
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='file:///etc/passwd')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 20, in test_non_network_schemes_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url, True)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='data:text/plain,abc')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 20, in test_non_network_schemes_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url, True)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='ftp://example.org/a')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 20, in test_non_network_schemes_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url, True)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_non_network_schemes_are_rejected (__main__.GuardTests.test_non_network_schemes_are_rejected) (url='javascript:alert(1)')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 20, in test_non_network_schemes_are_rejected
+    with self.subTest(url=url), self.assertRaises(ValueError): guard.validate_url(url, True)
+                                ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_plain_http_requires_consent (__main__.GuardTests.test_plain_http_requires_consent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 16, in test_plain_http_requires_consent
+    with self.assertRaises(ValueError): guard.validate_url('http://example.org/a')
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_redirect_port_counts_as_origin (__main__.GuardTests.test_redirect_port_counts_as_origin)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 37, in test_redirect_port_counts_as_origin
+    self.assertNotIn('Authorization', dict(guard.redirect(req, 'https://a.example:8443/b', False).header_items()))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'Authorization' unexpectedly found in {'Authorization': 'secret'}
+
+======================================================================
+FAIL: test_redirect_strips_cross_origin_credentials (__main__.GuardTests.test_redirect_strips_cross_origin_credentials)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 30, in test_redirect_strips_cross_origin_credentials
+    self.assertEqual(dict(redirected.header_items()), {'Accept':'*/*'})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'Authorization': 'secret', 'Cookie': 'secre[86 chars]*/*'} != {'Accept': '*/*'}
+- {'Accept': '*/*',
+?                 ^
+
++ {'Accept': '*/*'}
+?                 ^
+
+-  'Authorization': 'secret',
+-  'Cookie': 'secret',
+-  'Referer': 'https://a.example/private?token=x',
+-  'X-api-key': 'secret'}
+
+======================================================================
+FAIL: test_same_origin_preserves_authorization_but_not_cookie (__main__.GuardTests.test_same_origin_preserves_authorization_but_not_cookie)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-media-bootstrap.py", line 34, in test_same_origin_preserves_authorization_but_not_cookie
+    self.assertEqual(dict(redirected.header_items()), {'Authorization':'secret'})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'Authorization': 'secret', 'Cookie': 'secret'} != {'Authorization': 'secret'}
+- {'Authorization': 'secret', 'Cookie': 'secret'}
++ {'Authorization': 'secret'}
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.004s
+
+FAILED (failures=12)

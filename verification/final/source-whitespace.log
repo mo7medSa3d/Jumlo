@@ -1,0 +1,7 @@
+command: ["bash", "-c", "git diff --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts && git diff --cached --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts"]
+started_at_utc: 2026-10-16T12:40:10.555206+00:00
+scope: Staged and unstaged source diff whitespace only; excludes documentation/evidence
+
+
+exit_code: 0
+status: PASS

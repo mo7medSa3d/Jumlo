@@ -1,0 +1,6 @@
+command: ["bash", "scripts/tests/test-launcher.sh"]
+started_at_utc: 2026-10-16T14:29:42.874142+00:00
+PASS missing wrapper fails before JVM or downloads
+PASS invalid wrapper fails before JVM execution from a spaced path
+
+exit_code: 0

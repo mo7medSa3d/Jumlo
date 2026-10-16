@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">الأدوات الشاملة</string>
+    <string name="tagline">ملفاتك. أدواتك.</string>
+    <string name="tagline_subtitle">ملفاتك. أدواتك. معالجة محلية 100% بدون سحابة.</string>
+    <string name="offline_pledge_short">معالجة محلية 100%: مزامنة سحابية منعدمة • الملفات لا تغادر جهازك إطلاقاً</string>
+    <string name="offline_badge">الوضع الآمن غير المتصل</string>
+    <string name="local_only_badge">محلي فقط</string>
+
+    <!-- Navigation Dock -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_tools">الأدوات</string>
+    <string name="nav_downloads">التنزيلات</string>
+    <string name="nav_files">الملفات</string>
+
+    <!-- Welcome Launch -->
+    <string name="welcome_title">مرحباً بك في الأدوات الشاملة</string>
+    <string name="welcome_badge">معالجة محلية آمنة 100% • بيئة معزولة</string>
+    <string name="welcome_card_title">معالجة محلية 100% على الجهاز</string>
+    <string name="welcome_card_body">تتم معالجة جميع الملفات محلياً داخل بيئة الهاتف المعزولة. بدون حسابات سحابية وبدون تتبع.</string>
+    <string name="welcome_sandbox_active">نظام الملفات المحلي غير المتصل نشط</string>
+    <string name="welcome_pillars_header">أقسام الأدوات الرئيسية</string>
+    <string name="welcome_ready">جاهز</string>
+    <string name="welcome_get_started">ابدأ الآن</string>
+    <string name="welcome_privacy_licenses">هندسة الخصوصية والتراخيص</string>
+
+    <!-- Home -->
+    <string name="home_search_placeholder">البحث في الأدوات والملفات المحلية…</string>
+    <string name="pillar_pdf_title">ملفات PDF</string>
+    <string name="pillar_pdf_sub">8 أدوات جاهزة</string>
+    <string name="pillar_images_title">أدوات الصور</string>
+    <string name="pillar_images_sub">6 أدوات للمعالجة</string>
+    <string name="pillar_downloads_title">مدير التنزيلات</string>
+    <string name="pillar_downloads_sub">2 تنزيل نشط</string>
+    <string name="pillar_files_title">متصفح الملفات</string>
+    <string name="pillar_files_sub">142 ملف محفوظ</string>
+    <string name="quick_actions_title">الإجراءات السريعة والمفضلة</string>
+    <string name="action_customize">تخصيص</string>
+    <string name="recent_results_title">أحدث المخرجات المكتملة</string>
+    <string name="local_cache_badge">ذاكرة محلية</string>
+    <string name="filter_all">الكل</string>
+    <string name="filter_pdfs">PDF فقط</string>
+    <string name="filter_images">الصور</string>
+    <string name="filter_drafts">المسودات</string>
+    <string name="filter_archives">الأرشيف</string>
+    <string name="action_view">عرض</string>
+    <string name="action_open">فتح</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_change">تغيير</string>
+    <string name="action_reset">إعادة ضبط</string>
+    <string name="action_copy">نسخ</string>
+
+    <!-- Scoped Search -->
+    <string name="search_title">البحث في الأدوات والملفات</string>
+    <string name="search_matching_utilities">الأدوات المطابقة</string>
+    <string name="search_suggested_tools">أدوات مقترحة</string>
+    <string name="search_recent_matching_files">الملفات المطابقة في المساحة المحلية</string>
+    <string name="search_local_index_notice">يبحث فقط في الأدوات المثبتة والملفات المحلية. لا توجد فهرسة سحابية.</string>
+
+    <!-- Choose Source Import -->
+    <string name="import_title">استيراد الملفات</string>
+    <string name="import_subtitle">اختر ملفات الإدخال لأدوات PDF والصور. معالجة محلية 100%.</string>
+    <string name="import_received_share">تم الاستلام عبر مشاركة أندرويد</string>
+    <string name="import_use_shared">استخدام الملفات المشاركة</string>
+    <string name="import_photo_gallery">معرض الصور والوسائط</string>
+    <string name="import_device_files">ملفات الجهاز والتخزين</string>
+    <string name="import_my_files">ملفاتي (التخزين الداخلي للتطبيق)</string>
+    <string name="import_privacy_pledge">بدون رفع سحابي. لا يصل التطبيق إلى أي ملفات خارج المجلدات المحددة.</string>
+
+    <!-- Permission Education -->
+    <string name="perm_sheet_badge">نافذة استعادة النظام</string>
+    <string name="perm_allow_title">السماح بإشعارات تقدم المهام في الخلفية</string>
+    <string name="perm_allow_subtitle">تابع حالة التنزيلات والتحويلات أثناء استخدام تطبيقات أخرى أو عند قفل الشاشة.</string>
+    <string name="perm_grant_btn">منح إذن الإشعارات</string>
+    <string name="perm_continue_without">المتابعة بدون إشعارات</string>
+
+    <!-- Tools Catalog -->
+    <string name="tools_catalog_title">دليل الأدوات</string>
+    <string name="tools_count_badge">16 أداة</string>
+    <string name="tools_no_matching">لا توجد أدوات مطابقة</string>
+    <string name="tools_no_matching_sub">جميع الأدوات تعمل محلياً على جهازك. جرب البحث بكلمات مثل \'دمج\' أو \'تحويل\'.</string>
+    <string name="tools_reset_filters">إعادة ضبط الفلاتر</string>
+
+    <!-- PDF Tools -->
+    <string name="tool_images_to_pdf">صور إلى PDF</string>
+    <string name="tool_images_to_pdf_sub">تجميع فوري للصور في مستند PDF</string>
+    <string name="tool_merge_pdf">دمج ملفات PDF</string>
+    <string name="tool_merge_pdf_sub">دمج عدة ملفات PDF بدون فقد جودة</string>
+    <string name="tool_split_pdf">تقسيم مستند PDF</string>
+    <string name="tool_split_pdf_sub">تقسيم حسب عدد الصفحات أو النطاقات</string>
+    <string name="tool_organize_pages">ترتيب صفحات PDF</string>
+    <string name="tool_organize_pages_sub">إعادة ترتيب أو تدوير أو حذف الصفحات</string>
+    <string name="tool_extract_pages">استخراج صفحات PDF</string>
+    <string name="tool_extract_pages_sub">تصدير نطاقات صفحات محددة</string>
+    <string name="tool_pdf_to_images">تحويل PDF إلى صور</string>
+    <string name="tool_pdf_to_images_sub">تصدير الصفحات بصيغة JPG أو PNG</string>
+    <string name="tool_view_pdf">عارض PDF</string>
+    <string name="tool_view_pdf_sub">فحص وقراءة المستندات المحلية</string>
+    <string name="tool_pdf_expansion">ضغط PDF والعلامة المائية والترقيم</string>
+
+    <!-- Image Tools -->
+    <string name="tool_convert_images">تحويل الصور</string>
+    <string name="tool_convert_images_sub">تحويل دفعات WebP, PNG, JPG</string>
+    <string name="tool_resize_images">تغيير أبعاد الصور</string>
+    <string name="tool_resize_images_sub">تحجيم بالبكسل أو النسبة المئوية</string>
+    <string name="tool_crop_rotate_flip">قص وتدوير وقلب الصور</string>
+    <string name="tool_crop_rotate_flip_sub">نسب أبعاد قياسية وتعديل الاتجاه</string>
+    <string name="tool_compress_images">ضغط الصور</string>
+    <string name="tool_compress_images_sub">تقليل حجم الملف مع الحفاظ على الجودة</string>
+    <string name="tool_image_expansion">دمج الصور والعلامة المائية</string>
+
+    <!-- Download Tools -->
+    <string name="tool_new_download">تنزيل جديد</string>
+    <string name="tool_new_download_sub">لصق الرابط المباشر للتنزيل</string>
+    <string name="tool_batch_url">إدخال دفعة روابط</string>
+    <string name="tool_download_settings">إعدادات التنزيل</string>
+    <string name="tool_download_settings_sub">تفضيلات الشبكة ومجلد الحفظ</string>
+
+    <!-- File Tools -->
+    <string name="tool_browse_storage">تصفح التخزين</string>
+    <string name="tool_browse_storage_sub">فحص المجلدات الداخلية والممنوحة</string>
+    <string name="tool_create_zip">إنشاء أرشيف ZIP</string>
+    <string name="tool_create_zip_sub">ضغط الملفات في أرشيف محلي</string>
+    <string name="tool_extract_zip">فك ضغط ZIP</string>
+    <string name="tool_extract_zip_sub">استخراج ملفات أرشيف ZIP بأمان</string>
+    <string name="tool_secure_vault">الخزنة المشفرة (AES-256)</string>
+
+    <!-- Settings -->
+    <string name="settings_title">الإعدادات العامة</string>
+    <string name="settings_appearance_language">المظهر واللغة</string>
+    <string name="settings_haptic_feedback">الاستجابة اللمسية (الاهتزاز)</string>
+    <string name="settings_tool_defaults">الإعدادات الافتراضية للأدوات</string>
+    <string name="settings_download_prefs">تفضيلات التنزيل</string>
+    <string name="settings_storage_history_cache">التخزين والسجل وذاكرة التخزين المؤقت</string>
+    <string name="settings_privacy_permissions">الخصوصية والأذونات</string>
+    <string name="settings_offline_help">الدليل والمساعدة بدون اتصال</string>
+    <string name="settings_diagnostic_report">تقرير التشخيص الآمن</string>
+    <string name="settings_about">حول الأدوات الشاملة</string>
+    <string name="processing_channel">معالجة الملفات</string>
+    <string name="processing_title">جاري معالجة الملفات على هذا الجهاز</string>
+    <string name="processing_body">افتح التطبيق لرؤية التقدم والنتائج.</string>
+    <string name="processing_cancel">إلغاء</string>
+</resources>

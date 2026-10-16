@@ -1,0 +1,7 @@
+command: ["bash", "gradlew", "--offline", "--version"]
+started_at_utc: 2026-10-16T14:26:58.940921+00:00
+
+BLOCKED: WRAPPER_JAR_MISSING. Run scripts/restore-wrapper.sh --download explicitly on a network-enabled machine, or use a trusted local Gradle via scripts/verify-local.sh.
+
+exit_code: 2
+status: BLOCKED

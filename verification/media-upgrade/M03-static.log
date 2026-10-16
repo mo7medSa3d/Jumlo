@@ -1,0 +1,67 @@
+test_cancel_receiver_is_not_exported (__main__.SourceConsistencyTests.test_cancel_receiver_is_not_exported) ... ok
+test_candidate_gate_is_enforced_at_dispatch (__main__.SourceConsistencyTests.test_candidate_gate_is_enforced_at_dispatch) ... ok
+test_default_strings_exist_for_all_code_references (__main__.SourceConsistencyTests.test_default_strings_exist_for_all_code_references) ... FAIL
+test_legacy_simulated_engines_are_not_in_production (__main__.SourceConsistencyTests.test_legacy_simulated_engines_are_not_in_production) ... ok
+test_no_font_binaries_in_project_sources (__main__.SourceConsistencyTests.test_no_font_binaries_in_project_sources) ... ok
+test_only_published_files_have_fileprovider_paths (__main__.SourceConsistencyTests.test_only_published_files_have_fileprovider_paths) ... ok
+test_resource_names_are_unique_per_locale (__main__.SourceConsistencyTests.test_resource_names_are_unique_per_locale) ... ok
+test_xml_files_parse (__main__.SourceConsistencyTests.test_xml_files_parse) ... ok
+
+======================================================================
+FAIL: test_default_strings_exist_for_all_code_references (__main__.SourceConsistencyTests.test_default_strings_exist_for_all_code_references)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/uu-media/UniversalUtilities/scripts/test-source-static.py", line 22, in test_default_strings_exist_for_all_code_references
+    self.assertEqual(set(),used-names)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+AssertionError: Items in the second set but not the first:
+'media_intro'
+'media_browser_address'
+'media_error_site'
+'media_encoding_bitrate'
+'media_wifi'
+'media_approximate'
+'media_download_selected'
+'media_error_generic'
+'media_unmetered'
+'media_error_url'
+'media_no_upscale'
+'media_no_candidates'
+'media_error_session'
+'media_mux'
+'media_browser_error'
+'media_link'
+'media_browser_scope'
+'media_go'
+'media_analyzing'
+'media_duration'
+'media_error_runtime'
+'media_resolution_unknown'
+'media_http'
+'media_candidates_note'
+'media_silent'
+'media_cancel'
+'media_audio_only'
+'media_audio_format'
+'media_filename'
+'media_no_choices'
+'media_size_unknown'
+'media_video'
+'media_original_audio'
+'media_found'
+'media_limits'
+'media_close_browser'
+'media_browser'
+'media_analyze'
+'media_queueing'
+'media_error_format'
+'media_direct_instead'
+'media_analyze_page'
+'media_bitrate_unknown'
+'media_actual_qualities'
+'media_error_rate'
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.078s
+
+FAILED (failures=1)

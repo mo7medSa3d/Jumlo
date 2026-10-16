@@ -1,0 +1,18 @@
+{
+  "recorded_at_utc": "2026-10-16T14:26:56.308707+00:00",
+  "java": "openjdk version \"21.0.12.1\" 2026-08-18\nOpenJDK Runtime Environment (build 21.0.12.1+1-1-deb13u1-Debian)\nOpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-deb13u1-Debian, mixed mode, sharing)\n",
+  "kotlin": "info: kotlinc-jvm 1.9.0 (JRE 21.0.12.1+1-1-deb13u1-Debian)\n",
+  "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers",
+  "ffprobe": "ffprobe version 7.1.5-0+deb13u1 Copyright (c) 2007-2026 the FFmpeg developers",
+  "python": "Python 3.13.5",
+  "tools": {
+    "gradle": null,
+    "sdkmanager": null,
+    "adb": null
+  },
+  "android_home_present": false,
+  "wrapper_jar_present": false,
+  "project_baseline": "JDK17, Kotlin2.0.21, Gradle8.14, AGP8.10.1, SDK36, BuildTools36.0.0",
+  "native_media_dependencies": "io.github.junkfood02.youtubedl-android library and ffmpeg 0.18.1; not resolved/executed in this runner",
+  "host_media_scope": "Actual installed FFmpeg/ffprobe; NOT the bundled Android native runtime and not live platforms"
+}
