@@ -91,6 +91,10 @@ android {
         buildConfig = true
     }
 
+    lint {
+        abortOnError = true
+    }
+
     packaging {
         jniLibs.useLegacyPackaging = true
         resources {
