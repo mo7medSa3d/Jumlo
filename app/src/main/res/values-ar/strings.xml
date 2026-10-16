@@ -26,6 +26,9 @@
 
     <!-- Home -->
     <string name="home_search_placeholder">البحث في الأدوات والملفات المحلية…</string>
+    <string name="home_hero_title">أدوات ملفات قوية</string>
+    <string name="home_hero_subtitle">PDF والصور والأرشيفات والتنزيلات، تتم معالجتها على جهازك.</string>
+    <string name="transfer_activity_title">نشاط النقل</string>
     <string name="pillar_pdf_title">ملفات PDF</string>
     <string name="pillar_pdf_sub">8 أدوات جاهزة</string>
     <string name="pillar_images_title">أدوات الصور</string>

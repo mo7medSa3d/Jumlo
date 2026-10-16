@@ -27,8 +27,10 @@ android {
         applicationId = "com.jumlo.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10842
-        versionName = "1.4-media-candidate"
+        // Release versioning: pass -PversionCode / -PversionName at build time
+        // (or set them in gradle.properties); defaults keep local builds working.
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
+        versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
         buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -39,6 +41,10 @@ android {
     }
 
     sourceSets["main"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+
+    // pdfbox-android keeps standard-14 font metrics in AAR assets (loaded via
+    // PDFBoxResourceLoader on device); expose them on the unit-test classpath for JVM.
+    sourceSets["test"].resources.srcDir(layout.buildDirectory.dir("generated/pdfboxTestAssets/assets"))
 
     signingConfigs {
         create("release") {
@@ -89,12 +95,26 @@ android {
         buildConfig = true
     }
 
+    lint {
+        abortOnError = true
+    }
+
+    testOptions {
+        // pdfbox-android JVM tests hit android.util.Log inside font parsing.
+        unitTests.isReturnDefaultValues = true
+    }
+
     packaging {
         jniLibs.useLegacyPackaging = true
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+val pdfboxAar = configurations.create("pdfboxAar") {
+    isCanBeResolved = true
+    isTransitive = false
 }
 
 dependencies {
@@ -134,10 +154,16 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.androidx.biometric)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.window)
+    implementation(libs.pdfbox.android)
+    pdfboxAar(libs.pdfbox.android)
+    implementation(libs.zip4j)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.view)
+    implementation(libs.mlkit.text.recognition)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -147,6 +173,18 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+val extractPdfboxTestAssets by tasks.registering(Copy::class) {
+    from(pdfboxAar.map { zipTree(it) })
+    include("assets/**")
+    into(layout.buildDirectory.dir("generated/pdfboxTestAssets"))
+}
+
+afterEvaluate {
+    tasks.matching { it.name.endsWith("UnitTestJavaRes") }.configureEach {
+        dependsOn(extractPdfboxTestAssets)
+    }
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
