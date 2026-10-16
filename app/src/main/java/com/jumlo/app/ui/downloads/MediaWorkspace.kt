@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -20,7 +19,6 @@ import java.util.Locale
 @Composable fun MediaWorkspace(initialUrl:String,onQueued:(String)->Unit,onDirect:(String)->Unit,viewModel:MediaViewModel=hiltViewModel()) {
     val s by viewModel.state.collectAsStateWithLifecycle()
     var browser by remember { mutableStateOf(false) }
-    var tosAck by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(initialUrl) { viewModel.acceptSharedUrl(initialUrl) }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
     if(browser) {
@@ -31,20 +29,9 @@ import java.util.Locale
         LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             item { Text(stringResource(R.string.media_intro),style=MaterialTheme.typography.bodyMedium) }
             item {
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.media_tos_notice),style=MaterialTheme.typography.bodySmall)
-                        Row(verticalAlignment=Alignment.CenterVertically) {
-                            Checkbox(checked=tosAck,onCheckedChange={tosAck=it},enabled=!s.submitting)
-                            Text(stringResource(R.string.media_tos_ack),style=MaterialTheme.typography.bodySmall,modifier=Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-            item {
                 OutlinedTextField(value=s.url,onValueChange=viewModel::editUrl,enabled=!s.submitting,label={Text(stringResource(R.string.media_link))},modifier=Modifier.fillMaxWidth(),maxLines=4)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Button(onClick=viewModel::analyze,enabled=tosAck && s.url.isNotBlank() && !s.analyzing && !s.submitting) {Text(stringResource(R.string.media_analyze))}
+                    Button(onClick=viewModel::analyze,enabled=s.url.isNotBlank() && !s.analyzing && !s.submitting) {Text(stringResource(R.string.media_analyze))}
                     OutlinedButton(onClick={viewModel.cancelAnalysis();browser=true},enabled=!s.submitting) {Text(stringResource(R.string.media_browser))}
                     if(s.analyzing) TextButton(onClick=viewModel::cancelAnalysis) {Text(stringResource(R.string.media_cancel))}
                 }
@@ -100,7 +87,7 @@ import java.util.Locale
             item { Text(stringResource(R.string.media_limits),style=MaterialTheme.typography.bodySmall);TextButton(onClick={onDirect(s.url)}) {Text(stringResource(R.string.media_direct_instead))} }
         }
         Surface(tonalElevation=3.dp) {
-            Button(onClick={viewModel.submit(onQueued)},enabled=tosAck && s.selectedKey!=null && !s.analyzing && !s.submitting,modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
+            Button(onClick={viewModel.submit(onQueued)},enabled=s.selectedKey!=null && !s.analyzing && !s.submitting,modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
                 Text(stringResource(if(s.submitting) R.string.media_queueing else R.string.media_download_selected))
             }
         }

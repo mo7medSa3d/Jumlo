@@ -1,14 +1,12 @@
 package com.jumlo.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -32,75 +29,85 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Compress
+import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Crop
+import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DragIndicator
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderZip
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Merge
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.model.AppLanguage
@@ -108,33 +115,205 @@ import com.jumlo.app.model.DockTab
 import com.jumlo.app.model.ManagedFileItem
 import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.ui.theme.QuietTheme
-import kotlin.math.roundToInt
 
 /**
- * Maps Stitch icon strings to Material Rounded Icons.
+ * Maps icon names (Material Symbols style names used across the catalog)
+ * to Google Material Icons (Rounded set, from material-icons-extended).
  */
 fun resolveStitchIcon(iconName: String): ImageVector = when (iconName) {
-    "picture_as_pdf" -> Icons.Rounded.PictureAsPdf
-    "photo_library", "image", "collections" -> Icons.Rounded.PhotoLibrary
-    "download", "file_download", "add_link" -> Icons.Rounded.Download
+    "picture_as_pdf", "pdf", "description" -> Icons.Rounded.PictureAsPdf
+    "photo_library", "image", "collections", "photo" -> Icons.Rounded.PhotoLibrary
+    "download", "file_download", "add_link", "cloud_download" -> Icons.Rounded.Download
     "folder", "folder_open", "folder_shared" -> Icons.Rounded.Folder
-    "folder_zip", "archive" -> Icons.Rounded.FolderZip
-    "unarchive" -> Icons.Rounded.Unarchive
-    "merge", "call_merge", "file_copy" -> Icons.Rounded.Merge
+    "folder_zip", "archive", "zip" -> Icons.Rounded.FolderZip
+    "unarchive", "extract" -> Icons.Rounded.Unarchive
+    "merge", "call_merge", "file_copy", "layers" -> Icons.Rounded.Merge
     "crop", "crop_rotate", "aspect_ratio" -> Icons.Rounded.Crop
-    "compress" -> Icons.Rounded.Compress
-    "visibility", "file_open" -> Icons.Rounded.Visibility
-    "lock", "enhanced_encryption", "security" -> Icons.Rounded.Lock
-    "verified_user", "shield" -> Icons.Rounded.VerifiedUser
-    "settings", "tune" -> Icons.Rounded.Tune
+    "compress", "press", "speed" -> Icons.Rounded.Compress
+    "visibility", "file_open", "preview" -> Icons.Rounded.Visibility
+    "lock", "enhanced_encryption", "password" -> Icons.Rounded.Lock
+    "security", "shield_lock" -> Icons.Rounded.Security
+    "verified_user", "shield", "verified" -> Icons.Rounded.VerifiedUser
+    "settings", "tune", "tune_rounded" -> Icons.Rounded.Tune
     "search" -> Icons.Rounded.Search
     "share", "ios_share" -> Icons.Rounded.Share
-    else -> Icons.Rounded.AutoAwesome
+    "home" -> Icons.Rounded.Home
+    "grid_view", "apps", "build", "tools" -> Icons.Rounded.GridView
+    "content_cut", "cut", "scissors" -> Icons.Rounded.ContentCut
+    "bolt", "auto_fix", "flash_on" -> Icons.Rounded.Bolt
+    "dashboard" -> Icons.Rounded.Dashboard
+    "history", "schedule_history" -> Icons.Rounded.History
+    "schedule", "timer" -> Icons.Rounded.Schedule
+    "storage", "hard_drive" -> Icons.Rounded.Storage
+    "cloud", "cloud_sync", "sync" -> Icons.Rounded.Cloud
+    "link", "url" -> Icons.Rounded.Link
+    "language", "translate" -> Icons.Rounded.Language
+    "dark_mode" -> Icons.Rounded.DarkMode
+    "fingerprint", "biometric" -> Icons.Rounded.Fingerprint
+    "notifications", "notifications_active" -> Icons.Rounded.Notifications
+    "star", "favorite" -> Icons.Rounded.Star
+    "add", "new" -> Icons.Rounded.Add
+    "edit", "rename" -> Icons.Rounded.Edit
+    "delete", "trash" -> Icons.Rounded.Delete
+    "warning", "error" -> Icons.Rounded.Warning
+    "info" -> Icons.Rounded.Description
+    "person", "account" -> Icons.Rounded.Person
+    "swap", "compare" -> Icons.Rounded.SwapHoriz
+    "build_circle", "magic" -> Icons.Rounded.Build
+    else -> Icons.Rounded.Bolt
+}
+
+/** Icon for a file by its extension. */
+fun fileIconFor(extension: String): ImageVector = when (extension.lowercase()) {
+    "pdf" -> Icons.Rounded.PictureAsPdf
+    "jpg", "jpeg", "png", "webp", "heic", "heif", "gif", "bmp", "avif" -> Icons.Rounded.Image
+    "zip", "tar", "gz", "tgz", "7z", "rar" -> Icons.Rounded.FolderZip
+    "txt", "md", "doc", "docx", "rtf" -> Icons.Rounded.Description
+    else -> Icons.Rounded.InsertDriveFile
+}
+
+// ---------------------------------------------------------------------------
+// Shared building blocks
+// ---------------------------------------------------------------------------
+
+/** Round tonal icon button used in app bars and toolbars. */
+@Composable
+fun QuietTonalIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 44.dp,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.size(size).semantics { this.contentDescription = contentDescription },
+        shape = CircleShape,
+        color = containerColor
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+/** Square-ish colored icon tile (the signature element of every list item and tool card). */
+@Composable
+fun QuietIconTile(
+    icon: ImageVector,
+    tint: Color,
+    container: Color,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 48.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(size / 3))
+            .background(container),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(size / 2))
+    }
+}
+
+/** Section heading with optional trailing text, e.g. "Recent results   See all". */
+@Composable
+fun QuietSectionTitle(
+    text: String,
+    modifier: Modifier = Modifier,
+    trailingText: String? = null,
+    onTrailingClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = text,
+            style = QuietTheme.typography.sectionTitle,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        if (trailingText != null && onTrailingClick != null) {
+            TextButton(onClick = onTrailingClick) {
+                Text(trailingText, style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
 }
 
 /**
- * Quiet Precision Floating Dock (380dp wide, 80dp tall, 32dp radius, 12dp above nav bar).
- * Features 4 equal slots: Home, Tools, Downloads, Files with 64x32dp active pill indicator.
+ * Hero banner: gradient "aurora" card used at the top of the home screen.
+ */
+@Composable
+fun QuietHero(
+    title: String,
+    subtitle: String,
+    icon: ImageVector = Icons.Rounded.Bolt,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val colors = MaterialTheme.colorScheme
+    val brush = Brush.linearGradient(listOf(colors.primary, colors.tertiary))
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(QuietTheme.shapes.card)
+            .background(brush)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(QuietTheme.spacing.cardInteriorPadding + 6.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = title,
+                    style = QuietTheme.typography.screenTitle,
+                    color = colors.onPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = QuietTheme.typography.metadata,
+                    color = colors.onPrimary.copy(alpha = 0.85f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(colors.onPrimary.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(32.dp))
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+
+private fun dockIcon(tab: DockTab, selected: Boolean): ImageVector = when (tab) {
+    DockTab.HOME -> Icons.Rounded.Home
+    DockTab.TOOLS -> Icons.Rounded.GridView
+    DockTab.DOWNLOADS -> Icons.Rounded.Download
+    DockTab.FILES -> Icons.Rounded.Folder
+}
+
+/**
+ * Floating pill navigation for compact widths. The active tab expands into a
+ * labelled capsule; the others collapse to icons.
  */
 @Composable
 fun QuietFloatingDock(
@@ -155,82 +334,34 @@ fun QuietFloatingDock(
         Surface(
             modifier = Modifier
                 .widthIn(max = QuietTheme.spacing.dockWidth)
-                .fillMaxWidth(0.92f)
+                .fillMaxWidth(0.94f)
                 .height(QuietTheme.spacing.dockHeight)
                 .shadow(
-                    elevation = 16.dp,
+                    elevation = 24.dp,
                     shape = QuietTheme.shapes.dockPill,
-                    ambientColor = Color.Black.copy(alpha = 0.14f),
-                    spotColor = Color.Black.copy(alpha = 0.18f)
+                    ambientColor = Color.Black.copy(alpha = 0.18f),
+                    spotColor = Color.Black.copy(alpha = 0.22f)
                 ),
             shape = QuietTheme.shapes.dockPill,
             color = pillars.dockSurface,
             border = BorderStroke(1.dp, pillars.dockBorder)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DockTab.entries.forEach { tab ->
                     val isSelected = tab == selectedTab
                     val label = if (language == AppLanguage.ARABIC) tab.labelAr else tab.labelEn
-                    val icon = when (tab) {
-                        DockTab.HOME -> Icons.Rounded.Home
-                        DockTab.TOOLS -> Icons.Rounded.Build
-                        DockTab.DOWNLOADS -> Icons.Rounded.Download
-                        DockTab.FILES -> Icons.Rounded.Folder
-                    }
-
-                    val pillBg by animateColorAsState(
-                        targetValue = if (isSelected) pillars.activePillContainer else Color.Transparent,
-                        animationSpec = tween(220),
-                        label = "dockPillBg"
+                    NavItem(
+                        icon = dockIcon(tab, isSelected),
+                        label = label,
+                        selected = isSelected,
+                        vertical = false,
+                        onClick = { onSelectTab(tab) },
+                        modifier = Modifier.weight(if (isSelected) 1.7f else 1f).fillMaxHeight()
                     )
-                    val iconTint by animateColorAsState(
-                        targetValue = if (isSelected) pillars.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = tween(220),
-                        label = "dockIconTint"
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(24.dp))
-                            .clickable { onSelectTab(tab) }
-                            .semantics { contentDescription = label },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(64.dp)
-                                .height(32.dp)
-                                .clip(QuietTheme.shapes.activeIndicatorPill)
-                                .background(pillBg),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = iconTint,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = label,
-                            style = QuietTheme.typography.navigation.copy(
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
-                            ),
-                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
             }
         }
@@ -238,7 +369,7 @@ fun QuietFloatingDock(
 }
 
 /**
- * Permanent 96dp Left-Hand Vertical Navigation Rail for Expanded Breakpoints (>= 840dp).
+ * Permanent vertical navigation rail for expanded widths (>= 840dp).
  */
 @Composable
 fun QuietExpandedNavigationRail(
@@ -249,55 +380,99 @@ fun QuietExpandedNavigationRail(
 ) {
     val pillars = QuietTheme.pillars
     Surface(
-        modifier = modifier
-            .width(96.dp)
-            .fillMaxHeight(),
-        color = pillars.cardSurface,
+        modifier = modifier.width(104.dp).fillMaxHeight(),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(1.dp, pillars.cardBorder)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 24.dp),
+            modifier = Modifier.fillMaxSize().padding(vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)
         ) {
             DockTab.entries.forEach { tab ->
                 val isSelected = tab == selectedTab
                 val label = if (language == AppLanguage.ARABIC) tab.labelAr else tab.labelEn
-                val icon = when (tab) {
-                    DockTab.HOME -> Icons.Rounded.Home
-                    DockTab.TOOLS -> Icons.Rounded.Build
-                    DockTab.DOWNLOADS -> Icons.Rounded.Download
-                    DockTab.FILES -> Icons.Rounded.Folder
-                }
-                Column(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable { onSelectTab(tab) }
-                        .padding(vertical = 8.dp, horizontal = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(64.dp)
-                            .height(32.dp)
-                            .clip(QuietTheme.shapes.activeIndicatorPill)
-                            .background(if (isSelected) pillars.activePillContainer else Color.Transparent),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = if (isSelected) pillars.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
+                NavItem(
+                    icon = dockIcon(tab, isSelected),
+                    label = label,
+                    selected = isSelected,
+                    vertical = true,
+                    onClick = { onSelectTab(tab) },
+                    modifier = Modifier.width(88.dp).height(68.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    vertical: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val pillars = QuietTheme.pillars
+    val pillBg by animateColorAsState(
+        targetValue = if (selected) pillars.activePillContainer else Color.Transparent,
+        animationSpec = tween(260),
+        label = "navPillBg"
+    )
+    val tint by animateColorAsState(
+        targetValue = if (selected) pillars.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(260),
+        label = "navTint"
+    )
+    Box(
+        modifier = modifier
+            .clip(QuietTheme.shapes.activeIndicatorPill)
+            .clickable(onClick = onClick)
+            .semantics {
+                contentDescription = label
+                role = Role.Tab
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (vertical) {
+            Column(
+                modifier = Modifier
+                    .clip(QuietTheme.shapes.activeIndicatorPill)
+                    .background(pillBg)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .animateContentSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = label,
+                    style = QuietTheme.typography.navigation,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .clip(QuietTheme.shapes.activeIndicatorPill)
+                    .background(pillBg)
+                    .padding(horizontal = if (selected) 16.dp else 14.dp, vertical = 10.dp)
+                    .animateContentSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+                if (selected) {
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = label,
-                        style = QuietTheme.typography.navigation,
-                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                        style = QuietTheme.typography.navigation.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+                        color = tint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -306,7 +481,7 @@ fun QuietExpandedNavigationRail(
 }
 
 /**
- * Standard Quiet Precision Top App Bar for Root Pillar Screens.
+ * Root top bar: large title, badge, and tonal action buttons with a brand avatar.
  */
 @Composable
 fun QuietRootTopBar(
@@ -317,15 +492,12 @@ fun QuietRootTopBar(
     onVaultClick: (() -> Unit)? = null
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    Surface(
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.94f),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    val colors = MaterialTheme.colorScheme
+    Surface(color = colors.background, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = statusTop)
-                .height(64.dp)
+                .padding(top = statusTop + 8.dp, bottom = 6.dp)
                 .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -338,58 +510,41 @@ fun QuietRootTopBar(
                 Text(
                     text = title,
                     style = QuietTheme.typography.screenTitle,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = colors.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (badgeText != null) {
                     QuietBadge(
                         text = badgeText,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        containerColor = colors.primaryContainer,
+                        contentColor = colors.onPrimaryContainer
                     )
                 }
             }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (onSearchClick != null) {
-                    IconButton(
-                        onClick = onSearchClick,
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    QuietTonalIconButton(Icons.Rounded.Search, "Search", onSearchClick)
                 }
-                IconButton(
-                    onClick = onSettingsClick,
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                QuietTonalIconButton(Icons.Rounded.Settings, "Settings", onSettingsClick)
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable { onVaultClick?.invoke() },
+                        .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))
+                        .clickable { onVaultClick?.invoke() }
+                        .semantics { contentDescription = "Profile & Vault" },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Person,
-                        contentDescription = "Profile & Vault",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = null,
+                        tint = colors.onPrimary,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -398,7 +553,7 @@ fun QuietRootTopBar(
 }
 
 /**
- * Standard Workspace / Subscreen Top App Bar with Back Navigation, Subtitle, and Action Slot.
+ * Workspace top bar: back button, title with optional subtitle and pillar badge, trailing actions.
  */
 @Composable
 fun QuietWorkspaceTopBar(
@@ -421,15 +576,13 @@ fun QuietWorkspaceTopBar(
     }
 
     Surface(
-        color = MaterialTheme.colorScheme.background.copy(alpha = 0.96f),
-        border = BorderStroke(1.dp, pillars.cardBorder),
+        color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = statusTop)
-                .height(68.dp)
+                .padding(top = statusTop + 6.dp, bottom = 8.dp)
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -438,20 +591,11 @@ fun QuietWorkspaceTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                QuietTonalIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack)
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 4.dp)
+                        .padding(start = 12.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -462,14 +606,11 @@ fun QuietWorkspaceTopBar(
                             style = QuietTheme.typography.sectionTitle,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                         if (badgeText != null) {
-                            QuietBadge(
-                                text = badgeText,
-                                containerColor = badgeBg,
-                                contentColor = badgeFg
-                            )
+                            QuietBadge(text = badgeText, containerColor = badgeBg, contentColor = badgeFg)
                         }
                     }
                     if (!subtitle.isNullOrBlank()) {
@@ -486,62 +627,48 @@ fun QuietWorkspaceTopBar(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 trailingContent?.invoke(this)
                 if (onMoreClick != null) {
-                    IconButton(
-                        onClick = onMoreClick,
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    QuietTonalIconButton(Icons.Rounded.MoreVert, "More options", onMoreClick)
                 }
             }
         }
     }
 }
 
-/**
- * Tactile Card Surface (20dp radius, 16dp internal padding, 1px hairline border).
- */
+// ---------------------------------------------------------------------------
+// Surfaces, badges, buttons
+// ---------------------------------------------------------------------------
+
+/** Soft, layered card (28dp radius, hairline border, tonal fill). */
 @Composable
 fun QuietCard(
     modifier: Modifier = Modifier,
     containerColor: Color = QuietTheme.pillars.cardSurface,
     borderColor: Color = QuietTheme.pillars.cardBorder,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(QuietTheme.spacing.cardInteriorPadding),
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val cardModifier = if (onClick != null) {
-        modifier
-            .clip(QuietTheme.shapes.card)
-            .clickable(onClick = onClick)
-    } else {
-        modifier
-    }
-
+    val shape = QuietTheme.shapes.card
+    val clickModifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier
     Surface(
-        modifier = cardModifier,
-        shape = QuietTheme.shapes.card,
+        modifier = modifier.then(clickModifier),
+        shape = shape,
         color = containerColor,
         border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content
         )
     }
 }
 
-/**
- * Semantic Pillar Badge / Tag.
- */
+/** Pill-shaped status or category badge. */
 @Composable
 fun QuietBadge(
     text: String,
@@ -550,36 +677,27 @@ fun QuietBadge(
     leadingIcon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier,
-        shape = QuietTheme.shapes.thumbnail,
-        color = containerColor
+    Row(
+        modifier = modifier
+            .clip(QuietTheme.shapes.activeIndicatorPill)
+            .background(containerColor)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            if (leadingIcon != null) {
-                Icon(
-                    imageVector = leadingIcon,
-                    contentDescription = null,
-                    tint = contentColor,
-                    modifier = Modifier.size(13.dp)
-                )
-            }
-            Text(
-                text = text,
-                style = QuietTheme.typography.badge,
-                color = contentColor
-            )
+        if (leadingIcon != null) {
+            Icon(leadingIcon, contentDescription = null, tint = contentColor, modifier = Modifier.size(14.dp))
         }
+        Text(
+            text = text,
+            style = QuietTheme.typography.badge,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
-/**
- * Primary Action Button (52dp height, 16dp radius, #4F3DFF in light / #8F86FF in dark).
- */
 @Composable
 fun QuietPrimaryButton(
     text: String,
@@ -592,37 +710,26 @@ fun QuietPrimaryButton(
 ) {
     Button(
         onClick = onClick,
+        modifier = modifier.height(QuietTheme.spacing.primaryButtonHeight),
         enabled = enabled,
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
-            contentColor = contentColor
+            contentColor = contentColor,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .height(QuietTheme.spacing.primaryButtonHeight)
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
     ) {
         if (leadingIcon != null) {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
+            Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
         }
-        Text(
-            text = text,
-            style = QuietTheme.typography.button,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Text(text = text, style = QuietTheme.typography.button, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/**
- * Tonal Pillar Button (44dp height, 16dp radius).
- */
 @Composable
 fun QuietTonalButton(
     text: String,
@@ -634,34 +741,24 @@ fun QuietTonalButton(
 ) {
     Button(
         onClick = onClick,
+        modifier = modifier.height(QuietTheme.spacing.tonalButtonHeight),
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor
         ),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        modifier = modifier.height(QuietTheme.spacing.tonalButtonHeight)
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp)
     ) {
         if (leadingIcon != null) {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
+            Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
         }
-        Text(
-            text = text,
-            style = QuietTheme.typography.metadataStrong,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Text(text = text, style = QuietTheme.typography.metadataStrong.copy(fontSize = 15.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/**
- * Standard 52dp Search Bar with Voice & Filter triggers.
- */
+/** Pill search field. With [onClickBar] it behaves as a tappable launcher. */
 @Composable
 fun QuietSearchBar(
     query: String,
@@ -671,90 +768,70 @@ fun QuietSearchBar(
     onClickBar: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val pillars = QuietTheme.pillars
+    val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
-            .let { if (onClickBar != null) it.clickable { onClickBar() } else it },
-        shape = QuietTheme.shapes.inputField,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(
-            width = if (query.isNotEmpty()) 2.dp else 1.dp,
-            color = if (query.isNotEmpty()) pillars.primaryActionBackground else pillars.cardBorder
-        )
+            .height(56.dp)
+            .then(if (onClickBar != null) Modifier.clickable(onClick = onClickBar) else Modifier),
+        shape = QuietTheme.shapes.button,
+        color = colors.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxSize().padding(start = 18.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            if (onClickBar != null && query.isEmpty()) {
-                Text(
-                    text = placeholder,
-                    style = QuietTheme.typography.body,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            } else {
-                TextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    placeholder = {
-                        Text(
-                            text = placeholder,
-                            style = QuietTheme.typography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    singleLine = true,
-                    textStyle = QuietTheme.typography.body.copy(color = MaterialTheme.colorScheme.onSurface),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            if (query.isNotEmpty()) {
-                IconButton(
-                    onClick = onClear,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Clear search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+            Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                if (onClickBar != null) {
+                    Text(
+                        text = placeholder,
+                        style = QuietTheme.typography.body,
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    if (query.isEmpty()) {
+                        Text(text = placeholder, style = QuietTheme.typography.body, color = colors.onSurfaceVariant, maxLines = 1)
+                    }
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        singleLine = true,
+                        textStyle = QuietTheme.typography.body.copy(color = colors.onSurface),
+                        cursorBrush = SolidColor(colors.primary),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
-            Icon(
-                imageVector = Icons.Rounded.Mic,
-                contentDescription = "Voice search",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
+            if (query.isNotEmpty() && onClickBar == null) {
+                QuietTonalIconButton(
+                    icon = Icons.Rounded.Close,
+                    contentDescription = "Clear",
+                    onClick = onClear,
+                    size = 40.dp,
+                    containerColor = colors.surfaceContainerHighest
+                )
+            }
         }
     }
 }
 
-/**
- * Standard 68dp File Representation Row with 48dp leading pillar icon/thumbnail,
- * title (16/24 weight 500), tabular metadata subtitle (14/20), and trailing action/checkbox.
- */
+/** Color family used for a file's icon tile, derived from its type. */
+@Composable
+private fun fileTint(extension: String): Pair<Color, Color> {
+    val p = QuietTheme.pillars
+    return when (extension.lowercase()) {
+        "pdf" -> p.pdfPrimary to p.pdfContainer
+        "jpg", "jpeg", "png", "webp", "heic", "heif", "gif", "bmp", "avif" -> p.imagesPrimary to p.imagesContainer
+        "zip", "tar", "gz", "tgz", "7z", "rar" -> p.filesPrimary to p.filesContainer
+        else -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.primaryContainer
+    }
+}
+
+/** File list row with a colored type tile, metadata line and optional selection. */
 @Composable
 fun QuietFileRow(
     file: ManagedFileItem,
@@ -766,83 +843,54 @@ fun QuietFileRow(
     onTrailingAction: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val pillars = QuietTheme.pillars
-    val (iconBg, iconTint, iconVec) = when (file.extension.lowercase()) {
-        "pdf" -> Triple(pillars.pdfContainer, pillars.pdfPrimary, Icons.Rounded.PictureAsPdf)
-        "webp", "jpg", "jpeg", "png", "heic" -> Triple(pillars.imagesContainer, pillars.imagesPrimary, Icons.Rounded.PhotoLibrary)
-        "zip", "tar.gz" -> Triple(pillars.filesContainer, pillars.filesPrimary, Icons.Rounded.FolderZip)
-        else -> Triple(pillars.downloadsContainer, pillars.downloadsPrimary, Icons.Rounded.Description)
-    }
+    val (tint, container) = fileTint(file.extension)
+    val isRtl = language.isRtl
+    val modified = if (isRtl) file.modifiedLabelAr else file.modifiedLabelEn
+    val details = buildList {
+        add(file.formattedSize)
+        file.pageCount?.let { add(if (isRtl) "$it صفحة" else "$it pages") }
+        file.itemCount?.let { add(if (isRtl) "$it عنصر" else "$it items") }
+        file.dimensions?.let { add(it) }
+        add(modified)
+    }.joinToString("  ·  ")
+    val selected = file.isSelected
 
-    val subtitle = buildString {
-        if (file.pageCount != null) append("${file.pageCount} pages · ")
-        if (file.itemCount != null) append("${file.itemCount} items · ")
-        if (file.dimensions != null) append("${file.dimensions} · ")
-        append(file.formattedSize)
-        append(" · ")
-        append(if (language == AppLanguage.ARABIC) file.modifiedLabelAr else file.modifiedLabelEn)
-    }
-
-    QuietCard(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-        borderColor = if (file.isSelected) pillars.primaryActionBackground else pillars.cardBorder,
-        onClick = {
-            if (showCheckbox && onToggleSelect != null) {
-                onToggleSelect()
-            } else {
-                onClick()
-            }
-        }
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(26.dp),
+        color = if (selected) QuietTheme.pillars.activePillContainer else MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(QuietTheme.spacing.fileRowStandardHeight)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (showCheckbox) {
-                QuietCheckbox(
-                    checked = file.isSelected,
-                    onCheckedChange = { onToggleSelect?.invoke() }
-                )
+                QuietCheckbox(checked = selected, onCheckedChange = { onToggleSelect?.invoke() })
+                Spacer(modifier = Modifier.width(10.dp))
             }
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(QuietTheme.shapes.thumbnail)
-                    .background(iconBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = iconVec,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    QuietBadge(
-                        text = file.extension.uppercase(),
-                        containerColor = iconBg,
-                        contentColor = iconTint
-                    )
-                    Text(
-                        text = file.name,
-                        style = QuietTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+            QuietIconTile(
+                icon = fileIconFor(file.extension),
+                tint = tint,
+                container = container,
+                size = 48.dp
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = subtitle,
+                    text = file.name,
+                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = details,
                     style = QuietTheme.typography.metadata,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -850,63 +898,56 @@ fun QuietFileRow(
                 )
             }
             if (trailingActionText != null && onTrailingAction != null) {
-                QuietTonalButton(
-                    text = trailingActionText,
-                    onClick = onTrailingAction
-                )
-            } else {
-                IconButton(
-                    onClick = onClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = "File actions",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                TextButton(onClick = onTrailingAction) {
+                    Text(trailingActionText, style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
                 }
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
 }
 
-/**
- * Custom 20dp Quiet Precision Checkbox with 6dp radius.
- */
+/** Animated rounded checkbox. */
 @Composable
 fun QuietCheckbox(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val pillars = QuietTheme.pillars
+    val colors = MaterialTheme.colorScheme
+    val fill by animateColorAsState(
+        targetValue = if (checked) colors.primary else Color.Transparent,
+        animationSpec = tween(200),
+        label = "checkFill"
+    )
+    val stroke by animateColorAsState(
+        targetValue = if (checked) colors.primary else colors.outline,
+        animationSpec = tween(200),
+        label = "checkStroke"
+    )
     Box(
         modifier = modifier
-            .size(22.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (checked) pillars.primaryActionBackground else Color.Transparent)
-            .border(
-                width = 2.dp,
-                color = if (checked) pillars.primaryActionBackground else MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(6.dp)
-            )
-            .clickable { onCheckedChange(!checked) },
+            .size(26.dp)
+            .clip(RoundedCornerShape(9.dp))
+            .background(fill)
+            .border(2.dp, stroke, RoundedCornerShape(9.dp))
+            .clickable { onCheckedChange(!checked) }
+            .semantics { role = Role.Checkbox },
         contentAlignment = Alignment.Center
     ) {
         if (checked) {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                tint = pillars.primaryActionText,
-                modifier = Modifier.size(15.dp)
-            )
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(18.dp))
         }
     }
 }
 
-/**
- * Interactive Split-Screen Before/After Image Texture Inspector (used in Compress Images img_04).
- */
+/** Side-by-side before/after comparison tile. */
 @Composable
 fun QuietBeforeAfterPreview(
     fileName: String,
@@ -915,144 +956,105 @@ fun QuietBeforeAfterPreview(
     compressedLabel: String,
     modifier: Modifier = Modifier
 ) {
-    var splitFraction by remember { mutableFloatStateOf(0.52f) }
-    val pillars = QuietTheme.pillars
-
-    QuietCard(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(0.dp)
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(QuietTheme.shapes.card)
+            .background(QuietTheme.pillars.cardSurface)
+            .border(1.dp, QuietTheme.pillars.cardBorder, QuietTheme.shapes.card)
+            .padding(QuietTheme.spacing.cardInteriorPadding),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(210.dp)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { change, dragAmount ->
-                        change.consume()
-                        val delta = dragAmount / size.width.toFloat().coerceAtLeast(1f)
-                        splitFraction = (splitFraction + delta).coerceIn(0.15f, 0.85f)
-                    }
-                }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = fileName,
+                style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            QuietBadge(text = resolution, containerColor = colors.secondaryContainer, contentColor = colors.onSecondaryContainer)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Simulated high-contrast visual texture canvas
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val splitX = size.width * splitFraction
-                // Left side: Original crisp gradient
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF233347), Color(0xFF3A5B7C), Color(0xFF1A2530))
-                    ),
-                    size = size.copy(width = splitX)
-                )
-                // Right side: Compressed WebP/JPEG preview
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF1F2D3D), Color(0xFF33516E), Color(0xFF162029))
-                    ),
-                    topLeft = Offset(splitX, 0f),
-                    size = size.copy(width = size.width - splitX)
-                )
-                // Fine grid lines representing architectural facade texture
-                val step = 28.dp.toPx()
-                var x = step
-                while (x < size.width) {
-                    drawLine(
-                        color = Color.White.copy(alpha = 0.08f),
-                        start = Offset(x, 0f),
-                        end = Offset(x, size.height),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                    x += step
-                }
-                // Divider line
-                drawLine(
-                    color = Color.White,
-                    start = Offset(splitX, 0f),
-                    end = Offset(splitX, size.height),
-                    strokeWidth = 2.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-                drawCircle(
-                    color = Color(0xFF4F3DFF),
-                    radius = 16.dp.toPx(),
-                    center = Offset(splitX, size.height / 2f)
-                )
-            }
-
-            // Top badges
-            Row(
+            PreviewPane(label = originalLabel, highlighted = false, modifier = Modifier.weight(1f))
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(colors.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
             ) {
-                QuietBadge(
-                    text = originalLabel,
-                    containerColor = Color.Black.copy(alpha = 0.68f),
-                    contentColor = Color.White
-                )
-                QuietBadge(
-                    text = compressedLabel,
-                    containerColor = pillars.primaryActionBackground,
-                    contentColor = pillars.primaryActionText
-                )
+                Icon(Icons.Rounded.SwapHoriz, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
-
-            // Bottom caption
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.58f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "$fileName · $resolution",
-                    style = QuietTheme.typography.metadata,
-                    color = Color.White
-                )
-                Text(
-                    text = "Slide divider to inspect fine textures · Zoom 1:1",
-                    style = QuietTheme.typography.badge,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
-            }
+            PreviewPane(label = compressedLabel, highlighted = true, modifier = Modifier.weight(1f))
         }
     }
 }
 
-/**
- * Privacy & On-Device Isolation Footer Banner present across Stitch screens.
- */
+@Composable
+private fun PreviewPane(label: String, highlighted: Boolean, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(104.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    if (highlighted) Brush.linearGradient(listOf(colors.primaryContainer, colors.tertiaryContainer))
+                    else SolidColor(colors.surfaceContainerHighest)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.Image,
+                contentDescription = null,
+                tint = if (highlighted) colors.onPrimaryContainer else colors.onSurfaceVariant,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+        Text(
+            text = label,
+            style = QuietTheme.typography.metadataStrong,
+            color = if (highlighted) colors.primary else colors.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** Privacy reassurance strip shown on tools that process files locally. */
 @Composable
 fun QuietIsolationFooter(
     text: String,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = QuietTheme.shapes.button,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, QuietTheme.pillars.cardBorder)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(QuietTheme.shapes.activeIndicatorPill)
+            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.VerifiedUser,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Text(
-                text = text,
-                style = QuietTheme.typography.metadata,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Icon(
+            imageVector = Icons.Rounded.Shield,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = text,
+            style = QuietTheme.typography.metadata,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
+        )
     }
 }

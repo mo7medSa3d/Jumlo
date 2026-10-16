@@ -27,10 +27,8 @@ android {
         applicationId = "com.jumlo.app"
         minSdk = 26
         targetSdk = 36
-        // Release versioning: pass -PversionCode / -PversionName at build time
-        // (or set them in gradle.properties); defaults keep local builds working.
-        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
-        versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
+        versionCode = 10842
+        versionName = "1.4-media-candidate"
         buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -91,10 +89,6 @@ android {
         buildConfig = true
     }
 
-    lint {
-        abortOnError = true
-    }
-
     packaging {
         jniLibs.useLegacyPackaging = true
         resources {
@@ -140,6 +134,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.biometric)
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.window)

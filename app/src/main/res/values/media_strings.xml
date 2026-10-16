@@ -46,6 +46,4 @@
     <string name="media_candidates_note">Detected network candidates may be previews or manifests. Analyze one to inspect actual formats; no download starts automatically.</string>
     <string name="media_no_candidates">No media resource detected yet. Start playback on the page, or use Analyze page.</string>
     <string name="media_new_copy">Create an additional copy on the next download</string>
-    <string name="media_tos_notice">Only download videos or audio you own or are allowed to save. Some sites prohibit downloading in their terms of service, and bypassing paid access, login walls, or copy protection is not supported. You are responsible for respecting copyright and the source site\'s terms.</string>
-    <string name="media_tos_ack">I have the right to download this, and I accept responsibility for copyright and the source site\'s terms</string>
 </resources>

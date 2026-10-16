@@ -28,6 +28,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bolt
+import com.jumlo.app.ui.theme.QuietTheme
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -137,25 +143,26 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 if(route=="home" || route=="tools_catalog") {
                                     item { CandidateNotice() }
                                     if(route=="home") {
-                                        item { QuietPrimaryButton(stringResource(R.string.import_device_files),::importFiles,Modifier.fillMaxWidth(),enabled=!busy) }
+                                        item { QuietHero(title=if(settings.language.isRtl) "أدوات ملفات قوية" else "Powerful file tools",subtitle=if(settings.language.isRtl) "PDF والصور والأرشيفات والتنزيلات، تتم معالجتها على جهازك." else "PDF, images, archives and downloads, processed on your device.",icon=Icons.Rounded.Bolt) }
+                                        item { QuietPrimaryButton(stringResource(R.string.import_device_files),::importFiles,Modifier.fillMaxWidth(),leadingIcon=Icons.Rounded.Add,enabled=!busy) }
                                         item { TextButton(onClick={ route="workspace" }) { Text("Resume saved workspace (${form.sourceIds.size} files)") } }
                                     }
-                                    item { OutlinedTextField(search,{ search=it },label={Text(stringResource(R.string.home_search_placeholder))},modifier=Modifier.fillMaxWidth(),singleLine=true) }
+                                    item { QuietSearchBar(query=search,placeholder=stringResource(R.string.home_search_placeholder),onQueryChange={ search=it },onClear={ search="" }) }
                                     val catalog=CapabilityRegistry.tools.filter { search.isBlank() || title(it,settings.language).contains(search,true) || it.id.contains(search,true) }
                                     for(pillar in listOf(PillarCategory.PDF,PillarCategory.IMAGES,PillarCategory.DOWNLOADS,PillarCategory.FILES,PillarCategory.VAULT)) {
                                         val tools=catalog.filter { it.pillar==pillar }
-                                        if(tools.isNotEmpty()) item(key="heading-${pillar.name}") { Text(if(settings.language.isRtl) pillar.labelAr else pillar.labelEn,style=MaterialTheme.typography.titleLarge) }
+                                        if(tools.isNotEmpty()) item(key="heading-${pillar.name}") { QuietSectionTitle(if(settings.language.isRtl) pillar.labelAr else pillar.labelEn) }
                                         items(tools,key={it.id}) { tool -> ToolCard(tool,settings.language,{ openTool(tool) }) }
                                     }
                                     if(route=="home") {
-                                        item { Text(stringResource(R.string.recent_results_title),style=MaterialTheme.typography.titleLarge) }
+                                        item { QuietSectionTitle(stringResource(R.string.recent_results_title)) }
                                         items(outputs.take(5),key={"recent-${it.id}"}) { output -> OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);route="workspace"}) }
                                     }
                                 }
                                 if(route=="downloads") {
                                     item { CandidateNotice() }
                                     items(CapabilityRegistry.tools.filter { it.id in setOf("dl_02","dl_03","dl_media") },key={it.id}) { tool ->ToolCard(tool,settings.language,{openTool(tool)}) }
-                                    item { Text("Transfer activity",style=MaterialTheme.typography.titleLarge) }
+                                    item { QuietSectionTitle("Transfer activity") }
                                     val downloads=jobs.filter { it.request.toolId.startsWith("dl_") }
                                     if(downloads.isEmpty()) item { Text("No transfers. Network failures are reported, never replaced by sample files.") }
                                     items(downloads,key={it.request.id}) { job -> JobCard(job,{ selectedJob=job.request.id;route="activity" },{viewModel.cancel(job.request.id)},{viewModel.retry(job)}) }
@@ -171,7 +178,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                             TextButton(onClick={viewModel.addSource(source.id);route="workspace"}) { Text("Add to workspace") }
                                         }
                                     }
-                                    item { Text(stringResource(R.string.recent_results_title),style=MaterialTheme.typography.titleLarge) }
+                                    item { QuietSectionTitle(stringResource(R.string.recent_results_title)) }
                                     items(outputs,key={it.id}) { output ->OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);route="workspace"}) }
                                     tree?.let { listing ->
                                         item { Text(listing.name,style=MaterialTheme.typography.titleLarge);TextButton(onClick={newFolder=true;folderName=""}) {Text("New folder")} }
@@ -231,10 +238,24 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
 }
 @Composable private fun ToolCard(tool:UtilityTool,language:AppLanguage,onOpen:()->Unit) {
-    QuietCard {
-        Text(title(tool,language),style=MaterialTheme.typography.titleMedium)
-        Text(if(language.isRtl) tool.subtitleAr else tool.subtitleEn,style=MaterialTheme.typography.bodyMedium)
-        if(CapabilityRegistry.enabled(tool.id)) TextButton(onClick=onOpen) {Text(stringResource(R.string.action_open))}
+    val pillars=QuietTheme.pillars
+    val (tint,container)=when(tool.pillar) {
+        PillarCategory.PDF->pillars.pdfPrimary to pillars.pdfContainer
+        PillarCategory.IMAGES->pillars.imagesPrimary to pillars.imagesContainer
+        PillarCategory.DOWNLOADS->pillars.downloadsPrimary to pillars.downloadsContainer
+        PillarCategory.FILES->pillars.filesPrimary to pillars.filesContainer
+        PillarCategory.VAULT->pillars.vaultPrimary to pillars.vaultContainer
+    }
+    val enabled=CapabilityRegistry.enabled(tool.id)
+    QuietCard(onClick=if(enabled) onOpen else null) {
+        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+            QuietIconTile(resolveStitchIcon(tool.iconName),tint,container)
+            Column(Modifier.weight(1f)) {
+                Text(title(tool,language),style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(if(language.isRtl) tool.subtitleAr else tool.subtitleEn,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
+            }
+        }
+        if(enabled) QuietTonalButton(stringResource(R.string.action_open),onOpen,Modifier.align(Alignment.End),leadingIcon=Icons.AutoMirrored.Rounded.ArrowForward)
         else Text(CapabilityRegistry.reason(tool.id).replace('_',' '),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
