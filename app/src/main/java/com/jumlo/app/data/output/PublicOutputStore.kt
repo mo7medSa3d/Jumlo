@@ -45,7 +45,7 @@ import javax.inject.Singleton
     private fun saveSaf(rootUri:Uri,file:File,name:String,mime:String,sha256:String):String {
         val root=DocumentFile.fromTreeUri(app,rootUri) ?: error("DESTINATION_ACCESS_LOST")
         require(root.canWrite()) { "DESTINATION_READ_ONLY" }
-        val branded=if(root.name=="Jevlo") root else root.findFile("Jevlo") ?: root.createDirectory("Jevlo") ?: error("DESTINATION_CREATE_FAILED")
+        val branded=if(root.name=="Jumlo") root else root.findFile("Jumlo") ?: root.createDirectory("Jumlo") ?: error("DESTINATION_CREATE_FAILED")
         val category=StoragePaths.category(mime)
         val directory=branded.findFile(category) ?: branded.createDirectory(category) ?: error("DESTINATION_CREATE_FAILED")
         val filenames=directory.listFiles().mapNotNull { it.name }.toSet()
@@ -79,7 +79,7 @@ import javax.inject.Singleton
         } catch(e:Exception) { runCatching { resolver.delete(uri,null,null) };throw e }
     }
     private fun saveLegacy(file:File,name:String,mime:String,sha256:String):String {
-        val dir=File(app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),"Jevlo/${StoragePaths.category(mime)}").apply { mkdirs() }
+        val dir=File(app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),"Jumlo/${StoragePaths.category(mime)}").apply { mkdirs() }
         val candidate=StoragePaths.uniqueName(name,dir.list()?.toSet() ?: emptySet())
         val destination=File(dir,SafeNames.basename(candidate))
         try {

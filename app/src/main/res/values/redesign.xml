@@ -13,7 +13,7 @@
     <string name="redesign_file_view">Default file view</string>
     <string name="redesign_accent">Accent color</string>
     <string name="redesign_font_scale">Text size</string>
-    <string name="redesign_storage_folder">Saved in Jevlo / Video, Audio, PDF, Images, Documents</string>
+    <string name="redesign_storage_folder">Saved in Jumlo / Video, Audio, PDF, Images, Documents</string>
     <string name="redesign_open_folder">Open saved folder</string>
     <string name="redesign_sort">Sort files</string>
     <string name="redesign_sort_name">Name</string>
@@ -28,7 +28,7 @@
     <string name="redesign_featured_tools">The essentials, one tap away.</string>
     <string name="redesign_tools_subtitle">Work locally on your documents and images.</string>
     <string name="redesign_saved_outputs">Your recent work</string>
-    <string name="redesign_storage_path">Default: Download / Jevlo</string>
+    <string name="redesign_storage_path">Default: Download / Jumlo</string>
     <string name="redesign_platform_unavailable">This link cannot be analyzed on this device yet.</string>
     <string name="redesign_quality_balanced">Balanced · up to 1080p</string>
     <string name="redesign_quality_best">Best available</string>
@@ -51,8 +51,8 @@
     <string name="redesign_home_hero">Make every file easier.</string>
     <string name="redesign_home_subtitle">Convert, edit, download and organize—right on your device.</string>
     <string name="redesign_explore_tools">Explore tools</string>
-    <string name="redesign_custom_saved_path">Selected folder / Jevlo</string>
-    <string name="redesign_save_fallback">Some files are kept safely inside Jevlo because saving to the selected folder failed. Use Export on those files to save a visible copy.</string>
+    <string name="redesign_custom_saved_path">Selected folder / Jumlo</string>
+    <string name="redesign_save_fallback">Some files are kept safely inside Jumlo because saving to the selected folder failed. Use Export on those files to save a visible copy.</string>
     <string name="redesign_storage_by_type">Results by file type</string>
     <string name="redesign_pdf_type">PDF</string>
 </resources>

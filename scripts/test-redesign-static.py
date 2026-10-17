@@ -31,7 +31,7 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertNotIn('"--no-continue"',code('core/media/MediaPolicies.kt'))
     def test_public_files_use_platform_output_providers(self):
         store=code('data/output/PublicOutputStore.kt')
-        for token in ('MediaStore.Downloads.EXTERNAL_CONTENT_URI','DocumentFile.fromTreeUri','Download/Jevlo'):
+        for token in ('MediaStore.Downloads.EXTERNAL_CONTENT_URI','DocumentFile.fromTreeUri','Download/Jumlo'):
             self.assertTrue(token in (store+code('core/StoragePaths.kt')),token)
         self.assertIn('publicUri',code('model/OperationContracts.kt'))
     def test_settings_picker_and_concurrency_are_connected(self):

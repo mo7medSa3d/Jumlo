@@ -1,8 +1,8 @@
-# Jevlo (formerly Jumlo)
+# Jumlo
 
-## New source revision — Jevlo 2026 branding and motion, phases 0–6 (2026-10-17)
+## Jumlo 2026 motion redesign and brand restoration, phases 0–6 (2026-10-17)
 
-This native Android/Kotlin source candidate has a Jevlo launcher/visual brand, adaptive/themed SVG-derived icons, Android 12+ launch styling, exported iOS icon sources (NO iOS application), a five-tab animated dock, spring press/entrance/route motion, Android predictive-back gesture feedback, original small UI audio cues, per-setting haptic intensity/sounds persistence, and a grid-first Files screen. See [Jevlo implementation audit](docs/JEVLO_2026_MOTION_BRAND_QA.md).
+The original **Jumlo** app name has been restored throughout the user-facing UI and assets. The new abstract PDF/download icon is retained because it does not display the alternate brand. This native Android/Kotlin source candidate has a Jumlo launcher/visual brand, adaptive/themed SVG-derived icons, Android 12+ launch styling, exported iOS icon sources (NO iOS application), a five-tab animated dock, spring press/entrance/route motion, Android predictive-back gesture feedback, original small UI audio cues, per-setting haptic intensity/sounds persistence, and a grid-first Files screen. See [Jumlo implementation audit](docs/JUMLO_2026_MOTION_BRAND_QA.md).
 
 **Release qualification remains NO-GO:** host-level tests, source checks, and assets were executed and packaged, but Android Gradle assembly, real/emulated device verification, live downloads and frame-time profiling were not possible in this environment; no SDK/Gradle distribution/device was available. The source keeps the original `com.jumlo.app` application ID, Room database and legacy `jumlo://workspace` link for installed-user compatibility.
 

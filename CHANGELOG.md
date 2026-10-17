@@ -149,10 +149,19 @@ See `AUDIT.md`, `docs/RELEASE.md` and `verification/production-2026-10-17/` for 
 
 ---
 
-## Jevlo 2026 premium brand and motion pass — 2026-10-17
+## Jumlo 2026 premium brand and motion pass — 2026-10-17
 
-- **Brand**: Jevlo in localized app labels, headers and Android launcher. Kept `com.jumlo.app`/`jumlo://workspace` for upgrade continuity; new default exported files use `Download/Jevlo` and older saved URIs are retained.
+- **Brand**: Jumlo in localized app labels, headers and Android launcher. Kept `com.jumlo.app`/`jumlo://workspace` for upgrade continuity; new default exported files use `Download/Jumlo` and older saved URIs are retained.
 - **Assets**: original SVG emblem, Android adaptive/monochrome resources, 1024px iOS light/dark/tinted icon exports, Android 12+ splash backdrop, six original synthesized short UI sounds and reproducible generator.
 - **UI**: spring press feedback, 44ms staggered grid entrances, moving RTL dock indicator, predictive back gesture response, download completion pulse, grid-first Files, short Downloads/Settings bento compositions, paired Arabic/English strings.
 - **Interaction**: SoundPool with muted/zero-volume gating, Android haptic intent patterns by intensity, persisted Sounds and Haptic Intensity preferences, feedback wired into principal buttons, navigation and major file operations.
-- **Verification**: Added 14 Jevlo asset/wiring/contrast tests to host test runner; preserved 123 Kotlin host tests and existing suite. Android SDK/Gradle bootstrap unavailable; no APK or device trace. This is **source candidate, release NO-GO**. See audit and verification logs.
+- **Verification**: Added 14 Jumlo asset/wiring/contrast tests to host test runner; preserved 123 Kotlin host tests and existing suite. Android SDK/Gradle bootstrap unavailable; no APK or device trace. This is **source candidate, release NO-GO**. See audit and verification logs.
+
+
+## 2026-10-17 — Restore original Jumlo identity
+
+- Returned all user-facing English/Arabic product names to Jumlo, including the launcher, splash, welcome/About, File browser, Settings, and exports.
+- Kept the redesigned neutral launcher icon, gradient, sounds, haptics, spring navigation, and animation behavior. Renamed the supporting brand files and code symbols to Jumlo without modifying their image/audio data.
+- Reverted default saves from `Download/Jevlo` to `Download/Jumlo`; a persisted old default is normalized on reading while custom SAF selections and previously saved URIs are untouched.
+- Retained `com.jumlo.app` and `jumlo://workspace`, existing app data, and fixes already on main.
+- Updated brand tests and integrity metadata. Host regression verification passed; APK compile, emulator, and hardware behavior require GitHub Actions and device testing.

@@ -245,8 +245,11 @@ fun main() {
         check(AutoOutputName.fromSource("img_03","image.png")==null)
     }
     test("downloads folder categories and duplicate names are deterministic") {
-        check(StoragePaths.relativePath("audio/mpeg")=="Download/Jevlo/Audio/")
-        check(StoragePaths.relativePath("application/pdf")=="Download/Jevlo/PDF/")
+        check(StoragePaths.relativePath("audio/mpeg")=="Download/Jumlo/Audio/")
+        check(StoragePaths.relativePath("application/pdf")=="Download/Jumlo/PDF/")
+        check(StoragePaths.canonicalDownloadFolder(null)=="Download/Jumlo")
+        check(StoragePaths.canonicalDownloadFolder("Download/Jevlo")=="Download/Jumlo")
+        check(StoragePaths.canonicalDownloadFolder("content://com.android.providers.downloads.documents/tree/42")=="content://com.android.providers.downloads.documents/tree/42")
         check(StoragePaths.category("image/webp")=="Images")
         check(StoragePaths.uniqueName("work.pdf",setOf("work.pdf","work (2).pdf"))=="work (3).pdf")
         rejects<IllegalArgumentException> { StoragePaths.uniqueName("../../escape.pdf",emptySet()) }

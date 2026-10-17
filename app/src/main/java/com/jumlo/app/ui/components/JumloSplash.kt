@@ -30,7 +30,7 @@ import com.jumlo.app.R
 import com.jumlo.app.ui.theme.LocalReducedMotion
 
 /** Brief SVG-derived mark reveal while data initializes; has no blocking timers for navigation. */
-@Composable fun JevloSplash(modifier: Modifier=Modifier) {
+@Composable fun JumloSplash(modifier: Modifier=Modifier) {
     val reduced=LocalReducedMotion.current
     var visible by remember {mutableStateOf(false)}
     LaunchedEffect(Unit) {visible=true}

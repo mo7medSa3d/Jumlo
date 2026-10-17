@@ -20,12 +20,12 @@ class UiSoundPlayer(private val context: Context) {
             if(status==0) synchronized(loaded) {loaded+=sampleId}
         }
         soundIds=mapOf(
-            Cue.TAP to pool.load(context,R.raw.jevlo_tap,1),
-            Cue.TOGGLE to pool.load(context,R.raw.jevlo_toggle,1),
-            Cue.START to pool.load(context,R.raw.jevlo_start,1),
-            Cue.SUCCESS to pool.load(context,R.raw.jevlo_success,1),
-            Cue.ERROR to pool.load(context,R.raw.jevlo_error,1),
-            Cue.DELETE to pool.load(context,R.raw.jevlo_delete,1)
+            Cue.TAP to pool.load(context,R.raw.jumlo_tap,1),
+            Cue.TOGGLE to pool.load(context,R.raw.jumlo_toggle,1),
+            Cue.START to pool.load(context,R.raw.jumlo_start,1),
+            Cue.SUCCESS to pool.load(context,R.raw.jumlo_success,1),
+            Cue.ERROR to pool.load(context,R.raw.jumlo_error,1),
+            Cue.DELETE to pool.load(context,R.raw.jumlo_delete,1)
         )
     }
     fun play(cue:Cue, enabled:Boolean) {

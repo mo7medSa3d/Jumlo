@@ -1,4 +1,4 @@
-# Jevlo 2026 verification, 2026-10-17
+# Jumlo 2026 verification, 2026-10-17
 
 Input (updated prior source ZIP): `Jumlo-2026-Android-Redesign-Source.zip`, SHA256 `d95badc55271f0a65c6b0ec92771be5dfec74f46bf115229247455deaab64da3`.
 
@@ -6,7 +6,7 @@ Executed host test commands:
 
 ```shell
 LANG=C.UTF-8 LC_ALL=C.UTF-8 JAVA_TOOL_OPTIONS='-Dfile.encoding=UTF-8' bash scripts/verify-host.sh
-python3 scripts/test-jevlo-brand-motion.py
+python3 scripts/test-jumlo-brand-motion.py
 bash ./gradlew :app:assembleDebug --offline
 ```
 
@@ -21,4 +21,9 @@ bash ./gradlew :app:assembleDebug --offline
 - Live network-site downloads, real vibration/audio, icon installation and mid-range frame profiling: **NOT EXECUTED**.
 - iOS app compilation: **NOT APPLICABLE**, no iOS source exists in supplied archive; only assets exported.
 
-**NO-GO for release** until native Android test, visual/accessibility reviews, real media verification and iOS source integration. `docs/JEVLO_2026_MOTION_BRAND_QA.md` contains release checklist.
+**NO-GO for release** until native Android test, visual/accessibility reviews, real media verification and iOS source integration. `docs/JUMLO_2026_MOTION_BRAND_QA.md` contains release checklist.
+
+
+### Brand restoration (2026-10-17)
+
+Original **Jumlo** branding restored, including localized labels, existing neutral icon, sound resource names, and download directory. Existing files and persisted result URIs remain available; the brief alternate default preference normalizes to `Download/Jumlo`. Native APK build/device checks require CI.

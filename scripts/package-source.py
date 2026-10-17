@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create and verify a deterministic Jevlo (formerly Jumlo) source ZIP without generated/private files.
+"""Create and verify a deterministic Jumlo source ZIP without generated/private files.
 
 Build exclusions are repository-relative prefixes, deliberately NOT a generic
 "build" directory rule: verification/production-2026-10-17/build logs are retained.

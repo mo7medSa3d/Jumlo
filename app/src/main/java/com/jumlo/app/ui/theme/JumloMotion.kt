@@ -21,7 +21,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 
 /** Transform/opacity-only interaction motion. No new animation framework or bitmap allocations. */
-object JevloMotion {
+object JumloMotion {
     const val pressScale = 0.965f
     const val staggerMs = 44L
     const val maxStaggered = 12
@@ -35,8 +35,8 @@ fun Modifier.pressFeedback(): Modifier = composed {
     val reduced = LocalReducedMotion.current
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        if (pressed && !reduced) JevloMotion.pressScale else 1f,
-        animationSpec = if (reduced) snap() else spring(dampingRatio = JevloMotion.pressDamping, stiffness = Spring.StiffnessHigh),
+        if (pressed && !reduced) JumloMotion.pressScale else 1f,
+        animationSpec = if (reduced) snap() else spring(dampingRatio = JumloMotion.pressDamping, stiffness = Spring.StiffnessHigh),
         label = "press-scale"
     )
     val brightness by animateFloatAsState(
@@ -59,14 +59,14 @@ fun StaggeredReveal(index: Int, modifier: Modifier = Modifier, content: @Composa
     val reduced = LocalReducedMotion.current
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(reduced) {
-        if (!reduced) delay(index.coerceIn(0, JevloMotion.maxStaggered).toLong() * JevloMotion.staggerMs)
+        if (!reduced) delay(index.coerceIn(0, JumloMotion.maxStaggered).toLong() * JumloMotion.staggerMs)
         shown = true
     }
     val alpha by animateFloatAsState(if (shown) 1f else 0f,
-        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium, dampingRatio = JevloMotion.enterDamping),
+        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium, dampingRatio = JumloMotion.enterDamping),
         label = "reveal-opacity")
     val travel by animateFloatAsState(if (shown || reduced) 0f else 18f,
-        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = JevloMotion.enterDamping),
+        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = JumloMotion.enterDamping),
         label = "reveal-position")
     Box(modifier.graphicsLayer { this.alpha = alpha; translationY = travel }, content = { content() })
 }

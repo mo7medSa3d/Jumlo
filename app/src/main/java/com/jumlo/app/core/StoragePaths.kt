@@ -9,7 +9,13 @@ object StoragePaths {
         mime.startsWith("image/") -> "Images"
         else -> "Documents"
     }
-    fun relativePath(mime:String):String="Download/Jevlo/${category(mime)}/"
+    fun relativePath(mime:String):String="Download/Jumlo/${category(mime)}/"
+    /** Keep custom SAF locations, but normalize the short-lived previous default.
+     * Files already saved there remain reachable through their existing persisted URIs. */
+    fun canonicalDownloadFolder(saved:String?):String = when(saved) {
+        null, "Download/Jevlo" -> "Download/Jumlo"
+        else -> saved
+    }
     fun uniqueName(desired:String,existing:Set<String>):String {
         val name=SafeNames.basename(desired)
         if(name !in existing) return name

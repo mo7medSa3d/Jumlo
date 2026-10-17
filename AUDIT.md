@@ -108,6 +108,11 @@ Obtain authentic historic upgrade evidence; run API 26/36 instrumentation, 16KB-
 
 ---
 
-## Jevlo brand/motion follow-up (2026-10-17)
+## Jumlo brand/motion follow-up (2026-10-17)
 
-See [`docs/JEVLO_2026_MOTION_BRAND_QA.md`](docs/JEVLO_2026_MOTION_BRAND_QA.md) for exact source pathways, phase actions, tests, visual/tactile limitations and mandatory device gates. This work was executed against the prior **updated source ZIP**, not current GitHub. Native Android build and iOS application development remain unverified/unavailable. **NO-GO** for production approval.
+See [`docs/JUMLO_2026_MOTION_BRAND_QA.md`](docs/JUMLO_2026_MOTION_BRAND_QA.md) for exact source pathways, phase actions, tests, visual/tactile limitations and mandatory device gates. This work was executed against the prior **updated source ZIP**, not current GitHub. Native Android build and iOS application development remain unverified/unavailable. **NO-GO** for production approval.
+
+
+## Original Jumlo brand restored on main — 2026-10-17
+
+The temporary Jevlo brand was reverted across translated strings, screen/splash references, launcher label, stored output path defaults, sound and SVG asset names, packaging scripts, and documentation. The abstract redesigned icon and interactive motion remain intact. Existing output URIs, SAF directory permissions, package name, and user data are preserved; only the default download-path preference is normalized. Host verification passed; native Android CI/device validation must still be checked for this new revision.

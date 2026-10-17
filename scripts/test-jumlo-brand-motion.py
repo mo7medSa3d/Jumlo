@@ -21,27 +21,27 @@ def ratio(a,b):
     a,b=lum(a),lum(b)
     return (max(a,b)+.05)/(min(a,b)+.05)
 
-class JevloBrandMotionChecks(unittest.TestCase):
+class JumloBrandMotionChecks(unittest.TestCase):
     def test_app_brand_matches_translated_app_name(self):
         for locale in ('values','values-ar'):
             values={e.attrib.get('name'):e.text for e in ET.parse(RES/locale/'strings.xml').getroot() if e.tag=='string'}
-            self.assertEqual(values['app_name'],'Jevlo')
+            self.assertEqual(values['app_name'],'Jumlo')
         self.assertIn('@string/app_name',(ROOT/'app/src/main/AndroidManifest.xml').read_text())
-        self.assertIn('jevlo-errors.txt',code('ui/navigation/JumloNavHost.kt'))
+        self.assertIn('jumlo-errors.txt',code('ui/navigation/JumloNavHost.kt'))
     def test_upgrade_identity_preserved(self):
         manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
         self.assertIn('android:scheme="jumlo"',manifest)
         self.assertIn('android:host="workspace"',manifest)
         self.assertIn('applicationId = "com.jumlo.app"',(ROOT/'app/build.gradle.kts').read_text())
     def test_all_icon_sources_are_parseable_svg(self):
-        expected=['jevlo-icon-light.svg','jevlo-icon-dark.svg','jevlo-icon-tinted.svg','jevlo-adaptive-foreground.svg','jevlo-monochrome.svg']
+        expected=['jumlo-icon-light.svg','jumlo-icon-dark.svg','jumlo-icon-tinted.svg','jumlo-adaptive-foreground.svg','jumlo-monochrome.svg']
         for name in expected:
             with self.subTest(name=name):
                 root=ET.parse(BRAND/'svg'/name).getroot()
                 self.assertTrue(root.tag.endswith('svg'))
                 self.assertIn('viewBox',root.attrib)
     def test_ios_icon_exports_are_present_without_claiming_ios_app(self):
-        folder=BRAND/'ios/JevloAppIcon.appiconset'
+        folder=BRAND/'ios/JumloAppIcon.appiconset'
         manifest=json.loads((folder/'Contents.json').read_text())
         self.assertEqual(3,len(manifest['images']))
         for record in manifest['images']:
@@ -62,7 +62,7 @@ class JevloBrandMotionChecks(unittest.TestCase):
         expected=['tap','toggle','start','success','error','delete']
         size=0
         for cue in expected:
-            file=root/f'jevlo_{cue}.wav'
+            file=root/f'jumlo_{cue}.wav'
             with wave.open(str(file),'rb') as track:
                 self.assertEqual(track.getnchannels(),1)
                 self.assertEqual(track.getsampwidth(),2)
@@ -71,7 +71,7 @@ class JevloBrandMotionChecks(unittest.TestCase):
                 self.assertGreater(track.getnframes(),0)
             size+=file.stat().st_size
         self.assertLess(size,60*1024)
-        self.assertTrue((ROOT/'scripts/generate-jevlo-sounds.py').is_file())
+        self.assertTrue((ROOT/'scripts/generate-jumlo-sounds.py').is_file())
     def test_sound_switch_honors_system_silence_and_volume(self):
         sound=code('ui/util/UiSoundPlayer.kt')
         self.assertIn('AudioManager.RINGER_MODE_NORMAL',sound)
@@ -98,7 +98,7 @@ class JevloBrandMotionChecks(unittest.TestCase):
         main=code('MainActivity.kt')
         self.assertIn('ANIMATOR_DURATION_SCALE',system)
         self.assertIn('LocalReducedMotion provides (settings.respectReducedMotion || systemReduced)',main)
-        self.assertIn('LocalReducedMotion.current',code('ui/theme/JevloMotion.kt'))
+        self.assertIn('LocalReducedMotion.current',code('ui/theme/JumloMotion.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/ProductionRows.kt'))
     def test_predictive_back_follows_gesture_and_respects_dirty_state(self):
         nav=code('ui/navigation/JumloNavHost.kt')

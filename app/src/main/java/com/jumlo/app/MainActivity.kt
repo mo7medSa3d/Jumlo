@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.CircularProgressIndicator
-import com.jumlo.app.ui.components.JevloSplash
+import com.jumlo.app.ui.components.JumloSplash
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
@@ -75,7 +75,7 @@ import dagger.hilt.android.AndroidEntryPoint
                                 JumloNavHost(appViewModel)
                             }
                         }
-                        if(!ready || showLaunch) JevloSplash()
+                        if(!ready || showLaunch) JumloSplash()
                     }
                 }
             }

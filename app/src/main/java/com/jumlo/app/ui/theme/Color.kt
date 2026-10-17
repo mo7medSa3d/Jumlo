@@ -5,7 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
-// Jevlo Quiet Precision semantic palette.
+// Jumlo Quiet Precision semantic palette.
 // Quiet violet primary, warm neutral surfaces, high contrast text.
 // Token names are kept stable so every screen picks up the new look.
 // ============================================================================

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.jumlo.app.core.ToolUsagePolicy
+import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.AppSettingsState
 import com.jumlo.app.model.ThemeMode
@@ -67,7 +68,7 @@ class UserPreferencesRepository @Inject constructor(
             soundsEnabled = prefs[Keys.UI_SOUNDS] ?: true,
             reorderHandleHaptics = prefs[Keys.REORDER_HAPTICS] ?: true,
             defaultDestinationFolder = prefs[Keys.DEFAULT_DEST_FOLDER] ?: "My files / Results",
-            downloadDestinationFolder = prefs[Keys.DOWNLOAD_DEST_FOLDER] ?: "Download/Jevlo",
+            downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
             wifiOnlyDefault = false,
             downloadQuality = runCatching { DownloadQuality.valueOf(prefs[Keys.DOWNLOAD_QUALITY] ?: "BALANCED") }.getOrDefault(DownloadQuality.BALANCED),

@@ -273,7 +273,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         val location=settings.downloadDestinationFolder
         try {
             val folder=if(location.startsWith("content://")) Uri.parse(location)
-                else Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADownload%2FJevlo")
+                else Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADownload%2FJumlo")
             context.startActivity(Intent(Intent.ACTION_VIEW).apply {setDataAndType(folder,"vnd.android.document/directory");addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)})
         } catch(_:Exception) { navigateTab(DockTab.FILES) }
     }
@@ -332,7 +332,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,::importFiles,{pickFolder()},::openSavedFolder,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.chooseTool("pdf_02");viewModel.importOutput(it);navigateTo("workspace")},{viewModel.chooseTool("pdf_02");viewModel.addSource(it);navigateTo("workspace")},{pickFolder(it.uri)},{launchExternal(it.uri,it.mimeType,false)},{viewModel.chooseTool("pdf_02");viewModel.intake(Intake(listOf(it.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null));navigateTo("workspace")},{viewModel.copyOrMoveFile(it,false,CollisionPolicy.KEEP_BOTH)},{renameEntry=it;renameText=it.name},{deleteEntry=it},{newFolder=true;folderName=""})
                                 "settings" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
                                     onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
-                                    onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jevlo-errors.txt")})},
+                                    onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
                                     onOpenFiles={navigateTab(DockTab.FILES)},onChooseFolder={pickFolder()},
                                     onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()})
                                 "scan" -> com.jumlo.app.ui.scan.ScanScreen(onCaptured={file->viewModel.chooseTool("pdf_02");viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg");navigateTo("workspace")},onBack=::goBack)

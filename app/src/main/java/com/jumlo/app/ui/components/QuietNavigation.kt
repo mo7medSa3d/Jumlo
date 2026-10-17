@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
-import com.jumlo.app.ui.theme.JevloMotion
+import com.jumlo.app.ui.theme.JumloMotion
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
@@ -78,7 +78,7 @@ fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
                 val x by animateDpAsState(
                     targetValue=8.dp + segment * visualIndex,
                     animationSpec=if(reduced) snap() else spring(
-                        dampingRatio=JevloMotion.indicatorDamping,stiffness=Spring.StiffnessMedium),
+                        dampingRatio=JumloMotion.indicatorDamping,stiffness=Spring.StiffnessMedium),
                     label="dock-morph-offset"
                 )
                 Box(Modifier.offset(x=x).align(Alignment.CenterStart)

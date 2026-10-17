@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
 
 /**
- * Jevlo 2026 type scale.
+ * Jumlo 2026 type scale.
  * - Font: IBM Plex Sans (bundled variable font, weights 400–700).
  * - Arabic uses the bundled IBM Plex Sans Arabic face.
  * - Display / titles are bold and tight to give the "poster" headline feel of modern apps.

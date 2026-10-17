@@ -279,7 +279,7 @@ data class AppSettingsState(
     val soundsEnabled: Boolean = true,
     val reorderHandleHaptics: Boolean = true,
     val defaultDestinationFolder: String = "My files / Results",
-    val downloadDestinationFolder: String = "Download/Jevlo",
+    val downloadDestinationFolder: String = "Download/Jumlo",
     val maxConcurrentDownloads: Int = 2,
     val downloadQuality: DownloadQuality = DownloadQuality.BALANCED,
     val audioOnlyDefault: Boolean = false,
