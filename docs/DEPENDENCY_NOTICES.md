@@ -41,3 +41,29 @@ Decision for the release train (needs owner sign-off):
 
 No cookie export and no DRM/encryption bypass is implemented, and none may
 be added as part of resolving the above.
+
+## Added this session (base build)
+
+| Dependency | Version | License |
+|---|---|---|
+| pdfbox-android (`com.tom-roush:pdfbox-android`) | 2.0.27.0 | Apache-2.0 |
+| zip4j (`net.lingala.zip4j:zip4j`) | 2.11.5 | Apache-2.0 |
+| CameraX (`camera-lifecycle/camera2/view`) | 1.3.4 | Apache-2.0 |
+| ML Kit text-recognition (`com.google.mlkit:text-recognition`) | 16.0.1 | Apache-2.0 / ML Kit ToS; bundled Latin model, on-device |
+
+Fonts decision (recorded): the two IBM Plex TTFs (SIL OFL-1.1) are bundled
+deliberately for the Aurora theme and pinned by SHA-256
+(`ibm_plex_sans_variable.ttf` 3b031aa4…, `ibm_plex_sans_arabic_regular.ttf`
+6f611412…). `scripts/test-source-static.py` now allows exactly these two files
+by hash and rejects any other font binary. Owner: confirm or switch to
+build-time download with the same pinned hashes.
+
+Media payload licensing (Phase 2 research, owner sign-off still required):
+yt-dlp itself is Unlicense/public-domain. The Android wrapper used by the
+optional `-PextendedMedia=true` build (`io.github.junkfood02.youtubedl-android`
+0.18.1) is GPL-3.0 and bundles FFmpeg; FFmpeg builds are LGPL-2.1+ or GPL
+depending on enabled encoders, and this wrapper's FFmpeg must be treated as
+**GPL** until its exact build flags are audited. Distribution obligation if
+ever shipped: corresponding source offer + license notices for the whole
+combined work. Current state stays: media feature OFF in release builds and
+in non-extended builds.

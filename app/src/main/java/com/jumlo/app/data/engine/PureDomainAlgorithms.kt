@@ -154,6 +154,23 @@ object PureDomainAlgorithms {
         return rawDimensions
     }
 
+    /** Batch-rename preview: pattern supports {n}, {name}, {ext}; result is validated + uniquified. */
+    fun batchRenamePreview(names: List<String>, pattern: String, startAt: Int): List<String> {
+        require(pattern.isNotBlank() && pattern.length <= 200 && startAt >= 0) { "INVALID_RENAME_PATTERN" }
+        val used = mutableSetOf<String>()
+        return names.mapIndexed { index, original ->
+            val ext = original.substringAfterLast('.', "").takeIf { original.contains('.') }?.let { ".$it" } ?: ""
+            var candidate = pattern.replace("{n}", (startAt + index).toString()).replace("{name}", original.removeSuffix(ext)).replace("{ext}", ext.removePrefix("."))
+            if (!candidate.endsWith(ext, true) && ext.isNotEmpty() && !pattern.contains("{ext}")) candidate += ext
+            val safe = com.jumlo.app.core.SafeNames.basename(candidate)
+            val unique = com.jumlo.app.core.SafeNames.unique(used, safe); used += unique.lowercase(Locale.ROOT); unique
+        }
+    }
+
+    /** Groups indices of identical SHA-256 digests; only groups of 2+ are duplicates. */
+    fun duplicateGroups(hashes: List<String>): List<List<Int>> =
+        hashes.mapIndexed { i, h -> h to i }.groupBy({ it.first }, { it.second }).values.filter { it.size > 1 }
+
     /**
      * Formats byte counts into clean tabular strings (e.g. "2.62 GB", "840 KB").
      */

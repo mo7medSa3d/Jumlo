@@ -69,6 +69,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     private var lastFingerprint:String?=null
     private var lastJobId:String?=null
     var pendingExport:OutputRecord?=null
+    private val errorLog=com.jumlo.app.core.ErrorLog(java.io.File(app.filesDir,"error-log.txt"))
+    @Volatile var pendingErrorLogExport:Boolean=false
+        private set
         private set
 
     init {
@@ -92,7 +95,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         refreshStorage()
     }
     fun dismissMessage() { _message.value=null }
-    fun notifyMessage(code:String) { _message.value=code }
+    fun notifyMessage(code:String) { errorLog.record(code,form.value.toolId); _message.value=code }
     fun setUrls(value:String) { _urls.value=value.take(100000) }
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
     fun chooseTool(id:String):Boolean {
@@ -123,6 +126,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             } finally { _busy.value=false }
         }
     }
+    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { try { addSource(sources.importLocalFile(file,displayName,mimeType).id); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } } }
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
     fun submit(onQueued:(String)->Unit) {
         if(!submitting.compareAndSet(false,true)) return
@@ -134,7 +138,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 val state=form.value
                 require(CapabilityRegistry.enabled(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
-                require(download || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+                require(download || state.toolId=="webpage_pdf" || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
                 if(state.toolId in setOf("pdf_07","file_08")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
                 val urlSnapshot=urls.value
                 if(download) {
@@ -144,14 +148,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 }
                 val fingerprint=Hashing.sha256(ByteArrayInputStream((Json.encodeToString(state)+"\n"+if(download) urlSnapshot else "").toByteArray()))
                 if(lastFingerprint==fingerprint && lastJobId!=null) { onQueued(lastJobId!!); return@launch }
-                newHandle=if(download) secrets.put(urlSnapshot.toCharArray()) else null
+                newHandle=when {
+                    download -> secrets.put(urlSnapshot.toCharArray())
+                    state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
+                    state.toolId=="file_encrypted_zip" -> secrets.put(state.secret1.toCharArray())
+                    else -> null
+                }
                 val settings=state.executionSettings(newHandle)
                 val request=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
                 val id=jobStore.enqueue(request)
                 lastFingerprint=fingerprint;lastJobId=id;newHandle=null
                 onQueued(id) // Queued is not completed. UI observes Room for every later transition.
             } catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { _message.value=stableError(error) }
+            catch(error:Exception) { errorLog.record(stableError(error),state.toolId); _message.value=stableError(error) }
             finally { newHandle?.let(secrets::remove);_busy.value=false;submitting.set(false) }
         }
     }
@@ -172,6 +181,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setLanguage(language:AppLanguage) { viewModelScope.launch { preferences.setLanguage(language) } }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
+    fun prepareErrorLogExport() { pendingErrorLogExport=true }
+    fun exportErrorLog(target:String?) {
+        if(!pendingErrorLogExport) return; pendingErrorLogExport=false
+        if(target==null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                app.contentResolver.openOutputStream(Uri.parse(target),"wt")?.use { it.write(errorLog.read().toByteArray(Charsets.UTF_8)) }
+                    ?: throw OperationFailure("EXPORT_WRITE_FAILED")
+                _message.value="ERROR_LOG_EXPORTED"
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(_:Exception) { _message.value="EXPORT_FAILED" }
+        }
+    }
     fun export(target:String?) {
         val output=pendingExport ?: return;pendingExport=null
         if(target==null) return
@@ -204,6 +226,14 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         try { val current=tree.value ?: throw OperationFailure("NO_FOLDER_SELECTED");block(current);_tree.value=treeStore.list(current.treeUri) }
         catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { _message.value=stableError(error) }
+    } }
+    /** Retention cleanup: staging/seek/extract temp older than 7 days is deleted. Sources and published outputs are never touched. */
+    fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
+        val cutoff=System.currentTimeMillis()-7L*24*3600*1000
+        var freed=0L
+        fun sweep(dir:java.io.File) { if(!dir.exists()) return; dir.walkBottomUp().forEach { f -> if(f.isFile && f.lastModified()<cutoff) { freed+=f.length(); f.delete() } }; dir.walkBottomUp().forEach { d -> if(d.isDirectory && d.list().isNullOrEmpty() && d!=dir) d.delete() } }
+        sweep(java.io.File(app.cacheDir,"seek")); sweep(java.io.File(app.cacheDir,"extract")); sweep(java.io.File(app.filesDir,"processing/staging"))
+        _message.value="CLEANUP_DONE"; refreshStorage()
     } }
     fun refreshStorage() { viewModelScope.launch(Dispatchers.IO) {
         fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { if(it.isFile) total+=it.length() };return total }

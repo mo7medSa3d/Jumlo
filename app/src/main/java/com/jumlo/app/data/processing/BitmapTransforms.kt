@@ -109,3 +109,56 @@ object BitmapTransforms {
     fun extension(format:String)=when(format) { "JPEG" -> "jpg"; "PNG" -> "png"; "WEBP" -> "webp"; else -> throw IllegalArgumentException("UNSUPPORTED_IMAGE_FORMAT") }
     fun mime(format:String)=when(format) { "JPEG" -> "image/jpeg"; "PNG" -> "image/png"; "WEBP" -> "image/webp"; else -> throw IllegalArgumentException("UNSUPPORTED_IMAGE_FORMAT") }
 }
+
+/** Expansion transforms: watermark, join/stitch, adjustments. All budget-checked. */
+object BitmapExtras {
+    fun watermarkText(source:Bitmap,text:String,opacityPercent:Int,budget:Long):Bitmap {
+        MemoryBudget.requireBitmaps(source.width,source.height,2,budget)
+        val out=Bitmap.createBitmap(source.width,source.height,Bitmap.Config.ARGB_8888)
+        try { val canvas=Canvas(out); canvas.drawBitmap(source,0f,0f,null)
+            val paint=Paint(Paint.ANTI_ALIAS_FLAG).apply{ color=Color.WHITE; alpha=(opacityPercent.coerceIn(1,100)*255/100); textSize=(source.width/12f).coerceAtLeast(18f); isFakeBoldText=true; setShadowLayer(4f,2f,2f,Color.BLACK) }
+            canvas.drawText(text,source.width*0.08f,source.height*0.92f,paint); return out
+        } catch(t:Throwable){ out.recycle(); throw t }
+    }
+    fun watermarkLogo(source:Bitmap,logo:Bitmap,budget:Long):Bitmap {
+        MemoryBudget.requireBitmaps(source.width,source.height,2,budget)
+        val out=Bitmap.createBitmap(source.width,source.height,Bitmap.Config.ARGB_8888)
+        try { val canvas=Canvas(out); canvas.drawBitmap(source,0f,0f,null)
+            val w=source.width/4; val h=(logo.height*w.toFloat()/logo.width).toInt().coerceAtLeast(1)
+            canvas.drawBitmap(logo,null,RectF((source.width-w-16).toFloat(),(source.height-h-16).toFloat(),(source.width-16).toFloat(),(source.height-16).toFloat()),Paint(Paint.FILTER_BITMAP_FLAG)); return out
+        } catch(t:Throwable){ out.recycle(); throw t }
+    }
+    fun join(bitmaps:List<Bitmap>,layout:String,gapPx:Int,budget:Long):Bitmap {
+        require(bitmaps.isNotEmpty()){"NO_SOURCES"}
+        val gap=gapPx.coerceIn(0,500)
+        val (w,h)=when(layout){
+            "VSTRIP" -> bitmaps.maxOf{it.width} to bitmaps.sumOf{it.height}+gap*(bitmaps.size-1)
+            "HSTRIP" -> bitmaps.sumOf{it.width}+gap*(bitmaps.size-1) to bitmaps.maxOf{it.height}
+            else -> { val cols=2; val rows=(bitmaps.size+cols-1)/cols; val cw=bitmaps.maxOf{it.width}; val ch=bitmaps.maxOf{it.height}; (cw*cols+gap*(cols-1)) to (ch*rows+gap*(rows-1)) }
+        }
+        MemoryBudget.requireBitmaps(w,h,1,budget)
+        val out=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
+        try { val canvas=Canvas(out); canvas.drawColor(Color.WHITE); var x=0; var y=0; var col=0; val cw=bitmaps.maxOf{it.width}; val ch=bitmaps.maxOf{it.height}
+            bitmaps.forEach{ b -> canvas.drawBitmap(b,x.toFloat(),y.toFloat(),null); when(layout){ "VSTRIP" -> y+=b.height+gap; "HSTRIP" -> x+=b.width+gap; else -> { col++; if(col>=2){col=0;x=0;y+=ch+gap}else x+=cw+gap } } }
+            return out
+        } catch(t:Throwable){ out.recycle(); throw t }
+    }
+    fun adjust(source:Bitmap,brightness:Int,contrastPercent:Int,saturationPercent:Int,padPx:Int,budget:Long):Bitmap {
+        val pad=padPx.coerceIn(0,2000)
+        MemoryBudget.requireBitmaps(source.width+pad*2,source.height+pad*2,2,budget)
+        val out=Bitmap.createBitmap(source.width+pad*2,source.height+pad*2,Bitmap.Config.ARGB_8888)
+        try { val canvas=Canvas(out); canvas.drawColor(Color.WHITE)
+            val c=contrastPercent.coerceIn(0,300)/100f; val s=saturationPercent.coerceIn(0,300)/100f; val b=brightness.coerceIn(-100,100)*1.27f
+            val matrix=ColorMatrix(floatArrayOf(c,0f,0f,0f,b, 0f,c,0f,0f,b, 0f,0f,c,0f,b, 0f,0f,0f,1f,0f))
+            matrix.postConcat(ColorMatrix().apply{ setSaturation(s) })
+            canvas.drawBitmap(source,pad.toFloat(),pad.toFloat(),Paint(Paint.FILTER_BITMAP_FLAG).apply{ colorFilter=ColorMatrixColorFilter(matrix) }); return out
+        } catch(t:Throwable){ out.recycle(); throw t }
+    }
+    /** Mean absolute per-pixel difference 0..255 between same-size images (else -1). */
+    fun meanDifference(a:Bitmap,b:Bitmap):Double {
+        if(a.width!=b.width||a.height!=b.height) return -1.0
+        val pa=IntArray(a.width*a.height); val pb=IntArray(b.width*b.height); a.getPixels(pa,0,a.width,0,0,a.width,a.height); b.getPixels(pb,0,b.width,0,0,b.width,b.height)
+        var sum=0L; for(i in pa.indices){ sum+=kotlin.math.abs(Color.red(pa[i])-Color.red(pb[i]))+kotlin.math.abs(Color.green(pa[i])-Color.green(pb[i]))+kotlin.math.abs(Color.blue(pa[i])-Color.blue(pb[i])) }
+        return sum.toDouble()/pa.size/3.0
+    }
+}

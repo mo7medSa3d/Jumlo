@@ -42,9 +42,16 @@ class SourceConsistencyTests(unittest.TestCase):
         match=[r for r in receivers if r.get(android+'name')=='.worker.CancelJobReceiver']
         self.assertEqual(1,len(match))
         self.assertEqual('false',match[0].get(android+'exported'))
-    def test_no_font_binaries_in_project_sources(self):
-        prohibited={'.ttf','.otf','.woff','.woff2','.ttc','.eot'}
-        self.assertEqual([], [str(p) for p in MAIN.rglob('*') if p.suffix.lower() in prohibited])
+    def test_bundled_fonts_are_exactly_the_pinned_plex_files(self):
+        # Decision (docs/DEPENDENCY_NOTICES.md): the two IBM Plex TTFs are bundled
+        # deliberately (OFL-1.1) and pinned by SHA-256; no other font binary may appear.
+        import hashlib
+        pinned={'ibm_plex_sans_variable.ttf':'3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3',
+                'ibm_plex_sans_arabic_regular.ttf':'6f611412270a132bbac838da9259d4c68569b4175f3b3b8fa3fa36a30b56dab9'}
+        found={p.name:p for p in MAIN.rglob('*') if p.suffix.lower() in {'.ttf','.otf','.woff','.woff2','.ttc','.eot'}}
+        self.assertEqual(set(pinned),set(found))
+        for name,path in found.items():
+            self.assertEqual(pinned[name],hashlib.sha256(path.read_bytes()).hexdigest(),name)
 
 if __name__=='__main__':
     unittest.main(verbosity=2)

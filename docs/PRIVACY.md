@@ -31,10 +31,23 @@
 - `POST_NOTIFICATIONS`: foreground download/job progress (user-granted,
   Android 13+ runtime prompt with rationale in Settings).
 - `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC`: long downloads.
-- No location, camera, microphone, contacts, or biometric permission.
+- `CAMERA`: only the user-opened document-scan screen (runtime-granted).
+- No location, microphone, contacts, or biometric permission.
   (`VIBRATE` / `USE_BIOMETRIC` were removed: nothing used them.)
 
 ## Errors
 
 Failures surface as on-screen messages and per-item job error codes stored
 locally. There is no third-party crash reporter and no network telemetry.
+
+## Camera, OCR, webpage capture (added this session)
+
+- CAMERA is used only for the manual document-scan screen; captures stay in
+  app-private cache and become normal imported snapshots. No camera data is
+  uploaded.
+- OCR is ML Kit on-device text recognition; page images never leave the
+  device for OCR.
+- Webpage-to-PDF loads the URL you enter in a WebView (that site sees a
+  normal page visit) and prints it locally.
+- PDF/ZIP passwords are held only in memory (session handles), never written
+  to drafts, jobs, logs, or backups.

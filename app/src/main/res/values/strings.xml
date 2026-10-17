@@ -144,4 +144,22 @@
     <string name="processing_title">Processing files on this device</string>
     <string name="processing_body">Open the app to see actual progress and results.</string>
     <string name="processing_cancel">Cancel</string>
+    <string name="settings_export_error_log">Export error log</string>
+    <string name="scan_title">Scan document</string>
+    <string name="scan_hint">Align the document inside the frame. Perspective uses a fixed inset quad.</string>
+    <string name="scan_allow_camera">Allow camera</string>
+    <string name="scan_capture">Capture &amp; correct perspective</string>
+    <string name="scan_back">Back</string>
+    <string name="scan_error_bind">Camera unavailable</string>
+    <string name="scan_error_process">Could not process the scan</string>
+    <string name="scan_error_capture">Capture failed</string>
+    <string name="signature_title">Draw signature</string>
+    <string name="signature_clear">Clear</string>
+    <string name="signature_save">Save drawing as signature image</string>
+    <string name="signature_hint">After saving, add the signature image as the second selected file (PDF first).</string>
+    <string name="scan_adjust_hint">Drag the four corners onto the document edges.</string>
+    <string name="scan_apply">Apply correction</string>
+    <string name="scan_retake">Retake</string>
+    <string name="settings_refresh_storage">Refresh storage</string>
+    <string name="settings_clean_temp">Clean temporary files</string>
 </resources>

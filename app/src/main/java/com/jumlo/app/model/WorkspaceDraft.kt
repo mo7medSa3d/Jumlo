@@ -20,7 +20,11 @@ import kotlinx.serialization.json.Json
     val paperWidth:String="595",val paperHeight:String="842",val orientation:String="AUTO",val margin:String="10",val fill:Boolean=false,
     val pages:String="all",val dpi:String="144",val grayscale:Boolean=false,
     val zipLevel:String="6",val expectedHash:String="",
-    val wifiOnly:Boolean=false,val unmeteredOnly:Boolean=false,val cleartextConsent:Boolean=false
+    val wifiOnly:Boolean=false,val unmeteredOnly:Boolean=false,val cleartextConsent:Boolean=false,
+    val text1:String="",val text2:String="",val text3:String="",val text4:String="",
+    val num1:String="",val num2:String="",val num3:String="",val num4:String="",
+    val flag1:Boolean=false,val flag2:Boolean=false,
+    val secret1:String="",val secret2:String=""
 ) {
     fun executionSettings(downloadHandle:String?=null):String {
         require(version==1) { "UNSUPPORTED_DRAFT_VERSION" }
@@ -42,6 +46,31 @@ import kotlinx.serialization.json.Json
             "pdf_07" -> Json.encodeToString(PdfImagesSettings(pages.trim(),number(dpi,36,600),if(format=="JPEG") "JPEG" else "PNG",number(quality,1,100),grayscale))
             "file_07","file_08" -> Json.encodeToString(ArchiveSettings(SafeNames.basename(outputName),number(zipLevel,0,9)))
             "sha256" -> Json.encodeToString(HashSettings(expectedHash.trim().takeIf { it.isNotEmpty() }))
+            "pdf_03" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMergeSettings(SafeNames.basename(outputName)))
+            "pdf_05" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSplitSettings(SafeNames.basename(outputName),if(flag1) "EVERY" else "RANGES",pages,if(flag1) number(num1.ifBlank{"1"},1,1000) else 1))
+            "pdf_06" -> Json.encodeToString(com.jumlo.app.data.processing.PdfExtractSettings(SafeNames.basename(outputName),pages))
+            "pdf_04" -> Json.encodeToString(com.jumlo.app.data.processing.PdfOrganizeSettings(SafeNames.basename(outputName),text1,text2,number(num1.ifBlank{"90"},-360,360)))
+            "pdf_crop" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCropSettings(SafeNames.basename(outputName),pages,fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))
+            "pdf_compress" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompressSettings(SafeNames.basename(outputName),number(num1.ifBlank{"150"},36,600),number(quality,1,100)))
+            "pdf_stamp" -> Json.encodeToString(com.jumlo.app.data.processing.PdfStampSettings(SafeNames.basename(outputName),text1,flag1,pages))
+            "pdf_annotate" -> Json.encodeToString(com.jumlo.app.data.processing.PdfAnnotateSettings(SafeNames.basename(outputName),text1,number(num1.ifBlank{"1"},1,100000),fraction(num2.ifBlank{"0.1"}),fraction(num3.ifBlank{"0.1"}),flag1))
+            "pdf_signature" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSignatureSettings(SafeNames.basename(outputName),number(num1.ifBlank{"1"},1,100000),fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))
+            "pdf_metadata" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMetadataSettings(SafeNames.basename(outputName),text1,text2,text3,text4))
+            "pdf_protect" -> Json.encodeToString(com.jumlo.app.data.processing.PdfProtectSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
+            "pdf_forms" -> Json.encodeToString(com.jumlo.app.data.processing.PdfFormSettings(SafeNames.basename(outputName),text1.ifBlank{"{}"},flag1))
+            "pdf_compare" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompareSettings())
+            "pdf_redact" -> Json.encodeToString(com.jumlo.app.data.processing.PdfRedactSettings(SafeNames.basename(outputName),number(num1.ifBlank{"1"},1,100000),fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom),text1))
+            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages,number(dpi,36,600),"PNG",number(quality,1,100),grayscale))
+            "webpage_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(text1,144,"PNG",90,false))
+            "img_exif" -> Json.encodeToString(com.jumlo.app.data.processing.ImageExifSettings(flag2,flag1,converted))
+            "img_watermark" -> Json.encodeToString(com.jumlo.app.data.processing.ImageWatermarkSettings(text1,number(num1.ifBlank{"40"},1,100),flag1,converted))
+            "img_join","img_stitch" -> Json.encodeToString(com.jumlo.app.data.processing.ImageJoinSettings(if(toolId=="img_stitch") "VSTRIP" else text1.ifBlank{"GRID2"},number(num1.ifBlank{"8"},0,500),converted))
+            "img_adjust" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings(number(num1.ifBlank{"0"},-100,100),number(num2.ifBlank{"100"},0,300),number(num3.ifBlank{"100"},0,300),number(num4.ifBlank{"0"},0,2000),converted))
+            "img_target" -> Json.encodeToString(com.jumlo.app.data.processing.ImageTargetSettings(number(num1.ifBlank{"200000"},1000,100000000).toLong(),converted))
+            "img_compare" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings())
+            "file_batch_rename" -> Json.encodeToString(com.jumlo.app.data.processing.BatchRenameSettings(text1.ifBlank{"file-{n}"},number(num1.ifBlank{"1"},0,1000000)))
+            "file_duplicates","file_trash" -> Json.encodeToString(com.jumlo.app.data.processing.HashSettings(expectedHash.trim().takeIf { it.isNotEmpty() }))
+            "file_encrypted_zip" -> Json.encodeToString(com.jumlo.app.data.processing.EncryptedArchiveSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
             "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.basename(outputName),wifiOnly,unmeteredOnly,cleartextConsent))
             else -> throw IllegalArgumentException("CAPABILITY_UNAVAILABLE")
         }

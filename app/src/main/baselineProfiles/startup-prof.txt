@@ -1,0 +1,6 @@
+# Baseline Profile rules are generated on-device by
+# :benchmark BaselineProfileGenerator and consumed via profileinstaller.
+# This file documents the hot path that must stay covered:
+# MainActivity launch, Home, Tools catalog, Workspace.
+Lcom/jumlo/app/MainActivity;
+Lcom/jumlo/app/ui/navigation/JumloNavHostKt;
