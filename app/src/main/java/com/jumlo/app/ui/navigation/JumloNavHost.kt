@@ -314,7 +314,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             if(!viewer) item { WorkspaceFields(form,vm::updateForm) }
         }
         if(!viewer) Surface(shadowElevation=6.dp) {
-            QuietPrimaryButton(if(download) "Queue download" else "Process selected files",onExecute,Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal=20.dp,vertical=12.dp),enabled=!busy && CapabilityRegistry.enabled(tool) && (download && urls.isNotBlank() || !download && form.sourceIds.isNotEmpty()))
+            QuietPrimaryButton(if(download) "Queue download" else "Process selected files",onExecute,Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal=20.dp,vertical=12.dp),enabled=!busy && CapabilityRegistry.enabled(tool) && (tool=="webpage_pdf" || (download && urls.isNotBlank() || !download && form.sourceIds.isNotEmpty())))
         }
     }
     previewId?.let { id -> AlertDialog(onDismissRequest={previewId=null},title={Text("Input preview")},text={InputPreview(vm,id)},confirmButton={TextButton(onClick={previewId=null}) {Text("Close")}}) }
