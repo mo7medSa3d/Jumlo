@@ -3,6 +3,7 @@ name: Android CI & APK
 on:
   push:
     branches: [main, 'arena/**']
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -11,6 +12,11 @@ on:
         description: Run Android emulator tests (API 26 and 36)
         type: boolean
         default: false
+        required: false
+      full_release_check:
+        description: Also run release build and R8 shrinker (slow)
+        type: boolean
+        default: true
         required: false
 
 permissions:
@@ -23,7 +29,7 @@ concurrency:
 
 jobs:
   build:
-    name: APK, tests, lint (+ R8 on main)
+    name: APK, unit tests and lint
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -73,10 +79,11 @@ jobs:
           compression-level: 0
           retention-days: 14
 
-      # Keep the installable APK available as soon as debug tests and lint pass.
-      # R8 is still checked for main builds but does not delay the APK artifact.
-      - name: Release R8 (main only)
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+      # R8 recompiles all release sources and can add 8+ minutes on code changes.
+      # Keep automatic fast feedback on pushes; still verify release on v* tags
+      # and on explicit full_release_check workflow dispatches.
+      - name: Release R8 (tag or manual full check)
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_release_check) }}
         shell: bash
         run: |
           set -euo pipefail
