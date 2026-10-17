@@ -3,6 +3,7 @@
     <string name="media_link">رابط الصفحة أو الوسائط</string>
     <string name="media_analyze">تحليل الرابط</string>
     <string name="media_browser">المتصفح</string>
+    <string name="media_update_extractor">تحديث المحرك</string>
     <string name="media_cancel">إلغاء</string>
     <string name="media_analyzing">جاري قراءة الجودات من المصدر...</string>
     <string name="media_video">فيديو</string>
@@ -36,8 +37,13 @@
     <string name="media_no_upscale">رفع معدل البت لا يعيد تفاصيل غير موجودة بالمصدر. ترميز المصدر يتجنب إعادة الترميز عندما يكون مدعوما.</string>
     <string name="media_limits">حد المساحة المؤقتة: 8 GiB حسب المساحة المتاحة. إعادة المحاولة تبدأ التنزيل غير المكتمل من جديد. النتائج المكتملة لا تتكرر. لا تحفظ الروابط بعد إغلاق عملية التطبيق.</string>
     <string name="media_error_site">محرك الاستخراج الحالي لا يتعرف على الرابط. جرب رابط الصفحة الأصلية أو رابط وسائط مكتشف.</string>
-    <string name="media_error_session">المصدر يتطلب جلسة دخول أو رفض الطلب. ملفات الدخول من المتصفح لا تنقل إلى محرك التنزيل في هذه النسخة.</string>
+    <string name="media_error_private">هذا المحتوى خاص أو للأعضاء فقط ولا يمكن تنزيله.</string>
+    <string name="media_error_geoblocked">هذا المحتوى محجوب جغرافيًا في منطقتك من قِبل المنصة المصدر.</string>
+    <string name="media_error_removed">تمت إزالة هذا المحتوى أو لم يعد متاحًا على الرابط المصدر.</string>
+    <string name="media_error_drm">هذا المحتوى محمي بتشفير إدارة الحقوق الرقمية (DRM) ولا يمكن تنزيله.</string>
+    <string name="media_error_session">المصدر يتطلب جلسة دخول أو رفض الطلب. سجل الدخول عبر المتصفح المعزول؛ لا تُصدّر ملفات تعريف الارتباط أبدًا.</string>
     <string name="media_error_rate">المصدر حدد معدل الطلبات. أعد المحاولة لاحقا بدون إنشاء مهام مكررة.</string>
+    <string name="media_error_network">تعذر الاتصال بالمصدر بسبب خطأ في الشبكة أو TLS. تحقق من الاتصال وحاول مجدداً.</string>
     <string name="media_error_format">الجودة المختارة تغيرت أو غير متاحة. حلل الرابط الأصلي من جديد.</string>
     <string name="media_error_runtime">محرك الوسائط غير متاح في هذا البناء أو معمارية الجهاز. استخدم إعدادات بناء الوسائط الموجودة في ملف README.</string>
     <string name="media_error_generic">لم تكتمل معالجة الوسائط ولم يتم إعلان نجاح الملف. راجع رمز الخطأ ثم أعد المحاولة أو حلل رابطا آخر.</string>
@@ -48,4 +54,7 @@
     <string name="media_new_copy">إنشاء نسخة إضافية عند التنزيل التالي</string>
     <string name="media_tos_notice">لا تنزّل إلا الفيديو أو الصوت الذي تملكه أو يُسمح لك بحفظه. بعض المواقع تمنع التنزيل في شروط استخدامها، وتجاوز الدفع أو تسجيل الدخول أو الحماية غير مدعوم. أنت مسؤول عن احترام حقوق النشر وشروط الموقع المصدر.</string>
     <string name="media_tos_ack">يحق لي تنزيل هذا المحتوى، وأتحمل مسؤولية حقوق النشر وشروط الموقع المصدر</string>
+    <string name="media_platform_matrix_title">حالة تأهيل المنصات</string>
+    <string name="media_status_unverified">غير متحقق</string>
+    <string name="media_status_host_verified">متحقق محلياً</string>
 </resources>

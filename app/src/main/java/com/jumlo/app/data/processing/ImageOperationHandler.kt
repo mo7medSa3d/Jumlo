@@ -1,6 +1,7 @@
 package com.jumlo.app.data.processing
 
 import android.graphics.Bitmap
+import androidx.exifinterface.media.ExifInterface
 import com.jumlo.app.core.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.model.*
@@ -78,24 +79,62 @@ import kotlin.math.roundToInt
         when(request.toolId){
             "img_exif" -> {
                 val settings=Json.decodeFromString<ImageExifSettings>(request.settingsJson)
+                val safeNonGpsTags=listOf(
+                    ExifInterface.TAG_DATETIME,
+                    ExifInterface.TAG_MAKE,
+                    ExifInterface.TAG_MODEL,
+                    ExifInterface.TAG_SOFTWARE,
+                    ExifInterface.TAG_ARTIST,
+                    ExifInterface.TAG_COPYRIGHT,
+                    ExifInterface.TAG_IMAGE_DESCRIPTION
+                )
+                val inspectTags=safeNonGpsTags + listOf(
+                    ExifInterface.TAG_GPS_LATITUDE,
+                    ExifInterface.TAG_GPS_LONGITUDE,
+                    ExifInterface.TAG_ORIENTATION
+                )
                 request.sourceIds.forEachIndexed{ index,id ->
                     val key="image:$index"
                     try {
                         val source=context.sources.get(id)
+                        var preservedAttrs=emptyMap<String,String>()
                         val report=context.sources.withSeekable(id,request.id){ f ->
-                            val ex=androidx.exifinterface.media.ExifInterface(f)
-                            val tags=listOf("DateTime","Make","Model","GPSLatitude","GPSLongitude","Orientation","Software")
-                            tags.joinToString("\n"){ tag -> "$tag=${ex.getAttribute(tag) ?: "-"}" }
+                            val ex=ExifInterface(f)
+                            if(!settings.removeAll) {
+                                val kept=mutableMapOf<String,String>()
+                                for(tag in safeNonGpsTags) ex.getAttribute(tag)?.let { kept[tag]=it }
+                                if(!settings.removeLocation) {
+                                    for(gpsTag in listOf(ExifInterface.TAG_GPS_LATITUDE,ExifInterface.TAG_GPS_LATITUDE_REF,ExifInterface.TAG_GPS_LONGITUDE,ExifInterface.TAG_GPS_LONGITUDE_REF)) {
+                                        ex.getAttribute(gpsTag)?.let { kept[gpsTag]=it }
+                                    }
+                                }
+                                preservedAttrs=kept
+                            }
+                            inspectTags.joinToString("\n"){ tag -> "$tag=${ex.getAttribute(tag) ?: "-"}" }
                         }
                         context.outputs.find(request.id,"report:$index")?.let{ outcomes+=ItemOutcome("report:$index",ItemStatus.CREATED,it.id) } ?: run {
-                            val ticket=context.outputs.reserve(request.id,"report:$index",SafeNames.basename("exif_report.txt"),"text/plain")
-                            ticket.stageFile.writeText(report+"\nremoveLocation=${settings.removeLocation} removeAll=${settings.removeAll}\nNote: re-encoded output strips metadata per output.stripMetadata.\n")
+                            val ticket=context.outputs.reserve(request.id,"report:$index",SafeNames.basename("exif_report_${index+1}.txt"),"text/plain")
+                            ticket.stageFile.writeText(report+"\nremoveLocation=${settings.removeLocation}\nremoveAll=${settings.removeAll}\nretainedTags=${preservedAttrs.keys.joinToString(",")}\n")
                             val rec=context.outputs.publish(ticket){ OutputMetadata() }; outcomes+=ItemOutcome("report:$index",ItemStatus.CREATED,rec.id)
                         }
-                        // stripped re-encode
-                        val name=SafeNames.basename(settings.output.namePrefix+SafeNames.fromDisplayName(source.displayName,"image").substringBeforeLast('.')+"."+BitmapTransforms.extension(settings.output.format))
-                        outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format)){ stage ->
-                            kotlinx.coroutines.runBlocking { context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d -> BitmapTransforms.encode(d.bitmap,stage,settings.output,context.budget.maxBitmapBytes) } } }
+                        val outFormat=if(!settings.removeAll && settings.output.format!="JPEG") "JPEG" else settings.output.format
+                        val outSettings=settings.output.copy(format=outFormat)
+                        val name=SafeNames.basename(outSettings.namePrefix+SafeNames.fromDisplayName(source.displayName,"image").substringBeforeLast('.')+"."+BitmapTransforms.extension(outSettings.format))
+                        outcomes+=publishBytes(key,name,BitmapTransforms.mime(outSettings.format)){ stage ->
+                            kotlinx.coroutines.runBlocking {
+                                context.sources.withSeekable(id,request.id){ f ->
+                                    BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d ->
+                                        BitmapTransforms.encode(d.bitmap,stage,outSettings,context.budget.maxBitmapBytes)
+                                    }
+                                }
+                                if(!settings.removeAll && preservedAttrs.isNotEmpty() && outSettings.format=="JPEG") {
+                                    runCatching {
+                                        val outExif=ExifInterface(stage)
+                                        preservedAttrs.forEach { (k,v) -> outExif.setAttribute(k,v) }
+                                        outExif.saveAttributes()
+                                    }
+                                }
+                            }
                         }
                     } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
                 }
@@ -127,9 +166,21 @@ import kotlin.math.roundToInt
                         kotlinx.coroutines.runBlocking {
                             val bitmaps=mutableListOf<Bitmap>()
                             try { for(id in request.sourceIds){ context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d -> bitmaps.add(Bitmap.createBitmap(d.bitmap)) } } }
-                                val joined=BitmapExtras.join(bitmaps,settings.layout,settings.gapPx,context.budget.maxBitmapBytes)
+                                val joined=BitmapExtras.join(bitmaps,settings.layout,settings.gapPx,context.budget.maxBitmapBytes,settings.overlapPx)
                                 try{ BitmapTransforms.encode(joined,stage,settings.output,context.budget.maxBitmapBytes) } finally { joined.recycle() }
                             } finally { bitmaps.forEach{ if(!it.isRecycled) it.recycle() } }
+                        }
+                    }
+                    if(request.toolId=="img_stitch") {
+                        val capKey="codec-capabilities"
+                        context.outputs.find(request.id,capKey)?.let { outcomes+=ItemOutcome(capKey,ItemStatus.CREATED,it.id) } ?: run {
+                            val capTicket=context.outputs.reserve(request.id,capKey,"codec_capabilities.txt","text/plain")
+                            val report=BitmapExtras.codecCapabilities().joinToString("\n") {
+                                "${it.format}|decode=${it.canDecode}|encode=${it.canEncode}|animation=${it.canPreserveAnimation}|api=${it.supportedApiRange}"
+                            }
+                            capTicket.stageFile.writeText(report+"\n")
+                            val rec=context.outputs.publish(capTicket){ OutputMetadata() }
+                            outcomes+=ItemOutcome(capKey,ItemStatus.CREATED,rec.id)
                         }
                     }
                 } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
@@ -150,7 +201,6 @@ import kotlin.math.roundToInt
                     try { val source=context.sources.get(id); val name=SafeNames.basename(settings.output.namePrefix+SafeNames.fromDisplayName(source.displayName,"image").substringBeforeLast('.')+".jpg")
                         outcomes+=publishBytes(key,name,"image/jpeg"){ stage -> kotlinx.coroutines.runBlocking{ context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d ->
                             var lo=1; var hi=100; var best:java.io.File?=null
-                            // binary search quality; encode to temp files in stage dir
                             val tmp=java.io.File(stage.parentFile,"qtmp.jpg")
                             while(lo<=hi){ val mid=(lo+hi)/2; BitmapTransforms.encode(d.bitmap,tmp,ImageConversionSettings(format="JPEG",quality=mid),context.budget.maxBitmapBytes); if(tmp.length()<=settings.targetBytes){ best=java.io.File(stage.parentFile,"qbest.jpg"); tmp.copyTo(best,true); lo=mid+1 } else hi=mid-1 }
                             val chosen=best ?: tmp; chosen.copyTo(stage,overwrite=true); tmp.delete(); best?.delete()

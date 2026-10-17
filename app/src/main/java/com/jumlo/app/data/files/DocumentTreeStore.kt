@@ -5,13 +5,17 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.documentfile.provider.DocumentFile
+import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.SafeNames
 import com.jumlo.app.data.jobs.OperationFailure
+import com.jumlo.app.model.CollisionPolicy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 data class DocumentEntry(val uri:String,val name:String,val mimeType:String?,val sizeBytes:Long?,val isDirectory:Boolean,val readable:Boolean,val writable:Boolean)
 data class DocumentListing(val treeUri:String,val name:String,val entries:List<DocumentEntry>)
@@ -66,5 +70,63 @@ data class DocumentListing(val treeUri:String,val name:String,val entries:List<D
         val item=DocumentFile.fromSingleUri(app,Uri.parse(uri)) ?: throw OperationFailure("ACCESS_LOST")
         require(item.isFile && item.canWrite()) { "FILE_DELETE_UNAVAILABLE" }
         require(item.delete()) { "PROVIDER_DELETE_FAILED" }
+    }
+    /**
+     * Provider-aware copy/move with explicit conflict policy (KEEP_BOTH, SKIP, REPLACE)
+     * and SHA-256 verification before deleting the source on move.
+     */
+    suspend fun copyOrMove(
+        sourceUri: String,
+        targetTreeUri: String,
+        desiredName: String? = null,
+        move: Boolean = false,
+        collisionPolicy: CollisionPolicy = CollisionPolicy.KEEP_BOTH
+    ): DocumentEntry? = withContext(Dispatchers.IO) {
+        val srcParsed = Uri.parse(sourceUri)
+        val srcDoc = DocumentFile.fromSingleUri(app, srcParsed) ?: throw OperationFailure("ACCESS_LOST")
+        require(srcDoc.isFile && srcDoc.canRead()) { "ACCESS_LOST" }
+        val targetRoot = DocumentFile.fromTreeUri(app, Uri.parse(targetTreeUri)) ?: throw OperationFailure("ACCESS_LOST")
+        require(targetRoot.canWrite()) { "PROVIDER_READ_ONLY" }
+        val existingChildren = targetRoot.listFiles()
+        require(existingChildren.size <= 10000) { "DIRECTORY_ENTRY_BUDGET_EXCEEDED" }
+        val baseName = SafeNames.basename(desiredName?.takeIf { it.isNotBlank() } ?: srcDoc.name ?: "file.bin")
+        val existingMatch = existingChildren.firstOrNull { it.name?.equals(baseName, ignoreCase = true) == true }
+        val finalName = when {
+            existingMatch == null -> baseName
+            collisionPolicy == CollisionPolicy.SKIP -> return@withContext null
+            collisionPolicy == CollisionPolicy.REPLACE -> {
+                require(existingMatch.canWrite() && existingMatch.delete()) { "PROVIDER_REPLACE_FAILED" }
+                baseName
+            }
+            else -> SafeNames.unique(existingChildren.mapNotNull { it.name }.toSet(), baseName)
+        }
+        val mime = srcDoc.type ?: "application/octet-stream"
+        val destDoc = targetRoot.createFile(mime, finalName) ?: throw OperationFailure("PROVIDER_CREATE_FAILED")
+        try {
+            val expectedHash = app.contentResolver.openInputStream(srcParsed)?.use { Hashing.sha256(it) }
+                ?: throw OperationFailure("ACCESS_LOST")
+            app.contentResolver.openInputStream(srcParsed)?.use { input ->
+                app.contentResolver.openOutputStream(destDoc.uri, "wt")?.use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        coroutineContext.ensureActive()
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        if (n > 0) output.write(buffer, 0, n)
+                    }
+                    output.flush()
+                } ?: throw OperationFailure("EXPORT_WRITE_FAILED")
+            } ?: throw OperationFailure("ACCESS_LOST")
+            val actualHash = app.contentResolver.openInputStream(destDoc.uri)?.use { Hashing.sha256(it) }
+                ?: throw OperationFailure("EXPORT_UNVERIFIED")
+            check(actualHash == expectedHash) { "EXPORT_HASH_MISMATCH" }
+            if (move) {
+                require(srcDoc.canWrite() && srcDoc.delete()) { "PROVIDER_MOVE_SOURCE_DELETE_FAILED" }
+            }
+            DocumentEntry(destDoc.uri.toString(), destDoc.name ?: finalName, destDoc.type, measuredSize(destDoc.uri), false, destDoc.canRead(), destDoc.canWrite())
+        } catch (t: Throwable) {
+            runCatching { destDoc.delete() }
+            throw t
+        }
     }
 }

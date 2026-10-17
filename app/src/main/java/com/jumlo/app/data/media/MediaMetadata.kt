@@ -27,8 +27,17 @@ object MediaMetadata {
                 protocol = f.string("protocol").ifBlank { if (f.string("url").startsWith("https://")) "https" else "http" },
                 drm = f.bool("has_drm") || value.bool("has_drm"), preference = f.int("preference") ?: 0)
         }
-        return MediaAsset(value.string("id"), value.string("extractor_key").ifBlank { value.string("extractor") },
-            value.string("title").take(1024), value.double("duration"), formats)
+        val uploader = value.string("uploader").ifBlank { value.string("channel") }.take(256).takeIf(String::isNotBlank)
+        val thumb = value.string("thumbnail").takeIf { it.startsWith("https://") && '?' !in it && it.length <= 512 }
+        return MediaAsset(
+            value.string("id"),
+            value.string("extractor_key").ifBlank { value.string("extractor") },
+            value.string("title").take(1024),
+            value.double("duration"),
+            formats,
+            uploader = uploader,
+            thumbnailUrl = thumb
+        )
     }
     private fun JsonObject.string(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull ?: ""
     private fun JsonObject.bool(key: String) = (this[key] as? JsonPrimitive)?.booleanOrNull == true

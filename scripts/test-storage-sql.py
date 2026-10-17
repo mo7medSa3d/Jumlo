@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Execute the actual migration/DAO SQL with SQLite. This is NOT Room/device qualification."""
 from pathlib import Path
+import json
 import re
 import sqlite3
 import unittest
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'app/src/main/java/com/jumlo/app/data/local'
 DAO = (PACKAGE / 'ProcessingEntities.kt').read_text()
 MIGRATIONS = re.findall(r'db\.execSQL\("([^"\n]+)"\)', (PACKAGE / 'DatabaseMigrations.kt').read_text())
+SCHEMA_DIR = ROOT / 'app/schemas/com.jumlo.app.data.local.AppDatabase'
 
 def query(name: str) -> str:
     found = re.search(r'@Query\("([^"\n]+)"\)\s*suspend\s+fun\s+' + re.escape(name) + r'\(', DAO)
@@ -48,6 +50,13 @@ class ActualSqlTests(unittest.TestCase):
         self.db.execute('INSERT INTO outputs VALUES (?, ?, ?, ?)',('one','job','item','a'))
         with self.assertRaises(sqlite3.IntegrityError):
             self.db.execute('INSERT INTO outputs VALUES (?, ?, ?, ?)',('two','job','item','b'))
+    def test_output_lookup_and_trash_delete_queries(self):
+        self.db.execute('INSERT INTO outputs VALUES (?, ?, ?, ?)',('out1','job','item','{"id":"out1"}'))
+        row = self.db.execute(query('outputById'), {'id': 'out1'}).fetchone()
+        self.assertIsNotNone(row)
+        self.assertEqual('out1', row[0])
+        self.assertEqual(1, self.run_query('deleteOutput', id='out1'))
+        self.assertIsNone(self.db.execute(query('outputById'), {'id': 'out1'}).fetchone())
     def test_source_uri_can_have_distinct_immutable_snapshot_ids(self):
         for key in ('old','new'):
             self.db.execute('INSERT INTO sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',(key,'content://same','input',None,None,1,0,0,None,key))
@@ -55,12 +64,23 @@ class ActualSqlTests(unittest.TestCase):
     def test_worker_start_failure_never_overwrites_cancelled_state(self):
         self.job(stage='CANCELLED')
         self.assertEqual(0,self.run_query('failBeforeClaim',id='job',snapshot='failed'))
-    def test_migration_sql_retains_preexisting_table_rows(self):
-        self.db.execute('CREATE TABLE managed_files(id TEXT PRIMARY KEY,name TEXT)')
-        self.db.execute("INSERT INTO managed_files VALUES ('legacy','original')")
-        for statement in MIGRATIONS:
-            self.db.execute(statement)
-        self.assertEqual([('legacy','original')],self.db.execute('SELECT * FROM managed_files').fetchall())
+    def test_migration_sql_retains_preexisting_table_rows_and_matches_schema_v1_to_v2(self):
+        s1 = json.loads((SCHEMA_DIR / '1.json').read_text())
+        s2 = json.loads((SCHEMA_DIR / '2.json').read_text())
+        conn = sqlite3.connect(':memory:')
+        try:
+            for entity in s1['database']['entities']:
+                conn.execute(entity['createSql'].replace('${TABLE_NAME}', entity['tableName']))
+            conn.execute("INSERT INTO managed_files VALUES ('legacy','original','/p','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','now',0,0)")
+            for statement in MIGRATIONS:
+                conn.execute(statement)
+            self.assertEqual([('legacy','original')], conn.execute('SELECT id, name FROM managed_files').fetchall())
+            for entity in s2['database']['entities']:
+                cols = [r[1] for r in conn.execute(f"PRAGMA table_info(`{entity['tableName']}`)").fetchall()]
+                expected_cols = [f['columnName'] for f in entity['fields']]
+                self.assertEqual(expected_cols, cols, entity['tableName'])
+        finally:
+            conn.close()
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

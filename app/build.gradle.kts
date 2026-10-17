@@ -41,6 +41,7 @@ android {
     }
 
     sourceSets["main"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     // pdfbox-android keeps standard-14 font metrics in AAR assets (loaded via
     // PDFBoxResourceLoader on device); expose them on the unit-test classpath for JVM.
@@ -97,7 +98,7 @@ android {
 
     lint {
         abortOnError = true
-        // Phase 5: every user-visible string must exist in values/ and values-ar/.
+        // Phase 6: every user-visible string must exist in values/ and values-ar/.
         error += setOf("MissingTranslation")
     }
 
@@ -172,6 +173,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)

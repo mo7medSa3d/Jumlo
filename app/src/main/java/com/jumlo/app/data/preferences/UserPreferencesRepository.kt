@@ -35,6 +35,7 @@ class UserPreferencesRepository @Inject constructor(
         val STRIP_EXIF_DEFAULT = booleanPreferencesKey("strip_exif_default")
         val NOTIFICATIONS_GRANTED = booleanPreferencesKey("notifications_granted")
         val VAULT_AUTO_LOCK_SEC = intPreferencesKey("vault_auto_lock_sec")
+        val MEDIA_TERMS_ACCEPTED = booleanPreferencesKey("media_terms_accepted")
     }
 
     val settingsFlow: Flow<AppSettingsState> = context.dataStore.data.map { prefs ->
@@ -53,7 +54,8 @@ class UserPreferencesRepository @Inject constructor(
             wifiOnlyDefault = prefs[Keys.WIFI_ONLY_DEFAULT] ?: true,
             stripExifByDefault = prefs[Keys.STRIP_EXIF_DEFAULT] ?: true,
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
-            vaultAutoLockSeconds = prefs[Keys.VAULT_AUTO_LOCK_SEC] ?: 120
+            vaultAutoLockSeconds = prefs[Keys.VAULT_AUTO_LOCK_SEC] ?: 120,
+            mediaTermsAccepted = prefs[Keys.MEDIA_TERMS_ACCEPTED] ?: false
         )
     }
 
@@ -95,5 +97,9 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setVaultAutoLockSeconds(seconds: Int) {
         context.dataStore.edit { it[Keys.VAULT_AUTO_LOCK_SEC] = seconds }
+    }
+
+    suspend fun setMediaTermsAccepted(accepted: Boolean) {
+        context.dataStore.edit { it[Keys.MEDIA_TERMS_ACCEPTED] = accepted }
     }
 }

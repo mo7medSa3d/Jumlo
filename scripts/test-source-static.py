@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Narrow source/package consistency checks. Does not replace Android lint or compilation."""
 from pathlib import Path
+import json
 import re
 import unittest
 import xml.etree.ElementTree as ET
@@ -20,6 +21,20 @@ class SourceConsistencyTests(unittest.TestCase):
         for path in CODE.rglob('*.kt'):
             used.update(re.findall(r'(?<![\w.])R\.string\.(\w+)',path.read_text()))
         self.assertEqual(set(),used-names)
+    def test_en_and_ar_string_resources_have_exact_parity(self):
+        en_keys={node.get('name') for path in (MAIN/'res/values').glob('*.xml') for node in ET.parse(path).getroot() if node.tag=='string'}
+        ar_keys={node.get('name') for path in (MAIN/'res/values-ar').glob('*.xml') for node in ET.parse(path).getroot() if node.tag=='string'}
+        self.assertEqual(set(), en_keys - ar_keys, f'Missing in values-ar: {sorted(en_keys - ar_keys)}')
+        self.assertEqual(set(), ar_keys - en_keys, f'Missing in values: {sorted(ar_keys - en_keys)}')
+    def test_string_format_placeholders_match_between_en_and_ar(self):
+        spec_re=re.compile(r'%\d+\$[sd]')
+        en_specs={node.get('name'):set(spec_re.findall(node.text or '')) for path in (MAIN/'res/values').glob('*.xml') for node in ET.parse(path).getroot() if node.tag=='string'}
+        ar_specs={node.get('name'):set(spec_re.findall(node.text or '')) for path in (MAIN/'res/values-ar').glob('*.xml') for node in ET.parse(path).getroot() if node.tag=='string'}
+        for key, specs in en_specs.items():
+            self.assertEqual(specs, ar_specs.get(key, set()), f'Format placeholder mismatch for {key}')
+        self.assertIn('%1$d', en_specs['home_resume_workspace'])
+        self.assertEqual({'%1$s','%2$s','%3$s','%4$s','%5$s'}, en_specs['settings_storage_summary'])
+        self.assertEqual({'%1$d','%2$s'}, en_specs['workspace_queue_summary'])
     def test_resource_names_are_unique_per_locale(self):
         for folder in (MAIN/'res').glob('values*'):
             keys=[n.get('name') for path in folder.glob('*.xml') for n in ET.parse(path).getroot() if n.tag=='string']
@@ -43,8 +58,6 @@ class SourceConsistencyTests(unittest.TestCase):
         self.assertEqual(1,len(match))
         self.assertEqual('false',match[0].get(android+'exported'))
     def test_bundled_fonts_are_exactly_the_pinned_plex_files(self):
-        # Decision (docs/DEPENDENCY_NOTICES.md): the two IBM Plex TTFs are bundled
-        # deliberately (OFL-1.1) and pinned by SHA-256; no other font binary may appear.
         import hashlib
         pinned={'ibm_plex_sans_variable.ttf':'3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3',
                 'ibm_plex_sans_arabic_regular.ttf':'6f611412270a132bbac838da9259d4c68569b4175f3b3b8fa3fa36a30b56dab9'}
@@ -52,6 +65,28 @@ class SourceConsistencyTests(unittest.TestCase):
         self.assertEqual(set(pinned),set(found))
         for name,path in found.items():
             self.assertEqual(pinned[name],hashlib.sha256(path.read_bytes()).hexdigest(),name)
+    def test_room_exported_schemas_v1_and_v2_exist_and_parse(self):
+        schema_dir=ROOT/'app/schemas/com.jumlo.app.data.local.AppDatabase'
+        s1=json.loads((schema_dir/'1.json').read_text())
+        s2=json.loads((schema_dir/'2.json').read_text())
+        self.assertEqual(1,s1['database']['version'])
+        self.assertEqual(2,s2['database']['version'])
+        t1={e['tableName'] for e in s1['database']['entities']}
+        t2={e['tableName'] for e in s2['database']['entities']}
+        self.assertEqual({'managed_files','download_tasks'},t1)
+        self.assertEqual({'managed_files','download_tasks','sources','jobs','outputs','drafts'},t2)
+    def test_kotlin_files_have_balanced_delimiters_and_no_known_compile_hazards(self):
+        for path in (ROOT/'app/src').rglob('*.kt'):
+            text=path.read_text()
+            with self.subTest(path=str(path.relative_to(ROOT))):
+                self.assertNotIn('private set\n        private set',text)
+                self.assertNotIn('route=next.route',text)
+                self.assertNotIn('RenderingMode.INVISIBLE',text)
+                self.assertNotIn('JumloDestination',text)
+                self.assertNotIn('QuietHeader',text)
+                self.assertNotIn('QuietPrimaryActionButton',text)
+                self.assertNotIn('Icons.Outlined.',text)
+                self.assertTrue(text.strip().startswith('package com.jumlo.'))
 
 if __name__=='__main__':
     unittest.main(verbosity=2)

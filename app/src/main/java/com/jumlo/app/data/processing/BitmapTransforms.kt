@@ -11,6 +11,15 @@ import kotlin.math.*
 
 data class DecodedImage(val bitmap:Bitmap,val normalizedExifOrientation:Int=1):Closeable { override fun close() { if(!bitmap.isRecycled) bitmap.recycle() } }
 
+data class CodecCapability(
+    val format: String,
+    val canDecode: Boolean,
+    val canEncode: Boolean,
+    val canPreserveAnimation: Boolean,
+    val supportedApiRange: IntRange,
+    val verifiedFixtureIds: List<String>
+)
+
 object BitmapTransforms {
     private fun requireAggregate(source:Bitmap,w:Int,h:Int,budget:Long) {
         MemoryBudget.requireBitmaps(w,h,1,budget)
@@ -38,9 +47,9 @@ object BitmapTransforms {
             if(orientation in 2..8) {
                 val normalized=Bitmap.createBitmap(bitmap,0,0,bitmap.width,bitmap.height,matrix,true)
                 if(normalized!==bitmap) bitmap.recycle()
-                return DecodedImage(normalized)
+                return DecodedImage(normalized,1)
             }
-            return DecodedImage(bitmap)
+            return DecodedImage(bitmap,1)
         } catch(t:Throwable) { bitmap.recycle(); throw t }
     }
     /** Refuse animation rather than silently converting only its first frame. */
@@ -110,8 +119,15 @@ object BitmapTransforms {
     fun mime(format:String)=when(format) { "JPEG" -> "image/jpeg"; "PNG" -> "image/png"; "WEBP" -> "image/webp"; else -> throw IllegalArgumentException("UNSUPPORTED_IMAGE_FORMAT") }
 }
 
-/** Expansion transforms: watermark, join/stitch, adjustments. All budget-checked. */
+/** Expansion transforms: watermark, join/stitch, adjustments, codec matrix. All budget-checked. */
 object BitmapExtras {
+    fun codecCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): List<CodecCapability> = listOf(
+        CodecCapability("JPEG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = listOf("jpeg_srgb_baseline")),
+        CodecCapability("PNG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = listOf("png_rgba_lossless")),
+        CodecCapability("WEBP", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = listOf("webp_lossy")),
+        CodecCapability("HEIC", canDecode = sdkInt >= 28, canEncode = false, canPreserveAnimation = false, supportedApiRange = 28..36, verifiedFixtureIds = emptyList())
+    )
+
     fun watermarkText(source:Bitmap,text:String,opacityPercent:Int,budget:Long):Bitmap {
         MemoryBudget.requireBitmaps(source.width,source.height,2,budget)
         val out=Bitmap.createBitmap(source.width,source.height,Bitmap.Config.ARGB_8888)
@@ -128,18 +144,33 @@ object BitmapExtras {
             canvas.drawBitmap(logo,null,RectF((source.width-w-16).toFloat(),(source.height-h-16).toFloat(),(source.width-16).toFloat(),(source.height-16).toFloat()),Paint(Paint.FILTER_BITMAP_FLAG)); return out
         } catch(t:Throwable){ out.recycle(); throw t }
     }
-    fun join(bitmaps:List<Bitmap>,layout:String,gapPx:Int,budget:Long):Bitmap {
+    fun join(bitmaps:List<Bitmap>,layout:String,gapPx:Int,budget:Long,overlapPx:Int=0):Bitmap {
         require(bitmaps.isNotEmpty()){"NO_SOURCES"}
         val gap=gapPx.coerceIn(0,500)
+        val overlap=if(layout=="VSTRIP") overlapPx.coerceIn(0,400) else 0
         val (w,h)=when(layout){
-            "VSTRIP" -> bitmaps.maxOf{it.width} to bitmaps.sumOf{it.height}+gap*(bitmaps.size-1)
+            "VSTRIP" -> {
+                val totalH=bitmaps.mapIndexed { idx,b -> if(idx==0) b.height else (b.height-overlap).coerceAtLeast(1) }.sum() + gap*(bitmaps.size-1)
+                bitmaps.maxOf{it.width} to totalH.coerceAtLeast(1)
+            }
             "HSTRIP" -> bitmaps.sumOf{it.width}+gap*(bitmaps.size-1) to bitmaps.maxOf{it.height}
             else -> { val cols=2; val rows=(bitmaps.size+cols-1)/cols; val cw=bitmaps.maxOf{it.width}; val ch=bitmaps.maxOf{it.height}; (cw*cols+gap*(cols-1)) to (ch*rows+gap*(rows-1)) }
         }
         MemoryBudget.requireBitmaps(w,h,1,budget)
         val out=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
         try { val canvas=Canvas(out); canvas.drawColor(Color.WHITE); var x=0; var y=0; var col=0; val cw=bitmaps.maxOf{it.width}; val ch=bitmaps.maxOf{it.height}
-            bitmaps.forEach{ b -> canvas.drawBitmap(b,x.toFloat(),y.toFloat(),null); when(layout){ "VSTRIP" -> y+=b.height+gap; "HSTRIP" -> x+=b.width+gap; else -> { col++; if(col>=2){col=0;x=0;y+=ch+gap}else x+=cw+gap } } }
+            bitmaps.forEachIndexed{ idx,b ->
+                when(layout){
+                    "VSTRIP" -> {
+                        val trimTop=if(idx==0) 0 else overlap.coerceAtMost(b.height-1)
+                        val drawH=(b.height-trimTop).coerceAtLeast(1)
+                        canvas.drawBitmap(b,Rect(0,trimTop,b.width,b.height),Rect(0,y,b.width,y+drawH),null)
+                        y+=drawH+gap
+                    }
+                    "HSTRIP" -> { canvas.drawBitmap(b,x.toFloat(),y.toFloat(),null); x+=b.width+gap }
+                    else -> { canvas.drawBitmap(b,x.toFloat(),y.toFloat(),null); col++; if(col>=2){col=0;x=0;y+=ch+gap}else x+=cw+gap }
+                }
+            }
             return out
         } catch(t:Throwable){ out.recycle(); throw t }
     }

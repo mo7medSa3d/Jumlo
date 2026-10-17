@@ -55,7 +55,7 @@ import kotlinx.serialization.json.Json
             "pdf_stamp" -> Json.encodeToString(com.jumlo.app.data.processing.PdfStampSettings(SafeNames.basename(outputName),text1,flag1,pages))
             "pdf_annotate" -> Json.encodeToString(com.jumlo.app.data.processing.PdfAnnotateSettings(SafeNames.basename(outputName),text1,number(num1.ifBlank{"1"},1,100000),fraction(num2.ifBlank{"0.1"}),fraction(num3.ifBlank{"0.1"}),flag1))
             "pdf_signature" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSignatureSettings(SafeNames.basename(outputName),number(num1.ifBlank{"1"},1,100000),fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))
-            "pdf_metadata" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMetadataSettings(SafeNames.basename(outputName),text1,text2,text3,text4))
+            "pdf_metadata" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMetadataSettings(SafeNames.basename(outputName),text1,text2,text3,text4,number(num1.ifBlank{"1"},1,100000)))
             "pdf_protect" -> Json.encodeToString(com.jumlo.app.data.processing.PdfProtectSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
             "pdf_forms" -> Json.encodeToString(com.jumlo.app.data.processing.PdfFormSettings(SafeNames.basename(outputName),text1.ifBlank{"{}"},flag1))
             "pdf_compare" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompareSettings())
@@ -64,19 +64,20 @@ import kotlinx.serialization.json.Json
             "webpage_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(text1,144,"PNG",90,false))
             "img_exif" -> Json.encodeToString(com.jumlo.app.data.processing.ImageExifSettings(flag2,flag1,converted))
             "img_watermark" -> Json.encodeToString(com.jumlo.app.data.processing.ImageWatermarkSettings(text1,number(num1.ifBlank{"40"},1,100),flag1,converted))
-            "img_join","img_stitch" -> Json.encodeToString(com.jumlo.app.data.processing.ImageJoinSettings(if(toolId=="img_stitch") "VSTRIP" else text1.ifBlank{"GRID2"},number(num1.ifBlank{"8"},0,500),converted))
+            "img_join","img_stitch" -> Json.encodeToString(com.jumlo.app.data.processing.ImageJoinSettings(if(toolId=="img_stitch") "VSTRIP" else text1.ifBlank{"GRID2"},number(num1.ifBlank{"8"},0,500),if(toolId=="img_stitch") number(num2.ifBlank{"0"},0,400) else 0,converted))
             "img_adjust" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings(number(num1.ifBlank{"0"},-100,100),number(num2.ifBlank{"100"},0,300),number(num3.ifBlank{"100"},0,300),number(num4.ifBlank{"0"},0,2000),converted))
             "img_target" -> Json.encodeToString(com.jumlo.app.data.processing.ImageTargetSettings(number(num1.ifBlank{"200000"},1000,100000000).toLong(),converted))
             "img_compare" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings())
             "file_batch_rename" -> Json.encodeToString(com.jumlo.app.data.processing.BatchRenameSettings(text1.ifBlank{"file-{n}"},number(num1.ifBlank{"1"},0,1000000)))
             "file_duplicates","file_trash" -> Json.encodeToString(com.jumlo.app.data.processing.HashSettings(expectedHash.trim().takeIf { it.isNotEmpty() }))
             "file_encrypted_zip" -> Json.encodeToString(com.jumlo.app.data.processing.EncryptedArchiveSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
+            "file_drive" -> Json.encodeToString(com.jumlo.app.data.processing.GoogleDriveSettings(text1.trim(),text2.trim(),flag1,downloadHandle ?: ""))
             "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.basename(outputName),wifiOnly,unmeteredOnly,cleartextConsent))
             else -> throw IllegalArgumentException("CAPABILITY_UNAVAILABLE")
         }
     }
     companion object {
         fun normalizeDigits(text:String):String=text.trim().map { c -> when(c) { in '\u0660'..'\u0669' -> '0'+(c-'\u0660');in '\u06f0'..'\u06f9' -> '0'+(c-'\u06f0');'\u066b' -> '.';else->c } }.joinToString("")
-        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_02"->"Images.pdf";"file_07","file_08"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },quality=if(id=="img_04") "75" else "85")
+        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_02"->"Images.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },quality=if(id=="img_04") "75" else "85")
     }
 }

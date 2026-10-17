@@ -2,10 +2,33 @@ package com.jumlo.app.core
 import java.io.*
 interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
 class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,private val closeAction:()->Unit={}):Closeable { override fun close() { try { body.close() } finally { closeAction() } } }
-data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=2L*1024*1024*1024,val minFreeBytes:Long=32L*1024*1024,val headers:Map<String,String> = emptyMap(),val finalUrlSha256:String?=null)
+data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=2L*1024*1024*1024,val minFreeBytes:Long=32L*1024*1024,val headers:Map<String,String> = emptyMap(),val finalUrlSha256:String?=null,val maxRetries:Int=2,val retryBackoffMs:Long=150L)
 data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val mimeType:String?,val finalUrlSha256:String?=null)
 class StreamTransfer(private val transport:HttpTransport) {
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferResult)->Unit={}):TransferResult {
+        var attempt=0
+        while(true) {
+            try {
+                return executeSingleAttempt(request,checkCancel,progress,onMetadata)
+            } catch(restart:RestartRequired) {
+                throw restart
+            } catch(arg:IllegalArgumentException) {
+                if(attempt<request.maxRetries && arg.message in setOf("HTTP_429","HTTP_502","HTTP_503","HTTP_504")) {
+                    attempt++
+                    checkCancel()
+                    if(request.retryBackoffMs>0) Thread.sleep(request.retryBackoffMs*(1L shl (attempt-1)))
+                } else throw arg
+            } catch(io:IOException) {
+                if(attempt<request.maxRetries && io !is EOFException && io.message!="DOWNLOAD_LENGTH_MISMATCH") {
+                    attempt++
+                    checkCancel()
+                    if(request.retryBackoffMs>0) Thread.sleep(request.retryBackoffMs*(1L shl (attempt-1)))
+                } else throw io
+            }
+        }
+    }
+
+    private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferResult)->Unit):TransferResult {
         require(request.offset>=0 && request.maxBytes>0 && request.minFreeBytes>=0) { "INVALID_TRANSFER_REQUEST" }
         require(request.offset==0L || (request.partialFile.isFile && request.partialFile.length()==request.offset)) { "PARTIAL_FILE_MISMATCH" }
         var target=HttpPolicy.url(request.url,request.cleartextConsent)

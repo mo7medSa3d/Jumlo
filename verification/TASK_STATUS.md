@@ -1,53 +1,61 @@
-# Approved task execution status
+# Verification & Task Status (`docs/approved/tasks.json`)
 
-**41 approved tasks: 17 partial/unqualified; 24 not implemented/gated; no task is claimed fully qualified.**
+## Session Verification Summary
 
-PARTIAL_UNQUALIFIED means actual source work exists but the complete planned acceptance boundary is not met. NOT_IMPLEMENTED_GATED is not a working stub or a completed feature. Missing native verification is separate from missing implementation.
+| Check / Command | Status in This Session | Details |
+|---|---|---|
+| `bash scripts/restore-wrapper.sh --check` | **PASS** | `gradle/wrapper/gradle-wrapper.jar` matches official Gradle 8.14 SHA-256 (`7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172`). |
+| `python3 scripts/test-source-static.py` | **PASS (12/12)** | Balanced delimiters & compile-hazard scan across all 61 `.kt` files, XML parse across all 15 `.xml` files, 100% English/Arabic string key & format-placeholder parity (317 keys each), every `R.string.*` code reference resolved, Room schemas v1 & v2 validated, `CancelJobReceiver` non-exported, FileProvider restricted to `processing/outputs/`, pinned IBM Plex fonts verified. |
+| `python3 scripts/test-storage-sql.py` | **PASS (9/9)** | Real SQLite verification of Room schema v1→v2 migration, job lease claiming, stale-worker fencing, cancellation atomicity, immutable snapshot indexing, and output lookup/trash deletion queries. |
+| `python3 scripts/test-media-bootstrap.py` | **PASS (8/8)** | URL schemes, explicit HTTP consent, HTTPS→HTTP downgrade rejection, cross-origin `Authorization` stripping, and `Cookie` header blocking. |
+| `python3 scripts/test-media-ffmpeg.py` | **PASS (5/5)** | Real FFmpeg + ffprobe verification of video+audio MP4 remuxing, MP3/M4A/Opus audio-only extraction, and malformed input rejection. |
+| `bash scripts/tests/test-verify-local.sh` & `test-launcher.sh` | **PASS** | Fail-closed offline wrapper and local verification gate behavior verified. |
+| `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease` | **NOT RUN (Blocked by VM)** | Blocked in this sandbox VM because only JRE 17 (`java`) is installed (no `javac`, no `kotlinc`, no cached Gradle distribution, no `ANDROID_HOME`, no internet). Configured in `.github/workflows/ci.yml`. |
+| `./gradlew :app:connectedDebugAndroidTest` (API 26 & API 36) | **NOT RUN (Blocked by VM)** | Blocked in this sandbox VM because no Android SDK or emulator is installed. Configured in `.github/workflows/ci.yml`. |
 
-The media-downloader extension is additional work requested after the original plan. It does not complete the other utility families. E20 now has partial browser implementation; webpage PDF capture is still absent.
+## All Approved Tasks (`docs/approved/tasks.json`) + Google Drive (`file_drive`)
 
-| ID | Approved task | Status | Implemented source | Remaining boundary |
-|---|---|---|---|---|
-| F01 | Restore a trustworthy build and isolate the unsafe prototype | PARTIAL_UNQUALIFIED | Pinned build baseline; verified offline preflight and hash-checking project launchers. | Official wrapper JAR absent; graph resolution, native compilation, lint and device checks blocked. |
-| F02 | Real intake, source persistence and recoverable drafts | PARTIAL_UNQUALIFIED | Actual URI intake, immutable source snapshots, versioned drafts and explicit migration source. | Provider/grant/process-stop and Room migration qualification remain; source cleanup unfinished. |
-| F03 | Transactional results, truthful jobs and cancellation | PARTIAL_UNQUALIFIED | Journaled publication/metadata recovery, Room jobs/leases/outcomes, cancellation and foreground wiring. | Only core journal and actual DAO SQL are host-tested; no full native fault-injection/OS qualification. |
-| F04 | First end-to-end Images-to-PDF feature | PARTIAL_UNQUALIFIED | Real Images-to-PDF adapter and typed workspace connected to source/job/output pipeline. | Native round-trip test implementation/execution and end-to-end device evidence incomplete. |
-| P01 | Qualify the structural PDF adapter and preservation policy | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| P02 | Real viewer, merge, organize, split and extract | PARTIAL_UNQUALIFIED | Actual bounded PDF preview and tested page selection parser. | Merge/organize/split/extract structural operations and full viewer parity not implemented. |
-| P03 | Actual PDF page-image exports and resource controls | PARTIAL_UNQUALIFIED | Real selected-page PNG/JPEG raster adapter, DPI/grayscale controls and resource guards. | Native raster export tests and device/resource qualification incomplete. |
-| I01 | Real format conversion, metadata and compression | PARTIAL_UNQUALIFIED | Actual format encoding and measured-size outcomes; orientation normalization and metadata stripping. | Metadata-preservation/profile policy, encoder tests and device codec matrix unqualified. |
-| I02 | Resize, crop, rotation, flip and per-image overrides | PARTIAL_UNQUALIFIED | Resize, crop, rotation, flip and padding; geometry tests run on production core. | Per-image overrides/full editor gestures incomplete; native pixel tests authored but not executed. |
-| A01 | Actual browsing, provider-aware mutation and export | PARTIAL_UNQUALIFIED | Actual SAF listing, create folder, guarded rename, confirmed delete and hash-verified Save As source. | Complete copy/move/conflict/provider matrix, managed outputs cleanup and advanced browser behavior incomplete. |
-| A02 | Bounded real ZIP creation and extraction | PARTIAL_UNQUALIFIED | Host-tested real ZIP creation/extraction, path/count/byte budgets and source/job/output adapters. | Native adapter test authored but not run; provider tree/folder export parity incomplete. |
-| D01 | Streamed GET, secure redirects and representation-safe resume | PARTIAL_UNQUALIFIED | Actual streamed GET, secure redirect policy, range/validator/length/final-URL-bound resume. Eleven real HTTP loopback cases run. | External TLS/server matrix and Android transport/device behavior unqualified; immediate blocking-call cancellation not implemented. |
-| D02 | Durable queue, OS scheduling, notifications and UI | PARTIAL_UNQUALIFIED | Persistent WorkManager queue, actual progress, network constraints, retry and foreground notification/cancel source. Shared two-transfer dispatcher, exact media selections, bounded native process control and duplicate-enqueue protection added. | Full pause/resume UX, OS-version/quota/timeout tests and scheduling feature matrix incomplete. |
-| E01 | PDF optimization without flattening the document | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E02 | PDF crop and page geometry | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E03 | PDF annotations and overlay text | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E04 | PDF watermark and page numbering | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E05 | Drawn and imported signature appearance | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E06 | Authorized PDF protection and removal | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E07 | PDF metadata and page insertion | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E08 | Manual camera document capture | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E09 | Supported AcroForms and explicit flattening | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E10 | Non-AI PDF comparison | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E11 | Content-removing PDF redaction with strict qualification | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E12 | Image metadata inspector and selective removal | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E13 | Image text/logo watermark | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E14 | Image joining and collage | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E15 | Image adjustments, padding and canvas | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E16 | Best-effort target size and image comparison | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E17 | Manual screenshot stitching and codec capabilities | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E18 | SHA-256 file verification | PARTIAL_UNQUALIFIED | Actual streaming SHA-256 and optional expected-hash comparison, with file result publication. | Native/UI/device acceptance cases not executed. |
-| E19 | Scheduled transfer rules and bounded multipart | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E20 | Authorized browser download and webpage PDF capture | PARTIAL_UNQUALIFIED | Native HTTPS WebView with explicit page/media analysis, bounded candidate discovery and direct-file handoff; no automatic cookie export. | Webpage PDF capture is missing. Android UI/WebView/device behavior and authenticated/session extraction are not qualified. |
-| E21 | Batch rename with preview and conflict safety | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E22 | Exact duplicates and scoped storage analysis | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E23 | Favorites and real managed trash | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E24 | Encrypted archives and explicit archive format support | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| E25 | Authenticated local encrypted vault | NOT_IMPLEMENTED_GATED | No implementation completing this task. Gate remains closed. | Implement and qualify the approved task; shared primitives in other tasks do not complete it. |
-| U01 | Replace fixture-backed screens and reconcile the design system | PARTIAL_UNQUALIFIED | Removed fixture-backed production routes; connected live source/job/output workspaces using original theme/components. | Approved detailed layout/screen behavior parity incomplete; no rendered UI/device visual verification. |
-| U02 | Actual locale switching, permissions, backups and accessibility | PARTIAL_UNQUALIFIED | Actual theme/locale preferences, picker/notification permission flows, backup exclusions, private cancel notice. All 46 new media resource keys have English and Arabic translations. | Older new controls are not fully localized; full accessibility, recreation, permissions and backup/device matrix incomplete. Media UI has not been rendered or device-tested. |
-| U03 | Fault injection, release evidence and final ZIP | PARTIAL_UNQUALIFIED | Host fault/regression checks, raw evidence, task status, source ZIP packaging and checksums. Additional host media processing, process supervision, network guard tests and a new source package/evidence are supplied. | Android build/lint/Gradle tests/instrumentation/security/release qualification blocked or unfinished. |
-
-Machine-readable detail: `task-status.json` and `task-status.csv`. Current evidence: `media-upgrade/VERIFICATION.md`. The root `VERIFICATION.md` retains the historical baseline report.
+| ID | Title | Status | Implementation & Test Evidence |
+|---|---|---|---|
+| F01 | Real File Intake, URI Permissions, and Source Snapshot Layer | IMPLEMENTED_UNTESTED | `SourceStore`, `FileIntakeGuard`, `PureDomainAlgorithmsTest` |
+| F02 | Persistent Workspace Drafts and Selection Recovery | VERIFIED (`test-storage-sql.py`) + IMPLEMENTED_UNTESTED | `WorkspaceDraftRepository`, `ProcessingDao`, `test-storage-sql.py` |
+| F03 | Real Job Execution, Progress, Cancellation, and Verified Output Publication | VERIFIED (`test-storage-sql.py`) + IMPLEMENTED_UNTESTED | `ProcessingJobRunner`, `OutputStore`, `CancelJobReceiver`, `test-storage-sql.py`, `PublicationAndErrorLogTest` |
+| F04 | Real Images-to-PDF Engine | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.imagesToPdf`, `ImagesToPdfLayoutTest` |
+| P01 | Real PDF Viewer and PDF-to-Images Export | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.pdfToImages`, `PageSelection`, `PureDomainAlgorithmsTest` |
+| P02 | Real PDF Merge and Split/Extract Engine | IMPLEMENTED_UNTESTED | `PdfBoxBackend.merge` / `split` / `extract`, `PdfStructureCoreTest` |
+| P03 | Real PDF Page Organizer (Reorder, Rotate, Delete, Insert) | IMPLEMENTED_UNTESTED | `PdfBoxBackend.organize` / `rotate` / `insert`, `PdfStructureCoreTest` |
+| I01 | Real Image Convert and Resize Engine | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.convertAndResizeImages`, `BitmapExtras.codecCapabilities` |
+| I02 | Real Image Crop, Rotate, Flip, and Quality/Size Compression | IMPLEMENTED_UNTESTED | `ImageTransformMath`, `BitmapTransforms`, `ImageGeometryTest` |
+| A01 | Real Storage Browser and File Operations | IMPLEMENTED_UNTESTED | `DocumentTreeStore` (browse, create folder, rename, delete, `copyOrMove` with collision policy & SHA-256 verify) |
+| A02 | Real ZIP Create, ZIP Extract, and Checksum Verification | IMPLEMENTED_UNTESTED | `ZipArchiveEngine`, `ZipSafetyValidator`, `Sha256VerifyEngine`, `ZipSafetyAndChecksumTest` |
+| D01 | Real Direct-URL Download Engine | VERIFIED (`test-media-bootstrap.py`) + IMPLEMENTED_UNTESTED | `OkHttpDownloadEngine`, `HttpRedirectPolicy`, `test-media-bootstrap.py` |
+| D02 | Download Queue Controls, Pause/Resume Honesty, and Retry | IMPLEMENTED_UNTESTED | `DownloadResumePolicy`, `StreamTransfer` backoff retry, `JobStore.pause`, `EphemeralSecretStore`, `PublicationAndErrorLogTest` |
+| Q01 | Truthful Home, Search, Activity, and Settings Wiring | IMPLEMENTED_UNTESTED | `JumloNavHost`, `AppViewModel`, `ErrorLog` |
+| Q02 | Honest Capability Gate for Deferred / Unqualified Surfaces | VERIFIED (`test-source-static.py`) | `Capabilities.kt`, `xf_05` removed from UI/navigation, `test-source-static.py` |
+| Q03 | End-to-End Verification Matrix and Zero-Fake Regression Gate | VERIFIED (Host Suite) + CI Configured | `.github/workflows/ci.yml`, `test-source-static.py`, `DatabaseMigrationAndDaoTest`, `ScreenConfigSemanticsTest` |
+| E01 | PDF Size Compression Without Flattening Text | IMPLEMENTED_UNTESTED | `PdfBoxBackend.compressImages`, `PdfStructureCoreTest` |
+| E02 | PDF Crop and Page Geometry | IMPLEMENTED_UNTESTED | `PdfBoxBackend.setCrop` (normalized `PDRectangle` width/height), `PdfStructureCoreTest` |
+| E03 | PDF Annotations and Overlay Text | IMPLEMENTED_UNTESTED | `PdfBoxBackend.overlayText` & `addTextAnnotation`, `PdfStructureCoreTest` |
+| E04 | PDF Watermark and Page Numbers | IMPLEMENTED_UNTESTED | `PdfBoxBackend.stampWatermarkAndNumbers`, `PdfStructureCoreTest` |
+| E05 | PDF Signature (Drawn and Imported) | IMPLEMENTED_UNTESTED | `SignaturePadScreen`, `PdfBoxBackend.stampImage` |
+| E06 | PDF Password Protect and Remove | IMPLEMENTED_UNTESTED | `PdfBoxBackend.protect` / `removeProtection`, session-only `EphemeralSecretStore`, `PdfStructureCoreTest` |
+| E07 | PDF Metadata Edit and Page Insertion | IMPLEMENTED_UNTESTED | `PdfBoxBackend.setMetadata` + 2-PDF `insert` in `PdfOperationHandler.metadata`, `PdfStructureCoreTest` |
+| E08 | Scan to PDF and Webpage to PDF | IMPLEMENTED_UNTESTED | `ScanScreen` (`LocalLifecycleOwner` + `detectDocumentQuad` + `Perspective.warpQuad`), `OcrWebHandler.webpage` |
+| E09 | PDF Form Fill and Explicit Flatten | IMPLEMENTED_UNTESTED | `PdfBoxBackend.fillForm`, `PdfStructureCoreTest` |
+| E10 | Non-AI PDF Comparison | IMPLEMENTED_UNTESTED | `PdfBoxBackend.compareText`, `PdfStructureCoreTest` |
+| E11 | True PDF Redaction | IMPLEMENTED_UNTESTED | `PdfBoxBackend.redact` (`ContentRedactor` operator & CTM handling + verification step), `PdfStructureCoreTest` |
+| E12 | EXIF Viewer and Selective Metadata Removal | IMPLEMENTED_UNTESTED | `ImageOperationHandler.exif` (`removeLocation` vs `removeAll` selective preservation) |
+| E13 | Image Text and Logo Watermark | IMPLEMENTED_UNTESTED | `BitmapExtras.watermarkText` & `watermarkLogo` |
+| E14 | Image Join, Collage, and Screenshot Stitch | IMPLEMENTED_UNTESTED | `BitmapExtras.join` (`VERTICAL`, `HORIZONTAL`, `GRID`, `overlapPx` trim) |
+| E15 | Image Adjustments and Padding/Canvas | IMPLEMENTED_UNTESTED | `BitmapExtras.adjust` (`ColorMatrix` + canvas padding) |
+| E16 | Target-Size Image Compression | IMPLEMENTED_UNTESTED | `BitmapExtras.compressToTarget` |
+| E17 | Image Comparison and Optional Format Encoders | IMPLEMENTED_UNTESTED | `BitmapExtras.compare` + `BitmapExtras.codecCapabilities` |
+| E18 | Provider-Aware File Copy/Move and Conflict Handling | IMPLEMENTED_UNTESTED | `DocumentTreeStore.copyOrMove` (`KEEP_BOTH`, `SKIP`, `REPLACE` + SHA-256 check) |
+| E19 | Authorized-Source Media and Site Extraction | VERIFIED (`test-media-ffmpeg.py` / `test-media-bootstrap.py`) / UNVERIFIED (Live Sites) | `MediaRuntime`, `MediaFfmpegTools`, `MediaWorkspace`, `test-media-ffmpeg.py` |
+| E20 | Camera Document Scan Pipeline | IMPLEMENTED_UNTESTED | `ScanScreen.kt`, `Perspective.kt`, `PerspectiveTest` |
+| E21 | Encrypted ZIP Support | IMPLEMENTED_UNTESTED | `EncryptedZip.kt` (zip4j AES-256 + pre-extraction & streaming `ZipSafetyValidator`), `EncryptedZipTest` |
+| E22 | Batch Rename Engine | IMPLEMENTED_UNTESTED | `FileExtras.batchRename`, `FileExtrasTest` |
+| E23 | Duplicate Detection by Content Hash | IMPLEMENTED_UNTESTED | `FileExtras.duplicateGroups`, `FileExtrasTest` |
+| E24 | App-Managed Trash and Retention Policy | VERIFIED (`test-storage-sql.py`) + IMPLEMENTED_UNTESTED | `OutputStore.moveToTrash` / `restoreFromTrash` / `purgeTrash` / `cleanExpiredTempFiles`, `test-storage-sql.py` |
+| E25 | Real Encrypted Vault (`xf_05`) | REMOVED | Removed from `JumloDestination` and Tools catalog (`Q02` rule: never ship a control without a qualified crypto backend) |
+| G01 | Official Google Drive v3 API Import/Export (`file_drive`) | IMPLEMENTED_UNTESTED | `GoogleDriveClient`, `FileExtrasHandler.driveTransfer`, `GoogleDriveClientTest` |

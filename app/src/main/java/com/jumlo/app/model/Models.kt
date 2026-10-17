@@ -278,5 +278,6 @@ data class AppSettingsState(
     val stripExifByDefault: Boolean = true,
     val notificationsGranted: Boolean = false,
     val vaultAutoLockSeconds: Int = 120,
+    val mediaTermsAccepted: Boolean = false,
     val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_02")
 )

@@ -4,6 +4,7 @@
     <string name="media_link">Page or media link</string>
     <string name="media_analyze">Analyze link</string>
     <string name="media_browser">Browser</string>
+    <string name="media_update_extractor">Update extractor</string>
     <string name="media_cancel">Cancel</string>
     <string name="media_analyzing">Reading media formats from the source...</string>
     <string name="media_video">Video</string>
@@ -30,8 +31,13 @@
     <string name="media_queueing">Queueing...</string>
     <string name="media_download_selected">Download selected format</string>
     <string name="media_error_site">The current extractor does not recognize this link. Try analyzing the original page or a detected direct media resource.</string>
-    <string name="media_error_session">The source requires a browser session or rejected the request. Browser login cookies are not transferred to the extractor in this build.</string>
+    <string name="media_error_private">This media is private or members-only. Private content cannot be downloaded.</string>
+    <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>
+    <string name="media_error_removed">This media has been removed or is no longer available at the source URL.</string>
+    <string name="media_error_drm">This media uses DRM or encryption protection and cannot be downloaded.</string>
+    <string name="media_error_session">The source requires a browser session or rejected the request. Sign in via the isolated in-app browser; login cookies are never exported.</string>
     <string name="media_error_rate">The source rate-limited the request. Retry later without creating duplicate jobs.</string>
+    <string name="media_error_network">A network or TLS error prevented reaching the source. Check connectivity and try again.</string>
     <string name="media_error_format">The selected format changed or is unavailable. Analyze the original link again.</string>
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
     <string name="media_error_runtime">The media runtime is not available in this build or device ABI. Build the extended-media variant described in the source README.</string>
@@ -48,4 +54,7 @@
     <string name="media_new_copy">Create an additional copy on the next download</string>
     <string name="media_tos_notice">Only download videos or audio you own or are allowed to save. Some sites prohibit downloading in their terms of service, and bypassing paid access, login walls, or copy protection is not supported. You are responsible for respecting copyright and the source site\'s terms.</string>
     <string name="media_tos_ack">I have the right to download this, and I accept responsibility for copyright and the source site\'s terms</string>
+    <string name="media_platform_matrix_title">Platform qualification status</string>
+    <string name="media_status_unverified">UNVERIFIED</string>
+    <string name="media_status_host_verified">HOST_VERIFIED</string>
 </resources>

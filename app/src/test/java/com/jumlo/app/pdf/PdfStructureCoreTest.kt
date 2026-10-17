@@ -95,6 +95,38 @@ class PdfStructureCoreTest {
         }
     }
 
+    @Test fun crop_box_updates_page_geometry() {
+        val target = File(dir, "cropped.pdf")
+        PdfBoxBackend.open(docFile("alpha", 1), null).use { doc ->
+            PdfBoxBackend.setCrop(doc, 0, 0.1, 0.2, 0.9, 0.8)
+            doc.save(target)
+        }
+        PdfBoxBackend.open(target, null).use { doc ->
+            val info = PdfBoxBackend.info(doc)
+            val media = info.pageBoxes[0].media
+            val crop = info.pageBoxes[0].crop
+            assertTrue(crop[0] > media[0])
+            assertTrue(crop[2] < media[2])
+        }
+    }
+
+    @Test fun stamp_text_and_annotation_persist() {
+        val target = File(dir, "stamped.pdf")
+        PdfBoxBackend.open(docFile("alpha", 1), null).use { doc ->
+            PdfBoxBackend.stampText(doc, listOf(0), "CONFIDENTIAL", 0.1, 0.5, 24f, 0.5f)
+            PdfBoxBackend.addTextAnnotation(doc, 0, "Review note", 0.2, 0.3)
+            PdfBoxBackend.stampInvisibleText(doc, 0, "ocr-searchable-token", 0.05, 0.05, 10f)
+            doc.save(target)
+        }
+        PdfBoxBackend.open(target, null).use { doc ->
+            val text = PdfBoxBackend.pageTexts(doc).single()
+            assertTrue(text.contains("CONFIDENTIAL"))
+            assertTrue(text.contains("ocr-searchable-token"))
+            assertEquals(1, doc.getPage(0).annotations.size)
+            assertEquals("Review note", doc.getPage(0).annotations.single().contents)
+        }
+    }
+
     @Test fun metadata_round_trip() {
         val target = File(dir, "meta.pdf")
         PdfBoxBackend.open(docFile("alpha", 1), null).use { doc ->

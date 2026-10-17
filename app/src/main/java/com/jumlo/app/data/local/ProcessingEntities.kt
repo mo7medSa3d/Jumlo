@@ -33,6 +33,8 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     suspend fun failBeforeClaim(id:String,snapshot:String):Int
     @Insert(onConflict=OnConflictStrategy.IGNORE) suspend fun insertOutput(output:OutputEntity):Long
     @Query("SELECT * FROM outputs WHERE jobId=:job AND itemKey=:key") suspend fun output(job:String,key:String):OutputEntity?
+    @Query("SELECT * FROM outputs WHERE id=:id") suspend fun outputById(id:String):OutputEntity?
+    @Query("DELETE FROM outputs WHERE id=:id") suspend fun deleteOutput(id:String):Int
     @Query("SELECT * FROM outputs ORDER BY rowid DESC") fun outputs():Flow<List<OutputEntity>>
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun saveDraft(draft:DraftEntity)
     @Query("SELECT * FROM drafts WHERE id=:id") suspend fun draft(id:String):DraftEntity?

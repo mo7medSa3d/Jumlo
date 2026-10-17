@@ -2,6 +2,13 @@ package com.jumlo.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -21,9 +28,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -57,7 +66,6 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.InsertDriveFile
 import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Merge
@@ -72,11 +80,9 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -85,14 +91,12 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,6 +105,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -110,35 +115,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
 import com.jumlo.app.model.ManagedFileItem
 import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.ui.theme.QuietTheme
 
-/**
- * Maps icon names (Material Symbols style names used across the catalog)
- * to Google Material Icons (Rounded set, from material-icons-extended).
- */
 fun resolveStitchIcon(iconName: String): ImageVector = when (iconName) {
     "picture_as_pdf", "pdf", "description" -> Icons.Rounded.PictureAsPdf
-    "photo_library", "image", "collections", "photo" -> Icons.Rounded.PhotoLibrary
+    "photo_library", "image", "collections", "photo", "view_agenda" -> Icons.Rounded.PhotoLibrary
     "download", "file_download", "add_link", "cloud_download" -> Icons.Rounded.Download
     "folder", "folder_open", "folder_shared" -> Icons.Rounded.Folder
     "folder_zip", "archive", "zip" -> Icons.Rounded.FolderZip
     "unarchive", "extract" -> Icons.Rounded.Unarchive
-    "merge", "call_merge", "file_copy", "layers" -> Icons.Rounded.Merge
+    "merge", "call_merge", "file_copy", "layers", "copy_all" -> Icons.Rounded.Merge
     "crop", "crop_rotate", "aspect_ratio" -> Icons.Rounded.Crop
     "compress", "press", "speed" -> Icons.Rounded.Compress
-    "visibility", "file_open", "preview" -> Icons.Rounded.Visibility
+    "visibility", "file_open", "preview", "visibility_off" -> Icons.Rounded.Visibility
     "lock", "enhanced_encryption", "password" -> Icons.Rounded.Lock
     "security", "shield_lock" -> Icons.Rounded.Security
-    "verified_user", "shield", "verified" -> Icons.Rounded.VerifiedUser
+    "verified_user", "shield", "verified", "approval" -> Icons.Rounded.VerifiedUser
     "settings", "tune", "tune_rounded" -> Icons.Rounded.Tune
     "search" -> Icons.Rounded.Search
     "share", "ios_share" -> Icons.Rounded.Share
     "home" -> Icons.Rounded.Home
-    "grid_view", "apps", "build", "tools" -> Icons.Rounded.GridView
+    "grid_view", "apps", "build", "tools", "document_scanner" -> Icons.Rounded.GridView
     "content_cut", "cut", "scissors" -> Icons.Rounded.ContentCut
     "bolt", "auto_fix", "flash_on" -> Icons.Rounded.Bolt
     "dashboard" -> Icons.Rounded.Dashboard
@@ -153,7 +155,7 @@ fun resolveStitchIcon(iconName: String): ImageVector = when (iconName) {
     "notifications", "notifications_active" -> Icons.Rounded.Notifications
     "star", "favorite" -> Icons.Rounded.Star
     "add", "new" -> Icons.Rounded.Add
-    "edit", "rename" -> Icons.Rounded.Edit
+    "edit", "rename", "draw", "drive_file_rename_outline", "text_fields", "assignment" -> Icons.Rounded.Edit
     "delete", "trash" -> Icons.Rounded.Delete
     "warning", "error" -> Icons.Rounded.Warning
     "info" -> Icons.Rounded.Description
@@ -163,7 +165,6 @@ fun resolveStitchIcon(iconName: String): ImageVector = when (iconName) {
     else -> Icons.Rounded.Bolt
 }
 
-/** Icon for a file by its extension. */
 fun fileIconFor(extension: String): ImageVector = when (extension.lowercase()) {
     "pdf" -> Icons.Rounded.PictureAsPdf
     "jpg", "jpeg", "png", "webp", "heic", "heif", "gif", "bmp", "avif" -> Icons.Rounded.Image
@@ -172,24 +173,22 @@ fun fileIconFor(extension: String): ImageVector = when (extension.lowercase()) {
     else -> Icons.Rounded.InsertDriveFile
 }
 
-// ---------------------------------------------------------------------------
-// Shared building blocks
-// ---------------------------------------------------------------------------
-
-/** Round tonal icon button used in app bars and toolbars. */
 @Composable
 fun QuietTonalIconButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 44.dp,
+    size: androidx.compose.ui.unit.Dp = 48.dp,
     tint: Color = MaterialTheme.colorScheme.onSurface,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.size(size).semantics { this.contentDescription = contentDescription },
+        modifier = modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .size(size)
+            .semantics { this.contentDescription = contentDescription },
         shape = CircleShape,
         color = containerColor
     ) {
@@ -199,7 +198,6 @@ fun QuietTonalIconButton(
     }
 }
 
-/** Square-ish colored icon tile (the signature element of every list item and tool card). */
 @Composable
 fun QuietIconTile(
     icon: ImageVector,
@@ -219,7 +217,6 @@ fun QuietIconTile(
     }
 }
 
-/** Section heading with optional trailing text, e.g. "Recent results   See all". */
 @Composable
 fun QuietSectionTitle(
     text: String,
@@ -228,7 +225,7 @@ fun QuietSectionTitle(
     onTrailingClick: (() -> Unit)? = null
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
+        modifier = modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -236,21 +233,18 @@ fun QuietSectionTitle(
             text = text,
             style = QuietTheme.typography.sectionTitle,
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
         if (trailingText != null && onTrailingClick != null) {
-            TextButton(onClick = onTrailingClick) {
+            TextButton(onClick = onTrailingClick, modifier = Modifier.sizeIn(minHeight = 48.dp)) {
                 Text(trailingText, style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
 }
 
-/**
- * Hero banner: gradient "aurora" card used at the top of the home screen.
- */
 @Composable
 fun QuietHero(
     title: String,
@@ -270,19 +264,19 @@ fun QuietHero(
             .padding(QuietTheme.spacing.cardInteriorPadding + 6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = title,
                     style = QuietTheme.typography.screenTitle,
                     color = colors.onPrimary,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = subtitle,
                     style = QuietTheme.typography.metadata,
                     color = colors.onPrimary.copy(alpha = 0.85f),
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -300,21 +294,80 @@ fun QuietHero(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Navigation
-// ---------------------------------------------------------------------------
+@Composable
+fun QuietShimmerSkeleton(
+    modifier: Modifier = Modifier,
+    reduceMotion: Boolean = false
+) {
+    val colors = MaterialTheme.colorScheme
+    if (reduceMotion) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(80.dp)
+                .clip(QuietTheme.shapes.card)
+                .background(colors.surfaceContainerHigh)
+        )
+        return
+    }
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse),
+        label = "shimmerAlpha"
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .clip(QuietTheme.shapes.card)
+            .background(colors.surfaceContainerHigh.copy(alpha = alpha))
+    )
+}
 
-private fun dockIcon(tab: DockTab, selected: Boolean): ImageVector = when (tab) {
+@Composable
+fun QuietStateCard(
+    title: String,
+    subtitle: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+    isError: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    QuietCard(
+        modifier = modifier.fillMaxWidth(),
+        containerColor = if (isError) colors.errorContainer.copy(alpha = 0.35f) else QuietTheme.pillars.cardSurface,
+        borderColor = if (isError) colors.error.copy(alpha = 0.45f) else QuietTheme.pillars.cardBorder
+    ) {
+        Text(
+            text = title,
+            style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = if (isError) colors.onErrorContainer else colors.onSurface
+        )
+        Text(
+            text = subtitle,
+            style = QuietTheme.typography.metadata,
+            color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant
+        )
+        if (actionLabel != null && onAction != null) {
+            QuietTonalButton(
+                text = actionLabel,
+                onClick = onAction,
+                modifier = Modifier.align(Alignment.End)
+            )
+        }
+    }
+}
+
+private fun dockIcon(tab: DockTab): ImageVector = when (tab) {
     DockTab.HOME -> Icons.Rounded.Home
     DockTab.TOOLS -> Icons.Rounded.GridView
     DockTab.DOWNLOADS -> Icons.Rounded.Download
     DockTab.FILES -> Icons.Rounded.Folder
 }
 
-/**
- * Floating pill navigation for compact widths. The active tab expands into a
- * labelled capsule; the others collapse to icons.
- */
 @Composable
 fun QuietFloatingDock(
     selectedTab: DockTab,
@@ -335,7 +388,7 @@ fun QuietFloatingDock(
             modifier = Modifier
                 .widthIn(max = QuietTheme.spacing.dockWidth)
                 .fillMaxWidth(0.94f)
-                .height(QuietTheme.spacing.dockHeight)
+                .heightIn(min = QuietTheme.spacing.dockHeight)
                 .shadow(
                     elevation = 24.dp,
                     shape = QuietTheme.shapes.dockPill,
@@ -347,7 +400,7 @@ fun QuietFloatingDock(
             border = BorderStroke(1.dp, pillars.dockBorder)
         ) {
             Row(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -355,12 +408,12 @@ fun QuietFloatingDock(
                     val isSelected = tab == selectedTab
                     val label = if (language == AppLanguage.ARABIC) tab.labelAr else tab.labelEn
                     NavItem(
-                        icon = dockIcon(tab, isSelected),
+                        icon = dockIcon(tab),
                         label = label,
                         selected = isSelected,
                         vertical = false,
                         onClick = { onSelectTab(tab) },
-                        modifier = Modifier.weight(if (isSelected) 1.7f else 1f).fillMaxHeight()
+                        modifier = Modifier.weight(if (isSelected) 1.7f else 1f).sizeIn(minHeight = 48.dp)
                     )
                 }
             }
@@ -368,9 +421,6 @@ fun QuietFloatingDock(
     }
 }
 
-/**
- * Permanent vertical navigation rail for expanded widths (>= 840dp).
- */
 @Composable
 fun QuietExpandedNavigationRail(
     selectedTab: DockTab,
@@ -387,18 +437,18 @@ fun QuietExpandedNavigationRail(
         Column(
             modifier = Modifier.fillMaxSize().padding(vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
         ) {
             DockTab.entries.forEach { tab ->
                 val isSelected = tab == selectedTab
                 val label = if (language == AppLanguage.ARABIC) tab.labelAr else tab.labelEn
                 NavItem(
-                    icon = dockIcon(tab, isSelected),
+                    icon = dockIcon(tab),
                     label = label,
                     selected = isSelected,
                     vertical = true,
                     onClick = { onSelectTab(tab) },
-                    modifier = Modifier.width(88.dp).height(68.dp)
+                    modifier = Modifier.width(88.dp).heightIn(min = 68.dp)
                 )
             }
         }
@@ -417,16 +467,17 @@ private fun NavItem(
     val pillars = QuietTheme.pillars
     val pillBg by animateColorAsState(
         targetValue = if (selected) pillars.activePillContainer else Color.Transparent,
-        animationSpec = tween(260),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "navPillBg"
     )
     val tint by animateColorAsState(
         targetValue = if (selected) pillars.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(260),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "navTint"
     )
     Box(
         modifier = modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .clip(QuietTheme.shapes.activeIndicatorPill)
             .clickable(onClick = onClick)
             .semantics {
@@ -441,7 +492,7 @@ private fun NavItem(
                     .clip(QuietTheme.shapes.activeIndicatorPill)
                     .background(pillBg)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .animateContentSize(),
+                    .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -461,7 +512,7 @@ private fun NavItem(
                     .clip(QuietTheme.shapes.activeIndicatorPill)
                     .background(pillBg)
                     .padding(horizontal = if (selected) 16.dp else 14.dp, vertical = 10.dp)
-                    .animateContentSize(),
+                    .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
@@ -480,9 +531,6 @@ private fun NavItem(
     }
 }
 
-/**
- * Root top bar: large title, badge, and tonal action buttons with a brand avatar.
- */
 @Composable
 fun QuietRootTopBar(
     title: String,
@@ -493,18 +541,21 @@ fun QuietRootTopBar(
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
+    val searchCd = stringResource(R.string.search_title)
+    val settingsCd = stringResource(R.string.settings_title)
+    val vaultCd = stringResource(R.string.tool_secure_vault)
     Surface(color = colors.background, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = statusTop + 8.dp, bottom = 6.dp)
+                .padding(top = statusTop + 8.dp, bottom = 8.dp)
                 .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
@@ -528,16 +579,16 @@ fun QuietRootTopBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (onSearchClick != null) {
-                    QuietTonalIconButton(Icons.Rounded.Search, "Search", onSearchClick)
+                    QuietTonalIconButton(Icons.Rounded.Search, searchCd, onSearchClick)
                 }
-                QuietTonalIconButton(Icons.Rounded.Settings, "Settings", onSettingsClick)
+                QuietTonalIconButton(Icons.Rounded.Settings, settingsCd, onSettingsClick)
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))
-                        .clickable { onVaultClick?.invoke() }
-                        .semantics { contentDescription = "Profile & Vault" },
+                        .then(if (onVaultClick != null) Modifier.clickable(onClick = onVaultClick) else Modifier)
+                        .semantics { contentDescription = vaultCd },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -552,9 +603,6 @@ fun QuietRootTopBar(
     }
 }
 
-/**
- * Workspace top bar: back button, title with optional subtitle and pillar badge, trailing actions.
- */
 @Composable
 fun QuietWorkspaceTopBar(
     title: String,
@@ -567,6 +615,8 @@ fun QuietWorkspaceTopBar(
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val pillars = QuietTheme.pillars
+    val backCd = stringResource(R.string.scan_back)
+    val moreCd = stringResource(R.string.action_customize)
     val (badgeBg, badgeFg) = when (pillar) {
         PillarCategory.PDF -> pillars.pdfContainer to pillars.pdfPrimary
         PillarCategory.IMAGES -> pillars.imagesContainer to pillars.imagesPrimary
@@ -582,7 +632,7 @@ fun QuietWorkspaceTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = statusTop + 6.dp, bottom = 8.dp)
+                .padding(top = statusTop + 8.dp, bottom = 8.dp)
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -591,7 +641,7 @@ fun QuietWorkspaceTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                QuietTonalIconButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack)
+                QuietTonalIconButton(Icons.AutoMirrored.Rounded.ArrowBack, backCd, onBack)
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -605,7 +655,7 @@ fun QuietWorkspaceTopBar(
                             text = title,
                             style = QuietTheme.typography.sectionTitle,
                             color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
@@ -618,7 +668,7 @@ fun QuietWorkspaceTopBar(
                             text = subtitle,
                             style = QuietTheme.typography.metadata,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -627,22 +677,17 @@ fun QuietWorkspaceTopBar(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 trailingContent?.invoke(this)
                 if (onMoreClick != null) {
-                    QuietTonalIconButton(Icons.Rounded.MoreVert, "More options", onMoreClick)
+                    QuietTonalIconButton(Icons.Rounded.MoreVert, moreCd, onMoreClick)
                 }
             }
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Surfaces, badges, buttons
-// ---------------------------------------------------------------------------
-
-/** Soft, layered card (28dp radius, hairline border, tonal fill). */
 @Composable
 fun QuietCard(
     modifier: Modifier = Modifier,
@@ -662,13 +707,12 @@ fun QuietCard(
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content
         )
     }
 }
 
-/** Pill-shaped status or category badge. */
 @Composable
 fun QuietBadge(
     text: String,
@@ -681,7 +725,7 @@ fun QuietBadge(
         modifier = modifier
             .clip(QuietTheme.shapes.activeIndicatorPill)
             .background(containerColor)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -710,7 +754,7 @@ fun QuietPrimaryButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(QuietTheme.spacing.primaryButtonHeight),
+        modifier = modifier.heightIn(min = QuietTheme.spacing.primaryButtonHeight),
         enabled = enabled,
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
@@ -720,13 +764,13 @@ fun QuietPrimaryButton(
             disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
     ) {
         if (leadingIcon != null) {
             Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
         }
-        Text(text = text, style = QuietTheme.typography.button, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = text, style = QuietTheme.typography.button, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -741,24 +785,23 @@ fun QuietTonalButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(QuietTheme.spacing.tonalButtonHeight),
+        modifier = modifier.heightIn(min = QuietTheme.spacing.tonalButtonHeight),
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
     ) {
         if (leadingIcon != null) {
             Icon(leadingIcon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(8.dp))
         }
-        Text(text = text, style = QuietTheme.typography.metadataStrong.copy(fontSize = 15.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = text, style = QuietTheme.typography.metadataStrong.copy(fontSize = 15.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/** Pill search field. With [onClickBar] it behaves as a tappable launcher. */
 @Composable
 fun QuietSearchBar(
     query: String,
@@ -769,16 +812,17 @@ fun QuietSearchBar(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
+    val clearCd = stringResource(R.string.action_reset)
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .heightIn(min = 56.dp)
             .then(if (onClickBar != null) Modifier.clickable(onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.button,
         color = colors.surfaceContainerHigh
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(start = 18.dp, end = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(22.dp))
@@ -789,7 +833,7 @@ fun QuietSearchBar(
                         text = placeholder,
                         style = QuietTheme.typography.body,
                         color = colors.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
@@ -809,9 +853,9 @@ fun QuietSearchBar(
             if (query.isNotEmpty() && onClickBar == null) {
                 QuietTonalIconButton(
                     icon = Icons.Rounded.Close,
-                    contentDescription = "Clear",
+                    contentDescription = clearCd,
                     onClick = onClear,
-                    size = 40.dp,
+                    size = 48.dp,
                     containerColor = colors.surfaceContainerHighest
                 )
             }
@@ -819,7 +863,6 @@ fun QuietSearchBar(
     }
 }
 
-/** Color family used for a file's icon tile, derived from its type. */
 @Composable
 private fun fileTint(extension: String): Pair<Color, Color> {
     val p = QuietTheme.pillars
@@ -831,7 +874,6 @@ private fun fileTint(extension: String): Pair<Color, Color> {
     }
 }
 
-/** File list row with a colored type tile, metadata line and optional selection. */
 @Composable
 fun QuietFileRow(
     file: ManagedFileItem,
@@ -866,13 +908,13 @@ fun QuietFileRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(QuietTheme.spacing.fileRowStandardHeight)
-                .padding(horizontal = 12.dp),
+                .heightIn(min = QuietTheme.spacing.fileRowStandardHeight)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (showCheckbox) {
                 QuietCheckbox(checked = selected, onCheckedChange = { onToggleSelect?.invoke() })
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
             }
             QuietIconTile(
                 icon = fileIconFor(file.extension),
@@ -880,25 +922,25 @@ fun QuietFileRow(
                 container = container,
                 size = 48.dp
             )
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = file.name,
                     style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = details,
                     style = QuietTheme.typography.metadata,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             if (trailingActionText != null && onTrailingAction != null) {
-                TextButton(onClick = onTrailingAction) {
+                TextButton(onClick = onTrailingAction, modifier = Modifier.sizeIn(minHeight = 48.dp)) {
                     Text(trailingActionText, style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
                 }
             } else {
@@ -913,7 +955,6 @@ fun QuietFileRow(
     }
 }
 
-/** Animated rounded checkbox. */
 @Composable
 fun QuietCheckbox(
     checked: Boolean,
@@ -923,31 +964,36 @@ fun QuietCheckbox(
     val colors = MaterialTheme.colorScheme
     val fill by animateColorAsState(
         targetValue = if (checked) colors.primary else Color.Transparent,
-        animationSpec = tween(200),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "checkFill"
     )
     val stroke by animateColorAsState(
         targetValue = if (checked) colors.primary else colors.outline,
-        animationSpec = tween(200),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "checkStroke"
     )
     Box(
         modifier = modifier
-            .size(26.dp)
-            .clip(RoundedCornerShape(9.dp))
-            .background(fill)
-            .border(2.dp, stroke, RoundedCornerShape(9.dp))
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .clickable { onCheckedChange(!checked) }
             .semantics { role = Role.Checkbox },
         contentAlignment = Alignment.Center
     ) {
-        if (checked) {
-            Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(18.dp))
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(fill)
+                .border(2.dp, stroke, RoundedCornerShape(9.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (checked) {
+                Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }
 
-/** Side-by-side before/after comparison tile. */
 @Composable
 fun QuietBeforeAfterPreview(
     fileName: String,
@@ -964,7 +1010,7 @@ fun QuietBeforeAfterPreview(
             .background(QuietTheme.pillars.cardSurface)
             .border(1.dp, QuietTheme.pillars.cardBorder, QuietTheme.shapes.card)
             .padding(QuietTheme.spacing.cardInteriorPadding),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
@@ -980,7 +1026,7 @@ fun QuietBeforeAfterPreview(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             PreviewPane(label = originalLabel, highlighted = false, modifier = Modifier.weight(1f))
             Box(
@@ -1030,7 +1076,6 @@ private fun PreviewPane(label: String, highlighted: Boolean, modifier: Modifier 
     }
 }
 
-/** Privacy reassurance strip shown on tools that process files locally. */
 @Composable
 fun QuietIsolationFooter(
     text: String,
@@ -1043,7 +1088,7 @@ fun QuietIsolationFooter(
             .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(
             imageVector = Icons.Rounded.Shield,

@@ -29,17 +29,9 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         try {
             YoutubeDL.getInstance().init(context)
             FFmpeg.getInstance().init(context)
-            // Upstream init keeps an existing extractor; explicitly refresh from this APK.
-            // AtomicFile retains the old complete copy if extraction is interrupted.
-            val archive=AtomicFile(File(context.noBackupFilesDir,"youtubedl-android/yt-dlp/yt-dlp"))
-            val output=archive.startWrite()
-            try {
-                context.resources.openRawResource(com.yausername.youtubedl_android.R.raw.ytdlp).use { it.copyTo(output) }
-                archive.finishWrite(output)
-            } catch(error:Exception) { archive.failWrite(output);throw error }
+            refreshBundledPayload()
             check(tools.mkdirs() || tools.isDirectory)
             for (name in listOf("bootstrap.py", "network_guard.py")) {
-                // Replace from the installed APK; no downloaded executable or code update.
                 context.assets.open("media/$name").use { input -> File(tools, name).outputStream().use { output -> input.copyTo(output) } }
             }
             for (name in listOf("libpython.so", "libffmpeg.so", "libqjs.so"))
@@ -47,6 +39,24 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
             initialized = true
         } catch (e: OperationFailure) { throw e }
         catch (_: Exception) { throw OperationFailure("MEDIA_RUNTIME_INITIALIZATION_FAILED") }
+    }
+    private fun refreshBundledPayload() {
+        val archive = AtomicFile(File(context.noBackupFilesDir, "youtubedl-android/yt-dlp/yt-dlp"))
+        val output = archive.startWrite()
+        try {
+            context.resources.openRawResource(com.yausername.youtubedl_android.R.raw.ytdlp).use { it.copyTo(output) }
+            archive.finishWrite(output)
+        } catch (error: Exception) { archive.failWrite(output); throw error }
+    }
+    override fun refreshExtractor(): String {
+        initialize()
+        return try {
+            val status = YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel._STABLE)
+            status?.name ?: "EXTRACTOR_UP_TO_DATE"
+        } catch (_: Exception) {
+            refreshBundledPayload()
+            "EXTRACTOR_RESTORED_FROM_APK"
+        }
     }
     private fun execute(args: List<String>, directory: File, allowHttp: Boolean, probe: Boolean,
         check: () -> Unit, progress: (MediaProgress) -> Unit = {}): String {
@@ -89,9 +99,13 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
             "media_tls_downgrade" in text || "certificate" in text -> "MEDIA_TLS_FAILED"
             "unsupported url" in text -> "MEDIA_SITE_UNSUPPORTED"
             "requested format is not available" in text -> "MEDIA_REANALYSIS_REQUIRED"
+            "private video" in text || "this video is private" in text || "members-only" in text -> "MEDIA_PRIVATE_CONTENT"
+            "not available in your country" in text || "geo-restricted" in text || "geoblocked" in text -> "MEDIA_GEO_BLOCKED"
+            "video unavailable" in text || "has been removed" in text || "404" in text || "does not exist" in text -> "MEDIA_REMOVED"
             "sign in" in text || "login" in text || "cookies" in text -> "MEDIA_SESSION_REQUIRED"
             "drm" in text -> "MEDIA_ENCRYPTED_SOURCE"
-            "429" in text -> "MEDIA_RATE_LIMITED"
+            "429" in text || "too many requests" in text || "rate limit" in text -> "MEDIA_RATE_LIMITED"
+            "timed out" in text || "connection reset" in text || "name or service not known" in text || "network is unreachable" in text -> "MEDIA_NETWORK_ERROR"
             "403" in text || "401" in text -> "MEDIA_SOURCE_REJECTED"
             else -> "MEDIA_EXTRACTION_FAILED"
         }

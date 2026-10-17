@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.media.MediaRuntime
+import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.*
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.model.JobRequest
@@ -20,11 +21,15 @@ data class MediaUiState(
     val url: String="",val asset: MediaAsset?=null,val choices: List<MediaChoice> = emptyList(),
     val selectedKey: String?=null,val mode: MediaMode=MediaMode.VIDEO,val audio: AudioOutput=AudioOutput.ORIGINAL,
     val bitrate: Int=192,val name: String="",val allowHttp: Boolean=false,val wifiOnly: Boolean=false,val unmetered: Boolean=false,
-    val analyzing: Boolean=false,val submitting: Boolean=false,val error: String?=null
+    val termsAccepted: Boolean=false,val analyzing: Boolean=false,val submitting: Boolean=false,val updatingExtractor: Boolean=false,
+    val extractorStatus: String?=null,val error: String?=null
 )
 
 @HiltViewModel class MediaViewModel @Inject constructor(
-    private val runtime: MediaRuntime, private val jobs: JobStore, private val secrets: EphemeralSecretStore
+    private val runtime: MediaRuntime,
+    private val jobs: JobStore,
+    private val secrets: EphemeralSecretStore,
+    private val preferences: UserPreferencesRepository
 ): ViewModel() {
     private val _state=MutableStateFlow(MediaUiState())
     val state=_state.asStateFlow()
@@ -35,6 +40,20 @@ data class MediaUiState(
     private var lastSignature: String?=null
     private var lastJob: String?=null
     private val submissions=MediaSubmissionSlot<JobRequest>()
+
+    init {
+        viewModelScope.launch {
+            preferences.settingsFlow.map { it.mediaTermsAccepted }.distinctUntilChanged().collect { accepted ->
+                _state.update { it.copy(termsAccepted = accepted) }
+            }
+        }
+    }
+
+    fun acceptTerms(accepted: Boolean) {
+        _state.update { it.copy(termsAccepted = accepted) }
+        viewModelScope.launch { preferences.setMediaTermsAccepted(accepted) }
+    }
+
     fun newCopy() { lastSignature=null;lastJob=null;submissions.clear() }
 
     fun acceptSharedUrl(value:String) {
@@ -58,8 +77,21 @@ data class MediaUiState(
         val choices=asset?.let { MediaCatalog.choices(it,value) }.orEmpty()
         _state.update { it.copy(mode=value,choices=choices,selectedKey=choices.firstOrNull()?.key,error=null) }
     }
+    fun refreshExtractor() {
+        if(_state.value.updatingExtractor || _state.value.submitting) return
+        _state.update { it.copy(updatingExtractor=true,extractorStatus=null,error=null) }
+        viewModelScope.launch {
+            try {
+                val status=withContext(Dispatchers.IO) { runtime.refreshExtractor() }
+                _state.update { it.copy(extractorStatus=status) }
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(e:Exception) { _state.update { it.copy(error=stableError(e)) } }
+            finally { _state.update { it.copy(updatingExtractor=false) } }
+        }
+    }
     fun analyze() {
         if(_state.value.submitting) return
+        if(!_state.value.termsAccepted) { _state.update { it.copy(error="MEDIA_TERMS_REQUIRED") };return }
         if(!CapabilityRegistry.enabled("dl_media")) { _state.update { it.copy(error=CapabilityRegistry.reason("dl_media")) };return }
         val snapshot=_state.value
         val token=++generation
@@ -85,7 +117,7 @@ data class MediaUiState(
     }
     fun submit(onQueued:(String)->Unit) {
         val s=_state.value
-        if(s.submitting || s.analyzing) return
+        if(s.submitting || s.analyzing || !s.termsAccepted) return
         val asset=s.asset ?: return
         val choice=s.choices.firstOrNull { it.key==s.selectedKey } ?: return
         val url=analyzedUrl ?: return
@@ -103,7 +135,6 @@ data class MediaUiState(
                     JobRequest(UUID.randomUUID().toString(),"dl_media",emptyList(),1,Json.encodeToString(settings),System.currentTimeMillis())
                 }
                 val job=jobs.enqueue(request)
-                // A failed scheduling acknowledgment reuses the entire prepared request.
                 lastSignature=signature;lastJob=job
                 onQueued(job)
             } catch(cancel:CancellationException) { throw cancel }

@@ -44,6 +44,14 @@ import javax.inject.Singleton
         }
         work.enqueueUniqueWork("job:${request.id}",policy,builder.build())
     }
+    suspend fun pause(jobId:String) {
+        val row=dao.job(jobId) ?: return
+        val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
+        if(old.progress.stage !in setOf(JobStage.QUEUED,JobStage.VALIDATING,JobStage.RUNNING)) return
+        val paused=old.copy(progress=old.progress.copy(stage=JobStage.INTERRUPTED),updatedAtEpochMs=System.currentTimeMillis())
+        dao.setStage(jobId,JobStage.INTERRUPTED.name,Json.encodeToString(paused))
+        work.cancelUniqueWork("job:$jobId")
+    }
     suspend fun cancel(jobId:String) {
         val row=dao.job(jobId) ?: return
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
@@ -117,7 +125,7 @@ import javax.inject.Singleton
             true
         } catch(e:Exception) {
             val code=stableError(e)
-            val state=if(code in setOf("ACCESS_LOST","SECRET_EXPIRED","WIFI_REQUIRED","UNMETERED_NETWORK_REQUIRED","DOWNLOAD_RESTART_REQUIRED","MEDIA_REANALYSIS_REQUIRED","NETWORK_UNAVAILABLE","CLEARTEXT_CONSENT_REQUIRED")) JobStage.WAITING_FOR_INPUT else JobStage.FAILED
+            val state=if(code in setOf("ACCESS_LOST","SECRET_EXPIRED","LOGIN_REQUIRED","WIFI_REQUIRED","UNMETERED_NETWORK_REQUIRED","DOWNLOAD_RESTART_REQUIRED","MEDIA_REANALYSIS_REQUIRED","NETWORK_UNAVAILABLE","CLEARTEXT_CONSENT_REQUIRED")) JobStage.WAITING_FOR_INPUT else JobStage.FAILED
             save(JobProgress(state,snapshot.progress.completedUnits,snapshot.progress.totalUnits),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode=code))
             true
         } finally {

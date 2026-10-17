@@ -34,7 +34,7 @@ import javax.inject.Inject
 import kotlin.math.roundToInt
 
 data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:Int,val height:Int)
-data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0)
+data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0,val trash:Long=0)
 
 @OptIn(FlowPreview::class)
 @HiltViewModel class AppViewModel @Inject constructor(
@@ -51,6 +51,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     val settings=preferences.settingsFlow.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),AppSettingsState())
     val imported=sources.records.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val outputs=outputStore.records.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+    val trashed=outputStore.trashed
     val jobs=jobStore.snapshots.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     private val _form=MutableStateFlow(WorkspaceDraft())
     val form=_form.asStateFlow()
@@ -58,6 +59,8 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     val busy=_busy.asStateFlow()
     private val _message=MutableStateFlow<String?>(null)
     val message=_message.asStateFlow()
+    private val _undoTrashId=MutableStateFlow<String?>(null)
+    val undoTrashId=_undoTrashId.asStateFlow()
     private val _urls=MutableStateFlow("")
     val urls=_urls.asStateFlow()
     private val _tree=MutableStateFlow<DocumentListing?>(null)
@@ -71,7 +74,6 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     var pendingExport:OutputRecord?=null
     private val errorLog=com.jumlo.app.core.ErrorLog(java.io.File(app.filesDir,"error-log.txt"))
     @Volatile var pendingErrorLogExport:Boolean=false
-        private set
         private set
 
     init {
@@ -94,7 +96,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         viewModelScope.launch { try { _tree.value=treeStore.restore() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } }
         refreshStorage()
     }
-    fun dismissMessage() { _message.value=null }
+    fun dismissMessage() { _message.value=null; _undoTrashId.value=null }
     fun notifyMessage(code:String) { errorLog.record(code,form.value.toolId); _message.value=code }
     fun setUrls(value:String) { _urls.value=value.take(100000) }
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
@@ -128,6 +130,36 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     }
     fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { try { addSource(sources.importLocalFile(file,displayName,mimeType).id); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } } }
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
+    fun trashOutput(record:OutputRecord) {
+        viewModelScope.launch {
+            try {
+                val moved=outputStore.moveToTrash(record.id)
+                if(moved!=null) { _undoTrashId.value=moved.id; _message.value="MOVED_TO_TRASH"; refreshStorage() }
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { _message.value=stableError(error) }
+        }
+    }
+    fun restoreOutput(outputId:String) {
+        viewModelScope.launch {
+            try {
+                outputStore.restoreFromTrash(outputId)
+                _undoTrashId.value=null
+                _message.value="RESTORED_FROM_TRASH"
+                refreshStorage()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { _message.value=stableError(error) }
+        }
+    }
+    fun purgeTrashItem(outputId:String?=null) {
+        viewModelScope.launch {
+            try {
+                outputStore.purgeTrash(outputId)
+                _message.value="TRASH_PURGED"
+                refreshStorage()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { _message.value=stableError(error) }
+        }
+    }
     fun submit(onQueued:(String)->Unit) {
         if(!submitting.compareAndSet(false,true)) return
         _busy.value=true
@@ -138,8 +170,13 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 val state=form.value
                 require(CapabilityRegistry.enabled(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
-                require(download || state.toolId=="webpage_pdf" || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+                val driveImport=state.toolId=="file_drive" && !state.flag1
+                require(download || state.toolId=="webpage_pdf" || driveImport || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
                 if(state.toolId in setOf("pdf_07","file_08")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
+                if(state.toolId=="file_drive") {
+                    require(state.secret1.isNotBlank()) { "LOGIN_REQUIRED" }
+                    if(!state.flag1) require(state.text1.isNotBlank()) { "INVALID_DRIVE_FILE_ID" }
+                }
                 val urlSnapshot=urls.value
                 if(download) {
                     val lines=urlSnapshot.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
@@ -151,20 +188,21 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 newHandle=when {
                     download -> secrets.put(urlSnapshot.toCharArray())
                     state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
-                    state.toolId=="file_encrypted_zip" -> secrets.put(state.secret1.toCharArray())
+                    state.toolId in setOf("file_encrypted_zip","file_drive") -> secrets.put(state.secret1.toCharArray())
                     else -> null
                 }
                 val settings=state.executionSettings(newHandle)
-                val request=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
+                val request=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download || driveImport) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
                 val id=jobStore.enqueue(request)
                 lastFingerprint=fingerprint;lastJobId=id;newHandle=null
                 onQueued(id) // Queued is not completed. UI observes Room for every later transition.
             } catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { errorLog.record(stableError(error),state.toolId); _message.value=stableError(error) }
+            catch(error:Exception) { errorLog.record(stableError(error),form.value.toolId); _message.value=stableError(error) }
             finally { newHandle?.let(secrets::remove);_busy.value=false;submitting.set(false) }
         }
     }
     fun allowNewRun() { lastFingerprint=null;lastJobId=null }
+    fun pause(job:String) { viewModelScope.launch { jobStore.pause(job) } }
     fun cancel(job:String) { viewModelScope.launch { jobStore.cancel(job) } }
     fun retry(job:JobSnapshot,replacementUrls:String?=null) { viewModelScope.launch {
         try {
@@ -179,6 +217,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun finishOnboarding() { viewModelScope.launch { preferences.setOnboardingCompleted(true) } }
     fun setThemeMode(mode:ThemeMode) { viewModelScope.launch { preferences.setThemeMode(mode) } }
     fun setLanguage(language:AppLanguage) { viewModelScope.launch { preferences.setLanguage(language) } }
+    fun setRespectReducedMotion(enabled:Boolean) { viewModelScope.launch { preferences.setRespectReducedMotion(enabled) } }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }
@@ -222,22 +261,36 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun createFolder(name:String) { treeOperation { treeStore.createFolder(it.treeUri,name) } }
     fun renameFile(entry:DocumentEntry,name:String) { treeOperation { treeStore.rename(entry.uri,name) } }
     fun deleteFile(entry:DocumentEntry) { treeOperation { treeStore.deleteFile(entry.uri) } }
+    fun copyOrMoveFile(entry:DocumentEntry,move:Boolean,policy:CollisionPolicy) {
+        treeOperation { current ->
+            val created=treeStore.copyOrMove(entry.uri,current.treeUri,entry.name,move,policy)
+            _message.value=if(created==null) "COLLISION_SKIPPED" else if(move) "FILE_MOVED_VERIFIED" else "FILE_COPIED_VERIFIED"
+        }
+    }
     private fun treeOperation(block:suspend (DocumentListing)->Unit) { viewModelScope.launch {
         try { val current=tree.value ?: throw OperationFailure("NO_FOLDER_SELECTED");block(current);_tree.value=treeStore.list(current.treeUri) }
         catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { _message.value=stableError(error) }
     } }
-    /** Retention cleanup: staging/seek/extract temp older than 7 days is deleted. Sources and published outputs are never touched. */
+    /** Retention cleanup: staging/seek/extract temp older than 7 days and trash older than 30 days are deleted. Sources and published outputs are never touched. */
     fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
         val cutoff=System.currentTimeMillis()-7L*24*3600*1000
+        val trashCutoff=System.currentTimeMillis()-30L*24*3600*1000
         var freed=0L
         fun sweep(dir:java.io.File) { if(!dir.exists()) return; dir.walkBottomUp().forEach { f -> if(f.isFile && f.lastModified()<cutoff) { freed+=f.length(); f.delete() } }; dir.walkBottomUp().forEach { d -> if(d.isDirectory && d.list().isNullOrEmpty() && d!=dir) d.delete() } }
         sweep(java.io.File(app.cacheDir,"seek")); sweep(java.io.File(app.cacheDir,"extract")); sweep(java.io.File(app.filesDir,"processing/staging"))
+        outputStore.purgeTrash(null,trashCutoff)
         _message.value="CLEANUP_DONE"; refreshStorage()
     } }
     fun refreshStorage() { viewModelScope.launch(Dispatchers.IO) {
         fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { if(it.isFile) total+=it.length() };return total }
-        _storage.value=StorageUsage(bytes(File(app.filesDir,"inbound")),bytes(File(app.filesDir,"processing/results")),bytes(File(app.filesDir,"transfers")),bytes(app.cacheDir))
+        _storage.value=StorageUsage(
+            bytes(File(app.filesDir,"inbound")),
+            bytes(File(app.filesDir,"processing/results")),
+            bytes(File(app.filesDir,"transfers")),
+            bytes(app.cacheDir),
+            bytes(File(app.filesDir,"processing/trash"))
+        )
     } }
     suspend fun preview(sourceId:String,page:Int):PreviewFrame {
         var pending:PreviewFrame?=null
@@ -246,7 +299,6 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             pending=null
             return delivered
         } finally {
-            // withContext has prompt cancellation: reclaim a decoded frame not delivered to Compose.
             pending?.bitmap?.takeUnless { it.isRecycled }?.recycle()
         }
     }

@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer
 import java.io.*
 import java.net.*
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicInteger
 
 fun transferTests(test:(String,()->Unit)->Unit) {
     fun fingerprint(url:String)=Hashing.sha256(ByteArrayInputStream(HttpPolicy.url(url,true).toString().toByteArray()))
@@ -12,7 +13,12 @@ fun transferTests(test:(String,()->Unit)->Unit) {
         val dir=Files.createTempDirectory("uu-http-").toFile()
         val server=HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(),0),0)
         val bytes="0123456789".toByteArray()
+        val flakyAttempts=AtomicInteger(0)
         server.createContext("/file") { ex -> ex.responseHeaders.add("ETag","\"v1\""); ex.sendResponseHeaders(200,bytes.size.toLong()); ex.responseBody.use { it.write(bytes) }; ex.close() }
+        server.createContext("/flaky") { ex ->
+            if(flakyAttempts.incrementAndGet()==1) { ex.sendResponseHeaders(503,-1); ex.close() }
+            else { ex.responseHeaders.add("ETag","\"v1\""); ex.sendResponseHeaders(200,bytes.size.toLong()); ex.responseBody.use { it.write(bytes) }; ex.close() }
+        }
         server.createContext("/unknown") { ex -> ex.sendResponseHeaders(200,0); ex.responseBody.use { it.write(bytes) }; ex.close() }
         server.createContext("/resume") { ex ->
             val range=ex.requestHeaders.getFirst("Range")
@@ -43,6 +49,11 @@ fun transferTests(test:(String,()->Unit)->Unit) {
     test("real HTTP GET writes exact bytes and measured size") { fixture { base,dir ->
         val out=File(dir,"a.part"); val result=StreamTransfer(transport).execute(TransferRequest("$base/file",out,cleartextConsent=true,maxBytes=1000,minFreeBytes=0))
         check(out.readText()=="0123456789" && result.bytes==10L && result.totalBytes==10L)
+    } }
+    test("transient 503 retries with backoff and succeeds") { fixture { base,dir ->
+        val out=File(dir,"flaky.part")
+        val result=StreamTransfer(transport).execute(TransferRequest("$base/flaky",out,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,maxRetries=2,retryBackoffMs=10L))
+        check(out.readText()=="0123456789" && result.bytes==10L)
     } }
     test("unknown HTTP size stays unknown") { fixture { base,dir ->
         val result=StreamTransfer(transport).execute(TransferRequest("$base/unknown",File(dir,"a.part"),cleartextConsent=true,maxBytes=1000,minFreeBytes=0))
@@ -90,5 +101,4 @@ fun transferTests(test:(String,()->Unit)->Unit) {
         } catch(_:RestartRequired) { rejected=true }
         check(rejected && out.readText()=="01234")
     } }
-
 }

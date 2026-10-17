@@ -20,18 +20,19 @@ import kotlinx.serialization.Serializable
 @Serializable data class PdfStampSettings(val displayName:String="Stamped.pdf", val text:String="", val pageNumbers:Boolean=false, val pages:String="all")
 @Serializable data class PdfAnnotateSettings(val displayName:String="Annotated.pdf", val text:String="", val page:Int=1, val x:Double=0.1, val y:Double=0.1, val asAnnotation:Boolean=false)
 @Serializable data class PdfSignatureSettings(val displayName:String="Signed.pdf", val page:Int=1, val left:Double=0.6, val top:Double=0.75, val right:Double=0.95, val bottom:Double=0.95)
-@Serializable data class PdfMetadataSettings(val displayName:String="Document.pdf", val title:String="", val author:String="", val subject:String="", val keywords:String="")
+@Serializable data class PdfMetadataSettings(val displayName:String="Document.pdf", val title:String="", val author:String="", val subject:String="", val keywords:String="", val insertAtPage:Int=1)
 @Serializable data class PdfProtectSettings(val displayName:String="Protected.pdf", val secretHandle:String="", val removeProtection:Boolean=false)
 @Serializable data class PdfFormSettings(val displayName:String="Form.pdf", val fieldsJson:String="{}", val flatten:Boolean=false)
 @Serializable data class PdfCompareSettings(val dummy:Int=0)
 @Serializable data class PdfRedactSettings(val displayName:String="Redacted.pdf", val page:Int=1, val left:Double=0.0, val top:Double=0.0, val right:Double=1.0, val bottom:Double=0.2, val verifyText:String="")
 @Serializable data class ImageExifSettings(val removeLocation:Boolean=true, val removeAll:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="exif_"))
 @Serializable data class ImageWatermarkSettings(val text:String="", val opacityPercent:Int=40, val useLogo:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="watermarked_"))
-@Serializable data class ImageJoinSettings(val layout:String="GRID2", val gapPx:Int=8, val output:ImageConversionSettings=ImageConversionSettings(format="PNG", namePrefix="joined_"))
+@Serializable data class ImageJoinSettings(val layout:String="GRID2", val gapPx:Int=8, val overlapPx:Int=0, val output:ImageConversionSettings=ImageConversionSettings(format="PNG", namePrefix="joined_"))
 @Serializable data class ImageAdjustSettings(val brightness:Int=0, val contrastPercent:Int=100, val saturationPercent:Int=100, val padPx:Int=0, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="adjusted_"))
 @Serializable data class ImageTargetSettings(val targetBytes:Long=200000, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="target_"))
 @Serializable data class BatchRenameSettings(val pattern:String="file-{n}", val startAt:Int=1)
 @Serializable data class EncryptedArchiveSettings(val displayName:String="Archive.zip", val secretHandle:String="", val extract:Boolean=false)
+@Serializable data class GoogleDriveSettings(val fileIdOrUrl:String="", val folderId:String="", val exportMode:Boolean=false, val tokenSecretHandle:String="")
 
 @Serializable data class MediaSelectionSettings(
     val assetIdentity:String, val choiceKey:String, val fingerprint:String,

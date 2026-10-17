@@ -8,6 +8,7 @@ import com.jumlo.app.core.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.pdf.*
 import com.jumlo.app.model.*
+import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -41,6 +42,41 @@ import kotlin.math.roundToInt
 
     private fun pages(spec:String,count:Int):List<Int> = if(spec.trim()=="all"||spec.isBlank()) (1..count).toList() else PageSelection.parse(spec,count)
 
+    private fun openUnencrypted(file: File): com.tom_roush.pdfbox.pdmodel.PDDocument {
+        val doc = try {
+            PdfBoxBackend.open(file, null)
+        } catch (_: InvalidPasswordException) {
+            throw OperationFailure("PDF_ENCRYPTED")
+        }
+        if (doc.isEncrypted) {
+            doc.close()
+            throw OperationFailure("PDF_ENCRYPTED")
+        }
+        return doc
+    }
+
+    private fun parseFormEntries(rawInput: String): Map<String, FormEntry> {
+        val trimmed = rawInput.trim()
+        if (trimmed.isEmpty() || trimmed == "{}") return emptyMap()
+        val values = mutableMapOf<String, FormEntry>()
+        fun toFormEntry(v: String): FormEntry = when {
+            v.equals("true", ignoreCase = true) || v.equals("false", ignoreCase = true) -> FormEntry.Check(v.toBoolean())
+            v.toIntOrNull() != null -> FormEntry.Radio(v.toInt())
+            else -> FormEntry.Text(v)
+        }
+        if (trimmed.startsWith("{")) {
+            val obj = JSONObject(trimmed)
+            obj.keys().forEach { k -> values[k] = toFormEntry(obj.getString(k)) }
+        } else {
+            trimmed.lineSequence().map { it.trim() }.filter { it.isNotEmpty() && '=' in it }.forEach { line ->
+                val key = line.substringBefore('=').trim()
+                val value = line.substringAfter('=').trim()
+                if (key.isNotEmpty()) values[key] = toFormEntry(value)
+            }
+        }
+        return values
+    }
+
     private suspend fun structural(request:JobRequest,context:ExecutionContext,kind:String):List<ItemOutcome> {
         val json: (String) -> JSONObject = { JSONObject(it) }
         val s = json(request.settingsJson)
@@ -56,14 +92,17 @@ import kotlin.math.roundToInt
             "merge" -> {
                 require(request.sourceIds.isNotEmpty()){"ONE_PDF_REQUIRED"}
                 publishOne("merged",name("Merged.pdf")){ out ->
-                    seekAll(context,request,request.sourceIds){ files -> PdfBoxBackend.merge(files.map{ PdfInput(it) },out) }
+                    seekAll(context,request,request.sourceIds){ files ->
+                        files.forEach { f -> openUnencrypted(f).close() }
+                        PdfBoxBackend.merge(files.map{ PdfInput(it) },out)
+                    }
                 }
             }
             "split" -> {
                 require(request.sourceIds.size==1){"ONE_PDF_REQUIRED"}
                 val outcomes=mutableListOf<ItemOutcome>()
                 context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
-                    PdfBoxBackend.open(src,null).use{ doc ->
+                    openUnencrypted(src).use{ doc ->
                         val count=doc.numberOfPages
                         val groups:List<Pair<Int,Int>> = if(s.optString("mode","RANGES")=="EVERY"){
                             val every=s.optInt("every",1).coerceAtLeast(1); (0 until count step every).map{ it to minOf(every,count-it) }
@@ -86,11 +125,11 @@ import kotlin.math.roundToInt
                 require(request.sourceIds.size==1){"ONE_PDF_REQUIRED"}
                 publishOne(kind,name(if(kind=="extract")"Extracted.pdf" else "Organized.pdf")){ out ->
                     context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
-                        PdfBoxBackend.open(src,null).use{ doc ->
+                        openUnencrypted(src).use{ doc ->
                             val count=doc.numberOfPages
                             if(kind=="extract"){
                                 val selected=pages(s.optString("pages","1"),count)
-                                PdfBoxBackend.organize(doc,selected.map{ OrganizeOp(it-1) },out)
+                                PdfBoxBackend.extract(doc,selected.map{ it-1 },out)
                             } else {
                                 val orderSpec=s.optString("order","")
                                 val order=if(orderSpec.isBlank()) (1..count).toList() else orderSpec.split(",").mapNotNull{ it.trim().toIntOrNull() }
@@ -110,57 +149,90 @@ import kotlin.math.roundToInt
                 doc.save(out)
             }
             "compress" -> singleDoc(request,context,s,name("Compressed.pdf")){ doc,out ->
-                PdfBoxBackend.compress(doc,s.optInt("maxDpi",150),s.optInt("jpegQuality",80)); doc.save(out)
+                PdfBoxBackend.compressImages(doc,s.optInt("maxDpi",150),s.optInt("jpegQuality",80)); doc.save(out)
             }
             "stamp" -> singleDoc(request,context,s,name("Stamped.pdf")){ doc,out ->
                 val selected=pages(s.optString("pages","all"),doc.numberOfPages).map{ it-1 }
                 val text=s.optString("text","")
-                if(text.isNotBlank()) PdfBoxBackend.stampText(doc,selected,text,0.08,0.08,28f,0.75f)
-                if(s.optBoolean("pageNumbers",false)) selected.forEach{ idx -> PdfBoxBackend.stampText(doc,listOf(idx),"${idx+1}",0.47,0.96,10f,0.4f) }
+                PdfBoxBackend.stampWatermarkAndNumbers(doc,selected,text,s.optBoolean("pageNumbers",false))
                 doc.save(out)
             }
             "annotate" -> singleDoc(request,context,s,name("Annotated.pdf")){ doc,out ->
                 val page=s.optInt("page",1); val text=s.optString("text",""); val x=s.optDouble("x",0.1); val y=s.optDouble("y",0.1)
                 require(text.isNotBlank()){"INVALID_ANNOTATION"}
                 if(s.optBoolean("asAnnotation",false)) PdfBoxBackend.addTextAnnotation(doc,page-1,text,x,y)
-                else PdfBoxBackend.stampText(doc,listOf(page-1),text,x,y,12f,0.1f)
+                else PdfBoxBackend.overlayText(doc,listOf(page-1),text,x,y,12f,0.1f)
                 doc.save(out)
             }
             "signature" -> {
                 require(request.sourceIds.size==2){"PDF_AND_SIGNATURE_IMAGE_REQUIRED"}
                 publishOne("signed",name("Signed.pdf")){ out ->
                     seekAll(context,request,request.sourceIds){ files ->
-                        PdfBoxBackend.open(files[0],null).use{ doc ->
+                        openUnencrypted(files[0]).use{ doc ->
                             PdfBoxBackend.stampImage(doc,s.optInt("page",1)-1,files[1],s.optDouble("left",0.6),s.optDouble("top",0.75),s.optDouble("right",0.95),s.optDouble("bottom",0.95))
                             doc.save(out)
                         }
                     }
                 }
             }
-            "metadata" -> singleDoc(request,context,s,name("Document.pdf")){ doc,out ->
-                PdfBoxBackend.setMetadata(doc,mapOf("title" to s.optString("title",""),"author" to s.optString("author",""),"subject" to s.optString("subject",""),"keywords" to s.optString("keywords","")))
-                doc.save(out)
-            }
-            "protect" -> {
-                // Passwords arrive via WorkspaceDraft direct fields encoded as handles is not wired;
-                // protect settings carry session handles resolved by AppViewModel into settingsJson placeholders.
-                // Here we require the literal session passwords injected as handle-resolved values.
-                singleDoc(request,context,s,name("Protected.pdf")){ doc,out ->
-                    if(s.optBoolean("removeProtection",false)) PdfBoxBackend.removeProtection(doc,out)
-                    else {
-                        val handle=s.optString("secretHandle","")
-                        val raw=secrets.copy(handle)?.let{ String(it) } ?: throw OperationFailure("SECRET_EXPIRED")
-                        val parts=raw.split("\n",limit=2); val user=parts.getOrElse(0){""}; val owner=parts.getOrElse(1){""}
-                        require(owner.isNotEmpty()){"OWNER_PASSWORD_REQUIRED"}
-                        PdfBoxBackend.protect(doc,user.toCharArray(),owner.toCharArray(),out)
+            "metadata" -> {
+                require(request.sourceIds.size in 1..2){"ONE_OR_TWO_PDFS_REQUIRED"}
+                val metaMap=mapOf("title" to s.optString("title",""),"author" to s.optString("author",""),"subject" to s.optString("subject",""),"keywords" to s.optString("keywords",""))
+                if(request.sourceIds.size==2){
+                    publishOne("document",name("Document.pdf")){ out ->
+                        seekAll(context,request,request.sourceIds){ files ->
+                            val tempInserted=File(out.parentFile,"inserted-tmp.pdf")
+                            try {
+                                openUnencrypted(files[0]).use{ baseDoc ->
+                                    openUnencrypted(files[1]).close()
+                                    val insertPos=(s.optInt("insertAtPage",1)-1).coerceIn(0,baseDoc.numberOfPages)
+                                    PdfBoxBackend.insert(baseDoc,PdfInput(files[1]),insertPos,tempInserted)
+                                }
+                                openUnencrypted(tempInserted).use{ mergedDoc ->
+                                    PdfBoxBackend.setMetadata(mergedDoc,metaMap)
+                                    mergedDoc.save(out)
+                                }
+                            } finally { tempInserted.delete() }
+                        }
+                    }
+                } else {
+                    singleDoc(request,context,s,name("Document.pdf")){ doc,out ->
+                        PdfBoxBackend.setMetadata(doc,metaMap)
+                        doc.save(out)
                     }
                 }
             }
+            "protect" -> {
+                require(request.sourceIds.size==1){"ONE_PDF_REQUIRED"}
+                val handle=s.optString("secretHandle","")
+                val rawChars=secrets.copy(handle) ?: throw OperationFailure("SECRET_EXPIRED")
+                try {
+                    val raw=String(rawChars)
+                    val parts=raw.split("\n",limit=2)
+                    val user=parts.getOrElse(0){""}
+                    val owner=parts.getOrElse(1){""}
+                    val remove=s.optBoolean("removeProtection",false)
+                    publishOne("document",name(if(remove) "Unlocked.pdf" else "Protected.pdf")){ out ->
+                        context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
+                            val openPw=(user.ifEmpty { owner }).toCharArray()
+                            try {
+                                PdfBoxBackend.open(src,if(remove) openPw else null).use{ doc ->
+                                    if(remove) PdfBoxBackend.removeProtection(doc,out)
+                                    else {
+                                        require(owner.isNotEmpty()){"OWNER_PASSWORD_REQUIRED"}
+                                        val userArr=user.toCharArray(); val ownerArr=owner.toCharArray()
+                                        try { PdfBoxBackend.protect(doc,userArr,ownerArr,out) }
+                                        finally { userArr.fill('\u0000'); ownerArr.fill('\u0000') }
+                                    }
+                                }
+                            } finally { openPw.fill('\u0000') }
+                        }
+                    }
+                } finally { rawChars.fill('\u0000') }
+            }
             "forms" -> singleDoc(request,context,s,name("Form.pdf")){ doc,out ->
-                val fieldsJson=s.optString("fieldsJson","{}")
-                if(fieldsJson.isNotBlank() && fieldsJson!="{}"){
-                    val obj=JSONObject(fieldsJson); val values=mutableMapOf<String,FormEntry>()
-                    obj.keys().forEach{ k -> val v=obj.getString(k); values[k]= when { v=="true"||v=="false" -> FormEntry.Check(v.toBoolean()); v.toIntOrNull()!=null -> FormEntry.Radio(v.toInt()); else -> FormEntry.Text(v) } }
+                val values = parseFormEntries(s.optString("fieldsJson","{}"))
+                if (values.isNotEmpty()) {
                     PdfBoxBackend.fillForm(doc,values)
                 }
                 if(s.optBoolean("flatten",false)) PdfBoxBackend.flattenForm(doc,out) else doc.save(out)
@@ -171,7 +243,7 @@ import kotlin.math.roundToInt
                 context.outputs.find(request.id,key)?.let{ listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) } ?: run {
                     val ticket=context.outputs.reserve(request.id,key,"compare-report.txt","text/plain")
                     seekAll(context,request,request.sourceIds){ files ->
-                        val result=PdfBoxBackend.open(files[0],null).use{ da -> PdfBoxBackend.open(files[1],null).use{ db -> PdfBoxBackend.compare(da,db) } }
+                        val result=openUnencrypted(files[0]).use{ da -> openUnencrypted(files[1]).use{ db -> PdfBoxBackend.compareText(da,db) } }
                         ticket.stageFile.writeText("verdict=${result.verdict}\npagesA=${result.pageCountA}\npagesB=${result.pageCountB}\nfirstDifferentPage=${result.firstDifferentPage ?: "-"}\n")
                     }
                     val rec=context.outputs.publish(ticket){ OutputMetadata() }
@@ -182,11 +254,11 @@ import kotlin.math.roundToInt
                 val page=s.optInt("page",1)
                 val region=RedactRegion(s.optDouble("left",0.0),s.optDouble("top",0.0),s.optDouble("right",1.0),s.optDouble("bottom",0.2))
                 val result=PdfBoxBackend.redact(doc,mapOf((page-1) to listOf(region)))
-                require(result.leftoverText.isEmpty()){"REDACTION_VERIFICATION_FAILED"}
+                require(result.leftoverText.isEmpty() && result.pageFallbacks.isEmpty()){"REDACTION_VERIFICATION_FAILED"}
                 val verify=s.optString("verifyText","")
                 doc.save(out)
                 if(verify.isNotBlank()){
-                    PdfBoxBackend.open(out,null).use{ check -> require(!PdfBoxBackend.pageTexts(check).joinToString(" ").contains(verify)){"REDACTION_VERIFICATION_FAILED"} }
+                    openUnencrypted(out).use{ check -> require(!PdfBoxBackend.pageTexts(check).joinToString(" ").contains(verify)){"REDACTION_VERIFICATION_FAILED"} }
                 }
             }
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
@@ -198,7 +270,7 @@ import kotlin.math.roundToInt
         val key="document"
         context.outputs.find(request.id,key)?.let{ return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
         val ticket=context.outputs.reserve(request.id,key,display,"application/pdf")
-        context.sources.withSeekable(request.sourceIds.single(),request.id){ src -> PdfBoxBackend.open(src,null).use{ block(it,ticket.stageFile) } }
+        context.sources.withSeekable(request.sourceIds.single(),request.id){ src -> openUnencrypted(src).use{ block(it,ticket.stageFile) } }
         val record=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf") }
         return listOf(ItemOutcome(key,ItemStatus.CREATED,record.id))
     }

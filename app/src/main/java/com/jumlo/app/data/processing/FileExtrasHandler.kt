@@ -1,38 +1,43 @@
 package com.jumlo.app.data.processing
 
+import com.jumlo.app.core.ArchiveLimits
+import com.jumlo.app.data.files.EncryptedZip
+import com.jumlo.app.data.files.EncryptedZipEntrySource
 import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.SafeNames
 import com.jumlo.app.data.engine.PureDomainAlgorithms
+import com.jumlo.app.data.files.GoogleDriveClient
 import com.jumlo.app.data.jobs.ExecutionContext
 import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.OperationHandler
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.model.ItemOutcome
 import com.jumlo.app.model.ItemStatus
+import com.jumlo.app.model.JobProgress
 import com.jumlo.app.model.JobRequest
+import com.jumlo.app.model.JobStage
 import com.jumlo.app.model.OutputMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import net.lingala.zip4j.ZipFile
-import net.lingala.zip4j.model.ZipParameters
-import net.lingala.zip4j.model.enums.AesKeyStrength
-import net.lingala.zip4j.model.enums.CompressionLevel
-import net.lingala.zip4j.model.enums.CompressionMethod
-import net.lingala.zip4j.model.enums.EncryptionMethod
+import okhttp3.OkHttpClient
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Batch rename (renamed copies), duplicate report, encrypted ZIP via zip4j (Apache-2.0). Passwords: session handles only. */
-@Singleton class FileExtrasHandler @Inject constructor(private val secrets: EphemeralSecretStore) : OperationHandler {
+/** Batch rename (renamed copies), duplicate report, managed trash summary, encrypted ZIP via zip4j, and Google Drive v3 import/export. Passwords/tokens: session handles only. */
+@Singleton class FileExtrasHandler @Inject constructor(
+    private val secrets: EphemeralSecretStore,
+    private val okHttpClient: OkHttpClient
+) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
         when (request.toolId) {
             "file_batch_rename" -> rename(request, context)
-            "file_duplicates", "file_trash" -> duplicates(request, context)
+            "file_duplicates", "file_trash" -> duplicatesAndTrash(request, context)
             "file_encrypted_zip" -> encryptedZip(request, context)
+            "file_drive" -> googleDrive(request, context)
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }
@@ -42,11 +47,21 @@ import javax.inject.Singleton
         val names = request.sourceIds.map { context.sources.get(it).displayName }
         val preview = PureDomainAlgorithms.batchRenamePreview(names, settings.pattern, settings.startAt)
         val outcomes = mutableListOf<ItemOutcome>()
+        // Publish a preview manifest alongside the renamed copies
+        val previewKey = "rename-preview"
+        context.outputs.find(request.id, previewKey)?.let { outcomes += ItemOutcome(previewKey, ItemStatus.CREATED, it.id) } ?: run {
+            val ticket = context.outputs.reserve(request.id, previewKey, "rename_preview.txt", "text/plain")
+            val mapping = names.indices.joinToString("\n") { i -> "${names[i]} -> ${preview[i]}" }
+            ticket.stageFile.writeText(mapping + "\n")
+            val rec = context.outputs.publish(ticket) { OutputMetadata() }
+            outcomes += ItemOutcome(previewKey, ItemStatus.CREATED, rec.id)
+        }
         request.sourceIds.forEachIndexed { index, id ->
             val key = "renamed:$index"
             context.outputs.find(request.id, key)?.let { outcomes += ItemOutcome(key, ItemStatus.CREATED, it.id); return@forEachIndexed }
             try {
-                val ticket = context.outputs.reserve(request.id, key, preview[index], "application/octet-stream")
+                val source = context.sources.get(id)
+                val ticket = context.outputs.reserve(request.id, key, preview[index], source.mimeType ?: "application/octet-stream")
                 context.sources.openRead(id).use { input -> FileOutputStream(ticket.stageFile).use { input.copyTo(it); it.fd.sync() } }
                 val rec = context.outputs.publish(ticket) { OutputMetadata() }
                 outcomes += ItemOutcome(key, ItemStatus.CREATED, rec.id)
@@ -55,18 +70,24 @@ import javax.inject.Singleton
         return outcomes
     }
 
-    private suspend fun duplicates(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
-        val key = "duplicates-report"
+    private suspend fun duplicatesAndTrash(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
+        val key = if (request.toolId == "file_trash") "trash-report" else "duplicates-report"
         context.outputs.find(request.id, key)?.let { return listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
         val hashes = request.sourceIds.map { id -> context.sources.openRead(id).use { Hashing.sha256(it, context.checkCancellation) } }
         val groups = PureDomainAlgorithms.duplicateGroups(hashes)
         val names = request.sourceIds.map { context.sources.get(it).displayName }
+        val trashedItems = if (request.toolId == "file_trash") context.outputs.refreshTrash() else emptyList()
         val text = buildString {
             append("groups=${groups.size}\n")
             groups.forEach { g -> append(g.joinToString(",") { names[it] }); append(" sha256="); append(hashes[g.first()]); append("\n") }
-            if (request.toolId == "file_trash") append("trashNote=Published outputs stay in app storage until you delete them from Files; sources are never deleted by this report.\n")
+            if (request.toolId == "file_trash") {
+                append("trashedCount=${trashedItems.size}\n")
+                trashedItems.forEach { item -> append("trashed=${item.displayName}|size=${item.sizeBytes}|sha256=${item.sha256}\n") }
+                append("trashNote=Trashed outputs stay in app-managed trash until restored or purged; sources are never deleted by this report.\n")
+            }
         }
-        val ticket = context.outputs.reserve(request.id, key, "duplicates-report.txt", "text/plain")
+        val reportName = if (request.toolId == "file_trash") "trash-report.txt" else "duplicates-report.txt"
+        val ticket = context.outputs.reserve(request.id, key, reportName, "text/plain")
         ticket.stageFile.writeText(text)
         val rec = context.outputs.publish(ticket) { OutputMetadata() }
         return listOf(ItemOutcome(key, ItemStatus.CREATED, rec.id))
@@ -75,66 +96,124 @@ import javax.inject.Singleton
     private suspend fun encryptedZip(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         val settings = Json.decodeFromString<EncryptedArchiveSettings>(request.settingsJson)
         val raw = secrets.copy(settings.secretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
-        // zip4j 2.11.5: ZipFile(File, char[]) is the password constructor; this tool only
-        // handles encrypted archives, so an empty password fails instead of weakening it.
         require(raw.isNotEmpty()) { "ZIP_PASSWORD_REQUIRED" }
-        val password = String(raw).toCharArray()
+        val password = raw.copyOf()
         raw.fill('\u0000')
-        require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
-        return if (!settings.extract) {
-            val itemKey = "archive"
-            context.outputs.find(request.id, itemKey)?.let { listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) } ?: run {
-                val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(settings.displayName), "application/zip")
-                val params = ZipParameters().apply {
-                    compressionMethod = CompressionMethod.DEFLATE; compressionLevel = CompressionLevel.NORMAL
-                    isEncryptFiles = true; encryptionMethod = EncryptionMethod.AES; aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
-                }
-                val zip = ZipFile(ticket.stageFile, password)
-                request.sourceIds.forEach { id ->
-                    val ref = context.sources.get(id)
-                    context.sources.withSeekable(id, request.id) { f ->
-                        val tmp = File(ticket.stageFile.parentFile, SafeNames.fromDisplayName(ref.displayName, "file.bin"))
-                        f.copyTo(tmp, overwrite = true); zip.addFile(tmp, params); tmp.delete()
+        val limits = ArchiveLimits(
+            maxBytes = context.budget.maxExpandedArchiveBytes,
+            maxEntries = context.budget.maxArchiveEntries,
+            maxDepth = 32
+        )
+        try {
+            require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+            return if (!settings.extract) {
+                val itemKey = "archive"
+                context.outputs.find(request.id, itemKey)?.let { listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) } ?: run {
+                    val outName = SafeNames.basename(settings.displayName.let { if (it.endsWith(".zip", true)) it else "$it.zip" })
+                    val ticket = context.outputs.reserve(request.id, itemKey, outName, "application/zip")
+                    val tempSourcesDir = File(ticket.stageFile.parentFile, "ezip-inputs").apply { mkdirs() }
+                    try {
+                        val entrySources = request.sourceIds.mapIndexed { idx, id ->
+                            val ref = context.sources.get(id)
+                            val tempFile = File(tempSourcesDir, "src-$idx.bin")
+                            context.sources.openRead(id).use { input ->
+                                FileOutputStream(tempFile).use { out -> input.copyTo(out); out.fd.sync() }
+                            }
+                            EncryptedZipEntrySource(ref.displayName, tempFile)
+                        }
+                        EncryptedZip.create(ticket.stageFile, entrySources, password, limits, context.checkCancellation)
+                    } finally {
+                        tempSourcesDir.deleteRecursively()
                     }
+                    val rec = context.outputs.publish(ticket) { ctxFile -> context.outputs.inspect(ctxFile, "application/zip") }
+                    listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
                 }
-                val rec = context.outputs.publish(ticket) { context.outputs.inspect(it, "application/zip") }
+            } else {
+                require(request.sourceIds.size == 1) { "ONE_ZIP_REQUIRED" }
+                val outcomes = mutableListOf<ItemOutcome>()
+                context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
+                    val dir = File(src.parentFile, "ezx")
+                    try {
+                        val extractedFiles = EncryptedZip.extract(src, dir, password, limits, context.checkCancellation)
+                        extractedFiles.forEachIndexed { index, f ->
+                            val itemKey = "entry:$index"
+                            context.outputs.find(request.id, itemKey)?.let {
+                                outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, it.id)
+                            } ?: run {
+                                val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), "application/octet-stream")
+                                f.copyTo(ticket.stageFile, overwrite = true)
+                                val rec = context.outputs.publish(ticket) { OutputMetadata() }
+                                outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
+                            }
+                        }
+                    } finally { dir.deleteRecursively() }
+                }
+                outcomes
+            }
+        } finally {
+            password.fill('\u0000')
+        }
+    }
+
+    private suspend fun googleDrive(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
+        val settings = Json.decodeFromString<GoogleDriveSettings>(request.settingsJson)
+        val tokenChars = secrets.copy(settings.tokenSecretHandle) ?: throw OperationFailure("LOGIN_REQUIRED")
+        try {
+            require(tokenChars.isNotEmpty()) { "LOGIN_REQUIRED" }
+            val client = GoogleDriveClient(OkHttpTransport(okHttpClient), okHttpClient)
+            return if (!settings.exportMode) {
+                // Import / download a Drive file that the signed-in user can access
+                val itemKey = "drive-import"
+                context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
+                val meta = client.fetchMetadata(settings.fileIdOrUrl, tokenChars)
+                val ticket = context.outputs.reserve(request.id, itemKey, meta.name, meta.mimeType)
+                val downloaded = client.downloadFile(
+                    fileIdOrUrl = settings.fileIdOrUrl,
+                    accessToken = tokenChars,
+                    targetFile = ticket.stageFile,
+                    maxBytes = context.budget.maxExpandedArchiveBytes,
+                    minFreeBytes = context.budget.minFreeBytes,
+                    checkCancel = context.checkCancellation
+                )
+                context.report(JobProgress(JobStage.FINALIZING, downloaded.sizeBytes ?: ticket.stageFile.length(), downloaded.sizeBytes))
+                val rec = context.outputs.publish(ticket) { OutputMetadata() }
+                secrets.remove(settings.tokenSecretHandle)
                 listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
-            }
-        } else {
-            require(request.sourceIds.size == 1) { "ONE_ZIP_REQUIRED" }
-            val outcomes = mutableListOf<ItemOutcome>()
-            context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
-                val dir = File(src.parentFile, "ezx").apply { mkdirs() }
-                val canonicalDir = dir.canonicalFile
-                try {
-                    val zip = ZipFile(src, password)
-                    val headers = zip.fileHeaders
-                    require(headers.size <= context.budget.maxArchiveEntries) { "ARCHIVE_ENTRY_LIMIT" }
-                    var totalBytes = 0L
-                    // Validate every entry name BEFORE extracting anything (ZIP-slip),
-                    // and enforce the expanded-byte budget from declared sizes.
-                    headers.forEach { header ->
-                        val name = header.fileName
-                        require(name.isNotBlank() && !name.startsWith("/") && !name.startsWith("\\") && !name.contains("\\")) { "UNSAFE_ARCHIVE_PATH" }
-                        require(!name.split('/').any { it == ".." || it == "." }) { "UNSAFE_ARCHIVE_PATH" }
-                        val dest = File(canonicalDir, name).canonicalFile
-                        require(dest.path.startsWith(canonicalDir.path + File.separator)) { "UNSAFE_ARCHIVE_PATH" }
-                        if (!header.isDirectory) { totalBytes += header.uncompressedSize; require(totalBytes <= context.budget.maxExpandedArchiveBytes) { "ARCHIVE_SIZE_LIMIT" } }
+            } else {
+                // Export / upload selected local source snapshots to the signed-in user's Google Drive
+                require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+                val outcomes = mutableListOf<ItemOutcome>()
+                val uploadedLines = mutableListOf<String>()
+                for ((index, id) in request.sourceIds.withIndex()) {
+                    context.checkCancellation()
+                    val srcRef = context.sources.get(id)
+                    context.sources.withSeekable(id, request.id) { file ->
+                        val uploaded = client.uploadFile(
+                            sourceFile = file,
+                            displayName = srcRef.displayName,
+                            mimeType = srcRef.mimeType ?: "application/octet-stream",
+                            folderId = settings.folderId.takeIf { it.isNotBlank() },
+                            accessToken = tokenChars,
+                            checkCancel = context.checkCancellation
+                        )
+                        uploadedLines += "uploaded=${uploaded.name}|driveId=${uploaded.id}|mime=${uploaded.mimeType}"
                     }
-                    zip.extractAll(dir.path)
-                    var actualBytes = 0L
-                    dir.walkTopDown().filter { it.isFile }.forEach { actualBytes += it.length() }
-                    require(actualBytes <= context.budget.maxExpandedArchiveBytes) { "ARCHIVE_SIZE_LIMIT" }
-                    dir.walkTopDown().filter { it.isFile }.forEachIndexed { index, f ->
-                        val itemKey = "entry:$index"
-                        val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), "application/octet-stream")
-                        f.copyTo(ticket.stageFile, overwrite = true)
-                        val rec = context.outputs.publish(ticket) { OutputMetadata() }
-                        outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
-                    }
-                } finally { dir.deleteRecursively() }
+                    context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), request.sourceIds.size.toLong()))
+                }
+                val reportKey = "drive-export-receipt"
+                context.outputs.find(request.id, reportKey)?.let {
+                    outcomes += ItemOutcome(reportKey, ItemStatus.CREATED, it.id)
+                } ?: run {
+                    val ticket = context.outputs.reserve(request.id, reportKey, "drive_export_receipt.txt", "text/plain")
+                    ticket.stageFile.writeText(uploadedLines.joinToString("\n") + "\n")
+                    val rec = context.outputs.publish(ticket) { OutputMetadata() }
+                    outcomes += ItemOutcome(reportKey, ItemStatus.CREATED, rec.id)
+                }
+                secrets.remove(settings.tokenSecretHandle)
+                outcomes
             }
-            outcomes
+        } finally {
+            tokenChars.fill('\u0000')
         }
     }
 }

@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.jumlo.app.core.HttpPolicy
 import com.jumlo.app.core.MemoryBudget
 import com.jumlo.app.core.PageSelection
 import com.jumlo.app.data.jobs.ExecutionContext
@@ -37,11 +38,9 @@ import kotlin.coroutines.resumeWithException
 import kotlin.math.roundToInt
 
 /**
- * pdf_ocr: renders pages, runs on-device ML Kit OCR, publishes extracted .txt.
- * (Searchable-PDF text layer embedding is done by reusing the raster + invisible
- * text via PdfBox in PdfOperationHandler stamps; here the honest deliverable is
- * the verified text export plus the OCR'd page images are not silently claimed.)
- * webpage_pdf: loads a public URL in a WebView and prints it to PDF.
+ * pdf_ocr: renders pages, runs on-device ML Kit OCR, publishes extracted .txt
+ * and searchable.pdf with an invisible text layer.
+ * webpage_pdf: loads a validated URL in a WebView and prints it to PDF.
  */
 @Singleton class OcrWebHandler @Inject constructor(@ApplicationContext private val app: Context) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = when (request.toolId) {
@@ -52,15 +51,30 @@ import kotlin.math.roundToInt
 
     private suspend fun ocr(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         require(request.sourceIds.size == 1) { "ONE_PDF_REQUIRED" }
+        val settings = runCatching { Json.decodeFromString<PdfImagesSettings>(request.settingsJson) }.getOrDefault(PdfImagesSettings())
         val itemKey = "ocr-text"
-        context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
+        val existingTxt = context.outputs.find(request.id, itemKey)
+        val existingPdf = context.outputs.find(request.id, "searchable-pdf")
+        if (existingTxt != null && existingPdf != null) {
+            return listOf(
+                ItemOutcome(itemKey, ItemStatus.CREATED, existingTxt.id),
+                ItemOutcome("searchable-pdf", ItemStatus.CREATED, existingPdf.id)
+            )
+        }
+        val perPageTexts = mutableMapOf<Int, String>()
         val text = context.sources.withSeekable(request.sourceIds.single(), request.id) { source ->
             ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                 PdfRenderer(fd).use { renderer ->
+                    val selectedPages = if (settings.pages.isBlank() || settings.pages.trim().equals("all", true)) {
+                        (1..renderer.pageCount).toList()
+                    } else {
+                        PageSelection.parse(settings.pages, renderer.pageCount)
+                    }
                     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
                     val sb = StringBuilder()
                     try {
-                        for (index in 0 until renderer.pageCount) {
+                        for ((stepIdx, pageNum) in selectedPages.withIndex()) {
+                            val index = pageNum - 1
                             context.checkCancellation()
                             renderer.openPage(index).use { page ->
                                 val width = (page.width * 200 / 72.0).roundToInt(); val height = (page.height * 200 / 72.0).roundToInt()
@@ -74,31 +88,41 @@ import kotlin.math.roundToInt
                                             .addOnSuccessListener { cont.resume(it.text) }
                                             .addOnFailureListener { cont.resumeWithException(it) }
                                     }
+                                    perPageTexts[index] = recognized
                                     sb.append("--- page ${index + 1} ---\n").append(recognized).append("\n")
                                 } finally { bitmap.recycle() }
                             }
-                            context.report(com.jumlo.app.model.JobProgress(com.jumlo.app.model.JobStage.RUNNING, (index + 1).toLong(), renderer.pageCount.toLong()))
+                            context.report(com.jumlo.app.model.JobProgress(com.jumlo.app.model.JobStage.RUNNING, (stepIdx + 1).toLong(), selectedPages.size.toLong()))
                         }
                     } finally { recognizer.close() }
                     sb.toString()
                 }
             }
         }
-        val ticket = context.outputs.reserve(request.id, itemKey, "ocr.txt", "text/plain")
-        ticket.stageFile.writeText(text)
-        val rec = context.outputs.publish(ticket) { OutputMetadata() }
-        val outcomes = mutableListOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
-        // Searchable PDF: original pages rasterized + invisible OCR text layer (positions approximated per page block).
+        val outcomes = mutableListOf<ItemOutcome>()
+        if (existingTxt != null) {
+            outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, existingTxt.id)
+        } else {
+            val ticket = context.outputs.reserve(request.id, itemKey, "ocr.txt", "text/plain")
+            ticket.stageFile.writeText(text)
+            val rec = context.outputs.publish(ticket) { OutputMetadata() }
+            outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
+        }
+        // Searchable PDF: original pages with embedded invisible OCR text layer.
         try {
             val sKey = "searchable-pdf"
             context.outputs.find(request.id, sKey)?.let { outcomes += ItemOutcome(sKey, ItemStatus.CREATED, it.id) } ?: run {
                 val sTicket = context.outputs.reserve(request.id, sKey, "searchable.pdf", "application/pdf")
                 context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
                     com.jumlo.app.data.pdf.PdfBoxBackend.open(src, null).use { doc ->
-                        val perPage = text.split(Regex("(?m)^--- page \\d+ ---$")).drop(1)
-                        perPage.forEachIndexed { i, pageText ->
-                            if (i < doc.numberOfPages && pageText.isNotBlank())
-                                runCatching { com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(doc, i, pageText.replace(Regex("[^\\x20-\\x7E\\n]"), " "), 0.05, 0.05, 10f) }
+                        perPageTexts.forEach { (pageIdx, pageText) ->
+                            if (pageIdx in 0 until doc.numberOfPages && pageText.isNotBlank()) {
+                                runCatching {
+                                    com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(
+                                        doc, pageIdx, pageText.replace(Regex("[^\\x20-\\x7E\\n]"), " "), 0.05, 0.05, 10f
+                                    )
+                                }
+                            }
                         }
                         doc.save(sTicket.stageFile)
                     }
@@ -111,11 +135,9 @@ import kotlin.math.roundToInt
     }
 
     private suspend fun webpage(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
-        // URL arrives as the single source's display name? No: webpage URL is carried in settings pages field? Use urls via DownloadSettings-like: text in PdfImagesSettings.pages is page spec, so URL is the first source displayName is wrong.
-        // Contract: the workspace puts the URL in text1 -> encoded into PdfImagesSettings.pages for this tool (see WorkspaceDraft).
         val settings = Json.decodeFromString<PdfImagesSettings>(request.settingsJson)
-        val url = settings.pages.trim()
-        require(url.startsWith("https://") || url.startsWith("http://")) { "INVALID_URL" }
+        val validatedUri = HttpPolicy.url(settings.pages.trim(), cleartext = false)
+        val url = validatedUri.toASCIIString()
         val itemKey = "webpage"
         context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
         val ticket = context.outputs.reserve(request.id, itemKey, "webpage.pdf", "application/pdf")
@@ -124,6 +146,8 @@ import kotlin.math.roundToInt
                 suspendCancellableCoroutine { cont ->
                     val webView = WebView(app)
                     webView.settings.javaScriptEnabled = true
+                    webView.settings.allowFileAccess = false
+                    webView.settings.allowContentAccess = false
                     webView.webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView, finishedUrl: String?) {
                             val adapter = view.createPrintDocumentAdapter("webpage")

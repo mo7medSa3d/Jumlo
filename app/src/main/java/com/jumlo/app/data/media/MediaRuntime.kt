@@ -9,4 +9,5 @@ interface MediaRuntime {
     fun download(url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,
         allowHttp: Boolean, directory: File, check: () -> Unit,
         progress: (MediaProgress) -> Unit)
+    fun refreshExtractor(): String = "MEDIA_BUILD_NOT_ENABLED"
 }

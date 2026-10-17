@@ -72,7 +72,8 @@ object PdfCapabilityPolicy {
         "MERGE", "SPLIT", "EXTRACT", "REORDER", "ROTATE", "DELETE", "INSERT",
         "CROP_BOX", "METADATA", "PROTECT_STANDARD", "REMOVE_PROTECTION",
         "COMPRESS_IMAGE_DOWNSCALE", "COMPARE_TEXT", "REDACT_OPERATOR_LEVEL",
-        "FORM_FILL_TEXT_CHECKBOX_RADIO", "FORM_FLATTEN", "FORM_LIST"
+        "FORM_FILL_TEXT_CHECKBOX_RADIO", "FORM_FLATTEN", "FORM_LIST",
+        "STAMP_TEXT", "STAMP_IMAGE", "ANNOTATION_TEXT", "OCR_INVISIBLE_TEXT"
     )
 }
 
@@ -130,6 +131,11 @@ object PdfBoxBackend {
         }
     }
 
+    fun extract(doc: PDDocument, zeroBasedPages: List<Int>, out: File): File {
+        organize(doc, zeroBasedPages.map { OrganizeOp(it) }, out)
+        return out
+    }
+
     fun organize(doc: PDDocument, ops: List<OrganizeOp>, out: File) {
         val pages = doc.pages.toList()
         require(ops.isNotEmpty() && ops.all { it.sourceIndex in pages.indices }) { "INVALID_PAGE_INDEX" }
@@ -177,12 +183,11 @@ object PdfBoxBackend {
         require(left < right && top < bottom) { "INVALID_CROP" }
         val page = doc.getPage(zeroBasedPage)
         val media = page.mediaBox
-        page.cropBox = PDRectangle(
-            (media.lowerLeftX + left * media.width).toFloat(),
-            (media.lowerLeftY + top * media.height).toFloat(),
-            (media.lowerLeftX + right * media.width).toFloat(),
-            (media.lowerLeftY + bottom * media.height).toFloat()
-        )
+        val x0 = (media.lowerLeftX + left * media.width).toFloat()
+        val y0 = (media.lowerLeftY + top * media.height).toFloat()
+        val w = ((right - left) * media.width).toFloat()
+        val h = ((bottom - top) * media.height).toFloat()
+        page.cropBox = PDRectangle(x0, y0, w, h)
     }
 
     fun setMetadata(doc: PDDocument, values: Map<String, String>) {
@@ -248,17 +253,17 @@ object PdfBoxBackend {
             when (entry) {
                 is FormEntry.Text -> {
                     require(field is PDTextField) { "FORM_FIELD_TYPE_MISMATCH" }
-                    (field as PDTextField).setValue(entry.value)
+                    field.setValue(entry.value)
                 }
                 is FormEntry.Check -> {
                     require(field is PDCheckBox) { "FORM_FIELD_TYPE_MISMATCH" }
-                    if (entry.on) (field as PDCheckBox).check() else (field as PDCheckBox).unCheck()
+                    if (entry.on) field.check() else field.unCheck()
                 }
                 is FormEntry.Radio -> {
                     require(field is PDRadioButton) { "FORM_FIELD_TYPE_MISMATCH" }
-                    val values = (field as PDRadioButton).exportValues
-                    require(entry.index in values.indices) { "FORM_FIELD_TYPE_MISMATCH" }
-                    (field as PDRadioButton).setValue(values[entry.index])
+                    val exportValues = field.exportValues
+                    require(entry.index in exportValues.indices) { "FORM_FIELD_TYPE_MISMATCH" }
+                    field.setValue(exportValues[entry.index])
                 }
             }
         }
@@ -302,6 +307,8 @@ object PdfBoxBackend {
         doc.documentCatalog.acroForm = null
         doc.save(out)
     }
+
+    fun compressImages(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85): Int = compress(doc, maxDpi, jpegQuality)
 
     /**
      * Lossless JVM path: flate 8-bit DeviceRGB/DeviceGray images are box-downscaled toward
@@ -395,6 +402,15 @@ object PdfBoxBackend {
         return out
     }
 
+    fun overlayText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float = 12f, gray: Float = 0.1f) {
+        stampText(doc, zeroBasedPages, text, xNorm, yNormTop, fontSize, gray)
+    }
+
+    fun stampWatermarkAndNumbers(doc: PDDocument, zeroBasedPages: List<Int>, watermarkText: String, addPageNumbers: Boolean) {
+        if (watermarkText.isNotBlank()) stampText(doc, zeroBasedPages, watermarkText, 0.08, 0.08, 28f, 0.75f)
+        if (addPageNumbers) zeroBasedPages.forEach { idx -> stampText(doc, listOf(idx), "${idx + 1}", 0.47, 0.96, 10f, 0.4f) }
+    }
+
     /** Overlay text (annotations/overlay, watermark, page numbers share this primitive). */
     fun stampText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, gray: Float) {
         require(text.isNotBlank() && fontSize in 4f..200f && gray in 0f..1f) { "INVALID_STAMP" }
@@ -419,7 +435,7 @@ object PdfBoxBackend {
         val page = doc.getPage(zeroBasedPage); val media = page.mediaBox
         PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
             cs.beginText(); cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
-            try { cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.INVISIBLE) } catch (_: Exception) {}
+            try { cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.NEITHER) } catch (_: Exception) {}
             cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
             text.lines().take(200).forEachIndexed { i, line -> if (i > 0) cs.newLineAtOffset(0f, -fontSize * 1.2f); runCatching { cs.showText(line.take(500)) } }
             cs.endText()
@@ -454,6 +470,8 @@ object PdfBoxBackend {
         annotation.isOpen = true
         val annotations = page.annotations.toMutableList(); annotations.add(annotation); page.setAnnotations(annotations)
     }
+
+    fun compareText(a: PDDocument, b: PDDocument): CompareResult = compare(a, b)
 
     fun compare(a: PDDocument, b: PDDocument): CompareResult {
         val aTexts = pageTexts(a)
@@ -549,7 +567,6 @@ object PdfBoxBackend {
         val removedWordFragments = mutableSetOf<String>()
         private val tokens = mutableListOf<Any>()
         private val removeIdx = mutableSetOf<Int>()
-        private val media = page.mediaBox
         private var ctm = Geo.Mat.IDENTITY
         private var tlm = Geo.Mat.IDENTITY
         private var fontSize = 0f
@@ -561,21 +578,21 @@ object PdfBoxBackend {
 
         data class Outcome(val removedChunks: Int, val images: Int, val complex: Boolean)
 
-        private fun bounds() = Geo.Area(areas.first().x0, areas.first().y0, areas.last().x1, areas.last().y1)
+        private fun bounds() = Geo.Area(areas.minOf { it.x0 }, areas.minOf { it.y0 }, areas.maxOf { it.x1 }, areas.maxOf { it.y1 })
 
         fun execute(): Outcome {
             try {
                 val parser = PDFStreamParser(page)
                 parser.parse()
                 parser.tokens.forEach { tokens.add(it) }
-            } catch (error: Exception) { complex = true; return Outcome(0, 0, true) }
+            } catch (_: Exception) { complex = true; return Outcome(0, 0, true) }
             val graphicsStack = mutableListOf<Geo.Mat>()
             var i = 0
             while (i < tokens.size) {
                 val operator = tokens[i] as? Operator
                 if (operator == null) { i++; continue }
                 when (operator.getName()) {
-                    "q" -> { graphicsStack.add(ctm); ctm = Geo.Mat.IDENTITY }
+                    "q" -> graphicsStack.add(ctm)
                     "Q" -> ctm = if (graphicsStack.isNotEmpty()) graphicsStack.removeAt(graphicsStack.lastIndex) else Geo.Mat.IDENTITY
                     "cm" -> { val m = operandMatrix(i); if (m != null) ctm = m * ctm else complex = true }
                     "Tf" -> fontSize = (tokens.getOrNull(i - 1) as? COSNumber)?.floatValue() ?: 0f
@@ -593,7 +610,11 @@ object PdfBoxBackend {
                     }
                     "TL" -> leading = (tokens.getOrNull(i - 1) as? COSNumber)?.floatValue() ?: 0f
                     "T*" -> tlm = Geo.Mat.TRANSLATE(0f, -leading) * tlm
-                    "Tj" -> { if (mutateText(i, "")) removedChunks++; i++; continue }
+                    "Tj" -> {
+                        val text = (tokens.getOrNull(i - 1) as? COSString)?.string ?: ""
+                        if (mutateText(i, text)) removedChunks++
+                        i++; continue
+                    }
                     "TJ" -> {
                         val text = (tokens.getOrNull(i - 1) as? COSArray)?.let { array ->
                             (0 until array.size()).map { (array.getObject(it) as? COSString)?.string ?: "" }.joinToString("")
@@ -601,10 +622,16 @@ object PdfBoxBackend {
                         if (mutateText(i, text)) removedChunks++
                         i++; continue
                     }
-                    "'" -> { tlm = Geo.Mat.TRANSLATE(0f, -leading) * tlm; if (mutateText(i, "")) removedChunks++; i++; continue }
+                    "'" -> {
+                        tlm = Geo.Mat.TRANSLATE(0f, -leading) * tlm
+                        val text = (tokens.getOrNull(i - 1) as? COSString)?.string ?: ""
+                        if (mutateText(i, text)) removedChunks++
+                        i++; continue
+                    }
                     "\"" -> {
                         tlm = Geo.Mat.TRANSLATE((tokens.getOrNull(i - 2) as? COSNumber)?.floatValue() ?: 0f, -leading) * tlm
-                        if (mutateText(i, "")) removedChunks++
+                        val text = (tokens.getOrNull(i - 1) as? COSString)?.string ?: ""
+                        if (mutateText(i, text)) removedChunks++
                         i++; continue
                     }
                     "Do" -> {
@@ -619,9 +646,10 @@ object PdfBoxBackend {
                             corners.maxOf { it.first }, corners.maxOf { it.second }
                         )
                         when {
-                            rect.intersects(bounds()) && areas.all { it.contains(rect) } -> {
+                            rect.intersects(bounds()) && areas.any { it.contains(rect) } -> {
                                 removeIdx.add(i - 1); removeIdx.add(i)
-                                page.resources.cosObject.removeItem(name)
+                                (page.resources?.cosObject?.getDictionaryObject(COSName.XOBJECT) as? COSDictionary)?.removeItem(name)
+                                page.resources?.cosObject?.removeItem(name)
                                 images++
                             }
                             rect.intersects(bounds()) -> complex = true
@@ -653,14 +681,12 @@ object PdfBoxBackend {
             if (areas.none { it.intersects(run) }) return false
             if (chars.length in 1..40) removedWordFragments.add(chars)
             when ((tokens[operatorIndex] as Operator).getName()) {
-                "Tj" -> tokens[operatorIndex - 1] = COSString("")
+                "Tj", "'", "\"" -> tokens[operatorIndex - 1] = COSString("")
                 "TJ" -> {
                     val array = COSArray()
                     array.add(COSString(""))
                     tokens[operatorIndex - 1] = array
                 }
-                "'" -> tokens[operatorIndex - 1] = COSString("")
-                "\"" -> tokens[operatorIndex - 3] = COSString("")
             }
             mutated = true
             return true
