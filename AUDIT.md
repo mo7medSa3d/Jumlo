@@ -16,7 +16,7 @@ Do NOT call this release-ready.
 | Check | Result |
 |---|---|
 | `gradle-wrapper.jar` SHA-256 | `7d3a4ac4…df296172` (matches the official Gradle 8.14 wrapper JAR hash recorded previously; not re-downloaded — distribution host blocked) |
-| `python3 scripts/test-source-static.py` | 7/8 pass; 1 pre-existing failure (committed IBM Plex TTFs vs `test_no_font_binaries_in_project_sources`) |
+| `python3 scripts/test-source-static.py` | 8/8 pass (IBM Plex TTFs pinned by SHA-256 allowlist; see `docs/DEPENDENCY_NOTICES.md`) |
 | `:app:assembleDebug/testDebugUnitTest/lintDebug/assembleRelease` | NOT RUN (no JDK/SDK) |
 | Instrumented tests API 26 / 36 | NOT RUN (no emulator) |
 | Live media platform matrix | NOT RUN — see `docs/MEDIA_CAPABILITY_MATRIX.md` |
@@ -34,8 +34,11 @@ positioning); WebView webpage→PDF; CameraX manual scan (fixed-quad
 perspective, no auto edge detection); drawn signature pad.
 Passwords: session handles only; drafts strip secret fields before saving.
 
-Known code risks to check at first compile: PdfBox-Android API surface used
-in stamps/redaction, zip4j parameters API, CameraX lifecycle binding cast,
+Still not CI-verified at the time of writing (CI results were not waited
+for in this session). Known compile risks to check at first CI compile:
+PdfBox-Android API surface used in stamps/redaction, zip4j parameters API,
 Compose Canvas path handling in the signature pad, recursive `seekAll`
 helper suspension. JVM tests exist for the PDF backend
-(`PdfStructureCoreTest`) but were not executed here.
+(`PdfStructureCoreTest`) but have not been executed yet. CI now emits
+Gradle errors as check annotations/step summary so failures are readable
+without log downloads. Per-feature status: `docs/FEATURE_STATUS.md`.

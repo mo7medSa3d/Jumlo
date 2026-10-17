@@ -31,7 +31,8 @@
 - `POST_NOTIFICATIONS`: foreground download/job progress (user-granted,
   Android 13+ runtime prompt with rationale in Settings).
 - `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC`: long downloads.
-- No location, camera, microphone, contacts, or biometric permission.
+- `CAMERA`: only the user-opened document-scan screen (runtime-granted).
+- No location, microphone, contacts, or biometric permission.
   (`VIBRATE` / `USE_BIOMETRIC` were removed: nothing used them.)
 
 ## Errors
