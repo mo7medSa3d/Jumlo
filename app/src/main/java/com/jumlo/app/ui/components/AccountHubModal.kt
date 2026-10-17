@@ -54,7 +54,7 @@ fun AccountHubModal(settings: AppSettingsState, storage: StorageUsage, outputsCo
         }
     }
     when (panel) {
-        "storage" -> StorageOverviewDialog(storage) { panel = null }
+        "storage" -> StorageOverviewDialog(usage = storage, onDismiss = { panel = null })
         "privacy" -> PrivacyDialog { panel = null }
         "about" -> AboutDialog { panel = null }
     }
