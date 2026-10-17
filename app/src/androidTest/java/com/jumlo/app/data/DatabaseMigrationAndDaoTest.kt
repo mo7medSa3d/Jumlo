@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.jumlo.app.data.local.AppDatabase
 import com.jumlo.app.data.local.DatabaseMigrations
+import com.jumlo.app.data.local.DownloadTaskEntity
 import com.jumlo.app.data.local.JobEntity
 import com.jumlo.app.data.local.LegacyDownloadPrivacyCallback
 import com.jumlo.app.data.local.OutputEntity
