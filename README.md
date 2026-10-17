@@ -1,4 +1,18 @@
-# Jumlo
+# Jevlo (formerly Jumlo)
+
+## New source revision — Jevlo 2026 branding and motion, phases 0–6 (2026-10-17)
+
+This native Android/Kotlin source candidate has a Jevlo launcher/visual brand, adaptive/themed SVG-derived icons, Android 12+ launch styling, exported iOS icon sources (NO iOS application), a five-tab animated dock, spring press/entrance/route motion, Android predictive-back gesture feedback, original small UI audio cues, per-setting haptic intensity/sounds persistence, and a grid-first Files screen. See [Jevlo implementation audit](docs/JEVLO_2026_MOTION_BRAND_QA.md).
+
+**Release qualification remains NO-GO:** host-level tests, source checks, and assets were executed and packaged, but Android Gradle assembly, real/emulated device verification, live downloads and frame-time profiling were not possible in this environment; no SDK/Gradle distribution/device was available. The source keeps the original `com.jumlo.app` application ID, Room database and legacy `jumlo://workspace` link for installed-user compatibility.
+
+## Previous source revision — 2026 redesign, phases 0–5 (2026-10-17)
+
+The updated **Android source candidate** includes isolated tool sessions, a default on-device yt-dlp/FFmpeg media flow, automatic naming, public categorized output via MediaStore/SAF, a five-tab floating dock and redesigned pages/settings. Host verification is passing, but **Android compilation and live device/platform media playback remain UNVERIFIED; this is not a production-ready APK**. The supplied ZIP contains no iOS implementation. See [phase report, actual test evidence and remaining gaps](verification/2026-redesign/PHASES_0_TO_5.md) and [original root-cause diagnosis](verification/2026-redesign/PHASE0_DIAGNOSIS.md). The historical reports and implementation notes below describe earlier ZIP revisions; where they disagree, the new report takes precedence.
+
+Normal builds now **include** the embedded media runtime; opt out with `-PextendedMedia=false` to build the lite stub. A fresh build must be validated on a networked Android toolchain.
+
+---
 
 ## Continued execution on the hardened source ZIP (2026-10-17)
 

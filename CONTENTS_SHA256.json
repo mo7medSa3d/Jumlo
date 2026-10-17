@@ -5,20 +5,15 @@
       "mode": 420,
       "sha256": "63fe60b92325feb1d1029febedb88f20cad608690b353a12d50b3a0494a34162"
     },
-    ".github/workflows/baseline-profile.yml": {
-      "bytes": 1646,
-      "mode": 420,
-      "sha256": "98ec03ec612c6bf876a98696e9e27675eff7801f184c296b1ad7dcb71b771715"
-    },
     ".github/workflows/ci.yml": {
-      "bytes": 5428,
+      "bytes": 4292,
       "mode": 420,
-      "sha256": "63dc559552aa655db59530a476652ca455f36ad03e56b4e6db85a0cfcaa3aefe"
+      "sha256": "056af73790937464445b4be60564e1f95b90c12c6721e0af554461875c2ef99f"
     },
     ".gitignore": {
-      "bytes": 943,
+      "bytes": 764,
       "mode": 420,
-      "sha256": "c5696676b1ed3ecc7399f15b8df61e2f58c74e77835dba79949cc5d13edaaa23"
+      "sha256": "66e8cc7f686c0425b58c027c57ad5a8ab70bac7bd468348b117320e62f5f1c23"
     },
     ".superpowers/sdd/tasks.json/progress.md": {
       "bytes": 2248,
@@ -26,29 +21,29 @@
       "sha256": "9831b95716c293b1945219d535d846d700e98c74f855d6e6b25ea6c01208cd78"
     },
     "AUDIT.md": {
-      "bytes": 16835,
+      "bytes": 17274,
       "mode": 420,
-      "sha256": "b965555d8e31d2b7b813d3230f81166391789f07a6eb809a4a9d672b69c7c802"
+      "sha256": "6e26203f69bd9b523cde4c8f43523c70651f0f50d38e8b3eb50d94e1fd311ba8"
     },
     "CHANGELOG.md": {
-      "bytes": 17165,
+      "bytes": 18427,
       "mode": 420,
-      "sha256": "c2ef5e0519118a0d0f5a00519eb5a1f2d5b5ca09f6f8a101285833e953a8b3c2"
+      "sha256": "fc3c7fe88b3a30f9c16ab98c5e6102459c3baee0e96d2846adc5e9797ab1c600"
     },
     "README.md": {
-      "bytes": 7502,
+      "bytes": 9570,
       "mode": 420,
-      "sha256": "00e7cc758c93092948bf91901dcdfa6b48a0d0b496c756009c2a801b8e11b5bf"
+      "sha256": "186a49bc33b6f9b33f29f7f3b5f2df65e0f59f1d6d8cf13d8ab9b64f14f49994"
     },
     "README_AR.md": {
-      "bytes": 8643,
+      "bytes": 10106,
       "mode": 420,
-      "sha256": "d351479996df859be0948489bee1ec76e4d586c76931d8b58b1193c98b074a24"
+      "sha256": "d7957af2322870fc0173bd626fed088694252da362132ab37d9ff88f1bb81306"
     },
     "app/build.gradle.kts": {
-      "bytes": 7756,
+      "bytes": 7692,
       "mode": 420,
-      "sha256": "88d38bb831d2ebb6da93d164461cce1ca1d45b54921dcf9e3ee460076509b7ca"
+      "sha256": "508114f438fd7a4ef07a4f877ad2ad96ab9c9377921af3f6468bbcf46eb7d1db"
     },
     "app/proguard-rules.pro": {
       "bytes": 1055,
@@ -61,14 +56,14 @@
       "sha256": "40877ee6f5bbd8d6010665548494bc3600a9908826d6774c71e0a7ae630d51e6"
     },
     "app/schemas/legacy-v1-structure.sql": {
-      "bytes": 1013,
+      "bytes": 1105,
       "mode": 420,
-      "sha256": "b6c3c767af784177cba5b583fdd51215332802f5eafca7d6c2dabcc945160f11"
+      "sha256": "ceda7e2029dd4ec6f1f3147f2ef9bb1865aa0d6da8f7c35adbbdb007df09169c"
     },
     "app/schemas/schema-provenance.md": {
-      "bytes": 1958,
+      "bytes": 660,
       "mode": 420,
-      "sha256": "47ae49f57cacc51f2c597e0c12c0883ad07639c6157ccb18cb0214b5d0fc3c3a"
+      "sha256": "ef8ecea71fe62423f4425f079cd43a98cff0495bb9e27425769258a98c374844"
     },
     "app/src/androidTest/java/com/jumlo/app/data/ArchiveHandlerTest.kt": {
       "bytes": 2413,
@@ -76,9 +71,9 @@
       "sha256": "03e3f95080f65f3d8dccc6bee7121630ec92205316ef4ad90bf04f554f74accc"
     },
     "app/src/androidTest/java/com/jumlo/app/data/DatabaseMigrationAndDaoTest.kt": {
-      "bytes": 7640,
+      "bytes": 7691,
       "mode": 420,
-      "sha256": "98a4c0687894a3d5cb07c1f53fec777f9fb5b704a8213dcd1a2a3f4371a3b85a"
+      "sha256": "bf7d4b137ac58f7a7ea9cb359ae81de59dc8c9c0a01cf99d454b09a09ee96d7c"
     },
     "app/src/androidTest/java/com/jumlo/app/data/HomeActionsPersistenceTest.kt": {
       "bytes": 968,
@@ -161,9 +156,9 @@
       "sha256": "e71a24e2c7b9102828d8ef6c317ecc183bb00919ada613b6da6ed013a4e714d5"
     },
     "app/src/hostTest/kotlin/CoreTests.kt": {
-      "bytes": 21032,
+      "bytes": 24196,
       "mode": 420,
-      "sha256": "47595c4601ed87051976c2ea36a61ce14956f8d1eea0738ad8e940a7d88f66ed"
+      "sha256": "46ed137d281607b4ff1890155c7ec644029a4a27c0624e3ab7e56b970d91198c"
     },
     "app/src/hostTest/kotlin/HomeLayoutPolicyTests.kt": {
       "bytes": 211,
@@ -176,9 +171,9 @@
       "sha256": "cf2240ff09cbf2911c73f479c6b059a78403d781d97d73a0421164215264f9f7"
     },
     "app/src/hostTest/kotlin/MediaPolicyTests.kt": {
-      "bytes": 11046,
+      "bytes": 11145,
       "mode": 420,
-      "sha256": "c5256622c91e6d04bf025a8bf3f548ccb3408032db10bd13ef1203a3773550e4"
+      "sha256": "6bd906f273661e1817fb8a17b0af5b49ba46f8554e3dd9e53693827bcfb0cb04"
     },
     "app/src/hostTest/kotlin/MediaProcessTests.kt": {
       "bytes": 3867,
@@ -196,9 +191,9 @@
       "sha256": "a9cddab8e79510e3fed040dea6a7d4ff5d4dd5e3f289b131844bbd3933c959e5"
     },
     "app/src/main/AndroidManifest.xml": {
-      "bytes": 4393,
+      "bytes": 4459,
       "mode": 420,
-      "sha256": "5d87dce8809d663fe5574154fa40f8de4f27c7003579fb660dbf4ad105c154ca"
+      "sha256": "3a2438cbed82a2c3f9b55981489fcb632008eb8c7f9f2f62cbb070312776bfe1"
     },
     "app/src/main/assets/media/bootstrap.py": {
       "bytes": 506,
@@ -236,19 +231,29 @@
       "sha256": "61b82be5ceef0972b14386ffa7d9bb20c7f0ebf82d4569de43b54b98105c976e"
     },
     "app/src/main/java/com/jumlo/app/MainActivity.kt": {
-      "bytes": 2872,
+      "bytes": 4547,
       "mode": 420,
-      "sha256": "7a17531932015c99e87c94a91a00e093f1c0d32451293092e2ba33c1b81acee5"
+      "sha256": "d3e741c687c85efed7e1db1259ccd7966de4fd2411f0059b21605183f54156e2"
+    },
+    "app/src/main/java/com/jumlo/app/core/AutoOutputName.kt": {
+      "bytes": 1114,
+      "mode": 420,
+      "sha256": "0e03a4a29ece126b359cd4a220fb7465035af37366e2ce5da4b8e8c79e3fcf17"
     },
     "app/src/main/java/com/jumlo/app/core/CapabilityPolicy.kt": {
-      "bytes": 2767,
+      "bytes": 2717,
       "mode": 420,
-      "sha256": "1b4c5f85f7e2a800fffedb9b19dd9849246ecc56f5fb8cb9014a3ae293f9397c"
+      "sha256": "fbddb7e204937f9910ecb8c6c56e33a8d9e69414dc29eaa4936ac6a2b953f31b"
     },
     "app/src/main/java/com/jumlo/app/core/CopyDestinationPolicy.kt": {
       "bytes": 1030,
       "mode": 420,
       "sha256": "fc7e4000d7a95bf6eee439cb5127eac9d00cc32873da0067727dec7a4f3b2b32"
+    },
+    "app/src/main/java/com/jumlo/app/core/DownloadLinkPolicy.kt": {
+      "bytes": 3264,
+      "mode": 420,
+      "sha256": "f04014aaf548f9d992338b50855cd7aa358fcfd45b1d5453aa3ee19451c4abbd"
     },
     "app/src/main/java/com/jumlo/app/core/DriveLink.kt": {
       "bytes": 1668,
@@ -290,15 +295,25 @@
       "mode": 420,
       "sha256": "fb0ad57c964d9cdd52e4024304f6e32041c6a5b56238d1734e8f390548b15ff8"
     },
-    "app/src/main/java/com/jumlo/app/core/StreamTransfer.kt": {
-      "bytes": 7185,
+    "app/src/main/java/com/jumlo/app/core/StoragePaths.kt": {
+      "bytes": 1048,
       "mode": 420,
-      "sha256": "6d3a75b0e263879a362ce4a8720d470c9fe5459aa4ff71d8d4371aba6eda4c2c"
+      "sha256": "329010bdfac6088d5eddbb6f5130070b602bb07661d4db923b7b02226d49c998"
+    },
+    "app/src/main/java/com/jumlo/app/core/StreamTransfer.kt": {
+      "bytes": 7246,
+      "mode": 420,
+      "sha256": "6fcab8ad66da9c6bb568b7d729511c4d4de54f5947ab97eae107b575bbb45326"
     },
     "app/src/main/java/com/jumlo/app/core/TemporaryCleanup.kt": {
       "bytes": 1952,
       "mode": 420,
       "sha256": "45b40df5ca1bf101b8470ddd5ee52b99ee02629ed33a9f3c81f85c1972c5706a"
+    },
+    "app/src/main/java/com/jumlo/app/core/ToolUsagePolicy.kt": {
+      "bytes": 852,
+      "mode": 420,
+      "sha256": "b95ea351498b1a0e0108a7467163e3add63c0b91bd26c3523895649cdd6e7990"
     },
     "app/src/main/java/com/jumlo/app/core/Validation.kt": {
       "bytes": 6567,
@@ -316,9 +331,9 @@
       "sha256": "b02389687add016324de277badace95a956c0cc8fc7c67ba65b9e9cebbcfef37"
     },
     "app/src/main/java/com/jumlo/app/core/media/MediaPolicies.kt": {
-      "bytes": 11623,
+      "bytes": 12108,
       "mode": 420,
-      "sha256": "7b652c84dc9c80a9b5df8533f08a2b92422748b105c00542cfab9877c5793c3d"
+      "sha256": "5fb4e2ad825c8aec081a5ff78101d9953d67530140d0faab50652f1c49cb3cc1"
     },
     "app/src/main/java/com/jumlo/app/core/media/MediaProcessRunner.kt": {
       "bytes": 7406,
@@ -360,15 +375,20 @@
       "mode": 420,
       "sha256": "f4e0940189d55979919c20a20a5fa005255453ee68ecfbcacef9fc166ed3944a"
     },
+    "app/src/main/java/com/jumlo/app/data/jobs/DownloadAdmission.kt": {
+      "bytes": 797,
+      "mode": 420,
+      "sha256": "4413113f7f027798c01e46ddb2c4ab284456b7b9a46295afefb80c64e39a099d"
+    },
     "app/src/main/java/com/jumlo/app/data/jobs/DraftStore.kt": {
       "bytes": 2828,
       "mode": 420,
       "sha256": "32d250837bec27857d62599b97d526a51d4ddd5b4ed4ae3667b1e1a898922b8d"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/JobStore.kt": {
-      "bytes": 8702,
+      "bytes": 9226,
       "mode": 420,
-      "sha256": "8d6d436f09e644bf627410a864d7ce05b58d39142c678b82cfda576bc609fc22"
+      "sha256": "e129b6ab0bd7015c30be04a03b9db9bed5338ef9be683a5cd52e33291646d15f"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/OperationDispatcher.kt": {
       "bytes": 2933,
@@ -411,9 +431,9 @@
       "sha256": "f1c62eca98171114e26565ecebaced1610f2994c7a8511e8975fb0d24088ca28"
     },
     "app/src/main/java/com/jumlo/app/data/media/MediaOperationHandler.kt": {
-      "bytes": 8132,
+      "bytes": 8517,
       "mode": 420,
-      "sha256": "32ff2c53f7401fca270a91574ff1175893d085c8241c4fc392b4adee8010a3b4"
+      "sha256": "89f3c173999427ab28b06772b4682be7376ef9eefa388cb3c5691f74bb36ba2f"
     },
     "app/src/main/java/com/jumlo/app/data/media/MediaRuntime.kt": {
       "bytes": 544,
@@ -421,9 +441,14 @@
       "sha256": "9c4c12efaad535f70451fb4606d25acbf5b40d07df6006a0c2ff84ace3ee6416"
     },
     "app/src/main/java/com/jumlo/app/data/output/OutputStore.kt": {
-      "bytes": 8723,
+      "bytes": 9315,
       "mode": 420,
-      "sha256": "19ac46ddf00d7c435047f43a81f3b4c559b4fa07e1dc38d213162cb51bbe3880"
+      "sha256": "ec53ce987594ee4534e6694ffa2e1aee0d8fdbd732d32a2e058e9111bc8b4476"
+    },
+    "app/src/main/java/com/jumlo/app/data/output/PublicOutputStore.kt": {
+      "bytes": 5264,
+      "mode": 420,
+      "sha256": "838799bd8118de8481fb7db7c2a667482f6811194094d992ee10d8923d42e6da"
     },
     "app/src/main/java/com/jumlo/app/data/pdf/PdfBoxBackend.kt": {
       "bytes": 38423,
@@ -431,9 +456,9 @@
       "sha256": "f10915161138c21b87854c4a98433aa31c346d693eda84b01cc9b1bf4585ac98"
     },
     "app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt": {
-      "bytes": 5543,
+      "bytes": 9882,
       "mode": 420,
-      "sha256": "b82f37f9fc769a15111cd18012d661c9cbad3d24cf01c5ea15537c774aefee5b"
+      "sha256": "7548f7a3c5032281e2d7c7f9b53cdb3c7a712bf0bb1085740421bcb91b9885d9"
     },
     "app/src/main/java/com/jumlo/app/data/processing/ArchiveOperationHandler.kt": {
       "bytes": 7566,
@@ -446,9 +471,9 @@
       "sha256": "5c0dec95434a4c1a3453415e1c7e9364cf02830e9f7b375e7de8b136f3a6fa91"
     },
     "app/src/main/java/com/jumlo/app/data/processing/DownloadOperationHandler.kt": {
-      "bytes": 7240,
+      "bytes": 7685,
       "mode": 420,
-      "sha256": "7061da0c3bf444cded8f54313d6489d957c0aa7158f524fb168ce13df5252457"
+      "sha256": "1cc7dc89e963f0c56de0f11d29cda85874e45c847f7dbd8cbf9495edf42c5115"
     },
     "app/src/main/java/com/jumlo/app/data/processing/FileExtrasHandler.kt": {
       "bytes": 16222,
@@ -491,14 +516,14 @@
       "sha256": "17f4ca6bd686638a1850e10f1021c82608d6c66953f0664e8b1f1edd17bac9ce"
     },
     "app/src/main/java/com/jumlo/app/model/Models.kt": {
-      "bytes": 10519,
+      "bytes": 11197,
       "mode": 420,
-      "sha256": "d2ece821573338a83a879da6cc8b306b2531157937c391e9d2f5c60d91aaf014"
+      "sha256": "ec5e4b13343a224b084c95c2bd16024c4a626dc7a2c0e77c9681b7c6c5198e6a"
     },
     "app/src/main/java/com/jumlo/app/model/OperationContracts.kt": {
-      "bytes": 1616,
+      "bytes": 1643,
       "mode": 420,
-      "sha256": "0fe6a9519e45df8772cd7c03394bf0e84b4fcfae70404521967b995add1f5cc1"
+      "sha256": "d6f497529f74c88ab06d66f4691f9125981971188cc08f6c812c4ab84e7bbddf"
     },
     "app/src/main/java/com/jumlo/app/model/WorkspaceDraft.kt": {
       "bytes": 10187,
@@ -506,9 +531,9 @@
       "sha256": "95007a8026c3cd83f2b5447806104549ac1ae1a5a7e5a5385da3fabb37906e7b"
     },
     "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt": {
-      "bytes": 26350,
+      "bytes": 31037,
       "mode": 420,
-      "sha256": "f233163a386ac3e9ad6530970690a02e061fd2eab48b9478af12390774357179"
+      "sha256": "762c2a0dcf7f84eb67315e37124d6195410cb8444a1990f2b1d1f1df07915af0"
     },
     "app/src/main/java/com/jumlo/app/ui/adaptive/HingeSafeViewport.kt": {
       "bytes": 2993,
@@ -525,30 +550,35 @@
       "mode": 420,
       "sha256": "20c582e34447d3baebd20e3016d92ad1b78bb6f2ea45cb3dd088c90de6626ed4"
     },
+    "app/src/main/java/com/jumlo/app/ui/components/JevloSplash.kt": {
+      "bytes": 2917,
+      "mode": 420,
+      "sha256": "22002d22329fab3ec23e93a02ac4004cd803f027d679d412b4d658867b6204a4"
+    },
     "app/src/main/java/com/jumlo/app/ui/components/LegacyPreviewFixtures.kt": {
       "bytes": 4798,
       "mode": 420,
       "sha256": "12e6aa215b5e38e912cf03ef9caa4c87042ee1df103849097b882ca50813f580"
     },
     "app/src/main/java/com/jumlo/app/ui/components/ProductionRows.kt": {
-      "bytes": 7011,
+      "bytes": 8885,
       "mode": 420,
-      "sha256": "66dd3fd01c92bd50f5eca264b9e48a70b33102b7755ed29c5b0ad0c3f8bd2ba1"
+      "sha256": "34f87714a34d4afb8caf1e90b220070560ac1a5f6d4c71825e1fc81c17a10ae4"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietButtons.kt": {
-      "bytes": 10257,
+      "bytes": 10552,
       "mode": 420,
-      "sha256": "1b4e2099dacd96a5bc21c3499b58ca6e7fddd75fee09344081ecffb8c896d282"
+      "sha256": "5696bf5f72564cc3d78dcdaacf5588e50cc3d0c9a0ea56cc78186dc4baa73261"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietFileRows.kt": {
-      "bytes": 5203,
+      "bytes": 5434,
       "mode": 420,
-      "sha256": "eccd442680a9db7c5c2ebabf1c9bed5ed66105da4c0a83e634da8ce90e348b8a"
+      "sha256": "3a725e27c0f71e890a56d10d2ca05f43b288a2b7959c27f12a4e4d09a4793bf3"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietNavigation.kt": {
-      "bytes": 8946,
+      "bytes": 6028,
       "mode": 420,
-      "sha256": "b8724d945c8ba1844ad739cdaff7c449dbd04419e2f8a09fb930cb52e1b4b9f6"
+      "sha256": "7d6710828b4362f4cd2684a9db68db032404fa1e3d4feb077301dc11a6ff29fb"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietPrecisionComponents.kt": {
       "bytes": 5295,
@@ -556,14 +586,14 @@
       "sha256": "142510ae7ee98fe0238a1ba86397d18e6869ae977b95e1b43fe2a286d9b3f9ac"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietStates.kt": {
-      "bytes": 9952,
+      "bytes": 10053,
       "mode": 420,
-      "sha256": "df83f8f3426eb678f1b4dc1ba2d6ac5795bcf991bb82a35ac2658dfc617b5a4b"
+      "sha256": "bf78acfe15dd82365747f6158a69988730c6e02b5398527fa17bf9a476ac0a71"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietTopBars.kt": {
-      "bytes": 8658,
+      "bytes": 8719,
       "mode": 420,
-      "sha256": "53d38379bb1c2ca694a7619684cee514ad36ac8f1421ec3fb68e95e149d86898"
+      "sha256": "eba9f1d3ab4da922f4280e2fc5a0fe90939010e8564154fa3f41d4440c6b8965"
     },
     "app/src/main/java/com/jumlo/app/ui/components/UserMessages.kt": {
       "bytes": 3011,
@@ -571,9 +601,9 @@
       "sha256": "d0c55282bea9a38774a377fc0dd9f35eaa35fb9cd1b27b621c07760a9d3d8b6b"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/DownloadsScreen.kt": {
-      "bytes": 5108,
+      "bytes": 8043,
       "mode": 420,
-      "sha256": "23af5d3354fad176075896016a019b7aa745a6b316a71452307c767506d84bb5"
+      "sha256": "e73dd641b5eee131cf8fdba92462c7728bfee52d550c25b8f29c30c0193464b4"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/MediaBrowser.kt": {
       "bytes": 7605,
@@ -581,19 +611,19 @@
       "sha256": "e3ebf859a6386eba1e40ab567735df06c05a955353d9fef5610dda7db0645da6"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/MediaViewModel.kt": {
-      "bytes": 7781,
+      "bytes": 11253,
       "mode": 420,
-      "sha256": "35a7fd1b60ac85d3ce2d0f40b80406fac9afb68a701e08e2ad4663620dc0bbae"
+      "sha256": "9dde4ff78c07c654e395a8a327afd20395651b0c188f897a17d31995bdd3749f"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/MediaWorkspace.kt": {
-      "bytes": 24867,
+      "bytes": 10406,
       "mode": 420,
-      "sha256": "2d5526ec63264b7bcf02fecbf3926f2488abe070a88372cc27277764f4525aef"
+      "sha256": "81a4f375a3401bbcfdcdd9f9dfe0f46ae22d2ab8d0b43c49367b78b9b421222d"
     },
     "app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt": {
-      "bytes": 11456,
+      "bytes": 19588,
       "mode": 420,
-      "sha256": "44abaf68723ae95b391324d72602c5e1acfd375992101eda43cd24814fd1b81c"
+      "sha256": "0a73b587093817926f335cfbfdb1d28cca336dc3436b15fe68da4ae38f697091"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeActionEditor.kt": {
       "bytes": 3310,
@@ -601,14 +631,14 @@
       "sha256": "ed895b2d2778261ac54b6dfd0de7ed7891079a368cbdd049f7213eec1886a187"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeActionPolicy.kt": {
-      "bytes": 450,
+      "bytes": 453,
       "mode": 420,
-      "sha256": "51302497490ce09671e25b6343e6d1d33ddcd4f2e1781f7ece89485769159333"
+      "sha256": "dfc7abbf711080165e56aa47d2aed774015e2efc2946876f4090aa44dc4da342"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeScreen.kt": {
-      "bytes": 5120,
+      "bytes": 7487,
       "mode": 420,
-      "sha256": "9fe52a63db9c66eedc57fcb99be4720de0a7b21657e0536115268f40cb232d1b"
+      "sha256": "03a18a61b2942d30c4b9312d799d1ec80aa9d7e16b19f308e734adf7f44333e7"
     },
     "app/src/main/java/com/jumlo/app/ui/intake/IntakeController.kt": {
       "bytes": 1332,
@@ -616,9 +646,9 @@
       "sha256": "71e6289461da2e70d6f38fd57f57bc81b34327bf4b516ac1a445a89d40fe4f38"
     },
     "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt": {
-      "bytes": 23517,
+      "bytes": 26939,
       "mode": 420,
-      "sha256": "901dd8b5ac15201414759f1f301d3cdebf3fdae1559af6dce91f076baf04c9fd"
+      "sha256": "0885f11c6cf43487467b7b04d48c37f129a8ef7b6982955b85d29557e185f661"
     },
     "app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt": {
       "bytes": 15114,
@@ -626,49 +656,64 @@
       "sha256": "b123e1573e4bd0afe36b34ecbb192eef0d745b6f01c95c42ce5eeaef4bea4b80"
     },
     "app/src/main/java/com/jumlo/app/ui/settings/PreferenceComponents.kt": {
-      "bytes": 4333,
+      "bytes": 6391,
       "mode": 420,
-      "sha256": "ee03a34846ca7a1a3b6f64bc443034737a2864169f6933f69a918d285eac7f90"
+      "sha256": "0cbc644c16c7ab4a206ebfc548d6b5c5b935f4d8463aa234e857258159201c9e"
     },
     "app/src/main/java/com/jumlo/app/ui/settings/SettingsScreen.kt": {
-      "bytes": 10940,
+      "bytes": 18623,
       "mode": 420,
-      "sha256": "f04ba8f64c41e10130e6653d41199472ca86157c563fe36c8fd7b92ae8f3e9d6"
+      "sha256": "e9b525d0f06e99cdaa0436eee2809663bb492abf27b62032e3e2d2353cb209e2"
     },
     "app/src/main/java/com/jumlo/app/ui/theme/Color.kt": {
       "bytes": 7218,
       "mode": 420,
-      "sha256": "2cdd83de5b4fa1aa5e3eb797bb4a0f7fa56a52c69add0233208b5328c8a29545"
+      "sha256": "9236bafa750efe695fc22312d64ce794730dde2fa7eff680a71f72aca298e83f"
+    },
+    "app/src/main/java/com/jumlo/app/ui/theme/JevloMotion.kt": {
+      "bytes": 3393,
+      "mode": 420,
+      "sha256": "11b72534ef767023053162a934a6775fa1bf62fcc6d04403031c863bd48405cb"
     },
     "app/src/main/java/com/jumlo/app/ui/theme/Shape.kt": {
       "bytes": 2453,
       "mode": 420,
-      "sha256": "23ddeff017f0068ffce7280e61df434f5d1a011fbbfe4ffaf9f12cd27022c59c"
+      "sha256": "d9b11af8d839d520c8202303ab766d819b24147f0cd365087900aed6cda70edc"
+    },
+    "app/src/main/java/com/jumlo/app/ui/theme/SystemMotion.kt": {
+      "bytes": 1280,
+      "mode": 420,
+      "sha256": "3d17441eadf0b59c5c90e356e74d64caaa8a8d95d68f6986d25660c07b2ab5a5"
     },
     "app/src/main/java/com/jumlo/app/ui/theme/Theme.kt": {
-      "bytes": 5471,
+      "bytes": 7165,
       "mode": 420,
-      "sha256": "c946f11d3833b2c2a863aca41df82b67d091fdfc8e9e5dd72dba58b1f1a29449"
+      "sha256": "bd373b0b82bff88c90eaa4ff8388bcb5718a6cc468200a590d3ff6b2baed0c0e"
     },
     "app/src/main/java/com/jumlo/app/ui/theme/Type.kt": {
       "bytes": 5229,
       "mode": 420,
-      "sha256": "be9aad0ccfa365bd0e08cb960a38f0cf3aa1e5d3cf80f5ffb7f328c35debe2e4"
+      "sha256": "5016b8afafa7f0a38ac84a41ba98e7e8ae361c946ffb381745b3b9128abb5b57"
     },
     "app/src/main/java/com/jumlo/app/ui/tools/ToolsScreen.kt": {
-      "bytes": 2856,
+      "bytes": 6606,
       "mode": 420,
-      "sha256": "9c1d7d6863ffdd86b3d76ba32a42cfac17592fa128656864d2e1c05c65c0bf87"
+      "sha256": "c58c6dcea31afd3661d2c27bd1b0659169559929ca7807bd32b47251668ebb97"
     },
     "app/src/main/java/com/jumlo/app/ui/util/AppHaptics.kt": {
-      "bytes": 3417,
+      "bytes": 4726,
       "mode": 420,
-      "sha256": "4a6909ceca63a3e82075cca15531dc04c4dfc70643dba0ce902cf3b8801eb81d"
+      "sha256": "8a10c4b85855efe7d68d7398e28da68cce46934734525b7d89a6087ea076c0c1"
+    },
+    "app/src/main/java/com/jumlo/app/ui/util/UiSoundPlayer.kt": {
+      "bytes": 1767,
+      "mode": 420,
+      "sha256": "7a50d6a589325733e74fd1f4aaed77b71cbb3a95bfb65f3f0e75a3cde2007dd3"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/WorkspaceScreen.kt": {
-      "bytes": 40069,
+      "bytes": 37842,
       "mode": 420,
-      "sha256": "8dff7c99257147d2043c5f2b87c7287782503179a9dda996b5364c10b07f8a33"
+      "sha256": "2a107a00ff51a3b8f1d233499b01cd4e15c93cc11274fb0bfd574e5a5cb3649d"
     },
     "app/src/main/java/com/jumlo/app/worker/CancelJobReceiver.kt": {
       "bytes": 1046,
@@ -686,14 +731,19 @@
       "sha256": "d21388db6c4c9d486223dd25cab1cf5bcf0caa25be720221d16d0cd4c5967f10"
     },
     "app/src/main/res/drawable/ic_launcher_background.xml": {
-      "bytes": 700,
+      "bytes": 233,
       "mode": 420,
-      "sha256": "39b93d553a5d31c47e2b53907212586f6d85eb043c1c2c6a0f3415ecaeef924f"
+      "sha256": "5084205e42f2f53446ca268dba8c41b13cd169342d033907e6fc90d5aa404b0a"
     },
     "app/src/main/res/drawable/ic_launcher_foreground.xml": {
-      "bytes": 2119,
+      "bytes": 736,
       "mode": 420,
-      "sha256": "38592fa7d883c2a5be48e6a169dcd3d307c528d6683cefa11af898e67403bd6d"
+      "sha256": "a6e4b7f12e9da171d03e67056570f9a252647650e0ad6d402284684fd3b0f9c5"
+    },
+    "app/src/main/res/drawable/ic_launcher_monochrome.xml": {
+      "bytes": 609,
+      "mode": 420,
+      "sha256": "25b47c3e7d3db664b39eaedf67cb0363ab48e8c2cbec32c523c4b369b77698de"
     },
     "app/src/main/res/font/ibm_plex_sans.xml": {
       "bytes": 754,
@@ -711,14 +761,44 @@
       "sha256": "3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3"
     },
     "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml": {
-      "bytes": 273,
+      "bytes": 332,
       "mode": 420,
-      "sha256": "1c832bf194d8eecd439a92bcced0df144c9f566b934b3d7865e983d8ee8dbdeb"
+      "sha256": "5d69c4109ada71cc9950819ad08fd42045e46f2211ea9ecdab08699fa49d4ade"
     },
     "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml": {
-      "bytes": 273,
+      "bytes": 332,
       "mode": 420,
-      "sha256": "1c832bf194d8eecd439a92bcced0df144c9f566b934b3d7865e983d8ee8dbdeb"
+      "sha256": "5d69c4109ada71cc9950819ad08fd42045e46f2211ea9ecdab08699fa49d4ade"
+    },
+    "app/src/main/res/raw/jevlo_delete.wav": {
+      "bytes": 5290,
+      "mode": 420,
+      "sha256": "f0db35f2ebac8535d6e544f54d63f5a0ec15d3833edcbcce57ed4ea4493c4cd6"
+    },
+    "app/src/main/res/raw/jevlo_error.wav": {
+      "bytes": 12170,
+      "mode": 420,
+      "sha256": "3092e25396bbfb05ff9ac6084d8ef23ccadd5e685ee498cd101ccf321a119b55"
+    },
+    "app/src/main/res/raw/jevlo_start.wav": {
+      "bytes": 6262,
+      "mode": 420,
+      "sha256": "5e8dcc1a3dc6c5a27aec838e56f4d6fdd0a000163bfca57cef9c4d56980ece2b"
+    },
+    "app/src/main/res/raw/jevlo_success.wav": {
+      "bytes": 11156,
+      "mode": 420,
+      "sha256": "474ac743465404215c071008b6c1811618946f427d58c3ab2d12f58faaafdd64"
+    },
+    "app/src/main/res/raw/jevlo_tap.wav": {
+      "bytes": 2822,
+      "mode": 420,
+      "sha256": "71664c6600b8a85e174e022ce6ed67db8f4c618f276867388de171e617d85afc"
+    },
+    "app/src/main/res/raw/jevlo_toggle.wav": {
+      "bytes": 4232,
+      "mode": 420,
+      "sha256": "df738991e892b0a7bedf4ad114c4e58699cbd6d2d80c6106ad9363ac0e52a052"
     },
     "app/src/main/res/values-ar/account_settings.xml": {
       "bytes": 5895,
@@ -740,6 +820,11 @@
       "mode": 420,
       "sha256": "679c8eaa73b89b105ba5af264f0ceeef596be4ddd2012597ba7850e53e86ae66"
     },
+    "app/src/main/res/values-ar/jevlo.xml": {
+      "bytes": 1043,
+      "mode": 420,
+      "sha256": "5f3fbbee4579288774308c414b85c8498ed47cba98a4bc0ec2a0e052a32439a1"
+    },
     "app/src/main/res/values-ar/media_strings.xml": {
       "bytes": 7273,
       "mode": 420,
@@ -750,20 +835,30 @@
       "mode": 420,
       "sha256": "25809fd5d37f89367d94d66ea709a345b204f789ce34b6be8c066fa6560612c6"
     },
+    "app/src/main/res/values-ar/redesign.xml": {
+      "bytes": 4653,
+      "mode": 420,
+      "sha256": "c954ecd9ccd52a0c0145cca380881b275503c64db9337dcdfb4a22b0aee9ff53"
+    },
     "app/src/main/res/values-ar/strings.xml": {
       "bytes": 31366,
       "mode": 420,
-      "sha256": "cac99debbc9e5d5b912c1a98e8b31aea0cb6021ed70aaf9ec883f189da6f08a7"
+      "sha256": "911ffacfee1c88648841e28b7fba29f4109e80f7839b1ee50eb505243088f76b"
     },
     "app/src/main/res/values-ar/workspace_validation.xml": {
       "bytes": 1261,
       "mode": 420,
       "sha256": "e957ec8fa1a1008c63df158e4026163db58a0f9bd6464185c5677421f43edda3"
     },
+    "app/src/main/res/values-v31/jevlo_splash.xml": {
+      "bytes": 511,
+      "mode": 420,
+      "sha256": "bc0bb738ebefa0bb0dcf9259b4cdb5a9d9b1c2e1461ec2d7d9c5ba1dba7fb3ec"
+    },
     "app/src/main/res/values/account_settings.xml": {
       "bytes": 4644,
       "mode": 420,
-      "sha256": "2f287caa71202dbbbda6d76068433281c3c2d3628f60c2f71760fe3ad70a24d9"
+      "sha256": "dcc74b4c23def576728b0a37ff8fd869232930b1630545c1b50786f784642646"
     },
     "app/src/main/res/values/error_messages.xml": {
       "bytes": 2877,
@@ -780,6 +875,11 @@
       "mode": 420,
       "sha256": "7ffa0643d7ab4155c5c140c33d5002817388d29ca6e60909dda4362d31a39b52"
     },
+    "app/src/main/res/values/jevlo.xml": {
+      "bytes": 939,
+      "mode": 420,
+      "sha256": "755eca7f6ec4c8ce8b9d7b1911d682bb8f79f6e648ca4f4278c437ba0ef9abf4"
+    },
     "app/src/main/res/values/media_strings.xml": {
       "bytes": 5977,
       "mode": 420,
@@ -790,10 +890,15 @@
       "mode": 420,
       "sha256": "ab0015050ae9377d78f440362ff7a5cebedcca26b7f64a6535ffe7f84e057f0d"
     },
+    "app/src/main/res/values/redesign.xml": {
+      "bytes": 3992,
+      "mode": 420,
+      "sha256": "77b6febd3cdc37130fbbcad3c1cec13b0a21655fae8ccd3c9e4ade15ee749f8a"
+    },
     "app/src/main/res/values/strings.xml": {
       "bytes": 25490,
       "mode": 420,
-      "sha256": "4554484337d708c38217359f597cdd15f4771bc9390b9894dbee00bd9dbb671d"
+      "sha256": "f576d0b4fc6aed708206416456da73d0e02ecec0519f1e2c41a3c6972bb3d58e"
     },
     "app/src/main/res/values/themes.xml": {
       "bytes": 314,
@@ -900,6 +1005,81 @@
       "mode": 420,
       "sha256": "9785945cae538af43b2a365545d4610f7ce682c69f35d0efb2156fd258a6defe"
     },
+    "brand/ios/JevloAppIcon.appiconset/Contents.json": {
+      "bytes": 432,
+      "mode": 420,
+      "sha256": "966ed2de5a3f70c7fe32166106ee47886cc41a1887a14550cff01a05ded02815"
+    },
+    "brand/ios/JevloAppIcon.appiconset/Jevlo-dark.png": {
+      "bytes": 76556,
+      "mode": 420,
+      "sha256": "b624c6bf61786d32023540508883e9d343896c8ce368e5abee5058555e323621"
+    },
+    "brand/ios/JevloAppIcon.appiconset/Jevlo-light.png": {
+      "bytes": 76813,
+      "mode": 420,
+      "sha256": "b78be92fdceb5acf5d42f2f875629c2592c8c74d0b8655475880ffbb783803f4"
+    },
+    "brand/ios/JevloAppIcon.appiconset/Jevlo-tinted.png": {
+      "bytes": 23158,
+      "mode": 420,
+      "sha256": "723c3929519c0f5df97d739646d2f0aa28fff897f2ab0496cfb21e032bfdb1e0"
+    },
+    "brand/previews/jevlo-128.png": {
+      "bytes": 4437,
+      "mode": 420,
+      "sha256": "0bfff140aa019cf2ab5ce3462473c74fea16fc5d56f40215e0ac3399239d955b"
+    },
+    "brand/previews/jevlo-192.png": {
+      "bytes": 7344,
+      "mode": 420,
+      "sha256": "ec794bb8ed90e24b941180fb8ff58c16c62c5e85811f5efcddb59e47b24c8ac9"
+    },
+    "brand/previews/jevlo-256.png": {
+      "bytes": 10200,
+      "mode": 420,
+      "sha256": "f3f66b994f75e12ee1143d63e89f824c1b565a8119dba517e0d3133d2dca5573"
+    },
+    "brand/previews/jevlo-32.png": {
+      "bytes": 1178,
+      "mode": 420,
+      "sha256": "bc4054b36cb3dd19a93f76a138a9245b03fa175de927b76332538ec397605620"
+    },
+    "brand/previews/jevlo-512.png": {
+      "bytes": 25468,
+      "mode": 420,
+      "sha256": "d311003e1399f685b0d46b8d5b4a6750c1e8b5c8731a18b84409a42fec1cf3b0"
+    },
+    "brand/previews/jevlo-64.png": {
+      "bytes": 2319,
+      "mode": 420,
+      "sha256": "77119407ef76d1bf388906024b92ffde5ec69d2250bed0b0e7f697bb74382c64"
+    },
+    "brand/svg/jevlo-adaptive-foreground.svg": {
+      "bytes": 376,
+      "mode": 420,
+      "sha256": "54259abc862166d49ab8e39e93943f7ada8c85c8406daf9b4576db10f410cc4e"
+    },
+    "brand/svg/jevlo-icon-dark.svg": {
+      "bytes": 1001,
+      "mode": 420,
+      "sha256": "bccbd97546c2a57267b38934f98010954dc01e75ce905a8174120723972fa83f"
+    },
+    "brand/svg/jevlo-icon-light.svg": {
+      "bytes": 1001,
+      "mode": 420,
+      "sha256": "26ed41bc2d2996aac19456719cbde4b31bb6e013aaf9a866a96fd61325720181"
+    },
+    "brand/svg/jevlo-icon-tinted.svg": {
+      "bytes": 541,
+      "mode": 420,
+      "sha256": "e8e0f448c93dc290a93ed29881da0de0a2a47567b304f965f7926085b0dcbc82"
+    },
+    "brand/svg/jevlo-monochrome.svg": {
+      "bytes": 367,
+      "mode": 420,
+      "sha256": "066f934c2cb2741aab0f821c34ca603dd5ee16bea2ba5fdb6975bf2128a5ebb3"
+    },
     "build.gradle.kts": {
       "bytes": 357,
       "mode": 420,
@@ -924,6 +1104,11 @@
       "bytes": 13580,
       "mode": 420,
       "sha256": "b0429b08256663392e2f2dbb1049edbf52c79f5e3bf1a805e8b4482cec61bc89"
+    },
+    "docs/JEVLO_2026_MOTION_BRAND_QA.md": {
+      "bytes": 9810,
+      "mode": 420,
+      "sha256": "959541b60889cacfff633a2c63719f392276a5cd1df7c1e1727a31d480f52127"
     },
     "docs/MEDIA_CAPABILITY_MATRIX.md": {
       "bytes": 4319,
@@ -1082,7 +1267,7 @@
     },
     "gradlew": {
       "bytes": 1204,
-      "mode": 493,
+      "mode": 420,
       "sha256": "1725a496046445fd232238ea86a05b662817cf1866a12fc5b2a728a79fe87e38"
     },
     "gradlew.bat": {
@@ -1110,6 +1295,11 @@
       "mode": 420,
       "sha256": "a0393fdb2b43ab11f0b2ada4e2a7e53fb25083e6a25603d0730770e82f27766f"
     },
+    "scripts/generate-jevlo-sounds.py": {
+      "bytes": 1694,
+      "mode": 420,
+      "sha256": "273c5d12071e3c8bdb33dbac6370cffdda4f92e4a57e47d4dddb80c6d6e4cf3f"
+    },
     "scripts/host-tests/CapabilityInventoryMain.kt": {
       "bytes": 387,
       "mode": 420,
@@ -1131,9 +1321,9 @@
       "sha256": "891179723d3698f41ee3150dcbe6fb9a96b7fa72490797515471e5f754dd77e1"
     },
     "scripts/package-source.py": {
-      "bytes": 9446,
-      "mode": 493,
-      "sha256": "ecfe30194b74a95f0a13377fc511dd81035acc3167bea35aeeb318d50ca8fff6"
+      "bytes": 9463,
+      "mode": 420,
+      "sha256": "0526ba3e75ca2c5253973ab2955ef4e7b7683a4a3d48e7fa665f9845d54d8dac"
     },
     "scripts/restore-wrapper.ps1": {
       "bytes": 1154,
@@ -1155,6 +1345,11 @@
       "mode": 420,
       "sha256": "e72cf7e07d6701f74a296f9098f9c5ba6fe5d4c4e2c9480977b38cc2b431bb8f"
     },
+    "scripts/test-jevlo-brand-motion.py": {
+      "bytes": 7428,
+      "mode": 420,
+      "sha256": "3e6f100b5ed8272b34951310ae2aac01d5e779f48f22dc6c148e32ee9fd2bc5b"
+    },
     "scripts/test-media-bootstrap.py": {
       "bytes": 2676,
       "mode": 420,
@@ -1170,10 +1365,15 @@
       "mode": 420,
       "sha256": "d8438205d0eab7413870a5af7e92677b44c3424032a5be6916d9697e0baf4531"
     },
-    "scripts/test-release-media-isolation.py": {
-      "bytes": 3256,
+    "scripts/test-redesign-static.py": {
+      "bytes": 3747,
       "mode": 420,
-      "sha256": "4cafccfea48910cd85340c1d1be0bb1929352c77ce33746bbf9a378e90040301"
+      "sha256": "e26b140368d57c262d430a91069a396335f2da9470a69f6ab070e311522abb54"
+    },
+    "scripts/test-release-media-isolation.py": {
+      "bytes": 1707,
+      "mode": 420,
+      "sha256": "9216062dd534e6a17bfde33e2373a01cca7339ca7598126268acf39bccf4067d"
     },
     "scripts/test-source-static.py": {
       "bytes": 8256,
@@ -1201,9 +1401,9 @@
       "sha256": "3f469ec4ccb5cfdbb52194703bf2c05bd0fb4ffef38f140125f9e252a94184eb"
     },
     "scripts/verify-host.sh": {
-      "bytes": 588,
+      "bytes": 687,
       "mode": 420,
-      "sha256": "e1458670a992d27f98aea81b5ea9638ef489305571109b96879d7a4a42f66b36"
+      "sha256": "bf8fae97782b7fa17650718016715d3f003fb190b5d67eb332f01ad8d6a74d14"
     },
     "scripts/verify-local.sh": {
       "bytes": 1384,
@@ -1211,14 +1411,49 @@
       "sha256": "ecc6265e34a914074e5ad329aad8693eb28818cd4e36a85e15f8b11b974d2abb"
     },
     "scripts/verify-native.sh": {
-      "bytes": 3082,
-      "mode": 493,
-      "sha256": "3c956e3f4d3a7a1f43a8591d7c82a34a9fda016139edfb21f0deb3a4cd5f6bb1"
+      "bytes": 2654,
+      "mode": 420,
+      "sha256": "28e34a9b0afa4dbea7386ca923deff826f376e2f354ac51960ee36077d2a6da7"
     },
     "settings.gradle.kts": {
       "bytes": 552,
       "mode": 420,
       "sha256": "b1843e333b6a5f43629308536f94103b4e1dab7f0cda4dd7fa36c3660c1349dd"
+    },
+    "verification/2026-redesign/PHASE0_DIAGNOSIS.md": {
+      "bytes": 4411,
+      "mode": 420,
+      "sha256": "0c16fb0f690d370434b7a833f8d8191cec9569d7ec88713762d0d9f978dfb35c"
+    },
+    "verification/2026-redesign/PHASES_0_TO_5.md": {
+      "bytes": 11291,
+      "mode": 420,
+      "sha256": "e94493b0635c9b4ebfffce3cd1ed937e3c928d3ae50d01a16c5b8592a2642e40"
+    },
+    "verification/2026-redesign/evidence/host-verify.log": {
+      "bytes": 14112,
+      "mode": 420,
+      "sha256": "af0d9ec53930ff4802d5d2688e080aeeba654f9962369d8890201dbfd724f60a"
+    },
+    "verification/2026-redesign/evidence/media-fixture-partial-timeout.log": {
+      "bytes": 6732,
+      "mode": 420,
+      "sha256": "97af046e78313451a18d2a00ab55e59f4a6c8efac638aadafd6b85260c4b68d5"
+    },
+    "verification/2026-redesign/evidence/native-gate-blocked.log": {
+      "bytes": 1857,
+      "mode": 420,
+      "sha256": "04b38b00c03367265c0b9db4a4692c602f4480a0e3d615ed3374576365e4f7c9"
+    },
+    "verification/2026-redesign/evidence/release-media-source-check.log": {
+      "bytes": 584,
+      "mode": 420,
+      "sha256": "b70b6839c489c55955f91537c79aa80b8bc7eb3e7abd58d35f05a9c5110328e4"
+    },
+    "verification/2026-redesign/evidence/workspace-cleanup.log": {
+      "bytes": 472,
+      "mode": 420,
+      "sha256": "a98e0fc686fba028fceb614e491a134b256cf83c9f8bdfb1118ad05c453de389"
     },
     "verification/F01-green.log": {
       "bytes": 91,
@@ -1310,105 +1545,20 @@
       "mode": 420,
       "sha256": "df09f09ce176b36f50784e9119c23aa97d83113c6ab26e461536878e9c765046"
     },
-    "verification/current-session/feature-matrix-generator.log": {
-      "bytes": 47,
-      "mode": 420,
-      "sha256": "d2c80aeb09710f38e36d269aae12675ece6f0870f64a2e35a2d545cd231c2616"
-    },
     "verification/current-session/followup-2026-10-17/REPORT.md": {
       "bytes": 6038,
       "mode": 420,
       "sha256": "c40b48008cfc268e1cf2e1f54eafda6abdd4cb8cf7cbc9dae2a2705cab58477c"
-    },
-    "verification/current-session/followup-2026-10-17/android-build-attempt.log": {
-      "bytes": 1857,
-      "mode": 420,
-      "sha256": "04b38b00c03367265c0b9db4a4692c602f4480a0e3d615ed3374576365e4f7c9"
     },
     "verification/current-session/followup-2026-10-17/environment.txt": {
       "bytes": 280,
       "mode": 420,
       "sha256": "50926756ae67e62557e1d2aef47ecbbc46448193ab58e510f06ef08b46e967c1"
     },
-    "verification/current-session/followup-2026-10-17/feature-generator.log": {
-      "bytes": 47,
-      "mode": 420,
-      "sha256": "d2c80aeb09710f38e36d269aae12675ece6f0870f64a2e35a2d545cd231c2616"
-    },
-    "verification/current-session/followup-2026-10-17/home-layout.log": {
-      "bytes": 645,
-      "mode": 420,
-      "sha256": "71e2ac90ba25a8d241abe9bd674c1c3fc49c20905c1a5c66973f1476a091ad21"
-    },
-    "verification/current-session/followup-2026-10-17/media-ffmpeg.log": {
-      "bytes": 759,
-      "mode": 420,
-      "sha256": "74121088d6a673cfad4cb0589767605672fdb1405d4f642699cdd3b26d26d6a5"
-    },
-    "verification/current-session/followup-2026-10-17/release-media.log": {
-      "bytes": 860,
-      "mode": 420,
-      "sha256": "64c7f28cf759fa7fda7653e879e5e8ec46fb7ec5260eb10da181706788f0f7b9"
-    },
-    "verification/current-session/followup-2026-10-17/verify-host.log": {
-      "bytes": 12241,
-      "mode": 420,
-      "sha256": "7289a4b115e8ae1ce01b52704267d78f632c259429584d8458fa15b51910b6da"
-    },
-    "verification/current-session/followup-2026-10-17/workspace.log": {
-      "bytes": 370,
-      "mode": 420,
-      "sha256": "575e11f1b062b8be4feaa20819039443158527047e9d9cf8ac21476780d6d0f8"
-    },
-    "verification/current-session/home-layout.log": {
-      "bytes": 645,
-      "mode": 420,
-      "sha256": "71e2ac90ba25a8d241abe9bd674c1c3fc49c20905c1a5c66973f1476a091ad21"
-    },
-    "verification/current-session/media-ffmpeg.log": {
-      "bytes": 759,
-      "mode": 420,
-      "sha256": "1980e3ff124e5118540e51fb7225e7c2326faac2bfae0bb88dd11bd9e80451f7"
-    },
-    "verification/current-session/native-environment.log": {
-      "bytes": 2131,
-      "mode": 420,
-      "sha256": "6971d154a4b42f32db6c227807e1788df643bdb748f0dc91f8f0a1c7e2fc66dd"
-    },
-    "verification/current-session/release-media-isolation.log": {
-      "bytes": 522,
-      "mode": 420,
-      "sha256": "3944d3fb42a2c5413e8ae87f5802265d526b377ddcda9796f2ecd5b68d7bde50"
-    },
     "verification/current-session/results.json": {
       "bytes": 4045,
       "mode": 420,
       "sha256": "15b6917d27c738b271f13094618d49fe0dd62534eb9b04a1ce27de2fe0ed2f52"
-    },
-    "verification/current-session/test-core-after.log": {
-      "bytes": 6896,
-      "mode": 420,
-      "sha256": "d1344cf05ae63686a59fa7eb3e40e489346402bc4a95cac2133cd4b532cd49c5"
-    },
-    "verification/current-session/verify-host-final.log": {
-      "bytes": 11832,
-      "mode": 420,
-      "sha256": "ea09d5037631dfb7dfa80c02b54a1553e7a999cc6984a26aedb0c44a1ad89ffb"
-    },
-    "verification/current-session/verify-host-utf8.log": {
-      "bytes": 11465,
-      "mode": 420,
-      "sha256": "4e857910f195e8173004c7e30ea66d66f272aa81a78a88703bd821d4d4d11fac"
-    },
-    "verification/current-session/verify-host.log": {
-      "bytes": 7109,
-      "mode": 420,
-      "sha256": "a01f96840ad771864656b1268b62fcaf0d75507c73973529d0a5cb8bc485fd59"
-    },
-    "verification/current-session/workspace-safety.log": {
-      "bytes": 370,
-      "mode": 420,
-      "sha256": "575e11f1b062b8be4feaa20819039443158527047e9d9cf8ac21476780d6d0f8"
     },
     "verification/download-red-tightened.log": {
       "bytes": 4493,
@@ -1504,6 +1654,31 @@
       "bytes": 374,
       "mode": 420,
       "sha256": "d7fb562e6449ac2697530c48ec2b390b23151a41e4921584158491513aa7002e"
+    },
+    "verification/jevlo-2026/RELEASE_STATUS.md": {
+      "bytes": 1411,
+      "mode": 420,
+      "sha256": "862ca6360698ce8e75cc97bb933ab13d3582cdf19256b605d9b753089fa1205b"
+    },
+    "verification/jevlo-2026/android-build-blocked.log": {
+      "bytes": 1857,
+      "mode": 420,
+      "sha256": "04b38b00c03367265c0b9db4a4692c602f4480a0e3d615ed3374576365e4f7c9"
+    },
+    "verification/jevlo-2026/brand-motion-assets-check.log": {
+      "bytes": 2041,
+      "mode": 420,
+      "sha256": "1309efdde5c38bd43d81894016f2740a04a185e7e4c826435bef8d33f47d7986"
+    },
+    "verification/jevlo-2026/full-host-suite.log": {
+      "bytes": 16153,
+      "mode": 420,
+      "sha256": "b39a0df981629bf0f4ec2ceebb51fc8e95e3cbe64058f12a6a6adc5e0c279c0c"
+    },
+    "verification/jevlo-2026/source-localization.log": {
+      "bytes": 2187,
+      "mode": 420,
+      "sha256": "ac249b13a5bb1576b8f8fc697d7fc8b9d03544f201a81f5fb800f035390aec9f"
     },
     "verification/launcher-green.log": {
       "bytes": 118,
@@ -1755,35 +1930,25 @@
       "mode": 420,
       "sha256": "5d294f97d8dfdcfaaab4c26bc99c89f2a1050b578edac3529fe830cd0eddb000"
     },
+    "verification/native/configuration.log": {
+      "bytes": 1857,
+      "mode": 420,
+      "sha256": "04b38b00c03367265c0b9db4a4692c602f4480a0e3d615ed3374576365e4f7c9"
+    },
+    "verification/native/context.txt": {
+      "bytes": 90,
+      "mode": 420,
+      "sha256": "1f933a545eeffa5e20709bb0006c10879a4b365eac8eb9cc0385be3bc5c0419d"
+    },
+    "verification/native/exit-codes.tsv": {
+      "bytes": 16,
+      "mode": 420,
+      "sha256": "cb799f8c984c94f4cdf43a293c8e4581d146909a5de873f98e0747de60ef5ce9"
+    },
     "verification/page-overflow-red.log": {
       "bytes": 2980,
       "mode": 420,
       "sha256": "d728b0550e75926fa55bc50321df10ad7dce9b6748b9863a3dc3c014f92cff32"
-    },
-    "verification/production-2026-10-17/baseline-1.log": {
-      "bytes": 43,
-      "mode": 420,
-      "sha256": "bdb0a26c2730a3d4b262cffb4863f3ef40ec5d345b1c5fbb19a6131d6570eb58"
-    },
-    "verification/production-2026-10-17/baseline-2.log": {
-      "bytes": 3025,
-      "mode": 420,
-      "sha256": "d8c0f6dc03d2b36b1387261a8a73eb52f64194a16a22d599e1495e67b0c7b23e"
-    },
-    "verification/production-2026-10-17/baseline-3.log": {
-      "bytes": 2662,
-      "mode": 420,
-      "sha256": "a15d8897c2d12336af4d6dd98f0a2b35ecf3c83ca1dd62b0c3bf8fd64fa20cc7"
-    },
-    "verification/production-2026-10-17/baseline-4.log": {
-      "bytes": 986,
-      "mode": 420,
-      "sha256": "f4e1e105c93c0d17092d4597d50e511e7ca746f9c8a9fc92776bcb6ddd655d98"
-    },
-    "verification/production-2026-10-17/baseline-5.log": {
-      "bytes": 759,
-      "mode": 420,
-      "sha256": "d21151d6d4f7109ca1caab8e2a46d81f0c0656fa6738626ba4630ef43f36859c"
     },
     "verification/production-2026-10-17/baseline-documents/AUDIT.md": {
       "bytes": 6319,
@@ -1860,1125 +2025,20 @@
       "mode": 420,
       "sha256": "6fbae2c04dcfa047aa32596f03d38b5d3b2e82d9ec0541d054ca5a55ae982f43"
     },
-    "verification/production-2026-10-17/build/AppDatabase-earliest.kt": {
-      "bytes": 2718,
-      "mode": 420,
-      "sha256": "c3f9ab536b89c0832223c6c630834144b9a3e40111731e1d49505f26a62cd718"
-    },
-    "verification/production-2026-10-17/build/AppDatabase-initial.kt": {
-      "bytes": 2705,
-      "mode": 420,
-      "sha256": "325fa48c41911c63ed121722719f99b4889ee0da3508ccd1378da888f0ff5314"
-    },
-    "verification/production-2026-10-17/build/adb-devices.log": {
-      "bytes": 103,
-      "mode": 420,
-      "sha256": "672807417514f7a8b05c7d98c989afccaca3acf07f5eb023ffb94df9c76a4c11"
-    },
-    "verification/production-2026-10-17/build/android-test-compile-interrupted.log": {
-      "bytes": 472,
-      "mode": 420,
-      "sha256": "e492a1678c4dae240b799a84fa0d0890d84b823ef4ee494a0b0a49225ca683e3"
-    },
-    "verification/production-2026-10-17/build/android-test-compile.log": {
-      "bytes": 3431,
-      "mode": 420,
-      "sha256": "611289c6feaf4dddd09c146a147b624efa89bbeda43b52ef17c81bd80c0a623c"
-    },
-    "verification/production-2026-10-17/build/assemble-debug-1.log": {
-      "bytes": 36655,
-      "mode": 420,
-      "sha256": "367028efe472b61395f5b4456ab3de447d16ff61d0ac5293456d15c9add32244"
-    },
-    "verification/production-2026-10-17/build/assemble-debug-2.log": {
-      "bytes": 34946,
-      "mode": 420,
-      "sha256": "72dfc79c63bb73c0e71f40e7e00d7641a30adeb73eb305d2df0117a3cff39a17"
-    },
-    "verification/production-2026-10-17/build/assemble-debug-final.log": {
-      "bytes": 9398,
-      "mode": 420,
-      "sha256": "62ca08df93151d95de21e719dd3a522169d77615667c81a6dbe227548f8e7855"
-    },
-    "verification/production-2026-10-17/build/before-fresh-ksp-assemble-debug-final.log": {
-      "bytes": 34525,
-      "mode": 420,
-      "sha256": "7aa71824c3a5aafd37438e071be920db43f09066776f06b20c9a770c0b49921e"
-    },
-    "verification/production-2026-10-17/build/before-fresh-ksp-native-suite-results.json": {
-      "bytes": 336,
-      "mode": 420,
-      "sha256": "e4742198bccc8150023fb52bd9b3d7d97f8b78855880fe38fedb1c3e6d1342c6"
-    },
-    "verification/production-2026-10-17/build/before-fresh-ksp-unit-tests.log": {
-      "bytes": 2029,
-      "mode": 420,
-      "sha256": "a2bc165529d7187711db032d43df0102abb94f25a5b685d0daac616ab103d228"
-    },
-    "verification/production-2026-10-17/build/before-profile-removal-native-results.json": {
-      "bytes": 2600,
-      "mode": 420,
-      "sha256": "647674ef337039b73641ce9d81920a63ba4a5f01277f991291476bd104cc288b"
-    },
-    "verification/production-2026-10-17/build/camera134-elf64-red.json": {
-      "bytes": 6005,
-      "mode": 420,
-      "sha256": "5ff9b93da36a23324bf5db53f4662342ff901b85e84c462cad7bccb6843c1dfb"
-    },
-    "verification/production-2026-10-17/build/camera140-aar-inspection.json": {
-      "bytes": 1668,
-      "mode": 420,
-      "sha256": "d19fec3888548325892fd95e409c20575f816dab9ed754e7ca8868e49a66440e"
-    },
-    "verification/production-2026-10-17/build/camera140-aar-metadata.properties": {
-      "bytes": 157,
-      "mode": 420,
-      "sha256": "6e8a8e41513bc2d63867491e5db201172ba20b4717201b05911f667e7bb010fb"
-    },
-    "verification/production-2026-10-17/build/camera140-correction.json": {
-      "bytes": 846,
-      "mode": 420,
-      "sha256": "bfb99b913b67ebfea459839624e662ddd0cb246bb10c2d9450440de029955ff5"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/android-test-compile.log": {
-      "bytes": 472,
-      "mode": 420,
-      "sha256": "e492a1678c4dae240b799a84fa0d0890d84b823ef4ee494a0b0a49225ca683e3"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/assemble-debug-final.log": {
-      "bytes": 26142,
-      "mode": 420,
-      "sha256": "eb0efea058f0adb5f88856224bfc784b0d03da6c412eb06ba87f78ab96610413"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/debug-elf-alignment.json": {
-      "bytes": 3396,
-      "mode": 420,
-      "sha256": "cf68fb66c915a020f1c4a2fb50a70a37b7991df32de2050595f1ece22351b7a8"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/generated-AppDatabase_Impl.kt": {
-      "bytes": 18950,
-      "mode": 420,
-      "sha256": "0dfdc7a983548116f2efaf0317bb4a6d3ee1f020a1c4cabe5acd3538346aaa2b"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.core.ErrorLogTest.xml": {
-      "bytes": 557,
-      "mode": 420,
-      "sha256": "47efc2a44cedd3101628a989f0ac80d31bd483859820dd12b3ae497001429bfc"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.core.PublicationRecoveryTest.xml": {
-      "bytes": 1407,
-      "mode": 420,
-      "sha256": "be2c80d04cf25a251f0869b2479e395a83d17014bea05eb1da8ee2c3154092d2"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.data.files.DocumentEntryPermissionsTest.xml": {
-      "bytes": 768,
-      "mode": 420,
-      "sha256": "a3bf996a165c2bca599fc13fcdd75b7234f4000c2128cb4a29e0d11da5e48952"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.data.files.ProviderRenamePreviewTest.xml": {
-      "bytes": 1752,
-      "mode": 420,
-      "sha256": "db71ff2f98cccf42f8a4d8454650c0b8e4b9d8a9a1d2eb0d9575cbbc07f0a98f"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.data.media.MediaMetadataTest.xml": {
-      "bytes": 829,
-      "mode": 420,
-      "sha256": "4fe3619bf99fa3cc1fde7a99940461d4a2a9cfaa230c5cc6d5b3f68707cd1ef5"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.data.source.EphemeralSecretStoreTest.xml": {
-      "bytes": 908,
-      "mode": 420,
-      "sha256": "d08735628693fe064cdb44ffcc71581240b527f2cc6fa897f205604e4057214a"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.domain.EncryptedZipTest.xml": {
-      "bytes": 618,
-      "mode": 420,
-      "sha256": "455141f526fc19fc9bb5a2246fdccedbcc9e7f2e699f51c94be59dc8db4d2102"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.domain.ExpansionLogicTest.xml": {
-      "bytes": 577,
-      "mode": 420,
-      "sha256": "36fd5b8af29061f14d226aae635877c00e8ce3db7dea1281f1318dc68eeb1348"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.domain.GoogleDriveClientTest.xml": {
-      "bytes": 639,
-      "mode": 420,
-      "sha256": "44dbcfd41b9622bf32ecdcb490537f36bd05462d8efd6e2a3bdce8fe67c46f75"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.domain.PureDomainAlgorithmsTest.xml": {
-      "bytes": 1598,
-      "mode": 420,
-      "sha256": "7351b8ea60b0729a90eef0b73c90f346661d17249efbb577ea8f1316cfe64b19"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.domain.ZipSlipTest.xml": {
-      "bytes": 687,
-      "mode": 420,
-      "sha256": "a6ef7228c4811e5accc58b01c6caf75d796e415a322ca7bd1ca2f04e6a50bdb2"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.model.SubmissionSecretsTest.xml": {
-      "bytes": 622,
-      "mode": 420,
-      "sha256": "385e69d3deb1f4190aaee7569be2927e7d0c83cae3db0fe9615c3e25fa0da5df"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.model.WorkspaceSettingsTest.xml": {
-      "bytes": 2675,
-      "mode": 420,
-      "sha256": "af512ac89c69cdafeefb9ee976ae9f086cd8d8d82513bbd0a20013950ca4da8a"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/junit/TEST-com.jumlo.app.pdf.PdfStructureCoreTest.xml": {
-      "bytes": 2344,
-      "mode": 420,
-      "sha256": "c28b1ad6bfb7d2a43c67e08c30100e4af8ea8ec02635b95a15ad367dad9c9f8b"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/lint-debug.log": {
-      "bytes": 30183,
-      "mode": 420,
-      "sha256": "5805dbae9424f75a5f24a2212ec13cbfd4e9e1073d88065898f4aca48dd8b4b8"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/local-context.json": {
-      "bytes": 882,
-      "mode": 420,
-      "sha256": "144d22ffc95515739ad92d1b5b910d9c751387485c23392da0e8a8446ef6a04b"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/native-suite-results.json": {
-      "bytes": 767,
-      "mode": 420,
-      "sha256": "1eca16332b30b7857648bf8a46d982bf8dc825827e5d6452b0c9adf98ff5cfb8"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/schema-comparison.json": {
-      "bytes": 455,
-      "mode": 420,
-      "sha256": "7339e5ac69ef02a739350ac19dd1915f1f3835fa1601b69c5ad1363ac3643193"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/source-input-manifest.json": {
-      "bytes": 35198,
-      "mode": 420,
-      "sha256": "bdc4010528b8c70ca62bf73929f7f9e530132c628790fb945e74c738916fce97"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/unit-test-summary.json": {
-      "bytes": 3510,
-      "mode": 420,
-      "sha256": "d9e5784c0e56783b74b6d36135b27a563c175451d609bd85432818de637566f8"
-    },
-    "verification/production-2026-10-17/build/camera140-rsync-interference/unit-tests.log": {
-      "bytes": 3233,
-      "mode": 420,
-      "sha256": "00c385e101e98cb8c52f7c643887c66861ca8dfeb6a9a2c43bf5c2e9ff45287e"
-    },
-    "verification/production-2026-10-17/build/compile-debug-after-ksp-checkpoint.log": {
-      "bytes": 23821,
-      "mode": 420,
-      "sha256": "95b2f9fe4b81beeaf0a871c8a729fe23b6517378c2b84a9fb082272c4116d292"
-    },
-    "verification/production-2026-10-17/build/configuration-baseline.log": {
-      "bytes": 1829,
-      "mode": 420,
-      "sha256": "70500fe7ad17e8dcd06bba6138fc9159d919e1f8987b5916c6d48083a0b13f9b"
-    },
-    "verification/production-2026-10-17/build/configuration-fixed-2.log": {
-      "bytes": 4903,
-      "mode": 420,
-      "sha256": "5ec48f362cfde2242b4ec12e0c7cfa1d7a89a0294e35065c5434eb3a5212a901"
-    },
-    "verification/production-2026-10-17/build/configuration-fixed.log": {
-      "bytes": 21445,
-      "mode": 420,
-      "sha256": "6ae87448a07b98ca70133f98fb0b818be18a5855f3ba75454cff885ddbe6dee7"
-    },
-    "verification/production-2026-10-17/build/database-github-history.json": {
-      "bytes": 11670,
-      "mode": 420,
-      "sha256": "51e664e4560461261d5cbaaa32a143f41963c79c531067ad9bb05fb8a403afcf"
-    },
-    "verification/production-2026-10-17/build/debug-badging.log": {
-      "bytes": 2004,
-      "mode": 420,
-      "sha256": "6694a4f86f49708068007d6a5e7c4c8258e9780eca5b15b189e34c4dc9c4cff1"
-    },
-    "verification/production-2026-10-17/build/debug-signature.log": {
-      "bytes": 955,
-      "mode": 420,
-      "sha256": "15889601f7a627d083a4fc131ad027f27b67ebc62d32e6bfb8ee945437625f11"
-    },
-    "verification/production-2026-10-17/build/debug-standard-content.json": {
-      "bytes": 3658,
-      "mode": 420,
-      "sha256": "e6939b9922048063ae662ad8c944b20702390ba7c2feaa8bc317214a822ae9c3"
-    },
-    "verification/production-2026-10-17/build/final/android-test-compile.log": {
-      "bytes": 3502,
-      "mode": 420,
-      "sha256": "aed9f789035a29347e3f464dfa13e5b5d6d2a088bd925e65598ed09700b34c7b"
-    },
-    "verification/production-2026-10-17/build/final/artifact-checks.json": {
-      "bytes": 1318,
-      "mode": 420,
-      "sha256": "eb2fcc376690064cfb5f937b67ef95d77b4c3feab6353d4e01d0467f612f852a"
-    },
-    "verification/production-2026-10-17/build/final/assemble-debug-final.log": {
-      "bytes": 3320,
-      "mode": 420,
-      "sha256": "4c9c36a1d022409cfdd1d09eae5ad585726d32444610a9b5b75f247ef2cf3e0c"
-    },
-    "verification/production-2026-10-17/build/final/assemble-release.log": {
-      "bytes": 3757,
-      "mode": 420,
-      "sha256": "3fcca1a66a68a2cf71f258a77f968c3388f7119e5a800fa471478577521417d3"
-    },
-    "verification/production-2026-10-17/build/final/base-dependency-check.json": {
-      "bytes": 352,
-      "mode": 420,
-      "sha256": "a0e7b19f843f6a03f3bc4ddcd07bcbef4db39319010e6fd9a44504c63967352a"
-    },
-    "verification/production-2026-10-17/build/final/base-release-dependencies.log": {
-      "bytes": 78846,
-      "mode": 420,
-      "sha256": "8dcd73cca7a2f0a74ad2df596e1d7da01b252583855ff3e3f672e71a166628e2"
-    },
-    "verification/production-2026-10-17/build/final/baseline-generation.log": {
-      "bytes": 24520,
-      "mode": 420,
-      "sha256": "0ad056b7fb8d5e210f7d7a94179af594ca39ff4b5b87660d4dd980480a096fd2"
-    },
-    "verification/production-2026-10-17/build/final/benchmark-app-badging.log": {
-      "bytes": 1774,
-      "mode": 420,
-      "sha256": "a1369fabec2a5cb0f68a9f0aba9d23ad2664d3b52cf6cff78cdc90e49775bac8"
-    },
-    "verification/production-2026-10-17/build/final/benchmark-app-manifest.log": {
-      "bytes": 28223,
-      "mode": 420,
-      "sha256": "b32cf9cc3579fe49ce2057c540d30b73c385628cae5b0e3660ae564f0c516d11"
-    },
-    "verification/production-2026-10-17/build/final/benchmark-artifact-metadata.json": {
-      "bytes": 454,
-      "mode": 420,
-      "sha256": "25f0638e4966c9f2ec05eedb7663e827958c98330aebbd92f8bb18b0b04c2f86"
-    },
-    "verification/production-2026-10-17/build/final/benchmark-assemble.log": {
-      "bytes": 11741,
-      "mode": 420,
-      "sha256": "081f464f38a7360638b40bee0e88a81aab53354ca0503c9143dd212d2393b89e"
-    },
-    "verification/production-2026-10-17/build/final/benchmark-test-badging.log": {
-      "bytes": 1554,
-      "mode": 420,
-      "sha256": "e658ebfb5ba10f461557d2b649cf03426116c50d9d17505007189455b82d26a1"
-    },
-    "verification/production-2026-10-17/build/final/bundle-release.log": {
-      "bytes": 3760,
-      "mode": 420,
-      "sha256": "0be48845cff4f4db2c7b3e4142ddada4085460574f6d4b800a3f511aebf50ffd"
-    },
-    "verification/production-2026-10-17/build/final/connected-debug.log": {
-      "bytes": 30221,
-      "mode": 420,
-      "sha256": "e3a6b5bda70cfd337f1af564ae209d426aba48abd0a9658c5a51a2674fdd3b18"
-    },
-    "verification/production-2026-10-17/build/final/debug-badging.log": {
-      "bytes": 2017,
-      "mode": 420,
-      "sha256": "37ac45ff675490a9c5a22e37b9efbe8c1243b580c20c8d9e5c69cdc85138866e"
-    },
-    "verification/production-2026-10-17/build/final/debug-elf-alignment.json": {
-      "bytes": 3396,
-      "mode": 420,
-      "sha256": "cf68fb66c915a020f1c4a2fb50a70a37b7991df32de2050595f1ece22351b7a8"
-    },
-    "verification/production-2026-10-17/build/final/debug-output-metadata.json": {
-      "bytes": 427,
-      "mode": 420,
-      "sha256": "677aab3e24968af408891d4b673ecb106e77d067d8abafa5866e0688a5c45947"
-    },
-    "verification/production-2026-10-17/build/final/debug-profile-correction.log": {
-      "bytes": 3231,
-      "mode": 420,
-      "sha256": "b0d9450f85ab635aea4341f0f7b8760763c4edf4f3fb04a2230e9e4b2a7db19f"
-    },
-    "verification/production-2026-10-17/build/final/debug-signature.log": {
-      "bytes": 968,
-      "mode": 420,
-      "sha256": "c8135f3a083b3d4c7cd07ab901d6e7f1504bd55c3c706219b5e8b57edd4be213"
-    },
-    "verification/production-2026-10-17/build/final/debug-standard-content.json": {
-      "bytes": 5877,
-      "mode": 420,
-      "sha256": "93b37c1e410854b09e5abe7e16a66dacb1e193000b6e3cb25532ce8a8703efe6"
-    },
-    "verification/production-2026-10-17/build/final/debug-zipalign.log": {
-      "bytes": 13,
-      "mode": 420,
-      "sha256": "9fa3b6ead7afc298499f30c5b70014c78b6686a8269611537606fa5a7c02b6a2"
-    },
-    "verification/production-2026-10-17/build/final/final-evidence-check.json": {
-      "bytes": 706,
-      "mode": 420,
-      "sha256": "3af57d837887324b11188ec45a783182c989fa4713034fe112dc61a0f5d8296a"
-    },
-    "verification/production-2026-10-17/build/final/generated-AppDatabase_Impl.kt": {
-      "bytes": 18950,
-      "mode": 420,
-      "sha256": "0dfdc7a983548116f2efaf0317bb4a6d3ee1f020a1c4cabe5acd3538346aaa2b"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.core.ErrorLogTest.xml": {
-      "bytes": 556,
-      "mode": 420,
-      "sha256": "6ec18c1bdb031010d349641004e53357bdb522550e860b836d6354613ca4471e"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.core.PublicationRecoveryTest.xml": {
-      "bytes": 1407,
-      "mode": 420,
-      "sha256": "41dd637a492e6e8e639b2f988349897928bd27281189cd6a4d3ade3adee9f5e7"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.data.files.DocumentEntryPermissionsTest.xml": {
-      "bytes": 768,
-      "mode": 420,
-      "sha256": "1a612180f8bd6b01f8bc6a8703dadcc4e56c26e3a432a11fbaaa58e258170bb9"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.data.files.ProviderRenamePreviewTest.xml": {
-      "bytes": 1752,
-      "mode": 420,
-      "sha256": "ecb87d4ede02b8db29be681e9dd3137819313a9637f4ca5cafbf0d6a936fefdb"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.data.media.MediaMetadataTest.xml": {
-      "bytes": 831,
-      "mode": 420,
-      "sha256": "60226fcd379cf0db945d928e64114261b8a583f312e1387212b91c507d03ab40"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.data.source.EphemeralSecretStoreTest.xml": {
-      "bytes": 904,
-      "mode": 420,
-      "sha256": "8020baf2037b3a8f0aba46d3c69089dba86535883c63e8624206259592b27f21"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.domain.EncryptedZipTest.xml": {
-      "bytes": 617,
-      "mode": 420,
-      "sha256": "9344153f5b9388c1fd11eb2e58b70c325452d44fe9930b3120ddd056f816f88d"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.domain.ExpansionLogicTest.xml": {
-      "bytes": 575,
-      "mode": 420,
-      "sha256": "976385064bb7fba35d12f5abe071ba493b46ffd62d24de421e7a35cc4dc9e3ed"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.domain.GoogleDriveClientTest.xml": {
-      "bytes": 640,
-      "mode": 420,
-      "sha256": "dd1b6b9d648471451b8606d66c8bf18ba46a65536fce9f522fa34adc76715cc4"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.domain.PureDomainAlgorithmsTest.xml": {
-      "bytes": 1596,
-      "mode": 420,
-      "sha256": "c38e62917aece213905b42fbca1c0adface2eb1e29365efe718921408888d5bd"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.domain.ZipSlipTest.xml": {
-      "bytes": 688,
-      "mode": 420,
-      "sha256": "583d4c18801ea412d579b8ed50eb69779c07b2b98eaf7f69b68acc2bc76fa597"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.model.SubmissionSecretsTest.xml": {
-      "bytes": 621,
-      "mode": 420,
-      "sha256": "f5daa0ada2a77ce67475ce1d00f570b579fb520eea5bed4ac663996f4b76112d"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.model.WorkspaceSettingsTest.xml": {
-      "bytes": 2670,
-      "mode": 420,
-      "sha256": "10f33ce4b291f53fd538dae178441d120a597480cf51c7ade1a9d54757b77d39"
-    },
-    "verification/production-2026-10-17/build/final/junit/TEST-com.jumlo.app.pdf.PdfStructureCoreTest.xml": {
-      "bytes": 2345,
-      "mode": 420,
-      "sha256": "98d59de0fecd74277303e9c0d51214b58b7698164c4228481df55d05a3792a2f"
-    },
-    "verification/production-2026-10-17/build/final/lint-debug.log": {
-      "bytes": 2731,
-      "mode": 420,
-      "sha256": "14b8e5e1319f9edaee44b1c1f66f24bf0523c189bd87165f7e55f6d510945aea"
-    },
-    "verification/production-2026-10-17/build/final/lint/lint-results-debug.html": {
-      "bytes": 467371,
-      "mode": 420,
-      "sha256": "16fbc8476cdbcc8aaabe1c124ecd79813ce1dcd0622950552f49100fbe6ec6f7"
-    },
-    "verification/production-2026-10-17/build/final/lint/lint-results-debug.txt": {
-      "bytes": 97034,
-      "mode": 420,
-      "sha256": "f2fa8190ff44e9b8dfbfa01dbc1f6bd22c6f246f54172821c041654c4cd9279d"
-    },
-    "verification/production-2026-10-17/build/final/lint/lint-results-debug.xml": {
-      "bytes": 301091,
-      "mode": 420,
-      "sha256": "edac6cfebcdcaee16678a6497e4be391b92e65e49dd98d372b5c9d63bdf6a76c"
-    },
-    "verification/production-2026-10-17/build/final/lint/summary.json": {
-      "bytes": 2201,
-      "mode": 420,
-      "sha256": "b873237eba2feac2ac49a90b3c97dbe36ff3f524b0e774a6e778c95105e98e38"
-    },
-    "verification/production-2026-10-17/build/final/local-build-isolation.gradle": {
-      "bytes": 388,
-      "mode": 420,
-      "sha256": "275f12021de1ab948d98a7207faa84e418c19d9326cd2e048fb47bbba7e5fadf"
-    },
-    "verification/production-2026-10-17/build/final/local-build-isolation.json": {
-      "bytes": 801,
-      "mode": 420,
-      "sha256": "5956db64b693f05d6bf5631df98d4580fca795f3fa2d63b78ff7f8d962350d04"
-    },
-    "verification/production-2026-10-17/build/final/local-context.json": {
-      "bytes": 882,
-      "mode": 420,
-      "sha256": "144d22ffc95515739ad92d1b5b910d9c751387485c23392da0e8a8446ef6a04b"
-    },
-    "verification/production-2026-10-17/build/final/native-suite-results.json": {
-      "bytes": 5978,
-      "mode": 420,
-      "sha256": "ab6c449574b8271049e73f14cdff3510052b0ab6f9771e133bb0dfc6a1ff4b6b"
-    },
-    "verification/production-2026-10-17/build/final/r8-evidence.json": {
-      "bytes": 1172,
-      "mode": 420,
-      "sha256": "b6c68ae5512a67dffaa1cd031f9389821c5027827f2f0052f83856f0461ecd0d"
-    },
-    "verification/production-2026-10-17/build/final/release-badging.log": {
-      "bytes": 1787,
-      "mode": 420,
-      "sha256": "ec13c7221d090f52747d9e45349cf5c544e5f81a77c32864bd34ff1050163b84"
-    },
-    "verification/production-2026-10-17/build/final/release-output-metadata.json": {
-      "bytes": 748,
-      "mode": 420,
-      "sha256": "8f8845711a4a7b4bc313d224c4da5d382b1418cbd8a593b5b139ff8fc6da421e"
-    },
-    "verification/production-2026-10-17/build/final/release-signature.log": {
-      "bytes": 65,
-      "mode": 420,
-      "sha256": "11856960f63c43a0ca3a2c521bbda14fcaf85b96d99675bfdea0c38f582aa660"
-    },
-    "verification/production-2026-10-17/build/final/release-zipalign.log": {
-      "bytes": 13,
-      "mode": 420,
-      "sha256": "9fa3b6ead7afc298499f30c5b70014c78b6686a8269611537606fa5a7c02b6a2"
-    },
-    "verification/production-2026-10-17/build/final/schema-comparison.json": {
-      "bytes": 650,
-      "mode": 420,
-      "sha256": "0522953ae8ec7bcd02b8153999708a294bf5dfe927a9bf62f33963bb9f4300d3"
-    },
-    "verification/production-2026-10-17/build/final/source-evidence-scope.json": {
-      "bytes": 744,
-      "mode": 420,
-      "sha256": "a02d6038ba7f9eb7cb61f3880f1dc65c2c979294eaacc3b8ed3296caf5a122bd"
-    },
-    "verification/production-2026-10-17/build/final/source-input-check.json": {
-      "bytes": 257,
-      "mode": 420,
-      "sha256": "99ab768ecba184c7399a1f1b912373bfe48b4c318b1b72ab502588c0a9370992"
-    },
-    "verification/production-2026-10-17/build/final/source-input-manifest.json": {
-      "bytes": 35198,
-      "mode": 420,
-      "sha256": "d8b74d67698cb7217f647808c1b8db3b1fcefc107092bd577c6f07eef19bd915"
-    },
-    "verification/production-2026-10-17/build/final/standard-content.json": {
-      "bytes": 14456,
-      "mode": 420,
-      "sha256": "26c2933f11903348fa5c900f09a0e01faf2b36d0e55662bfb3a87fd162b4922d"
-    },
-    "verification/production-2026-10-17/build/final/unit-genuine-execution.log": {
-      "bytes": 3233,
-      "mode": 420,
-      "sha256": "00c385e101e98cb8c52f7c643887c66861ca8dfeb6a9a2c43bf5c2e9ff45287e"
-    },
-    "verification/production-2026-10-17/build/final/unit-test-summary.json": {
-      "bytes": 4665,
-      "mode": 420,
-      "sha256": "a0ec25919bb68b029a2db47e2e3c4bf069fb04464dd95456d867ea5f05bbb34b"
-    },
-    "verification/production-2026-10-17/build/final/unit-tests.log": {
-      "bytes": 3088,
-      "mode": 420,
-      "sha256": "c9fd9725b6f4dabbfea2f08a6ff014155c9acaa8ba4c066abcf0f5ce1f031f6e"
-    },
-    "verification/production-2026-10-17/build/generated-room-v2-AppDatabase_Impl.java": {
-      "bytes": 20847,
-      "mode": 420,
-      "sha256": "6cc3a4111d5fdf5ff56996c894b965ecc1f87848e087d75b0f3e5aaa6218fa18"
-    },
-    "verification/production-2026-10-17/build/github-releases.json": {
-      "bytes": 5,
-      "mode": 420,
-      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
-    },
-    "verification/production-2026-10-17/build/github-tags.json": {
-      "bytes": 5,
-      "mode": 420,
-      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
-    },
-    "verification/production-2026-10-17/build/gradle-distribution.sha256": {
-      "bytes": 64,
-      "mode": 420,
-      "sha256": "101e536f9115bb9e310505c09ca819e6f362fe95b18d9f3deb812d0dd69ac679"
-    },
-    "verification/production-2026-10-17/build/hilt254-ksp1027-android-test-compile.log": {
-      "bytes": 23389,
-      "mode": 420,
-      "sha256": "b4d12961f529d8f19221953f74391015f7c25671191a0dc59f0115e097a2a0b4"
-    },
-    "verification/production-2026-10-17/build/hilt254-ksp1027-assemble-debug-final.log": {
-      "bytes": 23673,
-      "mode": 420,
-      "sha256": "ab4612493e927fd261aa41dd400039eb551e2a5683b1eec31d06101162db392d"
-    },
-    "verification/production-2026-10-17/build/hilt254-ksp1027-native-suite-results.json": {
-      "bytes": 1193,
-      "mode": 420,
-      "sha256": "c50c84063e37eaacf9d277a0d5a9cfbe22d815e53bc203707daa57e7488085b3"
-    },
-    "verification/production-2026-10-17/build/hilt254-ksp1027-unit-tests.log": {
-      "bytes": 23365,
-      "mode": 420,
-      "sha256": "62801b98f992cfb1c869250a7735014a402fe098c92548ebc8ec5bae1879dcd3"
-    },
-    "verification/production-2026-10-17/build/historical-199-source-input-manifest.json": {
-      "bytes": 34746,
-      "mode": 420,
-      "sha256": "01a077b9e05a39e469387d0473f5e0f35461df6bbe521b66b87e7e843a63ca2a"
-    },
-    "verification/production-2026-10-17/build/historical-app_src_main_baseline-prof.txt": {
-      "bytes": 4141,
-      "mode": 420,
-      "sha256": "1d719da6ae6e1de33a95b1bd3634e44fa361c31632e5b1d84e32661bb4a0b07e"
-    },
-    "verification/production-2026-10-17/build/historical-app_src_main_baselineProfiles_baseline-prof.txt": {
-      "bytes": 4141,
-      "mode": 420,
-      "sha256": "1d719da6ae6e1de33a95b1bd3634e44fa361c31632e5b1d84e32661bb4a0b07e"
-    },
-    "verification/production-2026-10-17/build/historical-app_src_main_baselineProfiles_startup-prof.txt": {
-      "bytes": 313,
-      "mode": 420,
-      "sha256": "0eb1ea2239a4d06514654943bd65c703a2ea2366991e9d94b65771d6c698177e"
-    },
-    "verification/production-2026-10-17/build/kotlin-compiler-official.sha256": {
-      "bytes": 64,
-      "mode": 420,
-      "sha256": "7ff7ed5c26c68f042df8e2b2a6ca52cabfd18880913a93bb31c6a75484c94599"
-    },
-    "verification/production-2026-10-17/build/ksp-api-inspection.log": {
-      "bytes": 552,
-      "mode": 420,
-      "sha256": "f5b396d6eb1ef486951f628d366d656f90ea380e1ee9a7d5c3311e357b98c4b9"
-    },
-    "verification/production-2026-10-17/build/ksp-shadow-upstream-comments.json": {
-      "bytes": 58038,
-      "mode": 420,
-      "sha256": "1adbf4bd825814873421b349e5728100a884e0296c5117cc83737307718a8beb"
-    },
-    "verification/production-2026-10-17/build/ksp-shadow-upstream-issues.json": {
-      "bytes": 12476,
-      "mode": 420,
-      "sha256": "36e2c5463d8e8b2675bf870fe676d7dcaf8a2ab461c7d13f0928a5c28c4cc970"
-    },
-    "verification/production-2026-10-17/build/ksp-upstream-evidence.json": {
-      "bytes": 816,
-      "mode": 420,
-      "sha256": "ab3be4ede4340de792c3a490d9624069252e07e384dfec7cc774728a98be2b61"
-    },
-    "verification/production-2026-10-17/build/ksp1-android-test-compile.log": {
-      "bytes": 34308,
-      "mode": 420,
-      "sha256": "946355c278f3f65af3231c0089fd20a650b50d67e77b53df35e772ef8d57f5a1"
-    },
-    "verification/production-2026-10-17/build/ksp1-assemble-debug-final.log": {
-      "bytes": 9187,
-      "mode": 420,
-      "sha256": "8f45450cc7dc6b5ba0317df305b22b86da0d0894a7412ff810eae53caf6cc735"
-    },
-    "verification/production-2026-10-17/build/ksp1-lint-debug.log": {
-      "bytes": 652,
-      "mode": 420,
-      "sha256": "ab1ad9f783eae6f938f7a0718811234ba2e571cebfe282e2fb81b6f9624a6d68"
-    },
-    "verification/production-2026-10-17/build/ksp1-native-suite-results.json": {
-      "bytes": 1194,
-      "mode": 420,
-      "sha256": "b5a76c18f5100e0d2366c6836ef727b39a61909bf1afd5e00d508d1873e69e79"
-    },
-    "verification/production-2026-10-17/build/ksp1-unit-tests.log": {
-      "bytes": 27752,
-      "mode": 420,
-      "sha256": "a6b8ceaa5fd8f949d73ac37dbe7b19b57dacdff899cb73239d60d48dadad6798"
-    },
-    "verification/production-2026-10-17/build/ksp2-room261-android-test-compile.log": {
-      "bytes": 34448,
-      "mode": 420,
-      "sha256": "bc39a3f68dd21f25224814d677c5d5d9634a2d7d9f3a6cbebab6dadc733c5c17"
-    },
-    "verification/production-2026-10-17/build/ksp2-room261-assemble-debug-final.log": {
-      "bytes": 28401,
-      "mode": 420,
-      "sha256": "77e999d4e208c8481156f20cdba15c25eb559deb41fd00db3bd85f87aba889a1"
-    },
-    "verification/production-2026-10-17/build/ksp2-room261-lint-debug.log": {
-      "bytes": 472,
-      "mode": 420,
-      "sha256": "e492a1678c4dae240b799a84fa0d0890d84b823ef4ee494a0b0a49225ca683e3"
-    },
-    "verification/production-2026-10-17/build/ksp2-room261-native-suite-results.json": {
-      "bytes": 1192,
-      "mode": 420,
-      "sha256": "e0ef55129b4c597f3780da39b36912fc5de46a47b8d58c9aa8e2278fa984bc41"
-    },
-    "verification/production-2026-10-17/build/ksp2-room261-unit-tests.log": {
-      "bytes": 34317,
-      "mode": 420,
-      "sha256": "42ff85b7df704700c2a1da05ef247e550c82351ed922aeda4b5714b53ef13c59"
-    },
-    "verification/production-2026-10-17/build/ksp2-room272-hilt252-android-test-compile.log": {
-      "bytes": 472,
-      "mode": 420,
-      "sha256": "e492a1678c4dae240b799a84fa0d0890d84b823ef4ee494a0b0a49225ca683e3"
-    },
-    "verification/production-2026-10-17/build/ksp2-room272-hilt252-assemble-debug-final.log": {
-      "bytes": 24358,
-      "mode": 420,
-      "sha256": "0bd32d27007aec92c5d13942194c1e5c852dcc156603b075db5c3e04b42e8a8b"
-    },
-    "verification/production-2026-10-17/build/ksp2-room272-hilt252-lint-debug.log": {
-      "bytes": 472,
-      "mode": 420,
-      "sha256": "e492a1678c4dae240b799a84fa0d0890d84b823ef4ee494a0b0a49225ca683e3"
-    },
-    "verification/production-2026-10-17/build/ksp2-room272-hilt252-native-suite-results.json": {
-      "bytes": 787,
-      "mode": 420,
-      "sha256": "a8fb01023fe6f665750ccd0ca0cdbb4c5b3de303f5b20ffa7e13f4f8375775ba"
-    },
-    "verification/production-2026-10-17/build/ksp2-room272-hilt252-unit-tests.log": {
-      "bytes": 24379,
-      "mode": 420,
-      "sha256": "fa78cc8dd7553288ec4ccb377fc4fb42fdd08e79e3b9b595f9285ba78301d2a3"
-    },
-    "verification/production-2026-10-17/build/launcher-tests.log": {
-      "bytes": 118,
-      "mode": 420,
-      "sha256": "b15d058787ad77d0155bf42ed4c353d49833f34763879bbf31da9b3070740560"
-    },
-    "verification/production-2026-10-17/build/legacy-database-github-history.json": {
-      "bytes": 7922,
-      "mode": 420,
-      "sha256": "918590e66bb20c7e5103bc2ef28e8d558fab8f3f11cf9bfefaa55616ab1c5025"
-    },
-    "verification/production-2026-10-17/build/legacy-schema-v1-github-history.json": {
-      "bytes": 5,
-      "mode": 420,
-      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
-    },
-    "verification/production-2026-10-17/build/native-frozen-input-manifest.json": {
-      "bytes": 20515,
-      "mode": 420,
-      "sha256": "78276114bdcbe946b8b4fa5ea3e9a91a6157c5b5e510600f9d133543646a7f60"
-    },
-    "verification/production-2026-10-17/build/native-input-manifest.json": {
-      "bytes": 20515,
-      "mode": 420,
-      "sha256": "5cac9dadfe7cc2122661392ec6a7cab0e63f47ae3d341639f3cf41ee8577cc2d"
-    },
-    "verification/production-2026-10-17/build/native-suite-interrupted-results.json": {
-      "bytes": 320,
-      "mode": 420,
-      "sha256": "85f27bd23c6cd59759688e0bffc0621dcdf686c861e5d30c4fae094cf6eb1a35"
-    },
-    "verification/production-2026-10-17/build/native-suite-results.json": {
-      "bytes": 1194,
-      "mode": 420,
-      "sha256": "87da5a6fad45b450f073bf259d360aa421269df7fe82b53f492e19b4be5fcde1"
-    },
-    "verification/production-2026-10-17/build/offline-preflight-tests.log": {
-      "bytes": 91,
-      "mode": 420,
-      "sha256": "a975ee1439b6b006896bc517bd6b28dfefca1c7b917de5d02decd79a880912c4"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/android-test-compile.log": {
-      "bytes": 2776,
-      "mode": 420,
-      "sha256": "ed13800c6a14b064c17551917cb918bdc886b1ce6c1584737c133695c8caeabc"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/assemble-debug-final.log": {
-      "bytes": 3252,
-      "mode": 420,
-      "sha256": "b215d08c97e96f60c1af3d41b77b2f27d265472796cf6c191cb1463d43103591"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/debug-elf-alignment.json": {
-      "bytes": 3396,
-      "mode": 420,
-      "sha256": "cf68fb66c915a020f1c4a2fb50a70a37b7991df32de2050595f1ece22351b7a8"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/generated-AppDatabase_Impl.kt": {
-      "bytes": 18950,
-      "mode": 420,
-      "sha256": "0dfdc7a983548116f2efaf0317bb4a6d3ee1f020a1c4cabe5acd3538346aaa2b"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.core.ErrorLogTest.xml": {
-      "bytes": 557,
-      "mode": 420,
-      "sha256": "47efc2a44cedd3101628a989f0ac80d31bd483859820dd12b3ae497001429bfc"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.core.PublicationRecoveryTest.xml": {
-      "bytes": 1407,
-      "mode": 420,
-      "sha256": "be2c80d04cf25a251f0869b2479e395a83d17014bea05eb1da8ee2c3154092d2"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.data.files.DocumentEntryPermissionsTest.xml": {
-      "bytes": 768,
-      "mode": 420,
-      "sha256": "a3bf996a165c2bca599fc13fcdd75b7234f4000c2128cb4a29e0d11da5e48952"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.data.files.ProviderRenamePreviewTest.xml": {
-      "bytes": 1752,
-      "mode": 420,
-      "sha256": "db71ff2f98cccf42f8a4d8454650c0b8e4b9d8a9a1d2eb0d9575cbbc07f0a98f"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.data.media.MediaMetadataTest.xml": {
-      "bytes": 829,
-      "mode": 420,
-      "sha256": "4fe3619bf99fa3cc1fde7a99940461d4a2a9cfaa230c5cc6d5b3f68707cd1ef5"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.data.source.EphemeralSecretStoreTest.xml": {
-      "bytes": 908,
-      "mode": 420,
-      "sha256": "d08735628693fe064cdb44ffcc71581240b527f2cc6fa897f205604e4057214a"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.domain.EncryptedZipTest.xml": {
-      "bytes": 618,
-      "mode": 420,
-      "sha256": "455141f526fc19fc9bb5a2246fdccedbcc9e7f2e699f51c94be59dc8db4d2102"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.domain.ExpansionLogicTest.xml": {
-      "bytes": 577,
-      "mode": 420,
-      "sha256": "36fd5b8af29061f14d226aae635877c00e8ce3db7dea1281f1318dc68eeb1348"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.domain.GoogleDriveClientTest.xml": {
-      "bytes": 639,
-      "mode": 420,
-      "sha256": "44dbcfd41b9622bf32ecdcb490537f36bd05462d8efd6e2a3bdce8fe67c46f75"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.domain.PureDomainAlgorithmsTest.xml": {
-      "bytes": 1598,
-      "mode": 420,
-      "sha256": "7351b8ea60b0729a90eef0b73c90f346661d17249efbb577ea8f1316cfe64b19"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.domain.ZipSlipTest.xml": {
-      "bytes": 687,
-      "mode": 420,
-      "sha256": "a6ef7228c4811e5accc58b01c6caf75d796e415a322ca7bd1ca2f04e6a50bdb2"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.model.SubmissionSecretsTest.xml": {
-      "bytes": 622,
-      "mode": 420,
-      "sha256": "385e69d3deb1f4190aaee7569be2927e7d0c83cae3db0fe9615c3e25fa0da5df"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.model.WorkspaceSettingsTest.xml": {
-      "bytes": 2675,
-      "mode": 420,
-      "sha256": "af512ac89c69cdafeefb9ee976ae9f086cd8d8d82513bbd0a20013950ca4da8a"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/junit/TEST-com.jumlo.app.pdf.PdfStructureCoreTest.xml": {
-      "bytes": 2344,
-      "mode": 420,
-      "sha256": "c28b1ad6bfb7d2a43c67e08c30100e4af8ea8ec02635b95a15ad367dad9c9f8b"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/lint-category-summary.json": {
-      "bytes": 80226,
-      "mode": 420,
-      "sha256": "094065474c85d4f3a2d1e81f78a056fa55e5600831788c6e2ffb54d1a1688835"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/lint-debug.log": {
-      "bytes": 30183,
-      "mode": 420,
-      "sha256": "5805dbae9424f75a5f24a2212ec13cbfd4e9e1073d88065898f4aca48dd8b4b8"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/lint-results-debug.html": {
-      "bytes": 454067,
-      "mode": 420,
-      "sha256": "34921458ac5c4bd663a739a89185ec23ecb7399ec41de97647c23c69b3b5aa47"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/lint-results-debug.txt": {
-      "bytes": 98292,
-      "mode": 420,
-      "sha256": "e40f3ee08142f5a3ff057b9590d310d8a843ffc8e4e0fee0904aa6248b03819d"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/lint-results-debug.xml": {
-      "bytes": 303305,
-      "mode": 420,
-      "sha256": "a48ed1ee2ab0e5150b3e1ffc7b70412c973eb5a51bc78bffbe455193550d2cd4"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/native-suite-results.json": {
-      "bytes": 1173,
-      "mode": 420,
-      "sha256": "88588ae15fca2bf0396cfbe230096dced1e379c2db31b3caee80b5713277d459"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/schema-comparison.json": {
-      "bytes": 455,
-      "mode": 420,
-      "sha256": "7339e5ac69ef02a739350ac19dd1915f1f3835fa1601b69c5ad1363ac3643193"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/source-input-manifest.json": {
-      "bytes": 35198,
-      "mode": 420,
-      "sha256": "73ff30e40cfb42f0dc0d7e4e43697cafea7963f19976ec5c19982b3006e1d834"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/unit-test-summary.json": {
-      "bytes": 3510,
-      "mode": 420,
-      "sha256": "d9e5784c0e56783b74b6d36135b27a563c175451d609bd85432818de637566f8"
-    },
-    "verification/production-2026-10-17/build/pre-camera140-lint-restrictedapi/unit-tests.log": {
-      "bytes": 3078,
-      "mode": 420,
-      "sha256": "3d2307de5fcf12fe227f0c81c2664cdba02ad3e3ca07090d17750302b1616aae"
-    },
-    "verification/production-2026-10-17/build/prior-source-tree.json": {
-      "bytes": 96201,
-      "mode": 420,
-      "sha256": "c0fd0148ce06356aa9bc97e98c429c9f1bced6b0c14f10d6a8fb81ffd29c3fc8"
-    },
-    "verification/production-2026-10-17/build/processor-compatibility-sources.json": {
-      "bytes": 1557,
-      "mode": 420,
-      "sha256": "9d75721926ea7d11aeabd166f9d6f446af2a7dcd4ba2afe7f01e6ea70c766f36"
-    },
-    "verification/production-2026-10-17/build/profile-removal-provenance.json": {
-      "bytes": 1189,
-      "mode": 420,
-      "sha256": "dd63df555fdfa9ce6556c437a61b874d4c52222e53ac944a743289314a799e78"
-    },
-    "verification/production-2026-10-17/build/release-unmeasured-profile-parse-failure.log": {
-      "bytes": 31683,
-      "mode": 420,
-      "sha256": "b733db84ffee307d901be1142bf7c7c2b8ea3121dec8291e0c158869116835ae"
-    },
-    "verification/production-2026-10-17/build/room-272-ksp2-evidence.log": {
-      "bytes": 733,
-      "mode": 420,
-      "sha256": "4a2b89baeec530bcbef65226d21fdc0876305fd5b9f164d09dcc12788aea0cd7"
-    },
-    "verification/production-2026-10-17/build/room-ksp-evidence.log": {
-      "bytes": 506,
-      "mode": 420,
-      "sha256": "56fca224659f3c4e9b64260bae1f3113d09a1c000aa5a5f59556709ee05d7668"
-    },
-    "verification/production-2026-10-17/build/schema-source-hashes.json": {
-      "bytes": 516,
-      "mode": 420,
-      "sha256": "6bc654ba5dc35a0fde6da69baecac14dc334970c20c775d3d6776a0f6b030063"
-    },
-    "verification/production-2026-10-17/build/schema-v1-github-history.json": {
-      "bytes": 5,
-      "mode": 420,
-      "sha256": "2ba33ca0557f1bb5b7ba88d67f9d0093c7185a36ec51fe2b7bd9372d3e001d6d"
-    },
-    "verification/production-2026-10-17/build/schema-v2-before-room-upgrade.json": {
-      "bytes": 12499,
-      "mode": 420,
-      "sha256": "40877ee6f5bbd8d6010665548494bc3600a9908826d6774c71e0a7ae630d51e6"
-    },
-    "verification/production-2026-10-17/build/sdk-install.log": {
-      "bytes": 17223,
-      "mode": 420,
-      "sha256": "4a16f5ae680d5f6f9467c3fe9d5797a5b61918efa48892d6b953055edc3078d7"
-    },
-    "verification/production-2026-10-17/build/source-input-manifest.json": {
-      "bytes": 35198,
-      "mode": 420,
-      "sha256": "d8b74d67698cb7217f647808c1b8db3b1fcefc107092bd577c6f07eef19bd915"
-    },
-    "verification/production-2026-10-17/build/structural-migration-sqlite.log": {
-      "bytes": 396,
-      "mode": 420,
-      "sha256": "91ae7a7ed05caec40c5b17e20ac4876a954d614cfb05b559ff78097addc83165"
-    },
-    "verification/production-2026-10-17/build/toolchain.json": {
-      "bytes": 527,
-      "mode": 420,
-      "sha256": "78009d1cf6fe59229c14c423ef22d329d2cc41bc4827ba15a3e6cc2b48b991c7"
-    },
-    "verification/production-2026-10-17/build/unit-tests-ksp-failure.log": {
-      "bytes": 27628,
-      "mode": 420,
-      "sha256": "09762075f941b1058a995bc615443ae6801009a734b454c6184646048f723b8f"
-    },
-    "verification/production-2026-10-17/build/unit-tests.log": {
-      "bytes": 3236,
-      "mode": 420,
-      "sha256": "fb1d5ac254aae58aecd1396b8a22ffed32b04fdd20730104cd8018e052710d40"
-    },
-    "verification/production-2026-10-17/build/unmeasured-original-baseline-prof.txt": {
-      "bytes": 4141,
-      "mode": 420,
-      "sha256": "1d719da6ae6e1de33a95b1bd3634e44fa361c31632e5b1d84e32661bb4a0b07e"
-    },
-    "verification/production-2026-10-17/build/wrapper-check.log": {
-      "bytes": 43,
-      "mode": 420,
-      "sha256": "bdb0a26c2730a3d4b262cffb4863f3ef40ec5d345b1c5fbb19a6131d6570eb58"
-    },
-    "verification/production-2026-10-17/build/wrapper-version.log": {
-      "bytes": 1177,
-      "mode": 420,
-      "sha256": "036f2cb648c681e2fb6dd08e9ead7c0dd070bfc1cc3684545a5359cf7c90c99f"
-    },
     "verification/production-2026-10-17/engine-brief.md": {
       "bytes": 4138,
       "mode": 420,
       "sha256": "6aed1e015aa6658d545ec5f2c19d78a35609f8f406f426f25d15a8206a689ec9"
-    },
-    "verification/production-2026-10-17/engine-copy-green-full.log": {
-      "bytes": 10842,
-      "mode": 420,
-      "sha256": "6cd2a2888fc26efdf363e54d93a0209705893447dc08ca36207e246b13818789"
-    },
-    "verification/production-2026-10-17/engine-copy-red.log": {
-      "bytes": 6832,
-      "mode": 420,
-      "sha256": "aff9bc9745f5e1c7064334f84b6b3928c4d1a308a3ea66e56767c0ae48fa7655"
-    },
-    "verification/production-2026-10-17/engine-core-green.log": {
-      "bytes": 6696,
-      "mode": 420,
-      "sha256": "cc3ec78809471c56f3061fd731463345fc560f07807bc7f7d0d0dabbc15ca41b"
-    },
-    "verification/production-2026-10-17/engine-final-host.log": {
-      "bytes": 6167,
-      "mode": 420,
-      "sha256": "64b4a2cd9bb725f959b03d00bf8e2debe6f80283492c915880da2199f52b6de2"
-    },
-    "verification/production-2026-10-17/engine-full-host-final.log": {
-      "bytes": 10614,
-      "mode": 420,
-      "sha256": "33f7d78af873b8f8c4a019a7cc69e6ed6f012877b24dcc444a87adf7b65ee693"
-    },
-    "verification/production-2026-10-17/engine-full-host.log": {
-      "bytes": 10549,
-      "mode": 420,
-      "sha256": "dee3ae505ae47ff74bb66c25dec1b766ca7d444aea265b074af44a8ffb94fd29"
-    },
-    "verification/production-2026-10-17/engine-host-verified.log": {
-      "bytes": 5996,
-      "mode": 420,
-      "sha256": "859b2c26c2821ff20b2bec092bb4a343101a51ca8ada250726c478fc552aac8a"
-    },
-    "verification/production-2026-10-17/engine-package-green.log": {
-      "bytes": 179,
-      "mode": 420,
-      "sha256": "ac2b8ab8b883327197eaf16a4f3f3d970c0c8b034b856e38b266c785eba9d0e2"
-    },
-    "verification/production-2026-10-17/engine-package-red.log": {
-      "bytes": 545,
-      "mode": 420,
-      "sha256": "5ca9bbdfcb06bd0b7428909001c72ccf8e8600d0774e8c89c34cd1de5e2d660f"
-    },
-    "verification/production-2026-10-17/engine-package-smoke.log": {
-      "bytes": 157,
-      "mode": 420,
-      "sha256": "55c57fad1c92fbce1b0f8d9d464fad5951cc3362f1d1083b5c377e47164e14a6"
-    },
-    "verification/production-2026-10-17/engine-package-validation.log": {
-      "bytes": 363,
-      "mode": 420,
-      "sha256": "0619246d4975be80a981db7f09b7ecc57cef6e62dcbd7856fcaebff89ff13290"
-    },
-    "verification/production-2026-10-17/engine-policy-red.log": {
-      "bytes": 34,
-      "mode": 420,
-      "sha256": "02f6fb07c97c6cccffe1c7d5ef159095021385aee5a6a403826d3cfe1f73256f"
-    },
-    "verification/production-2026-10-17/engine-regressions-red.log": {
-      "bytes": 6434,
-      "mode": 420,
-      "sha256": "bafced5c88d44f3dfa6746b6c9420ec9e168de2d2013e10225b5d55f802387a8"
     },
     "verification/production-2026-10-17/engine-report.md": {
       "bytes": 13874,
       "mode": 420,
       "sha256": "2f9f87969e853cc1700e987f95c7f598886ed14a084922ceb26389dbb1bf595b"
     },
-    "verification/production-2026-10-17/engine-resume-red.log": {
-      "bytes": 6324,
-      "mode": 420,
-      "sha256": "f69f5b0014c407ab92fe1dc1a9511e5bf0a8dfe1bc6293ad7bfb9875842e8297"
-    },
-    "verification/production-2026-10-17/engine-target-draft-red.log": {
-      "bytes": 715,
-      "mode": 420,
-      "sha256": "eba3afe6826a895e3fadd435c5dd1a787e332db6ca1e89c624bf5fbb0e6b71c8"
-    },
-    "verification/production-2026-10-17/engine-unicode-archive-red.log": {
-      "bytes": 240,
-      "mode": 420,
-      "sha256": "b72cb245f83f294c1ff88b212875311a1ce2a7a65a049532fa76870313eee167"
-    },
-    "verification/production-2026-10-17/engine-workspace-junit-green.log": {
-      "bytes": 55,
-      "mode": 420,
-      "sha256": "20751ef10a745f956a99771a806efa15a47d1d4050c1dcee15e9fb6123b8d997"
-    },
-    "verification/production-2026-10-17/feature-matrix-generation.log": {
-      "bytes": 1411,
-      "mode": 420,
-      "sha256": "f28477165290eaddfb35dd546ab3310ae95fc7420976ea3bedc3de550e4baa5f"
-    },
-    "verification/production-2026-10-17/files-focused-jvm.log": {
-      "bytes": 63,
-      "mode": 420,
-      "sha256": "576c0becf9155f1e22d85bca31ea6a845a105b18179ca2245fdd17e62a2e4aa7"
-    },
-    "verification/production-2026-10-17/files-focused-setup-error.log": {
-      "bytes": 2648,
-      "mode": 420,
-      "sha256": "89d64b198e423df87bf01a41782bf5df1c2e1e585b9fc5878a3faf0a1132ea79"
-    },
     "verification/production-2026-10-17/files-followup-implementation.md": {
       "bytes": 5468,
       "mode": 420,
       "sha256": "67efb705ef27b17133e4eb38da61958cb064b56bb745feb158856867a17798e2"
-    },
-    "verification/production-2026-10-17/files-host-final-aux.log": {
-      "bytes": 2768,
-      "mode": 420,
-      "sha256": "36816f9153aadd809ec6c0d0200e49738f176330587450b73ee20e5b901cee55"
-    },
-    "verification/production-2026-10-17/files-host-launchers.log": {
-      "bytes": 209,
-      "mode": 420,
-      "sha256": "1baad03088018b87e5b602dfc3cfa448880862450c8a4bd434a55ee7330e4b9b"
-    },
-    "verification/production-2026-10-17/files-host-suite-loopback.log": {
-      "bytes": 11588,
-      "mode": 420,
-      "sha256": "06a27f95730e5b7fd6f3a330ad0a8d5eacadbd3818ce5c7f46ffcdeaaefe904e"
-    },
-    "verification/production-2026-10-17/files-host-suite.log": {
-      "bytes": 7225,
-      "mode": 420,
-      "sha256": "107973e25957702f8f61e999ce39d4e474f5a116370ac8e619abf54999723774"
-    },
-    "verification/production-2026-10-17/files-permissions-red.log": {
-      "bytes": 554,
-      "mode": 420,
-      "sha256": "d4d644abc6b15a5be488f97449f95f3df79af0e74aa115f8b4621f42e76b8903"
-    },
-    "verification/production-2026-10-17/files-preview-red-policy.log": {
-      "bytes": 3939,
-      "mode": 420,
-      "sha256": "c3bfa04dc355121c5bf8de11ab9a6b239f21180d63afe7d29e17a4f5ba0e1948"
-    },
-    "verification/production-2026-10-17/files-source-static-final.log": {
-      "bytes": 1813,
-      "mode": 420,
-      "sha256": "57781f91eb7a81eaac917730f492239f125d1e983155af871f835d71a3cfaf63"
     },
     "verification/production-2026-10-17/lint-warning-review.md": {
       "bytes": 3576,
@@ -2989,11 +2049,6 @@
       "bytes": 4745,
       "mode": 420,
       "sha256": "5fd1df21206af667e4e8d2c63ce9012fee3e37f126624efbc6945462f3333097"
-    },
-    "verification/production-2026-10-17/review-focused-jvm.log": {
-      "bytes": 61,
-      "mode": 420,
-      "sha256": "4d554f841d6d487f28e1a9755dfb61f4943d14f3825c593dff3b0607e55b23f1"
     },
     "verification/production-2026-10-17/review-report.md": {
       "bytes": 19238,
@@ -3010,35 +2065,10 @@
       "mode": 420,
       "sha256": "e804835d17b10b94e7b6690b16e21881b18c7623e1171aa6662a177129fc140e"
     },
-    "verification/production-2026-10-17/review-supplemental-jvm.log": {
-      "bytes": 5030,
-      "mode": 420,
-      "sha256": "016277c4fcdadd37c73f684877af569f4b7c5bbc62ff09c7964e88d3578e770b"
-    },
-    "verification/production-2026-10-17/review-supplemental-manifest-check.log": {
-      "bytes": 1505,
-      "mode": 420,
-      "sha256": "28b8195d6089b84eebb5ccb503d988002bf81149a5026d9ef92f776200d684cf"
-    },
     "verification/production-2026-10-17/review-supplemental-source-sha256.txt": {
       "bytes": 2931,
       "mode": 420,
       "sha256": "e804835d17b10b94e7b6690b16e21881b18c7623e1171aa6662a177129fc140e"
-    },
-    "verification/production-2026-10-17/static-final-progress.log": {
-      "bytes": 1813,
-      "mode": 420,
-      "sha256": "28ffe04c4774c7a2f73899153860a9748df89ade4d7e23de360dc42cabda99ef"
-    },
-    "verification/production-2026-10-17/static-integration.log": {
-      "bytes": 6661,
-      "mode": 420,
-      "sha256": "30832d9009d9384d517db211ddbf072fc0828a0a14c081336051dc383e10a1aa"
-    },
-    "verification/production-2026-10-17/storage-green.log": {
-      "bytes": 1309,
-      "mode": 420,
-      "sha256": "519b8b1edaba776ad436b972df063f2b7600208489a628796260e12f2520eb62"
     },
     "verification/production-2026-10-17/ui-brief.md": {
       "bytes": 8591,
@@ -3055,80 +2085,10 @@
       "mode": 420,
       "sha256": "b61f85a54d52ee74f5ec1783ebb3fa90a206b8eb09b22ffa84889e5618277ce8"
     },
-    "verification/production-2026-10-17/ui/contrast-tokens.log": {
-      "bytes": 1087,
-      "mode": 420,
-      "sha256": "b33ca9fcd6f72af9bc3b9cda9620fcdc433f670472da383fa1b10d18118c3141"
-    },
-    "verification/production-2026-10-17/ui/core-regression-final.log": {
-      "bytes": 7225,
-      "mode": 420,
-      "sha256": "107973e25957702f8f61e999ce39d4e474f5a116370ac8e619abf54999723774"
-    },
-    "verification/production-2026-10-17/ui/core-regression-followup-rerun.log": {
-      "bytes": 7225,
-      "mode": 420,
-      "sha256": "107973e25957702f8f61e999ce39d4e474f5a116370ac8e619abf54999723774"
-    },
-    "verification/production-2026-10-17/ui/core-regression-followup.log": {
-      "bytes": 26010,
-      "mode": 420,
-      "sha256": "6b8e492eab5fa11c82625f9f2c7115cd7f9f7f97def2e60e924f2a43e7dc8bd9"
-    },
-    "verification/production-2026-10-17/ui/diff-check.log": {
-      "bytes": 0,
-      "mode": 420,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    },
-    "verification/production-2026-10-17/ui/favorites-hinge-static.log": {
-      "bytes": 83,
-      "mode": 420,
-      "sha256": "43f2a33ce9a9d6fc78ad1e15c632f5c819241be755043655e5b007cd4ca56ce7"
-    },
-    "verification/production-2026-10-17/ui/home-layout-green.log": {
-      "bytes": 645,
-      "mode": 420,
-      "sha256": "71e2ac90ba25a8d241abe9bd674c1c3fc49c20905c1a5c66973f1476a091ad21"
-    },
-    "verification/production-2026-10-17/ui/home-layout-red.log": {
-      "bytes": 1848,
-      "mode": 420,
-      "sha256": "81423c7950b2585d2628366e1a581b5c3448519cc68a2694689684129df12d41"
-    },
-    "verification/production-2026-10-17/ui/review-followup-static.log": {
-      "bytes": 197,
-      "mode": 420,
-      "sha256": "a39e25dc74307c07e4ab3126533a633e4097e8bb5e9eb03c241f1d405102fa9e"
-    },
     "verification/production-2026-10-17/ui/run-home-layout-tests.sh": {
       "bytes": 548,
-      "mode": 493,
+      "mode": 420,
       "sha256": "b7304ba95c7d863933c9c98f2adcc7148ff3bd502c8ffc616adcbed3366674fb"
-    },
-    "verification/production-2026-10-17/ui/static-validation.log": {
-      "bytes": 410,
-      "mode": 420,
-      "sha256": "1a15e95aa3e20f88bd3c7ee116f439e01f51612cabb4fe6082a47940e4d8beb9"
-    },
-    "verification/production-2026-10-17/workspace-essentials-green.log": {
-      "bytes": 4780,
-      "mode": 420,
-      "sha256": "25b0d8544ca931dd330d5a6d8cc8571c311b7ed8bc2ec2a1767da853912782ad"
-    },
-    "verification/production-2026-10-17/workspace-essentials-red.log": {
-      "bytes": 14474,
-      "mode": 420,
-      "sha256": "b0ea23f2c562f496a2ef8cfcaf8338674e3b488b668cd2fac49bf05598007c47"
-    },
-    "verification/production-2026-10-17/workspace-green.log": {
-      "bytes": 370,
-      "mode": 420,
-      "sha256": "575e11f1b062b8be4feaa20819039443158527047e9d9cf8ac21476780d6d0f8"
-    },
-    "verification/production-2026-10-17/workspace-red.log": {
-      "bytes": 148,
-      "mode": 420,
-      "sha256": "1b0ae2446ed9b1a2118708b201a00c97e041da07e42a3786e6cce26ceffa8ecd"
     },
     "verification/production-2026-10-17/workspace-report.md": {
       "bytes": 3327,
@@ -3187,5 +2147,5 @@
     }
   },
   "formatVersion": 1,
-  "originalUserZipSha256": "855314d2150e32a990ec1f5a03f6c29e04fe8f578a38beefa879b036a5dcecd3"
+  "originalUserZipSha256": "d95badc55271f0a65c6b0ec92771be5dfec74f46bf115229247455deaab64da3"
 }

@@ -1,5 +1,8 @@
 package com.jumlo.app.ui.settings
 
+import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.util.rememberAppHaptics
+
 import android.text.format.Formatter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import com.jumlo.app.BuildConfig
 import com.jumlo.app.R
 import com.jumlo.app.ui.StorageUsage
+import com.jumlo.app.model.OutputRecord
+import com.jumlo.app.core.StoragePaths
 
 @Composable internal fun PreferenceHeading(text: String) {
     Text(text, Modifier.padding(top = 24.dp, bottom = 8.dp).semantics { heading() },
@@ -30,7 +35,11 @@ import com.jumlo.app.ui.StorageUsage
 @Composable fun PreferenceRow(title: String, summary: String?, icon: ImageVector, onClick: () -> Unit,
     modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false) {
     val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-    Row(modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(enabled = enabled, onClick = onClick)
+    val haptics=rememberAppHaptics()
+    Row(modifier.pressFeedback().fillMaxWidth().heightIn(min = 64.dp).clickable(enabled = enabled, onClick = {
+            if(destructive) haptics.secondaryAction() else haptics.actionClick()
+            onClick()
+        })
         .padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, Modifier.size(24.dp), tint = if (enabled) color else MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(16.dp))
@@ -55,7 +64,7 @@ import com.jumlo.app.ui.StorageUsage
 @Composable fun AboutDialog(onDismiss: () -> Unit) = InfoDialog(
     stringResource(R.string.account_help_about), stringResource(R.string.account_about_body, BuildConfig.VERSION_NAME), onDismiss)
 
-@Composable fun StorageOverviewDialog(usage: StorageUsage, onDismiss: () -> Unit) {
+@Composable fun StorageOverviewDialog(usage: StorageUsage, onDismiss: () -> Unit, onClean: (() -> Unit)? = null, outputFiles: List<OutputRecord> = emptyList()) {
     val context = LocalContext.current
     val items = listOf(R.string.storage_imports to usage.sources, R.string.storage_results to usage.outputs,
         R.string.storage_transfers to usage.partials, R.string.storage_temporary to usage.temporary, R.string.storage_trash to usage.trash)
@@ -67,7 +76,33 @@ import com.jumlo.app.ui.StorageUsage
                     Text(Formatter.formatFileSize(context, bytes), style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr))
                 }
             }
+            if(outputFiles.isNotEmpty()) {
+                HorizontalDivider()
+                Text(stringResource(R.string.redesign_storage_by_type),style=MaterialTheme.typography.titleSmall)
+                val groups=outputFiles.groupBy { StoragePaths.category(it.mimeType) }
+                listOf("Video","Audio","PDF","Images","Documents").forEach {category->
+                    val bytes=groups[category].orEmpty().sumOf { it.sizeBytes }
+                    if(bytes>0L) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                            Text(stringResource(when(category) {
+                                "Video"->R.string.redesign_filter_video
+                                "Audio"->R.string.redesign_filter_audio
+                                "PDF"->R.string.redesign_pdf_type
+                                "Images"->R.string.redesign_filter_images
+                                else->R.string.redesign_filter_documents
+                            }),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall)
+                            Text(Formatter.formatFileSize(context,bytes),style=MaterialTheme.typography.bodySmall.copy(textDirection=TextDirection.Ltr))
+                        }
+                        LinearProgressIndicator(progress={if(usage.outputs>0) (bytes.toFloat()/usage.outputs).coerceIn(0f,1f) else 0f},modifier=Modifier.fillMaxWidth())
+                    }
+                }
+            }
             Text(stringResource(R.string.storage_scope), style = MaterialTheme.typography.bodySmall)
         }
-    }, confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.account_done)) } })
+    }, confirmButton = {
+        Row {
+            if(onClean!=null) TextButton(onClean) {Text(stringResource(R.string.pref_clear_temporary))}
+            TextButton(onDismiss) { Text(stringResource(R.string.account_done)) }
+        }
+    })
 }

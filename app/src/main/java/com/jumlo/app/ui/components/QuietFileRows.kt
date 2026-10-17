@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ManagedFileItem
 import com.jumlo.app.ui.theme.QuietTheme
@@ -65,12 +67,13 @@ fun QuietFileRow(
         add(modified)
     }.joinToString("  ·  ")
     val selected = file.isSelected
+    val haptics=rememberAppHaptics()
 
     Surface(
-        modifier = modifier
+        modifier = modifier.pressFeedback()
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
-            .clickable(onClick = onClick),
+            .clickable { haptics.actionClick(); onClick() },
         shape = RoundedCornerShape(26.dp),
         color = if (selected) QuietTheme.pillars.activePillContainer else MaterialTheme.colorScheme.surfaceContainerLow
     ) {
@@ -82,7 +85,7 @@ fun QuietFileRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (showCheckbox) {
-                QuietCheckbox(checked = selected, onCheckedChange = { onToggleSelect?.invoke() })
+                QuietCheckbox(checked = selected, onCheckedChange = { haptics.selectionToggle();onToggleSelect?.invoke() })
                 Spacer(modifier = Modifier.width(8.dp))
             }
             QuietIconTile(
@@ -109,7 +112,7 @@ fun QuietFileRow(
                 )
             }
             if (trailingActionText != null && onTrailingAction != null) {
-                TextButton(onClick = onTrailingAction, modifier = Modifier.sizeIn(minHeight = 48.dp)) {
+                TextButton(onClick = {haptics.actionClick();onTrailingAction()}, modifier = Modifier.pressFeedback().sizeIn(minHeight = 48.dp)) {
                     Text(trailingActionText, style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
                 }
             } else {

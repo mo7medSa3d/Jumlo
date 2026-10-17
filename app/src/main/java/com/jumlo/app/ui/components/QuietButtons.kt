@@ -1,8 +1,12 @@
 package com.jumlo.app.ui.components
 
+import com.jumlo.app.ui.theme.pressFeedback
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,7 +70,7 @@ fun QuietTonalIconButton(
             haptics.actionClick()
             onClick()
         },
-        modifier = modifier
+        modifier = modifier.pressFeedback()
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .size(size)
             .semantics { this.contentDescription = contentDescription },
@@ -114,7 +118,7 @@ fun QuietPrimaryButton(
             haptics.toolExecute()
             onClick()
         },
-        modifier = modifier.heightIn(min = QuietTheme.spacing.primaryButtonHeight),
+        modifier = modifier.pressFeedback().heightIn(min = QuietTheme.spacing.primaryButtonHeight),
         enabled = enabled,
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
@@ -149,7 +153,7 @@ fun QuietTonalButton(
             haptics.actionClick()
             onClick()
         },
-        modifier = modifier.heightIn(min = QuietTheme.spacing.tonalButtonHeight),
+        modifier = modifier.pressFeedback().heightIn(min = QuietTheme.spacing.tonalButtonHeight),
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
@@ -234,18 +238,19 @@ fun QuietCheckbox(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
+    val checkboxAnimation = if (LocalReducedMotion.current) snap<androidx.compose.ui.graphics.Color>() else spring<androidx.compose.ui.graphics.Color>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
     val fill by animateColorAsState(
         targetValue = if (checked) colors.primary else Color.Transparent,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        animationSpec = checkboxAnimation,
         label = "checkFill"
     )
     val stroke by animateColorAsState(
         targetValue = if (checked) colors.primary else colors.outline,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        animationSpec = checkboxAnimation,
         label = "checkStroke"
     )
     Box(
-        modifier = modifier
+        modifier = modifier.pressFeedback()
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .clickable { onCheckedChange(!checked) }
             .semantics { role = Role.Checkbox },

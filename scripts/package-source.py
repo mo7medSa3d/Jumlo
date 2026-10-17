@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create and verify a deterministic Jumlo source ZIP without generated/private files.
+"""Create and verify a deterministic Jevlo (formerly Jumlo) source ZIP without generated/private files.
 
 Build exclusions are repository-relative prefixes, deliberately NOT a generic
 "build" directory rule: verification/production-2026-10-17/build logs are retained.
@@ -17,7 +17,7 @@ import sys
 import tempfile
 import zipfile
 
-ORIGINAL_USER_ZIP_SHA256 = "855314d2150e32a990ec1f5a03f6c29e04fe8f578a38beefa879b036a5dcecd3"
+ORIGINAL_USER_ZIP_SHA256 = "d95badc55271f0a65c6b0ec92771be5dfec74f46bf115229247455deaab64da3"
 MANIFEST_NAME = "CONTENTS_SHA256.json"
 FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 EXCLUDED_PREFIXES = (

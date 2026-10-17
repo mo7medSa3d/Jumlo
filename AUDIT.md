@@ -105,3 +105,9 @@ The initial source static/SQLite tests failed because v1 was missing; the curren
 ## Open release criteria
 
 Obtain authentic historic upgrade evidence; run API 26/36 instrumentation, 16KB-page runtime checks, output roundtrips and adversarial workspaces; verify real process death/low disk/SAF revocation; capture complete EN/AR light/dark/200%-font/TalkBack/keyboard/device goldens; measure representative physical performance; generate and validate a baseline profile; review built manifest/DEX/assets/dependencies and licensing; sign/install/update the release with the owner's key; and get all required remote CI jobs green on exactly the intended final SHA. No claim of zero open P0/P1 or 100% device coverage is made before those results exist.
+
+---
+
+## Jevlo brand/motion follow-up (2026-10-17)
+
+See [`docs/JEVLO_2026_MOTION_BRAND_QA.md`](docs/JEVLO_2026_MOTION_BRAND_QA.md) for exact source pathways, phase actions, tests, visual/tactile limitations and mandatory device gates. This work was executed against the prior **updated source ZIP**, not current GitHub. Native Android build and iOS application development remain unverified/unavailable. **NO-GO** for production approval.

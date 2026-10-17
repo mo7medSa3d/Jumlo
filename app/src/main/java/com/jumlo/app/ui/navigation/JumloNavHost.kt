@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -81,6 +86,7 @@ import com.jumlo.app.ui.intake.Intake
 import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.intake.IntakeController
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.Serializable
@@ -105,11 +111,22 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val form by viewModel.form.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
-    val undoTrashId by viewModel.undoTrashId.collectAsStateWithLifecycle()
+    val undoTrashIds by viewModel.undoTrashIds.collectAsStateWithLifecycle()
+    val sessionEpoch by viewModel.sessionEpoch.collectAsStateWithLifecycle()
     val context=LocalContext.current
     val appHaptics = rememberAppHaptics(settings.hapticFeedbackOnCommit)
-    val systemReduceMotion=remember { try { android.provider.Settings.Global.getFloat(context.contentResolver,android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,1f)==0f } catch(_:Exception) { false } }
-    val reduceMotion=systemReduceMotion || settings.respectReducedMotion
+    val trackedJobs by viewModel.jobs.collectAsStateWithLifecycle()
+    val lastStages=remember { mutableStateMapOf<String,JobStage>() }
+    LaunchedEffect(trackedJobs) {
+        trackedJobs.forEach {job ->
+            val id=job.request.id
+            val previous=lastStages.put(id,job.progress.stage)
+            if(previous!=null && previous!=JobStage.COMPLETED && job.progress.stage==JobStage.COMPLETED &&
+                job.request.toolId.startsWith("dl_")) appHaptics.downloadComplete()
+        }
+    }
+    val reduceMotion=LocalReducedMotion.current
+    val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     val navController = rememberNavController()
     val currentEntry by navController.currentBackStackEntryAsState()
     val route: String = when (currentEntry?.destination?.route) {
@@ -122,7 +139,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
         ActivityRoute::class.qualifiedName -> "activity"
         else -> "home"
     }
-    var tab by rememberSaveable { mutableStateOf(DockTab.HOME) }
+    var lastTab by rememberSaveable { mutableStateOf(DockTab.HOME) }
+    val tab = DockTab.entries.firstOrNull { it.route==route } ?: lastTab
     fun destinationFor(name: String): Any = when (name) {
         "tools_catalog" -> ToolsRoute
         "downloads" -> DownloadsRoute
@@ -138,8 +156,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
         navController.navigate(destinationFor(name)) { launchSingleTop = true }
     }
     fun navigateTab(next: DockTab) {
-        appHaptics.navigationTab()
-        tab = next
+        lastTab = next
+        if(route=="workspace") viewModel.closeToolSession()
         navController.navigate(destinationFor(next.route)) {
             popUpTo(HomeRoute) { saveState = true }
             launchSingleTop = true
@@ -148,14 +166,18 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     fun leaveWorkspace() {
         appHaptics.navigationTab()
+        if(route=="workspace") viewModel.closeToolSession()
         if (!navController.popBackStack()) navigateTab(tab) 
     }
     val dirty by viewModel.hasUnsavedWorkspace.collectAsStateWithLifecycle()
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
     fun goBack() { if(route=="workspace" && dirty) confirmLeave=true else leaveWorkspace() }
-    PredictiveBackHandler(enabled = route == "workspace" && dirty) { progress ->
-        progress.collect { /* Complete gesture before asking about unsaved changes. */ }
-        confirmLeave=true
+    var backSwipe by remember { mutableFloatStateOf(0f) }
+    PredictiveBackHandler(enabled = route == "workspace") { progress ->
+        try {
+            progress.collect { backSwipe=it.progress.coerceIn(0f,1f) }
+            if(dirty) confirmLeave=true else leaveWorkspace()
+        } finally { backSwipe=0f }
     }
 
     var selectedJob by rememberSaveable { mutableStateOf<String?>(null) }
@@ -167,16 +189,16 @@ fun JumloNavHost(viewModel:AppViewModel) {
     var showAccountHub by rememberSaveable { mutableStateOf(false) }
     val snackbar=remember { SnackbarHostState() }
     val undoLabel=stringResource(R.string.action_undo)
-    LaunchedEffect(message, undoTrashId) {
+    LaunchedEffect(message, undoTrashIds) {
         val currentMsg=message ?: return@LaunchedEffect
-        val targetUndo=undoTrashId
+        val targetUndo=undoTrashIds
         val result=snackbar.showSnackbar(
             message=context.getString(userMessageResource(currentMsg)),
-            actionLabel=if(targetUndo!=null) undoLabel else null,
+            actionLabel=if(targetUndo.isNotEmpty()) undoLabel else null,
             duration=SnackbarDuration.Short
         )
-        if(result==SnackbarResult.ActionPerformed && targetUndo!=null) {
-            viewModel.restoreOutput(targetUndo)
+        if(result==SnackbarResult.ActionPerformed && targetUndo.isNotEmpty()) {
+            viewModel.restoreOutputs(targetUndo)
         } else {
             viewModel.dismissMessage()
         }
@@ -189,6 +211,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     val folderPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==Activity.RESULT_OK) result.data?.let { data -> data.data?.let { viewModel.acceptTree(it.toString(),data.flags) } }
+    }
+    val downloadFolderPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if(result.resultCode==Activity.RESULT_OK) result.data?.let { data ->
+            data.data?.let { uri -> viewModel.setDownloadDestinationFolder(uri.toString(),data.flags) }
+        }
     }
     val exportPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         viewModel.export(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
@@ -237,6 +264,19 @@ fun JumloNavHost(viewModel:AppViewModel) {
     fun pickFolder(initial:String?=null) {
         folderPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);if(initial!=null) putExtra(DocumentsContract.EXTRA_INITIAL_URI,Uri.parse(initial)) })
     }
+    fun pickDownloadDestination() {
+        downloadFolderPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        })
+    }
+    fun openSavedFolder() {
+        val location=settings.downloadDestinationFolder
+        try {
+            val folder=if(location.startsWith("content://")) Uri.parse(location)
+                else Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADownload%2FJevlo")
+            context.startActivity(Intent(Intent.ACTION_VIEW).apply {setDataAndType(folder,"vnd.android.document/directory");addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)})
+        } catch(_:Exception) { navigateTab(DockTab.FILES) }
+    }
     fun launchExternal(uri:String,mime:String?,share:Boolean) {
         try {
             val content=Uri.parse(uri)
@@ -263,16 +303,21 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
 
     @Composable fun Shell(shellRoute: String) {
-        val root = shellRoute in setOf("home","tools_catalog","downloads","files_overview")
+        val root = shellRoute in setOf("home","tools_catalog","downloads","files_overview","settings")
+        val swipeDistance=with(LocalDensity.current) { 54.dp.toPx() }
         com.jumlo.app.ui.adaptive.HingeSafeViewport {
         Scaffold(snackbarHost={SnackbarHost(snackbar)},contentWindowInsets=WindowInsets(0,0,0,0)) { padding ->
-            BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
-                val rail = root && maxWidth >= 600.dp
+            BoxWithConstraints(Modifier.fillMaxSize().padding(padding).graphicsLayer {
+                if(shellRoute=="workspace" && !reduceMotion) {
+                    translationX=(if(rtl) -1f else 1f)*backSwipe*swipeDistance
+                    scaleX=1f-.035f*backSwipe
+                    scaleY=1f-.035f*backSwipe
+                }
+            }) {
                 Row(Modifier.fillMaxSize()) {
-                    if(rail) QuietExpandedNavigationRail(tab,settings.language,::navigateTab)
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         if(root) QuietRootTopBar(
-                            title=stringResource(when(shellRoute) { "home"->R.string.app_name;"tools_catalog"->R.string.tools_catalog_title;"downloads"->R.string.nav_downloads;else->R.string.nav_files }),
+                            title=stringResource(when(shellRoute) { "home"->R.string.app_name;"tools_catalog"->R.string.tools_catalog_title;"downloads"->R.string.nav_downloads;"settings"->R.string.settings_title;else->R.string.nav_files }),
                             onSearchClick=if(shellRoute=="home") ({navigateTab(DockTab.TOOLS)}) else null,
                             onSettingsClick={navigateTo("settings")},onAccountClick={showAccountHub=true}
                         ) else QuietWorkspaceTopBar(
@@ -284,12 +329,13 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 "home" -> com.jumlo.app.ui.home.HomeScreen(viewModel,::openTool,{navigateTab(DockTab.TOOLS)},{selectedJob=it;navigateTo("activity")},{launchExternal(it.uri,it.mimeType,false)},{navigateTo("workspace")})
                                 "tools_catalog" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool)
                                 "downloads" -> com.jumlo.app.ui.downloads.DownloadsScreen(viewModel,::openTool,{selectedJob=it;navigateTo("activity")})
-                                "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,::importFiles,{pickFolder()},{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.importOutput(it);navigateTo("workspace")},{viewModel.addSource(it);navigateTo("workspace")},{pickFolder(it.uri)},{launchExternal(it.uri,it.mimeType,false)},{viewModel.intake(Intake(listOf(it.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null));navigateTo("workspace")},{viewModel.copyOrMoveFile(it,false,CollisionPolicy.KEEP_BOTH)},{renameEntry=it;renameText=it.name},{deleteEntry=it},{newFolder=true;folderName=""})
+                                "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,::importFiles,{pickFolder()},::openSavedFolder,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.chooseTool("pdf_02");viewModel.importOutput(it);navigateTo("workspace")},{viewModel.chooseTool("pdf_02");viewModel.addSource(it);navigateTo("workspace")},{pickFolder(it.uri)},{launchExternal(it.uri,it.mimeType,false)},{viewModel.chooseTool("pdf_02");viewModel.intake(Intake(listOf(it.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null));navigateTo("workspace")},{viewModel.copyOrMoveFile(it,false,CollisionPolicy.KEEP_BOTH)},{renameEntry=it;renameText=it.name},{deleteEntry=it},{newFolder=true;folderName=""})
                                 "settings" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
                                     onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
-                                    onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
-                                    onOpenFiles={navigateTab(DockTab.FILES)},onChooseFolder={pickFolder()})
-                                "scan" -> com.jumlo.app.ui.scan.ScanScreen(onCaptured={file->viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg");viewModel.chooseTool("pdf_02");navigateTo("workspace")},onBack=::goBack)
+                                    onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jevlo-errors.txt")})},
+                                    onOpenFiles={navigateTab(DockTab.FILES)},onChooseFolder={pickFolder()},
+                                    onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()})
+                                "scan" -> com.jumlo.app.ui.scan.ScanScreen(onCaptured={file->viewModel.chooseTool("pdf_02");viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg");navigateTo("workspace")},onBack=::goBack)
                                 "workspace" -> {
                                     val imported by viewModel.imported.collectAsStateWithLifecycle()
                                     val busy by viewModel.busy.collectAsStateWithLifecycle()
@@ -299,13 +345,13 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                         subtitle=stringResource(R.string.ui_unavailable_body),
                                         actionLabel=stringResource(R.string.ui_choose_tool),
                                         onAction={goBack()},modifier=Modifier.padding(20.dp)
-                                    ) else if(form.toolId=="dl_media") com.jumlo.app.ui.downloads.MediaWorkspace(urls,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")})
+                                    ) else if(form.toolId=="dl_media") com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")})
                                     else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                                 }
-                                "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.importOutput(it);navigateTo("workspace")},{viewModel.allowNewRun();navigateTo("workspace")})
+                                "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.chooseTool("pdf_02");viewModel.importOutput(it);navigateTo("workspace")},{viewModel.allowNewRun();navigateTo("workspace")})
                             }
                         }
-                        if(root && !rail) QuietFloatingDock(tab,settings.language,::navigateTab)
+                        if(root) QuietFloatingDock(tab,settings.language,::navigateTab)
                     }
                 }
             }
@@ -318,10 +364,30 @@ fun JumloNavHost(viewModel:AppViewModel) {
             navController = navController,
             startDestination = HomeRoute,
             modifier = Modifier.fillMaxSize(),
-            enterTransition = { if (reduceMotion) EnterTransition.None else fadeIn(spring(dampingRatio = 0.9f, stiffness = 380f)) },
-            exitTransition = { if (reduceMotion) ExitTransition.None else fadeOut(spring(dampingRatio = 0.9f, stiffness = 380f)) },
-            popEnterTransition = { if (reduceMotion) EnterTransition.None else fadeIn(spring(dampingRatio = 0.9f, stiffness = 380f)) },
-            popExitTransition = { if (reduceMotion) ExitTransition.None else fadeOut(spring(dampingRatio = 0.9f, stiffness = 380f)) }
+            enterTransition = {
+                fadeIn(spring(dampingRatio=1f,stiffness=420f)) +
+                    (if(reduceMotion) EnterTransition.None else slideInHorizontally(spring(dampingRatio=.88f,stiffness=440f)) {
+                        (if(rtl) -1 else 1) * it / 7
+                    })
+            },
+            exitTransition = {
+                fadeOut(spring(dampingRatio=1f,stiffness=440f)) +
+                    (if(reduceMotion) ExitTransition.None else slideOutHorizontally(spring(dampingRatio=.88f,stiffness=440f)) {
+                        (if(rtl) 1 else -1) * it / 10
+                    })
+            },
+            popEnterTransition = {
+                fadeIn(spring(dampingRatio=1f,stiffness=420f)) +
+                    (if(reduceMotion) EnterTransition.None else slideInHorizontally(spring(dampingRatio=.88f,stiffness=440f)) {
+                        (if(rtl) 1 else -1) * it / 7
+                    })
+            },
+            popExitTransition = {
+                fadeOut(spring(dampingRatio=1f,stiffness=440f)) +
+                    (if(reduceMotion) ExitTransition.None else slideOutHorizontally(spring(dampingRatio=.88f,stiffness=440f)) {
+                        (if(rtl) -1 else 1) * it / 10
+                    })
+            }
         ) {
             composable<HomeRoute> { Shell("home") }
             composable<ToolsRoute> { Shell("tools_catalog") }

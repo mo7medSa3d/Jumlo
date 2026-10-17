@@ -12,14 +12,14 @@
     <string name="account_language_ar">العربية</string>
     <string name="account_done">Done</string>
     <string name="account_cancel">Cancel</string>
-    <string name="account_privacy_body">PDF and image tools process documents on this device. Direct downloads contact only the addresses you choose. Jumlo does not automatically upload your documents.\n\nOriginals outside Jumlo change only through actions you confirm in granted folders. Items in managed trash remain until you confirm permanent deletion. Local diagnostics contain timestamps and error codes, without document contents, passwords or links.</string>
-    <string name="account_about_body">Jumlo · Version %1$s\n\nChoose a tool, add your files, review the preview and settings, then create your result. Open, share or export the result from Files.\n\nDraft parameters and file selections recover locally. Download links, passwords and account tokens are not written into saved drafts; enter them again after restarting the app. PDF and image tools work without a Jumlo account.</string>
+    <string name="account_privacy_body">PDF and image tools process documents on this device. Direct downloads contact only the addresses you choose. Jevlo does not automatically upload your documents.\n\nOriginals outside Jevlo change only through actions you confirm in granted folders. Items in managed trash remain until you confirm permanent deletion. Local diagnostics contain timestamps and error codes, without document contents, passwords or links.</string>
+    <string name="account_about_body">Jevlo · Version %1$s\n\nChoose a tool, add your files, review the preview and settings, then create your result. Open, share or export the result from Files.\n\nDraft parameters and file selections recover locally. Download links, passwords and account tokens are not written into saved drafts; enter them again after restarting the app. PDF and image tools work without a Jevlo account.</string>
     <string name="storage_imports">Imported copies</string>
     <string name="storage_results">Saved results</string>
     <string name="storage_transfers">Resumable downloads</string>
     <string name="storage_temporary">Temporary files</string>
     <string name="storage_trash">Managed trash</string>
-    <string name="storage_scope">Measured file sizes managed by Jumlo. Android may report a larger app total that also includes the app and its database.</string>
+    <string name="storage_scope">Measured file sizes managed by Jevlo. Android may report a larger app total that also includes the app and its database.</string>
     <string name="pref_appearance">Appearance</string>
     <string name="pref_theme">Theme</string>
     <string name="pref_theme_system">Use device setting</string>

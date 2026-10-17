@@ -1,6 +1,19 @@
 package com.jumlo.app.ui.downloads
 
+import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.util.rememberAppHaptics
+
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Brush
+import com.jumlo.app.ui.theme.StaggeredReveal
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -16,26 +29,64 @@ import com.jumlo.app.model.*
 import com.jumlo.app.data.jobs.CapabilityRegistry
 
 @Composable fun DownloadsScreen(vm:AppViewModel,onTool:(UtilityTool)->Unit,onJob:(String)->Unit) {
+    val haptics=rememberAppHaptics()
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     var selecting by remember {mutableStateOf(false)}
     var selected by remember {mutableStateOf(setOf<String>())}
     LaunchedEffect(jobs) {selected=selected.intersect(jobs.filter {it.isActive()}.map {it.request.id}.toSet());if(jobs.none {it.isActive() && it.request.toolId.startsWith("dl_")}) selecting=false}
     val downloads=remember(jobs) {jobs.filter {it.request.toolId.startsWith("dl_")}}
-    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-        if(!selecting) item {CapabilityRegistry.tools.find {it.id=="dl_02" && CapabilityRegistry.enabled(it.id)}?.let {tool->QuietPrimaryButton(stringResource(R.string.ui_new_download),{onTool(tool)},Modifier.fillMaxWidth())}}
-        if(!selecting) item {CapabilityRegistry.tools.find {it.id=="dl_03" && CapabilityRegistry.enabled(it.id)}?.let {tool->TextButton(onClick={onTool(tool)}) {Text(stringResource(R.string.ui_batch_download))}}}
-        item {QuietSectionTitle(stringResource(R.string.transfer_activity_title))}
-        if(downloads.any {it.isActive()}) item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick={selecting=!selecting;selected=emptySet()}) {Text(stringResource(if(selecting) R.string.action_cancel else R.string.ui_select_transfers))}
-            if(selecting) TextButton(onClick={downloads.filter {it.request.id in selected && it.isActive()}.forEach {vm.cancel(it.request.id)};selecting=false;selected=emptySet()},enabled=selected.isNotEmpty()) {Text(stringResource(R.string.ui_cancel_selected,selected.size))}
-        }}
-        if(downloads.isEmpty()) item {Text(stringResource(R.string.downloads_empty_title),color=MaterialTheme.colorScheme.onSurfaceVariant)}
-        items(downloads,key={it.request.id},contentType={"transfer"}) {job->TransferRow(job,settings.language,{onJob(job.request.id)},{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)},selection=if(selecting && job.isActive()) job.request.id in selected else null,onSelect={selected=if(job.request.id in selected) selected-job.request.id else selected+job.request.id})}
+    val active=downloads.count {it.isActive()}
+    val completed=downloads.count {it.progress.stage==JobStage.COMPLETED}
+    val mediaTool=CapabilityRegistry.tools.find {it.id=="dl_media" && CapabilityRegistry.enabled(it.id)}
+    val batchTool=CapabilityRegistry.tools.find {it.id=="dl_03" && CapabilityRegistry.enabled(it.id)}
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        item("download-hero") {
+            Surface(modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(30.dp),
+                color=MaterialTheme.colorScheme.primaryContainer) {
+                Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                    Icon(Icons.Rounded.Download,null,Modifier.size(32.dp),tint=MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.redesign_download_hero),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold,
+                        color=MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(stringResource(R.string.brand_downloads_tagline),style=MaterialTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onPrimaryContainer)
+                    if(!selecting && mediaTool!=null) QuietPrimaryButton(stringResource(R.string.ui_new_download),{onTool(mediaTool)},Modifier.fillMaxWidth())
+                }
+            }
+        }
+        item("download-stats") {
+            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                listOf(Triple(active,R.string.brand_download_active,Icons.Rounded.Bolt),
+                    Triple(completed,R.string.brand_download_done,Icons.Rounded.CheckCircle)).forEach {(number,label,icon)->
+                    Surface(Modifier.weight(1f),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
+                        Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Icon(icon,null,tint=MaterialTheme.colorScheme.primary)
+                            Column {Text(number.toString(),style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
+                                Text(stringResource(label),style=MaterialTheme.typography.labelSmall)}
+                        }
+                    }
+                }
+            }
+        }
+        if(!selecting && batchTool!=null) item("batch") {
+            TextButton(onClick={onTool(batchTool)}) {Text(stringResource(R.string.ui_batch_download))}
+        }
+        item("activity-title") { QuietSectionTitle(stringResource(R.string.transfer_activity_title)) }
+        if(downloads.any {it.isActive()}) item("selection") {
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick={haptics.selectionToggle();selecting=!selecting;selected=emptySet()}) {Text(stringResource(if(selecting) R.string.action_cancel else R.string.ui_select_transfers))}
+                if(selecting) TextButton(onClick={haptics.secondaryAction();downloads.filter {it.request.id in selected && it.isActive()}.forEach {vm.cancel(it.request.id)};selecting=false;selected=emptySet()},enabled=selected.isNotEmpty()) {Text(stringResource(R.string.ui_cancel_selected,selected.size))}
+            }
+        }
+        if(downloads.isEmpty()) item("empty") {QuietStateCard(stringResource(R.string.downloads_empty_title),stringResource(R.string.brand_downloads_tagline))}
+        items(downloads,key={it.request.id},contentType={"transfer"}) {job->
+            TransferRow(job,settings.language,{onJob(job.request.id)},{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)},selection=if(selecting && job.isActive()) job.request.id in selected else null,onSelect={haptics.selectionToggle();selected=if(job.request.id in selected) selected-job.request.id else selected+job.request.id})
+        }
     }
 }
 
 @Composable fun ActivityScreen(vm:AppViewModel,selectedJob:String?,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onNewRun:()->Unit) {
+    val haptics=rememberAppHaptics()
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()

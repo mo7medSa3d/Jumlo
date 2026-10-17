@@ -53,6 +53,13 @@ object MediaCatalog {
                 choice(mode, selected, container)
             }
     }
+    /** One-time preference: balanced caps at 1080p; never picks silent video if a voiced choice exists. */
+    fun preferred(choices:List<MediaChoice>,mode:MediaMode,maxHeight:Int=1080):MediaChoice? {
+        if(mode==MediaMode.AUDIO) return choices.firstOrNull()
+        val withAudio=choices.filter { it.expectsAudio }.ifEmpty { choices }
+        return withAudio.firstOrNull { maxHeight==0 || (it.expectedHeight ?: Int.MAX_VALUE)<=maxHeight }
+            ?: withAudio.lastOrNull()
+    }
     private fun choice(mode: MediaMode, formats: List<MediaFormat>, container: String): MediaChoice {
         val sizes = formats.map { it.bytes ?: it.approximateBytes }
         var sum: Long? = if (sizes.any { it == null }) null else 0L
@@ -97,7 +104,7 @@ object MediaArguments {
     fun download(url: String, choice: MediaChoice, audio: AudioOutput = AudioOutput.ORIGINAL, bitrate: Int = 192, allowHttp: Boolean = false): List<String> {
         require(bitrate in setOf(64, 96, 128, 160, 192, 256, 320)) { "INVALID_AUDIO_BITRATE" }
         val args = common().toMutableList()
-        args += listOf("--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--no-continue", "--force-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "1", "--newline", "--progress", "--progress-delta", "0.5", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
+        args += listOf("--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "1", "--newline", "--progress", "--progress-delta", "0.5", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
         if (choice.mode == MediaMode.AUDIO) {
             args += listOf("--extract-audio", "--audio-format", if (audio == AudioOutput.ORIGINAL) "best" else audio.name.lowercase(Locale.ROOT))
             if (audio != AudioOutput.ORIGINAL) args += listOf("--audio-quality", "${bitrate}K")

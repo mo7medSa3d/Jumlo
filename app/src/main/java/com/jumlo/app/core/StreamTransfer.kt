@@ -3,7 +3,7 @@ import java.io.*
 interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
 class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,private val closeAction:()->Unit={}):Closeable { override fun close() { try { body.close() } finally { closeAction() } } }
 data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=2L*1024*1024*1024,val minFreeBytes:Long=32L*1024*1024,val headers:Map<String,String> = emptyMap(),val finalUrlSha256:String?=null,val maxRetries:Int=2,val retryBackoffMs:Long=150L)
-data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val mimeType:String?,val finalUrlSha256:String?=null)
+data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val mimeType:String?,val finalUrlSha256:String?=null,val contentDisposition:String?=null)
 class StreamTransfer(private val transport:HttpTransport) {
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferResult)->Unit={}):TransferResult {
         var attempt=0
@@ -63,7 +63,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                     val total=if(range!=null) range.total else length
                     require(total==null || total<=request.maxBytes) { "DOWNLOAD_BYTE_BUDGET_EXCEEDED" }
                     val expectedBody=range?.let { it.end-it.start+1 } ?: length
-                    val metadata=TransferResult(request.offset,total,ResumePolicy.strong(h["etag"]),h["last-modified"],h["content-type"]?.substringBefore(';'),fingerprint)
+                    val metadata=TransferResult(request.offset,total,ResumePolicy.strong(h["etag"]),h["last-modified"],h["content-type"]?.substringBefore(';'),fingerprint,h["content-disposition"])
                     onMetadata(metadata)
                     request.partialFile.parentFile.mkdirs()
                     var received=0L

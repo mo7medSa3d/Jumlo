@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.*
 import com.jumlo.app.data.local.*
 import com.jumlo.app.data.output.OutputStore
+import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.model.*
 import com.jumlo.app.worker.EngineOperationWorker
@@ -18,7 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton class JobStore @Inject constructor(@ApplicationContext private val app:Context,private val db:AppDatabase,private val sources:SourceStore,private val outputs:OutputStore,private val budget:WorkBudget) {
+@Singleton class JobStore @Inject constructor(@ApplicationContext private val app:Context,private val db:AppDatabase,private val sources:SourceStore,private val outputs:OutputStore,private val budget:WorkBudget,
+    private val preferences:UserPreferencesRepository,private val admission:DownloadAdmission) {
     private val dao get()=db.processingDao()
     private val work get()=WorkManager.getInstance(app)
     val snapshots=dao.jobs().map { rows -> rows.map { Json.decodeFromString<JobSnapshot>(it.snapshotJson) } }
@@ -104,9 +106,15 @@ import javax.inject.Singleton
                 runningContext.ensureActive()
                 if(!leased.get()) throw CancellationException("JOB_LEASE_LOST")
             })
-            save(JobProgress(JobStage.RUNNING,0,null))
-            val outcomes=dispatcher.execute(snapshot.request,ctx)
-            ctx.checkCancellation()
+            val outcomes=if(snapshot.request.toolId.startsWith("dl_")) {
+                admission.withSlot(preferences.settingsFlow.first().maxConcurrentDownloads) {
+                    save(JobProgress(JobStage.RUNNING,0,null))
+                    dispatcher.execute(snapshot.request,ctx).also {ctx.checkCancellation()}
+                }
+            } else {
+                save(JobProgress(JobStage.RUNNING,0,null))
+                dispatcher.execute(snapshot.request,ctx).also {ctx.checkCancellation()}
+            }
             val failures=outcomes.count { it.status==ItemStatus.FAILED }
             val successes=outcomes.count { it.outputId!=null }
             val state=when { outcomes.isEmpty() -> JobStage.FAILED; failures==0 -> JobStage.COMPLETED; successes>0 -> JobStage.PARTIAL; else -> JobStage.FAILED }

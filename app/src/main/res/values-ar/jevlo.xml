@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="brand_splash_tagline">ملفاتك بانسيابية.</string>
+    <string name="brand_downloads_tagline">كل شيء يتحرك بسلاسة.</string>
+    <string name="brand_download_active">نشطة</string>
+    <string name="brand_download_done">مكتملة</string>
+    <string name="brand_settings_shortcuts">تحكم سريع</string>
+    <string name="brand_settings_storage">المساحة</string>
+    <string name="brand_settings_sound">الأصوات</string>
+    <string name="brand_haptics_level">قوة الاهتزاز</string>
+    <string name="brand_haptics_off">إيقاف</string>
+    <string name="brand_haptics_light">خفيف</string>
+    <string name="brand_haptics_medium">متوسط</string>
+    <string name="brand_haptics_strong">قوي</string>
+    <string name="brand_completed">اكتمل التنزيل</string>
+    <string name="brand_rename_notice">تظل ملفاتك القديمة متاحة في الملفات.</string>
+</resources>

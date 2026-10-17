@@ -10,8 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import com.jumlo.app.model.AppLanguage
@@ -85,6 +89,8 @@ private val QuietDarkColorScheme = darkColorScheme(
 fun JumloTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     language: AppLanguage = AppLanguage.ENGLISH,
+    accentColor: String = "VIOLET",
+    fontScale: String = "NORMAL",
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -93,11 +99,31 @@ fun JumloTheme(
         ThemeMode.DARK -> true
     }
 
-    val colorScheme: ColorScheme = if (darkTheme) QuietDarkColorScheme else QuietLightColorScheme
+    val baseColors: ColorScheme = if (darkTheme) QuietDarkColorScheme else QuietLightColorScheme
+    // Deliberate curated accent pairs preserve contrast for light and dark surfaces.
+    val selectedAccent = when(accentColor) {
+        "BLUE" -> if(darkTheme) Color(0xFF92B7FF) else Color(0xFF174AA5)
+        "TEAL" -> if(darkTheme) Color(0xFF72DACA) else Color(0xFF00695C)
+        "CORAL" -> if(darkTheme) Color(0xFFFFAD9A) else Color(0xFF9E3724)
+        else -> if(darkTheme) DarkPrimary else LightPrimary
+    }
+    val selectedContainer=when(accentColor) {
+        "BLUE" -> if(darkTheme) Color(0xFF203B67) else Color(0xFFD8E5FF)
+        "TEAL" -> if(darkTheme) Color(0xFF194E47) else Color(0xFFD3F3EA)
+        "CORAL" -> if(darkTheme) Color(0xFF663A33) else Color(0xFFFFE2DA)
+        else -> if(darkTheme) DarkPrimaryContainer else LightPrimaryContainer
+    }
+    val colorScheme = baseColors.copy(primary=selectedAccent,
+        onPrimary=if(darkTheme) Color(0xFF111318) else Color.White,
+        primaryContainer=selectedContainer,
+        onPrimaryContainer=if(darkTheme) Color(0xFFF8F8FD) else Color(0xFF182027))
     val pillarColors: PillarColors = if (darkTheme) DarkPillarColors else LightPillarColors
     val layoutDirection = if (language == AppLanguage.ARABIC) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     val fontFamily = if(language.isRtl) IbmPlexSansArabicFont else IbmPlexSansFont
+    val originalDensity=LocalDensity.current
+    val multiplier=when(fontScale) {"SMALL"->0.91f;"LARGE"->1.15f;else->1f}
+    val adaptedDensity=Density(originalDensity.density,originalDensity.fontScale*multiplier)
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -115,7 +141,8 @@ fun JumloTheme(
         LocalQuietTypography provides DefaultQuietTypography.withFont(fontFamily),
         LocalQuietShapes provides QuietPrecisionShapes(),
         LocalQuietSpacing provides QuietPrecisionSpacing(),
-        LocalLayoutDirection provides layoutDirection
+        LocalLayoutDirection provides layoutDirection,
+        LocalDensity provides adaptedDensity
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -147,3 +174,6 @@ object QuietTheme {
         @ReadOnlyComposable
         get() = LocalQuietSpacing.current
 }
+
+/** All motion-related components use this local rather than assuming motion is enabled. */
+val LocalReducedMotion = staticCompositionLocalOf { false }

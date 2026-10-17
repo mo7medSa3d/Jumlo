@@ -20,11 +20,16 @@ enum class AppLanguage(val code: String, val displayName: String, val nativeSubt
     ARABIC("ar", "العربية (Arabic)", "العربية - واجهة كاملة من اليمين لليسان", true)
 }
 
+enum class DownloadQuality { BALANCED, BEST, DATA_SAVER }
+enum class FileViewMode { LIST, GRID, GALLERY }
+enum class HapticIntensity { OFF, LIGHT, MEDIUM, STRONG }
+
 enum class DockTab(val route: String, val labelEn: String, val labelAr: String) {
     HOME("home", "Home", "الرئيسية"),
     TOOLS("tools_catalog", "Tools", "الأدوات"),
     DOWNLOADS("downloads", "Downloads", "التنزيلات"),
-    FILES("files_overview", "Files", "الملفات")
+    FILES("files_overview", "Files", "الملفات"),
+    SETTINGS("settings", "Settings", "الإعدادات")
 }
 
 enum class CollisionPolicy(val labelEn: String, val labelAr: String) {
@@ -270,16 +275,25 @@ data class AppSettingsState(
     val language: AppLanguage = AppLanguage.ENGLISH,
     val respectReducedMotion: Boolean = false,
     val hapticFeedbackOnCommit: Boolean = true,
+    val hapticIntensity: HapticIntensity = HapticIntensity.LIGHT,
+    val soundsEnabled: Boolean = true,
     val reorderHandleHaptics: Boolean = true,
     val defaultDestinationFolder: String = "My files / Results",
-    val downloadDestinationFolder: String = "My files / Downloads",
+    val downloadDestinationFolder: String = "Download/Jevlo",
     val maxConcurrentDownloads: Int = 2,
-    val wifiOnlyDefault: Boolean = true,
+    val downloadQuality: DownloadQuality = DownloadQuality.BALANCED,
+    val audioOnlyDefault: Boolean = false,
+    val fileViewMode: FileViewMode = FileViewMode.GRID,
+    val accentColor: String = "VIOLET",
+    val fontScale: String = "NORMAL",
+    val wifiOnlyDefault: Boolean = false,
     val stripExifByDefault: Boolean = true,
     val notificationsGranted: Boolean = false,
     val vaultAutoLockSeconds: Int = 120,
     val mediaTermsAccepted: Boolean = false,
-    val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_02"),
+    val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_media"),
+    val recentToolIds: List<String> = emptyList(),
+    val mostUsedToolIds: List<String> = emptyList(),
     /** The initial ViewModel placeholder is never presented as a saved preference. */
     val isLoaded: Boolean = false
 )

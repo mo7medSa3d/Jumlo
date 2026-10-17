@@ -9,7 +9,7 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-val extendedMedia = providers.gradleProperty("extendedMedia").map(String::toBoolean).orElse(false).get()
+val extendedMedia = providers.gradleProperty("extendedMedia").map(String::toBoolean).orElse(true).get()
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
@@ -30,8 +30,7 @@ android {
         // (or set them in gradle.properties); defaults keep local builds working.
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
         versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
-        // The public and benchmark artifacts never claim or package media support.
-        buildConfigField("boolean", "EXTENDED_MEDIA", "false")
+        buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -82,11 +81,10 @@ android {
         }
     }
 
-    // Optional media is strictly debug-only. A -PextendedMedia=true RELEASE build
-    // still compiles the safe stub and cannot accidentally ship yt-dlp / FFmpeg.
+    // Media is included by default in all variants; -PextendedMedia=false builds the lite stub.
     sourceSets["debug"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
-    sourceSets["release"].java.srcDir("src/base/java")
-    sourceSets["benchmark"].java.srcDir("src/base/java")
+    sourceSets["release"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    sourceSets["benchmark"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     compileOptions {
@@ -134,8 +132,8 @@ val pdfboxAar = configurations.create("pdfboxAar") {
 
 dependencies {
     if (extendedMedia) {
-        debugImplementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
-        debugImplementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+        implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+        implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

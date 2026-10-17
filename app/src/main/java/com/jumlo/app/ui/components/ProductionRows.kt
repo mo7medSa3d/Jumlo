@@ -1,6 +1,14 @@
 package com.jumlo.app.ui.components
 
+import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.util.rememberAppHaptics
+
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
+import androidx.compose.ui.graphics.graphicsLayer
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -32,7 +40,11 @@ fun formatBytes(value:Long?):String {
 
 @Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,menu:@Composable ColumnScope.(()->Unit)->Unit) {
     var expanded by remember {mutableStateOf(false)}
-    Surface(modifier=if(selection!=null || onOpen!=null) Modifier.clickable {if(selection!=null) onSelect?.invoke() else onOpen?.invoke()} else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+    val haptics=rememberAppHaptics()
+    Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().clickable {
+        haptics.actionClick()
+        if(selection!=null) onSelect?.invoke() else onOpen?.invoke()
+    } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().padding(start=12.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             if(selection!=null) Checkbox(selection,{onSelect?.invoke()}) else Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
@@ -40,7 +52,7 @@ fun formatBytes(value:Long?):String {
                 TechnicalText(metadata)
             }
             if(showOverflow) Box {
-                IconButton(onClick={expanded=true}) {Icon(Icons.Rounded.MoreVert,stringResource(R.string.ui_more_actions))}
+                IconButton(onClick={haptics.actionClick();expanded=true},modifier=Modifier.pressFeedback()) {Icon(Icons.Rounded.MoreVert,stringResource(R.string.ui_more_actions))}
                 DropdownMenu(expanded,{expanded=false}) {menu {expanded=false}}
             }
         }
@@ -77,7 +89,26 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
         if(job.isActive()) {
             val total=job.progress.totalUnits
             if(total==null || total<=0) LinearProgressIndicator(Modifier.fillMaxWidth())
-            else LinearProgressIndicator(progress={(job.progress.completedUnits.toDouble()/total).toFloat().coerceIn(0f,1f)},modifier=Modifier.fillMaxWidth())
+            else {
+                val fraction=(job.progress.completedUnits.toDouble()/total).toFloat().coerceIn(0f,1f)
+                val progress by animateFloatAsState(fraction,
+                    animationSpec=if(LocalReducedMotion.current) snap() else spring(dampingRatio=.9f,stiffness=260f),label="job-progress")
+                LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth())
+            }
+        }
+        if(job.progress.stage==JobStage.COMPLETED && job.request.toolId.startsWith("dl_")) {
+            var ready by remember(job.request.id) { mutableStateOf(false) }
+            LaunchedEffect(job.request.id) { ready=true }
+            val confirmScale by animateFloatAsState(if(ready) 1f else .80f,
+                animationSpec=if(LocalReducedMotion.current) snap() else spring(dampingRatio=.62f,stiffness=360f),
+                label="download-success-pulse")
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Rounded.CheckCircle,contentDescription=null,
+                    tint=MaterialTheme.colorScheme.tertiary,
+                    modifier=Modifier.size(20.dp).graphicsLayer { scaleX=confirmScale;scaleY=confirmScale })
+                Text(stringResource(R.string.brand_completed),style=MaterialTheme.typography.labelMedium,
+                    color=MaterialTheme.colorScheme.tertiary)
+            }
         }
         if(job.outcomes.isNotEmpty()) Text(stringResource(R.string.job_outcomes_summary,job.outcomes.count {it.outputId!=null},job.outcomes.count {it.status==ItemStatus.FAILED}),style=MaterialTheme.typography.bodySmall)
     }
@@ -85,7 +116,8 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
 
 @Composable fun ToolRow(tool:UtilityTool,language:AppLanguage,onOpen:()->Unit) {
     val icon=when(tool.pillar) {PillarCategory.PDF->Icons.Rounded.PictureAsPdf;PillarCategory.IMAGES->Icons.Rounded.Image;PillarCategory.DOWNLOADS->Icons.Rounded.Download;else->Icons.Rounded.Folder}
-    Surface(onClick=onOpen,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
+    val haptics=rememberAppHaptics()
+    Surface(onClick={haptics.toolSelect();onOpen()},modifier=Modifier.pressFeedback(),shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().heightIn(min=64.dp).padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
             Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
             Text(if(language.isRtl) tool.titleAr else tool.titleEn,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall)

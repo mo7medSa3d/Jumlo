@@ -203,10 +203,53 @@ fun main() {
     test("page range overflow is rejected rather than coerced to a single page") {
         rejects<IllegalArgumentException> { PageSelection.parse("1-99999999999999999999",10) }
     }
-    test("media downloader requires qualification") { check(!Capabilities.isEnabled("dl_media")) }
+    test("unified media capability is registered for the standard build") {
+        check(Capabilities.isEnabled("dl_media"))
+        check(CapabilityPolicy.canProcess("dl_media"))
+    }
     test("release security-sensitive candidates remain unavailable") {
-        for (id in listOf("pdf_protect", "pdf_redact", "file_encrypted_zip", "file_drive", "dl_media", "pdf_ocr", "webpage_pdf"))
+        for (id in listOf("pdf_protect", "pdf_redact", "file_encrypted_zip", "file_drive", "pdf_ocr", "webpage_pdf"))
             check(!Capabilities.isEnabled(id)) { "$id must be gated" }
+    }
+    test("direct link parser distinguishes media landing pages from real files") {
+        check(!DownloadLinkPolicy.isDirect("https://www.youtube.com/watch?v=abc123"))
+        check(!DownloadLinkPolicy.isDirect("https://m.instagram.com/reel/abc"))
+        check(!DownloadLinkPolicy.isDirect("https://drive.google.com/file/d/abc/view"))
+        check(DownloadLinkPolicy.isDirect("https://youtube.com.evil.example/video.mp4"))
+        check(DownloadLinkPolicy.isDirect("https://files.example.com/archive.ZIP?token=123"))
+        check(DownloadLinkPolicy.isDirect("https://files.example.com/file.pdf"))
+    }
+    test("download automatic naming takes safe title and exact MIME extension") {
+        check(DownloadLinkPolicy.cleanName("https://example.com/generate?x=1", "attachment; filename=record", "application/pdf")=="record.pdf")
+        check(DownloadLinkPolicy.cleanName("https://example.com/anything", "attachment; filename*=UTF-8''hello%20world.mp4", "video/mp4")=="hello world.mp4")
+        check(DownloadLinkPolicy.cleanName("https://example.com/video.mp3", null, "video/mp4")=="video.mp4")
+        check(!DownloadLinkPolicy.cleanName("https://example.com/file.pdf", "attachment; filename=../evil.zip", "application/zip").contains('/'))
+    }
+    test("HTML payloads are never published as file results") {
+        check(DownloadLinkPolicy.unexpectedHtml("text/html", byteArrayOf(1,2,3)))
+        check(DownloadLinkPolicy.unexpectedHtml("application/octet-stream", " <!doctype html><html>".toByteArray()))
+        check(!DownloadLinkPolicy.unexpectedHtml("video/mp4", byteArrayOf(0,0,0,16,102,116,121,112)))
+    }
+    test("recent tools are real sessions and duplicate entries never leak") {
+        val recent=ToolUsagePolicy.recent(listOf("pdf_01","img_02"),"img_02")
+        check(recent==listOf("img_02","pdf_01"))
+        check(ToolUsagePolicy.recent(recent,"../invalid")==recent)
+        val counts=ToolUsagePolicy.count(ToolUsagePolicy.count(emptyMap(),"img_02"),"img_02")
+        check(counts["img_02"]==2)
+        check(ToolUsagePolicy.top(mapOf("pdf_02" to 4,"img_02" to 2),setOf("img_02"))==listOf("img_02"))
+    }
+    test("output names derive safely from source content without asking the user") {
+        check(AutoOutputName.fromSource("pdf_03","Annual report.pdf")=="Annual report - Merged.pdf")
+        check(AutoOutputName.fromSource("file_07","backup.zip")=="backup - Archive.zip")
+        check(AutoOutputName.fromSource("pdf_02","../../unsafe.jpg")?.contains('/')==false)
+        check(AutoOutputName.fromSource("img_03","image.png")==null)
+    }
+    test("downloads folder categories and duplicate names are deterministic") {
+        check(StoragePaths.relativePath("audio/mpeg")=="Download/Jevlo/Audio/")
+        check(StoragePaths.relativePath("application/pdf")=="Download/Jevlo/PDF/")
+        check(StoragePaths.category("image/webp")=="Images")
+        check(StoragePaths.uniqueName("work.pdf",setOf("work.pdf","work (2).pdf"))=="work (3).pdf")
+        rejects<IllegalArgumentException> { StoragePaths.uniqueName("../../escape.pdf",emptySet()) }
     }
     test("navigation-only download settings is a supported capability") { check(Capabilities.isEnabled("dl_settings")) }
     test("publication normalizes names once before journal recovery") { tmp { root ->

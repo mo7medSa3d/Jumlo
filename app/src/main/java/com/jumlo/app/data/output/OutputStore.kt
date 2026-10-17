@@ -25,7 +25,7 @@ import java.util.zip.ZipFile
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton class OutputStore @Inject constructor(@ApplicationContext private val context:Context,private val db:AppDatabase) {
+@Singleton class OutputStore @Inject constructor(@ApplicationContext private val context:Context,private val db:AppDatabase,private val publicOutputs:PublicOutputStore) {
     private val rootDir get()=File(context.filesDir,"processing")
     private val resultsDir get()=File(rootDir,"results").apply { mkdirs() }
     private val journalDir get()=File(rootDir,"journal").apply { mkdirs() }
@@ -56,7 +56,9 @@ import javax.inject.Singleton
         persist(file,metadata)
     } }
     private suspend fun persist(file:PublishedFile,metadata:OutputMetadata):OutputRecord {
-        val record=OutputRecord(file.id,file.jobId,file.itemKey,FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file.file).toString(),file.displayName,file.mimeType,file.sizeBytes,file.sha256,metadata,file.createdAtEpochMs)
+        val visibleUri=try { publicOutputs.publish(file.file,file.displayName,file.mimeType,file.sha256) }
+            catch(_:Exception) { null } // A failed external mirror must never destroy a verified private output.
+        val record=OutputRecord(file.id,file.jobId,file.itemKey,FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file.file).toString(),file.displayName,file.mimeType,file.sizeBytes,file.sha256,metadata,file.createdAtEpochMs,visibleUri)
         db.processingDao().insertOutput(OutputEntity(record.id,record.jobId,record.itemKey,Json.encodeToString(record)))
         val found=find(record.jobId,record.itemKey) ?: error("OUTPUT_DATABASE_FAILED")
         check(found.sha256==record.sha256) { "OUTPUT_DIGEST_CONFLICT" }
@@ -101,15 +103,19 @@ import javax.inject.Singleton
         val record=Json.decodeFromString<OutputRecord>(row.recordJson)
         require(record.id==outputId) { "INVALID_TRASH_RECORD" }
         trashStorage.move(trashEntry(record))
+        runCatching { publicOutputs.deleteIfOwned(record.publicUri) }
         db.processingDao().deleteOutput(outputId)
         refreshTrashUnlocked();record
     } }
     suspend fun restoreFromTrash(outputId:String):OutputRecord?=withContext(Dispatchers.IO) { mutations.withLock {
         migrateLegacyTrash()
         val record=trashStorage.restore(outputId)?.let(::trashRecord) ?: return@withLock null
-        db.processingDao().insertOutput(OutputEntity(record.id,record.jobId,record.itemKey,Json.encodeToString(record)))
+        val restored=record.copy(publicUri=runCatching {
+            publicOutputs.publish(File(File(resultsDir,record.id),SafeNames.basename(record.displayName)),record.displayName,record.mimeType,record.sha256)
+        }.getOrNull())
+        db.processingDao().insertOutput(OutputEntity(restored.id,restored.jobId,restored.itemKey,Json.encodeToString(restored)))
         trashStorage.acknowledgeRestore(outputId)
-        refreshTrashUnlocked();record
+        refreshTrashUnlocked();restored
     } }
     /** Only the exact IDs shown in a confirmation may be purged; new trash is never included. */
     suspend fun purgeTrashIds(outputIds:Set<String>):Int=withContext(Dispatchers.IO) { mutations.withLock {

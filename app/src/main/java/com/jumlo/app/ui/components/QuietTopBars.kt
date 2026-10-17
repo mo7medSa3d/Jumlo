@@ -1,5 +1,7 @@
 package com.jumlo.app.ui.components
 
+import com.jumlo.app.ui.theme.pressFeedback
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -100,7 +102,7 @@ fun QuietRootTopBar(
                     enabled = accountAction != null,
                     shape = CircleShape,
                     color = Color.Transparent,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.pressFeedback().size(48.dp)
                 ) {
                     Box(
                         modifier = Modifier

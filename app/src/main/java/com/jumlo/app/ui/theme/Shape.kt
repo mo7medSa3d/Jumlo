@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Jumlo 2026 shape language: generous "expressive" radii, pill controls, and
+ * Jevlo 2026 shape language: generous "expressive" radii, pill controls, and
  * large soft containers. Field names are stable across the app.
  *
  * - Thumbnails and tags: 12dp

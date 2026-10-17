@@ -20,7 +20,7 @@ object CapabilityPolicy {
     private val navigation = setOf("pdf_01", "file_02", "dl_settings", "file_trash")
     private val hostCoreTested = setOf("file_07", "file_08", "sha256", "dl_02", "dl_03")
     private val processing = hostCoreTested + setOf(
-        "file_duplicates", "file_batch_rename",
+        "file_duplicates", "file_batch_rename", "dl_media",
         "pdf_02", "pdf_07", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
         "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_metadata", "pdf_forms", "pdf_compare",
         "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch"
@@ -32,7 +32,6 @@ object CapabilityPolicy {
         "pdf_redact" to "PDF_REDACTION_QUALIFICATION_PENDING",
         "file_encrypted_zip" to "ENCRYPTED_ZIP_QUALIFICATION_PENDING",
         "file_drive" to "DRIVE_PRIVACY_QUALIFICATION_PENDING",
-        "dl_media" to "EXTENDED_MEDIA_QUALIFICATION_PENDING",
         "xf_05" to "VAULT_BACKEND_UNQUALIFIED"
     )
     fun availability(id: String): CapabilityAvailability = when {

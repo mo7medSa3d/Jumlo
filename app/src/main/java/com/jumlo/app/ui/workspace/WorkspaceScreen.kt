@@ -108,8 +108,6 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     val driveImport=tool=="file_drive" && !form.flag1
     val viewer=tool=="pdf_01"
     val imageConversion=tool.startsWith("img_") && tool !in setOf("img_compare","img_target")
-    val namesOutput=tool in setOf("pdf_02","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress",
-        "pdf_stamp","pdf_annotate","pdf_signature","pdf_metadata","pdf_forms","file_07","dl_02","dl_03")
     val hasAdvanced=tool !in setOf("file_08","file_duplicates","file_batch_rename","pdf_compare","img_compare","img_target","sha256")
     var previewId by rememberSaveable {mutableStateOf<String?>(null)}
     var advanced by rememberSaveable {mutableStateOf(false)}
@@ -201,7 +199,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                                     }
                                 }
                             } else if(form.format!="PNG" || (tool=="img_exif" && !form.flag1)) Field(stringResource(R.string.field_quality),form.quality,{v->vm.updateForm {it.copy(quality=v)}},true)
-                        } else if(namesOutput) Field(stringResource(R.string.field_output_filename),form.outputName,{v->vm.updateForm {it.copy(outputName=v)}})
+                        }
                         when(tool) {
                             "img_target" -> TargetImageSettings(form,vm::updateForm)
                             "img_watermark","pdf_stamp","pdf_annotate" -> ContentToolSettings(form,vm::updateForm)
@@ -365,8 +363,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     Toggle(stringResource(R.string.field_flip_horizontal),f.flipX) {v->edit {it.copy(flipX=v)}};Toggle(stringResource(R.string.field_flip_vertical),f.flipY) {v->edit {it.copy(flipY=v)}}
                 }
                 "pdf_02" -> {
-                    Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}})
-                    Field(stringResource(R.string.field_paper_width),f.paperWidth,{v->edit {it.copy(paperWidth=v)}},true)
+                                        Field(stringResource(R.string.field_paper_width),f.paperWidth,{v->edit {it.copy(paperWidth=v)}},true)
                     Field(stringResource(R.string.field_paper_height),f.paperHeight,{v->edit {it.copy(paperHeight=v)}},true)
                     Field(stringResource(R.string.field_margin_mm),f.margin,{v->edit {it.copy(margin=v)}},true)
                     Options(stringResource(R.string.field_orientation),listOf("AUTO","PORTRAIT","LANDSCAPE"),f.orientation) {v->edit {it.copy(orientation=v)}}
@@ -380,23 +377,23 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     Toggle(stringResource(R.string.field_grayscale),f.grayscale) {v->edit {it.copy(grayscale=v)}}
                     Text(stringResource(R.string.field_raster_note))
                 }
-                "file_07" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}});Field(stringResource(R.string.field_zip_level),f.zipLevel,{v->edit {it.copy(zipLevel=v)}},true);Text(stringResource(R.string.field_zip_create_note)) }
+                "file_07" -> { Field(stringResource(R.string.field_zip_level),f.zipLevel,{v->edit {it.copy(zipLevel=v)}},true);Text(stringResource(R.string.field_zip_create_note)) }
                 "file_08" -> Text(stringResource(R.string.field_zip_extract_note))
                 "sha256" -> Field(stringResource(R.string.field_expected_sha256),f.expectedHash,{v->edit {it.copy(expectedHash=v)}})
-                "pdf_03" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Text(stringResource(R.string.field_merge_note)) }
-                "pdf_05" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) Field(stringResource(R.string.field_pages_per_part),f.num1,{v->edit {it.copy(num1=v)}},true) else Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
-                "pdf_06" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
-                "pdf_04" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_organize_order),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_rotate_pages),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_rotate_degrees),f.num1,{v->edit {it.copy(num1=v)}},true) }
-                "pdf_crop" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }
-                "pdf_compress" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_max_image_dpi),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_quality),f.quality,{v->edit {it.copy(quality=v)}},true); Text(stringResource(R.string.field_compress_note)) }
+                "pdf_03" -> {  Text(stringResource(R.string.field_merge_note)) }
+                "pdf_05" -> {  Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) Field(stringResource(R.string.field_pages_per_part),f.num1,{v->edit {it.copy(num1=v)}},true) else Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
+                "pdf_06" -> {  Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
+                "pdf_04" -> {  Field(stringResource(R.string.field_organize_order),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_rotate_pages),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_rotate_degrees),f.num1,{v->edit {it.copy(num1=v)}},true) }
+                "pdf_crop" -> {  Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }
+                "pdf_compress" -> {  Field(stringResource(R.string.field_max_image_dpi),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_quality),f.quality,{v->edit {it.copy(quality=v)}},true); Text(stringResource(R.string.field_compress_note)) }
                 "pdf_stamp" -> Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}})
                 "pdf_annotate" -> { Field(stringResource(R.string.field_x_norm),f.num2,{v->edit {it.copy(num2=v)}},true); Field(stringResource(R.string.field_y_norm),f.num3,{v->edit {it.copy(num3=v)}},true); Toggle(stringResource(R.string.field_as_note_annotation),f.flag1) {v->edit {it.copy(flag1=v)}} }
-                "pdf_signature" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Text(stringResource(R.string.field_signature_note)); com.jumlo.app.ui.scan.SignaturePad { file -> vm.intakeLocalFile(file,"signature.png","image/png") }; Field(stringResource(R.string.field_page_number),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }
-                "pdf_metadata" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_title),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_author),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_subject),f.text3,{v->edit {it.copy(text3=v)}}); Field(stringResource(R.string.field_keywords),f.text4,{v->edit {it.copy(text4=v)}}); Field(stringResource(R.string.field_insert_at_page),f.num1,{v->edit {it.copy(num1=v)}},true) }
-                "pdf_protect" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}}); if(!f.flag1) Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}}); Text(stringResource(R.string.field_protect_note)) }
-                "pdf_forms" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_forms_json),f.text1,{v->edit {it.copy(text1=v)}}); Toggle(stringResource(R.string.field_flatten_form),f.flag1) {v->edit {it.copy(flag1=v)}} }
+                "pdf_signature" -> {  Text(stringResource(R.string.field_signature_note)); com.jumlo.app.ui.scan.SignaturePad { file -> vm.intakeLocalFile(file,"signature.png","image/png") }; Field(stringResource(R.string.field_page_number),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }
+                "pdf_metadata" -> {  Field(stringResource(R.string.field_title),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_author),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_subject),f.text3,{v->edit {it.copy(text3=v)}}); Field(stringResource(R.string.field_keywords),f.text4,{v->edit {it.copy(text4=v)}}); Field(stringResource(R.string.field_insert_at_page),f.num1,{v->edit {it.copy(num1=v)}},true) }
+                "pdf_protect" -> {  Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}}); if(!f.flag1) Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}}); Text(stringResource(R.string.field_protect_note)) }
+                "pdf_forms" -> {  Field(stringResource(R.string.field_forms_json),f.text1,{v->edit {it.copy(text1=v)}}); Toggle(stringResource(R.string.field_flatten_form),f.flag1) {v->edit {it.copy(flag1=v)}} }
                 "pdf_compare" -> Text(stringResource(R.string.field_compare_pdf_note))
-                "pdf_redact" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Field(stringResource(R.string.field_page_number),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true); Field(stringResource(R.string.field_verify_redacted_text),f.text1,{v->edit {it.copy(text1=v)}}); Text(stringResource(R.string.field_redact_note)) }
+                "pdf_redact" -> {  Field(stringResource(R.string.field_page_number),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true); Field(stringResource(R.string.field_verify_redacted_text),f.text1,{v->edit {it.copy(text1=v)}}); Text(stringResource(R.string.field_redact_note)) }
                 "pdf_ocr" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Text(stringResource(R.string.field_ocr_note)) }
                 "webpage_pdf" -> { Field(stringResource(R.string.field_webpage_url),f.text1,{v->edit {it.copy(text1=v)}}); Text(stringResource(R.string.field_webpage_note)) }
                 "img_exif" -> { Toggle(stringResource(R.string.field_exif_remove_all),f.flag1) {v->edit {it.copy(flag1=v)}}; Toggle(stringResource(R.string.field_exif_remove_location),f.flag2) {v->edit {it.copy(flag2=v)}}; Text(stringResource(R.string.field_exif_note)) }
@@ -412,7 +409,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 "file_batch_rename" -> { Field(stringResource(R.string.field_rename_pattern),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_start_number),f.num1,{v->edit {it.copy(num1=v)}},true); Text(stringResource(R.string.field_rename_note)) }
                 "file_duplicates" -> Text(stringResource(R.string.field_duplicates_note))
                 "file_trash" -> Text(stringResource(R.string.field_trash_note))
-                "file_encrypted_zip" -> { Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}}); Toggle(stringResource(R.string.field_extract_instead),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}}); Text(stringResource(R.string.field_encrypted_zip_note)) }
+                "file_encrypted_zip" -> {  Toggle(stringResource(R.string.field_extract_instead),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}}); Text(stringResource(R.string.field_encrypted_zip_note)) }
                 "file_drive" -> {
                     Toggle(stringResource(R.string.field_drive_export_mode),f.flag1) {v->edit {it.copy(flag1=v)}}
                     if(!f.flag1) Field(stringResource(R.string.field_drive_file_id),f.text1,{v->edit {it.copy(text1=v)}})
@@ -422,10 +419,6 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     Text(stringResource(R.string.field_drive_note),style=MaterialTheme.typography.bodySmall)
                 }
                 "dl_02","dl_03" -> {
-                    Toggle(stringResource(R.string.ui_wifi_only),f.wifiOnly) {v->edit {it.copy(wifiOnly=v)}}
-                    Toggle(stringResource(R.string.ui_unmetered_only),f.unmeteredOnly) {v->edit {it.copy(unmeteredOnly=v)}}
-                    Toggle(stringResource(R.string.ui_http_consent),f.cleartextConsent) {v->edit {it.copy(cleartextConsent=v)}}
-                    Text(stringResource(R.string.ui_http_notice),style=MaterialTheme.typography.bodySmall)
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
                         shape = RoundedCornerShape(18.dp),

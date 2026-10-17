@@ -122,7 +122,8 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         val c=MediaCatalog.choices(asset,MediaMode.VIDEO).first()
         val args=MediaArguments.download("https://example.test/video",c)
         check(args[args.indexOf("--format")+1]=="best*[format_id=v1080]+best*[format_id=a128]")
-        check("--abort-on-unavailable-fragments" in args && "--no-continue" in args)
+        check("--abort-on-unavailable-fragments" in args && "--continue" in args && "--no-overwrites" in args)
+        check("--no-continue" !in args && "--force-overwrites" !in args)
         check(args[args.indexOf("--output")+1]=="media.%(ext)s")
     }
     test("MP3 M4A and Opus audio choices invoke real extraction options") {

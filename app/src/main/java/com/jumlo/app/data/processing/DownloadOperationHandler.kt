@@ -82,7 +82,11 @@ class DownloadOperationHandler @Inject constructor(
                     )
                     context.checkCancellation()
                     context.report(JobProgress(JobStage.FINALIZING,result.bytes,result.totalBytes))
-                    val name=if(urls.size==1) settings.displayName else "${index+1}-${settings.displayName}"
+                    // An HTML landing page is not a downloaded file. Never silently publish it.
+                    val prefix=partial.inputStream().use { input -> ByteArray(256).let { buffer -> buffer.copyOf(input.read(buffer).coerceAtLeast(0)) } }
+                    require(!DownloadLinkPolicy.unexpectedHtml(result.mimeType,prefix)) { "DOWNLOAD_NOT_A_FILE" }
+                    val derived=DownloadLinkPolicy.cleanName(url,result.contentDisposition,result.mimeType)
+                    val name=if(urls.size==1) derived else "${index+1}-$derived"
                     val ticket=context.outputs.reserve(request.id,key,SafeNames.basename(name),result.mimeType?.takeIf { Regex("[a-zA-Z0-9!#$&^_.+-]+/[a-zA-Z0-9!#$&^_.+-]+").matches(it) } ?: "application/octet-stream")
                     // Same internal storage volume. Atomic move avoids duplicating a large download.
                     Files.move(partial.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)

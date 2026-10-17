@@ -27,17 +27,17 @@ class MediaOperationHandler @Inject constructor(
     private val secrets: EphemeralSecretStore, private val preferences: UserPreferencesRepository
 ) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
-        if (!preferences.settingsFlow.first().mediaTermsAccepted) throw OperationFailure("MEDIA_TERMS_REQUIRED")
         val settings = Json.decodeFromString<DownloadSettings>(request.settingsJson)
         val selection = settings.media ?: throw OperationFailure("MEDIA_SELECTION_REQUIRED")
         require(request.sourceIds.isEmpty() && request.toolId == "dl_media") { "INVALID_MEDIA_JOB" }
         val key = "media:0"
         context.outputs.find(request.id,key)?.let { return@withContext listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
         val secret = secrets.copy(settings.urlSecretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
-        // A leased retry restarts only its own workspace. Published output identity is stable.
+        // A leased retry resumes the same request-owned workspace. Published output identity is stable.
         val root = File(app.noBackupFilesDir,"media-transfers").apply { mkdirs() }
         val directory = File(root,request.id)
         var lastStorageCheck = 0L
+        var completed = false
         fun check() {
             context.checkCancellation()
             val cm = app.getSystemService(ConnectivityManager::class.java)
@@ -61,8 +61,12 @@ class MediaOperationHandler @Inject constructor(
         }
         try {
             check()
-            if(directory.exists() && !directory.deleteRecursively()) throw OperationFailure("MEDIA_CLEANUP_FAILED")
-            require(directory.mkdir()) { "MEDIA_WORKSPACE_MISSING" }
+            // Keep .part and fragment files after a transient failure or pause. yt-dlp can
+            // continue them on the same request ID; never mix jobs or follow symlinks.
+            require(directory.canonicalFile.parentFile == root.canonicalFile) { "MEDIA_WORKSPACE_LIMIT" }
+            if (!directory.exists()) require(directory.mkdir()) { "MEDIA_WORKSPACE_MISSING" }
+            require(directory.isDirectory && !Files.isSymbolicLink(directory.toPath())) { "MEDIA_WORKSPACE_LIMIT" }
+            check()
             val url = MediaLinks.normalize(String(secret),settings.cleartextConsent)
             val mode = MediaMode.valueOf(selection.mode)
             val audio = AudioOutput.valueOf(selection.audioOutput)
@@ -98,11 +102,13 @@ class MediaOperationHandler @Inject constructor(
                 metadata
             }
             secrets.remove(settings.urlSecretHandle)
+            completed = true
             listOf(ItemOutcome(key,ItemStatus.CREATED,output.id))
         } finally {
             secret.fill('\u0000')
-            // Native process runner terminates the complete process group before this returns.
-            directory.deleteRecursively()
+            // The process runner stops child processes before returning. Preserve fragments
+            // only for resumable pauses/retries; remove after successful publication.
+            if (completed) directory.deleteRecursively()
         }
     }
     private fun validateTracks(file: File,choice: MediaChoice): OutputMetadata {

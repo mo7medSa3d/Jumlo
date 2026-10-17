@@ -146,3 +146,13 @@ This records the changes made to the supplied ZIP in this delivery. Earlier supp
 ## Delivery status
 
 See `AUDIT.md`, `docs/RELEASE.md` and `verification/production-2026-10-17/` for actual command results. No device screenshots, physical performance numbers, authentic old-install migration, owner-signed release or remote exact-SHA CI pass is invented. The source handoff does not approve production release.
+
+---
+
+## Jevlo 2026 premium brand and motion pass — 2026-10-17
+
+- **Brand**: Jevlo in localized app labels, headers and Android launcher. Kept `com.jumlo.app`/`jumlo://workspace` for upgrade continuity; new default exported files use `Download/Jevlo` and older saved URIs are retained.
+- **Assets**: original SVG emblem, Android adaptive/monochrome resources, 1024px iOS light/dark/tinted icon exports, Android 12+ splash backdrop, six original synthesized short UI sounds and reproducible generator.
+- **UI**: spring press feedback, 44ms staggered grid entrances, moving RTL dock indicator, predictive back gesture response, download completion pulse, grid-first Files, short Downloads/Settings bento compositions, paired Arabic/English strings.
+- **Interaction**: SoundPool with muted/zero-volume gating, Android haptic intent patterns by intensity, persisted Sounds and Haptic Intensity preferences, feedback wired into principal buttons, navigation and major file operations.
+- **Verification**: Added 14 Jevlo asset/wiring/contrast tests to host test runner; preserved 123 Kotlin host tests and existing suite. Android SDK/Gradle bootstrap unavailable; no APK or device trace. This is **source candidate, release NO-GO**. See audit and verification logs.

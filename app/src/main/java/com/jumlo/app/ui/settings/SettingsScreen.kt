@@ -6,6 +6,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import com.jumlo.app.ui.theme.pressFeedback
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -29,15 +32,21 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
+import com.jumlo.app.model.DownloadQuality
+import com.jumlo.app.model.FileViewMode
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
+import com.jumlo.app.model.HapticIntensity
+import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.AppViewModel
 
 @Composable fun SettingsScreen(viewModel: AppViewModel, onRequestNotifications: () -> Unit,
-    onExportLogs: () -> Unit, onOpenFiles: () -> Unit, onChooseFolder: () -> Unit) {
+    onExportLogs: () -> Unit, onOpenFiles: () -> Unit, onChooseFolder: () -> Unit,
+    onChooseDownloadFolder: () -> Unit, onOpenSavedFolder: () -> Unit) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val trash by viewModel.trashed.collectAsStateWithLifecycle()
+    val savedOutputs by viewModel.outputs.collectAsStateWithLifecycle()
     val tree by viewModel.tree.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -55,21 +64,68 @@ import com.jumlo.app.ui.AppViewModel
     }
     LaunchedEffect(settings.notificationsGranted) { notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled() }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
-    LazyColumn(Modifier.fillMaxSize().testTag("settings.screen"), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("settings.screen"), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        item("settings-hero") {
+            Column(Modifier.padding(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                Text(stringResource(R.string.settings_title),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold)
+                Text(stringResource(R.string.brand_settings_shortcuts),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Surface(onClick={viewModel.refreshStorage();panel="storage"},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=100.dp),
+                        shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.primaryContainer) {
+                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Rounded.Storage,null,tint=MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(stringResource(R.string.brand_settings_storage),style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onPrimaryContainer)
+                        }
+                    }
+                    Surface(onClick={panel="haptic-intensity"},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=100.dp),
+                        shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Rounded.Vibration,null,tint=MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.brand_haptics_level),style=MaterialTheme.typography.titleMedium,maxLines=2)
+                        }
+                    }
+                }
+            }
+        }
         item("appearance") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
         item("theme") { PreferenceRow(stringResource(R.string.pref_theme), themeLabel(settings.themeMode), Icons.Rounded.Palette,
             { panel = "theme" }, Modifier.testTag("settings.theme")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language), Icons.Rounded.Language,
             { panel = "language" }, Modifier.testTag("settings.language")) }
+        item("accent") { PreferenceRow(stringResource(R.string.redesign_accent),when(settings.accentColor) {
+                "BLUE"->stringResource(R.string.redesign_accent_blue)
+                "TEAL"->stringResource(R.string.redesign_accent_teal)
+                "CORAL"->stringResource(R.string.redesign_accent_coral)
+                else->stringResource(R.string.redesign_accent_violet)
+            },Icons.Rounded.ColorLens,{panel="accent"}) }
+        item("scale") { PreferenceRow(stringResource(R.string.redesign_font_scale),when(settings.fontScale) {
+                "SMALL"->stringResource(R.string.redesign_scale_small)
+                "LARGE"->stringResource(R.string.redesign_scale_large)
+                else->stringResource(R.string.redesign_scale_normal)
+            },Icons.Rounded.FormatSize,{panel="scale"}) }
         item("motion") { TogglePreference(stringResource(R.string.pref_reduce_motion), stringResource(R.string.pref_reduce_motion_summary),
             settings.respectReducedMotion, viewModel::setRespectReducedMotion, "settings.motion") }
         item("haptics") { TogglePreference(stringResource(R.string.pref_haptics), null, settings.hapticFeedbackOnCommit,
             viewModel::setHapticFeedback, "settings.haptics") }
+        item("haptic-level") { PreferenceRow(stringResource(R.string.brand_haptics_level),
+            stringResource(when(settings.hapticIntensity) {
+                HapticIntensity.OFF->R.string.brand_haptics_off
+                HapticIntensity.LIGHT->R.string.brand_haptics_light
+                HapticIntensity.MEDIUM->R.string.brand_haptics_medium
+                HapticIntensity.STRONG->R.string.brand_haptics_strong
+            }),Icons.Rounded.Vibration,{panel="haptic-intensity"},Modifier.testTag("settings.hapticIntensity")) }
+        item("sounds") { TogglePreference(stringResource(R.string.brand_settings_sound),null,
+            settings.soundsEnabled,viewModel::setSoundsEnabled,"settings.sounds") }
         item("downloads") { PreferenceHeading(stringResource(R.string.pref_downloads)) }
-        item("wifi") { TogglePreference(stringResource(R.string.pref_wifi_only), stringResource(R.string.pref_wifi_summary),
-            settings.wifiOnlyDefault, viewModel::setWifiOnlyDefault, "settings.wifi") }
-        item("location") { PreferenceRow(stringResource(R.string.pref_save_location), stringResource(R.string.pref_save_location_summary),
-            Icons.Rounded.FolderOpen, onOpenFiles, Modifier.testTag("settings.downloadLocation")) }
+        item("quality") { PreferenceRow(stringResource(R.string.redesign_download_quality),
+            when(settings.downloadQuality) {DownloadQuality.BALANCED->stringResource(R.string.redesign_quality_balanced);DownloadQuality.BEST->stringResource(R.string.redesign_quality_best);DownloadQuality.DATA_SAVER->stringResource(R.string.redesign_quality_saver)},
+            Icons.Rounded.HighQuality,{panel="quality"}) }
+        item("audio") { TogglePreference(stringResource(R.string.redesign_audio_only),null,settings.audioOnlyDefault,viewModel::setAudioOnlyDefault,"settings.audio") }
+        item("concurrent") { PreferenceRow(stringResource(R.string.redesign_concurrent),settings.maxConcurrentDownloads.toString(),Icons.Rounded.Download,{panel="concurrent"}) }
+        item("location") { PreferenceRow(stringResource(R.string.pref_save_location),
+            if(settings.downloadDestinationFolder.startsWith("content://")) stringResource(R.string.redesign_custom_location) else stringResource(R.string.redesign_storage_path),
+            Icons.Rounded.FolderOpen, onChooseDownloadFolder, Modifier.testTag("settings.downloadLocation")) }
+        item("openSaved") { PreferenceRow(stringResource(R.string.redesign_open_folder),stringResource(R.string.redesign_storage_folder),Icons.Rounded.FolderOpen,onOpenSavedFolder) }
         item("notifications") { PreferenceRow(stringResource(R.string.pref_notifications),
             stringResource(if (notificationsEnabled) R.string.pref_enabled else R.string.pref_disabled), Icons.Rounded.Notifications, {
                 if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) onRequestNotifications()
@@ -77,6 +133,9 @@ import com.jumlo.app.ui.AppViewModel
                 catch (_: Exception) { viewModel.notifyMessage("EXTERNAL_APP_UNAVAILABLE") }
             }, Modifier.testTag("settings.notifications")) }
         item("files_storage") { PreferenceHeading(stringResource(R.string.pref_files_storage)) }
+        item("fileView") { PreferenceRow(stringResource(R.string.redesign_file_view),
+            when(settings.fileViewMode) {FileViewMode.LIST->stringResource(R.string.redesign_view_list);FileViewMode.GRID->stringResource(R.string.redesign_view_grid);FileViewMode.GALLERY->stringResource(R.string.redesign_view_gallery)},
+            Icons.Rounded.GridView,{panel="fileView"}) }
         item("storage") { PreferenceRow(stringResource(R.string.account_storage), null, Icons.Rounded.Storage,
             { viewModel.refreshStorage(); panel = "storage" }, Modifier.testTag("settings.storage")) }
         item("folder") { PreferenceRow(stringResource(R.string.pref_folder_access), tree?.name ?: stringResource(R.string.pref_folder_access_summary),
@@ -94,11 +153,26 @@ import com.jumlo.app.ui.AppViewModel
         item("bottom") { Spacer(Modifier.height(24.dp)) }
     }
     when (panel) {
+        "haptic-intensity" -> ChoiceDialog(stringResource(R.string.brand_haptics_level),
+            listOf(stringResource(R.string.brand_haptics_off),stringResource(R.string.brand_haptics_light),
+                stringResource(R.string.brand_haptics_medium),stringResource(R.string.brand_haptics_strong)),
+            settings.hapticIntensity.ordinal,
+            {viewModel.setHapticIntensity(HapticIntensity.entries[it]);panel=null},{panel=null})
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) }, settings.themeMode.ordinal,
             { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) }, settings.language.ordinal,
             { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
-        "storage" -> StorageOverviewDialog(storage) { panel = null }
+        "quality" -> ChoiceDialog(stringResource(R.string.redesign_download_quality),listOf(stringResource(R.string.redesign_quality_balanced),stringResource(R.string.redesign_quality_best),stringResource(R.string.redesign_quality_saver)),settings.downloadQuality.ordinal,
+            {viewModel.setDownloadQuality(DownloadQuality.entries[it]);panel=null},{panel=null})
+        "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..4).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,4)-1,
+            {viewModel.setMaxConcurrentDownloads(it+1);panel=null},{panel=null})
+        "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,
+            {viewModel.setFileViewMode(FileViewMode.entries[it]);panel=null},{panel=null})
+        "accent" -> ChoiceDialog(stringResource(R.string.redesign_accent),listOf(stringResource(R.string.redesign_accent_violet),stringResource(R.string.redesign_accent_blue),stringResource(R.string.redesign_accent_teal),stringResource(R.string.redesign_accent_coral)),
+            listOf("VIOLET","BLUE","TEAL","CORAL").indexOf(settings.accentColor).coerceAtLeast(0),{viewModel.setAccentColor(listOf("VIOLET","BLUE","TEAL","CORAL")[it]);panel=null},{panel=null})
+        "scale" -> ChoiceDialog(stringResource(R.string.redesign_font_scale),listOf(stringResource(R.string.redesign_scale_small),stringResource(R.string.redesign_scale_normal),stringResource(R.string.redesign_scale_large)),
+            listOf("SMALL","NORMAL","LARGE").indexOf(settings.fontScale).coerceAtLeast(0),{viewModel.setFontScale(listOf("SMALL","NORMAL","LARGE")[it]);panel=null},{panel=null})
+        "storage" -> StorageOverviewDialog(storage,{panel = null},onClean={panel=null;viewModel.cleanTemporary()},outputFiles=savedOutputs)
         "privacy" -> PrivacyDialog { panel = null }
         "about" -> AboutDialog { panel = null }
         "cache" -> AlertDialog(onDismissRequest = { panel = null }, title = { Text(stringResource(R.string.pref_clear_temporary)) },
@@ -123,7 +197,9 @@ import com.jumlo.app.ui.AppViewModel
     if(language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
 
 @Composable private fun TogglePreference(title: String, summary: String?, checked: Boolean, onChanged: (Boolean) -> Unit, tag: String) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).testTag(tag).toggleable(checked, role = Role.Switch, onValueChange = onChanged)
+    val haptics=rememberAppHaptics()
+    Row(Modifier.pressFeedback().fillMaxWidth().heightIn(min = 64.dp).testTag(tag).toggleable(checked, role = Role.Switch,
+        onValueChange = {haptics.selectionToggle();onChanged(it)})
         .padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
@@ -134,11 +210,12 @@ import com.jumlo.app.ui.AppViewModel
 }
 
 @Composable private fun ChoiceDialog(title: String, labels: List<String>, selected: Int, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
+    val haptics=rememberAppHaptics()
     AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = {
         Column(Modifier.selectableGroup()) {
             labels.forEachIndexed { index, label ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(index == selected, role = Role.RadioButton,
-                    onClick = { onSelected(index) }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    onClick = { haptics.selectionToggle();onSelected(index) }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(index == selected, onClick = null); Text(label, Modifier.padding(start = 12.dp))
                 }
             }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="brand_splash_tagline">Make files flow.</string>
+    <string name="brand_downloads_tagline">Everything in motion.</string>
+    <string name="brand_download_active">Active</string>
+    <string name="brand_download_done">Finished</string>
+    <string name="brand_settings_shortcuts">Quick controls</string>
+    <string name="brand_settings_storage">Storage</string>
+    <string name="brand_settings_sound">Sounds</string>
+    <string name="brand_haptics_level">Haptic intensity</string>
+    <string name="brand_haptics_off">Off</string>
+    <string name="brand_haptics_light">Light</string>
+    <string name="brand_haptics_medium">Medium</string>
+    <string name="brand_haptics_strong">Strong</string>
+    <string name="brand_completed">Download complete</string>
+    <string name="brand_rename_notice">Your existing files remain available in Files.</string>
+</resources>

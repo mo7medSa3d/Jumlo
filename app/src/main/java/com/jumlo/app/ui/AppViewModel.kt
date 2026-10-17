@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.jumlo.app.core.Hashing
+import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.core.HttpPolicy
 import com.jumlo.app.core.MemoryBudget
 import com.jumlo.app.data.files.*
@@ -89,6 +90,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     private val _storage=MutableStateFlow(StorageUsage())
     val storage=_storage.asStateFlow()
     private val initialized=CompletableDeferred<Unit>()
+    private var openedSession=false
+    private val _sessionEpoch=MutableStateFlow(0L)
+    val sessionEpoch=_sessionEpoch.asStateFlow()
     private val submitting=AtomicBoolean(false)
     private var storageRefresh:Job?=null
     private var lastFingerprint:String?=null
@@ -107,8 +111,10 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             try {
                 val checkpoint=drafts.loadWorkspace()?.takeIf { it.version==1 } ?: WorkspaceDraft()
                 savedWorkspace.value=checkpoint
-                _form.value=checkpoint
-                _form.value=drafts.loadRecovery()?.takeIf { it.version==1 } ?: checkpoint
+                if (!openedSession) {
+                    _form.value=checkpoint
+                    _form.value=drafts.loadRecovery()?.takeIf { it.version==1 } ?: checkpoint
+                }
             }
             catch(cancel:CancellationException) { throw cancel }
             catch(_:Exception) { _message.value="DRAFT_RESTORE_FAILED" }
@@ -127,7 +133,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         viewModelScope.launch { try { _tree.value=treeStore.restore() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } }
         refreshStorage()
     }
-    fun dismissMessage() { _message.value=null; _undoTrashId.value=null }
+    fun dismissMessage() { _message.value=null; _undoTrashId.value=null; _undoTrashIds.value=emptyList() }
     fun notifyMessage(code:String) {
         _message.value=code
         val tool=form.value.toolId
@@ -169,12 +175,41 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         }
     }
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
+    /** Each entry is a new session. Never pass a previous tool's selected input IDs. */
     fun chooseTool(id:String):Boolean {
         if(!CapabilityRegistry.enabled(id)) { _message.value=CapabilityRegistry.reason(id); return false }
-        if(_form.value.toolId!=id) updateForm { WorkspaceDraft.forTool(id,it.sourceIds).copy(wifiOnly=settings.value.wifiOnlyDefault) }
+        openedSession=true
+        _sessionEpoch.value++
+        savePreference { preferences.recordToolOpen(id) }
+        _urls.value=""
+        _form.value=WorkspaceDraft.forTool(id,emptyList())
+        savedWorkspace.value=_form.value
+        savedUrls.value=""
+        lastFingerprint=null;lastJobId=null
         return true
     }
-    fun addSource(id:String) { updateForm { it.copy(sourceIds=(it.sourceIds+id).distinct().take(1000)) } }
+    /** Explicit handoff only, e.g. a result's "Use in another tool" action. */
+    fun chooseToolWithSources(id:String,sourceIds:List<String>):Boolean {
+        if(!chooseTool(id)) return false
+        updateForm { it.copy(sourceIds=sourceIds.distinct().take(1000)) }
+        return true
+    }
+    fun closeToolSession() {
+        openedSession=true
+        _sessionEpoch.value++
+        _urls.value=""
+        _form.value=WorkspaceDraft.forTool("pdf_02",emptyList())
+        savedWorkspace.value=_form.value
+        savedUrls.value=""
+        lastFingerprint=null;lastJobId=null
+    }
+    fun addSource(id:String,displayName:String?=null) { updateForm { draft ->
+        val names=(draft.sourceIds+id).distinct().take(1000)
+        val sourceName=displayName ?: imported.value.firstOrNull { it.id==id }?.displayName
+        val output=if(draft.sourceIds.isEmpty() && sourceName!=null)
+            AutoOutputName.fromSource(draft.toolId,sourceName) ?: draft.outputName else draft.outputName
+        draft.copy(sourceIds=names,outputName=output)
+    } }
     fun removeSource(id:String) { updateForm { it.copy(sourceIds=it.sourceIds-id) } }
     fun clearQueue() { updateForm { it.copy(sourceIds=emptyList()) } }
     fun moveSource(index:Int,delta:Int) { updateForm { old ->
@@ -196,7 +231,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             beginBusy()
             try {
                 for(uri in intake.uris) {
-                    try { addSource(sources.inspect(uri,intake.offeredFlags).id) }
+                    try { val source=sources.inspect(uri,intake.offeredFlags);addSource(source.id,source.displayName) }
                     catch(cancel:CancellationException) { throw cancel }
                     catch(error:Exception) { _message.value=stableError(error) }
                 }
@@ -204,13 +239,48 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             } finally { endBusy() }
         }
     }
-    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { addSource(sources.importLocalFile(file,displayName,mimeType).id); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
+    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { val source=sources.importLocalFile(file,displayName,mimeType);addSource(source.id,source.displayName); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
+    private val _undoTrashIds=MutableStateFlow<List<String>>(emptyList())
+    val undoTrashIds=_undoTrashIds.asStateFlow()
+    /** Captured IDs only; a single Undo reverses the complete selection. */
+    fun trashOutputs(records:List<OutputRecord>) {
+        val captured=records.map {it.id}.distinct()
+        if(captured.isEmpty()) return
+        viewModelScope.launch {
+            beginBusy()
+            try {
+                val moved=captured.mapNotNull { outputStore.moveToTrash(it) }.map {it.id}
+                if(moved.isNotEmpty()) {
+                    _undoTrashIds.value=moved
+                    _undoTrashId.value=moved.last()
+                    _message.value="MOVED_TO_TRASH"
+                    refreshStorage()
+                }
+            } catch(cancel:CancellationException) {throw cancel}
+            catch(error:Exception) {_message.value=stableError(error)}
+            finally {endBusy()}
+        }
+    }
+    fun restoreOutputs(ids:List<String>) {
+        if(ids.isEmpty()) return
+        viewModelScope.launch {
+            beginBusy()
+            try {
+                ids.distinct().forEach {outputStore.restoreFromTrash(it)}
+                _undoTrashIds.value=emptyList();_undoTrashId.value=null
+                _message.value="RESTORED_FROM_TRASH"
+                refreshStorage()
+            } catch(cancel:CancellationException) {throw cancel}
+            catch(error:Exception) {_message.value=stableError(error)}
+            finally {endBusy()}
+        }
+    }
     fun trashOutput(record:OutputRecord) {
         viewModelScope.launch {
             try {
                 val moved=outputStore.moveToTrash(record.id)
-                if(moved!=null) { _undoTrashId.value=moved.id; _message.value="MOVED_TO_TRASH"; refreshStorage() }
+                if(moved!=null) { _undoTrashIds.value=listOf(moved.id);_undoTrashId.value=moved.id; _message.value="MOVED_TO_TRASH"; refreshStorage() }
             } catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { _message.value=stableError(error) }
         }
@@ -220,6 +290,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             try {
                 outputStore.restoreFromTrash(outputId)
                 _undoTrashId.value=null
+                _undoTrashIds.value=emptyList()
                 _message.value="RESTORED_FROM_TRASH"
                 refreshStorage()
             } catch(cancel:CancellationException) { throw cancel }
@@ -324,6 +395,25 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setLanguage(language:AppLanguage) = savePreference { preferences.setLanguage(language) }
     fun setRespectReducedMotion(enabled:Boolean) = savePreference { preferences.setRespectReducedMotion(enabled) }
     fun setHapticFeedback(enabled:Boolean) = savePreference { preferences.setHapticOnCommit(enabled) }
+    fun setHapticIntensity(intensity:com.jumlo.app.model.HapticIntensity) = savePreference { preferences.setHapticIntensity(intensity) }
+    fun setSoundsEnabled(enabled:Boolean) = savePreference { preferences.setSoundsEnabled(enabled) }
+    fun setDownloadQuality(value:DownloadQuality) = savePreference { preferences.setDownloadQuality(value) }
+    fun setAudioOnlyDefault(value:Boolean) = savePreference { preferences.setAudioOnlyDefault(value) }
+    fun setFileViewMode(value:FileViewMode) = savePreference { preferences.setFileViewMode(value) }
+    fun setAccentColor(value:String) = savePreference { preferences.setAccentColor(value) }
+    fun setFontScale(value:String) = savePreference { preferences.setFontScale(value) }
+    fun setMaxConcurrentDownloads(value:Int) = savePreference { preferences.setMaxConcurrentDownloads(value) }
+    fun setDownloadDestinationFolder(treeUri:String,flags:Int) { viewModelScope.launch {
+        try {
+            val uri=Uri.parse(treeUri)
+            require(uri.scheme=="content") { "INVALID_TREE_URI" }
+            val writable=flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            require(writable and Intent.FLAG_GRANT_WRITE_URI_PERMISSION!=0) { "PROVIDER_READ_ONLY" }
+            app.contentResolver.takePersistableUriPermission(uri,writable)
+            preferences.setDownloadDestinationFolder(treeUri)
+        } catch(cancel:CancellationException) { throw cancel }
+        catch(error:Exception) { _message.value=stableError(error) }
+    } }
     fun setWifiOnlyDefault(enabled:Boolean) = savePreference { preferences.setWifiOnlyDefault(enabled) }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }

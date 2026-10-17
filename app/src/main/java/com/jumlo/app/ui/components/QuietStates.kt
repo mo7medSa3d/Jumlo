@@ -1,6 +1,7 @@
 package com.jumlo.app.ui.components
 
-import androidx.compose.animation.core.LinearEasing
+import com.jumlo.app.ui.theme.pressFeedback
+
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -90,7 +91,7 @@ fun QuietHero(
             .fillMaxWidth()
             .clip(QuietTheme.shapes.card)
             .background(brush)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.pressFeedback().clickable(onClick = onClick) else Modifier)
             .padding(QuietTheme.spacing.cardInteriorPadding + 6.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -130,7 +131,7 @@ fun QuietShimmerSkeleton(
     reduceMotion: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
-    if (reduceMotion) {
+    if (reduceMotion || com.jumlo.app.ui.theme.LocalReducedMotion.current) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -144,7 +145,7 @@ fun QuietShimmerSkeleton(
     val alpha by transition.animateFloat(
         initialValue = 0.35f,
         targetValue = 0.85f,
-        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing), RepeatMode.Reverse),
         label = "shimmerAlpha"
     )
     Box(
