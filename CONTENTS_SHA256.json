@@ -21,19 +21,19 @@
       "sha256": "9831b95716c293b1945219d535d846d700e98c74f855d6e6b25ea6c01208cd78"
     },
     "AUDIT.md": {
-      "bytes": 17858,
+      "bytes": 17843,
       "mode": 420,
-      "sha256": "259d46a7038f4408c154d4ea37efe151b1013385a2b4a9caba5e669b39c3e62e"
+      "sha256": "89a10863e31b3dcde00164e90ea333ec7d18a400eca06bbf4f7b55cb9e004607"
     },
     "CHANGELOG.md": {
-      "bytes": 19303,
+      "bytes": 19183,
       "mode": 420,
-      "sha256": "2da5708400069301ee2ebd54a38ed4349bc90a254568fe5efdc0fe1ef3d965d1"
+      "sha256": "0ce0b151b22d7f782bb87228d056c32ee3842ed0d496e02e0f23e78771fff14c"
     },
     "README.md": {
-      "bytes": 9735,
+      "bytes": 9684,
       "mode": 420,
-      "sha256": "c1fc7b83cba17366f1337feff3f0c6689e2e9e77d9b08f7d230f9e6c7a3a988c"
+      "sha256": "b9375ced0377ea224735311b52a4612bdf25fc15c5ce2094c5406bb3b9411c6f"
     },
     "README_AR.md": {
       "bytes": 10104,
@@ -146,9 +146,9 @@
       "sha256": "e71a24e2c7b9102828d8ef6c317ecc183bb00919ada613b6da6ed013a4e714d5"
     },
     "app/src/hostTest/kotlin/CoreTests.kt": {
-      "bytes": 24538,
+      "bytes": 24617,
       "mode": 420,
-      "sha256": "245fc1cb3eaf8f4f8404f361322e024b1c65cd39bcc20127dcf1ad202e4047af"
+      "sha256": "26c33658b841f0d96bede4c2656d51420b36970c882bd1cc791de5e7e8b4fac6"
     },
     "app/src/hostTest/kotlin/HomeLayoutPolicyTests.kt": {
       "bytes": 211,
@@ -286,9 +286,9 @@
       "sha256": "fb0ad57c964d9cdd52e4024304f6e32041c6a5b56238d1734e8f390548b15ff8"
     },
     "app/src/main/java/com/jumlo/app/core/StoragePaths.kt": {
-      "bytes": 1372,
+      "bytes": 1377,
       "mode": 420,
-      "sha256": "b94429fe0fbc25f965d8f86d4b0fbfcbe4aa353d8701f4422754890ea410cc77"
+      "sha256": "cd8ed2ba4ce44f4be95ca95663c41b88f43fea20c0828366616317571931e1f1"
     },
     "app/src/main/java/com/jumlo/app/core/StreamTransfer.kt": {
       "bytes": 7246,
@@ -1096,9 +1096,9 @@
       "sha256": "b0429b08256663392e2f2dbb1049edbf52c79f5e3bf1a805e8b4482cec61bc89"
     },
     "docs/JUMLO_2026_MOTION_BRAND_QA.md": {
-      "bytes": 9880,
+      "bytes": 9341,
       "mode": 420,
-      "sha256": "7581b6b6d85767a15a25751a2bcb4b1f3e05d96a5a4ba52ebf71a0142d204a78"
+      "sha256": "6e3ed82ac9a57ddf2d499269214f060e1a3a623d1a5f314d34748e08e7e8d0ed"
     },
     "docs/MEDIA_CAPABILITY_MATRIX.md": {
       "bytes": 4319,
@@ -1623,7 +1623,7 @@
     "verification/jumlo-2026/RELEASE_STATUS.md": {
       "bytes": 1757,
       "mode": 420,
-      "sha256": "f321f792c741dc69590eb059716dc21d9116a28974ad73ed0560b2affbb7f5fc"
+      "sha256": "d11c558fc266369fb6d05bd1e77704a8f99a33efab906f29af86e635c5a7bdc3"
     },
     "verification/launcher-green.log": {
       "bytes": 118,

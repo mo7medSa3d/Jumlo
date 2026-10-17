@@ -24,6 +24,6 @@ bash ./gradlew :app:assembleDebug --offline
 **NO-GO for release** until native Android test, visual/accessibility reviews, real media verification and iOS source integration. `docs/JUMLO_2026_MOTION_BRAND_QA.md` contains release checklist.
 
 
-### Brand restoration (2026-10-17)
+### Jumlo assets (2026-10-17)
 
-Original **Jumlo** branding restored, including localized labels, existing neutral icon, sound resource names, and download directory. Existing files and persisted result URIs remain available; the brief alternate default preference normalizes to `Download/Jumlo`. Native APK build/device checks require CI.
+The **Jumlo** name is used by the launcher, localized labels, splash, sound resources and public save directory. The redesigned neutral icon and existing files are preserved; generated folder defaults resolve to `Download/Jumlo` while custom SAF locations remain valid. Native APK build/device checks require CI.

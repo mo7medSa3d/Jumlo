@@ -10,12 +10,11 @@ object StoragePaths {
         else -> "Documents"
     }
     fun relativePath(mime:String):String="Download/Jumlo/${category(mime)}/"
-    /** Keep custom SAF locations, but normalize the short-lived previous default.
-     * Files already saved there remain reachable through their existing persisted URIs. */
-    fun canonicalDownloadFolder(saved:String?):String = when(saved) {
-        null, "Download/Jevlo" -> "Download/Jumlo"
-        else -> saved
-    }
+    /** Only SAF tree URIs represent custom destinations. Previous generated
+     * default folder values are replaced by the current public directory.
+     * Existing result URIs are unaffected. */
+    fun canonicalDownloadFolder(saved:String?):String =
+        saved?.takeIf { it.startsWith("content://") } ?: "Download/Jumlo"
     fun uniqueName(desired:String,existing:Set<String>):String {
         val name=SafeNames.basename(desired)
         if(name !in existing) return name

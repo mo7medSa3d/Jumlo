@@ -11,18 +11,12 @@
 | Haptics | `ui/util/AppHaptics.kt` previously used generic feedback without per-pattern intensity, and settings only had an on/off switch. | One Android-native feedback layer with intensity Off / Light / Medium / Strong. |
 | Sound | There was no local UI sound asset or playback service. | Six small locally synthesized WAV cues and SoundPool, with silent-mode and volume checks. |
 | Files / Settings | `ui/files/FilesScreen.kt` defaulted to LIST, with large amounts of stacked rows; `ui/settings/SettingsScreen.kt` was primarily a single-column preferences list. | Two-column default saved outputs, quick-actions bento and compact preference rows. |
-| Brand / icon | The established Jumlo display name had briefly been changed in a source revision. | Restored Jumlo everywhere while retaining the new neutral document/download emblem, Android adaptive vectors, and iOS icon exports. |
+| Brand / icon | Jumlo is the established product identity; the launcher mark needed a clearer visual system. | Consistent Jumlo labeling and a neutral document/download emblem, Android adaptive vectors and iOS icon exports. |
 | Typography | `ui/theme/Type.kt` already bundled IBM Plex Sans and IBM Plex Sans Arabic. | Keep existing pinned fonts; refine typography hierarchy and semantic colors, no added fonts. |
 
-### Five name candidates
+### Brand decision
 
-1. **Jumlo — original identity restored** (جملو): established app name retained with the redesigned neutral document/download mark.
-2. **Nivdo** (نيفدو): suggests navigation and fast task completion.
-3. **Tivdo** (تيفدو): rhythmic and action-oriented, suited to a daily utility.
-4. **Fayru** (فايرو): light, warm vowel flow, friendly for Arabic and English.
-5. **Kezlo** (كيزلو): compact, technical, memorable sound.
-
-Preliminary general search is **not** a full app-store, domain, or trademark clearance; some candidates have unrelated real-world uses. Jumlo does not establish a new legal identity and `com.jumlo.app` is deliberately unchanged for upgrade compatibility.
+**Jumlo (جملو)** is the product name. The abstract launcher mark depicts files and downloading without wordmark lettering. The Android package identity remains `com.jumlo.app` for upgrade compatibility.
 
 ## Implementation plan and executed status
 
@@ -41,7 +35,7 @@ Preliminary general search is **not** a full app-store, domain, or trademark cle
 - Six original synthesized **mono PCM WAV** clips at 22.05 kHz (tap/toggle/start/success/error/delete), totaling under 60 KiB. Generator: `scripts/generate-jumlo-sounds.py`. They do not use recordings, samples or third-party sound effects. **Sound source/license:** original generated sound design supplied with this deliverable, dedicated to CC0 1.0 for reuse; no attribution required.
 - Android source retains existing pinned IBM Plex fonts and their existing OFL license as documented in `docs/DEPENDENCY_NOTICES.md`.
 - All new user-facing text keys live in paired `res/values/jumlo.xml` and `res/values-ar/jumlo.xml`.
-- `Download/Jumlo` is the restored default public category root. Older output records and their public URIs remain available, including files saved under the briefly used alternate folder. Only the transient old default preference is normalized; saved files are not deleted or relocated.
+- `Download/Jumlo` is the public category root. Only SAF tree URIs are recognized as user-selected download folders; other persisted path values resolve to the current default. Saved output records and their public URIs are neither deleted nor relocated.
 
 ## Verification evidence and limits
 
