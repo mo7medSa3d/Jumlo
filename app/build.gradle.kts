@@ -97,6 +97,8 @@ android {
 
     lint {
         abortOnError = true
+        // Phase 5: every user-visible string must exist in values/ and values-ar/.
+        error += setOf("MissingTranslation")
     }
 
     testOptions {
@@ -164,6 +166,7 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.view)
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

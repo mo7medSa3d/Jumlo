@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Jumlo"
 include(":app")
+include(":benchmark")
