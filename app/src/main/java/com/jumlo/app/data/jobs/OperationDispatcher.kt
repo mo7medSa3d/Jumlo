@@ -16,21 +16,25 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private val pdf:com.jumlo.app.data.processing.PdfOperationHandler,
     private val archives:com.jumlo.app.data.processing.ArchiveOperationHandler,
     private val downloads:com.jumlo.app.data.processing.DownloadOperationHandler,
-    private val media:com.jumlo.app.data.media.MediaOperationHandler
+    private val media:com.jumlo.app.data.media.MediaOperationHandler,
+    private val fileExtras:com.jumlo.app.data.processing.FileExtrasHandler,
+    private val ocrWeb:com.jumlo.app.data.processing.OcrWebHandler
 ) : OperationHandler {
     private val bitmapSlot=Semaphore(1)
     private val downloadSlots=Semaphore(2)
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         if(!CapabilityRegistry.enabled(request.toolId)) throw OperationFailure("CAPABILITY_UNAVAILABLE")
-        return if(request.toolId.startsWith("img_") || request.toolId in setOf("pdf_02","pdf_07")) {
+        return if(request.toolId.startsWith("img_") || request.toolId.startsWith("pdf_")) {
             bitmapSlot.withPermit { dispatch(request,context) }
         } else if(request.toolId.startsWith("dl_")) downloadSlots.withPermit { dispatch(request,context) } else dispatch(request,context)
     }
     private suspend fun dispatch(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         if(request.schemaVersion!=1) throw OperationFailure("UNSUPPORTED_SETTINGS_VERSION")
         return when(request.toolId) {
-            "pdf_02","pdf_07" -> pdf.execute(request,context)
-            "img_01","img_02","img_03","img_04" -> images.execute(request,context)
+            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_metadata","pdf_protect","pdf_forms","pdf_compare","pdf_redact" -> pdf.execute(request,context)
+            "pdf_ocr","webpage_pdf" -> ocrWeb.execute(request,context)
+            "file_encrypted_zip","file_batch_rename","file_duplicates","file_trash" -> fileExtras.execute(request,context)
+            "img_01","img_02","img_03","img_04","img_exif","img_watermark","img_join","img_adjust","img_target","img_compare","img_stitch" -> images.execute(request,context)
             "file_07","file_08","sha256" -> archives.execute(request,context)
             "dl_02","dl_03" -> downloads.execute(request,context)
             "dl_media" -> media.execute(request,context)

@@ -61,6 +61,18 @@ import javax.inject.Singleton
         } catch(cancel:CancellationException) { throw cancel }
         catch(e:Exception) { File(inbound,"$id.bin").delete(); throw OperationFailure(stableError(e)) }
     }
+    /** Imports an app-private local file (camera scan / drawn signature) as an immutable snapshot. */
+    suspend fun importLocalFile(file:java.io.File,displayName:String,mimeType:String?):SourceRef=withContext(Dispatchers.IO) {
+        require(file.isFile && file.length()>0) { "LOCAL_IMPORT_EMPTY" }
+        val id=UUID.randomUUID().toString()
+        val dest=File(inbound,"$id.bin"); val partial=File(inbound,"$id.part")
+        try {
+            file.inputStream().use { source -> FileOutputStream(partial).use { sink -> boundedCopy(source,sink,partial); sink.fd.sync() } }
+            java.nio.file.Files.move(partial.toPath(),dest.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            val entity=SourceEntity(id,"local://$id",displayName,mimeType,dest.length(),true,false,false,System.currentTimeMillis(),dest.absolutePath)
+            db.processingDao().putSource(entity); entity.ref()
+        } finally { partial.delete() }
+    }
     suspend fun openRead(sourceId:String):InputStream=withContext(Dispatchers.IO) {
         val source=db.processingDao().source(sourceId) ?: throw OperationFailure("SOURCE_NOT_FOUND")
         try {

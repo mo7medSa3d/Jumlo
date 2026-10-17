@@ -129,6 +129,9 @@ object HttpPolicy {
 
 /** Candidate features are distinct from device/security qualification. */
 object Capabilities {
-    private val implemented = setOf("pdf_02", "pdf_07", "pdf_01", "img_01", "img_02", "img_03", "img_04", "dl_02", "dl_03", "dl_media", "file_02", "file_07", "file_08", "sha256")
+    private val implemented = setOf("pdf_02", "pdf_07", "pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
+        "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_protect", "pdf_metadata", "pdf_forms", "pdf_compare", "pdf_redact", "pdf_ocr", "webpage_pdf",
+        "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch",
+        "dl_02", "dl_03", "dl_media", "file_02", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename", "file_duplicates", "file_trash", "sha256")
     fun isEnabled(tool: String): Boolean = tool in implemented
 }

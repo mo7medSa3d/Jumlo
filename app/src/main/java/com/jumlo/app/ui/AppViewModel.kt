@@ -123,6 +123,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             } finally { _busy.value=false }
         }
     }
+    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { try { addSource(sources.importLocalFile(file,displayName,mimeType).id); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } } }
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
     fun submit(onQueued:(String)->Unit) {
         if(!submitting.compareAndSet(false,true)) return
@@ -134,7 +135,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 val state=form.value
                 require(CapabilityRegistry.enabled(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
-                require(download || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+                require(download || state.toolId=="webpage_pdf" || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
                 if(state.toolId in setOf("pdf_07","file_08")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
                 val urlSnapshot=urls.value
                 if(download) {
@@ -144,7 +145,12 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 }
                 val fingerprint=Hashing.sha256(ByteArrayInputStream((Json.encodeToString(state)+"\n"+if(download) urlSnapshot else "").toByteArray()))
                 if(lastFingerprint==fingerprint && lastJobId!=null) { onQueued(lastJobId!!); return@launch }
-                newHandle=if(download) secrets.put(urlSnapshot.toCharArray()) else null
+                newHandle=when {
+                    download -> secrets.put(urlSnapshot.toCharArray())
+                    state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
+                    state.toolId=="file_encrypted_zip" -> secrets.put(state.secret1.toCharArray())
+                    else -> null
+                }
                 val settings=state.executionSettings(newHandle)
                 val request=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
                 val id=jobStore.enqueue(request)

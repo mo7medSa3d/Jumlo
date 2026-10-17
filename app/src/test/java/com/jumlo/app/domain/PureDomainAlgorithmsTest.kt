@@ -95,3 +95,14 @@ class PureDomainAlgorithmsTest {
         assertEquals(600, smallH)
     }
 }
+
+class ExpansionLogicTest {
+    @org.junit.Test fun batchRename_applies_pattern_and_uniquifies() {
+        val out = com.jumlo.app.data.engine.PureDomainAlgorithms.batchRenamePreview(listOf("a.jpg","b.jpg"), "file-{n}", 1)
+        org.junit.Assert.assertEquals(listOf("file-1.jpg","file-2.jpg"), out)
+    }
+    @org.junit.Test fun duplicateGroups_finds_exact_groups() {
+        val groups = com.jumlo.app.data.engine.PureDomainAlgorithms.duplicateGroups(listOf("x","y","x","x","z"))
+        org.junit.Assert.assertEquals(listOf(listOf(0,2,3)), groups)
+    }
+}

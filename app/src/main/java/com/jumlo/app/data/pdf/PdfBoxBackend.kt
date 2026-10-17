@@ -395,6 +395,66 @@ object PdfBoxBackend {
         return out
     }
 
+    /** Overlay text (annotations/overlay, watermark, page numbers share this primitive). */
+    fun stampText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, gray: Float) {
+        require(text.isNotBlank() && fontSize in 4f..200f && gray in 0f..1f) { "INVALID_STAMP" }
+        require(zeroBasedPages.all { it in 0 until doc.pages.count }) { "INVALID_PAGE_INDEX" }
+        zeroBasedPages.forEach { index ->
+            val page = doc.getPage(index)
+            val media = page.mediaBox
+            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
+                cs.beginText()
+                cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
+                cs.setNonStrokingColor(gray, gray, gray)
+                cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
+                cs.showText(text)
+                cs.endText()
+            }
+        }
+    }
+
+    /** Invisible (but extractable/searchable) text layer for OCR output. */
+    fun stampInvisibleText(doc: PDDocument, zeroBasedPage: Int, text: String, xNorm: Double, yNormTop: Double, fontSize: Float) {
+        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
+        val page = doc.getPage(zeroBasedPage); val media = page.mediaBox
+        PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
+            cs.beginText(); cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
+            try { cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.INVISIBLE) } catch (_: Exception) {}
+            cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
+            text.lines().take(200).forEachIndexed { i, line -> if (i > 0) cs.newLineAtOffset(0f, -fontSize * 1.2f); runCatching { cs.showText(line.take(500)) } }
+            cs.endText()
+        }
+    }
+
+    /** Places an image (signature/logo) at a normalized top-left-origin rect on one page. */
+    fun stampImage(doc: PDDocument, zeroBasedPage: Int, imageFile: File, left: Double, top: Double, right: Double, bottom: Double) {
+        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
+        listOf(left, top, right, bottom).forEach { require(it in 0.0..1.0) { "INVALID_CROP" } }
+        require(left < right && top < bottom) { "INVALID_CROP" }
+        val page = doc.getPage(zeroBasedPage)
+        val media = page.mediaBox
+        val image = com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject.createFromFile(imageFile.path, doc)
+        PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
+            cs.drawImage(image,
+                (media.lowerLeftX + left * media.width).toFloat(),
+                (media.lowerLeftY + (1.0 - bottom) * media.height).toFloat(),
+                ((right - left) * media.width).toFloat(), ((bottom - top) * media.height).toFloat())
+        }
+    }
+
+    /** Adds a free-text annotation anchored at a normalized point. */
+    fun addTextAnnotation(doc: PDDocument, zeroBasedPage: Int, contents: String, xNorm: Double, yNormTop: Double) {
+        require(contents.isNotBlank() && zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
+        val page = doc.getPage(zeroBasedPage)
+        val media = page.mediaBox
+        val annotation = com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText()
+        val x = (media.lowerLeftX + xNorm * media.width).toFloat(); val y = (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat()
+        annotation.rectangle = PDRectangle(x, y, 20f, 20f)
+        annotation.contents = contents
+        annotation.isOpen = true
+        val annotations = page.annotations.toMutableList(); annotations.add(annotation); page.setAnnotations(annotations)
+    }
+
     fun compare(a: PDDocument, b: PDDocument): CompareResult {
         val aTexts = pageTexts(a)
         val bTexts = pageTexts(b)
