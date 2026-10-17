@@ -154,15 +154,17 @@ import kotlin.math.roundToInt
                             val attrs = PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).build()
                             val file = ticket.stageFile
                             val stream = FileOutputStream(file)
-                            adapter.onLayout(null, attrs, null, object : android.print.PrintDocumentAdapter.LayoutResultCallback() {
+                            val layoutCallback = android.print.PrintAdapterHelper.createLayoutCallback(object : android.print.PrintAdapterHelper.LayoutCallback {
                                 override fun onLayoutFinished(info: android.print.PrintDocumentInfo?, changed: Boolean) {
-                                    adapter.onWrite(arrayOf(android.print.PageRange.ALL_PAGES), ParcelFileDescriptor.dup(stream.fd), null, object : android.print.PrintDocumentAdapter.WriteResultCallback() {
+                                    val writeCallback = android.print.PrintAdapterHelper.createWriteCallback(object : android.print.PrintAdapterHelper.WriteCallback {
                                         override fun onWriteFinished(pages: Array<out android.print.PageRange>?) { stream.close(); webView.destroy(); if (cont.isActive) cont.resume(true) }
                                         override fun onWriteFailed(error: CharSequence?) { stream.close(); webView.destroy(); if (cont.isActive) cont.resume(false) }
                                     })
+                                    adapter.onWrite(arrayOf(android.print.PageRange.ALL_PAGES), ParcelFileDescriptor.dup(stream.fd), null, writeCallback)
                                 }
                                 override fun onLayoutFailed(error: CharSequence?) { stream.close(); webView.destroy(); if (cont.isActive) cont.resume(false) }
-                            }, null)
+                            })
+                            adapter.onLayout(null, attrs, null, layoutCallback, null)
                         }
                     }
                     webView.loadUrl(url)

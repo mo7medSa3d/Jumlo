@@ -98,7 +98,16 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     }
     fun dismissMessage() { _message.value=null; _undoTrashId.value=null }
     fun notifyMessage(code:String) { errorLog.record(code,form.value.toolId); _message.value=code }
-    fun setUrls(value:String) { _urls.value=value.take(100000) }
+    fun setUrls(value:String) {
+        _urls.value=value.take(100000)
+        val firstLine = value.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: ""
+        if (firstLine.isNotBlank()) {
+            val candidate = firstLine.substringBefore('?').substringBefore('#').substringAfterLast('/').trim()
+            if (candidate.isNotBlank() && candidate.contains('.') && !candidate.endsWith('.')) {
+                updateForm { it.copy(outputName = candidate) }
+            }
+        }
+    }
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
     fun chooseTool(id:String):Boolean {
         if(!CapabilityRegistry.enabled(id)) { _message.value=CapabilityRegistry.reason(id); return false }
@@ -218,6 +227,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setThemeMode(mode:ThemeMode) { viewModelScope.launch { preferences.setThemeMode(mode) } }
     fun setLanguage(language:AppLanguage) { viewModelScope.launch { preferences.setLanguage(language) } }
     fun setRespectReducedMotion(enabled:Boolean) { viewModelScope.launch { preferences.setRespectReducedMotion(enabled) } }
+    fun setHapticFeedback(enabled:Boolean) { viewModelScope.launch { preferences.setHapticOnCommit(enabled) } }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }

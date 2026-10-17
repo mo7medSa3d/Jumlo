@@ -54,6 +54,7 @@
     <string name="action_change">Change</string>
     <string name="action_reset">Reset</string>
     <string name="action_copy">Copy</string>
+    <string name="action_paste">Paste</string>
     <string name="action_close">Close</string>
     <string name="action_delete">Delete</string>
     <string name="action_rename">Rename</string>
@@ -325,4 +326,22 @@
     <string name="activity_retry_urls">Retry with these URLs</string>
     <string name="activity_published_notice">Outputs are verified on disk and listed in Home and Files.</string>
     <string name="activity_start_new_run">Start another run</string>
+    <string name="account_hub_title">User &amp; Engine Hub</string>
+    <string name="account_hub_tier">Jumlo On-Device Pro Core</string>
+    <string name="account_privacy_status">100% Local • Zero Cloud Tracking</string>
+    <string name="account_storage_stats">Engine Storage &amp; Space</string>
+    <string name="account_clear_cache_btn">Clear Temporary Cache</string>
+    <string name="account_clear_cache_success">Temporary cache and staging cleared</string>
+    <string name="account_preferences_header">Display &amp; Experience</string>
+    <string name="home_greeting">Welcome back to Jumlo</string>
+    <string name="home_greeting_sub">Private on-device powerhouse for media &amp; documents</string>
+    <string name="home_stat_outputs">Outputs generated</string>
+    <string name="home_stat_jobs">Completed jobs</string>
+    <string name="home_stat_storage">Storage active</string>
+    <string name="home_featured_header">Featured Super Utilities</string>
+    <string name="home_browse_catalog_banner_title">Explore All 16 Tools</string>
+    <string name="home_browse_catalog_banner_sub">Advanced PDF, image manipulation, file encryption &amp; archives</string>
+    <string name="home_browse_catalog_btn">View Complete Catalog</string>
+    <string name="home_no_recent_outputs">No processed results yet. Launch any tool above to get started!</string>
+    <string name="home_active_tasks_title">Active Tasks in Progress</string>
 </resources>

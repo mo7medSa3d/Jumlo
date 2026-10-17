@@ -14,6 +14,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -121,6 +123,7 @@ import com.jumlo.app.model.DockTab
 import com.jumlo.app.model.ManagedFileItem
 import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.util.rememberAppHaptics
 
 fun resolveStitchIcon(iconName: String): ImageVector = when (iconName) {
     "picture_as_pdf", "pdf", "description" -> Icons.Rounded.PictureAsPdf
@@ -183,8 +186,12 @@ fun QuietTonalIconButton(
     tint: Color = MaterialTheme.colorScheme.onSurface,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh
 ) {
+    val haptics = rememberAppHaptics()
     Surface(
-        onClick = onClick,
+        onClick = {
+            haptics.actionClick()
+            onClick()
+        },
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .size(size)
@@ -430,14 +437,19 @@ fun QuietExpandedNavigationRail(
 ) {
     val pillars = QuietTheme.pillars
     Surface(
-        modifier = modifier.width(104.dp).fillMaxHeight(),
+        modifier = modifier
+            .widthIn(min = 88.dp, max = 104.dp)
+            .fillMaxHeight(),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(1.dp, pillars.cardBorder)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(vertical = 28.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 18.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
         ) {
             DockTab.entries.forEach { tab ->
                 val isSelected = tab == selectedTab
@@ -448,7 +460,7 @@ fun QuietExpandedNavigationRail(
                     selected = isSelected,
                     vertical = true,
                     onClick = { onSelectTab(tab) },
-                    modifier = Modifier.width(88.dp).heightIn(min = 68.dp)
+                    modifier = Modifier.width(84.dp).heightIn(min = 60.dp)
                 )
             }
         }
@@ -475,11 +487,15 @@ private fun NavItem(
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "navTint"
     )
+    val haptics = rememberAppHaptics()
     Box(
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .clip(QuietTheme.shapes.activeIndicatorPill)
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                haptics.navigationTab()
+                onClick()
+            })
             .semantics {
                 contentDescription = label
                 role = Role.Tab
@@ -537,13 +553,15 @@ fun QuietRootTopBar(
     badgeText: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onSettingsClick: () -> Unit,
+    onAccountClick: (() -> Unit)? = null,
     onVaultClick: (() -> Unit)? = null
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
     val searchCd = stringResource(R.string.search_title)
     val settingsCd = stringResource(R.string.settings_title)
-    val vaultCd = stringResource(R.string.tool_secure_vault)
+    val accountAction = onAccountClick ?: onVaultClick
+    val haptics = rememberAppHaptics()
     Surface(color = colors.background, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -582,21 +600,30 @@ fun QuietRootTopBar(
                     QuietTonalIconButton(Icons.Rounded.Search, searchCd, onSearchClick)
                 }
                 QuietTonalIconButton(Icons.Rounded.Settings, settingsCd, onSettingsClick)
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))
-                        .then(if (onVaultClick != null) Modifier.clickable(onClick = onVaultClick) else Modifier)
-                        .semantics { contentDescription = vaultCd },
-                    contentAlignment = Alignment.Center
+                Surface(
+                    onClick = {
+                        haptics.actionClick()
+                        accountAction?.invoke()
+                    },
+                    enabled = accountAction != null,
+                    shape = CircleShape,
+                    color = Color.Transparent,
+                    modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Person,
-                        contentDescription = null,
-                        tint = colors.onPrimary,
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Person,
+                            contentDescription = "Account Hub",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
@@ -698,7 +725,11 @@ fun QuietCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = QuietTheme.shapes.card
-    val clickModifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = onClick) else Modifier
+    val haptics = rememberAppHaptics()
+    val clickModifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = {
+        haptics.toolSelect()
+        onClick()
+    }) else Modifier
     Surface(
         modifier = modifier.then(clickModifier),
         shape = shape,
@@ -752,8 +783,12 @@ fun QuietPrimaryButton(
     containerColor: Color = QuietTheme.pillars.primaryActionBackground,
     contentColor: Color = QuietTheme.pillars.primaryActionText
 ) {
+    val haptics = rememberAppHaptics()
     Button(
-        onClick = onClick,
+        onClick = {
+            haptics.toolExecute()
+            onClick()
+        },
         modifier = modifier.heightIn(min = QuietTheme.spacing.primaryButtonHeight),
         enabled = enabled,
         shape = QuietTheme.shapes.button,
@@ -783,8 +818,12 @@ fun QuietTonalButton(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
+    val haptics = rememberAppHaptics()
     Button(
-        onClick = onClick,
+        onClick = {
+            haptics.actionClick()
+            onClick()
+        },
         modifier = modifier.heightIn(min = QuietTheme.spacing.tonalButtonHeight),
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(

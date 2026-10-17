@@ -467,7 +467,7 @@ object PdfBoxBackend {
         val x = (media.lowerLeftX + xNorm * media.width).toFloat(); val y = (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat()
         annotation.rectangle = PDRectangle(x, y, 20f, 20f)
         annotation.contents = contents
-        annotation.isOpen = true
+        annotation.setOpen(true)
         val annotations = page.annotations.toMutableList(); annotations.add(annotation); page.setAnnotations(annotations)
     }
 

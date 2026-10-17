@@ -20,7 +20,7 @@ import kotlinx.serialization.json.Json
     val paperWidth:String="595",val paperHeight:String="842",val orientation:String="AUTO",val margin:String="10",val fill:Boolean=false,
     val pages:String="all",val dpi:String="144",val grayscale:Boolean=false,
     val zipLevel:String="6",val expectedHash:String="",
-    val wifiOnly:Boolean=false,val unmeteredOnly:Boolean=false,val cleartextConsent:Boolean=false,
+    val wifiOnly:Boolean=false,val unmeteredOnly:Boolean=false,val cleartextConsent:Boolean=true,
     val text1:String="",val text2:String="",val text3:String="",val text4:String="",
     val num1:String="",val num2:String="",val num3:String="",val num4:String="",
     val flag1:Boolean=false,val flag2:Boolean=false,
@@ -72,7 +72,7 @@ import kotlinx.serialization.json.Json
             "file_duplicates","file_trash" -> Json.encodeToString(com.jumlo.app.data.processing.HashSettings(expectedHash.trim().takeIf { it.isNotEmpty() }))
             "file_encrypted_zip" -> Json.encodeToString(com.jumlo.app.data.processing.EncryptedArchiveSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
             "file_drive" -> Json.encodeToString(com.jumlo.app.data.processing.GoogleDriveSettings(text1.trim(),text2.trim(),flag1,downloadHandle ?: ""))
-            "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.basename(outputName),wifiOnly,unmeteredOnly,cleartextConsent))
+            "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.fromDisplayName(outputName.ifBlank{"download.bin"},"download.bin"),wifiOnly,unmeteredOnly,cleartextConsent))
             else -> throw IllegalArgumentException("CAPABILITY_UNAVAILABLE")
         }
     }

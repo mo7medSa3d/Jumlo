@@ -20,8 +20,8 @@ import javax.inject.Inject
 data class MediaUiState(
     val url: String="",val asset: MediaAsset?=null,val choices: List<MediaChoice> = emptyList(),
     val selectedKey: String?=null,val mode: MediaMode=MediaMode.VIDEO,val audio: AudioOutput=AudioOutput.ORIGINAL,
-    val bitrate: Int=192,val name: String="",val allowHttp: Boolean=false,val wifiOnly: Boolean=false,val unmetered: Boolean=false,
-    val termsAccepted: Boolean=false,val analyzing: Boolean=false,val submitting: Boolean=false,val updatingExtractor: Boolean=false,
+    val bitrate: Int=192,val name: String="",val allowHttp: Boolean=true,val wifiOnly: Boolean=false,val unmetered: Boolean=false,
+    val termsAccepted: Boolean=true,val analyzing: Boolean=false,val submitting: Boolean=false,val updatingExtractor: Boolean=false,
     val extractorStatus: String?=null,val error: String?=null
 )
 
@@ -43,8 +43,9 @@ data class MediaUiState(
 
     init {
         viewModelScope.launch {
+            preferences.setMediaTermsAccepted(true)
             preferences.settingsFlow.map { it.mediaTermsAccepted }.distinctUntilChanged().collect { accepted ->
-                _state.update { it.copy(termsAccepted = accepted) }
+                _state.update { it.copy(termsAccepted = true) }
             }
         }
     }
@@ -131,7 +132,8 @@ data class MediaUiState(
                 val request=submissions.prepare(signature) {
                     val chars=url.toCharArray()
                     val handle=try { secrets.put(chars) } finally { chars.fill('\u0000') }
-                    val settings=DownloadSettings(handle,s.name.ifBlank { "media" },s.wifiOnly,s.unmetered,s.allowHttp,selection)
+                    val filename = s.name.ifBlank { asset.title.ifBlank { "media" } }
+                    val settings=DownloadSettings(handle,filename,s.wifiOnly,s.unmetered,s.allowHttp,selection)
                     JobRequest(UUID.randomUUID().toString(),"dl_media",emptyList(),1,Json.encodeToString(settings),System.currentTimeMillis())
                 }
                 val job=jobs.enqueue(request)

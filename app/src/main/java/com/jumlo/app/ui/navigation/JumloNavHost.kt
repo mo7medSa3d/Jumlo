@@ -12,12 +12,22 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,22 +37,31 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -59,6 +78,7 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.intake.Intake
+import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.intake.IntakeController
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
@@ -102,6 +122,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val context=LocalContext.current
     val haptics=LocalHapticFeedback.current
+    val appHaptics = rememberAppHaptics(settings.hapticFeedbackOnCommit)
     val systemReduceMotion=remember { try { android.provider.Settings.Global.getFloat(context.contentResolver,android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,1f)==0f } catch(_:Exception) { false } }
     val reduceMotion=systemReduceMotion || settings.respectReducedMotion
     val navController = rememberNavController()
@@ -128,11 +149,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
         else -> HomeRoute
     }
     fun navigateTo(name: String) {
-        if (settings.hapticFeedbackOnCommit) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        appHaptics.actionClick()
         navController.navigate(destinationFor(name)) { launchSingleTop = true }
     }
     fun navigateTab(next: DockTab) {
-        if (settings.hapticFeedbackOnCommit) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        appHaptics.navigationTab()
         tab = next
         navController.navigate(destinationFor(next.route)) {
             popUpTo(HomeRoute) { saveState = true }
@@ -140,17 +161,22 @@ fun JumloNavHost(viewModel:AppViewModel) {
             restoreState = true
         }
     }
-    fun goBack() { if (!navController.popBackStack()) navigateTab(tab) }
+    fun goBack() { 
+        appHaptics.navigationTab()
+        if (!navController.popBackStack()) navigateTab(tab) 
+    }
     BackHandler(enabled = route != "home") { goBack() }
 
     var selectedJob by rememberSaveable { mutableStateOf<String?>(null) }
     var search by rememberSaveable { mutableStateOf("") }
+    var selectedPillar by rememberSaveable { mutableStateOf("all") }
     var deleteEntry by remember { mutableStateOf<DocumentEntry?>(null) }
     var renameEntry by remember { mutableStateOf<DocumentEntry?>(null) }
     var renameText by remember { mutableStateOf("") }
     var collisionPolicy by rememberSaveable { mutableStateOf(CollisionPolicy.KEEP_BOTH) }
     var newFolder by remember { mutableStateOf(false) }
     var folderName by remember { mutableStateOf("") }
+    var showAccountHub by rememberSaveable { mutableStateOf(false) }
     val snackbar=remember { SnackbarHostState() }
     val undoLabel=stringResource(R.string.action_undo)
     LaunchedEffect(message, undoTrashId) {
@@ -244,11 +270,40 @@ fun JumloNavHost(viewModel:AppViewModel) {
 
     @Composable fun Shell(shellRoute: String) {
         val root = shellRoute in setOf("home","tools_catalog","downloads","files_overview")
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         Scaffold(snackbarHost={ SnackbarHost(snackbar) },contentWindowInsets=WindowInsets(0,0,0,0)) { padding ->
             BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
-                val wide=maxWidth>=840.dp
+                val showNavRail = root && (maxWidth >= 600.dp || isLandscape)
+                val showBottomDock = root && !showNavRail
                 Row(Modifier.fillMaxSize()) {
-                    if(wide && root) QuietExpandedNavigationRail(tab,settings.language,{ next -> navigateTab(next) })
+                    this@Row.AnimatedVisibility(
+                        visible = showNavRail,
+                        enter = if (reduceMotion) fadeIn() else (
+                            slideInHorizontally(
+                                initialOffsetX = { -it },
+                                animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                            ) + expandHorizontally(
+                                expandFrom = Alignment.Start,
+                                animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                            ) + fadeIn(animationSpec = tween(durationMillis = 220))
+                        ),
+                        exit = if (reduceMotion) fadeOut() else (
+                            slideOutHorizontally(
+                                targetOffsetX = { -it },
+                                animationSpec = spring(dampingRatio = 0.95f, stiffness = 380f)
+                            ) + shrinkHorizontally(
+                                shrinkTowards = Alignment.Start,
+                                animationSpec = spring(dampingRatio = 0.95f, stiffness = 380f)
+                            ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                        )
+                    ) {
+                        QuietExpandedNavigationRail(
+                            selectedTab = tab,
+                            language = settings.language,
+                            onSelectTab = { next -> navigateTab(next) }
+                        )
+                    }
                     Box(Modifier.weight(1f).fillMaxHeight()) {
                         Column(Modifier.fillMaxSize()) {
                             if(root) QuietRootTopBar(
@@ -258,7 +313,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     "downloads"->stringResource(R.string.nav_downloads)
                                     else->stringResource(R.string.nav_files)
                                 },
-                                onSettingsClick={ navigateTo("settings") }
+                                onSettingsClick={ navigateTo("settings") },
+                                onAccountClick={ showAccountHub = true }
                             )
                             else QuietWorkspaceTopBar(
                                 title=when(shellRoute) {
@@ -299,49 +355,352 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 }
                                 LazyColumn(
                                     Modifier.weight(1f).fillMaxWidth().widthIn(max=900.dp).align(Alignment.CenterHorizontally),
-                                    contentPadding=PaddingValues(start=20.dp,end=20.dp,top=16.dp,bottom=if(root && !wide) 124.dp else 32.dp),
+                                    contentPadding=PaddingValues(start=20.dp,end=20.dp,top=16.dp,bottom=if(showBottomDock) 124.dp else 32.dp),
                                     verticalArrangement=Arrangement.spacedBy(16.dp)
                                 ) {
-                                    if(shellRoute=="home" || shellRoute=="tools_catalog") {
-                                        item(key="notice") { CandidateNotice() }
-                                        if(shellRoute=="home") {
-                                            item(key="hero") { QuietHero(title=stringResource(R.string.home_hero_title),subtitle=stringResource(R.string.home_hero_subtitle),icon=Icons.Rounded.Bolt) }
-                                            item(key="import-btn") { QuietPrimaryButton(stringResource(R.string.import_device_files),::importFiles,Modifier.fillMaxWidth(),leadingIcon=Icons.Rounded.Add,enabled=!busy) }
-                                            item(key="resume-btn") { TextButton(onClick={ navigateTo("workspace") }) { Text(stringResource(R.string.home_resume_workspace, form.sourceIds.size)) } }
-                                        }
-                                        item(key="search-bar") { QuietSearchBar(query=search,placeholder=stringResource(R.string.home_search_placeholder),onQueryChange={ search=it },onClear={ search="" }) }
-                                        if(visibleTools.isEmpty()) {
-                                            item(key="no-matching-tools") {
-                                                QuietStateCard(
-                                                    title=stringResource(R.string.tools_no_matching),
-                                                    subtitle=stringResource(R.string.tools_no_matching_sub),
-                                                    actionLabel=stringResource(R.string.tools_reset_filters),
-                                                    onAction={ search="" }
-                                                )
+                                    if(shellRoute=="home") {
+                                        // 1. Executive Hero & System Status
+                                        item(key="home-hero") {
+                                            Surface(
+                                                shape = RoundedCornerShape(26.dp),
+                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                                shadowElevation = 2.dp,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Column(
+                                                    modifier = Modifier.padding(20.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource(R.string.home_greeting),
+                                                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                        Surface(
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                                            modifier = Modifier.padding(start = 4.dp)
+                                                        ) {
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                            ) {
+                                                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF00C853)))
+                                                                Text(
+                                                                    text = stringResource(R.string.offline_badge),
+                                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    Text(
+                                                        text = stringResource(R.string.home_greeting_sub),
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
                                             }
                                         }
-                                        for(pillar in listOf(PillarCategory.PDF,PillarCategory.IMAGES,PillarCategory.DOWNLOADS,PillarCategory.FILES)) {
-                                            val tools=visibleTools.filter { it.pillar==pillar }
-                                            if(tools.isNotEmpty()) item(key="heading-${pillar.name}") { QuietSectionTitle(if(settings.language.isRtl) pillar.labelAr else pillar.labelEn) }
-                                            items(tools,key={it.id}) { tool -> ToolCard(tool,settings.language,{ openTool(tool) }) }
+
+                                        // 2. Executive Quick Stats Dashboard Card
+                                        item(key="home-dashboard") {
+                                            Surface(
+                                                shape = RoundedCornerShape(22.dp),
+                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 14.dp, vertical = 14.dp),
+                                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                        Text(
+                                                            text = outputs.size.toString(),
+                                                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                                            color = MaterialTheme.colorScheme.primary
+                                                        )
+                                                        Text(
+                                                            text = stringResource(R.string.home_stat_outputs),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)))
+                                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                        Text(
+                                                            text = jobs.size.toString(),
+                                                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                                            color = MaterialTheme.colorScheme.secondary
+                                                        )
+                                                        Text(
+                                                            text = stringResource(R.string.home_stat_jobs),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)))
+                                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                        Text(
+                                                            text = bytes(storage.outputs + storage.sources),
+                                                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                                            color = MaterialTheme.colorScheme.tertiary
+                                                        )
+                                                        Text(
+                                                            text = stringResource(R.string.home_stat_storage),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
-                                        if(shellRoute=="home") {
-                                            item(key="recent-heading") { QuietSectionTitle(stringResource(R.string.recent_results_title)) }
-                                            items(outputs.take(5),key={"recent-${it.id}"}) { output ->
+
+                                        // 3. Featured 4 Core Super-Utilities in high-contrast 2x2 grid
+                                        item(key="featured-heading") {
+                                            QuietSectionTitle(stringResource(R.string.home_featured_header))
+                                        }
+                                        item(key="featured-grid-1") {
+                                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                Box(modifier = Modifier.weight(1f)) {
+                                                    HomeFeatureCard(
+                                                        title = if (settings.language.isRtl) "تنزيل الفيديو التلقائي" else "Instant Video Download",
+                                                        subtitle = if (settings.language.isRtl) "تنزيل فوري برابط واحد" else "1-tap direct stream",
+                                                        icon = Icons.Rounded.Download,
+                                                        accentColor = Color(0xFF059669),
+                                                        containerColor = Color(0xFFECFDF5),
+                                                        onClick = {
+                                                            if (viewModel.chooseTool("dl_media")) navigateTo("workspace")
+                                                        }
+                                                    )
+                                                }
+                                                Box(modifier = Modifier.weight(1f)) {
+                                                    HomeFeatureCard(
+                                                        title = if (settings.language.isRtl) "دمج وتحويل PDF" else "Smart PDF Studio",
+                                                        subtitle = if (settings.language.isRtl) "دمج الصور والمستندات" else "Merge, convert, pages",
+                                                        icon = Icons.Rounded.PictureAsPdf,
+                                                        accentColor = Color(0xFFDC2626),
+                                                        containerColor = Color(0xFFFEF2F2),
+                                                        onClick = {
+                                                            if (viewModel.chooseTool("pdf_02")) navigateTo("workspace")
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        item(key="featured-grid-2") {
+                                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                Box(modifier = Modifier.weight(1f)) {
+                                                    HomeFeatureCard(
+                                                        title = if (settings.language.isRtl) "ضغط ومعالجة الصور" else "Image Optimization",
+                                                        subtitle = if (settings.language.isRtl) "تصغير الحجم وتغيير الصيغ" else "Compress, WebP, resize",
+                                                        icon = Icons.Rounded.PhotoLibrary,
+                                                        accentColor = Color(0xFFD97706),
+                                                        containerColor = Color(0xFFFFFBEB),
+                                                        onClick = {
+                                                            if (viewModel.chooseTool("img_04")) navigateTo("workspace")
+                                                        }
+                                                    )
+                                                }
+                                                Box(modifier = Modifier.weight(1f)) {
+                                                    HomeFeatureCard(
+                                                        title = if (settings.language.isRtl) "ماسح المستندات" else "Document Scanner",
+                                                        subtitle = if (settings.language.isRtl) "مسح فوري بالكاميرا" else "Instant camera to PDF",
+                                                        icon = Icons.Rounded.GridView,
+                                                        accentColor = Color(0xFF2563EB),
+                                                        containerColor = Color(0xFFEFF6FF),
+                                                        onClick = { navigateTo("scan") }
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // 4. Call to Action: Explore Complete 16 Tools Directory
+                                        item(key="browse-catalog-banner") {
+                                            Surface(
+                                                onClick = { navigateTab(DockTab.TOOLS) },
+                                                shape = RoundedCornerShape(22.dp),
+                                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(46.dp)
+                                                                .clip(CircleShape)
+                                                                .background(MaterialTheme.colorScheme.primary),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(Icons.Rounded.Dashboard, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                                                        }
+                                                        Column {
+                                                            Text(
+                                                                text = stringResource(R.string.home_browse_catalog_banner_title),
+                                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Text(
+                                                                text = stringResource(R.string.home_browse_catalog_banner_sub),
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                    }
+                                                    Icon(
+                                                        Icons.AutoMirrored.Rounded.ArrowForward,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // 5. Recent Results
+                                        item(key="home-recent-heading") {
+                                            QuietSectionTitle(stringResource(R.string.recent_results_title))
+                                        }
+                                        if (outputs.isEmpty()) {
+                                            item(key="home-no-recents") {
+                                                QuietStateCard(
+                                                    title = stringResource(R.string.home_no_recent_outputs),
+                                                    subtitle = stringResource(R.string.offline_pledge_short)
+                                                )
+                                            }
+                                        } else {
+                                            items(outputs.take(4), key = { "home-recent-${it.id}" }) { output ->
                                                 OutputCard(
                                                     output,
-                                                    { launchExternal(output.uri,output.mimeType,false) },
-                                                    { launchExternal(output.uri,output.mimeType,true) },
+                                                    { launchExternal(output.uri, output.mimeType, false) },
+                                                    { launchExternal(output.uri, output.mimeType, true) },
                                                     { exportOutput(output) },
-                                                    { viewModel.importOutput(output);navigateTo("workspace") },
+                                                    { viewModel.importOutput(output); navigateTo("workspace") },
                                                     { viewModel.trashOutput(output) }
                                                 )
                                             }
                                         }
                                     }
+
+                                    if(shellRoute=="tools_catalog") {
+                                        item(key="catalog-search-bar") {
+                                            QuietSearchBar(
+                                                query = search,
+                                                placeholder = stringResource(R.string.home_search_placeholder),
+                                                onQueryChange = { search = it },
+                                                onClear = { search = "" }
+                                            )
+                                        }
+                                        item(key="catalog-pillar-chips") {
+                                            LazyRow(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                contentPadding = PaddingValues(horizontal = 2.dp)
+                                            ) {
+                                                val categories = listOf(
+                                                    "all" to (if (settings.language.isRtl) "الكل (16)" else "All (16)"),
+                                                    PillarCategory.PDF.name to (if (settings.language.isRtl) "PDF" else "PDF"),
+                                                    PillarCategory.IMAGES.name to (if (settings.language.isRtl) "الصور" else "Images"),
+                                                    PillarCategory.DOWNLOADS.name to (if (settings.language.isRtl) "التنزيلات" else "Downloads"),
+                                                    PillarCategory.FILES.name to (if (settings.language.isRtl) "الملفات" else "Files")
+                                                )
+                                                items(categories, key = { it.first }) { (key, label) ->
+                                                    val isSelected = selectedPillar == key
+                                                    FilterChip(
+                                                        selected = isSelected,
+                                                        onClick = {
+                                                            appHaptics.selectionToggle()
+                                                            selectedPillar = key
+                                                        },
+                                                        label = { Text(label, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                                        shape = RoundedCornerShape(14.dp),
+                                                        colors = FilterChipDefaults.filterChipColors(
+                                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        if(visibleTools.isEmpty()) {
+                                            item(key="no-matching-tools") {
+                                                QuietStateCard(
+                                                    title = stringResource(R.string.tools_no_matching),
+                                                    subtitle = stringResource(R.string.tools_no_matching_sub),
+                                                    actionLabel = stringResource(R.string.tools_reset_filters),
+                                                    onAction = { search = ""; selectedPillar = "all" }
+                                                )
+                                            }
+                                        }
+                                        val pillarsToShow = when (selectedPillar) {
+                                            PillarCategory.PDF.name -> listOf(PillarCategory.PDF)
+                                            PillarCategory.IMAGES.name -> listOf(PillarCategory.IMAGES)
+                                            PillarCategory.DOWNLOADS.name -> listOf(PillarCategory.DOWNLOADS)
+                                            PillarCategory.FILES.name -> listOf(PillarCategory.FILES)
+                                            else -> listOf(PillarCategory.PDF, PillarCategory.IMAGES, PillarCategory.DOWNLOADS, PillarCategory.FILES)
+                                        }
+                                        for(pillar in pillarsToShow) {
+                                            val tools = visibleTools.filter { it.pillar == pillar }
+                                            if(tools.isNotEmpty()) {
+                                                item(key = "catalog-heading-${pillar.name}") {
+                                                    QuietSectionTitle(if(settings.language.isRtl) pillar.labelAr else pillar.labelEn)
+                                                }
+                                                items(tools.chunked(2), key = { pair -> "catalog-grid-${pair.joinToString("-") { it.id }}" }) { rowTools ->
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                    ) {
+                                                        rowTools.forEach { tool ->
+                                                            Box(modifier = Modifier.weight(1f)) {
+                                                                ToolGridCard(tool, settings.language, { openTool(tool) })
+                                                            }
+                                                        }
+                                                        if (rowTools.size == 1) {
+                                                            Spacer(modifier = Modifier.weight(1f))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                     if(shellRoute=="downloads") {
-                                        item(key="dl-notice") { CandidateNotice() }
-                                        items(CapabilityRegistry.tools.filter { it.id in setOf("dl_02","dl_03","dl_media") },key={it.id}) { tool -> ToolCard(tool,settings.language,{openTool(tool)}) }
+                                        val dlTools = CapabilityRegistry.tools.filter { it.id in setOf("dl_media","dl_02","dl_03") }
+                                        items(dlTools.chunked(2), key={ pair -> "dl-grid-${pair.joinToString("-") { it.id }}" }) { rowTools ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                rowTools.forEach { tool ->
+                                                    Box(modifier = Modifier.weight(1f)) {
+                                                        ToolGridCard(tool, settings.language, { openTool(tool) })
+                                                    }
+                                                }
+                                                if (rowTools.size == 1) {
+                                                    Spacer(modifier = Modifier.weight(1f))
+                                                }
+                                            }
+                                        }
                                         item(key="dl-activity-heading") { QuietSectionTitle(stringResource(R.string.transfer_activity_title)) }
                                         val downloads=jobs.filter { it.request.toolId.startsWith("dl_") }
                                         if(downloads.isEmpty()) {
@@ -547,7 +906,28 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 }
                             }
                         }
-                        if(root && !wide) QuietFloatingDock(tab,settings.language,{ next -> navigateTab(next) },Modifier.align(Alignment.BottomCenter))
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showBottomDock,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            enter = if (reduceMotion) fadeIn() else (
+                                slideInVertically(
+                                    initialOffsetY = { it },
+                                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f)
+                                ) + fadeIn(animationSpec = tween(durationMillis = 220))
+                            ),
+                            exit = if (reduceMotion) fadeOut() else (
+                                slideOutVertically(
+                                    targetOffsetY = { it },
+                                    animationSpec = spring(dampingRatio = 0.95f, stiffness = 380f)
+                                ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                            )
+                        ) {
+                            QuietFloatingDock(
+                                selectedTab = tab,
+                                language = settings.language,
+                                onSelectTab = { next -> navigateTab(next) }
+                            )
+                        }
                     }
                 }
             }
@@ -609,6 +989,30 @@ fun JumloNavHost(viewModel:AppViewModel) {
             dismissButton={TextButton(onClick={newFolder=false}) {Text(stringResource(R.string.action_cancel))}}
         )
     }
+    if (showAccountHub) {
+        AccountHubModal(
+            settings = settings,
+            storage = storage,
+            outputsCount = outputs.size,
+            jobsCount = jobs.size,
+            onDismiss = { showAccountHub = false },
+            onOpenSettings = { navigateTo("settings") },
+            onClearCache = {
+                viewModel.cleanTemporary()
+                viewModel.refreshStorage()
+            },
+            onExportLogs = {
+                viewModel.prepareErrorLogExport()
+                errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TITLE, "jumlo-errors.txt")
+                })
+            },
+            onThemeChange = { mode -> viewModel.setThemeMode(mode) },
+            onLanguageChange = { lang -> viewModel.setLanguage(lang) }
+        )
+    }
 }
 
 @Composable private fun CandidateNotice() {
@@ -620,6 +1024,232 @@ fun JumloNavHost(viewModel:AppViewModel) {
         )
     }
 }
+private data class ToolTheme(val primary: Color, val container: Color, val icon: ImageVector)
+
+private fun resolveToolTheme(tool: UtilityTool): ToolTheme {
+    return when(tool.id) {
+        "pdf_02" -> ToolTheme(Color(0xFFE53935), Color(0xFFFFEBEE), Icons.Rounded.PictureAsPdf)
+        "pdf_03" -> ToolTheme(Color(0xFFD81B60), Color(0xFFFCE4EC), Icons.Rounded.Merge)
+        "pdf_05" -> ToolTheme(Color(0xFF8E24AA), Color(0xFFF3E5F5), Icons.Rounded.ContentCut)
+        "pdf_04" -> ToolTheme(Color(0xFF5E35B1), Color(0xFFEDE7F6), Icons.Rounded.Dashboard)
+        "pdf_06" -> ToolTheme(Color(0xFF3949AB), Color(0xFFE8EAF6), Icons.Rounded.Description)
+        "pdf_07" -> ToolTheme(Color(0xFF1E88E5), Color(0xFFE3F2FD), Icons.Rounded.PhotoLibrary)
+        "pdf_01" -> ToolTheme(Color(0xFF0288D1), Color(0xFFE1F5FE), Icons.Rounded.Visibility)
+        "pdf_compress" -> ToolTheme(Color(0xFF0097A7), Color(0xFFE0F7FA), Icons.Rounded.Compress)
+        "pdf_crop" -> ToolTheme(Color(0xFF00897B), Color(0xFFE0F2F1), Icons.Rounded.Crop)
+        "pdf_annotate" -> ToolTheme(Color(0xFF43A047), Color(0xFFE8F5E9), Icons.Rounded.Edit)
+        "pdf_stamp" -> ToolTheme(Color(0xFF689F38), Color(0xFFF1F8E9), Icons.Rounded.Star)
+        "pdf_signature" -> ToolTheme(Color(0xFF558B2F), Color(0xFFF1F8E9), Icons.Rounded.Edit)
+        "pdf_protect" -> ToolTheme(Color(0xFFF4511E), Color(0xFFFBE9E7), Icons.Rounded.Lock)
+        "pdf_metadata" -> ToolTheme(Color(0xFF795548), Color(0xFFEFEBE9), Icons.Rounded.Tune)
+        "pdf_forms" -> ToolTheme(Color(0xFF607D8B), Color(0xFFECEFF1), Icons.Rounded.Edit)
+        "pdf_compare" -> ToolTheme(Color(0xFF5C6BC0), Color(0xFFE8EAF6), Icons.Rounded.SwapHoriz)
+        "pdf_redact" -> ToolTheme(Color(0xFFD32F2F), Color(0xFFFFEBEE), Icons.Rounded.Visibility)
+        "pdf_ocr" -> ToolTheme(Color(0xFF7B1FA2), Color(0xFFF3E5F5), Icons.Rounded.Bolt)
+        "scan_doc" -> ToolTheme(Color(0xFF00C853), Color(0xFFE8F8EE), Icons.Rounded.GridView)
+        "webpage_pdf" -> ToolTheme(Color(0xFF1565C0), Color(0xFFE3F2FD), Icons.Rounded.Link)
+
+        "img_01" -> ToolTheme(Color(0xFF2962FF), Color(0xFFE8EAF6), Icons.Rounded.PhotoLibrary)
+        "img_02" -> ToolTheme(Color(0xFF0091EA), Color(0xFFE1F5FE), Icons.Rounded.Crop)
+        "img_03" -> ToolTheme(Color(0xFF00B8D4), Color(0xFFE0F7FA), Icons.Rounded.Crop)
+        "img_04" -> ToolTheme(Color(0xFF00BFA5), Color(0xFFE0F2F1), Icons.Rounded.Compress)
+        "img_exif" -> ToolTheme(Color(0xFF651FFF), Color(0xFFEDE7F6), Icons.Rounded.Tune)
+        "img_watermark" -> ToolTheme(Color(0xFFAA00FF), Color(0xFFF3E5F5), Icons.Rounded.Star)
+        "img_join" -> ToolTheme(Color(0xFFFF6D00), Color(0xFFFFF3E0), Icons.Rounded.GridView)
+        "img_adjust" -> ToolTheme(Color(0xFFFFAB00), Color(0xFFFFF8E1), Icons.Rounded.Tune)
+        "img_target" -> ToolTheme(Color(0xFF00897B), Color(0xFFE0F2F1), Icons.Rounded.Compress)
+        "img_compare" -> ToolTheme(Color(0xFF3F51B5), Color(0xFFE8EAF6), Icons.Rounded.SwapHoriz)
+        "img_stitch" -> ToolTheme(Color(0xFF00ACC1), Color(0xFFE0F7FA), Icons.Rounded.GridView)
+
+        "dl_media" -> ToolTheme(Color(0xFFFF1744), Color(0xFFFFEBEE), Icons.Rounded.Download)
+        "dl_02" -> ToolTheme(Color(0xFF00C853), Color(0xFFE8F8EE), Icons.Rounded.Download)
+        "dl_03" -> ToolTheme(Color(0xFF0091EA), Color(0xFFE1F5FE), Icons.Rounded.Link)
+        "dl_settings" -> ToolTheme(Color(0xFF546E7A), Color(0xFFECEFF1), Icons.Rounded.Settings)
+
+        "file_02" -> ToolTheme(Color(0xFF1976D2), Color(0xFFE3F2FD), Icons.Rounded.Folder)
+        "file_07" -> ToolTheme(Color(0xFFF57C00), Color(0xFFFFF3E0), Icons.Rounded.FolderZip)
+        "file_08" -> ToolTheme(Color(0xFF388E3C), Color(0xFFE8F5E9), Icons.Rounded.Unarchive)
+        "file_encrypted_zip" -> ToolTheme(Color(0xFF6A1B9A), Color(0xFFF3E5F5), Icons.Rounded.Lock)
+        "file_batch_rename" -> ToolTheme(Color(0xFF0288D1), Color(0xFFE1F5FE), Icons.Rounded.Edit)
+        "file_duplicates" -> ToolTheme(Color(0xFFC2185B), Color(0xFFFCE4EC), Icons.Rounded.Search)
+        "file_trash" -> ToolTheme(Color(0xFFD32F2F), Color(0xFFFFEBEE), Icons.Rounded.Delete)
+        "file_drive" -> ToolTheme(Color(0xFF0F9D58), Color(0xFFE8F5E9), Icons.Rounded.Cloud)
+        else -> ToolTheme(Color(0xFF5B4CF5), Color(0xFFECEAFF), resolveStitchIcon(tool.iconName))
+    }
+}
+
+@Composable
+private fun QuickActionTile(
+    title: String,
+    icon: ImageVector,
+    tint: Color,
+    container: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val appHaptics = rememberAppHaptics()
+    Surface(
+        onClick = { appHaptics.toolSelect(); onClick() },
+        modifier = modifier.height(64.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = container.copy(alpha = 0.55f),
+        border = BorderStroke(1.dp, tint.copy(alpha = 0.25f)),
+        tonalElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(container),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeFeatureCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accentColor: Color,
+    containerColor: Color,
+    onClick: () -> Unit
+) {
+    val appHaptics = rememberAppHaptics()
+    Surface(
+        onClick = {
+            appHaptics.toolSelect()
+            onClick()
+        },
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
+        shadowElevation = 2.dp,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth().height(148.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(containerColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
+            }
+
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 15.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable private fun ToolGridCard(tool:UtilityTool,language:AppLanguage,onOpen:()->Unit) {
+    val enabled=CapabilityRegistry.enabled(tool.id)
+    val theme=remember(tool.id) { resolveToolTheme(tool) }
+    val appHaptics = rememberAppHaptics()
+    Surface(
+        onClick=if(enabled) { { appHaptics.toolSelect(); onOpen() } } else ({}),
+        modifier=Modifier.fillMaxWidth().heightIn(min=152.dp),
+        shape=RoundedCornerShape(22.dp),
+        color=MaterialTheme.colorScheme.surfaceContainerLow,
+        border=BorderStroke(1.dp, theme.primary.copy(alpha=0.22f)),
+        shadowElevation=1.dp,
+        tonalElevation=2.dp
+    ) {
+        Column(
+            modifier=Modifier.fillMaxSize().padding(14.dp),
+            verticalArrangement=Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier=Modifier.fillMaxWidth(),
+                horizontalArrangement=Arrangement.SpaceBetween,
+                verticalAlignment=Alignment.Top
+            ) {
+                Box(
+                    modifier=Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(theme.container),
+                    contentAlignment=Alignment.Center
+                ) {
+                    Icon(theme.icon,contentDescription=null,tint=theme.primary,modifier=Modifier.size(26.dp))
+                }
+                if(enabled) {
+                    Box(
+                        modifier=Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(theme.primary.copy(alpha=0.12f)),
+                        contentAlignment=Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ArrowForward,
+                            contentDescription=null,
+                            tint=theme.primary,
+                            modifier=Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Column {
+                Text(
+                    text=title(tool,language),
+                    style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold),
+                    maxLines=1,
+                    overflow=TextOverflow.Ellipsis,
+                    color=MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text=if(language.isRtl) tool.subtitleAr else tool.subtitleEn,
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines=2,
+                    overflow=TextOverflow.Ellipsis,
+                    lineHeight=16.sp
+                )
+            }
+        }
+    }
+}
+
 @Composable private fun ToolCard(tool:UtilityTool,language:AppLanguage,onOpen:()->Unit) {
     val pillars=QuietTheme.pillars
     val (tint,container)=when(tool.pillar) {
@@ -698,7 +1328,6 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val queue=remember(form.sourceIds, imported) { form.sourceIds.mapNotNull { id->imported.find { it.id==id } } }
     Column(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max=760.dp).align(Alignment.CenterHorizontally),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            item(key="ws-notice") { CandidateNotice() }
             if(!download) {
                 item(key="ws-import-row") {
                     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -737,8 +1366,35 @@ fun JumloNavHost(viewModel:AppViewModel) {
                 }
             } else {
                 item(key="ws-dl-input") {
-                    OutlinedTextField(urls,vm::setUrls,label={Text(stringResource(if(tool=="dl_03") R.string.workspace_direct_urls_batch else R.string.workspace_direct_url_single))},modifier=Modifier.fillMaxWidth(),minLines=if(tool=="dl_03") 4 else 2)
-                    Text(stringResource(R.string.workspace_direct_url_hint),style=MaterialTheme.typography.bodySmall)
+                    val clipboard = LocalClipboardManager.current
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        shadowElevation = 2.dp
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedTextField(
+                                value = urls,
+                                onValueChange = vm::setUrls,
+                                label = { Text(stringResource(if(tool=="dl_03") R.string.workspace_direct_urls_batch else R.string.workspace_direct_url_single)) },
+                                placeholder = { Text("https://example.com/file...") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = if(tool=="dl_03") 4 else 2,
+                                shape = RoundedCornerShape(16.dp),
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        clipboard.getText()?.text?.let { text ->
+                                            if(text.isNotBlank()) vm.setUrls(text)
+                                        }
+                                    }) {
+                                        Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.action_paste), tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            )
+                            Text(stringResource(R.string.workspace_direct_url_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
             if(!viewer) item(key="ws-fields") { WorkspaceFields(vm,form,vm::updateForm,onGoogleSignIn) }
@@ -885,11 +1541,43 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     Text(stringResource(R.string.field_drive_note),style=MaterialTheme.typography.bodySmall)
                 }
                 "dl_02","dl_03" -> {
-                    Field(stringResource(R.string.field_output_filename),f.outputName,{v->edit {it.copy(outputName=v)}})
-                    Toggle(stringResource(R.string.field_wifi_only),f.wifiOnly) {v->edit {it.copy(wifiOnly=v)}}
-                    Toggle(stringResource(R.string.field_unmetered_only),f.unmeteredOnly) {v->edit {it.copy(unmeteredOnly=v)}}
-                    Toggle(stringResource(R.string.field_allow_http),f.cleartextConsent) {v->edit {it.copy(cleartextConsent=v)}}
-                    if(f.cleartextConsent) Text(stringResource(R.string.field_http_warning),color=MaterialTheme.colorScheme.error)
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Download,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.nav_downloads),
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                                Text(
+                                    text = if(f.outputName.isNotBlank() && f.outputName != "download.bin") f.outputName else stringResource(R.string.workspace_direct_url_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

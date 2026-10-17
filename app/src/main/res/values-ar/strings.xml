@@ -54,6 +54,7 @@
     <string name="action_change">تغيير</string>
     <string name="action_reset">إعادة ضبط</string>
     <string name="action_copy">نسخ</string>
+    <string name="action_paste">لصق</string>
     <string name="action_close">إغلاق</string>
     <string name="action_delete">حذف</string>
     <string name="action_rename">إعادة تسمية</string>
@@ -325,4 +326,22 @@
     <string name="activity_retry_urls">إعادة المحاولة بهذه الروابط</string>
     <string name="activity_published_notice">تم التحقق من المخرجات على القرص وإدراجها في الرئيسية والملفات.</string>
     <string name="activity_start_new_run">بدء عملية جديدة</string>
+    <string name="account_hub_title">حساب المستخدم والمحرك</string>
+    <string name="account_hub_tier">نسخة جملو الاحترافية المحلية</string>
+    <string name="account_privacy_status">معالجة محلية 100% • بدون تتبع سحابي</string>
+    <string name="account_storage_stats">مساحة التخزين والذاكرة</string>
+    <string name="account_clear_cache_btn">تفريغ الذاكرة المؤقتة الآن</string>
+    <string name="account_clear_cache_success">تم تفريغ الملفات المؤقتة والذاكرة بنجاح</string>
+    <string name="account_preferences_header">المظهر واللغة وتجربة الاستخدام</string>
+    <string name="home_greeting">أهلاً بك في جملو</string>
+    <string name="home_greeting_sub">محركك المحلي الذكي لإدارة الوسائط والمستندات بخصوصية كاملة</string>
+    <string name="home_stat_outputs">ملفات منجزة</string>
+    <string name="home_stat_jobs">عمليات ناجحة</string>
+    <string name="home_stat_storage">مساحة مستخدمة</string>
+    <string name="home_featured_header">أدوات رئيسية سريعة</string>
+    <string name="home_browse_catalog_banner_title">استكشف دليل الأدوات الكامل (16 أداة)</string>
+    <string name="home_browse_catalog_banner_sub">أدوات PDF المتقدمة، استوديو الصور، التشفير والأرشيف</string>
+    <string name="home_browse_catalog_btn">فتح دليل الأدوات</string>
+    <string name="home_no_recent_outputs">لا توجد نتائج معالجة حديثة بعد. اختر إحدى الأدوات للبدء فوراً!</string>
+    <string name="home_active_tasks_title">مهام قيد المعالجة الآن</string>
 </resources>

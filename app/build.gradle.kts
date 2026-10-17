@@ -48,6 +48,12 @@ android {
     sourceSets["test"].resources.srcDir(layout.buildDirectory.dir("generated/pdfboxTestAssets/assets"))
 
     signingConfigs {
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             if (keystorePropertiesFile.exists()) {
                 storeFile = file(keystoreProperties.getProperty("storeFile", "release-keystore.jks"))
@@ -60,6 +66,7 @@ android {
 
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("debugConfig")
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false

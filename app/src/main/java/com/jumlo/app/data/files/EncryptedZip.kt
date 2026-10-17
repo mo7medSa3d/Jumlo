@@ -3,6 +3,7 @@ package com.jumlo.app.data.files
 import com.jumlo.app.core.ArchiveLimits
 import com.jumlo.app.core.SafeNames
 import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.model.FileHeader
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
 import net.lingala.zip4j.model.enums.CompressionLevel
@@ -13,6 +14,16 @@ import java.io.FileOutputStream
 import java.util.Locale
 
 data class EncryptedZipEntrySource(val displayName: String, val file: File)
+
+private val FileHeader.isSymbolicLink: Boolean
+    get() {
+        val attrs = externalFileAttributes ?: return false
+        if (attrs.size >= 4) {
+            val unixMode = ((attrs[3].toInt() and 0xFF) shl 8) or (attrs[2].toInt() and 0xFF)
+            return (unixMode and 0xF000) == 0xA000
+        }
+        return false
+    }
 
 /**
  * AES-256 encrypted ZIP creation and extraction via zip4j (Apache-2.0).
