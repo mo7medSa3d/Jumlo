@@ -86,6 +86,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val reduceMotion=LocalReducedMotion.current
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     val navController = rememberNavController()
+    LaunchedEffect(navController, viewModel) {
+        viewModel.sharedLinkOpenRequests.collect {
+            navController.navigate(WorkspaceRoute) { launchSingleTop = true }
+        }
+    }
     val currentEntry by navController.currentBackStackEntryAsState()
     val route: String = when (currentEntry?.destination?.route) {
         ToolsRoute::class.qualifiedName -> "tools_catalog"

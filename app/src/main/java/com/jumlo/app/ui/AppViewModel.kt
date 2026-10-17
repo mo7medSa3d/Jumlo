@@ -14,6 +14,7 @@ import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.core.DownloadLinkPolicy
 import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.HttpPolicy
+import com.jumlo.app.core.media.MediaLinks
 import com.jumlo.app.data.files.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.output.OutputStore
@@ -24,6 +25,7 @@ import com.jumlo.app.model.*
 import com.jumlo.app.ui.intake.Intake
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -78,6 +80,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     val undoTrashId=_undoTrashId.asStateFlow()
     private val _urls=MutableStateFlow("")
     val urls=_urls.asStateFlow()
+    // One-shot request survives intake before Navigation Compose starts collecting.
+    private val sharedLinkChannel = Channel<Unit>(Channel.CONFLATED)
+    val sharedLinkOpenRequests: Flow<Unit> = sharedLinkChannel.receiveAsFlow()
     private val savedWorkspace=MutableStateFlow(WorkspaceDraft())
     private val savedUrls=MutableStateFlow("")
     private val draftMutex=Mutex()
@@ -232,15 +237,23 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         viewModelScope.launch {
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
-                val lines=text.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
-                if(lines.all { it.startsWith("https://",true) || it.startsWith("http://",true) }) {
-                    // Route social pages through the extractor so users see real format choices.
-                    chooseTool(when {
-                        lines.size>1 -> "dl_03"
+                // Shared descriptions can surround one link; batches remain separate URL lines.
+                val normalizedSingle = runCatching { MediaLinks.normalize(text) }.getOrNull()
+                val lines = normalizedSingle?.let(::listOf)
+                    ?: text.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
+                if (lines.isNotEmpty() && lines.size <= 100 && lines.all { line ->
+                    (line.startsWith("https://", true) || line.startsWith("http://", true)) &&
+                        line.none(Char::isWhitespace)
+                }) {
+                    val tool = when {
+                        lines.size > 1 -> "dl_03"
                         DownloadLinkPolicy.requiresMediaExtractor(lines.single()) -> "dl_media"
                         else -> "dl_02"
-                    })
-                    setUrls(text)
+                    }
+                    if (chooseTool(tool)) {
+                        setUrls(lines.joinToString("\n"))
+                        sharedLinkChannel.trySend(Unit)
+                    } else notifyMessage("CAPABILITY_UNAVAILABLE")
                 } else notifyMessage("INVALID_DOWNLOAD_LIST")
             }
             if(intake.uris.isEmpty()) return@launch
