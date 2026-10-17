@@ -34,8 +34,13 @@ positioning); WebView webpage→PDF; CameraX manual scan (fixed-quad
 perspective, no auto edge detection); drawn signature pad.
 Passwords: session handles only; drafts strip secret fields before saving.
 
-Still not CI-verified at the time of writing (CI results were not waited
-for in this session). Known compile risks to check at first CI compile:
+Still not CI-verified at the time of writing (per instruction, CI runs
+were triggered but not waited for in this session). Session additions after
+the first honest audit: type-safe Navigation Compose migration, local
+sanitized error log with export, JVM publication-recovery tests,
+macrobenchmark + baseline-profile module, MissingTranslation lint error,
+scan/signature localization, four-config screen semantics tests.
+Known compile risks to check at first CI compile:
 PdfBox-Android API surface used in stamps/redaction, zip4j parameters API,
 Compose Canvas path handling in the signature pad, recursive `seekAll`
 helper suspension. JVM tests exist for the PDF backend

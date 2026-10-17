@@ -81,11 +81,12 @@ removed or made non-actionable.
 |---|---|---|
 | Room schema export | PARTIAL | v2 exported; **v1 JSON missing** — MigrationTestHelper blocked; manual migration test written (`DatabaseMigrationAndDaoTest`) |
 | DAO tests | IMPLEMENTED_UNTESTED | instrumented `processingDao_roundTrips_jobs_outputs_sources` written |
-| Process-death tests (publication/download/merge/scan) | NOT DONE | no fault-injection tests yet |
-| Navigation Compose type-safe routes | NOT DONE | manual string routes with `rememberSaveable` state restoration retained; migration not attempted blind |
-| Baseline Profile / macrobenchmark | NOT DONE | no module added |
-| Screenshot tests (light/dark/en/ar) | NOT DONE | no Paparazzi/screenshot setup |
-| Full Arabic localization of new screens | PARTIAL | media strings localized; newer workspace labels still hardcoded English in Compose (MissingTranslation lint will not catch hardcoded strings — needs resource pass) |
+| Process-death / interrupted publication | IMPLEMENTED_UNTESTED | JVM `PublicationRecoveryTest`: interrupted publication recovered by `reconcile()`, incomplete stage never published, publish idempotent. WorkManager process-death during download/merge/scan still lacks dedicated fault-injection tests |
+| Local error log + export | IMPLEMENTED_UNTESTED | `ErrorLog` (codes only, sanitized, JVM `ErrorLogTest`) + Settings export action |
+| Navigation Compose type-safe routes | IMPLEMENTED_UNTESTED | `@Serializable` routes + NavHost, tab saveState/restoreState, `jumlo://workspace` deep link, singleTop share-intent handling; not CI/device verified |
+| Baseline Profile / macrobenchmark | IMPLEMENTED_UNTESTED | `:benchmark` module (cold-start MacrobenchmarkRule, BaselineProfileRule generator), profileinstaller in `:app`; targets (<1s cold, <5% jank) are goals, **not measured results** |
+| Screenshot tests (light/dark/en/ar) | PARTIAL | semantics-level four-config instrumented tests (`ScreenConfigSemanticsTest`); golden-image Paparazzi tests NOT added (goldens cannot be recorded without a device/CI run) |
+| Full Arabic localization of new screens | PARTIAL | scan/signature screens localized en+ar this session; NavHost workspace field labels still hardcoded English (MissingTranslation lint is now an error for resource-based strings, but hardcoded Compose strings need a manual resource pass) |
 | CI | IMPLEMENTED_UNTESTED | build+unit+lint+release job and API 26/36 emulator job configured; not yet seen green |
 
 ## Removed / gated
