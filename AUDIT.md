@@ -1,66 +1,41 @@
-# AUDIT.md — Jumlo current build truth (2026-10-17, branch `release-hardening`)
+# AUDIT.md — Jumlo current truth (this session, branch `arena/ee36ee56-jumlo`)
 
-Supersedes all earlier "passed" claims. Results below were reproduced in this
-session on: Temurin JDK 17.0.20.1, Gradle 8.14 (verified wrapper), Android
-SDK with platforms 33–36 + build-tools 36.0.0, no emulator.
+Supersedes all earlier "passed" claims. Reproduced HERE, not inherited.
 
-## Reproduction commands (from repo root)
+## Environment reality
 
-```sh
-export JAVA_HOME=/usr/lib/jvm/java-17-temurin-jdk
-export ANDROID_HOME=$HOME/adb
-bash scripts/restore-wrapper.sh --check
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
-./gradlew :app:assembleRelease --console=plain
-./gradlew :app:assembleDebug -PextendedMedia=true --console=plain
-```
+This sandbox has **no JDK, no kotlinc, no Android SDK/emulator**, and network
+egress only to github.com / registry.npmjs.org / pypi.org (Google/Maven/Gradle
+hosts blocked). Therefore **no Gradle build, lint, JVM test, or instrumented
+test was executed in this session**. CI (`.github/workflows/ci.yml`, incl. new
+API 26 + 36 emulator job) is the first place the tree will actually compile.
+Do NOT call this release-ready.
 
-## Results (Aurora tree + re-applied hardening)
+## Verified here
 
-| Check | Result | Evidence |
-|---|---|---|
-| Wrapper SHA-256 (`restore-wrapper.sh --check`) | PASS | `7d3a4ac4…df296172` matches official Gradle 8.14; script needed no fix |
-| `:app:assembleDebug` | PASS | builds clean |
-| `:app:testDebugUnitTest` | PASS | 4 files, 19 tests, 0 failures/errors/skips (incl. `EphemeralSecretStoreTest`, 4 tests) |
-| `:app:lintDebug` | PASS | `abortOnError=true` enforced in `app/build.gradle.kts`; one `InsertDriveFile` deprecation warning remains |
-| `:app:assembleRelease` (R8) | PASS | unsigned APK ~2.2 MB |
-| `-PextendedMedia=true assembleDebug` | PASS (pre-Aurora; re-run pending) | flag wiring works; GPL payload MUST NOT ship — see `docs/DEPENDENCY_NOTICES.md` |
-| `:app:connectedDebugAndroidTest` | NOT RUN | no emulator / system images installed; CI runs API 26 + 36 matrix |
+| Check | Result |
+|---|---|
+| `gradle-wrapper.jar` SHA-256 | `7d3a4ac4…df296172` (matches the official Gradle 8.14 wrapper JAR hash recorded previously; not re-downloaded — distribution host blocked) |
+| `python3 scripts/test-source-static.py` | 7/8 pass; 1 pre-existing failure (committed IBM Plex TTFs vs `test_no_font_binaries_in_project_sources`) |
+| `:app:assembleDebug/testDebugUnitTest/lintDebug/assembleRelease` | NOT RUN (no JDK/SDK) |
+| Instrumented tests API 26 / 36 | NOT RUN (no emulator) |
+| Live media platform matrix | NOT RUN — see `docs/MEDIA_CAPABILITY_MATRIX.md` |
 
-Note: one earlier combined `--rerun-tasks` invocation failed on `lintAnalyze*`
-tasks, then the identical command passed repeatedly — treated as flakes.
+## Implemented this session (source only, unverified by compiler)
 
-## What changed
+Structural PDF (merge/split/organize/extract/rotate/crop/compress/stamp/
+annotate/signature/metadata/protect/forms/compare/redact-with-verification)
+via existing `PdfBoxBackend` + new handler/UI wiring; image expansions
+(EXIF report+strip, watermark, join/stitch, adjust/pad, target-size,
+compare); file expansions (batch rename as renamed copies, duplicate
+SHA-256 report, AES encrypted ZIP via zip4j, trash = recoverable-outputs
+report, no auto-delete); ML Kit OCR → .txt + searchable PDF (coarse text
+positioning); WebView webpage→PDF; CameraX manual scan (fixed-quad
+perspective, no auto edge detection); drawn signature pad.
+Passwords: session handles only; drafts strip secret fields before saving.
 
-- Aurora retheme + workspace polish (committed as-is, verified green after):
-  new palette values under stable token names, `QuietTheme.pillars`, Hero /
-  SearchBar / SectionTitle / TonalButton / IconTile components, `JumloNavHost`
-  polish. Contrast of the new pairs is unmeasured.
-- Re-applied on top: media ToS/copyright notice + explicit session checkbox
-  gating Analyze/Download (en+ar); dropped unused `VIBRATE` / `USE_BIOMETRIC`
-  permissions and the unreferenced `androidx.biometric` dependency;
-  `versionCode`/`versionName` from `-P` properties (defaults in
-  `gradle.properties`); lint `abortOnError`; Aurora hard-coded nav strings
-  moved to string resources (en+ar).
-- Earlier: stale `com.universalutilities.app` schema export removed;
-  `docs/DESIGN.md` created for the theme `DESIGN.md` references;
-  `EphemeralSecretStoreTest` added; `docs/PRIVACY.md`, `docs/RELEASE.md`,
-  full `docs/DEPENDENCY_NOTICES.md`; CI emulator matrix (API 26/36).
-- FileProvider scoped to `processing/results/`; cloud backup disabled with
-  full exclusions; cleartext only with per-job consent; secrets in-memory
-  only (`EphemeralSecretStore`), never in logs/notifications/Room/backups.
-
-## Deliberately NOT done (risks / needs owner decision)
-
-- No Navigation-Compose type-safe rewrite, no per-screen ViewModel/UiState
-  refactor: the string-route host works and is build-verified.
-- No structural PDF ops (merge/split/organize/extract): no qualified backend;
-  cards stay honestly gated with reason text, no dead buttons.
-- No dynamic color, no 200%-font/RTL device pass, no screenshots: needs a
-  device/emulator. Aurora contrast unmeasured.
-- No Room migration test: only schema v2 exported. No vault, no cookie
-  export, no DRM bypass — by design. Baseline Profile skipped (AGP 8.10.1
-  DSL unresolved); see `docs/RELEASE.md`.
-- GPL-3.0 yt-dlp payload: base builds are clean; extended-media builds are
-  qualification-only until the owner signs the decision in
-  `docs/DEPENDENCY_NOTICES.md`.
+Known code risks to check at first compile: PdfBox-Android API surface used
+in stamps/redaction, zip4j parameters API, CameraX lifecycle binding cast,
+Compose Canvas path handling in the signature pad, recursive `seekAll`
+helper suspension. JVM tests exist for the PDF backend
+(`PdfStructureCoreTest`) but were not executed here.

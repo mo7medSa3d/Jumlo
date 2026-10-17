@@ -87,7 +87,27 @@ import kotlin.math.roundToInt
         val ticket = context.outputs.reserve(request.id, itemKey, "ocr.txt", "text/plain")
         ticket.stageFile.writeText(text)
         val rec = context.outputs.publish(ticket) { OutputMetadata() }
-        return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
+        val outcomes = mutableListOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
+        // Searchable PDF: original pages rasterized + invisible OCR text layer (positions approximated per page block).
+        try {
+            val sKey = "searchable-pdf"
+            context.outputs.find(request.id, sKey)?.let { outcomes += ItemOutcome(sKey, ItemStatus.CREATED, it.id) } ?: run {
+                val sTicket = context.outputs.reserve(request.id, sKey, "searchable.pdf", "application/pdf")
+                context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
+                    com.jumlo.app.data.pdf.PdfBoxBackend.open(src, null).use { doc ->
+                        val perPage = text.split(Regex("(?m)^--- page \\d+ ---$")).drop(1)
+                        perPage.forEachIndexed { i, pageText ->
+                            if (i < doc.numberOfPages && pageText.isNotBlank())
+                                runCatching { com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(doc, i, pageText.replace(Regex("[^\\x20-\\x7E\\n]"), " "), 0.05, 0.05, 10f) }
+                        }
+                        doc.save(sTicket.stageFile)
+                    }
+                }
+                val sRec = context.outputs.publish(sTicket) { context.outputs.inspect(it, "application/pdf") }
+                outcomes += ItemOutcome(sKey, ItemStatus.CREATED, sRec.id)
+            }
+        } catch (e: Exception) { outcomes += ItemOutcome("searchable-pdf", ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
+        return outcomes
     }
 
     private suspend fun webpage(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {

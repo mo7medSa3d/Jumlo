@@ -41,3 +41,17 @@ Decision for the release train (needs owner sign-off):
 
 No cookie export and no DRM/encryption bypass is implemented, and none may
 be added as part of resolving the above.
+
+## Added this session (base build)
+
+| Dependency | Version | License |
+|---|---|---|
+| pdfbox-android (`com.tom-roush:pdfbox-android`) | 2.0.27.0 | Apache-2.0 |
+| zip4j (`net.lingala.zip4j:zip4j`) | 2.11.5 | Apache-2.0 |
+| CameraX (`camera-lifecycle/camera2/view`) | 1.3.4 | Apache-2.0 |
+| ML Kit text-recognition (`com.google.mlkit:text-recognition`) | 16.0.1 | Apache-2.0 / ML Kit ToS; bundled Latin model, on-device |
+
+Fonts note: `res/font/*.ttf` (IBM Plex, OFL-1.1) were already committed in the
+base tree; the host static check `test_no_font_binaries_in_project_sources`
+predates them and currently fails on those two files — owner decision needed:
+keep fonts (fix the check) or remove them.

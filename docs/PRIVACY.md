@@ -38,3 +38,15 @@
 
 Failures surface as on-screen messages and per-item job error codes stored
 locally. There is no third-party crash reporter and no network telemetry.
+
+## Camera, OCR, webpage capture (added this session)
+
+- CAMERA is used only for the manual document-scan screen; captures stay in
+  app-private cache and become normal imported snapshots. No camera data is
+  uploaded.
+- OCR is ML Kit on-device text recognition; page images never leave the
+  device for OCR.
+- Webpage-to-PDF loads the URL you enter in a WebView (that site sees a
+  normal page visit) and prints it locally.
+- PDF/ZIP passwords are held only in memory (session handles), never written
+  to drafts, jobs, logs, or backups.
