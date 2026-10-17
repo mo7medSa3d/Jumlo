@@ -59,7 +59,8 @@ import kotlin.math.roundToInt
     var showSessionSheet by rememberSaveable { mutableStateOf(false) }
     val clipboardSuggestion=remember { clipboard.getText()?.text?.toString()?.takeIf { it.trim().startsWith("https://",true) } }
     LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl) }
-    LaunchedEffect(state.url) {
+    // Also re-inspect on a fresh entry with the exact same shared URL.
+    LaunchedEffect(sessionEpoch, state.url) {
         if(state.url.startsWith("https://",true) || (state.allowHttp && state.url.startsWith("http://",true))) {
             delay(400)
             viewModel.analyze()
@@ -103,14 +104,6 @@ import kotlin.math.roundToInt
                                     containerColor=MaterialTheme.colorScheme.primaryContainer,
                                     contentColor=MaterialTheme.colorScheme.onPrimaryContainer,
                                     leadingIcon=Icons.Rounded.AutoAwesome
-                                )
-                            }
-                            if(state.hasSavedSession) {
-                                QuietBadge(
-                                    text=stringResource(R.string.media_session_active_badge, state.activeDomains.size.coerceAtLeast(1)),
-                                    containerColor=MaterialTheme.colorScheme.tertiaryContainer,
-                                    contentColor=MaterialTheme.colorScheme.onTertiaryContainer,
-                                    leadingIcon=Icons.Rounded.VerifiedUser
                                 )
                             }
                         }
@@ -305,7 +298,8 @@ import kotlin.math.roundToInt
                             val hasVideo = asset.formats.any { it.hasVideo }
                             if (hasVideo) {
                                 ModeSelectionCard(
-                                    title=stringResource(R.string.media_video),
+                                    title=stringResource(if (asset.formats.any { it.hasAudio })
+                                        R.string.media_video else R.string.media_video_only),
                                     icon=Icons.Rounded.Videocam,
                                     selected=state.mode==MediaMode.VIDEO,
                                     onClick={haptics.selectionToggle();viewModel.mode(MediaMode.VIDEO)},
@@ -313,13 +307,13 @@ import kotlin.math.roundToInt
                                 )
                             }
                             if (asset.formats.any { it.hasAudio }) {
-                            ModeSelectionCard(
-                                title=stringResource(R.string.media_audio_only),
-                                icon=Icons.Rounded.Audiotrack,
-                                selected=state.mode==MediaMode.AUDIO,
-                                onClick={haptics.selectionToggle();viewModel.mode(MediaMode.AUDIO)},
-                                modifier=Modifier.weight(1f)
-                            )
+                                ModeSelectionCard(
+                                    title=stringResource(R.string.media_audio_only),
+                                    icon=Icons.Rounded.Audiotrack,
+                                    selected=state.mode==MediaMode.AUDIO,
+                                    onClick={haptics.selectionToggle();viewModel.mode(MediaMode.AUDIO)},
+                                    modifier=Modifier.weight(1f)
+                                )
                             }
                         }
                     }
@@ -389,8 +383,9 @@ import kotlin.math.roundToInt
                             } else {
                                 choice.container.uppercase(Locale.ROOT)
                             }
-                            val subBadge = if (choice.mode == MediaMode.VIDEO && choice.expectsAudio) {
-                                "$containerLabel · ${stringResource(R.string.media_with_audio)}"
+                            val subBadge = if (choice.mode == MediaMode.VIDEO) {
+                                "$containerLabel · ${stringResource(if (choice.expectsAudio)
+                                    R.string.media_with_audio else R.string.media_without_audio)}"
                             } else {
                                 containerLabel
                             }

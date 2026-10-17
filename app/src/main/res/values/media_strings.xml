@@ -69,6 +69,7 @@
     <string name="media_switch_to_extractor">Analyze qualities or extract MP3 / M4A audio</string>
     <string name="media_supported_platforms">Supports YouTube, TikTok, Instagram, Facebook, X, LinkedIn, SoundCloud, Vimeo, Reddit, Google Drive, PDF &amp; direct links</string>
     <string name="media_with_audio">With Audio</string>
+    <string name="media_without_audio">No audio</string>
     <string name="media_video_only">Video</string>
     <string name="media_session_btn">Platform Login, Cookies &amp; Headers</string>
     <string name="media_session_active_badge">Session Active (%1$d)</string>

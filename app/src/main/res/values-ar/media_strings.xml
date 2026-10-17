@@ -69,6 +69,7 @@
     <string name="media_switch_to_extractor">تحليل جودات الفيديو أو استخراج الصوت MP3 / M4A</string>
     <string name="media_supported_platforms">يدعم YouTube وTikTok وInstagram وFacebook وX وLinkedIn وSoundCloud وVimeo وReddit وGoogle Drive وملفات PDF والروابط المباشرة</string>
     <string name="media_with_audio">مع الصوت</string>
+    <string name="media_without_audio">بدون صوت</string>
     <string name="media_video_only">فيديو</string>
     <string name="media_session_btn">تسجيل دخول المنصات والكوكيز والـ Headers</string>
     <string name="media_session_active_badge">جلسة نشطة (%1$d)</string>
