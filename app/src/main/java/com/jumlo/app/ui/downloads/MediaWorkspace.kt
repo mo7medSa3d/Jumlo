@@ -122,36 +122,6 @@ import kotlin.math.roundToInt
                             }
                         }
                     }
-                    // Prominent 1-tap Platform Login, Cookies & Custom Headers button
-                    Surface(
-                        onClick={haptics.actionClick();showSessionSheet=true},
-                        shape=RoundedCornerShape(18.dp),
-                        color=MaterialTheme.colorScheme.surfaceContainerLow,
-                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
-                        modifier=Modifier.fillMaxWidth().pressFeedback()
-                    ) {
-                        Row(
-                            modifier=Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=12.dp),
-                            verticalAlignment=Alignment.CenterVertically,
-                            horizontalArrangement=Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                modifier=Modifier.weight(1f),
-                                verticalAlignment=Alignment.CenterVertically,
-                                horizontalArrangement=Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(Icons.Rounded.Key,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(20.dp))
-                                Text(
-                                    text=stringResource(R.string.media_session_btn),
-                                    style=QuietTheme.typography.metadataStrong,
-                                    color=MaterialTheme.colorScheme.onSurface,
-                                    maxLines=1,
-                                    overflow=TextOverflow.Ellipsis
-                                )
-                            }
-                            Icon(Icons.Rounded.Tune,null,tint=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(18.dp))
-                        }
-                    }
                 }
             }
             if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
@@ -167,7 +137,7 @@ import kotlin.math.roundToInt
                 }
             }
             state.error?.let { code -> item("error") {
-                val needsSession = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_SOURCE_REJECTED","MEDIA_RATE_LIMITED","HTTP_401","HTTP_403","MEDIA_EXTRACTION_FAILED")
+                val needsSession = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_SOURCE_REJECTED","HTTP_401","HTTP_403")
                 QuietStateCard(
                     title=mediaError(code),
                     subtitle=stringResource(if(needsSession) R.string.media_error_session else R.string.redesign_download_retry_hint),
@@ -215,14 +185,7 @@ import kotlin.math.roundToInt
                                 style=QuietTheme.typography.metadata,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            OutlinedTextField(
-                                value=state.name,
-                                onValueChange=viewModel::name,
-                                singleLine=true,
-                                label={Text(stringResource(R.string.media_filename))},
-                                modifier=Modifier.fillMaxWidth(),
-                                shape=RoundedCornerShape(16.dp)
-                            )
+
                         }
                     }
                 }
@@ -329,14 +292,7 @@ import kotlin.math.roundToInt
                                 }
                             }
                             Text(state.name.ifBlank { asset.title },style=QuietTheme.typography.sectionTitle,fontWeight=FontWeight.Bold,maxLines=3,overflow=TextOverflow.Ellipsis)
-                            OutlinedTextField(
-                                value=state.name,
-                                onValueChange=viewModel::name,
-                                singleLine=true,
-                                label={Text(stringResource(R.string.media_filename))},
-                                modifier=Modifier.fillMaxWidth(),
-                                shape=RoundedCornerShape(16.dp)
-                            )
+
                         }
                     }
                 }
@@ -377,12 +333,13 @@ import kotlin.math.roundToInt
                         ) {
                             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                                 Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
+                                val originalAudioLabel = stringResource(R.string.media_original_audio)
                                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                     val audioFormats = listOf(
                                         AudioOutput.MP3 to "MP3",
                                         AudioOutput.M4A to "M4A (AAC)",
                                         AudioOutput.OPUS to "OPUS",
-                                        AudioOutput.ORIGINAL to stringResource(R.string.media_original_audio)
+                                        AudioOutput.ORIGINAL to originalAudioLabel
                                     )
                                     items(audioFormats, key={it.first.name}) { (fmt, label) ->
                                         FilterChip(
@@ -487,6 +444,14 @@ import kotlin.math.roundToInt
                 }
             }
 
+            if (state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
+                item("choose-quality-hint") {
+                    Text(stringResource(R.string.media_choose_quality_hint),
+                        style=QuietTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.primary)
+                }
+            }
+
             item("advanced") {
                 TextButton(onClick={advanced=!advanced}) {
                     Icon(Icons.Rounded.Tune,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp))
@@ -494,6 +459,18 @@ import kotlin.math.roundToInt
                 }
             }
             if(advanced) {
+                if (state.asset != null || state.direct != null) item("rename") {
+                    OutlinedTextField(value=state.name,onValueChange=viewModel::name,
+                        singleLine=true,label={Text(stringResource(R.string.media_filename))},
+                        modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp))
+                }
+                item("session-settings") {
+                    TextButton(onClick={haptics.actionClick();showSessionSheet=true}) {
+                        Icon(Icons.Rounded.Lock,null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.media_session_btn))
+                    }
+                }
                 item("network-toggles") {
                     Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {

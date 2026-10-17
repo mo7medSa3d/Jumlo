@@ -86,4 +86,5 @@
     <string name="media_prefer_desktop_ua">استخدام متصفح سطح المكتب Desktop Chrome UA (موصى به لـ Facebook وInstagram وYouTube HD)</string>
     <string name="media_custom_headers_label">ترويسات HTTP إضافية مخصصة (Header: Value في كل سطر)</string>
     <string name="media_headers_save_btn">حفظ الـ Headers والـ User-Agent وإعادة التحليل</string>
+    <string name="media_choose_quality_hint">اختَر الجودة المناسبة بالأعلى لبدء التنزيل في الخلفية.</string>
 </resources>

@@ -86,4 +86,5 @@
     <string name="media_prefer_desktop_ua">Prefer Desktop Chrome User-Agent (recommended for Facebook, Instagram &amp; YouTube HD)</string>
     <string name="media_custom_headers_label">Custom HTTP Headers (Key: Value per line)</string>
     <string name="media_headers_save_btn">Save Custom Headers &amp; Re-Analyze</string>
+    <string name="media_choose_quality_hint">Choose a quality above to download in the background.</string>
 </resources>

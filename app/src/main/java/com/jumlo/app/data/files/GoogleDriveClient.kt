@@ -44,6 +44,10 @@ class GoogleDriveClient(
     private val transport: HttpTransport,
     private val okHttpClient: OkHttpClient? = null
 ) {
+    // HttpTransport uses an explicit close callback, not Closeable.
+    private inline fun <R> TransportResponse.use(block: (TransportResponse) -> R): R =
+        try { block(this) } finally { this.close.invoke() }
+
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
 

@@ -13,7 +13,6 @@ import com.jumlo.app.data.media.MediaSessionStore
 import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.*
 import com.jumlo.app.data.source.EphemeralSecretStore
-import com.jumlo.app.model.DownloadQuality
 import com.jumlo.app.model.JobRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -39,7 +38,7 @@ data class MediaUiState(
     val choices: List<MediaChoice> = emptyList(),
     val selectedKey: String? = null,
     val mode: MediaMode = MediaMode.VIDEO,
-    val audio: AudioOutput = AudioOutput.MP3,
+    val audio: AudioOutput = AudioOutput.ORIGINAL,
     val bitrate: Int = 192,
     val directMode: String = "ORIGINAL",
     val platformBadge: String? = null,
@@ -74,9 +73,7 @@ data class MediaUiState(
     private var lastJob: String?=null
     private val submissions=MediaSubmissionSlot<JobRequest>()
     private val probeClient=client.newBuilder().followRedirects(false).followSslRedirects(false).build()
-    private fun qualityCap(quality:DownloadQuality):Int=when(quality) {
-        DownloadQuality.BALANCED -> 1080;DownloadQuality.BEST -> 0;DownloadQuality.DATA_SAVER -> 480
-    }
+    private var modeChangedByUser = false
     private fun probeDirect(url:String,allowHttp:Boolean,check:()->Unit):DirectPreview {
         var uri=HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(url),allowHttp)
         var useRangeGet = false
@@ -123,11 +120,14 @@ data class MediaUiState(
         refreshSessionState()
         viewModelScope.launch {
             preferences.settingsFlow.collect { pref ->
-                val mode=if(pref.audioOnlyDefault) MediaMode.AUDIO else MediaMode.VIDEO
-                val current=_state.value
-                if(current.asset == null || current.mode != mode) {
-                    val choices=current.asset?.let { MediaCatalog.choices(it,mode) }.orEmpty()
-                    _state.update { it.copy(mode=mode,choices=choices,selectedKey=MediaCatalog.preferred(choices,mode,qualityCap(pref.downloadQuality))?.key) }
+                val desiredMode = if (pref.audioOnlyDefault) MediaMode.AUDIO else MediaMode.VIDEO
+                // DataStore updates must never overwrite a deliberate video/audio selection.
+                if (!modeChangedByUser) {
+                    _state.update { current ->
+                        if (current.asset == null && current.direct == null && !current.analyzing)
+                            current.copy(mode = desiredMode)
+                        else current
+                    }
                 }
             }
         }
@@ -150,6 +150,7 @@ data class MediaUiState(
         generation++
         analysis?.cancel()
         analyzedUrl=null
+        modeChangedByUser = false
         newCopy()
         val trimmed = initialUrl.trim().take(32768)
         _state.value=MediaUiState(
@@ -236,10 +237,13 @@ data class MediaUiState(
     }
     fun select(key:String) { if(_state.value.choices.any { it.key==key }) { newCopy(); _state.update { it.copy(selectedKey=key) } } }
     fun mode(value:MediaMode) {
+        if (_state.value.mode == value) return
+        modeChangedByUser = true
         newCopy()
-        val asset=_state.value.asset
-        val choices=asset?.let { MediaCatalog.choices(it,value) }.orEmpty()
-        _state.update { it.copy(mode=value,choices=choices,selectedKey=choices.firstOrNull()?.key,error=null) }
+        val asset = _state.value.asset
+        val choices = asset?.let { MediaCatalog.choices(it, value) }.orEmpty()
+        _state.update { it.copy(mode = value, choices = choices, selectedKey = null,
+            error = if (asset != null && choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null) }
     }
 
     /** Forces full media-extractor inspection on a direct video/audio link so the user can pick qualities or extract MP3 audio. */
@@ -285,8 +289,6 @@ data class MediaUiState(
                         val hasVideo = asset.formats.any { it.hasVideo }
                         val effectiveMode = if (!hasVideo && asset.formats.any { it.hasAudio }) MediaMode.AUDIO else _state.value.mode
                         val choices=MediaCatalog.choices(asset,effectiveMode)
-                        val cap=qualityCap(preferences.settingsFlow.first().downloadQuality)
-                        val default=MediaCatalog.preferred(choices,effectiveMode,cap)
                         if(token==generation) {
                             analyzedUrl=url
                             _state.update {
@@ -295,9 +297,9 @@ data class MediaUiState(
                                     mode=effectiveMode,
                                     platformBadge=detectedPlatform ?: asset.extractor.takeIf { e -> !e.equals("generic", true) },
                                     choices=choices,
-                                    selectedKey=default?.key,
+                                    selectedKey=null,
                                     name=asset.title.ifBlank { "media" },
-                                    error=if(default==null) "MEDIA_NO_USABLE_FORMAT" else null
+                                    error=if(choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null
                                 )
                             }
                         }

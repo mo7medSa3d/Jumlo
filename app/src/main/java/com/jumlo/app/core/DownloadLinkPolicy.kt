@@ -79,6 +79,10 @@ object DownloadLinkPolicy {
     /** Rewrites Google Drive / Docs sharing URLs to their direct download endpoints; returns other URLs unchanged. */
     fun resolveDirectUrl(url: String): String = DriveLink.toDirectDownloadUrl(url) ?: url.trim()
 
+    /** A platform page needs metadata inspection, never a direct HTML download. */
+    fun requiresMediaExtractor(url: String): Boolean =
+        detectPlatformName(url)?.let { it != "Google Drive" } == true
+
     fun isDirect(url: String): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
         if (uri.scheme?.lowercase(Locale.ROOT) !in setOf("http", "https")) return false

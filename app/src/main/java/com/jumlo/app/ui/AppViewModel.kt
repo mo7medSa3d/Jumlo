@@ -233,12 +233,13 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
                 val lines=text.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
-                if(lines.any { DownloadLinkPolicy.isUnsupportedSocialPlatform(it) }) {
-                    notifyMessage("UNSUPPORTED_SOCIAL_PLATFORM")
-                    return@launch
-                }
                 if(lines.all { it.startsWith("https://",true) || it.startsWith("http://",true) }) {
-                    chooseTool(if(lines.size>1) "dl_03" else "dl_02")
+                    // Route social pages through the extractor so users see real format choices.
+                    chooseTool(when {
+                        lines.size>1 -> "dl_03"
+                        DownloadLinkPolicy.requiresMediaExtractor(lines.single()) -> "dl_media"
+                        else -> "dl_02"
+                    })
                     setUrls(text)
                 } else notifyMessage("INVALID_DOWNLOAD_LIST")
             }
@@ -349,7 +350,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                     val lines=urlSnapshot.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
                     require(lines.isNotEmpty() && lines.size<=100 && (state.toolId=="dl_03" || lines.size==1)) { "INVALID_DOWNLOAD_LIST" }
                     lines.forEach { line ->
-                        if(DownloadLinkPolicy.isUnsupportedSocialPlatform(line)) throw OperationFailure("UNSUPPORTED_SOCIAL_PLATFORM")
+                        if(DownloadLinkPolicy.requiresMediaExtractor(line)) throw OperationFailure("MEDIA_SELECTION_REQUIRED")
                         HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line),state.cleartextConsent)
                     }
                 }
