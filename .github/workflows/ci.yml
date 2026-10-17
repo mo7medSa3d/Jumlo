@@ -1,90 +1,116 @@
-name: CI
-
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
+name: Android CI & APK
 
 on:
   push:
     branches: [main, 'arena/**']
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      device_tests:
+        description: Run Android emulator tests (API 26 and 36)
+        type: boolean
+        default: false
+        required: false
+
+permissions:
+  contents: read
+
+# Cancel obsolete commits instead of paying for their builds.
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-test-lint:
-    runs-on: ubuntu-latest
+  build:
+    name: Build, test, lint, R8 and APK
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
-          java-version: 17
           distribution: temurin
-          cache: gradle
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+          java-version: '17'
+      # Restores Gradle 8.14 wrapper, dependencies, plugins and local build cache.
+      # Do NOT also use setup-java's Gradle cache or actions/cache on ~/.gradle.
+      - uses: gradle/actions/setup-gradle@v6
         with:
-          packages: 'platforms;android-36 build-tools;36.0.0 platform-tools'
-      - name: Gradle (debug build, unit tests, lint, release)
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # SDK 36 and Build Tools 36 ship on ubuntu-24.04 runners; only install if absent.
+      - name: Ensure Android SDK 36
         shell: bash
         run: |
-          set -o pipefail
-          chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease --no-daemon --console=plain --stacktrace 2>&1 | tee gradle.log
-          code=${PIPESTATUS[0]}
-          if [ "$code" -ne 0 ]; then
-            echo "## Gradle failures" >> "$GITHUB_STEP_SUMMARY"
-            grep -nE '(^e: |error:|FAILED|Exception|Caused by)' gradle.log | head -60 | while IFS= read -r line; do
-              echo "::error::${line}"
-              echo "- ${line}" >> "$GITHUB_STEP_SUMMARY"
-            done
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$sdk" ]]; then
+            echo 'Android SDK environment not found' >&2
+            exit 1
           fi
-          exit $code
-      - name: Report Gradle failure on PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if [[ ! -f "$sdk/platforms/android-36/android.jar" || ! -x "$sdk/build-tools/36.0.0/aapt2" ]]; then
+            sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          fi
+
+      - name: Debug APK, unit tests, lint and release R8
+        shell: bash
         run: |
-          { echo "### CI failure (run $GITHUB_RUN_ID)"; echo '```';
-            grep -nE '(^e: |error:|FAILED|Exception|Caused by|What went wrong|Execution failed)' gradle.log | head -80;
-            echo '```'; } > failure.md
-          gh pr comment ${{ github.event.pull_request.number }} --body-file failure.md || true
-      - name: Upload Gradle logs
-        if: always()
-        uses: actions/upload-artifact@v4
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease \
+            -PextendedMedia=false --no-daemon --console=plain 2>&1 | tee gradle.log
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
+
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v7
         with:
-          name: gradle-logs
+          name: Jumlo-Debug-APK-${{ github.run_number }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Failure-Logs-${{ github.run_number }}
           path: |
             gradle.log
             app/build/reports/
             app/build/test-results/
           if-no-files-found: ignore
+          retention-days: 7
 
   instrumented:
-    runs-on: ubuntu-latest
+    # Full device matrix is expensive. Run from Actions > Run workflow when needed.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.device_tests }}
+    needs: build
+    name: Device tests (API ${{ matrix.api }})
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         api: [26, 36]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
-          java-version: 17
           distribution: temurin
-          cache: gradle
-      - name: Run instrumented tests (API ${{ matrix.api }})
-        uses: reactivecircus/android-emulator-runner@v2
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+      - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
           target: default
           arch: x86_64
+          disable-animations: true
           script: |
             chmod +x gradlew
-            ./gradlew :app:connectedDebugAndroidTest --no-daemon --console=plain
+            ./gradlew :app:connectedDebugAndroidTest -PextendedMedia=false --no-daemon --console=plain

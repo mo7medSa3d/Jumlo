@@ -1,7 +1,7 @@
 # Built application files
 *.apk
 *.aab
-
+*.patch
 # Dalvik VM
 *.dex
 
