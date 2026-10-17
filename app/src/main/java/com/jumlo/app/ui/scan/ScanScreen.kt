@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -46,11 +47,18 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Scan document", style = MaterialTheme.typography.titleLarge)
-        Text("Align the document inside the frame. Perspective is corrected with a fixed inset quad; check the result and retake if corners are cut.")
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Text(stringResource(com.jumlo.app.R.string.scan_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(com.jumlo.app.R.string.scan_hint))
+        error?.let { code ->
+            val resId = when (code) {
+                "scan_error_bind" -> com.jumlo.app.R.string.scan_error_bind
+                "scan_error_process" -> com.jumlo.app.R.string.scan_error_process
+                else -> com.jumlo.app.R.string.scan_error_capture
+            }
+            Text(stringResource(resId), color = MaterialTheme.colorScheme.error)
+        }
         if (!granted) {
-            Button(onClick = { permission.launch(Manifest.permission.CAMERA) }) { Text("Allow camera") }
+            Button(onClick = { permission.launch(Manifest.permission.CAMERA) }) { Text(stringResource(com.jumlo.app.R.string.scan_allow_camera)) }
         } else {
             AndroidView(factory = { ctx ->
                 PreviewView(ctx).also { previewView ->
@@ -60,7 +68,7 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                         val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                         val capture = ImageCapture.Builder().build(); imageCapture = capture
                         try { val owner = ctx as? androidx.lifecycle.LifecycleOwner ?: throw IllegalStateException("NO_LIFECYCLE_OWNER"); provider.unbindAll(); provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture) }
-                        catch (e: Exception) { error = "CAMERA_BIND_FAILED" }
+                        catch (e: Exception) { error = "scan_error_bind" }
                     }, ContextCompat.getMainExecutor(ctx))
                 }
             }, modifier = Modifier.fillMaxWidth().height(420.dp))
@@ -71,13 +79,13 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                     override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                         try {
                             onCaptured(perspectiveInset(file))
-                        } catch (e: Exception) { error = "SCAN_PROCESS_FAILED" }
+                        } catch (e: Exception) { error = "scan_error_process" }
                     }
-                    override fun onError(exception: ImageCaptureException) { error = "CAMERA_CAPTURE_FAILED" }
+                    override fun onError(exception: ImageCaptureException) { error = "scan_error_capture" }
                 })
-            }) { Text("Capture & correct perspective") }
+            }) { Text(stringResource(com.jumlo.app.R.string.scan_capture)) }
         }
-        TextButton(onClick = onBack) { Text("Back") }
+        TextButton(onClick = onBack) { Text(stringResource(com.jumlo.app.R.string.scan_back)) }
     }
 }
 
@@ -107,12 +115,12 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
     var path by remember { mutableStateOf(androidx.compose.ui.graphics.Path()) }
     var strokes by remember { mutableStateOf(0) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Draw signature")
+        Text(stringResource(com.jumlo.app.R.string.signature_title))
         androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(140.dp).background(Color.White).pointerInput(Unit) {
             detectDragGestures(onDragStart = { path.moveTo(it.x, it.y); strokes++ }, onDrag = { change, _ -> path.lineTo(change.position.x, change.position.y) })
         }) { drawPath(path, Color.Black, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { path = androidx.compose.ui.graphics.Path(); strokes = 0 }) { Text("Clear") }
+            TextButton(onClick = { path = androidx.compose.ui.graphics.Path(); strokes = 0 }) { Text(stringResource(com.jumlo.app.R.string.signature_clear)) }
             Button(enabled = strokes > 0, onClick = {
                 val bitmap = Bitmap.createBitmap(600, 252, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
@@ -122,8 +130,8 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
                 FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
                 bitmap.recycle()
                 onSaved(file)
-            }) { Text("Save drawing as signature image") }
+            }) { Text(stringResource(com.jumlo.app.R.string.signature_save)) }
         }
-        Text("After saving, add the signature image as the second selected file (PDF first).", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(com.jumlo.app.R.string.signature_hint), style = MaterialTheme.typography.bodySmall)
     }
 }

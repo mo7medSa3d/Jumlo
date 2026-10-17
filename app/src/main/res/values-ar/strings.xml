@@ -145,4 +145,16 @@
     <string name="processing_body">افتح التطبيق لرؤية التقدم والنتائج.</string>
     <string name="processing_cancel">إلغاء</string>
     <string name="settings_export_error_log">تصدير سجل الأخطاء</string>
+    <string name="scan_title">مسح المستند</string>
+    <string name="scan_hint">حاذِ المستند داخل الإطار. يستخدم تصحيح المنظور رباعيًا ثابتًا.</string>
+    <string name="scan_allow_camera">السماح بالكاميرا</string>
+    <string name="scan_capture">التقط وصحّح المنظور</string>
+    <string name="scan_back">رجوع</string>
+    <string name="scan_error_bind">الكاميرا غير متاحة</string>
+    <string name="scan_error_process">تعذّرت معالجة المسح</string>
+    <string name="scan_error_capture">فشل الالتقاط</string>
+    <string name="signature_title">ارسم التوقيع</string>
+    <string name="signature_clear">مسح</string>
+    <string name="signature_save">حفظ الرسم كصورة توقيع</string>
+    <string name="signature_hint">بعد الحفظ، أضف صورة التوقيع كملف ثانٍ محدد (ملف PDF أولًا).</string>
 </resources>
