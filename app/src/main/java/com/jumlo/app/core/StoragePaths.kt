@@ -9,7 +9,11 @@ object StoragePaths {
         mime.startsWith("image/") -> "Images"
         else -> "Documents"
     }
-    fun relativePath(mime:String):String="Download/Jumlo/${category(mime)}/"
+    fun relativePath(mime:String, subfolder:String?=null):String {
+        val base="Download/Jumlo/${category(mime)}"
+        val cleanSub=subfolder?.trim()?.takeIf { it.isNotEmpty() }?.let { AutoOutputName.cleanBaseName(it,"Folder") }
+        return if(cleanSub!=null) "$base/$cleanSub/" else "$base/"
+    }
     /** Only SAF tree URIs represent custom destinations. Previous generated
      * default folder values are replaced by the current public directory.
      * Existing result URIs are unaffected. */

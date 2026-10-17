@@ -62,4 +62,21 @@
     <string name="ui_http_notice">لا يشفر HTTP رابط التنزيل أو محتواه. استخدم HTTPS كلما أمكن.</string>
     <string name="ui_target_jpeg_policy">ينشئ صور JPEG. تُختار الجودة تلقائيًا لتحقيق الحجم المستهدف؛ قد تكون بعض الأحجام أصغر من الممكن.</string>
     <string name="ui_exif_jpeg_policy">ينشئ الاحتفاظ ببيانات EXIF صورة JPEG. أزل جميع البيانات الوصفية لاختيار صيغة أخرى.</string>
+    <string name="ui_smart_defaults_active">الإعدادات الذكية مفعّلة: كل الصفحات، أفضل جودة، وتسمية تلقائية.</string>
+    <string name="ui_custom_output_name">اسم مخصص للملف الناتج (اختياري)</string>
+    <string name="ui_size_before_after">%1$s ← %2$s (-%3$d%%)</string>
+    <string name="ui_saved_subfolder">المجلد: %1$s</string>
+    <string name="ui_fit_contain">احتواء</string>
+    <string name="ui_fit_cover">ملء</string>
+    <string name="ui_fit_pad">حشو</string>
+    <string name="ui_fit_stretch">تمديد</string>
+    <string name="ui_orient_auto">تلقائي</string>
+    <string name="ui_orient_portrait">طولي</string>
+    <string name="ui_orient_landscape">عرضي</string>
+    <string name="ui_layout_grid2">شبكة عمودين</string>
+    <string name="ui_layout_hstrip">شريط أفقي</string>
+    <string name="ui_layout_vstrip">شريط عمودي</string>
+    <string name="ui_preview_zoom_hint">اسحب للتنقل بين الصفحات · قرّب بإصبعين أو انقر مرتين للتكبير</string>
+    <string name="ui_preview_reset_zoom">إعادة ضبط التكبير</string>
+    <string name="ui_page_indicator">صفحة %1$d من %2$d</string>
 </resources>

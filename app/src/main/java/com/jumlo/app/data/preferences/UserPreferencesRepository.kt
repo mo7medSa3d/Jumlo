@@ -74,7 +74,7 @@ class UserPreferencesRepository @Inject constructor(
             downloadQuality = runCatching { DownloadQuality.valueOf(prefs[Keys.DOWNLOAD_QUALITY] ?: "BALANCED") }.getOrDefault(DownloadQuality.BALANCED),
             audioOnlyDefault = prefs[Keys.AUDIO_ONLY_DEFAULT] ?: false,
             fileViewMode = runCatching { FileViewMode.valueOf(prefs[Keys.FILE_VIEW_MODE] ?: "GRID") }.getOrDefault(FileViewMode.GRID),
-            accentColor = (prefs[Keys.ACCENT_COLOR] ?: "VIOLET").takeIf { it in setOf("VIOLET","BLUE","TEAL","CORAL") } ?: "VIOLET",
+            accentColor = (prefs[Keys.ACCENT_COLOR] ?: "VIOLET").takeIf { it in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC") } ?: "VIOLET",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             stripExifByDefault = prefs[Keys.STRIP_EXIF_DEFAULT] ?: true,
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
@@ -140,10 +140,6 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.UI_SOUNDS] = enabled }
     }
 
-    suspend fun setReorderHaptics(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.REORDER_HAPTICS] = enabled }
-    }
-
     suspend fun setDownloadDestinationFolder(treeUri: String) {
         require(treeUri.startsWith("content://")) { "INVALID_TREE_URI" }
         context.dataStore.edit { it[Keys.DOWNLOAD_DEST_FOLDER] = treeUri }
@@ -153,7 +149,7 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun setAudioOnlyDefault(value: Boolean) { context.dataStore.edit { it[Keys.AUDIO_ONLY_DEFAULT] = value } }
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }
     suspend fun setAccentColor(value: String) {
-        require(value in setOf("VIOLET","BLUE","TEAL","CORAL"))
+        require(value in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC"))
         context.dataStore.edit { it[Keys.ACCENT_COLOR] = value }
     }
     suspend fun setFontScale(value: String) {
@@ -170,13 +166,5 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setNotificationsGranted(granted: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATIONS_GRANTED] = granted }
-    }
-
-    suspend fun setVaultAutoLockSeconds(seconds: Int) {
-        context.dataStore.edit { it[Keys.VAULT_AUTO_LOCK_SEC] = seconds }
-    }
-
-    suspend fun setMediaTermsAccepted(accepted: Boolean) {
-        context.dataStore.edit { it[Keys.MEDIA_TERMS_ACCEPTED] = accepted }
     }
 }

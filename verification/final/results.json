@@ -6,8 +6,8 @@
       "scripts/test-core.sh"
     ],
     "scope": "Production dependency-free Kotlin/domain sources and real loopback HTTP",
-    "exit_code": 0,
-    "status": "PASS",
+    "exit_code": 2,
+    "status": "BLOCKED",
     "log": "verification/final/core-domain-http.log"
   },
   {
@@ -111,20 +111,16 @@
       "--version"
     ],
     "scope": "Wrapper launch requested; integrity check precedes execution",
-    "exit_code": 2,
-    "status": "BLOCKED",
+    "exit_code": 1,
+    "status": "FAIL",
     "log": "verification/final/wrapper-launch.log"
   },
   {
     "name": "source-whitespace",
-    "command": [
-      "bash",
-      "-c",
-      "git diff --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts && git diff --cached --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts"
-    ],
-    "scope": "Staged and unstaged source diff whitespace only; excludes documentation/evidence",
-    "exit_code": 0,
-    "status": "PASS",
+    "command": null,
+    "scope": "Git-only diff check, not applicable to extracted source archives",
+    "exit_code": null,
+    "status": "NOT_APPLICABLE",
     "log": "verification/final/source-whitespace.log"
   }
 ]

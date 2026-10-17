@@ -1,18 +1,20 @@
 command: ["python3", "scripts/test-storage-sql.py"]
-started_at_utc: 2026-10-16T12:40:09.029300+00:00
+started_at_utc: 2026-10-17T19:29:43.145557+00:00
 scope: Exact production DAO/migration SQL in host SQLite; not Room
 
 test_cancelled_job_cannot_claim_or_be_marked_complete (__main__.ActualSqlTests.test_cancelled_job_cannot_claim_or_be_marked_complete) ... ok
 test_claim_does_not_steal_a_live_lease (__main__.ActualSqlTests.test_claim_does_not_steal_a_live_lease) ... ok
-test_migration_sql_retains_preexisting_table_rows (__main__.ActualSqlTests.test_migration_sql_retains_preexisting_table_rows) ... ok
+test_legacy_download_url_scrub_removes_signed_queries_without_losing_progress (__main__.ActualSqlTests.test_legacy_download_url_scrub_removes_signed_queries_without_losing_progress) ... ok
+test_migration_sql_retains_legacy_fixture_rows_and_matches_current_schema (__main__.ActualSqlTests.test_migration_sql_retains_legacy_fixture_rows_and_matches_current_schema) ... ok
 test_old_owner_cannot_write_after_lease_takeover (__main__.ActualSqlTests.test_old_owner_cannot_write_after_lease_takeover) ... ok
 test_output_logical_identity_is_unique (__main__.ActualSqlTests.test_output_logical_identity_is_unique) ... ok
+test_output_lookup_and_trash_delete_queries (__main__.ActualSqlTests.test_output_lookup_and_trash_delete_queries) ... ok
 test_retry_waits_for_prior_worker_cleanup (__main__.ActualSqlTests.test_retry_waits_for_prior_worker_cleanup) ... ok
 test_source_uri_can_have_distinct_immutable_snapshot_ids (__main__.ActualSqlTests.test_source_uri_can_have_distinct_immutable_snapshot_ids) ... ok
 test_worker_start_failure_never_overwrites_cancelled_state (__main__.ActualSqlTests.test_worker_start_failure_never_overwrites_cancelled_state) ... ok
 
 ----------------------------------------------------------------------
-Ran 8 tests in 0.004s
+Ran 10 tests in 0.032s
 
 OK
 

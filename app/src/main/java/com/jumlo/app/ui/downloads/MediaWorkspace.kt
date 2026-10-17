@@ -1,15 +1,13 @@
 package com.jumlo.app.ui.downloads
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentPaste
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,20 +19,32 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.jumlo.app.R
+import com.jumlo.app.core.DirectFileKind
 import com.jumlo.app.core.media.*
-import com.jumlo.app.ui.components.QuietStateCard
+import com.jumlo.app.ui.components.QuietBadge
 import com.jumlo.app.ui.components.QuietShimmerSkeleton
+import com.jumlo.app.ui.components.QuietStateCard
+import com.jumlo.app.ui.components.QuietTonalButton
+import com.jumlo.app.ui.components.userMessageResource
+import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 import kotlinx.coroutines.delay
 import java.util.Locale
+import kotlin.math.roundToInt
 
-/** One input, a real probe, a preview, then one action. Preferences own the normal format choice. */
+/**
+ * Universal 2026 Platform & File Downloader:
+ * Supports YouTube, TikTok, Instagram, Facebook, X/Twitter, LinkedIn, SoundCloud, Vimeo, Reddit,
+ * Google Drive, PDF documents, and direct files with real-time type detection, full quality/format selection,
+ * and built-in WebView Login / Cookies.txt / Custom HTTP Headers studio.
+ */
 @Composable fun MediaWorkspace(
     initialUrl:String,
     sessionEpoch:Long,
@@ -46,45 +56,103 @@ import java.util.Locale
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var advanced by rememberSaveable { mutableStateOf(false) }
-    var browser by rememberSaveable { mutableStateOf(false) }
+    var showSessionSheet by rememberSaveable { mutableStateOf(false) }
     val clipboardSuggestion=remember { clipboard.getText()?.text?.toString()?.takeIf { it.trim().startsWith("https://",true) } }
-    LaunchedEffect(sessionEpoch) { advanced=false; browser=false; viewModel.beginSession(initialUrl) }
+    LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl) }
     LaunchedEffect(state.url) {
-        if(state.url.startsWith("https://",true)) {
-            delay(500)
+        if(state.url.startsWith("https://",true) || (state.allowHttp && state.url.startsWith("http://",true))) {
+            delay(400)
             viewModel.analyze()
         }
     }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
-    if(browser) {
-        MediaBrowser(initialUrl=state.url,onClose={browser=false},onMedia={link->browser=false;viewModel.editUrl(link)},
-            onFile={link->browser=false;onDirect(link)})
-        return
-    }
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(
             modifier=Modifier.weight(1f).fillMaxWidth(),
-            contentPadding=PaddingValues(horizontal=20.dp,vertical=22.dp),
-            verticalArrangement=Arrangement.spacedBy(18.dp)
+            contentPadding=PaddingValues(horizontal=20.dp,vertical=20.dp),
+            verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
             item("hero") {
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.redesign_download_hero),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold)
-                    Text(stringResource(R.string.redesign_download_subtitle),color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.redesign_download_hero),style=QuietTheme.typography.screenTitle,fontWeight=FontWeight.Bold)
+                    Text(stringResource(R.string.media_supported_platforms),color=MaterialTheme.colorScheme.onSurfaceVariant,style=QuietTheme.typography.metadata)
                 }
             }
             item("input") {
-                OutlinedTextField(
-                    value=state.url,onValueChange=viewModel::editUrl,singleLine=true,
-                    placeholder={Text(stringResource(R.string.redesign_link_hint))},
-                    label={Text(stringResource(R.string.media_link))},
-                    modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(18.dp),
-                    textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),
-                    leadingIcon={Icon(Icons.Rounded.Link,null)},
-                    trailingIcon={IconButton(onClick={clipboard.getText()?.text?.toString()?.let(viewModel::editUrl)}) {
-                        Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))
-                    }}
-                )
+                Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value=state.url,onValueChange=viewModel::editUrl,singleLine=true,
+                        placeholder={Text(stringResource(R.string.redesign_link_hint))},
+                        label={Text(stringResource(R.string.media_link))},
+                        modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp),
+                        textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),
+                        leadingIcon={Icon(Icons.Rounded.Link,null)},
+                        trailingIcon={IconButton(onClick={clipboard.getText()?.text?.toString()?.let(viewModel::editUrl)}) {
+                            Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))
+                        }}
+                    )
+                    Row(
+                        modifier=Modifier.fillMaxWidth(),
+                        verticalAlignment=Alignment.CenterVertically,
+                        horizontalArrangement=Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            state.platformBadge?.let { badge ->
+                                QuietBadge(
+                                    text=badge,
+                                    containerColor=MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor=MaterialTheme.colorScheme.onPrimaryContainer,
+                                    leadingIcon=Icons.Rounded.AutoAwesome
+                                )
+                            }
+                            if(state.hasSavedSession) {
+                                QuietBadge(
+                                    text=stringResource(R.string.media_session_active_badge, state.activeDomains.size.coerceAtLeast(1)),
+                                    containerColor=MaterialTheme.colorScheme.tertiaryContainer,
+                                    contentColor=MaterialTheme.colorScheme.onTertiaryContainer,
+                                    leadingIcon=Icons.Rounded.VerifiedUser
+                                )
+                            }
+                        }
+                        if(state.url.isNotBlank() && !state.analyzing) {
+                            TextButton(onClick={haptics.actionClick();viewModel.analyze()}) {
+                                Icon(Icons.Rounded.Refresh,null,Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.media_analyze),style=QuietTheme.typography.metadataStrong)
+                            }
+                        }
+                    }
+                    // Prominent 1-tap Platform Login, Cookies & Custom Headers button
+                    Surface(
+                        onClick={haptics.actionClick();showSessionSheet=true},
+                        shape=RoundedCornerShape(18.dp),
+                        color=MaterialTheme.colorScheme.surfaceContainerLow,
+                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
+                        modifier=Modifier.fillMaxWidth().pressFeedback()
+                    ) {
+                        Row(
+                            modifier=Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=12.dp),
+                            verticalAlignment=Alignment.CenterVertically,
+                            horizontalArrangement=Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier=Modifier.weight(1f),
+                                verticalAlignment=Alignment.CenterVertically,
+                                horizontalArrangement=Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Rounded.Key,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(20.dp))
+                                Text(
+                                    text=stringResource(R.string.media_session_btn),
+                                    style=QuietTheme.typography.metadataStrong,
+                                    color=MaterialTheme.colorScheme.onSurface,
+                                    maxLines=1,
+                                    overflow=TextOverflow.Ellipsis
+                                )
+                            }
+                            Icon(Icons.Rounded.Tune,null,tint=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(18.dp))
+                        }
+                    }
+                }
             }
             if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
                 SuggestionChip(onClick={viewModel.editUrl(clipboardSuggestion)},
@@ -92,71 +160,439 @@ import java.util.Locale
             }
             if(state.analyzing) item("loading") {
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
                     QuietShimmerSkeleton(Modifier.fillMaxWidth())
-                    Text(stringResource(R.string.media_analyzing),style=MaterialTheme.typography.bodySmall,
+                    Text(stringResource(R.string.media_analyzing),style=QuietTheme.typography.metadata,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             state.error?.let { code -> item("error") {
-                QuietStateCard(title=mediaError(code),subtitle=stringResource(R.string.redesign_download_retry_hint),isError=true)
+                val needsSession = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_SOURCE_REJECTED","MEDIA_RATE_LIMITED","HTTP_401","HTTP_403","MEDIA_EXTRACTION_FAILED")
+                QuietStateCard(
+                    title=mediaError(code),
+                    subtitle=stringResource(if(needsSession) R.string.media_error_session else R.string.redesign_download_retry_hint),
+                    actionLabel=stringResource(if(needsSession) R.string.media_browser else R.string.media_analyze),
+                    onAction={if(needsSession) showSessionSheet=true else viewModel.analyze()},
+                    isError=true
+                )
             }}
-            state.direct?.let { preview -> item("direct") {
-                Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
-                    Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
-                        Text(stringResource(R.string.redesign_ready_file),color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelLarge)
-                        Text(preview.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-                        Text(listOfNotNull(preview.mime,preview.sizeBytes?.let(::mediaBytes)).joinToString(" · ").ifBlank { stringResource(R.string.media_size_unknown) },
-                            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+
+            // =========================================================================
+            // CASE 1: DIRECT FILE / PDF / IMAGE / GOOGLE DRIVE LINK
+            // =========================================================================
+            state.direct?.let { preview ->
+                item("direct-preview") {
+                    Surface(
+                        shape=RoundedCornerShape(24.dp),
+                        color=MaterialTheme.colorScheme.surfaceContainerLow,
+                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                                Icon(
+                                    imageVector=when(preview.kind) {
+                                        DirectFileKind.PDF -> Icons.Rounded.PictureAsPdf
+                                        DirectFileKind.VIDEO -> Icons.Rounded.Movie
+                                        DirectFileKind.AUDIO -> Icons.Rounded.AudioFile
+                                        DirectFileKind.IMAGE -> Icons.Rounded.Image
+                                        DirectFileKind.ARCHIVE -> Icons.Rounded.FolderZip
+                                        DirectFileKind.OTHER -> Icons.Rounded.InsertDriveFile
+                                    },
+                                    contentDescription=null,
+                                    tint=MaterialTheme.colorScheme.primary,
+                                    modifier=Modifier.size(28.dp)
+                                )
+                                QuietBadge(
+                                    text=state.platformBadge ?: preview.kind.name,
+                                    containerColor=MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor=MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(stringResource(R.string.redesign_ready_file),color=MaterialTheme.colorScheme.primary,style=QuietTheme.typography.metadataStrong)
+                            }
+                            Text(state.name.ifBlank { preview.title },style=QuietTheme.typography.sectionTitle,fontWeight=FontWeight.Bold)
+                            Text(
+                                text=listOfNotNull(preview.mime,preview.sizeBytes?.let(::mediaBytes)).joinToString(" · ").ifBlank { stringResource(R.string.media_size_unknown) },
+                                style=QuietTheme.typography.metadata,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            OutlinedTextField(
+                                value=state.name,
+                                onValueChange=viewModel::name,
+                                singleLine=true,
+                                label={Text(stringResource(R.string.media_filename))},
+                                modifier=Modifier.fillMaxWidth(),
+                                shape=RoundedCornerShape(16.dp)
+                            )
+                        }
                     }
                 }
-            }}
-            state.asset?.let { asset -> item("media") {
-                Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
-                        asset.thumbnailUrl?.let { thumb -> AsyncImage(model=thumb,contentDescription=asset.title,
-                            modifier=Modifier.fillMaxWidth().height(178.dp).clip(RoundedCornerShape(17.dp)),contentScale=ContentScale.Crop) }
-                        Text(asset.title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-                        val choice=state.choices.firstOrNull { it.key==state.selectedKey }
-                        val quality=choice?.expectedHeight?.let { "${it}p" } ?: choice?.container?.uppercase(Locale.ROOT)
-                        val size=choice?.estimatedBytes?.let(::mediaBytes) ?: stringResource(R.string.media_size_unknown)
-                        Text(listOfNotNull(quality,size).joinToString(" · "),style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if (preview.kind == DirectFileKind.PDF) {
+                    item("direct-pdf-options") {
+                        Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
+                            val pdfModes = listOf(
+                                "ORIGINAL" to stringResource(R.string.media_pdf_original),
+                                "PDF_RECOMMENDED" to stringResource(R.string.media_pdf_recommended),
+                                "PDF_EXTREME" to stringResource(R.string.media_pdf_extreme),
+                                "PDF_TO_IMAGES" to stringResource(R.string.media_pdf_to_images)
+                            )
+                            pdfModes.forEach { (modeKey, modeLabel) ->
+                                val selected = state.directMode == modeKey
+                                Surface(
+                                    onClick={haptics.selectionToggle();viewModel.directMode(modeKey)},
+                                    shape=RoundedCornerShape(18.dp),
+                                    color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                                    border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                    modifier=Modifier.fillMaxWidth().pressFeedback()
+                                ) {
+                                    Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                        RadioButton(selected=selected,onClick=null)
+                                        Text(modeLabel,style=QuietTheme.typography.bodyMedium.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
+                                            color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (preview.kind == DirectFileKind.IMAGE) {
+                    item("direct-image-options") {
+                        Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
+                            val imgModes = listOf(
+                                "ORIGINAL" to stringResource(R.string.media_img_original),
+                                "IMAGE_COMPRESSED" to stringResource(R.string.media_img_compressed),
+                                "IMAGE_TO_PDF" to stringResource(R.string.media_img_to_pdf)
+                            )
+                            imgModes.forEach { (modeKey, modeLabel) ->
+                                val selected = state.directMode == modeKey
+                                Surface(
+                                    onClick={haptics.selectionToggle();viewModel.directMode(modeKey)},
+                                    shape=RoundedCornerShape(18.dp),
+                                    color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                                    border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                    modifier=Modifier.fillMaxWidth().pressFeedback()
+                                ) {
+                                    Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                        RadioButton(selected=selected,onClick=null)
+                                        Text(modeLabel,style=QuietTheme.typography.bodyMedium.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
+                                            color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (preview.kind in setOf(DirectFileKind.VIDEO, DirectFileKind.AUDIO)) {
+                    item("direct-media-switch") {
+                        QuietTonalButton(
+                            text=stringResource(R.string.media_switch_to_extractor),
+                            onClick={haptics.actionClick();viewModel.analyzeAsMediaStream()},
+                            modifier=Modifier.fillMaxWidth()
+                        )
                     }
                 }
-            }}
+            }
+
+            // =========================================================================
+            // CASE 2: SOCIAL / VIDEO / AUDIO PLATFORM STREAM (YouTube, TikTok, IG, FB, X, SoundCloud, etc.)
+            // =========================================================================
+            state.asset?.let { asset ->
+                item("media-preview") {
+                    Surface(
+                        shape=RoundedCornerShape(24.dp),
+                        color=MaterialTheme.colorScheme.surfaceContainerLow,
+                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                            asset.thumbnailUrl?.let { thumb ->
+                                AsyncImage(
+                                    model=thumb,
+                                    contentDescription=asset.title,
+                                    modifier=Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)),
+                                    contentScale=ContentScale.Crop
+                                )
+                            }
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                QuietBadge(
+                                    text=state.platformBadge ?: asset.extractor,
+                                    containerColor=MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor=MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                asset.durationSeconds?.takeIf { it > 0 }?.let { sec ->
+                                    QuietBadge(
+                                        text=formatDuration(sec.roundToInt()),
+                                        containerColor=MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor=MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                asset.uploader?.let { up ->
+                                    Text(up,style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                }
+                            }
+                            Text(state.name.ifBlank { asset.title },style=QuietTheme.typography.sectionTitle,fontWeight=FontWeight.Bold,maxLines=3,overflow=TextOverflow.Ellipsis)
+                            OutlinedTextField(
+                                value=state.name,
+                                onValueChange=viewModel::name,
+                                singleLine=true,
+                                label={Text(stringResource(R.string.media_filename))},
+                                modifier=Modifier.fillMaxWidth(),
+                                shape=RoundedCornerShape(16.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
+                item("media-type-selector") {
+                    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
+                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
+                            val hasVideo = asset.formats.any { it.hasVideo }
+                            if (hasVideo) {
+                                ModeSelectionCard(
+                                    title=stringResource(R.string.media_video),
+                                    icon=Icons.Rounded.Videocam,
+                                    selected=state.mode==MediaMode.VIDEO,
+                                    onClick={haptics.selectionToggle();viewModel.mode(MediaMode.VIDEO)},
+                                    modifier=Modifier.weight(1f)
+                                )
+                            }
+                            ModeSelectionCard(
+                                title=stringResource(R.string.media_audio_only),
+                                icon=Icons.Rounded.Audiotrack,
+                                selected=state.mode==MediaMode.AUDIO,
+                                onClick={haptics.selectionToggle();viewModel.mode(MediaMode.AUDIO)},
+                                modifier=Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // 2. If Audio Mode is active: Audio Format (MP3, M4A, OPUS, ORIGINAL) + Bitrate (320..64 kbps)
+                if (state.mode == MediaMode.AUDIO) {
+                    item("audio-format-controls") {
+                        Surface(
+                            shape=RoundedCornerShape(22.dp),
+                            color=MaterialTheme.colorScheme.surfaceContainerLow,
+                            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                                Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
+                                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                    val audioFormats = listOf(
+                                        AudioOutput.MP3 to "MP3",
+                                        AudioOutput.M4A to "M4A (AAC)",
+                                        AudioOutput.OPUS to "OPUS",
+                                        AudioOutput.ORIGINAL to stringResource(R.string.media_original_audio)
+                                    )
+                                    items(audioFormats, key={it.first.name}) { (fmt, label) ->
+                                        FilterChip(
+                                            selected=state.audio==fmt,
+                                            onClick={haptics.selectionToggle();viewModel.audio(fmt)},
+                                            label={Text(label,style=QuietTheme.typography.metadataStrong)}
+                                        )
+                                    }
+                                }
+                                if (state.audio != AudioOutput.ORIGINAL) {
+                                    Text(stringResource(R.string.media_encoding_bitrate),style=QuietTheme.typography.metadataStrong)
+                                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                        items(listOf(320, 256, 192, 128, 96, 64), key={it}) { kbps ->
+                                            FilterChip(
+                                                selected=state.bitrate==kbps,
+                                                onClick={haptics.selectionToggle();viewModel.bitrate(kbps)},
+                                                label={Text("$kbps kbps",style=QuietTheme.typography.metadataStrong)}
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Quality & Resolution Grid — Visible directly!
+                item("media-quality-header") {
+                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
+                        Text(stringResource(R.string.media_actual_qualities),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
+                    Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
+                        row.forEach { choice ->
+                            val selected = state.selectedKey == choice.key
+                            val title = MediaCatalog.qualityTitle(choice)
+                            val estBytes = MediaCatalog.displayBytes(choice, asset.durationSeconds)
+                            val sizeLabel = estBytes?.let { (if(choice.sizeIsApproximate || choice.estimatedBytes == null) "~" else "") + mediaBytes(it) }
+                                ?: stringResource(R.string.media_size_unknown)
+                            val containerLabel = if (state.mode == MediaMode.AUDIO && state.audio != AudioOutput.ORIGINAL) {
+                                state.audio.name
+                            } else {
+                                choice.container.uppercase(Locale.ROOT)
+                            }
+                            val subBadge = if (choice.mode == MediaMode.VIDEO && choice.expectsAudio) {
+                                "$containerLabel · ${stringResource(R.string.media_with_audio)}"
+                            } else {
+                                containerLabel
+                            }
+                            Surface(
+                                onClick={haptics.selectionToggle();viewModel.select(choice.key)},
+                                shape=RoundedCornerShape(20.dp),
+                                color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                                border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                modifier=Modifier.weight(1f).height(96.dp).pressFeedback()
+                            ) {
+                                Column(
+                                    modifier=Modifier.fillMaxSize().padding(14.dp),
+                                    verticalArrangement=Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        modifier=Modifier.fillMaxWidth(),
+                                        verticalAlignment=Alignment.CenterVertically,
+                                        horizontalArrangement=Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text=title,
+                                            style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.Bold),
+                                            color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                            maxLines=1,
+                                            overflow=TextOverflow.Ellipsis
+                                        )
+                                        if(selected) {
+                                            Icon(Icons.Rounded.CheckCircle,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(18.dp))
+                                        }
+                                    }
+                                    Row(
+                                        modifier=Modifier.fillMaxWidth(),
+                                        verticalAlignment=Alignment.CenterVertically,
+                                        horizontalArrangement=Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text=subBadge,
+                                            style=QuietTheme.typography.badge,
+                                            color=if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text=sizeLabel,
+                                            style=QuietTheme.typography.metadata,
+                                            color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines=1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+
             item("advanced") {
                 TextButton(onClick={advanced=!advanced}) {
                     Icon(Icons.Rounded.Tune,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.ui_advanced))
+                    Text(stringResource(R.string.ui_advanced),style=QuietTheme.typography.metadataStrong)
                 }
             }
             if(advanced) {
-                item("mode") { Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FilterChip(state.mode==MediaMode.VIDEO,{viewModel.mode(MediaMode.VIDEO)},label={Text(stringResource(R.string.media_video))})
-                    FilterChip(state.mode==MediaMode.AUDIO,{viewModel.mode(MediaMode.AUDIO)},label={Text(stringResource(R.string.media_audio_only))})
-                    TextButton(onClick={browser=true}) {Text(stringResource(R.string.media_browser))}
-                }}
-                if(state.asset!=null) item("qualities") {
-                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        items(state.choices,key={it.key}) { choice ->
-                            FilterChip(selected=state.selectedKey==choice.key,onClick={viewModel.select(choice.key)},
-                                label={Text((choice.expectedHeight?.let { "${it}p" } ?: choice.container.uppercase(Locale.ROOT)) +
-                                    (choice.estimatedBytes?.let { " · ${mediaBytes(it)}" } ?: ""))})
+                item("network-toggles") {
+                    Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                                Text(stringResource(R.string.media_wifi),Modifier.weight(1f))
+                                Switch(checked=state.wifiOnly,onCheckedChange=viewModel::wifi)
+                            }
+                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                                Text(stringResource(R.string.media_unmetered),Modifier.weight(1f))
+                                Switch(checked=state.unmetered,onCheckedChange=viewModel::unmetered)
+                            }
+                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                                Text(stringResource(R.string.media_http),Modifier.weight(1f))
+                                Switch(checked=state.allowHttp,onCheckedChange=viewModel::allowHttp)
+                            }
                         }
                     }
                 }
             }
         }
         Surface(tonalElevation=3.dp,shadowElevation=7.dp) {
-            Button(onClick={haptics.toolExecute();viewModel.submit(onQueued)},
+            Button(
+                onClick={haptics.toolExecute();viewModel.submit(onQueued)},
                 enabled=!state.analyzing && !state.submitting && (state.direct!=null || state.selectedKey!=null),
-                modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
-                shape=RoundedCornerShape(18.dp)) {
+                modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
+                shape=RoundedCornerShape(18.dp)
+            ) {
                 Icon(Icons.Rounded.Download,null);Spacer(Modifier.width(8.dp))
-                Text(stringResource(if(state.submitting) R.string.media_queueing else R.string.redesign_download_now))
+                Text(
+                    text=when {
+                        state.submitting -> stringResource(R.string.media_queueing)
+                        state.asset != null -> stringResource(R.string.media_download_selected)
+                        else -> stringResource(R.string.redesign_download_now)
+                    },
+                    style=QuietTheme.typography.button
+                )
             }
         }
     }
+
+    if (showSessionSheet) {
+        PlatformSessionSheet(
+            initialUrl = state.url,
+            hasSavedSession = state.hasSavedSession,
+            activeDomains = state.activeDomains,
+            initialUserAgent = state.customUserAgent,
+            initialExtraHeaders = state.extraHeaders,
+            initialPreferDesktop = state.preferDesktopUa,
+            onSyncWebView = viewModel::syncWebViewSession,
+            onImportCookies = viewModel::importCookies,
+            onSaveHeaders = viewModel::saveHeaderConfig,
+            onClearSessions = viewModel::clearSessions,
+            onDismiss = { showSessionSheet = false }
+        )
+    }
+}
+
+@Composable
+private fun ModeSelectionCard(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier.height(64.dp).pressFeedback()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = title,
+                style = QuietTheme.typography.bodyMedium.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium),
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private fun formatDuration(totalSeconds: Int): String {
+    val hrs = totalSeconds / 3600
+    val mins = (totalSeconds % 3600) / 60
+    val secs = totalSeconds % 60
+    return if (hrs > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hrs, mins, secs)
+    else String.format(Locale.ROOT, "%02d:%02d", mins, secs)
 }
 
 private fun mediaBytes(bytes:Long):String=when {
@@ -166,12 +602,4 @@ private fun mediaBytes(bytes:Long):String=when {
     else -> "$bytes B"
 }
 
-@Composable private fun mediaError(code:String):String=stringResource(when(code) {
-    "DOWNLOAD_NOT_A_FILE" -> R.string.redesign_download_not_file
-    "MEDIA_PRIVATE_CONTENT","LOGIN_REQUIRED","MEDIA_SESSION_REQUIRED" -> R.string.media_error_private
-    "NETWORK_UNAVAILABLE","MEDIA_NETWORK_ERROR" -> R.string.media_error_network
-    "MEDIA_NO_USABLE_FORMAT" -> R.string.media_error_format
-    "INVALID_URL","MULTIPLE_MEDIA_LINKS" -> R.string.media_error_url
-    "MEDIA_RUNTIME_INITIALIZATION_FAILED","MEDIA_NATIVE_ABI_UNAVAILABLE" -> R.string.media_error_runtime
-    else -> R.string.media_error_generic
-})
+@Composable private fun mediaError(code:String):String=stringResource(userMessageResource(code))

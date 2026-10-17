@@ -1,7 +1,7 @@
 <resources>
     <string name="redesign_download_hero">Download anything useful.</string>
-    <string name="redesign_download_subtitle">One link. We choose the format, you keep the file.</string>
-    <string name="redesign_link_hint">Paste a video or file link</string>
+    <string name="redesign_download_subtitle">Direct file links and Google Drive links, saved cleanly on your device.</string>
+    <string name="redesign_link_hint">Paste a direct file or Google Drive link</string>
     <string name="redesign_paste_suggestion">Paste copied link</string>
     <string name="redesign_ready_file">Ready to save</string>
     <string name="redesign_download_retry_hint">Check the link and try again.</string>
@@ -37,6 +37,7 @@
     <string name="redesign_accent_blue">Blue</string>
     <string name="redesign_accent_teal">Teal</string>
     <string name="redesign_accent_coral">Coral</string>
+    <string name="redesign_accent_dynamic">System Dynamic (Material You)</string>
     <string name="redesign_scale_small">Compact</string>
     <string name="redesign_scale_normal">Standard</string>
     <string name="redesign_scale_large">Large</string>

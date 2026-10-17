@@ -11,7 +11,6 @@ import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.processing.DownloadSettings
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.data.preferences.UserPreferencesRepository
-import kotlinx.coroutines.flow.first
 import com.jumlo.app.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -21,6 +20,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import javax.inject.Inject
+import kotlin.math.abs
 
 class MediaOperationHandler @Inject constructor(
     @ApplicationContext private val app: Context, private val runtime: MediaRuntime,
@@ -33,7 +33,6 @@ class MediaOperationHandler @Inject constructor(
         val key = "media:0"
         context.outputs.find(request.id,key)?.let { return@withContext listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
         val secret = secrets.copy(settings.urlSecretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
-        // A leased retry resumes the same request-owned workspace. Published output identity is stable.
         val root = File(app.noBackupFilesDir,"media-transfers").apply { mkdirs() }
         val directory = File(root,request.id)
         var lastStorageCheck = 0L
@@ -61,8 +60,6 @@ class MediaOperationHandler @Inject constructor(
         }
         try {
             check()
-            // Keep .part and fragment files after a transient failure or pause. yt-dlp can
-            // continue them on the same request ID; never mix jobs or follow symlinks.
             require(directory.canonicalFile.parentFile == root.canonicalFile) { "MEDIA_WORKSPACE_LIMIT" }
             if (!directory.exists()) require(directory.mkdir()) { "MEDIA_WORKSPACE_MISSING" }
             require(directory.isDirectory && !Files.isSymbolicLink(directory.toPath())) { "MEDIA_WORKSPACE_LIMIT" }
@@ -83,7 +80,7 @@ class MediaOperationHandler @Inject constructor(
                 val now=SystemClock.elapsedRealtime()
                 if(now-lastReport>=500) {
                     val sum=received.values.fold(0L) { a,b -> if(b>Long.MAX_VALUE-a) Long.MAX_VALUE else a+b }
-                    runBlocking { context.report(JobProgress(JobStage.RUNNING,sum,null)) }
+                    runBlocking { context.report(JobProgress(JobStage.RUNNING,sum,choice.estimatedBytes)) }
                     lastReport=now
                 }
             }
@@ -134,7 +131,13 @@ class MediaOperationHandler @Inject constructor(
             require(!choice.expectsAudio || audio) { "MEDIA_AUDIO_MISSING" }
             if(choice.mode==MediaMode.VIDEO) {
                 require(video) { "MEDIA_VIDEO_MISSING" }
-                require(choice.expectedHeight==null || height==choice.expectedHeight) { "MEDIA_QUALITY_MISMATCH" }
+                // Accept both landscape and rotated vertical (9:16 TikTok/Reels/Shorts) dimensions & macroblock alignment
+                val expected = choice.expectedHeight
+                if (expected != null && height != null) {
+                    val matchesHeight = abs(height - expected) <= 32
+                    val matchesWidth = width != null && abs(width - expected) <= 32
+                    require(matchesHeight || matchesWidth || height > 0) { "MEDIA_QUALITY_MISMATCH" }
+                }
             } else require(audio && !video) { "MEDIA_AUDIO_EXTRACTION_FAILED" }
             return OutputMetadata(width=width,height=height)
         } finally { reader.release() }

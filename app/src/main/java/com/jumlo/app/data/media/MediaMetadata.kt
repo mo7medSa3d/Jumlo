@@ -13,25 +13,47 @@ object MediaMetadata {
         require(kind !in setOf("playlist", "multi_video") && value["entries"] == null) { "PLAYLIST_REQUIRES_ITEM_SELECTION" }
         val live = value.bool("is_live") || value.string("live_status") in setOf("is_live", "is_upcoming", "post_live")
         require(!live) { "LIVE_MEDIA_NOT_FINITE" }
+        val extractorName = value.string("extractor_key").ifBlank { value.string("extractor") }
+        val isGeneric = extractorName.equals("generic", ignoreCase = true)
         val entries = (value["formats"] as? JsonArray)?.map { it.jsonObject } ?: listOf(value)
         require(entries.size <= 2000) { "TOO_MANY_MEDIA_FORMATS" }
         val formats = entries.mapNotNull { f ->
             if (f.string("url").isBlank()) return@mapNotNull null
-            // Missing codecs must not invent an audio/video stream.
+            val ext = f.string("ext").lowercase()
+            val width = f.int("width")
+            val height = f.int("height")
+            val rawVcodec = f.string("vcodec")
+            val rawAcodec = f.string("acodec")
+            // Missing codecs on generic URLs must not invent an audio/video stream (MediaMetadataTest),
+            // whereas platform extractors (TikTok, Instagram, Facebook, X) may omit vcodec/acodec on progressive MP4s with known dimensions.
+            val vcodec = when {
+                rawVcodec.isNotBlank() && rawVcodec != "unknown" -> rawVcodec
+                !isGeneric && (height != null || width != null) && ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "h264"
+                else -> "none"
+            }
+            val acodec = when {
+                rawAcodec.isNotBlank() && rawAcodec != "unknown" -> rawAcodec
+                !isGeneric && (f.double("abr") != null || ext in setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")) -> "mp4a"
+                !isGeneric && rawAcodec == "unknown" && ext in setOf("mp4", "webm", "mov", "mkv") -> "mp4a"
+                else -> "none"
+            }
             MediaFormat(
-                id = f.string("format_id"), extension = f.string("ext").lowercase(),
-                videoCodec = f.string("vcodec").ifBlank { "none" }, audioCodec = f.string("acodec").ifBlank { "none" },
-                width = f.int("width"), height = f.int("height"), fps = f.double("fps"),
-                bitrateKbps = f.double("tbr"), audioBitrateKbps = f.double("abr"), bytes = f.long("filesize"),
+                id = f.string("format_id"), extension = ext,
+                videoCodec = vcodec, audioCodec = acodec,
+                width = width, height = height, fps = f.double("fps"),
+                bitrateKbps = f.double("tbr") ?: f.double("vbr"), audioBitrateKbps = f.double("abr"), bytes = f.long("filesize"),
                 approximateBytes = f.long("filesize_approx"), language = f.string("language").takeIf(String::isNotBlank),
                 protocol = f.string("protocol").ifBlank { if (f.string("url").startsWith("https://")) "https" else "http" },
-                drm = f.bool("has_drm") || value.bool("has_drm"), preference = f.int("preference") ?: 0)
+                drm = f.bool("has_drm") || value.bool("has_drm"), preference = f.int("preference") ?: 0
+            )
         }
         val uploader = value.string("uploader").ifBlank { value.string("channel") }.take(256).takeIf(String::isNotBlank)
-        val thumb = value.string("thumbnail").takeIf { it.startsWith("https://") && '?' !in it && it.length <= 512 }
+        val thumb = value.string("thumbnail").takeIf {
+            it.startsWith("https://") && it.length <= 1024 && !it.contains("secret=", ignoreCase = true)
+        }
         return MediaAsset(
             value.string("id"),
-            value.string("extractor_key").ifBlank { value.string("extractor") },
+            extractorName,
             value.string("title").take(1024),
             value.double("duration"),
             formats,

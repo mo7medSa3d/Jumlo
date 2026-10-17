@@ -13,7 +13,7 @@ import com.jumlo.app.R
 /**
  * Jumlo 2026 type scale.
  * - Font: IBM Plex Sans (bundled variable font, weights 400–700).
- * - Arabic uses the bundled IBM Plex Sans Arabic face.
+ * - Arabic uses the bundled IBM Plex Sans Arabic face with zero letter-spacing so cursive ligatures stay crisp.
  * - Display / titles are bold and tight to give the "poster" headline feel of modern apps.
  */
 val IbmPlexSansFont = FontFamily(
@@ -111,18 +111,44 @@ val Material3Typography = Typography(
 
 val LocalQuietTypography = staticCompositionLocalOf { DefaultQuietTypography }
 
-val IbmPlexSansArabicFont = FontFamily(Font(R.font.ibm_plex_sans_arabic_regular))
-fun QuietPrecisionTypography.withFont(family:FontFamily) = copy(
-    display=display.copy(fontFamily=family), screenTitle=screenTitle.copy(fontFamily=family),
-    sectionTitle=sectionTitle.copy(fontFamily=family), body=body.copy(fontFamily=family),
-    bodyMedium=bodyMedium.copy(fontFamily=family), button=button.copy(fontFamily=family),
-    metadata=metadata.copy(fontFamily=family), metadataStrong=metadataStrong.copy(fontFamily=family),
-    navigation=navigation.copy(fontFamily=family), badge=badge.copy(fontFamily=family)
+val IbmPlexSansArabicFont = FontFamily(
+    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Normal),
+    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Medium),
+    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.SemiBold),
+    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Bold)
 )
-fun Typography.withFont(family:FontFamily) = copy(
-    displayLarge=displayLarge.copy(fontFamily=family), displayMedium=displayMedium.copy(fontFamily=family), displaySmall=displaySmall.copy(fontFamily=family),
-    headlineLarge=headlineLarge.copy(fontFamily=family), headlineMedium=headlineMedium.copy(fontFamily=family), headlineSmall=headlineSmall.copy(fontFamily=family),
-    titleLarge=titleLarge.copy(fontFamily=family), titleMedium=titleMedium.copy(fontFamily=family), titleSmall=titleSmall.copy(fontFamily=family),
-    bodyLarge=bodyLarge.copy(fontFamily=family), bodyMedium=bodyMedium.copy(fontFamily=family), bodySmall=bodySmall.copy(fontFamily=family),
-    labelLarge=labelLarge.copy(fontFamily=family), labelMedium=labelMedium.copy(fontFamily=family), labelSmall=labelSmall.copy(fontFamily=family)
+
+private fun TextStyle.adaptForLocale(family: FontFamily, isArabic: Boolean): TextStyle =
+    if (isArabic) copy(fontFamily = family, letterSpacing = 0.sp, lineHeight = (fontSize.value * 1.42f).sp)
+    else copy(fontFamily = family)
+
+fun QuietPrecisionTypography.withFont(family: FontFamily, isArabic: Boolean = family == IbmPlexSansArabicFont) = copy(
+    display = display.adaptForLocale(family, isArabic),
+    screenTitle = screenTitle.adaptForLocale(family, isArabic),
+    sectionTitle = sectionTitle.adaptForLocale(family, isArabic),
+    body = body.adaptForLocale(family, isArabic),
+    bodyMedium = bodyMedium.adaptForLocale(family, isArabic),
+    button = button.adaptForLocale(family, isArabic),
+    metadata = metadata.adaptForLocale(family, isArabic),
+    metadataStrong = metadataStrong.adaptForLocale(family, isArabic),
+    navigation = navigation.adaptForLocale(family, isArabic),
+    badge = badge.adaptForLocale(family, isArabic)
+)
+
+fun Typography.withFont(family: FontFamily, isArabic: Boolean = family == IbmPlexSansArabicFont) = copy(
+    displayLarge = displayLarge.adaptForLocale(family, isArabic),
+    displayMedium = displayMedium.adaptForLocale(family, isArabic),
+    displaySmall = displaySmall.adaptForLocale(family, isArabic),
+    headlineLarge = headlineLarge.adaptForLocale(family, isArabic),
+    headlineMedium = headlineMedium.adaptForLocale(family, isArabic),
+    headlineSmall = headlineSmall.adaptForLocale(family, isArabic),
+    titleLarge = titleLarge.adaptForLocale(family, isArabic),
+    titleMedium = titleMedium.adaptForLocale(family, isArabic),
+    titleSmall = titleSmall.adaptForLocale(family, isArabic),
+    bodyLarge = bodyLarge.adaptForLocale(family, isArabic),
+    bodyMedium = bodyMedium.adaptForLocale(family, isArabic),
+    bodySmall = bodySmall.adaptForLocale(family, isArabic),
+    labelLarge = labelLarge.adaptForLocale(family, isArabic),
+    labelMedium = labelMedium.adaptForLocale(family, isArabic),
+    labelSmall = labelSmall.adaptForLocale(family, isArabic)
 )

@@ -5,9 +5,10 @@ import com.jumlo.app.core.HttpPolicy
 import com.jumlo.app.core.SafeNames
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.net.URI
 import java.nio.file.Files
 import java.util.Locale
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 object MediaCatalog {
     private val idPattern = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")
@@ -19,7 +20,8 @@ object MediaCatalog {
         require(asset.formats.size <= 2000) { "TOO_MANY_MEDIA_FORMATS" }
         val seen = HashSet<String>()
         val formats = asset.formats.filter { f ->
-            require(idPattern.matches(f.id) && seen.add(f.id)) { "INVALID_MEDIA_FORMAT" }
+            require(idPattern.matches(f.id)) { "INVALID_MEDIA_FORMAT" }
+            if (!seen.add(f.id)) return@filter false
             require(f.width == null || f.width in 1..65536) { "INVALID_MEDIA_FORMAT" }
             require(f.height == null || f.height in 1..65536) { "INVALID_MEDIA_FORMAT" }
             require(listOf(f.fps, f.bitrateKbps, f.audioBitrateKbps).all { it == null || it.isFinite() && it >= 0 }) { "INVALID_MEDIA_FORMAT" }
@@ -59,6 +61,35 @@ object MediaCatalog {
         val withAudio=choices.filter { it.expectsAudio }.ifEmpty { choices }
         return withAudio.firstOrNull { maxHeight==0 || (it.expectedHeight ?: Int.MAX_VALUE)<=maxHeight }
             ?: withAudio.lastOrNull()
+    }
+    /** Human-readable quality badge for UI cards (e.g. "1080p Full HD · 60fps" or "160 kbps M4A"). */
+    fun qualityTitle(choice: MediaChoice): String {
+        if (choice.mode == MediaMode.AUDIO) {
+            val f = choice.formats.firstOrNull()
+            val kbps = (f?.audioBitrateKbps ?: f?.bitrateKbps)?.roundToInt()?.takeIf { it > 0 }
+            val ext = (f?.extension ?: choice.container).uppercase(Locale.ROOT)
+            return if (kbps != null) "$kbps kbps · $ext" else ext
+        }
+        val v = choice.formats.firstOrNull { it.hasVideo }
+        val h = choice.expectedHeight ?: v?.height
+        val tier = when {
+            h == null -> choice.container.uppercase(Locale.ROOT)
+            h >= 2160 -> "${h}p 4K"
+            h >= 1440 -> "${h}p 2K"
+            h >= 1080 -> "${h}p Full HD"
+            h >= 720 -> "${h}p HD"
+            else -> "${h}p"
+        }
+        val fps = v?.fps?.roundToInt()?.takeIf { it >= 50 }?.let { " · ${it}fps" }.orEmpty()
+        return tier + fps
+    }
+    /** Estimates byte size for UI display using reported bytes or duration * bitrate when bytes are omitted. */
+    fun displayBytes(choice: MediaChoice, durationSeconds: Double?): Long? {
+        choice.estimatedBytes?.let { return it }
+        val dur = durationSeconds?.takeIf { it.isFinite() && it > 0.0 } ?: return null
+        val totalKbps = choice.formats.sumOf { (it.bitrateKbps ?: it.audioBitrateKbps ?: 0.0) }
+        if (totalKbps <= 0.0) return null
+        return ((totalKbps * 1000.0 / 8.0) * dur).roundToLong().takeIf { it > 0L }
     }
     private fun choice(mode: MediaMode, formats: List<MediaFormat>, container: String): MediaChoice {
         val sizes = formats.map { it.bytes ?: it.approximateBytes }

@@ -1,5 +1,5 @@
 command: ["bash", "scripts/tests/test-verify-local.sh"]
-started_at_utc: 2026-10-16T12:40:10.504413+00:00
+started_at_utc: 2026-10-17T19:29:56.311997+00:00
 scope: Offline/no-download preflight regression
 
 PASS uncachedDistributionDoesNotAccessNetwork

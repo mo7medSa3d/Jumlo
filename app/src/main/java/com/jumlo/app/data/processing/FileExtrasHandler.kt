@@ -48,7 +48,6 @@ import javax.inject.Singleton
         val names = request.sourceIds.map { context.sources.get(it).displayName }
         val preview = PureDomainAlgorithms.batchRenamePreview(names, settings.pattern, settings.startAt)
         val outcomes = mutableListOf<ItemOutcome>()
-        // Publish a preview manifest alongside the renamed copies
         val previewKey = "rename-preview"
         context.outputs.find(request.id, previewKey)?.let { outcomes += ItemOutcome(previewKey, ItemStatus.CREATED, it.id) } ?: run {
             val ticket = context.outputs.reserve(request.id, previewKey, "rename_preview.txt", "text/plain")
@@ -76,6 +75,7 @@ import javax.inject.Singleton
                 outcomes += ItemOutcome(key, ItemStatus.CREATED, rec.id)
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (e: Exception) { outcomes += ItemOutcome(key, ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
+            context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), request.sourceIds.size.toLong()))
         }
         return outcomes
     }
@@ -83,7 +83,11 @@ import javax.inject.Singleton
     private suspend fun duplicatesAndTrash(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         val key = if (request.toolId == "file_trash") "trash-report" else "duplicates-report"
         context.outputs.find(request.id, key)?.let { return listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
-        val hashes = request.sourceIds.map { id -> context.sources.openRead(id).use { Hashing.sha256(it, context.checkCancellation) } }
+        val hashes = request.sourceIds.mapIndexed { idx, id ->
+            val h = context.sources.openRead(id).use { Hashing.sha256(it, context.checkCancellation) }
+            context.report(JobProgress(JobStage.RUNNING, (idx + 1).toLong(), request.sourceIds.size.toLong()))
+            h
+        }
         val groups = PureDomainAlgorithms.duplicateGroups(hashes)
         val names = request.sourceIds.map { context.sources.get(it).displayName }
         val trashedItems = if (request.toolId == "file_trash") context.outputs.refreshTrash() else emptyList()
@@ -122,8 +126,8 @@ import javax.inject.Singleton
                     val outName = SafeNames.basename(settings.displayName.let { if (it.endsWith(".zip", true)) it else "$it.zip" })
                     val ticket = context.outputs.reserve(request.id, itemKey, outName, "application/zip")
                     val tempSourcesDir = File(ticket.stageFile.parentFile, "ezip-inputs-${UUID.randomUUID()}").apply { mkdirs() }
+                    var stagedBytes = 0L
                     try {
-                        var stagedBytes = 0L
                         val entrySources = request.sourceIds.mapIndexed { idx, id ->
                             context.checkCancellation()
                             val ref = context.sources.get(id)
@@ -145,15 +149,15 @@ import javax.inject.Singleton
                                     out.fd.sync()
                                 }
                             }
+                            context.report(JobProgress(JobStage.RUNNING, (idx + 1).toLong(), request.sourceIds.size.toLong()))
                             EncryptedZipEntrySource(ref.displayName, tempFile)
                         }
-                        // Owned, unjournaled partials from a previous attempt cannot be resumed.
                         if (ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
                         EncryptedZip.create(ticket.stageFile, entrySources, password, limits, context.checkCancellation)
                     } finally {
                         tempSourcesDir.deleteRecursively()
                     }
-                    val rec = context.outputs.publish(ticket) { ctxFile -> context.outputs.inspect(ctxFile, "application/zip") }
+                    val rec = context.outputs.publish(ticket) { ctxFile -> context.outputs.inspect(ctxFile, "application/zip", originalSizeBytes = stagedBytes.takeIf { it > 0L }) }
                     listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
                 }
             } else {
@@ -188,6 +192,7 @@ import javax.inject.Singleton
                                 val rec = context.outputs.publish(ticket) { OutputMetadata() }
                                 outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
                             }
+                            context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), extractedFiles.size.toLong()))
                         }
                     } finally { dir.deleteRecursively() }
                 }
@@ -205,7 +210,6 @@ import javax.inject.Singleton
             require(tokenChars.isNotEmpty()) { "LOGIN_REQUIRED" }
             val client = GoogleDriveClient(OkHttpTransport(okHttpClient), okHttpClient)
             return if (!settings.exportMode) {
-                // Import / download a Drive file that the signed-in user can access
                 val itemKey = "drive-import"
                 context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
                 val meta = client.fetchMetadata(settings.fileIdOrUrl, tokenChars)
@@ -223,7 +227,6 @@ import javax.inject.Singleton
                 secrets.remove(settings.tokenSecretHandle)
                 listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
             } else {
-                // Export / upload selected local source snapshots to the signed-in user's Google Drive
                 require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
                 val outcomes = mutableListOf<ItemOutcome>()
                 val uploadedLines = mutableListOf<String>()

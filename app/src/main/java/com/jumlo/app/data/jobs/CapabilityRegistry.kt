@@ -41,8 +41,8 @@ object CapabilityRegistry {
         UtilityTool("img_stitch", "img_stitch", PillarCategory.IMAGES, "Stitch Screenshots", "خياطة لقطات", "Vertical screenshot stitching", "دمج عمودي للقطات", "view_agenda"),
 
         // Download Tools
-        UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Video & Audio Downloader", "\u062a\u0646\u0632\u064a\u0644 \u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u0648\u0627\u0644\u0635\u0648\u062a", "Analyze real qualities, merge tracks, or save audio only", "\u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u062c\u0648\u062f\u0629 \u0623\u0648 \u062a\u0646\u0632\u064a\u0644 \u0627\u0644\u0635\u0648\u062a \u0641\u0642\u0637", "download"),
-        UtilityTool("dl_02", "add_single_url", PillarCategory.DOWNLOADS, "New Direct Download", "تنزيل جديد", "Download files from direct URLs", "لصق الرابط المباشر للتنزيل", "add_link"),
+        UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Universal Video, Audio & File Downloader", "تنزيل الفيديو والصوت والملفات من كل المنصات", "All social platforms, real video qualities, MP3/M4A audio, PDF & Google Drive", "كل المنصات، اختيار الجودة والصيغة، تنزيل الصوت أو الفيديو أو الـ PDF", "download"),
+        UtilityTool("dl_02", "add_single_url", PillarCategory.DOWNLOADS, "New Direct Download", "تنزيل مباشر وGoogle Drive", "Download files from direct URLs & Google Drive", "لصق رابط ملف مباشر أو Google Drive", "add_link"),
         UtilityTool("dl_03", "batch_url_intake", PillarCategory.DOWNLOADS, "Batch URL Intake", "إدخال دفعة روابط", "Parse & validate multi-line HTTP/HTTPS links", "تحليل وفحص الروابط المتعددة", "download"),
         UtilityTool("dl_settings", "settings_overview", PillarCategory.DOWNLOADS, "Download Settings", "إعدادات التنزيل", "Network preferences & storage destination", "تفضيلات الشبكة ومجلد الحفظ", "tune"),
 
@@ -57,7 +57,7 @@ object CapabilityRegistry {
         UtilityTool("file_drive", "google_drive", PillarCategory.FILES, "Google Drive Import / Export", "استيراد وتصدير Google Drive", "Import or export via official Drive v3 API", "استيراد وتصدير عبر واجهة Drive الرسمية", "cloud"),
         UtilityTool("xf_05", "secure_vault", PillarCategory.VAULT, "Private Vault (unavailable)", "الخزنة المشفرة (AES-256)", "Unavailable: cryptographic backend not qualified", "تشفير الأجهزة المحلي AES-256-GCM", "enhanced_encryption", isExpansionConcept = true, conceptCode = "XF-05")
     )
-    val tools get() = allTools + UtilityTool("sha256","sha256",PillarCategory.FILES,"SHA-256 verification","SHA-256","Compute or compare actual file digests","SHA-256","verified")
+    val tools get() = allTools + UtilityTool("sha256","sha256",PillarCategory.FILES,"SHA-256 verification","التحقق من بصمة SHA-256","Compute or compare actual file digests","حساب ومقارنة البصمة الرقمية للملفات","verified")
     fun availability(id:String) = CapabilityPolicy.availability(id)
     fun visible(id:String):Boolean = availability(id).visible
     fun enabled(id:String):Boolean = availability(id).enabled

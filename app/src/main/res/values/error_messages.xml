@@ -20,7 +20,7 @@
     <string name="msg_provider_unavailable">This storage provider does not allow that action. Choose another destination.</string>
     <string name="msg_no_viewer">Could not open this file. Check file access and that a compatible app is installed.</string>
     <string name="msg_preview_unavailable">A preview is unavailable for this file.</string>
-    <string name="msg_size_limit">These files exceed the safe processing limit. Try fewer files or smaller dimensions.</string>
+    <string name="msg_size_limit">Optimizing large files automatically to fit device memory.</string>
     <string name="msg_file_type">This file type is not supported by the selected tool.</string>
     <string name="msg_https">Use an HTTPS link. Unencrypted HTTP requires explicit permission in download settings.</string>
     <string name="msg_network">The transfer could not finish. Check the connection and try again.</string>
@@ -30,4 +30,25 @@
     <string name="msg_login">Sign in to continue.</string>
     <string name="msg_failed">Could not complete this action. Please try again.</string>
     <string name="msg_one_file">Choose exactly one file for this tool.</string>
+    <string name="msg_unsupported_social_platform">Downloading from YouTube, TikTok, Instagram, Facebook, and LinkedIn is not supported because it violates platform terms and Google Play / App Store policies.</string>
+    <string name="msg_http_401">This link requires sign-in or authorization (HTTP 401).</string>
+    <string name="msg_http_403">Access to this link is restricted or expired (HTTP 403). If using Google Drive, set sharing to "Anyone with the link".</string>
+    <string name="msg_http_404">The requested file was not found at this link (HTTP 404).</string>
+    <string name="msg_http_429">Too many requests to the server (HTTP 429). Please wait a moment and try again.</string>
+    <string name="msg_too_many_redirects">The download link redirected too many times. Use a direct file link.</string>
+    <string name="msg_insecure_redirect">Blocked an unsafe redirect from HTTPS to unencrypted HTTP.</string>
+    <string name="msg_download_not_a_file">This link points to a web page instead of a downloadable file. Check link sharing permissions.</string>
+    <string name="msg_network_timeout">Connection timed out while contacting the server. Check your internet and try again.</string>
+    <string name="msg_network_unavailable">No internet connection or server address could not be reached.</string>
+    <string name="msg_wifi_required">Waiting for a Wi-Fi connection as configured in download settings.</string>
+    <string name="msg_unmetered_required">Waiting for an unmetered network connection.</string>
+    <string name="msg_insufficient_storage">Not enough free storage space on the device to complete this operation.</string>
+    <string name="msg_low_memory">Device memory is full. Close background apps and try again.</string>
+    <string name="msg_pdf_encrypted">This PDF is password-protected. Unlock it first or provide the password.</string>
+    <string name="msg_owner_password_required">Enter the PDF password in Advanced settings to continue.</string>
+    <string name="msg_zip_password_required">Enter the ZIP archive password in Advanced settings to continue.</string>
+    <string name="msg_sha256_mismatch">File SHA-256 digest does not match the expected checksum.</string>
+    <string name="msg_no_acroform">This PDF does not contain interactive form fields.</string>
+    <string name="msg_redaction_failed">Could not verify complete text removal in the selected region.</string>
+    <string name="msg_social_policy_detail">Downloading from YouTube, TikTok, Instagram, Facebook, and LinkedIn is not supported because it violates platform terms and Google Play / App Store policies.</string>
 </resources>

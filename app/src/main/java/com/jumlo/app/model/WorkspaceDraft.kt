@@ -30,7 +30,8 @@ import kotlinx.serialization.json.Json
         require(version==1) { "UNSUPPORTED_DRAFT_VERSION" }
         fun number(text:String,min:Int,max:Int):Int=normalizeDigits(text).toIntOrNull()?.takeIf { it in min..max } ?: throw IllegalArgumentException("INVALID_NUMERIC_SETTING")
         fun fraction(text:String):Double=normalizeDigits(text).toDoubleOrNull()?.takeIf { it.isFinite() && it in 0.0..1.0 } ?: throw IllegalArgumentException("INVALID_CROP")
-        val converted by lazy { ImageConversionSettings(format,if(format=="PNG") 85 else number(quality,1,100),-1,true,prefix) }
+        val customImgName = outputName.trim().takeUnless { it == "download.bin" || it == "Images.pdf" }.orEmpty()
+        val converted by lazy { ImageConversionSettings(format,if(format=="PNG") 85 else number(quality,1,100),-1,true,prefix,customImgName) }
         return when(toolId) {
             "img_01" -> Json.encodeToString(converted)
             "img_02" -> {
@@ -43,18 +44,18 @@ import kotlinx.serialization.json.Json
             "img_03" -> { val l=fraction(cropLeft);val t=fraction(cropTop);val r=fraction(cropRight);val b=fraction(cropBottom); require(l<r && t<b) { "INVALID_CROP" }; Json.encodeToString(ImageCropSettings(l,t,r,b,turns,flipX,flipY,converted)) }
             "img_04" -> Json.encodeToString(ImageCompressionSettings(converted))
             "pdf_02" -> Json.encodeToString(ImagesToPdfSettings(SafeNames.basename(outputName),number(paperWidth,72,14400),number(paperHeight,72,14400),orientation,number(margin,0,200),fill))
-            "pdf_07" -> Json.encodeToString(PdfImagesSettings(pages.trim(),number(dpi,36,600),if(format=="JPEG") "JPEG" else "PNG",if(format=="JPEG") number(quality,1,100) else 85,grayscale))
+            "pdf_07" -> Json.encodeToString(PdfImagesSettings(pages.trim().ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),if(format=="JPEG") "JPEG" else "PNG",if(format=="JPEG") number(quality,1,100) else 85,grayscale,outputName.trim()))
             "file_07","file_08" -> Json.encodeToString(ArchiveSettings(SafeNames.basename(outputName),number(zipLevel,0,9)))
             "sha256" -> Json.encodeToString(HashSettings(expectedHash.trim().takeIf { it.isNotEmpty() }))
             "pdf_03" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMergeSettings(SafeNames.basename(outputName)))
-            "pdf_05" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSplitSettings(SafeNames.basename(outputName),if(flag1) "EVERY" else "RANGES",pages,if(flag1) number(num1.ifBlank{"1"},1,1000) else 1))
-            "pdf_06" -> Json.encodeToString(com.jumlo.app.data.processing.PdfExtractSettings(SafeNames.basename(outputName),pages))
+            "pdf_05" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSplitSettings(SafeNames.basename(outputName),if(flag1) "EVERY" else "RANGES",pages.ifBlank{"all"},if(flag1) number(num1.ifBlank{"1"},1,1000) else 1))
+            "pdf_06" -> Json.encodeToString(com.jumlo.app.data.processing.PdfExtractSettings(SafeNames.basename(outputName),pages.ifBlank{"all"}))
             "pdf_04" -> Json.encodeToString(com.jumlo.app.data.processing.PdfOrganizeSettings(SafeNames.basename(outputName),text1,text2,number(num1.ifBlank{"90"},-360,360)))
-            "pdf_crop" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCropSettings(SafeNames.basename(outputName),pages,fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))
+            "pdf_crop" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCropSettings(SafeNames.basename(outputName),pages.ifBlank{"all"},fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))
             "pdf_compress" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompressSettings(SafeNames.basename(outputName),number(num1.ifBlank{"150"},36,600),number(quality,1,100)))
             "pdf_stamp" -> {
                 require(text1.isNotBlank() || flag1) { "STAMP_CONTENT_REQUIRED" }
-                Json.encodeToString(com.jumlo.app.data.processing.PdfStampSettings(SafeNames.basename(outputName),text1,flag1,pages))
+                Json.encodeToString(com.jumlo.app.data.processing.PdfStampSettings(SafeNames.basename(outputName),text1,flag1,pages.ifBlank{"all"}))
             }
             "pdf_annotate" -> {
                 require(text1.isNotBlank()) { "INVALID_ANNOTATION" }
@@ -64,12 +65,12 @@ import kotlinx.serialization.json.Json
             "pdf_metadata" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMetadataSettings(SafeNames.basename(outputName),text1,text2,text3,text4,number(num1.ifBlank{"1"},1,100000)))
             "pdf_protect" -> Json.encodeToString(com.jumlo.app.data.processing.PdfProtectSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
             "pdf_forms" -> Json.encodeToString(com.jumlo.app.data.processing.PdfFormSettings(SafeNames.basename(outputName),text1.ifBlank{"{}"},flag1))
-            "pdf_compare" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompareSettings())
+            "pdf_compare" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompareSettings(0,SafeNames.fromDisplayName(outputName.ifBlank{"compare-report.txt"},"compare-report.txt")))
             "pdf_redact" -> Json.encodeToString(com.jumlo.app.data.processing.PdfRedactSettings(SafeNames.basename(outputName),number(num1.ifBlank{"1"},1,100000),fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom),text1))
-            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages,number(dpi,36,600),"PNG",number(quality,1,100),grayscale))
-            "webpage_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(text1,144,"PNG",90,false))
+            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf")))
+            "webpage_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(text1,144,"PNG",90,false,SafeNames.fromDisplayName(outputName.ifBlank{"webpage.pdf"},"webpage.pdf")))
             "img_exif" -> Json.encodeToString(com.jumlo.app.data.processing.ImageExifSettings(flag2,flag1,
-                if(flag1) converted else ImageConversionSettings("JPEG",number(quality,1,100),-1,true,prefix)))
+                if(flag1) converted else ImageConversionSettings("JPEG",number(quality,1,100),-1,true,prefix,customImgName)))
             "img_watermark" -> {
                 if(flag1) require(sourceIds.distinct().size>=2) { "WATERMARK_LOGO_REQUIRED" }
                 else require(text1.isNotBlank()) { "WATERMARK_CONTENT_REQUIRED" }
@@ -77,8 +78,8 @@ import kotlinx.serialization.json.Json
             }
             "img_join","img_stitch" -> Json.encodeToString(com.jumlo.app.data.processing.ImageJoinSettings(if(toolId=="img_stitch") "VSTRIP" else text1.ifBlank{"GRID2"},number(num1.ifBlank{"8"},0,500),if(toolId=="img_stitch") number(num2.ifBlank{"0"},0,400) else 0,converted))
             "img_adjust" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings(number(num1.ifBlank{"0"},-100,100),number(num2.ifBlank{"100"},0,300),number(num3.ifBlank{"100"},0,300),number(num4.ifBlank{"0"},0,2000),converted))
-            "img_target" -> Json.encodeToString(com.jumlo.app.data.processing.ImageTargetSettings(number(num1.ifBlank{"200000"},1000,100000000).toLong(),ImageConversionSettings(format="JPEG",quality=85,namePrefix=prefix)))
-            "img_compare" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings())
+            "img_target" -> Json.encodeToString(com.jumlo.app.data.processing.ImageTargetSettings(number(num1.ifBlank{"200000"},1000,100000000).toLong(),ImageConversionSettings(format="JPEG",quality=85,namePrefix=prefix,customOutputName=customImgName)))
+            "img_compare" -> Json.encodeToString(com.jumlo.app.data.processing.ImageAdjustSettings(output=converted))
             "file_batch_rename" -> {
                 val pattern=text1.ifBlank{"file-{n}"}
                 require(pattern.length<=200) { "INVALID_RENAME_PATTERN" }

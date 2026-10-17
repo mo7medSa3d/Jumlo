@@ -3,36 +3,6 @@ package com.jumlo.app.core.media
 /** Only measured extractor metadata. Unknown values are null, never a fabricated quality. */
 enum class MediaMode { VIDEO, AUDIO }
 enum class AudioOutput { ORIGINAL, MP3, M4A, OPUS }
-enum class PlatformVerificationStatus { UNVERIFIED, HOST_VERIFIED, VERIFIED }
-
-data class PlatformCapabilityEntry(
-    val id: String,
-    val displayName: String,
-    val extractorPath: String,
-    val status: PlatformVerificationStatus = PlatformVerificationStatus.UNVERIFIED
-)
-
-/**
- * Single source of truth for platform verification status shown in the UI and
- * recorded in docs/MEDIA_CAPABILITY_MATRIX.md. A platform without a passing live
- * result in this session remains UNVERIFIED.
- */
-object MediaPlatformMatrix {
-    val entries: List<PlatformCapabilityEntry> = listOf(
-        PlatformCapabilityEntry("youtube", "YouTube", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("tiktok", "TikTok", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("instagram", "Instagram", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("facebook", "Facebook", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("linkedin", "LinkedIn", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("x", "X", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("reddit", "Reddit", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("vimeo", "Vimeo", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("dailymotion", "Dailymotion", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("soundcloud", "SoundCloud", "yt-dlp + FFmpeg", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("gdrive", "Google Drive", "Official Drive v3 API", PlatformVerificationStatus.UNVERIFIED),
-        PlatformCapabilityEntry("direct", "Direct File (HTTPS)", "OkHttp StreamTransfer", PlatformVerificationStatus.HOST_VERIFIED)
-    )
-}
 
 data class MediaFormat(
     val id: String, val extension: String,

@@ -30,11 +30,13 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
     private suspend fun create(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
         ctx.outputs.find(job.id,"archive")?.let { return listOf(ItemOutcome("archive",ItemStatus.CREATED,it.id)) }
         val settings=Json.decodeFromString<ArchiveSettings>(job.settingsJson)
-        require(settings.displayName.endsWith(".zip",true)) { "ZIP_EXTENSION_REQUIRED" }
-        val ticket=ctx.outputs.reserve(job.id,"archive",SafeNames.basename(settings.displayName),"application/zip")
+        val display = if(settings.displayName.endsWith(".zip",true)) settings.displayName else "${settings.displayName}.zip"
+        val ticket=ctx.outputs.reserve(job.id,"archive",SafeNames.basename(display),"application/zip")
         val used=mutableSetOf<String>()
+        var totalSourceBytes=0L
         val inputs=job.sourceIds.mapIndexed { index,id ->
             val source=ctx.sources.get(id)
+            totalSourceBytes += (source.sizeBytes ?: 0L)
             val desired=SafeNames.fromDisplayName(source.displayName,"file-${index+1}")
             val unique=SafeNames.unique(used,desired).also { used+=it.lowercase(Locale.ROOT) }
             // ZipOutputStream is blocking. Only opening the owned stream bridges Room's suspend API.
@@ -50,11 +52,13 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
             if(app.filesDir.usableSpace<ctx.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
         }
         ctx.report(JobProgress(JobStage.FINALIZING,inputs.size.toLong(),inputs.size.toLong()))
-        val record=ctx.outputs.publish(ticket) { ctx.outputs.inspect(it,ticket.mimeType) }
+        val record=ctx.outputs.publish(ticket) { ctx.outputs.inspect(it,ticket.mimeType,originalSizeBytes=totalSourceBytes.takeIf { b -> b > 0L }) }
         return listOf(ItemOutcome("archive",ItemStatus.CREATED,record.id))
     }
     private suspend fun extract(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
         require(job.sourceIds.size==1) { "ONE_ZIP_REQUIRED" }
+        val sourceRef=runCatching { ctx.sources.get(job.sourceIds.single()) }.getOrNull()
+        val archiveFolder=sourceRef?.displayName?.let { AutoOutputName.cleanBaseName(it,"Extracted") }
         val directory=File(app.cacheDir,"extract/${job.id}/${UUID.randomUUID()}")
         val outcomes=mutableListOf<ItemOutcome>()
         try {
@@ -80,7 +84,7 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
                             }; output.fd.sync()
                         } }
                         // Arbitrary archive members are bytes, not a claim of decodable media.
-                        val record=ctx.outputs.publish(ticket) { require(it.length()==file.length()) { "OUTPUT_VERIFY_FAILED" }; OutputMetadata() }
+                        val record=ctx.outputs.publish(ticket) { require(it.length()==file.length()) { "OUTPUT_VERIFY_FAILED" }; OutputMetadata(subfolder=archiveFolder) }
                         outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
                     } catch(cancel:CancellationException) { throw cancel }
                     catch(error:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(error)) }

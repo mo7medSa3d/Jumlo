@@ -12,9 +12,10 @@ import android.webkit.WebViewClient
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.core.HttpPolicy
-import com.jumlo.app.core.MemoryBudget
 import com.jumlo.app.core.PageSelection
+import com.jumlo.app.core.SafeNames
 import com.jumlo.app.data.jobs.ExecutionContext
 import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.OperationHandler
@@ -29,13 +30,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /**
  * pdf_ocr: renders pages, runs on-device ML Kit OCR, publishes extracted .txt
@@ -62,6 +63,12 @@ import kotlin.math.roundToInt
                 ItemOutcome("searchable-pdf", ItemStatus.CREATED, existingPdf.id)
             )
         }
+        val sourceRef = runCatching { context.sources.get(request.sourceIds.single()) }.getOrNull()
+        val baseName = AutoOutputName.cleanBaseName(
+            settings.displayName.takeUnless { it.isBlank() || it == "searchable.pdf" || it == "download.bin" }
+                ?: sourceRef?.displayName ?: "ocr",
+            "ocr"
+        )
         val perPageTexts = mutableMapOf<Int, String>()
         val text = context.sources.withSeekable(request.sourceIds.single(), request.id) { source ->
             ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
@@ -78,8 +85,14 @@ import kotlin.math.roundToInt
                             val index = pageNum - 1
                             context.checkCancellation()
                             renderer.openPage(index).use { page ->
-                                val width = (page.width * settings.dpi / 72.0).roundToInt(); val height = (page.height * settings.dpi / 72.0).roundToInt()
-                                MemoryBudget.requireBitmaps(width, height, 1, context.budget.maxBitmapBytes)
+                                var width = (page.width * settings.dpi / 72.0).roundToInt().coerceAtLeast(1)
+                                var height = (page.height * settings.dpi / 72.0).roundToInt().coerceAtLeast(1)
+                                val maxPixels = (context.budget.maxBitmapBytes / 4L).coerceAtLeast(512L * 512L)
+                                if (width.toLong() * height > maxPixels) {
+                                    val downScale = sqrt(maxPixels.toDouble() / (width.toDouble() * height))
+                                    width = (width * downScale).roundToInt().coerceAtLeast(1)
+                                    height = (height * downScale).roundToInt().coerceAtLeast(1)
+                                }
                                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                                 try {
                                     bitmap.eraseColor(Color.WHITE)
@@ -104,7 +117,7 @@ import kotlin.math.roundToInt
         if (existingTxt != null) {
             outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, existingTxt.id)
         } else {
-            val ticket = context.outputs.reserve(request.id, itemKey, "ocr.txt", "text/plain")
+            val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename("$baseName - OCR.txt"), "text/plain")
             ticket.stageFile.writeText(text)
             val rec = context.outputs.publish(ticket) { OutputMetadata() }
             outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
@@ -113,13 +126,13 @@ import kotlin.math.roundToInt
         try {
             val sKey = "searchable-pdf"
             context.outputs.find(request.id, sKey)?.let { outcomes += ItemOutcome(sKey, ItemStatus.CREATED, it.id) } ?: run {
-                val sTicket = context.outputs.reserve(request.id, sKey, "searchable.pdf", "application/pdf")
+                val sTicket = context.outputs.reserve(request.id, sKey, SafeNames.basename("$baseName - Searchable.pdf"), "application/pdf")
                 context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
                     com.jumlo.app.data.pdf.PdfBoxBackend.open(src, null).use { doc ->
                         perPageTexts.forEach { (pageIdx, pageText) ->
                             if (pageIdx in 0 until doc.numberOfPages && pageText.isNotBlank()) {
                                 context.checkCancellation()
-                                com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(doc, pageIdx, pageText, 0.05, 0.05, 10f)
+                                com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(doc, pageIdx, pageText, 0.05, 0.05, 10f, strict = false)
                             }
                         }
                         doc.save(sTicket.stageFile)
@@ -139,7 +152,9 @@ import kotlin.math.roundToInt
         val url = validatedUri.toASCIIString()
         val itemKey = "webpage"
         context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
-        val ticket = context.outputs.reserve(request.id, itemKey, "webpage.pdf", "application/pdf")
+        val chosenName = settings.displayName.trim().takeUnless { it.isEmpty() || it == "download.bin" } ?: "webpage.pdf"
+        val safePdfName = SafeNames.basename(if (chosenName.endsWith(".pdf", true)) chosenName else "$chosenName.pdf")
+        val ticket = context.outputs.reserve(request.id, itemKey, safePdfName, "application/pdf")
         val ok = withContext(Dispatchers.Main) {
             withTimeoutOrNull(60_000) {
                 suspendCancellableCoroutine { cont ->

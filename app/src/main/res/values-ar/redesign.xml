@@ -1,7 +1,7 @@
 <resources>
     <string name="redesign_download_hero">نزّل ما تحتاجه.</string>
-    <string name="redesign_download_subtitle">رابط واحد، نختار الصيغة المناسبة وتحفظ الملف.</string>
-    <string name="redesign_link_hint">الصق رابط فيديو أو ملف</string>
+    <string name="redesign_download_subtitle">روابط الملفات المباشرة وروابط Google Drive تُحفظ مباشرة على جهازك.</string>
+    <string name="redesign_link_hint">الصق رابط ملف مباشر أو رابط Google Drive</string>
     <string name="redesign_paste_suggestion">لصق الرابط المنسوخ</string>
     <string name="redesign_ready_file">جاهز للحفظ</string>
     <string name="redesign_download_retry_hint">تحقق من الرابط وحاول مجددًا.</string>
@@ -37,6 +37,7 @@
     <string name="redesign_accent_blue">أزرق</string>
     <string name="redesign_accent_teal">تركوازي</string>
     <string name="redesign_accent_coral">مرجاني</string>
+    <string name="redesign_accent_dynamic">ألوان النظام الديناميكية (Material You)</string>
     <string name="redesign_scale_small">صغير</string>
     <string name="redesign_scale_normal">قياسي</string>
     <string name="redesign_scale_large">كبير</string>

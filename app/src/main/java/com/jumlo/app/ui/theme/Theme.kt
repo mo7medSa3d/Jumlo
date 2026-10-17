@@ -1,16 +1,20 @@
 package com.jumlo.app.ui.theme
 
 import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
@@ -99,31 +103,55 @@ fun JumloTheme(
         ThemeMode.DARK -> true
     }
 
-    val baseColors: ColorScheme = if (darkTheme) QuietDarkColorScheme else QuietLightColorScheme
-    // Deliberate curated accent pairs preserve contrast for light and dark surfaces.
-    val selectedAccent = when(accentColor) {
-        "BLUE" -> if(darkTheme) Color(0xFF92B7FF) else Color(0xFF174AA5)
-        "TEAL" -> if(darkTheme) Color(0xFF72DACA) else Color(0xFF00695C)
-        "CORAL" -> if(darkTheme) Color(0xFFFFAD9A) else Color(0xFF9E3724)
-        else -> if(darkTheme) DarkPrimary else LightPrimary
+    val context = LocalContext.current
+    val useDynamicColor = accentColor == "DYNAMIC" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val baseColors: ColorScheme = when {
+        useDynamicColor && darkTheme -> dynamicDarkColorScheme(context)
+        useDynamicColor && !darkTheme -> dynamicLightColorScheme(context)
+        darkTheme -> QuietDarkColorScheme
+        else -> QuietLightColorScheme
     }
-    val selectedContainer=when(accentColor) {
-        "BLUE" -> if(darkTheme) Color(0xFF203B67) else Color(0xFFD8E5FF)
-        "TEAL" -> if(darkTheme) Color(0xFF194E47) else Color(0xFFD3F3EA)
-        "CORAL" -> if(darkTheme) Color(0xFF663A33) else Color(0xFFFFE2DA)
-        else -> if(darkTheme) DarkPrimaryContainer else LightPrimaryContainer
+    val colorScheme: ColorScheme = if (useDynamicColor) {
+        baseColors
+    } else {
+        // Deliberate curated accent pairs preserve contrast for light and dark surfaces.
+        val selectedAccent = when (accentColor) {
+            "BLUE" -> if (darkTheme) Color(0xFF92B7FF) else Color(0xFF174AA5)
+            "TEAL" -> if (darkTheme) Color(0xFF72DACA) else Color(0xFF00695C)
+            "CORAL" -> if (darkTheme) Color(0xFFFFAD9A) else Color(0xFF9E3724)
+            else -> if (darkTheme) DarkPrimary else LightPrimary
+        }
+        val selectedContainer = when (accentColor) {
+            "BLUE" -> if (darkTheme) Color(0xFF203B67) else Color(0xFFD8E5FF)
+            "TEAL" -> if (darkTheme) Color(0xFF194E47) else Color(0xFFD3F3EA)
+            "CORAL" -> if (darkTheme) Color(0xFF663A33) else Color(0xFFFFE2DA)
+            else -> if (darkTheme) DarkPrimaryContainer else LightPrimaryContainer
+        }
+        baseColors.copy(
+            primary = selectedAccent,
+            onPrimary = if (darkTheme) Color(0xFF111318) else Color.White,
+            primaryContainer = selectedContainer,
+            onPrimaryContainer = if (darkTheme) Color(0xFFF8F8FD) else Color(0xFF182027)
+        )
     }
-    val colorScheme = baseColors.copy(primary=selectedAccent,
-        onPrimary=if(darkTheme) Color(0xFF111318) else Color.White,
-        primaryContainer=selectedContainer,
-        onPrimaryContainer=if(darkTheme) Color(0xFFF8F8FD) else Color(0xFF182027))
-    val pillarColors: PillarColors = if (darkTheme) DarkPillarColors else LightPillarColors
+
+    val basePillars = if (darkTheme) DarkPillarColors else LightPillarColors
+    val pillarColors: PillarColors = basePillars.copy(
+        cardSurface = colorScheme.surfaceContainerLow,
+        cardBorder = colorScheme.outlineVariant,
+        primaryActionBackground = colorScheme.primary,
+        primaryActionText = colorScheme.onPrimary,
+        dockSurface = colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
+        dockBorder = colorScheme.outlineVariant.copy(alpha = 0.55f),
+        activePillContainer = colorScheme.primaryContainer,
+        activePillContent = colorScheme.onPrimaryContainer
+    )
     val layoutDirection = if (language == AppLanguage.ARABIC) LayoutDirection.Rtl else LayoutDirection.Ltr
 
-    val fontFamily = if(language.isRtl) IbmPlexSansArabicFont else IbmPlexSansFont
-    val originalDensity=LocalDensity.current
-    val multiplier=when(fontScale) {"SMALL"->0.91f;"LARGE"->1.15f;else->1f}
-    val adaptedDensity=Density(originalDensity.density,originalDensity.fontScale*multiplier)
+    val fontFamily = if (language.isRtl) IbmPlexSansArabicFont else IbmPlexSansFont
+    val originalDensity = LocalDensity.current
+    val multiplier = when (fontScale) { "SMALL" -> 0.91f; "LARGE" -> 1.15f; else -> 1f }
+    val adaptedDensity = Density(originalDensity.density, originalDensity.fontScale * multiplier)
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -138,7 +166,7 @@ fun JumloTheme(
 
     CompositionLocalProvider(
         LocalPillarColors provides pillarColors,
-        LocalQuietTypography provides DefaultQuietTypography.withFont(fontFamily),
+        LocalQuietTypography provides DefaultQuietTypography.withFont(fontFamily, isArabic = language.isRtl),
         LocalQuietShapes provides QuietPrecisionShapes(),
         LocalQuietSpacing provides QuietPrecisionSpacing(),
         LocalLayoutDirection provides layoutDirection,
@@ -146,7 +174,7 @@ fun JumloTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Material3Typography.withFont(fontFamily),
+            typography = Material3Typography.withFont(fontFamily, isArabic = language.isRtl),
             shapes = Material3Shapes,
             content = content
         )

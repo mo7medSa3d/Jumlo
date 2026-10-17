@@ -20,7 +20,7 @@
     <string name="msg_provider_unavailable">موفر التخزين لا يسمح بهذا الإجراء. اختر وجهة أخرى.</string>
     <string name="msg_no_viewer">تعذر فتح الملف. تحقق من صلاحية الوصول ومن وجود تطبيق متوافق.</string>
     <string name="msg_preview_unavailable">المعاينة غير متاحة لهذا الملف.</string>
-    <string name="msg_size_limit">تتجاوز هذه الملفات حد المعالجة الآمن. جرّب ملفات أقل أو أبعادًا أصغر.</string>
+    <string name="msg_size_limit">يتم تحسين الملفات الكبيرة تلقائيًا لتناسب ذاكرة الجهاز.</string>
     <string name="msg_file_type">نوع الملف غير مدعوم في الأداة المحددة.</string>
     <string name="msg_https">استخدم رابط HTTPS. يتطلب HTTP غير المشفر إذنًا صريحًا في إعدادات التنزيل.</string>
     <string name="msg_network">تعذر إكمال التنزيل. تحقق من الاتصال وحاول مجددًا.</string>
@@ -30,4 +30,25 @@
     <string name="msg_login">سجّل الدخول للمتابعة.</string>
     <string name="msg_failed">تعذر إكمال هذا الإجراء. حاول مجددًا.</string>
     <string name="msg_one_file">اختر ملفًا واحدًا فقط لهذه الأداة.</string>
+    <string name="msg_unsupported_social_platform">التنزيل من YouTube وTikTok وInstagram وFacebook وLinkedIn غير مدعوم لأنه يخالف شروط المنصات وسياسات Google Play وApp Store.</string>
+    <string name="msg_http_401">هذا الرابط يتطلب تسجيل الدخول أو صلاحية وصول (HTTP 401).</string>
+    <string name="msg_http_403">الوصول إلى هذا الرابط مرفوض أو منتهي الصلاحية (HTTP 403). في Google Drive، تأكد أن المشاركة مضبوطة على "أي شخص لديه الرابط".</string>
+    <string name="msg_http_404">الملف المطلوب غير موجود على هذا الرابط (HTTP 404).</string>
+    <string name="msg_http_429">تم تجاوز حد الطلبات من الخادم (HTTP 429). انتظر قليلاً ثم حاول مجددًا.</string>
+    <string name="msg_too_many_redirects">قام الرابط بإعادة التوجيه مرات كثيرة جدًا. استخدم رابط ملف مباشر.</string>
+    <string name="msg_insecure_redirect">تم حظر إعادة توجيه غير آمنة من HTTPS إلى اتصال HTTP غير مشفر.</string>
+    <string name="msg_download_not_a_file">هذا الرابط يوجه إلى صفحة ويب وليس ملفًا قابلاً للتنزيل. تحقق من صلاحية مشاركة الرابط.</string>
+    <string name="msg_network_timeout">انتهت مهلة الاتصال بالخادم. تحقق من اتصال الإنترنت وحاول مجددًا.</string>
+    <string name="msg_network_unavailable">لا يوجد اتصال بالإنترنت أو تعذر الوصول إلى عنوان الخادم.</string>
+    <string name="msg_wifi_required">بانتظار اتصال Wi-Fi حسب إعدادات التنزيل.</string>
+    <string name="msg_unmetered_required">بانتظار شبكة غير محدودة البيانات.</string>
+    <string name="msg_insufficient_storage">لا توجد مساحة تخزين كافية على الجهاز لإكمال هذه العملية.</string>
+    <string name="msg_low_memory">ذاكرة الجهاز ممتلئة حاليًا. أغلق التطبيقات الخلفية وحاول مجددًا.</string>
+    <string name="msg_pdf_encrypted">ملف PDF محمي بكلمة مرور. افتح قفله أولًا أو أدخل كلمة المرور.</string>
+    <string name="msg_owner_password_required">أدخل كلمة مرور ملف PDF في الإعدادات المتقدمة للمتابعة.</string>
+    <string name="msg_zip_password_required">أدخل كلمة مرور أرشيف ZIP في الإعدادات المتقدمة للمتابعة.</string>
+    <string name="msg_sha256_mismatch">بصمة SHA-256 للملف لا تطابق القيمة المتوقعة.</string>
+    <string name="msg_no_acroform">لا يحتوي ملف PDF هذا على حقول نماذج تفاعلية قابلة للتعبئة.</string>
+    <string name="msg_redaction_failed">تعذر التحقق من إزالة النص بالكامل في المنطقة المحددة.</string>
+    <string name="msg_social_policy_detail">التنزيل من YouTube وTikTok وInstagram وFacebook وLinkedIn غير مدعوم لأنه يخالف شروط المنصات وسياسات Google Play وApp Store.</string>
 </resources>

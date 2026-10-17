@@ -62,4 +62,21 @@
     <string name="ui_http_notice">HTTP does not encrypt the download link or content. Use HTTPS whenever possible.</string>
     <string name="ui_target_jpeg_policy">Creates JPEG images. Quality is chosen automatically to meet the target size; some targets may be too small.</string>
     <string name="ui_exif_jpeg_policy">Preserving EXIF metadata creates JPEG output. Remove all metadata to choose another format.</string>
+    <string name="ui_smart_defaults_active">Smart defaults active: all pages, optimal quality, automatic naming.</string>
+    <string name="ui_custom_output_name">Custom output name (optional)</string>
+    <string name="ui_size_before_after">%1$s → %2$s (-%3$d%%)</string>
+    <string name="ui_saved_subfolder">Folder: %1$s</string>
+    <string name="ui_fit_contain">Fit</string>
+    <string name="ui_fit_cover">Fill</string>
+    <string name="ui_fit_pad">Pad</string>
+    <string name="ui_fit_stretch">Stretch</string>
+    <string name="ui_orient_auto">Auto</string>
+    <string name="ui_orient_portrait">Portrait</string>
+    <string name="ui_orient_landscape">Landscape</string>
+    <string name="ui_layout_grid2">2-Column Grid</string>
+    <string name="ui_layout_hstrip">Horizontal Strip</string>
+    <string name="ui_layout_vstrip">Vertical Strip</string>
+    <string name="ui_preview_zoom_hint">Swipe pages · Pinch or double-tap to zoom</string>
+    <string name="ui_preview_reset_zoom">Reset zoom</string>
+    <string name="ui_page_indicator">Page %1$d of %2$d</string>
 </resources>

@@ -243,6 +243,17 @@ fun main() {
         check(AutoOutputName.fromSource("file_07","backup.zip")=="backup - Archive.zip")
         check(AutoOutputName.fromSource("pdf_02","../../unsafe.jpg")?.contains('/')==false)
         check(AutoOutputName.fromSource("img_03","image.png")==null)
+        check(AutoOutputName.pageImageName("Report.pdf", 3, "png")=="Report - صفحة 003.png")
+        check(AutoOutputName.splitPartName("MySplit.pdf", "doc.pdf", 2)=="MySplit - 002.pdf")
+        check(StoragePaths.relativePath("image/png", "Report")=="Download/Jumlo/Images/Report/")
+        check(DownloadLinkPolicy.isGoogleDriveDownload("https://drive.google.com/file/d/1abcDE_fgHiJ23KLmno/view?usp=sharing"))
+        check(DriveLink.toDirectDownloadUrl("https://drive.google.com/file/d/1abcDE_fgHiJ23KLmno/view?usp=sharing")=="https://drive.usercontent.google.com/download?id=1abcDE_fgHiJ23KLmno&export=download&confirm=t")
+        check(DownloadLinkPolicy.detectPlatformName("https://www.youtube.com/watch?v=abc123")=="YouTube")
+        check(DownloadLinkPolicy.detectPlatformName("https://www.tiktok.com/@u/video/1")=="TikTok")
+        check(DownloadLinkPolicy.detectPlatformName("https://www.instagram.com/reel/abc")=="Instagram")
+        check(DownloadLinkPolicy.detectPlatformName("https://www.facebook.com/watch/?v=1")=="Facebook")
+        check(DownloadLinkPolicy.detectPlatformName("https://www.linkedin.com/posts/1")=="LinkedIn")
+        check(DownloadLinkPolicy.classifyDirectFile("report.pdf", "application/pdf")==DirectFileKind.PDF)
     }
     test("downloads folder categories and duplicate names are deterministic") {
         check(StoragePaths.relativePath("audio/mpeg")=="Download/Jumlo/Audio/")

@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.*
 import com.jumlo.app.data.jobs.CapabilityRegistry
+import com.jumlo.app.ui.theme.QuietTheme
 import java.util.Locale
+import kotlin.math.roundToInt
 
 fun formatBytes(value:Long?):String {
     if(value==null) return "—"
@@ -34,8 +36,24 @@ fun formatBytes(value:Long?):String {
     return String.format(Locale.ROOT,"%.1f %s",n,units[index])
 }
 
+@Composable
+fun formatOutputSizeSummary(output: OutputRecord): String {
+    val before = output.metadata.originalSizeBytes
+    val after = output.sizeBytes
+    val sizePart = if (before != null && before > after && before > 0L) {
+        val savedPct = (((before - after).toDouble() / before.toDouble()) * 100.0).roundToInt().coerceIn(1, 99)
+        stringResource(R.string.ui_size_before_after, formatBytes(before), formatBytes(after), savedPct)
+    } else {
+        formatBytes(after)
+    }
+    val folderPart = output.metadata.subfolder?.takeIf { it.isNotBlank() }?.let {
+        " · " + stringResource(R.string.ui_saved_subfolder, it)
+    }.orEmpty()
+    return sizePart + folderPart
+}
+
 @Composable fun TechnicalText(text:String, modifier:Modifier=Modifier) {
-    Text(text,modifier,style=MaterialTheme.typography.bodySmall.copy(textDirection=TextDirection.Ltr),color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(text,modifier,style=QuietTheme.typography.metadata.copy(textDirection=TextDirection.Content),color=MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,menu:@Composable ColumnScope.(()->Unit)->Unit) {
@@ -44,11 +62,11 @@ fun formatBytes(value:Long?):String {
     Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().clickable {
         haptics.actionClick()
         if(selection!=null) onSelect?.invoke() else onOpen?.invoke()
-    } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().padding(start=12.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceContainerLow) {
+        Row(Modifier.fillMaxWidth().padding(start=12.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             if(selection!=null) Checkbox(selection,{onSelect?.invoke()}) else Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text(name,style=MaterialTheme.typography.titleSmall.copy(textDirection=TextDirection.Ltr),maxLines=2,overflow=TextOverflow.Ellipsis)
+                Text(name,style=QuietTheme.typography.bodyMedium.copy(textDirection=TextDirection.Content),maxLines=2,overflow=TextOverflow.Ellipsis)
                 TechnicalText(metadata)
             }
             if(showOverflow) Box {
@@ -59,9 +77,11 @@ fun formatBytes(value:Long?):String {
     }
 }
 
-@Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null) {
-    FileMenuRow(output.displayName,"${formatBytes(output.sizeBytes)} · ${output.mimeType}",onOpen,selection=selection,onSelect=onSelect) {close->
+@Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null) {
+    val summary = "${formatOutputSizeSummary(output)} · ${output.mimeType}"
+    FileMenuRow(output.displayName,summary,onOpen,selection=selection,onSelect=onSelect) {close->
         DropdownMenuItem(text={Text(stringResource(R.string.action_open))},onClick={close();onOpen()})
+        if(onDetails!=null) DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={close();onDetails()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={close();onShare()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={close();onExport()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={close();onReuse()})
@@ -106,21 +126,10 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
                 Icon(Icons.Rounded.CheckCircle,contentDescription=null,
                     tint=MaterialTheme.colorScheme.tertiary,
                     modifier=Modifier.size(20.dp).graphicsLayer { scaleX=confirmScale;scaleY=confirmScale })
-                Text(stringResource(R.string.brand_completed),style=MaterialTheme.typography.labelMedium,
+                Text(stringResource(R.string.brand_completed),style=QuietTheme.typography.navigation,
                     color=MaterialTheme.colorScheme.tertiary)
             }
         }
-        if(job.outcomes.isNotEmpty()) Text(stringResource(R.string.job_outcomes_summary,job.outcomes.count {it.outputId!=null},job.outcomes.count {it.status==ItemStatus.FAILED}),style=MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable fun ToolRow(tool:UtilityTool,language:AppLanguage,onOpen:()->Unit) {
-    val icon=when(tool.pillar) {PillarCategory.PDF->Icons.Rounded.PictureAsPdf;PillarCategory.IMAGES->Icons.Rounded.Image;PillarCategory.DOWNLOADS->Icons.Rounded.Download;else->Icons.Rounded.Folder}
-    val haptics=rememberAppHaptics()
-    Surface(onClick={haptics.toolSelect();onOpen()},modifier=Modifier.pressFeedback(),shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface) {
-        Row(Modifier.fillMaxWidth().heightIn(min=64.dp).padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-            Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
-            Text(if(language.isRtl) tool.titleAr else tool.titleEn,Modifier.weight(1f),style=MaterialTheme.typography.titleSmall)
-        }
+        if(job.outcomes.isNotEmpty()) Text(stringResource(R.string.job_outcomes_summary,job.outcomes.count {it.outputId!=null},job.outcomes.count {it.status==ItemStatus.FAILED}),style=QuietTheme.typography.metadata)
     }
 }

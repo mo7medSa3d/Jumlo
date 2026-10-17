@@ -1,9 +1,15 @@
 package com.jumlo.app.model
 
+import com.jumlo.app.core.AutoOutputName
+import com.jumlo.app.core.DownloadLinkPolicy
+import com.jumlo.app.core.DriveLink
+import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.data.processing.ImageResizeSettings
 import com.jumlo.app.data.processing.ImageTargetSettings
 import com.jumlo.app.data.processing.ImageConversionSettings
+import com.jumlo.app.data.processing.PdfCompareSettings
 import com.jumlo.app.data.processing.PdfImagesSettings
+import com.jumlo.app.data.processing.PdfSplitSettings
 import com.jumlo.app.data.processing.ImageExifSettings
 import com.jumlo.app.data.processing.ImageWatermarkSettings
 import com.jumlo.app.data.processing.PdfAnnotateSettings
@@ -112,5 +118,44 @@ class WorkspaceSettingsTest {
     @Test(expected=IllegalArgumentException::class)
     fun conflictingResizeModesAreNotSilentlyIgnored() {
         WorkspaceDraft(toolId="img_02",percentage="50",longestEdge="1000").executionSettings()
+    }
+
+    @Test fun pdfToImagesFormatsFixedWidthThreeDigitArabicPageNameAndSubfolder() {
+        assertEquals("تقرير المبيعات - صفحة 003.png", AutoOutputName.pageImageName("تقرير المبيعات.pdf", 3, "png"))
+        assertEquals("Contract - صفحة 012.jpg", AutoOutputName.pageImageName("Contract.pdf", 12, "jpg"))
+        assertEquals("Download/Jumlo/Images/تقرير المبيعات/", StoragePaths.relativePath("image/png", "تقرير المبيعات"))
+    }
+
+    @Test fun splitPdfRespectsCustomOutputNameInsteadOfHardcodedSplitPrefix() {
+        assertEquals("عقد العمل - 001.pdf", AutoOutputName.splitPartName("عقد العمل.pdf", "fallback.pdf", 1))
+        assertEquals("عقد العمل - 002.pdf", AutoOutputName.splitPartName("عقد العمل.pdf", "fallback.pdf", 2))
+        val splitSettings = Json.decodeFromString<PdfSplitSettings>(
+            WorkspaceDraft.forTool("pdf_05", listOf("src")).copy(outputName = "MyCustomSplit.pdf").executionSettings()
+        )
+        assertEquals("MyCustomSplit.pdf", splitSettings.displayName)
+        val compareSettings = Json.decodeFromString<PdfCompareSettings>(
+            WorkspaceDraft.forTool("pdf_compare", listOf("a", "b")).copy(outputName = "diff.txt").executionSettings()
+        )
+        assertEquals("diff.txt", compareSettings.displayName)
+    }
+
+    @Test fun googleDriveSharedLinksAndAllSocialPlatformsRouteAndClassifyCorrectly() {
+        val driveUrl = "https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345/view?usp=sharing"
+        assertTrue(DownloadLinkPolicy.isGoogleDriveDownload(driveUrl))
+        assertEquals(
+            "https://drive.usercontent.google.com/download?id=1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345&export=download&confirm=t",
+            DriveLink.toDirectDownloadUrl(driveUrl)
+        )
+        assertEquals("YouTube", DownloadLinkPolicy.detectPlatformName("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
+        assertEquals("TikTok", DownloadLinkPolicy.detectPlatformName("https://www.tiktok.com/@user/video/123"))
+        assertEquals("Instagram", DownloadLinkPolicy.detectPlatformName("https://www.instagram.com/reel/abc/"))
+        assertEquals("Facebook", DownloadLinkPolicy.detectPlatformName("https://www.facebook.com/watch/?v=123"))
+        assertEquals("LinkedIn", DownloadLinkPolicy.detectPlatformName("https://www.linkedin.com/posts/abc"))
+        assertEquals("X (Twitter)", DownloadLinkPolicy.detectPlatformName("https://x.com/user/status/123"))
+        assertEquals("SoundCloud", DownloadLinkPolicy.detectPlatformName("https://soundcloud.com/artist/track"))
+        assertEquals(com.jumlo.app.core.DirectFileKind.PDF, DownloadLinkPolicy.classifyDirectFile("book.pdf", "application/pdf"))
+        assertEquals(com.jumlo.app.core.DirectFileKind.VIDEO, DownloadLinkPolicy.classifyDirectFile("clip.mp4", "video/mp4"))
+        assertEquals(com.jumlo.app.core.DirectFileKind.AUDIO, DownloadLinkPolicy.classifyDirectFile("song.mp3", "audio/mpeg"))
+        assertFalse(DownloadLinkPolicy.isDirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
     }
 }

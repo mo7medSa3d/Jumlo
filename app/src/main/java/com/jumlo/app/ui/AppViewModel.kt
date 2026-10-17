@@ -10,10 +10,10 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.AutoOutputName
+import com.jumlo.app.core.DownloadLinkPolicy
+import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.HttpPolicy
-import com.jumlo.app.core.MemoryBudget
 import com.jumlo.app.data.files.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.output.OutputStore
@@ -36,6 +36,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:Int,val height:Int)
 data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0,val trash:Long=0)
@@ -81,7 +82,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     private val savedUrls=MutableStateFlow("")
     private val draftMutex=Mutex()
     val hasUnsavedWorkspace=combine(_form,savedWorkspace,_urls,savedUrls) { current,saved,links,savedLinks ->
-        val default=WorkspaceDraft.forTool(current.toolId,emptyList()).copy(wifiOnly=current.wifiOnly)
+        val default=smartDefaultsForTool(WorkspaceDraft.forTool(current.toolId,emptyList()).copy(wifiOnly=current.wifiOnly))
         (current!=saved || links!=savedLinks) &&
             (current.sourceIds.isNotEmpty() || saved.sourceIds.isNotEmpty() || links.isNotBlank() || current!=default)
     }.stateIn(viewModelScope,SharingStarted.Eagerly,false)
@@ -175,6 +176,16 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         }
     }
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
+
+    private fun smartDefaultsForTool(draft: WorkspaceDraft): WorkspaceDraft = when (draft.toolId) {
+        "pdf_stamp" -> draft.copy(flag1 = true)
+        "pdf_annotate" -> draft.copy(text1 = "ملاحظة", num1 = "1")
+        "img_watermark" -> draft.copy(text1 = "Jumlo", num1 = "40")
+        "file_batch_rename" -> draft.copy(text1 = "{name}_{n}", num1 = "1")
+        "pdf_05" -> draft.copy(flag1 = true, num1 = "1", pages = "all")
+        else -> draft
+    }
+
     /** Each entry is a new session. Never pass a previous tool's selected input IDs. */
     fun chooseTool(id:String):Boolean {
         if(!CapabilityRegistry.enabled(id)) { _message.value=CapabilityRegistry.reason(id); return false }
@@ -182,7 +193,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         _sessionEpoch.value++
         savePreference { preferences.recordToolOpen(id) }
         _urls.value=""
-        _form.value=WorkspaceDraft.forTool(id,emptyList())
+        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool(id,emptyList()))
         savedWorkspace.value=_form.value
         savedUrls.value=""
         lastFingerprint=null;lastJobId=null
@@ -198,7 +209,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         openedSession=true
         _sessionEpoch.value++
         _urls.value=""
-        _form.value=WorkspaceDraft.forTool("pdf_02",emptyList())
+        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool("pdf_02",emptyList()))
         savedWorkspace.value=_form.value
         savedUrls.value=""
         lastFingerprint=null;lastJobId=null
@@ -222,6 +233,10 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
                 val lines=text.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
+                if(lines.any { DownloadLinkPolicy.isUnsupportedSocialPlatform(it) }) {
+                    notifyMessage("UNSUPPORTED_SOCIAL_PLATFORM")
+                    return@launch
+                }
                 if(lines.all { it.startsWith("https://",true) || it.startsWith("http://",true) }) {
                     chooseTool(if(lines.size>1) "dl_03" else "dl_02")
                     setUrls(text)
@@ -333,7 +348,10 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 if(download) {
                     val lines=urlSnapshot.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
                     require(lines.isNotEmpty() && lines.size<=100 && (state.toolId=="dl_03" || lines.size==1)) { "INVALID_DOWNLOAD_LIST" }
-                    lines.forEach { HttpPolicy.url(it,state.cleartextConsent) }
+                    lines.forEach { line ->
+                        if(DownloadLinkPolicy.isUnsupportedSocialPlatform(line)) throw OperationFailure("UNSUPPORTED_SOCIAL_PLATFORM")
+                        HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line),state.cleartextConsent)
+                    }
                 }
                 val fingerprint=Hashing.sha256(ByteArrayInputStream((Json.encodeToString(state)+"\n"+if(download) urlSnapshot else "").toByteArray()))
                 if(lastFingerprint==fingerprint && lastJobId!=null) { onQueued(lastJobId!!); return@launch }
@@ -349,8 +367,6 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 val reboundHandle=rebindDownloadSubmissionSecret(request,candidate,secrets)
                 val id=jobStore.enqueue(request)
                 if(reboundHandle!=null) {
-                    // INSERT IGNORE preserves the old job's state. A recovered waiting job
-                    // needs an explicit state transition as well as fresh in-memory input.
                     when(jobStore.observe(id).first().progress.stage) {
                         JobStage.WAITING_FOR_INPUT -> jobStore.retryFailed(id)
                         JobStage.COMPLETED,JobStage.CANCELLED -> secrets.remove(reboundHandle)
@@ -359,7 +375,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 }
                 lastFingerprint=fingerprint;lastJobId=id
                 if(request.id==candidate.id) newHandle=null
-                onQueued(id) // Queued is not completed. UI observes Room for every later transition.
+                onQueued(id)
             } catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { notifyMessage(stableError(error)) }
             finally { newHandle?.let(secrets::remove);endBusy();submitting.set(false) }
@@ -510,8 +526,15 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             if(pdf) ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer ->
                 require(page in 1..renderer.pageCount) { "PAGE_OUT_OF_RANGE" }
                 renderer.openPage(page-1).use { p ->
-                    val scale=minOf(1.8,1280.0/maxOf(p.width,p.height));val w=(p.width*scale).roundToInt().coerceAtLeast(1);val h=(p.height*scale).roundToInt().coerceAtLeast(1)
-                    MemoryBudget.requireBitmaps(w,h,1,budget.maxBitmapBytes)
+                    val scale=minOf(2.0,1600.0/maxOf(p.width,p.height).coerceAtLeast(1))
+                    var w=(p.width*scale).roundToInt().coerceAtLeast(1)
+                    var h=(p.height*scale).roundToInt().coerceAtLeast(1)
+                    val maxPixels=(budget.maxBitmapBytes/4L).coerceAtLeast(512L*512L)
+                    if(w.toLong()*h>maxPixels) {
+                        val down=sqrt(maxPixels.toDouble()/(w.toDouble()*h))
+                        w=(w*down).roundToInt().coerceAtLeast(1)
+                        h=(h*down).roundToInt().coerceAtLeast(1)
+                    }
                     val bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
                     try { bitmap.eraseColor(Color.WHITE);p.render(bitmap,null,Matrix().apply { setScale(w.toFloat()/p.width,h.toFloat()/p.height) },PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);PreviewFrame(bitmap,page,renderer.pageCount,p.width,p.height) }
                     catch(t:Throwable) { bitmap.recycle();throw t }
@@ -521,7 +544,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 val options=BitmapFactory.Options().apply { inJustDecodeBounds=true };BitmapFactory.decodeFile(file.path,options)
                 require(options.outWidth>0 && options.outHeight>0) { "PREVIEW_UNAVAILABLE" }
                 val width=options.outWidth;val height=options.outHeight;var sample=1
-                while(maxOf(width,height)/sample>1280) sample*=2
+                while(maxOf(width,height)/sample>1600) sample*=2
                 options.inJustDecodeBounds=false;options.inSampleSize=sample;options.inPreferredConfig=Bitmap.Config.ARGB_8888
                 val original=BitmapFactory.decodeFile(file.path,options) ?: throw OperationFailure("PREVIEW_UNAVAILABLE")
                 try {
@@ -534,5 +557,5 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             }
         }
     }
-    override fun onCleared() { super.onCleared(); /* Worker-owned secret handles remain until job completion or process death. */ }
+    override fun onCleared() { super.onCleared() }
 }

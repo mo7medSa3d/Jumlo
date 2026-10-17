@@ -1,89 +1,122 @@
 package com.jumlo.app.core
+
 import java.io.*
-interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
-class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,private val closeAction:()->Unit={}):Closeable { override fun close() { try { body.close() } finally { closeAction() } } }
-data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=2L*1024*1024*1024,val minFreeBytes:Long=32L*1024*1024,val headers:Map<String,String> = emptyMap(),val finalUrlSha256:String?=null,val maxRetries:Int=2,val retryBackoffMs:Long=150L)
-data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val mimeType:String?,val finalUrlSha256:String?=null,val contentDisposition:String?=null)
+import java.util.Locale
+import java.util.zip.GZIPInputStream
+
+data class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,val close:()->Unit={})
+fun interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
+data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=8L*1024*1024*1024,val minFreeBytes:Long=64L*1024*1024,val finalUrlSha256:String?=null,val maxRetries:Int=3,val retryBackoffMs:Long=300L)
+data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?)
+data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val finalUrlSha256:String,val mimeType:String?=null,val contentDisposition:String?=null)
+
 class StreamTransfer(private val transport:HttpTransport) {
-    fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferResult)->Unit={}):TransferResult {
+    private fun isTransient(code:Int)=code in setOf(408,425,429,500,502,503,504)
+    private fun isTransientIo(e:IOException):Boolean {
+        if(e is InterruptedIOException && e !is java.net.SocketTimeoutException) return false
+        val msg=e.message.orEmpty()
+        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","TRUNCATED_HTTP_BODY","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH")) return false
+        return true
+    }
+    fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferMetadata)->Unit={}):TransferResult {
+        require(request.offset>=0 && (request.offset==0L || request.partialFile.length()==request.offset)) { "PARTIAL_OFFSET_MISMATCH" }
+        val resolvedInitialUrl = DownloadLinkPolicy.resolveDirectUrl(request.url)
         var attempt=0
+        val startOffset=request.offset
         while(true) {
+            checkCancel()
             try {
-                return executeSingleAttempt(request,checkCancel,progress,onMetadata)
+                return executeSingleAttempt(request.copy(url = resolvedInitialUrl),checkCancel,progress,onMetadata)
             } catch(restart:RestartRequired) {
                 throw restart
-            } catch(arg:IllegalArgumentException) {
-                if(attempt<request.maxRetries && arg.message in setOf("HTTP_429","HTTP_502","HTTP_503","HTTP_504")) {
+            } catch(e:IllegalArgumentException) {
+                val code=e.message.orEmpty()
+                val status=code.removePrefix("HTTP_").toIntOrNull()
+                if(status!=null && isTransient(status) && attempt<request.maxRetries && request.partialFile.length()==startOffset) {
                     attempt++
-                    checkCancel()
-                    if(request.retryBackoffMs>0) Thread.sleep(request.retryBackoffMs*(1L shl (attempt-1)))
-                } else throw arg
-            } catch(io:IOException) {
-                if(attempt<request.maxRetries && io !is EOFException && io.message!="DOWNLOAD_LENGTH_MISMATCH" &&
-                    (request.offset==0L || request.partialFile.length()==request.offset)) {
+                    sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1)),checkCancel)
+                    continue
+                }
+                throw e
+            } catch(e:IOException) {
+                if(isTransientIo(e) && attempt<request.maxRetries && request.partialFile.length()==startOffset) {
                     attempt++
-                    checkCancel()
-                    if(request.retryBackoffMs>0) Thread.sleep(request.retryBackoffMs*(1L shl (attempt-1)))
-                } else throw io
+                    sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1)),checkCancel)
+                    continue
+                }
+                throw e
             }
         }
     }
 
-    private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferResult)->Unit):TransferResult {
-        require(request.offset>=0 && request.maxBytes>0 && request.minFreeBytes>=0) { "INVALID_TRANSFER_REQUEST" }
-        require(request.offset==0L || (request.partialFile.isFile && request.partialFile.length()==request.offset)) { "PARTIAL_FILE_MISMATCH" }
-        var target=HttpPolicy.url(request.url,request.cleartextConsent)
-        var headers=request.headers.filterKeys { it.lowercase() !in setOf("range","if-range","accept-encoding","host","content-length") }.toMutableMap()
-        headers["Accept-Encoding"]="identity"
-        if(request.offset>0) {
-            if(request.finalUrlSha256==null || !Regex("[0-9a-f]{64}").matches(request.finalUrlSha256)) throw RestartRequired("DOWNLOAD_RESTART_REQUIRED")
-            val validator=ResumePolicy.strong(request.strongEtag) ?: request.lastModified?.takeIf { it.isNotBlank() } ?: throw RestartRequired("DOWNLOAD_RESTART_REQUIRED")
-            headers["Range"]="bytes=${request.offset}-"; headers["If-Range"]=validator
-        }
-        if(target.scheme=="http") require(headers.keys.none { it.lowercase() in setOf("authorization","cookie","proxy-authorization") }) { "CLEARTEXT_CREDENTIALS_FORBIDDEN" }
-        for(redirect in 0..5) {
+    private fun sleepBackoff(ms:Long,checkCancel:()->Unit) {
+        if(ms<=0L) return
+        val end=System.currentTimeMillis()+ms
+        while(System.currentTimeMillis()<end) {
             checkCancel()
-            transport.open(target.toString(),headers).use { response ->
-                if(response.code in setOf(301,302,303,307,308)) {
-                    require(redirect<5) { "TOO_MANY_REDIRECTS" }
-                    val location=response.headers["location"] ?: throw IllegalArgumentException("INVALID_REDIRECT")
-                    val next=HttpPolicy.url(target.resolve(location).toString(),request.cleartextConsent)
-                    require(!(target.scheme=="https" && next.scheme=="http")) { "INSECURE_REDIRECT" }
-                    if(HttpPolicy.origin(target)!=HttpPolicy.origin(next)) headers=headers.filterKeys { it.lowercase() !in setOf("authorization","cookie","proxy-authorization") }.toMutableMap()
-                    target=next
-                } else {
-                    val h=response.headers
-                    val fingerprint=Hashing.sha256(ByteArrayInputStream(target.toString().toByteArray(Charsets.UTF_8)))
-                    if(request.offset>0 && fingerprint!=request.finalUrlSha256) throw RestartRequired("DOWNLOAD_RESTART_REQUIRED")
-                    ResumePolicy.validate(request.offset,request.strongEtag,request.lastModified,request.knownTotalBytes,response.code,h)
-                    require(h["content-encoding"]?.let { it.equals("identity",true) }!=false) { "UNSUPPORTED_CONTENT_ENCODING" }
-                    val length=h["content-length"]?.let { it.toLongOrNull()?.takeIf { n->n>=0 } ?: throw IllegalArgumentException("INVALID_CONTENT_LENGTH") }
-                    val range=if(request.offset>0) ResumePolicy.range(h["content-range"]) else null
-                    if(range!=null && (range.total==null || range.end!=range.total-1)) throw RestartRequired("DOWNLOAD_RESTART_REQUIRED")
-                    val total=if(range!=null) range.total else length
-                    require(total==null || total<=request.maxBytes) { "DOWNLOAD_BYTE_BUDGET_EXCEEDED" }
-                    val expectedBody=range?.let { it.end-it.start+1 } ?: length
-                    val metadata=TransferResult(request.offset,total,ResumePolicy.strong(h["etag"]),h["last-modified"],h["content-type"]?.substringBefore(';'),fingerprint,h["content-disposition"])
-                    onMetadata(metadata)
-                    request.partialFile.parentFile.mkdirs()
-                    var received=0L
-                    java.io.RandomAccessFile(request.partialFile,"rw").use { output ->
-                        if(request.offset==0L) output.setLength(0)
-                        output.seek(request.offset)
-                        val buffer=ByteArray(64*1024)
-                        while(true) {
-                            checkCancel(); val n=response.body.read(buffer); if(n<0) break
-                            require(n.toLong()<=request.maxBytes-request.offset-received) { "DOWNLOAD_BYTE_BUDGET_EXCEEDED" }
-                            if(expectedBody!=null && n.toLong()>expectedBody-received) throw IOException("DOWNLOAD_LENGTH_MISMATCH")
-                            require(request.partialFile.parentFile.usableSpace>=request.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
-                            if(n>0) { output.write(buffer,0,n); received+=n; progress(request.offset+received,total) }
-                        }
-                        if(expectedBody!=null && received!=expectedBody) throw EOFException("DOWNLOAD_TRUNCATED")
-                        checkCancel(); output.fd.sync()
-                    }
-                    return metadata.copy(bytes=request.offset+received)
-                }
+            Thread.sleep(minOf(25L,maxOf(1L,end-System.currentTimeMillis())))
+        }
+    }
+
+    private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferMetadata)->Unit):TransferResult {
+        var current=HttpPolicy.url(request.url,request.cleartextConsent)
+        repeat(11) { redirects ->
+            checkCancel()
+            val headers=mutableMapOf("Accept-Encoding" to "identity")
+            if(request.offset>0) {
+                headers["Range"]="bytes=${request.offset}-"
+                val validator=request.strongEtag?.takeIf { !it.startsWith("W/") } ?: request.lastModified
+                require(!validator.isNullOrBlank()) { "MISSING_RESUME_VALIDATOR" }
+                headers["If-Range"]=validator
             }
+            val response=transport.open(current.toString(),headers)
+            try {
+                if(response.code in setOf(301,302,303,307,308)) {
+                    require(redirects<10) { "TOO_MANY_REDIRECTS" }
+                    val location=response.headers["location"] ?: throw IllegalArgumentException("REDIRECT_WITHOUT_LOCATION")
+                    val next=HttpPolicy.url(current.resolve(location).toString(),request.cleartextConsent)
+                    require(current.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
+                    current=next; return@repeat
+                }
+                val finalDigest=Hashing.sha256(ByteArrayInputStream(current.toString().toByteArray(Charsets.UTF_8)))
+                if(request.offset>0 && (request.finalUrlSha256==null || request.finalUrlSha256!=finalDigest)) throw RestartRequired("FINAL_URL_CHANGED")
+                val etag=response.headers["etag"]?.takeUnless { it.startsWith("W/") }
+                val modified=response.headers["last-modified"]
+                val contentEncoding=response.headers["content-encoding"]?.trim()?.lowercase(Locale.ROOT)
+                val isGzipped = contentEncoding == "gzip" || contentEncoding == "x-gzip"
+                val declared=if(isGzipped) null else response.headers["content-length"]?.let { value -> value.toLongOrNull()?.takeIf { it>=0 } ?: throw IOException("INVALID_CONTENT_LENGTH") }
+                val total=if(request.offset>0) {
+                    ResumePolicy.validate(request.offset,request.strongEtag,request.lastModified,request.knownTotalBytes,response.code,response.headers)
+                    val end=response.headers.getValue("content-range").substringAfter("bytes ").substringBefore('/').substringAfter('-').toLong()
+                    val expectedSlice=end-request.offset+1
+                    if(declared!=null && declared!=expectedSlice) throw IOException("HTTP_CONTENT_LENGTH_MISMATCH")
+                    request.knownTotalBytes ?: (end+1)
+                } else {
+                    require(response.code==200) { "HTTP_${response.code}" }
+                    declared
+                }
+                if(total!=null) require(total<=request.maxBytes) { "DISK_BUDGET_EXCEEDED" }
+                request.partialFile.parentFile?.mkdirs()
+                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total))
+                var written=request.offset
+                val streamToRead: InputStream = if(isGzipped && request.offset==0L) GZIPInputStream(response.body) else response.body
+                FileOutputStream(request.partialFile,request.offset>0).use { out ->
+                    val buf=ByteArray(64*1024)
+                    while(true) {
+                        checkCancel()
+                        val read=streamToRead.read(buf); if(read<0) break
+                        written+=read
+                        if(written>request.maxBytes) throw IllegalArgumentException("DISK_BUDGET_EXCEEDED")
+                        if((request.partialFile.parentFile?.usableSpace ?: Long.MAX_VALUE)<request.minFreeBytes) throw IOException("INSUFFICIENT_STORAGE")
+                        out.write(buf,0,read); progress(written,total)
+                    }
+                    out.fd.sync()
+                }
+                if(total!=null && written!=total) throw IOException(if(written<total) "TRUNCATED_HTTP_BODY" else "OVERFLOW_HTTP_BODY")
+                val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
+                val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }
+                return TransferResult(written,total,etag ?: request.strongEtag,modified ?: request.lastModified,finalDigest,mime,disposition)
+            } finally { response.close() }
         }
         throw IllegalArgumentException("TOO_MANY_REDIRECTS")
     }

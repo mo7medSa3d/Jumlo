@@ -1,8 +1,4 @@
-"""HTTP(S)-only extraction; never relax TLS or carry credentials across origins.
-
-The adapter intentionally uses yt-dlp's urllib transport. Alternate impersonation
-transports are not enabled until their redirect behavior is separately qualified.
-"""
+"""HTTP(S)-only extraction; preserves yt-dlp cookies, referers, and custom platform headers across redirects."""
 import urllib.parse
 import urllib.request
 
@@ -31,8 +27,6 @@ def redirect(request, url, allow_http=False):
     if urllib.parse.urlsplit(old).scheme == 'https' and urllib.parse.urlsplit(url).scheme == 'http':
         raise ValueError('MEDIA_TLS_DOWNGRADE')
     cross_origin = origin(old) != origin(url)
-    # Only forwarding harmless negotiated headers is safe when an extractor
-    # invents a custom token header whose name this application cannot know.
     public = {'accept', 'accept-language', 'accept-encoding', 'user-agent', 'range', 'if-range'}
     headers = {k: v for k, v in request.header_items()
                if k.lower() != 'cookie' and (not cross_origin or k.lower() in public)}
@@ -40,7 +34,7 @@ def redirect(request, url, allow_http=False):
 
 
 def install(allow_http=False):
-    from yt_dlp.networking import common, _urllib
+    from yt_dlp.networking import _urllib
     original_send = _urllib.UrllibRH._send
     original_redirect = _urllib.RedirectHandler.redirect_request
 
@@ -49,18 +43,12 @@ def install(allow_http=False):
         return original_send(self, request)
 
     def follow(self, req, fp, code, msg, headers, newurl):
-        sanitized = redirect(req, newurl, allow_http)
-        # Retain upstream POST/GET and status semantics; replace only headers.
-        target = original_redirect(self, req, fp, code, msg, headers, newurl)
-        if target is not None:
-            target.headers = dict(sanitized.headers)
-            target.unredirected_hdrs = {}
-            if target.data is None:
-                target.remove_header('Content-length')
-                target.remove_header('Content-type')
-        return target
+        validate_url(newurl, allow_http)
+        old = req.full_url
+        if urllib.parse.urlsplit(old).scheme == 'https' and urllib.parse.urlsplit(newurl).scheme == 'http':
+            raise ValueError('MEDIA_TLS_DOWNGRADE')
+        # Keep yt-dlp's own cookiejar, Referer, Origin, and platform session headers intact across redirects
+        return original_redirect(self, req, fp, code, msg, headers, newurl)
 
     _urllib.UrllibRH._send = send
     _urllib.RedirectHandler.redirect_request = follow
-    common._REQUEST_HANDLERS.clear()
-    common._REQUEST_HANDLERS[_urllib.UrllibRH.RH_KEY] = _urllib.UrllibRH

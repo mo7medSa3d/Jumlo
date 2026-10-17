@@ -15,12 +15,13 @@ object MediaRuntimeFactory {
     fun create(context: Context): MediaRuntime = PackagedMediaRuntime(context.applicationContext)
 }
 
-/** Adapts the pinned 0.18.1 runtime layout, not its unbounded process wrapper. */
+/** Adapts the pinned 0.18.1 runtime layout with custom platform headers and authenticated session cookies. */
 private class PackagedMediaRuntime(private val context: Context) : MediaRuntime {
     @Volatile private var initialized = false
     private val packages = File(context.noBackupFilesDir, "youtubedl-android/packages")
     private val tools = File(context.noBackupFilesDir, "media-launcher")
     private val bin get() = File(context.applicationInfo.nativeLibraryDir)
+    private val sessionStore = MediaSessionStore(context)
     private val runner = MediaProcessRunner { pid, force ->
         Os.kill(-pid, if (force) OsConstants.SIGKILL else OsConstants.SIGTERM)
     }
@@ -55,7 +56,7 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         refreshBundledPayload()
         return "EXTRACTOR_RESTORED_FROM_APK"
     }
-    private fun execute(args: List<String>, directory: File, allowHttp: Boolean, probe: Boolean,
+    private fun execute(url: String, args: List<String>, directory: File, allowHttp: Boolean, probe: Boolean,
         check: () -> Unit, progress: (MediaProgress) -> Unit = {}): String {
         check(); initialize(); check()
         require(directory.isDirectory) { "MEDIA_WORKSPACE_MISSING" }
@@ -63,14 +64,16 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         val native = listOf("--no-plugin-dirs", "--js-runtimes", "quickjs:${File(bin,"libqjs.so").absolutePath}",
             "--ffmpeg-location", File(bin, "libffmpeg.so").absolutePath)
         val command = listOf(File(bin, "libpython.so").absolutePath, "-u", File(tools,"bootstrap.py").absolutePath, archive.absolutePath) + native + args
-        val environment = mapOf(
+        val baseEnv = mapOf(
             "PYTHONHOME" to File(packages,"python/usr").absolutePath,
             "PYTHONNOUSERSITE" to "1", "PYTHONDONTWRITEBYTECODE" to "1", "PYTHONUNBUFFERED" to "1",
             "LD_LIBRARY_PATH" to "${File(packages,"python/usr/lib")}:${File(packages,"ffmpeg/usr/lib")}",
             "SSL_CERT_FILE" to File(packages,"python/usr/etc/tls/cert.pem").absolutePath,
             "HOME" to directory.absolutePath, "TMPDIR" to directory.absolutePath,
             "PATH" to "${System.getenv("PATH") ?: "/system/bin"}:${bin.absolutePath}",
-            "UU_ALLOW_HTTP" to if (allowHttp) "1" else "0")
+            "UU_ALLOW_HTTP" to if (allowHttp) "1" else "0"
+        )
+        val environment = baseEnv + sessionStore.buildExtractorEnv(url)
         val result = runner.run(MediaProcessSpec(command, directory, environment,
             timeoutMillis = if (probe) 90_000 else 6 * 60 * 60 * 1000L,
             stdoutLimit = if (probe) 4 * 1024 * 1024 else 64 * 1024, tailOutput = !probe), check) { line ->
@@ -82,12 +85,12 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
     override fun inspect(url: String, allowHttp: Boolean, check: () -> Unit): MediaAsset {
         val root = File(context.cacheDir, "media-probes").apply { mkdirs() }
         val dir = File(root, UUID.randomUUID().toString()).apply { mkdir() }
-        return try { MediaMetadata.parse(execute(MediaArguments.probe(url,allowHttp),dir,allowHttp,true,check)) }
+        return try { MediaMetadata.parse(execute(url, MediaArguments.probe(url,allowHttp),dir,allowHttp,true,check)) }
         finally { dir.deleteRecursively() }
     }
     override fun download(url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,
         allowHttp: Boolean, directory: File, check: () -> Unit, progress: (MediaProgress) -> Unit) {
-        execute(MediaArguments.download(url,choice,audio,bitrate,allowHttp),directory,allowHttp,false,check,progress)
+        execute(url, MediaArguments.download(url,choice,audio,bitrate,allowHttp),directory,allowHttp,false,check,progress)
     }
     private fun classify(stderr: String): String {
         val text = stderr.lowercase()
@@ -99,7 +102,7 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
             "private video" in text || "this video is private" in text || "members-only" in text -> "MEDIA_PRIVATE_CONTENT"
             "not available in your country" in text || "geo-restricted" in text || "geoblocked" in text -> "MEDIA_GEO_BLOCKED"
             "video unavailable" in text || "has been removed" in text || "404" in text || "does not exist" in text -> "MEDIA_REMOVED"
-            "sign in" in text || "login" in text || "cookies" in text -> "MEDIA_SESSION_REQUIRED"
+            "sign in" in text || "login" in text || "cookies" in text || "login_required" in text || "not a bot" in text -> "MEDIA_SESSION_REQUIRED"
             "drm" in text -> "MEDIA_ENCRYPTED_SOURCE"
             "429" in text || "too many requests" in text || "rate limit" in text -> "MEDIA_RATE_LIMITED"
             "timed out" in text || "connection reset" in text || "name or service not known" in text || "network is unreachable" in text -> "MEDIA_NETWORK_ERROR"

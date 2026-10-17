@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.theme.QuietTheme
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -64,24 +65,28 @@ import com.jumlo.app.ui.AppViewModel
     }
     LaunchedEffect(settings.notificationsGranted) { notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled() }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
-    LazyColumn(Modifier.fillMaxSize().testTag("settings.screen"), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().testTag("settings.screen"),
+        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         item("settings-hero") {
             Column(Modifier.padding(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                Text(stringResource(R.string.settings_title),style=MaterialTheme.typography.headlineLarge,fontWeight=FontWeight.Bold)
-                Text(stringResource(R.string.brand_settings_shortcuts),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.settings_title),style=QuietTheme.typography.screenTitle,fontWeight=FontWeight.Bold)
+                Text(stringResource(R.string.brand_settings_shortcuts),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Surface(onClick={viewModel.refreshStorage();panel="storage"},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=100.dp),
+                    Surface(onClick={viewModel.refreshStorage();panel="storage"},modifier=Modifier.weight(1f).pressFeedback().height(108.dp),
                         shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.primaryContainer) {
-                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
                             Icon(Icons.Rounded.Storage,null,tint=MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(stringResource(R.string.brand_settings_storage),style=MaterialTheme.typography.titleMedium,color=MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(stringResource(R.string.brand_settings_storage),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),color=MaterialTheme.colorScheme.onPrimaryContainer,maxLines=2)
                         }
                     }
-                    Surface(onClick={panel="haptic-intensity"},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=100.dp),
+                    Surface(onClick={panel="haptic-intensity"},modifier=Modifier.weight(1f).pressFeedback().height(108.dp),
                         shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerHigh) {
-                        Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
                             Icon(Icons.Rounded.Vibration,null,tint=MaterialTheme.colorScheme.primary)
-                            Text(stringResource(R.string.brand_haptics_level),style=MaterialTheme.typography.titleMedium,maxLines=2)
+                            Text(stringResource(R.string.brand_haptics_level),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=2)
                         }
                     }
                 }
@@ -93,6 +98,7 @@ import com.jumlo.app.ui.AppViewModel
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language), Icons.Rounded.Language,
             { panel = "language" }, Modifier.testTag("settings.language")) }
         item("accent") { PreferenceRow(stringResource(R.string.redesign_accent),when(settings.accentColor) {
+                "DYNAMIC"->stringResource(R.string.redesign_accent_dynamic)
                 "BLUE"->stringResource(R.string.redesign_accent_blue)
                 "TEAL"->stringResource(R.string.redesign_accent_teal)
                 "CORAL"->stringResource(R.string.redesign_accent_coral)
@@ -152,6 +158,7 @@ import com.jumlo.app.ui.AppViewModel
         item("about") { PreferenceRow(stringResource(R.string.account_help_about), null, Icons.Rounded.Info, { panel = "about" }) }
         item("bottom") { Spacer(Modifier.height(24.dp)) }
     }
+    val accentKeys = listOf("VIOLET","DYNAMIC","BLUE","TEAL","CORAL")
     when (panel) {
         "haptic-intensity" -> ChoiceDialog(stringResource(R.string.brand_haptics_level),
             listOf(stringResource(R.string.brand_haptics_off),stringResource(R.string.brand_haptics_light),
@@ -168,8 +175,9 @@ import com.jumlo.app.ui.AppViewModel
             {viewModel.setMaxConcurrentDownloads(it+1);panel=null},{panel=null})
         "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,
             {viewModel.setFileViewMode(FileViewMode.entries[it]);panel=null},{panel=null})
-        "accent" -> ChoiceDialog(stringResource(R.string.redesign_accent),listOf(stringResource(R.string.redesign_accent_violet),stringResource(R.string.redesign_accent_blue),stringResource(R.string.redesign_accent_teal),stringResource(R.string.redesign_accent_coral)),
-            listOf("VIOLET","BLUE","TEAL","CORAL").indexOf(settings.accentColor).coerceAtLeast(0),{viewModel.setAccentColor(listOf("VIOLET","BLUE","TEAL","CORAL")[it]);panel=null},{panel=null})
+        "accent" -> ChoiceDialog(stringResource(R.string.redesign_accent),
+            listOf(stringResource(R.string.redesign_accent_violet),stringResource(R.string.redesign_accent_dynamic),stringResource(R.string.redesign_accent_blue),stringResource(R.string.redesign_accent_teal),stringResource(R.string.redesign_accent_coral)),
+            accentKeys.indexOf(settings.accentColor).coerceAtLeast(0),{viewModel.setAccentColor(accentKeys[it]);panel=null},{panel=null})
         "scale" -> ChoiceDialog(stringResource(R.string.redesign_font_scale),listOf(stringResource(R.string.redesign_scale_small),stringResource(R.string.redesign_scale_normal),stringResource(R.string.redesign_scale_large)),
             listOf("SMALL","NORMAL","LARGE").indexOf(settings.fontScale).coerceAtLeast(0),{viewModel.setFontScale(listOf("SMALL","NORMAL","LARGE")[it]);panel=null},{panel=null})
         "storage" -> StorageOverviewDialog(storage,{panel = null},onClean={panel=null;viewModel.cleanTemporary()},outputFiles=savedOutputs)
@@ -202,8 +210,8 @@ import com.jumlo.app.ui.AppViewModel
         onValueChange = {haptics.selectionToggle();onChanged(it)})
         .padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            summary?.let { Text(it, Modifier.padding(top = 3.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Text(title, style = QuietTheme.typography.body)
+            summary?.let { Text(it, Modifier.padding(top = 3.dp), style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         Spacer(Modifier.width(16.dp)); Switch(checked, onCheckedChange = null)
     }

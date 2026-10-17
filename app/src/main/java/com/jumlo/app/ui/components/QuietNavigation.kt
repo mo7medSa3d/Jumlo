@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
 import com.jumlo.app.ui.theme.JumloMotion
@@ -55,7 +54,7 @@ private fun dockIcon(tab: DockTab): ImageVector = when (tab) {
     DockTab.SETTINGS -> Icons.Rounded.Settings
 }
 
-/** One moving, spring-driven selection shape; automatically reverses in RTL. */
+/** One moving, spring-driven selection shape; automatically reverses in RTL via CenterStart + offset(x). */
 @Composable
 fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
     onSelectTab: (DockTab) -> Unit, modifier: Modifier = Modifier) {
@@ -67,16 +66,20 @@ fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
     Box(modifier.fillMaxWidth().padding(bottom=bottom + 12.dp),contentAlignment=Alignment.BottomCenter) {
         Surface(
             modifier=Modifier.widthIn(max=400.dp).fillMaxWidth(.94f).height(74.dp)
-                .shadow(20.dp,QuietTheme.shapes.dockPill,ambientColor=Color.Black.copy(alpha=.12f)),
+                .shadow(20.dp,QuietTheme.shapes.dockPill,ambientColor=Color.Black.copy(alpha=.16f)),
             shape=QuietTheme.shapes.dockPill, color=pillars.dockSurface,
+            tonalElevation=6.dp,
             border=BorderStroke(1.dp,pillars.dockBorder)
         ) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val segment=(maxWidth-16.dp)/tabs.size
                 val index=tabs.indexOf(selectedTab).coerceAtLeast(0)
                 val visualIndex=if(direction==LayoutDirection.Rtl) tabs.lastIndex-index else index
+                // In Compose RTL, Alignment.CenterStart anchors to the right edge and Modifier.offset(x)
+                // shifts toward the end (left), so 8.dp + segment * index moves from Right to Left in Arabic.
+                val startOffset=if(direction==LayoutDirection.Rtl) (tabs.lastIndex - visualIndex) else visualIndex
                 val x by animateDpAsState(
-                    targetValue=8.dp + segment * visualIndex,
+                    targetValue=8.dp + segment * startOffset,
                     animationSpec=if(reduced) snap() else spring(
                         dampingRatio=JumloMotion.indicatorDamping,stiffness=Spring.StiffnessMedium),
                     label="dock-morph-offset"
@@ -113,7 +116,7 @@ private fun DockItem(tab:DockTab,label:String,selected:Boolean,modifier:Modifier
         },tint=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(3.dp))
         Text(label,maxLines=1,overflow=TextOverflow.Ellipsis,
-            style=QuietTheme.typography.navigation.copy(fontSize=10.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
+            style=QuietTheme.typography.navigation.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
             color=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

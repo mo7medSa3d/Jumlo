@@ -18,6 +18,7 @@ import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
+import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDAcroForm
@@ -306,37 +307,75 @@ object PdfBoxBackend {
         doc.save(out)
     }
 
-    fun compressImages(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85): Int = compress(doc, maxDpi, jpegQuality)
+    fun compressImages(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85, onPage: ((Int, Int) -> Unit)? = null): Int =
+        compress(doc, maxDpi, jpegQuality, onPage)
 
     /**
-     * Lossless JVM path: flate 8-bit DeviceRGB/DeviceGray images are box-downscaled toward
-     * a page-budget derived from [maxDpi]. Other codecs pass through; [jpegQuality] is
-     * applied by the Android handler layer's JPEG re-encode pass on top of this.
+     * Multi-codec PDF image compressor:
+     * 1. On Android, decodes any embedded PDImageXObject (JPEG/DCTDecode, PNG/Flate, etc.),
+     *    downscales toward [maxDpi] if larger, and re-encodes via [JPEGFactory] at [jpegQuality]
+     *    whenever the resulting stream is strictly smaller than the original stream.
+     * 2. On pure JVM (or when Bitmap is unavailable), box-downscales 8-bit Flate DeviceRGB/Gray
+     *    streams and quantizes toward [jpegQuality] for better deflate compression.
      */
-    fun compress(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85): Int {
+    fun compress(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85, onPage: ((Int, Int) -> Unit)? = null): Int {
         require(maxDpi in 36..600) { "INVALID_COMPRESS_SETTINGS" }
         require(jpegQuality in 0..100) { "INVALID_COMPRESS_SETTINGS" }
         var replaced = 0
-        doc.pages.toList().forEach { page ->
-            val resources = page.resources ?: return@forEach
-            val media = page.mediaBox
-            val maxWidth = (media.width * maxDpi / 72.0).toInt().coerceAtLeast(16)
-            val maxHeight = (media.height * maxDpi / 72.0).toInt().coerceAtLeast(16)
-            resources.xObjectNames.forEach { name ->
-                if (!resources.isImageXObject(name)) return@forEach
-                val image = resources.getXObject(name) as? PDImageXObject ?: return@forEach
-                val replacement = downscaleFlateImage(image, maxWidth, maxHeight) ?: return@forEach
-                // Replace inside the /XObject sub-dictionary, not the resources root.
-                val xobjectDict = resources.cosObject.getDictionaryObject(COSName.XOBJECT) as? COSDictionary
-                xobjectDict?.setItem(name, replacement) ?: return@forEach
-                replaced++
+        val pages = doc.pages.toList()
+        pages.forEachIndexed { pageIndex, page ->
+            val resources = page.resources
+            if (resources != null) {
+                val media = page.mediaBox
+                val maxWidth = (media.width * maxDpi / 72.0).toInt().coerceAtLeast(16)
+                val maxHeight = (media.height * maxDpi / 72.0).toInt().coerceAtLeast(16)
+                resources.xObjectNames.forEach { name ->
+                    if (!resources.isImageXObject(name)) return@forEach
+                    val image = runCatching { resources.getXObject(name) as? PDImageXObject }.getOrNull() ?: return@forEach
+                    val replacement = downscaleAndCompressImage(doc, image, maxWidth, maxHeight, jpegQuality)
+                        ?: downscaleFlateImage(image, maxWidth, maxHeight, jpegQuality)
+                        ?: return@forEach
+                    val xobjectDict = resources.cosObject.getDictionaryObject(COSName.XOBJECT) as? COSDictionary
+                    xobjectDict?.setItem(name, replacement) ?: return@forEach
+                    replaced++
+                }
             }
+            onPage?.invoke(pageIndex + 1, pages.size)
         }
         return replaced
     }
 
-    private fun downscaleFlateImage(image: PDImageXObject, maxWidth: Int, maxHeight: Int): PDImageXObject? {
-        if (image.width <= maxWidth && image.height <= maxHeight) return null
+    private fun downscaleAndCompressImage(
+        doc: PDDocument,
+        image: PDImageXObject,
+        maxWidth: Int,
+        maxHeight: Int,
+        jpegQuality: Int
+    ): PDImageXObject? = runCatching {
+        val originalLength = (image.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
+        val bitmap = image.image ?: return null
+        try {
+            val scale = minOf(1.0, minOf(maxWidth.toDouble() / bitmap.width.coerceAtLeast(1), maxHeight.toDouble() / bitmap.height.coerceAtLeast(1)))
+            val targetW = maxOf(1, (bitmap.width * scale).toInt())
+            val targetH = maxOf(1, (bitmap.height * scale).toInt())
+            val workBitmap = if (targetW < bitmap.width || targetH < bitmap.height) {
+                android.graphics.Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
+            } else bitmap
+            try {
+                val q = (jpegQuality.coerceIn(10, 95) / 100f)
+                val candidate = JPEGFactory.createFromImage(doc, workBitmap, q)
+                val newLength = (candidate.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
+                if (newLength < originalLength || scale < 1.0) candidate else null
+            } finally {
+                if (workBitmap !== bitmap && !workBitmap.isRecycled) workBitmap.recycle()
+            }
+        } finally {
+            if (!bitmap.isRecycled) bitmap.recycle()
+        }
+    }.getOrNull()
+
+    private fun downscaleFlateImage(image: PDImageXObject, maxWidth: Int, maxHeight: Int, jpegQuality: Int = 85): PDImageXObject? {
+        if (image.width <= maxWidth && image.height <= maxHeight && jpegQuality >= 95) return null
         val cosStream = image.cosObject as? COSStream ?: return null
         val dict = cosStream as COSDictionary
         val filter = dict.getDictionaryObject(COSName.FILTER)
@@ -353,10 +392,9 @@ object PdfBoxBackend {
         if (colorSpace != COSName.DEVICERGB && colorSpace != COSName.DEVICEGRAY) return null
         if (dict.getDictionaryObject(COSName.SMASK) != null) return null
         val bytesPerPixel = if (colorSpace == COSName.DEVICERGB) 3 else 1
-        val decodedBytes=image.width.toLong()*image.height*bytesPerPixel
-        require(image.width>0 && image.height>0 && decodedBytes<=minOf(Runtime.getRuntime().maxMemory()/6,64L*1024*1024)) { "BITMAP_BUDGET_EXCEEDED" }
+        val decodedBytes = image.width.toLong() * image.height * bytesPerPixel
+        if (image.width <= 0 || image.height <= 0 || decodedBytes > minOf(Runtime.getRuntime().maxMemory() / 4, 96L * 1024 * 1024)) return null
         val raw = ByteArray(decodedBytes.toInt())
-        // createInputStream() applies the single flate decode in this port.
         image.createInputStream().use { input ->
             var read = 0
             while (read < raw.size) {
@@ -365,10 +403,10 @@ object PdfBoxBackend {
                 read += n
             }
         }
-        val scale = minOf(maxWidth.toDouble() / image.width, maxHeight.toDouble() / image.height)
+        val scale = minOf(1.0, minOf(maxWidth.toDouble() / image.width, maxHeight.toDouble() / image.height))
         val targetW = maxOf(1, (image.width * scale).toInt())
         val targetH = maxOf(1, (image.height * scale).toInt())
-        val data = boxDownscale(raw, image.width, image.height, targetW, targetH, bytesPerPixel)
+        val data = boxDownscale(raw, image.width, image.height, targetW, targetH, bytesPerPixel, jpegQuality)
         val stream = COSStream()
         stream.setItem(COSName.SUBTYPE, COSName.IMAGE)
         stream.setInt(COSName.WIDTH, targetW)
@@ -376,13 +414,13 @@ object PdfBoxBackend {
         stream.setItem(COSName.COLORSPACE, colorSpace)
         stream.setInt(COSName.BITS_PER_COMPONENT, 8)
         stream.setItem(COSName.FILTER, COSName.FLATE_DECODE)
-        // createOutputStream() compresses on close when /Filter is set.
         stream.createOutputStream().use { it.write(data) }
         return PDImageXObject(PDStream(stream), null)
     }
 
-    private fun boxDownscale(src: ByteArray, sw: Int, sh: Int, tw: Int, th: Int, cpp: Int): ByteArray {
+    private fun boxDownscale(src: ByteArray, sw: Int, sh: Int, tw: Int, th: Int, cpp: Int, quality: Int = 85): ByteArray {
         val out = ByteArray(tw * th * cpp)
+        val step = if (quality in 1..79) ((100 - quality) / 12).coerceAtLeast(1) else 1
         for (y in 0 until th) {
             val y0 = y * sh / th
             val y1 = ((y + 1) * sh / th).coerceAtLeast(y0 + 1).coerceAtMost(sh)
@@ -396,7 +434,11 @@ object PdfBoxBackend {
                 }
                 val count = (y1 - y0) * (x1 - x0)
                 val base = (y * tw + x) * cpp
-                for (c in 0 until cpp) out[base + c] = (sums[c] / count).toByte()
+                for (c in 0 until cpp) {
+                    val avg = sums[c] / count
+                    val quantized = if (step > 1) (avg / step) * step else avg
+                    out[base + c] = quantized.toByte()
+                }
             }
         }
         return out
@@ -415,6 +457,7 @@ object PdfBoxBackend {
     fun stampText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, gray: Float) {
         require(text.isNotBlank() && fontSize in 4f..200f && gray in 0f..1f) { "INVALID_STAMP" }
         require(zeroBasedPages.all { it in 0 until doc.pages.count }) { "INVALID_PAGE_INDEX" }
+        val safeText = text.map { if (it in ' '..'~') it else ' ' }.joinToString("").ifBlank { "Note" }
         zeroBasedPages.forEach { index ->
             val page = doc.getPage(index)
             val media = page.mediaBox
@@ -423,16 +466,18 @@ object PdfBoxBackend {
                 cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
                 cs.setNonStrokingColor(gray, gray, gray)
                 cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
-                cs.showText(text)
+                cs.showText(safeText)
                 cs.endText()
             }
         }
     }
 
     /** Invisible (but extractable/searchable) text layer for OCR output. */
-    fun stampInvisibleText(doc: PDDocument, zeroBasedPage: Int, text: String, xNorm: Double, yNormTop: Double, fontSize: Float) {
+    fun stampInvisibleText(doc: PDDocument, zeroBasedPage: Int, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, strict: Boolean = true) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
-        val lines=com.jumlo.app.core.OcrTextPolicy.requireRepresentable(text)
+        val lines = if (strict) com.jumlo.app.core.OcrTextPolicy.requireRepresentable(text)
+            else com.jumlo.app.core.OcrTextPolicy.sanitizeForLayer(text)
+        if (lines.isEmpty()) return
         val page = doc.getPage(zeroBasedPage); val media = page.mediaBox
         PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
             cs.beginText(); cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
@@ -507,7 +552,6 @@ object PdfBoxBackend {
                 ((1.0 - r.top) * media.height).toFloat()
             ) }
             var streamCount = 0
-            // The port's getContentStreams() yields a hasNext()-only loop; consume via next().
             page.getContentStreams().let { streams ->
                 while (streams.hasNext()) { ++streamCount; streams.next(); if (streamCount > 1) break }
             }
@@ -560,10 +604,6 @@ object PdfBoxBackend {
         }
     }
 
-    /**
-     * One operator walk per page with an own, minimal text/graphics state tracker.
-     * Conservative: run boxes are generous; anything ambiguous falls back for rasterization.
-     */
     private class ContentRedactor(private val doc: PDDocument, private val page: PDPage, private val areas: List<Geo.Area>) {
         val removedWordFragments = mutableSetOf<String>()
         private val tokens = mutableListOf<Any>()
@@ -729,8 +769,8 @@ object PdfBoxBackend {
     private fun Geo.Area.containsAll(areas: List<Geo.Area>): Boolean = areas.any { it.contains(this) || it.intersects(this) }
 
     private fun replaceContent(page: PDPage, tokens: List<Any>) {
-        // Content is written unencoded (no filter on the replacement stream).
         val stream = COSStream()
+        stream.setItem(COSName.FILTER, COSName.FLATE_DECODE)
         stream.createOutputStream().use { output -> ContentStreamWriter(output).writeTokens(tokens) }
         page.setContents(PDStream(stream))
     }

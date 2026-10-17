@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
+import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.core.SafeNames
@@ -24,16 +25,17 @@ import javax.inject.Singleton
     @ApplicationContext private val app:Context,
     private val prefs:UserPreferencesRepository
 ) {
-    suspend fun publish(file:File,name:String,mime:String,sha256:String):String = withContext(Dispatchers.IO) {
+    suspend fun publish(file:File,name:String,mime:String,sha256:String,subfolder:String?=null):String = withContext(Dispatchers.IO) {
+        val safeMime = mime.trim().ifBlank { "application/octet-stream" }
         val location=prefs.settingsFlow.first().downloadDestinationFolder
-        if(location.startsWith("content://")) saveSaf(Uri.parse(location),file,name,mime,sha256)
-        else if(Build.VERSION.SDK_INT>=29) saveMediaStore(file,name,mime,sha256)
-        else saveLegacy(file,name,mime,sha256)
+        if(location.startsWith("content://")) saveSaf(Uri.parse(location),file,name,safeMime,sha256,subfolder)
+        else if(Build.VERSION.SDK_INT>=29) saveMediaStore(file,name,safeMime,sha256,subfolder)
+        else saveLegacy(file,name,safeMime,sha256,subfolder)
     }
     private fun copyVerified(uri:Uri,file:File,sha256:String) {
         val resolver=app.contentResolver
         file.inputStream().use { input ->
-            resolver.openOutputStream(uri,"wt")?.use { output ->
+            (resolver.openOutputStream(uri,"wt") ?: resolver.openOutputStream(uri))?.use { output ->
                 input.copyTo(output,64*1024)
                 output.flush()
             } ?: error("DESTINATION_WRITE_UNAVAILABLE")
@@ -42,12 +44,14 @@ import javax.inject.Singleton
             ?: error("DESTINATION_VERIFY_UNAVAILABLE")
         check(actual==sha256) { "DESTINATION_VERIFY_FAILED" }
     }
-    private fun saveSaf(rootUri:Uri,file:File,name:String,mime:String,sha256:String):String {
+    private fun saveSaf(rootUri:Uri,file:File,name:String,mime:String,sha256:String,subfolder:String?=null):String {
         val root=DocumentFile.fromTreeUri(app,rootUri) ?: error("DESTINATION_ACCESS_LOST")
         require(root.canWrite()) { "DESTINATION_READ_ONLY" }
         val branded=if(root.name=="Jumlo") root else root.findFile("Jumlo") ?: root.createDirectory("Jumlo") ?: error("DESTINATION_CREATE_FAILED")
         val category=StoragePaths.category(mime)
-        val directory=branded.findFile(category) ?: branded.createDirectory(category) ?: error("DESTINATION_CREATE_FAILED")
+        val catDir=branded.findFile(category) ?: branded.createDirectory(category) ?: error("DESTINATION_CREATE_FAILED")
+        val cleanSub=subfolder?.trim()?.takeIf { it.isNotEmpty() }?.let { AutoOutputName.cleanBaseName(it,"Folder") }
+        val directory=if(cleanSub!=null) catDir.findFile(cleanSub) ?: catDir.createDirectory(cleanSub) ?: error("DESTINATION_CREATE_FAILED") else catDir
         val filenames=directory.listFiles().mapNotNull { it.name }.toSet()
         val filename=StoragePaths.uniqueName(name,filenames)
         val output=directory.createFile(mime,filename) ?: error("DESTINATION_CREATE_FAILED")
@@ -55,14 +59,16 @@ import javax.inject.Singleton
         catch(e:Exception) { output.delete(); throw e }
     }
     @androidx.annotation.RequiresApi(Build.VERSION_CODES.Q)
-    private fun saveMediaStore(file:File,name:String,mime:String,sha256:String):String {
+    private fun saveMediaStore(file:File,name:String,mime:String,sha256:String,subfolder:String?=null):String {
         val resolver=app.contentResolver
-        val path=StoragePaths.relativePath(mime)
+        val path=StoragePaths.relativePath(mime,subfolder)
         val existing=mutableSetOf<String>()
-        resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-            arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
-            "${MediaStore.MediaColumns.RELATIVE_PATH}=?",arrayOf(path),null)?.use { cursor ->
-            while(cursor.moveToNext()) existing+=cursor.getString(0)
+        runCatching {
+            resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
+                "${MediaStore.MediaColumns.RELATIVE_PATH}=?",arrayOf(path),null)?.use { cursor ->
+                while(cursor.moveToNext()) existing+=cursor.getString(0)
+            }
         }
         val filename=StoragePaths.uniqueName(name,existing)
         val values=ContentValues().apply {
@@ -78,8 +84,10 @@ import javax.inject.Singleton
             return uri.toString()
         } catch(e:Exception) { runCatching { resolver.delete(uri,null,null) };throw e }
     }
-    private fun saveLegacy(file:File,name:String,mime:String,sha256:String):String {
-        val dir=File(app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),"Jumlo/${StoragePaths.category(mime)}").apply { mkdirs() }
+    private fun saveLegacy(file:File,name:String,mime:String,sha256:String,subfolder:String?=null):String {
+        val cleanSub=subfolder?.trim()?.takeIf { it.isNotEmpty() }?.let { AutoOutputName.cleanBaseName(it,"Folder") }
+        val rel=if(cleanSub!=null) "Jumlo/${StoragePaths.category(mime)}/$cleanSub" else "Jumlo/${StoragePaths.category(mime)}"
+        val dir=File(app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),rel).apply { mkdirs() }
         val candidate=StoragePaths.uniqueName(name,dir.list()?.toSet() ?: emptySet())
         val destination=File(dir,SafeNames.basename(candidate))
         try {
