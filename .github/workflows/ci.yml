@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build, test, lint, R8 and APK
+    name: APK, tests, lint (+ R8 on main)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -52,12 +52,12 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
 
-      - name: Debug APK, unit tests, lint and release R8
+      - name: Debug APK, unit tests and lint
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease \
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug \
             -PextendedMedia=false --no-daemon --console=plain 2>&1 | tee gradle.log
           test -s app/build/outputs/apk/debug/app-debug.apk
           (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
@@ -65,7 +65,7 @@ jobs:
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: Jumlo-Debug-APK-${{ github.run_number }}
+          name: Jumlo-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/app-debug.apk.sha256
@@ -73,11 +73,20 @@ jobs:
           compression-level: 0
           retention-days: 14
 
+      # Keep the installable APK available as soon as debug tests and lint pass.
+      # R8 is still checked for main builds but does not delay the APK artifact.
+      - name: Release R8 (main only)
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleRelease -PextendedMedia=false --no-daemon --console=plain 2>&1 | tee -a gradle.log
+
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: Jumlo-Failure-Logs-${{ github.run_number }}
+          name: Jumlo-Failure-Logs-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             gradle.log
             app/build/reports/
