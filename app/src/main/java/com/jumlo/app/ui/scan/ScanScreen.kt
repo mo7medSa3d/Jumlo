@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -35,9 +36,10 @@ import java.io.FileOutputStream
 import java.util.concurrent.Executors
 
 /**
- * Manual document scan: CameraX preview + capture, then a fixed-quad perspective
- * correction (inset quad, user aligns the document inside the frame). No automatic
- * edge detection is claimed.
+ * Manual document scan: CameraX preview + capture, then a USER-ADJUSTED quad:
+ * the initial quad is an inset guess (no automatic edge detection is claimed),
+ * the user drags the four corners onto the document, then perspective
+ * correction + crop runs with exactly that quad.
  */
 @Composable
 fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
@@ -46,6 +48,7 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var captured by remember { mutableStateOf<File?>(null) }
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(com.jumlo.app.R.string.scan_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(com.jumlo.app.R.string.scan_hint))
@@ -76,36 +79,100 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                 val capture = imageCapture ?: return@Button
                 val file = File(context.cacheDir, "scan-${System.currentTimeMillis()}.jpg")
                 capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(), Executors.newSingleThreadExecutor(), object : ImageCapture.OnImageSavedCallback {
-                    override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                        try {
-                            onCaptured(perspectiveInset(file))
-                        } catch (e: Exception) { error = "scan_error_process" }
-                    }
+                    override fun onImageSaved(output: ImageCapture.OutputFileResults) { captured = file }
                     override fun onError(exception: ImageCaptureException) { error = "scan_error_capture" }
                 })
             }) { Text(stringResource(com.jumlo.app.R.string.scan_capture)) }
+        }
+        captured?.let { file ->
+            QuadAdjust(file,
+                onApply = { quad ->
+                    try { onCaptured(perspectiveQuad(file, quad)) } catch (e: Exception) { error = "scan_error_process" }
+                },
+                onRetake = { captured = null })
         }
         TextButton(onClick = onBack) { Text(stringResource(com.jumlo.app.R.string.scan_back)) }
     }
 }
 
-/** Fixed inset-quad perspective correction (manual alignment model). */
-private fun perspectiveInset(file: File): File {
+/**
+ * Perspective correction with a user-adjusted quad (corners normalized 0..1,
+ * order: TL, TR, BR, BL). Output size uses the longer of each edge pair.
+ */
+private fun perspectiveQuad(file: File, quad: List<Offset>): File {
+    require(quad.size == 4) { "SCAN_QUAD_INVALID" }
     val src = android.graphics.BitmapFactory.decodeFile(file.path) ?: throw IllegalArgumentException("SCAN_DECODE_FAILED")
     val w = src.width; val h = src.height
-    val insetX = w * 0.08f; val insetY = h * 0.08f
-    val matrix = Matrix().apply {
-        setPolyToPoly(
-            floatArrayOf(insetX, insetY, w - insetX, insetY, w - insetX, h - insetY, insetX, h - insetY), 0,
-            floatArrayOf(0f, 0f, w.toFloat(), 0f, w.toFloat(), h.toFloat(), 0f, h.toFloat()), 0, 4
-        )
+    val srcPts = FloatArray(8)
+    quad.forEachIndexed { i, o ->
+        srcPts[i * 2] = (o.x.coerceIn(0f, 1f) * w)
+        srcPts[i * 2 + 1] = (o.y.coerceIn(0f, 1f) * h)
     }
-    val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    fun dist(a: Int, b: Int): Float {
+        val dx = srcPts[a * 2] - srcPts[b * 2]; val dy = srcPts[a * 2 + 1] - srcPts[b * 2 + 1]
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+    val outW = maxOf(dist(0, 1), dist(3, 2)).toInt().coerceAtLeast(1)
+    val outH = maxOf(dist(0, 3), dist(1, 2)).toInt().coerceAtLeast(1)
+    val matrix = Matrix().apply {
+        setPolyToPoly(srcPts, 0, floatArrayOf(0f, 0f, outW.toFloat(), 0f, outW.toFloat(), outH.toFloat(), 0f, outH.toFloat()), 0, 4)
+    }
+    val out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
     Canvas(out).drawBitmap(src, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
     val dest = File(file.parentFile, file.nameWithoutExtension + "-scan.jpg")
     FileOutputStream(dest).use { out.compress(Bitmap.CompressFormat.JPEG, 92, it) }
     src.recycle(); out.recycle()
     return dest
+}
+
+/** Draggable four-corner quad over the captured photo (normalized coordinates). */
+@Composable
+private fun QuadAdjust(file: File, onApply: (List<Offset>) -> Unit, onRetake: () -> Unit) {
+    var corners by remember(file) {
+        mutableStateOf(listOf(Offset(0.08f, 0.08f), Offset(0.92f, 0.08f), Offset(0.92f, 0.92f), Offset(0.08f, 0.92f)))
+    }
+    var dragging by remember { mutableStateOf(-1) }
+    val bitmap = remember(file) { android.graphics.BitmapFactory.decodeFile(file.path) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(com.jumlo.app.R.string.scan_adjust_hint), style = MaterialTheme.typography.bodySmall)
+        Box(Modifier.fillMaxWidth().height(360.dp).background(Color.Black)) {
+            bitmap?.let {
+                androidx.compose.foundation.Image(
+                    it.asImageBitmap(), contentDescription = stringResource(com.jumlo.app.R.string.scan_title),
+                    modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                )
+            }
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { start ->
+                        val nx = start.x / size.width; val ny = start.y / size.height
+                        dragging = corners.indices.minByOrNull { i ->
+                            val dx = corners[i].x - nx; val dy = corners[i].y - ny; dx * dx + dy * dy
+                        } ?: -1
+                    },
+                    onDrag = { change, _ ->
+                        if (dragging in corners.indices) {
+                            val nx = (change.position.x / size.width).coerceIn(0f, 1f)
+                            val ny = (change.position.y / size.height).coerceIn(0f, 1f)
+                            corners = corners.toMutableList().also { list -> list[dragging] = Offset(nx, ny) }
+                        }
+                    },
+                    onDragEnd = { dragging = -1 }
+                )
+            }) {
+                val pts = corners.map { Offset(it.x * size.width, it.y * size.height) }
+                for (i in pts.indices) {
+                    val a = pts[i]; val b = pts[(i + 1) % pts.size]
+                    drawLine(Color.Yellow, a, b, strokeWidth = 3f)
+                }
+                pts.forEach { drawCircle(Color.Yellow, radius = 14f, center = it) }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onRetake) { Text(stringResource(com.jumlo.app.R.string.scan_retake)) }
+            Button(onClick = { onApply(corners) }) { Text(stringResource(com.jumlo.app.R.string.scan_apply)) }
+        }
+    }
 }
 
 /** Drawn signature pad: strokes -> transparent PNG in cache; callback gets content URI string. */

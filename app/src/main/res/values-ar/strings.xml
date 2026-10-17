@@ -157,4 +157,7 @@
     <string name="signature_clear">مسح</string>
     <string name="signature_save">حفظ الرسم كصورة توقيع</string>
     <string name="signature_hint">بعد الحفظ، أضف صورة التوقيع كملف ثانٍ محدد (ملف PDF أولًا).</string>
+    <string name="scan_adjust_hint">اسحب الزوايا الأربع إلى حواف المستند.</string>
+    <string name="scan_apply">تطبيق التصحيح</string>
+    <string name="scan_retake">إعادة الالتقاط</string>
 </resources>
