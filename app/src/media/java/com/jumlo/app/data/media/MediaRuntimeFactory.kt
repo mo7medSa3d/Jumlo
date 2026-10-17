@@ -73,14 +73,18 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
             "PATH" to "${System.getenv("PATH") ?: "/system/bin"}:${bin.absolutePath}",
             "UU_ALLOW_HTTP" to if (allowHttp) "1" else "0"
         )
-        val environment = baseEnv + sessionStore.buildExtractorEnv(url)
-        val result = runner.run(MediaProcessSpec(command, directory, environment,
-            timeoutMillis = if (probe) 90_000 else 6 * 60 * 60 * 1000L,
-            stdoutLimit = if (probe) 4 * 1024 * 1024 else 64 * 1024, tailOutput = !probe), check) { line ->
-                MediaProgressParser.parse(line)?.let(progress)
-            }
-        if (result.exitCode != 0) throw OperationFailure(classify(result.stderr))
-        return result.stdout
+        val sessionEnv = sessionStore.buildExtractorEnv(url)
+        try {
+            val result = runner.run(MediaProcessSpec(command, directory, baseEnv + sessionEnv,
+                timeoutMillis = if (probe) 90_000 else 6 * 60 * 60 * 1000L,
+                stdoutLimit = if (probe) 4 * 1024 * 1024 else 64 * 1024, tailOutput = !probe), check) { line ->
+                    MediaProgressParser.parse(line)?.let(progress)
+                }
+            if (result.exitCode != 0) throw OperationFailure(classify(result.stderr))
+            return result.stdout
+        } finally {
+            sessionStore.cleanupExtractorEnv(sessionEnv)
+        }
     }
     override fun inspect(url: String, allowHttp: Boolean, check: () -> Unit): MediaAsset {
         val root = File(context.cacheDir, "media-probes").apply { mkdirs() }
