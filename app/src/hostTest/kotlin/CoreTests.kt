@@ -39,11 +39,58 @@ fun main() {
     test("pad retains requested canvas") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.PAD,true); check(g.width==100 && g.height==100); check(g.draw.top==25.0 && g.draw.bottom==75.0) }
     test("fill crops only the excess axis") { val g=ImageGeometry.resolve(400,200,100,100,FitMode.FILL,true); check(g.crop.left==0.25 && g.crop.right==0.75) }
     test("no-upscale applies to one growing axis") { val g=ImageGeometry.resolve(400,200,100,1000,FitMode.STRETCH,false); check(g.width<=400 && g.height<=200) }
+    test("PDF crop top-left coordinates map to PDF bottom-left") {
+        val upper = PdfCropCoordinates.fromTopLeft(0f, 0f, 600f, 800f, 0.0, 0.0, 1.0, 0.25)
+        check(upper == PdfCropRect(0f, 600f, 600f, 200f))
+        val lower = PdfCropCoordinates.fromTopLeft(10f, 20f, 600f, 800f, 0.25, 0.75, 0.75, 1.0)
+        check(lower == PdfCropRect(160f, 20f, 300f, 200f))
+        check(PdfCropCoordinates.fromTopLeft(10f, 20f, 600f, 800f, 0.0, 0.0, 1.0, 1.0) ==
+            PdfCropRect(10f, 20f, 600f, 800f))
+    }
+    test("PDF crop rejects invalid and nonfinite input") {
+        rejects<IllegalArgumentException> { PdfCropCoordinates.fromTopLeft(0f, 0f, 600f, 800f, 0.3, 0.4, 0.2, 0.8) }
+        rejects<IllegalArgumentException> { PdfCropCoordinates.fromTopLeft(0f, 0f, 600f, 800f, 0.0, Double.NaN, 1.0, 1.0) }
+        rejects<IllegalArgumentException> { PdfCropCoordinates.fromTopLeft(0f, 0f, Float.POSITIVE_INFINITY, 800f, 0.0, 0.0, 1.0, 1.0) }
+    }
+    test("Drive link parser accepts only official HTTPS link locations") {
+        val id = "1abcDE_fgHiJ23KLmno"
+        check(DriveLink.fileId(id) == id)
+        check(DriveLink.fileId("https://drive.google.com/file/d/$id/view?usp=sharing") == id)
+        check(DriveLink.fileId("https://drive.google.com/open?id=$id&usp=sharing") == id)
+        check(DriveLink.fileId("https://docs.google.com/document/d/$id/edit") == id)
+        check(DriveLink.fileId("https://docs.google.com/spreadsheets/d/$id/edit") == id)
+    }
+    test("Drive link parser rejects impostors, credentials and embedded links") {
+        val id = "1abcDE_fgHiJ23KLmno"
+        for (value in listOf(
+            "https://drive.google.com.evil.example/file/d/$id/view",
+            "https://drive.google.com@evil.example/file/d/$id/view",
+            "https://evil.example/redirect?next=https://drive.google.com/file/d/$id",
+            "http://drive.google.com/file/d/$id/view",
+            "https://drive.google.com:444/file/d/$id/view",
+            "https://drive.google.com/file/d/$id/view#fragment",
+            "https://drive.google.com/open?id=$id&id=$id",
+            "https://drive.google.com/drive/folders/$id",
+            "look at https://docs.google.com/document/d/$id/edit"
+        )) rejects<IllegalArgumentException> { DriveLink.fileId(value) }
+    }
     test("zip roundtrip reads original bytes") { tmp { root ->
         val a=ByteArray(16384) { (it*17).toByte() }; val z=File(root,"a.zip")
         ArchiveCore.create(z,listOf(ArchiveInput("folder/a.bin") { ByteArrayInputStream(a) }),6,ArchiveLimits(100000,20,32))
         val dest=File(root,"out"); val files=ArchiveCore.extract(z,dest,ArchiveLimits(100000,20,32))
         check(files.single().readBytes().contentEquals(a)); check(ZipFile(z).use { it.size() }==1)
+    } }
+    test("Unix symlink ZIP member is materialized only as inert bytes") { tmp { root ->
+        val z=File(root,"symlink.zip");zip(z,listOf("link" to "../outside".toByteArray()))
+        val bytes=z.readBytes()
+        val central=bytes.indices.first { i -> i+4<bytes.size && bytes[i]==0x50.toByte() && bytes[i+1]==0x4b.toByte() && bytes[i+2]==1.toByte() && bytes[i+3]==2.toByte() }
+        bytes[central+5]=3 // Unix creator
+        val external=0xA1FF0000L // symlink + 0777 in upper Unix mode bits
+        for(i in 0..3) bytes[central+38+i]=(external shr (8*i)).toByte()
+        z.writeBytes(bytes);val original=Hashing.sha256(z)
+        val extracted=ArchiveCore.extract(z,File(root,"out"),ArchiveLimits(1000,10,32)).single()
+        check(!Files.isSymbolicLink(extracted.toPath()) && extracted.readText()=="../outside")
+        check(!File(root,"outside").exists() && Hashing.sha256(z)==original)
     } }
     test("zip traversal failure leaves no files") { tmp { root ->
         val z=File(root,"a.zip"); zip(z,listOf("ok" to byteArrayOf(1), "../outside" to byteArrayOf(2)))
@@ -61,6 +108,12 @@ fun main() {
     } }
     test("archive cancellation removes incomplete archive") { tmp { root ->
         val out=File(root,"partial.zip"); rejects<InterruptedIOException> { ArchiveCore.create(out,listOf(ArchiveInput("a") { ByteArrayInputStream(ByteArray(10000)) }),6,ArchiveLimits(100000,10,32),{ throw InterruptedIOException() }) }; check(!out.exists())
+    } }
+    test("ZIP Unicode-equivalent paths are rejected before extraction") { tmp { root ->
+        val z=File(root,"unicode.zip");zip(z,listOf("caf\u00e9.txt" to "one".toByteArray(),"cafe\u0301.txt" to "two".toByteArray()))
+        val before=Hashing.sha256(z)
+        rejects<IllegalArgumentException> { ArchiveCore.extract(z,File(root,"out"),ArchiveLimits(1000,10,32)) }
+        check(!File(root,"out").exists() && Hashing.sha256(z)==before)
     } }
     test("archive creation rejects duplicate normalized names") { tmp { root -> rejects<IllegalArgumentException> {
         ArchiveCore.create(File(root,"a.zip"),listOf(ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(1)) },ArchiveInput("a") { ByteArrayInputStream(byteArrayOf(2)) }),6,ArchiveLimits(1000,10,32))
@@ -81,6 +134,28 @@ fun main() {
         val restored=DurablePublication(root); check(restored.reconcile().single().file.readText()=="recover"); check(restored.reconcile().size==1)
     } }
     test("missing staged output cannot publish success") { tmp { root -> val p=DurablePublication(root); val t=p.reserve(UUID.randomUUID().toString(),"a","r.bin","application/octet-stream"); rejects<IllegalArgumentException> { p.publish(t) }; check(p.reconcile().isEmpty()) } }
+    test("error log export includes bounded rotation and clear deletes both files") { tmp { root ->
+        val file = File(root, "error.log")
+        val log = ErrorLog(file, 15)
+        log.record("TEST_ERROR")
+        log.record("SECOND_ERROR")
+        check(File(root, "error.log.1").isFile)
+        val export = log.read()
+        check(export.contains("TEST_ERROR") && export.contains("SECOND_ERROR"))
+        log.clear()
+        check(!file.exists() && !File(root, "error.log.1").exists())
+        check(log.read().isEmpty())
+    } }
+    test("error log never includes credentials or signed links after rotation") { tmp { root ->
+        val log = ErrorLog(File(root, "error.log"), 15)
+        log.record("https://example.org/?token=SECRET")
+        log.record("password=hunter2")
+        log.record("STABLE_CODE", "dl_02")
+        log.record("SECOND_ERROR", "dl_03")
+        val exported = log.read()
+        check("SECRET" !in exported && "hunter2" !in exported && "https://" !in exported)
+        check("STABLE_CODE" in exported && "SECOND_ERROR" in exported)
+    } }
     test("URL validation never invents network metadata") { val url=HttpPolicy.url("https://example.org/file?q=signed"); check(url.scheme=="https"); rejects<IllegalArgumentException> { HttpPolicy.url("https://") }; rejects<IllegalArgumentException> { HttpPolicy.url("https://user:pass@example.org/x") } }
     test("cleartext needs explicit consent") { rejects<IllegalArgumentException> { HttpPolicy.url("http://example.org/f") }; check(HttpPolicy.url("http://example.org/f",true).scheme=="http") }
     test("valid resume requires exact representation range") { ResumePolicy.validate(10,"\"v1\"",null,20,206,mapOf("content-range" to "bytes 10-19/20","etag" to "\"v1\"","content-length" to "10")) }
@@ -128,11 +203,84 @@ fun main() {
     test("page range overflow is rejected rather than coerced to a single page") {
         rejects<IllegalArgumentException> { PageSelection.parse("1-99999999999999999999",10) }
     }
-    test("media downloader capability has a real dispatch candidate") { check(Capabilities.isEnabled("dl_media")) }
+    test("media downloader requires qualification") { check(!Capabilities.isEnabled("dl_media")) }
+    test("release security-sensitive candidates remain unavailable") {
+        for (id in listOf("pdf_protect", "pdf_redact", "file_encrypted_zip", "file_drive", "dl_media", "pdf_ocr", "webpage_pdf"))
+            check(!Capabilities.isEnabled(id)) { "$id must be gated" }
+    }
+    test("navigation-only download settings is a supported capability") { check(Capabilities.isEnabled("dl_settings")) }
+    test("publication normalizes names once before journal recovery") { tmp { root ->
+        val p=DurablePublication(root)
+        val ticket=p.reserve(UUID.randomUUID().toString(),"unicode","cafe\u0301.bin","application/octet-stream")
+        ticket.stageFile.writeText("original bytes")
+        val published=p.publish(ticket)
+        check(published.displayName=="caf\u00e9.bin")
+        check(DurablePublication(root).reconcile().single().file.readText()=="original bytes")
+    } }
+    test("navigation routes can never enter the processing dispatcher policy") {
+        for (id in listOf("dl_settings", "file_02", "pdf_01", "file_trash")) {
+            check(CapabilityPolicy.availability(id).visible)
+            check(!CapabilityPolicy.canProcess(id))
+        }
+        check(CapabilityPolicy.canProcess("file_07"))
+        check(!CapabilityPolicy.availability("unknown-direct-route").visible)
+    }
+    test("searchable OCR never silently truncates or substitutes recognized text") {
+        check(OcrTextPolicy.requireRepresentable("First line\nSecond line")==listOf("First line","Second line"))
+        rejects<IllegalArgumentException> { OcrTextPolicy.requireRepresentable("Arabic: \u0627") }
+        rejects<IllegalArgumentException> { OcrTextPolicy.requireRepresentable("x".repeat(501)) }
+        rejects<IllegalArgumentException> { OcrTextPolicy.requireRepresentable((1..201).joinToString("\n") { "line" }) }
+    }
+    test("seeded page-range properties preserve order and bounds (256 cases)") {
+        val rng = kotlin.random.Random(0x4A554D4C)
+        repeat(256) {
+            val pageCount = rng.nextInt(1, 48)
+            val expected = linkedSetOf<Int>()
+            val segments = (0 until rng.nextInt(1, 14)).map {
+                val start = rng.nextInt(1, pageCount + 1)
+                val end = rng.nextInt(start, pageCount + 1)
+                (start..end).forEach(expected::add)
+                if (start == end || rng.nextBoolean()) "$start" else "$start-$end"
+            }
+            // Reconstruct expectation from the actual emitted syntax, rather
+            // than a segment that deliberately requested one page of a range.
+            val oracle = linkedSetOf<Int>()
+            segments.forEach { part ->
+                val range = part.split('-').map(String::toInt)
+                (range[0]..range.last()).forEach(oracle::add)
+            }
+            val actual = PageSelection.parse(segments.joinToString(","), pageCount)
+            check(actual == oracle.toList()) { "Range property mismatch: $segments" }
+            check(actual.size <= pageCount && actual.all { it in 1..pageCount })
+        }
+    }
+    test("seeded archive-entry path property blocks traversal (256 cases)") { tmp { root ->
+        val rng = kotlin.random.Random(0x1234ABCD)
+        val badPrefixes = listOf("../", "safe/../", "safe//", "/abs/", "C:/", "safe\\")
+        repeat(256) {
+            val filename = "file${rng.nextInt(1, 100000)}.dat"
+            val dangerous = badPrefixes[it % badPrefixes.size] + filename
+            rejects<IllegalArgumentException> { SafeNames.entry(root, dangerous) }
+            val safe = SafeNames.entry(root, "safe/sub/$filename")
+            check(safe.isAbsolute && safe.path.startsWith(root.canonicalPath + File.separator))
+        }
+    } }
+    test("seeded HTTPS URL policy excludes credentials and cleartext (256 cases)") {
+        val rng = kotlin.random.Random(0x76543210)
+        repeat(256) {
+            val suffix = "file${rng.nextInt(1, 100000)}.bin"
+            check(HttpPolicy.url("https://example.org/$suffix").host == "example.org")
+            rejects<IllegalArgumentException> { HttpPolicy.url("http://example.org/$suffix") }
+            rejects<IllegalArgumentException> { HttpPolicy.url("https://user:pass@example.org/$suffix") }
+            rejects<IllegalArgumentException> { HttpPolicy.url("https://example.org/$suffix#fragment") }
+        }
+    }
     mediaPolicyTests(::test)
     mediaProcessTests(::test)
     if(System.getenv("UU_TEST_REAL_MEDIA")=="1") mediaFileTests(::test)
     transferTests(::test)
+    trashTests(::test)
+    copyDestinationTests(::test)
     println("RESULT passed=$passed failed=$failed")
     check(failed==0) { "$failed tests failed" }
 }

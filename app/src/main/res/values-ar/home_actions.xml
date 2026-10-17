@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_customize_actions">تخصيص الإجراءات السريعة</string>
+    <string name="ui_actions_local">اختر حتى أربع أدوات ورتّبها. تُحفظ اختياراتك على هذا الجهاز.</string>
+    <string name="ui_action_up">نقل %1$s إلى الأعلى</string>
+    <string name="ui_action_down">نقل %1$s إلى الأسفل</string>
+    <string name="ui_action_add">إضافة %1$s</string>
+    <string name="ui_actions_reset">استعادة الأدوات الأربع الافتراضية</string>
+    <string name="ui_actions_available">الأدوات المتاحة</string>
+    <string name="ui_actions_save">حفظ الإجراءات</string>
+</resources>

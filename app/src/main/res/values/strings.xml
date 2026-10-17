@@ -344,4 +344,6 @@
     <string name="home_browse_catalog_btn">View Complete Catalog</string>
     <string name="home_no_recent_outputs">No processed results yet. Launch any tool above to get started!</string>
     <string name="home_active_tasks_title">Active Tasks in Progress</string>
+    <string name="media_rights_confirmation">I confirm I have rights to download this content and will follow the platform terms.</string>
+    <string name="media_rights_required">Confirm your rights and the platform terms first.</string>
 </resources>

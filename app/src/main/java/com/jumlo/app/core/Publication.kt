@@ -28,10 +28,10 @@ class DurablePublication(private val root: File) {
         RandomAccessFile(File(root,"publication.lock"),"rw").use { f -> f.channel.lock().use { block() } }
     }
     fun reserve(job: String,key: String,name: String,mime: String): PublicationTicket = locked {
-        val id=identity(job,key); SafeNames.basename(name)
+        val id=identity(job,key); val safeName=SafeNames.basename(name)
         require(mime.isNotBlank() && mime.length<200 && mime.none { it<' ' }) { "INVALID_MIME_TYPE" }
         val parent=File(staging,job); require(parent.mkdirs() || parent.isDirectory)
-        PublicationTicket(job,key,File(parent,"$id.part"),name,mime)
+        PublicationTicket(job,key,File(parent,"$id.part"),safeName,mime)
     }
     private fun checked(ticket: PublicationTicket): String {
         val id=identity(ticket.jobId,ticket.itemKey)

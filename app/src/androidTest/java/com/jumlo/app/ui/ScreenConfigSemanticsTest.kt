@@ -36,9 +36,11 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Screenshot (bitmap-capture) and semantics verification across the four required
+ * Component-only bitmap-capture and semantics tests across four
  * configurations: Light × English (LTR), Dark × English (LTR), Light × Arabic (RTL),
- * Dark × Arabic (RTL), plus 200% font scale accessibility layout verification.
+ * Dark × Arabic (RTL), plus a 200% English font-scale component check.
+ * These fixtures do not validate complete routes, provide approved goldens,
+ * or establish TalkBack/device accessibility acceptance.
  */
 class ScreenConfigSemanticsTest {
 

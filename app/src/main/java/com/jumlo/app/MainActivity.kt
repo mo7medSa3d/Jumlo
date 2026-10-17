@@ -8,9 +8,13 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
@@ -19,6 +23,7 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.intake.IntakeController
 import com.jumlo.app.ui.navigation.JumloNavHost
 import com.jumlo.app.ui.theme.JumloTheme
+import com.jumlo.app.ui.util.LocalAppHapticsEnabled
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint class MainActivity:AppCompatActivity() {
@@ -28,12 +33,19 @@ import dagger.hilt.android.AndroidEntryPoint
         if(savedInstanceState==null && intent?.action in setOf(Intent.ACTION_SEND,Intent.ACTION_SEND_MULTIPLE)) appViewModel.intake(IntakeController.collect(intent))
         setContent {
             val settings by appViewModel.settings.collectAsStateWithLifecycle()
-            LaunchedEffect(settings.language) {
+            val workspaceReady by appViewModel.workspaceReady.collectAsStateWithLifecycle()
+            LaunchedEffect(settings.isLoaded,settings.language) {
+                if(!settings.isLoaded) return@LaunchedEffect
                 val target=LocaleListCompat.forLanguageTags(settings.language.code)
                 if(AppCompatDelegate.getApplicationLocales()!=target) AppCompatDelegate.setApplicationLocales(target)
             }
             JumloTheme(settings.themeMode,settings.language) {
-                Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) { JumloNavHost(appViewModel) }
+                CompositionLocalProvider(LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit) {
+                    Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+                        if(settings.isLoaded && workspaceReady) JumloNavHost(appViewModel)
+                        else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) { CircularProgressIndicator() }
+                    }
+                }
             }
         }
     }

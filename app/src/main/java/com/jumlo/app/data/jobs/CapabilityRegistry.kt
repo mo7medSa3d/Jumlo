@@ -1,9 +1,8 @@
 package com.jumlo.app.data.jobs
-import com.jumlo.app.BuildConfig
-import com.jumlo.app.core.Capabilities
+import com.jumlo.app.core.CapabilityPolicy
 import com.jumlo.app.model.*
 
-/** Release gates stay shut until the Android/device qualification matrix is recorded. */
+/** Catalog and common standard availability policy. Availability does not certify device qualification. */
 object CapabilityRegistry {
     val allTools: List<UtilityTool> = listOf(
         // PDF Tools
@@ -59,12 +58,9 @@ object CapabilityRegistry {
         UtilityTool("xf_05", "secure_vault", PillarCategory.VAULT, "Private Vault (unavailable)", "الخزنة المشفرة (AES-256)", "Unavailable: cryptographic backend not qualified", "تشفير الأجهزة المحلي AES-256-GCM", "enhanced_encryption", isExpansionConcept = true, conceptCode = "XF-05")
     )
     val tools get() = allTools + UtilityTool("sha256","sha256",PillarCategory.FILES,"SHA-256 verification","SHA-256","Compute or compare actual file digests","SHA-256","verified")
-    fun enabled(id:String):Boolean = BuildConfig.DEBUG && Capabilities.isEnabled(id) && (id!="dl_media" || BuildConfig.EXTENDED_MEDIA)
-    fun reason(id:String):String = when {
-        id=="dl_media" && !BuildConfig.EXTENDED_MEDIA -> "MEDIA_BUILD_NOT_ENABLED"
-        id=="xf_05" -> "VAULT_BACKEND_UNQUALIFIED"
-        id.startsWith("pdf_") || id.startsWith("xp_") -> if(!Capabilities.isEnabled(id)) "STRUCTURAL_PDF_BACKEND_UNQUALIFIED" else "ANDROID_RELEASE_QUALIFICATION_PENDING"
-        !Capabilities.isEnabled(id) -> "CAPABILITY_NOT_IMPLEMENTED"
-        else -> "ANDROID_RELEASE_QUALIFICATION_PENDING"
-    }
+    fun availability(id:String) = CapabilityPolicy.availability(id)
+    fun visible(id:String):Boolean = availability(id).visible
+    fun enabled(id:String):Boolean = availability(id).enabled
+    fun canProcess(id:String):Boolean = CapabilityPolicy.canProcess(id)
+    fun reason(id:String):String = availability(id).reason.orEmpty()
 }

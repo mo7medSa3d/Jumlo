@@ -1,0 +1,32 @@
+[
+  {
+    "command": "bash scripts/restore-wrapper.sh --check",
+    "exit_code": 0,
+    "seconds": 0.02,
+    "log": "baseline-1.log"
+  },
+  {
+    "command": "python3 scripts/test-source-static.py",
+    "exit_code": 1,
+    "seconds": 0.43,
+    "log": "baseline-2.log"
+  },
+  {
+    "command": "python3 scripts/test-storage-sql.py",
+    "exit_code": 1,
+    "seconds": 0.09,
+    "log": "baseline-3.log"
+  },
+  {
+    "command": "python3 scripts/test-media-bootstrap.py",
+    "exit_code": 0,
+    "seconds": 0.12,
+    "log": "baseline-4.log"
+  },
+  {
+    "command": "python3 scripts/test-media-ffmpeg.py",
+    "exit_code": 0,
+    "seconds": 3.36,
+    "log": "baseline-5.log"
+  }
+]

@@ -13,14 +13,14 @@ import com.jumlo.app.R
 /**
  * Jumlo 2026 type scale.
  * - Font: IBM Plex Sans (bundled variable font, weights 400–700).
- * - Arabic text falls back to the system Arabic face, which is well-shaped on API 26+.
+ * - Arabic uses the bundled IBM Plex Sans Arabic face.
  * - Display / titles are bold and tight to give the "poster" headline feel of modern apps.
  */
 val IbmPlexSansFont = FontFamily(
-    Font(R.font.ibm_plex_sans, FontWeight(400)),
-    Font(R.font.ibm_plex_sans, FontWeight(500)),
-    Font(R.font.ibm_plex_sans, FontWeight(600)),
-    Font(R.font.ibm_plex_sans, FontWeight(700))
+    Font(R.font.ibm_plex_sans_variable, FontWeight(400)),
+    Font(R.font.ibm_plex_sans_variable, FontWeight(500)),
+    Font(R.font.ibm_plex_sans_variable, FontWeight(600)),
+    Font(R.font.ibm_plex_sans_variable, FontWeight(700))
 )
 
 @Immutable
@@ -35,8 +35,8 @@ data class QuietPrecisionTypography(
     val screenTitle: TextStyle = TextStyle(
         fontFamily = IbmPlexSansFont,
         fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
+        fontSize = 26.sp,
+        lineHeight = 32.sp,
         letterSpacing = (-0.6).sp
     ),
     val sectionTitle: TextStyle = TextStyle(
@@ -110,3 +110,19 @@ val Material3Typography = Typography(
 )
 
 val LocalQuietTypography = staticCompositionLocalOf { DefaultQuietTypography }
+
+val IbmPlexSansArabicFont = FontFamily(Font(R.font.ibm_plex_sans_arabic_regular))
+fun QuietPrecisionTypography.withFont(family:FontFamily) = copy(
+    display=display.copy(fontFamily=family), screenTitle=screenTitle.copy(fontFamily=family),
+    sectionTitle=sectionTitle.copy(fontFamily=family), body=body.copy(fontFamily=family),
+    bodyMedium=bodyMedium.copy(fontFamily=family), button=button.copy(fontFamily=family),
+    metadata=metadata.copy(fontFamily=family), metadataStrong=metadataStrong.copy(fontFamily=family),
+    navigation=navigation.copy(fontFamily=family), badge=badge.copy(fontFamily=family)
+)
+fun Typography.withFont(family:FontFamily) = copy(
+    displayLarge=displayLarge.copy(fontFamily=family), displayMedium=displayMedium.copy(fontFamily=family), displaySmall=displaySmall.copy(fontFamily=family),
+    headlineLarge=headlineLarge.copy(fontFamily=family), headlineMedium=headlineMedium.copy(fontFamily=family), headlineSmall=headlineSmall.copy(fontFamily=family),
+    titleLarge=titleLarge.copy(fontFamily=family), titleMedium=titleMedium.copy(fontFamily=family), titleSmall=titleSmall.copy(fontFamily=family),
+    bodyLarge=bodyLarge.copy(fontFamily=family), bodyMedium=bodyMedium.copy(fontFamily=family), bodySmall=bodySmall.copy(fontFamily=family),
+    labelLarge=labelLarge.copy(fontFamily=family), labelMedium=labelMedium.copy(fontFamily=family), labelSmall=labelSmall.copy(fontFamily=family)
+)

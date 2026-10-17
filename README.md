@@ -1,36 +1,99 @@
 # Jumlo
 
-Jumlo (`com.jumlo.app`, `minSdk 26`, `targetSdk/compileSdk 36`) is an on-device Android file utility app built with Kotlin, Jetpack Compose + Material 3 ("Aurora" Quiet Precision design system), Hilt, Room, WorkManager, and OkHttp.
+## Continued execution on the hardened source ZIP (2026-10-17)
 
-## Key Capabilities
+This is a **source-only, NO-GO engineering handoff**. In a separate working copy of
+`Jumlo_Updated_Source_Hardened_2026-10-17.zip`, the actual current code passed
+**117/117 Kotlin host**, **8/8 media-guard**, **10/10 SQLite**, **14/14 source/locale/font**,
+**6/6 filesystem-cleanup**, **11/11 Home/fold policy**, **5/5 synthetic host FFmpeg**,
+and **5/5 release-media source-isolation** checks. The host Kotlin compiler was 1.9.0,
+not the CI-pinned 2.0.21. Tests do **not** establish Android compilation or runtime success.
 
-- **Core Pipeline**: Immutable source snapshots (`SourceStore`), persistent workspace drafts (`WorkspaceDraftRepository`), background WorkManager execution with database lease recovery (`ProcessingJobRunner`), cooperative cancellation, and verified output publication (`OutputStore`) with Managed Trash and Undo.
-- **PDF Suite (`PdfBoxBackend` + `PdfRenderer`)**: Images→PDF, PDF→Images (PNG/JPEG), merge, split, extract, organize (reorder/rotate/delete/insert), image-stream compression without flattening text, normalized crop, text overlay & note annotations, watermark & page numbering, drawn & imported signatures, session-only AES-128 password protection & removal, metadata editing, AcroForm fill & explicit flatten, deterministic text comparison, verified content-stream redaction, and on-device ML Kit OCR (`.txt` + searchable PDF).
-- **Image Suite (`BitmapTransforms` + `ImageOperationHandler`)**: Convert (`JPEG`/`PNG`/`WEBP`), resize, crop, rotate, flip, EXIF inspection with selective GPS or full metadata removal, text & logo watermark, vertical/horizontal/grid collage & screenshot stitching with overlap trimming, brightness/contrast/saturation adjustments, canvas padding, target-size compression, and pixel-diff comparison.
-- **Capture**: CameraX document scanner (`ScanScreen`) with automatic luminance-gradient quad edge detection, draggable 4-corner refinement, and homography perspective correction; HTTPS Webpage-to-PDF capture via WebView print adapter.
-- **Files, Archives & Google Drive**: SAF folder manager with provider-aware copy/move and collision policies (`Keep both`, `Skip`, `Replace`), standard & AES-256 encrypted ZIP create/extract with pre-extraction and streaming ZIP-slip/symlink/ratio/size guards (`EncryptedZip`), batch rename (preview + copies only), SHA-256 duplicate finder, SHA-256 checksum verifier, official Google Drive v3 API import/export (`GoogleDriveClient` with session-only OAuth2 token), Managed Trash, and 7-day temp retention cleanup.
-- **Direct & Media Downloads**: Direct HTTPS downloader with ETag/`Last-Modified` range-safe pause/resume and exponential-backoff retry, plus an optional debug-gated media extractor (`-PextendedMedia=true`) with persisted first-use rights confirmation, DRM rejection, isolated WebView sign-in (zero cookie export), format/quality picker, audio-only extraction (`MP3`/`M4A`/`Opus`/source codec), per-platform capability badges, and in-app extractor updates.
+Android Gradle Debug, Android unit tests, lint, R8, instrumented API 26/36,
+screenshots, real file readers, and all eleven live platform/API qualifications are
+**UNVERIFIED**: the environment has no Android SDK or cached Gradle 8.14 distribution;
+the attempted wrapper launch failed with `UnknownHostException: services.gradle.org`.
 
-## Verification Commands
+Further changes include corrected bottom-left PDF crop coordinates, bounded image-to-PDF
+bitmap residency, AES-256 ZIP header enforcement and fail-safe staging, strict official
+Drive link parsing and create-new-only transfers, removal of signed URLs from legacy
+Room records/new DAO writes, explicit media-rights consent, and disabling runtime
+un-pinned yt-dlp updates. Extended media, Drive, OCR, scan, PDF redact/protect,
+encrypted ZIP, and webpage capture remain security-gated. No user-owned keystore is
+included. See [current follow-up evidence](verification/current-session/followup-2026-10-17/REPORT.md)
+and [feature status](docs/FEATURE_STATUS.md).
 
-### Host Verification Suite (Runs Without Android SDK or Internet)
+---
+
+## Current isolated archive execution — 2026-10-17
+
+**This updated archive is not release-ready.** The current session reproduced 110/110 host Kotlin core tests (after the diagnostic log fix), 8/8 media network-guard, 9/9 real SQLite-fixture, 12/12 source/static, 6/6 workspace-cleanup, 11/11 home/fold geometry and 5/5 local FFmpeg fixture tests. `Gradle` could not run because this container has no Android SDK or cached wrapper distribution and outbound DNS is unavailable. These are scoped local results, **not** an app/device verification. Gradle debug, unit, lint, R8 release and device tests are **UNVERIFIED for this archive**.
+
+This follow-up improves encrypted ZIP extraction safety without enabling the security-gated feature; bounds temporary source copying; keeps the optional yt-dlp/FFmpeg payload strictly out of release variants even with `-PextendedMedia=true`; and corrects rotated error-log export/clear semantics. Read [docs/FEATURE_STATUS.md](docs/FEATURE_STATUS.md), [docs/MEDIA_CAPABILITY_MATRIX.md](docs/MEDIA_CAPABILITY_MATRIX.md), [docs/RELEASE.md](docs/RELEASE.md) and [CHANGELOG.md](CHANGELOG.md). The original source archive and historical verification evidence were retained, but prior build PASS statements are not evidence of these changes passing the Android toolchain.
+
+---
+
+[الدليل العربي](README_AR.md)
+
+Native Kotlin / Jetpack Compose utility for local PDFs, images, files and direct downloads. Package `com.jumlo.app`; minimum API 26, compile/target API 36. This source preserves the existing Hilt, Room, WorkManager and processing architecture.
+
+## This delivery
+
+The supplied production plan has been applied through a repaired native build configuration, consistent capability policy, quieter feature screens, local Account & Data, grouped Settings, recoverable workspace state, bounded processing and safer file/trash operations. Home actions are locally customizable, layouts avoid separating/occluding fold bounds, and rename previews use the real naming policy before submission. The public Tools catalog has 33 entries (32 processing tools plus the PDF viewer) with live counts. Security-sensitive and unqualified features are hidden and rejected at execution boundaries.
+
+**This is an implementation handoff, not approval to publish.** Read [docs/RELEASE.md](docs/RELEASE.md) for observed build/test outcomes and outstanding hardware, historical migration, signing and CI gates. Authored tests are distinguished from executed tests.
+
+## Open and build
+
+Use JDK 17, Android SDK platform 36 and Build Tools 36.0.0. Open the root in Android Studio, or configure `ANDROID_HOME` and use the checked-in Gradle wrapper. Normal builds exclude extended-media binaries. No private signing key is included.
 
 ```bash
 bash scripts/restore-wrapper.sh --check
-python3 scripts/test-source-static.py
-python3 scripts/test-storage-sql.py
-python3 scripts/test-media-bootstrap.py
-python3 scripts/test-media-ffmpeg.py
-bash scripts/tests/test-verify-local.sh
-bash scripts/tests/test-launcher.sh
+./gradlew :app:assembleDebug --no-daemon --console=plain
+./gradlew :app:testDebugUnitTest --no-daemon --console=plain
+./gradlew :app:lintDebug --no-daemon --console=plain
+./gradlew :app:assembleRelease --no-daemon --console=plain
 ```
 
-### Full Android Gradle & Emulator Verification (Requires JDK 17 + Android SDK + Emulator; Configured in `.github/workflows/ci.yml`)
+Debug uses Android's standard debug signing. Release is unsigned unless the developer supplies their excluded `keystore.properties`; see the template and RELEASE. The included `:benchmark` module targets a profileable optimized app variant with debug signing. No unmeasured handwritten ART rules are packaged; the active profile files contain comments only.
+
+## Verify
 
 ```bash
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --console=plain
-./gradlew :app:assembleRelease --console=plain
-./gradlew :app:connectedDebugAndroidTest
+# Kotlin/JDK, Python; corresponding media tests also require FFmpeg:
+bash scripts/verify-host.sh
+bash scripts/test-workspace.sh
+python3 scripts/test-media-ffmpeg.py
+python3 scripts/generate-feature-matrix.py
+
+# Individual logged native gates:
+bash scripts/verify-native.sh gate
+# With a connected emulator/device:
+bash scripts/verify-native.sh instrumentation
+# On designated physical benchmark hardware:
+bash scripts/verify-native.sh benchmark
+bash scripts/verify-native.sh baseline
 ```
 
-See `CHANGELOG.md`, `AUDIT.md`, `docs/FEATURE_STATUS.md`, `docs/PDF_SUPPORT_MATRIX.md`, `docs/MEDIA_CAPABILITY_MATRIX.md`, `docs/PRIVACY.md`, `docs/RELEASE.md`, and `docs/DEPENDENCY_NOTICES.md` for complete architectural and verification details.
+Host HTTP fixtures use a local loopback server. Android instrumentation must run on API 26 and 36; emulator testing does not supply physical-device performance evidence. CI runs compilation/unit/lint/release before its emulator matrix and preserves per-SHA logs/artifacts.
+
+## Data contract
+
+Inputs are copied into app-owned snapshots and jobs publish verified new outputs. Managed-trash purge confirms an exact set of IDs. Cache cleanup is restricted to expired reproducible seek/extraction cache. Saved drafts exclude passwords, tokens and raw direct URLs; these need re-entry after process death. Downloads connect to endpoints explicitly entered by the user. There is no invented Jumlo identity, subscription tier or analytics backend.
+
+## Handoff map
+
+| Document | Purpose |
+|---|---|
+| [AUDIT.md](AUDIT.md) | Findings, patches, evidence and release criteria |
+| [Feature qualification](docs/FEATURE_QUALIFICATION_MATRIX.md) | Executable policy/handler inventory |
+| [Screen and action matrix](docs/SCREEN_AND_ACTION_MATRIX.md) | Controls, persistence, errors and back paths |
+| [Design](docs/DESIGN.md) | Components, tokens, typography and visual-QA limits |
+| [Performance](docs/PERFORMANCE_REPORT.md) | Reproducible methodology and actual evidence boundaries |
+| [Release](docs/RELEASE.md) | Individual native outcomes, signing and release blockers |
+| [Privacy](docs/PRIVACY.md) / [Security](docs/SECURITY_MODEL.md) | Stored data, permissions and threat boundaries |
+| [Schema provenance](app/schemas/schema-provenance.md) | Current schema and authentic historical-v1 evidence gap |
+| [Dependency notices](docs/DEPENDENCY_NOTICES.md) | Licenses, fonts and optional media restrictions |
+| `verification/production-2026-10-17/` | Current raw evidence, reports and archive provenance |
+
+The approved plan is in `docs/approved/2026-10-17-production-execution-plan.md`. Earlier supplied documents are preserved as historical material; current claims come from the verification of this delivery.

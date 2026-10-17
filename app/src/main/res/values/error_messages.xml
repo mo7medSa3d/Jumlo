@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="msg_draft_saved">Workspace saved.</string>
+    <string name="msg_draft_failed">Could not save or restore the workspace. Keep this screen open and try again.</string>
+    <string name="msg_settings_failed">Could not read or save your settings. Please try again.</string>
+    <string name="msg_trashed">Moved to trash. You can undo this.</string>
+    <string name="msg_restored">File restored.</string>
+    <string name="msg_purged">Selected trash files permanently deleted.</string>
+    <string name="msg_cleanup_done">Temporary files cleaned.</string>
+    <string name="msg_cleanup_failed">Could not finish cleaning temporary files. Please try again.</string>
+    <string name="msg_export_verified">Copy saved and verified.</string>
+    <string name="msg_log_exported">Diagnostic log exported.</string>
+    <string name="msg_copy_verified">File copied and verified.</string>
+    <string name="msg_move_verified">File moved and verified.</string>
+    <string name="msg_collision_skipped">Skipped an existing file.</string>
+    <string name="msg_export_failed">The saved copy could not be verified and may be incomplete. Your app result is preserved. Choose another destination and try again.</string>
+    <string name="msg_choose_files">Choose the files required for this tool.</string>
+    <string name="msg_choose_folder">Choose a device folder first.</string>
+    <string name="msg_access_lost">File access was lost. Select the file or folder again.</string>
+    <string name="msg_provider_unavailable">This storage provider does not allow that action. Choose another destination.</string>
+    <string name="msg_no_viewer">Could not open this file. Check file access and that a compatible app is installed.</string>
+    <string name="msg_preview_unavailable">A preview is unavailable for this file.</string>
+    <string name="msg_size_limit">These files exceed the safe processing limit. Try fewer files or smaller dimensions.</string>
+    <string name="msg_file_type">This file type is not supported by the selected tool.</string>
+    <string name="msg_https">Use an HTTPS link. Unencrypted HTTP requires explicit permission in download settings.</string>
+    <string name="msg_network">The transfer could not finish. Check the connection and try again.</string>
+    <string name="msg_url">Enter a valid direct download link, one link per line.</string>
+    <string name="msg_check_settings">Check the entered values and page ranges, then try again.</string>
+    <string name="msg_unavailable">This tool is unavailable in this build. Choose another tool.</string>
+    <string name="msg_login">Sign in to continue.</string>
+    <string name="msg_failed">Could not complete this action. Please try again.</string>
+    <string name="msg_one_file">Choose exactly one file for this tool.</string>
+</resources>

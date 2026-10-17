@@ -175,6 +175,21 @@ class ErrorLogTest {
     }
 
     @Test
+    fun clearing_log_removes_rotated_file_and_export_includes_previous_codes() {
+        val file = File(Files.createTempDirectory("errlog-rotation").toFile(), "error-log.txt")
+        val log = ErrorLog(file, 10L)
+        log.record("FIRST_ERROR")
+        log.record("SECOND_ERROR")
+        assertTrue(File(file.parentFile, file.name + ".1").isFile)
+        assertTrue(log.read().contains("FIRST_ERROR"))
+        assertTrue(log.read().contains("SECOND_ERROR"))
+        log.clear()
+        assertEquals("", log.read())
+        assertFalse(file.exists())
+        assertFalse(File(file.parentFile, file.name + ".1").exists())
+    }
+
+    @Test
     fun log_records_codes_and_tool_ids_but_not_payloads() {
         val file = File(Files.createTempDirectory("errlog").toFile(), "error-log.txt")
         val log = ErrorLog(file)

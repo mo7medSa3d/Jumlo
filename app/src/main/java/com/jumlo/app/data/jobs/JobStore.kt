@@ -27,6 +27,7 @@ import javax.inject.Singleton
         dao.jobs().first().filter { it.stage in setOf("QUEUED","VALIDATING","RUNNING","FINALIZING","INTERRUPTED") }.forEach { row -> schedule(Json.decodeFromString(row.requestJson)) }
     }
     suspend fun enqueue(request:JobRequest):String {
+        require(CapabilityRegistry.canProcess(request.toolId)) { "CAPABILITY_UNAVAILABLE" }
         require(UUID.fromString(request.id).toString()==request.id && request.sourceIds.size<=1000 && request.settingsJson.length<=100000) { "INVALID_JOB_REQUEST" }
         require(request.schemaVersion==1) { "UNSUPPORTED_SETTINGS_VERSION" }
         val snapshot=JobSnapshot(request,JobProgress(JobStage.QUEUED,0,null),emptyList(),System.currentTimeMillis())

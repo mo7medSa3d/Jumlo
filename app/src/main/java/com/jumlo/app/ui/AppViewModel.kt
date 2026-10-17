@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.HttpPolicy
@@ -23,6 +24,8 @@ import com.jumlo.app.ui.intake.Intake
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -46,44 +49,72 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     private val drafts:DraftStore,
     private val secrets:EphemeralSecretStore,
     private val treeStore:DocumentTreeStore,
-    private val budget:WorkBudget
+    private val budget:WorkBudget,
+    private val savedState:SavedStateHandle
 ):AndroidViewModel(app) {
-    val settings=preferences.settingsFlow.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),AppSettingsState())
+    val settings=preferences.settingsFlow.catch { error ->
+        if (error is java.io.IOException) { _message.value="SETTINGS_READ_FAILED"; emit(AppSettingsState(isLoaded=true)) }
+        else throw error
+    }.stateIn(viewModelScope,SharingStarted.Eagerly,AppSettingsState())
     val imported=sources.records.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val outputs=outputStore.records.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val trashed=outputStore.trashed
     val jobs=jobStore.snapshots.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     private val _form=MutableStateFlow(WorkspaceDraft())
     val form=_form.asStateFlow()
+    private val _workspaceReady=MutableStateFlow(false)
+    val workspaceReady=_workspaceReady.asStateFlow()
     private val _busy=MutableStateFlow(false)
     val busy=_busy.asStateFlow()
+    private val busyLock=Any()
+    private var activeOperations=0
+    private fun beginBusy()=synchronized(busyLock) { activeOperations++; _busy.value=true }
+    private fun endBusy()=synchronized(busyLock) { activeOperations=(activeOperations-1).coerceAtLeast(0); _busy.value=activeOperations>0 }
     private val _message=MutableStateFlow<String?>(null)
     val message=_message.asStateFlow()
     private val _undoTrashId=MutableStateFlow<String?>(null)
     val undoTrashId=_undoTrashId.asStateFlow()
     private val _urls=MutableStateFlow("")
     val urls=_urls.asStateFlow()
+    private val savedWorkspace=MutableStateFlow(WorkspaceDraft())
+    private val savedUrls=MutableStateFlow("")
+    private val draftMutex=Mutex()
+    val hasUnsavedWorkspace=combine(_form,savedWorkspace,_urls,savedUrls) { current,saved,links,savedLinks ->
+        val default=WorkspaceDraft.forTool(current.toolId,emptyList()).copy(wifiOnly=current.wifiOnly)
+        (current!=saved || links!=savedLinks) &&
+            (current.sourceIds.isNotEmpty() || saved.sourceIds.isNotEmpty() || links.isNotBlank() || current!=default)
+    }.stateIn(viewModelScope,SharingStarted.Eagerly,false)
     private val _tree=MutableStateFlow<DocumentListing?>(null)
     val tree=_tree.asStateFlow()
     private val _storage=MutableStateFlow(StorageUsage())
     val storage=_storage.asStateFlow()
     private val initialized=CompletableDeferred<Unit>()
     private val submitting=AtomicBoolean(false)
+    private var storageRefresh:Job?=null
     private var lastFingerprint:String?=null
     private var lastJobId:String?=null
-    var pendingExport:OutputRecord?=null
+    private var submissionReset:Deferred<Unit>?=null
+    var pendingExport:OutputRecord?
+        get()=savedState.get<String>("pending_export")?.let { Json.decodeFromString<OutputRecord>(it) }
+        set(value) { savedState["pending_export"]=value?.let { Json.encodeToString(it) } }
     private val errorLog=com.jumlo.app.core.ErrorLog(java.io.File(app.filesDir,"error-log.txt"))
-    @Volatile var pendingErrorLogExport:Boolean=false
-        private set
+    var pendingErrorLogExport:Boolean
+        get()=savedState["pending_error_export"] ?: false
+        private set(value) { savedState["pending_error_export"]=value }
 
     init {
         viewModelScope.launch {
-            try { drafts.loadWorkspace()?.takeIf { it.version==1 }?.let { _form.value=it } }
+            try {
+                val checkpoint=drafts.loadWorkspace()?.takeIf { it.version==1 } ?: WorkspaceDraft()
+                savedWorkspace.value=checkpoint
+                _form.value=checkpoint
+                _form.value=drafts.loadRecovery()?.takeIf { it.version==1 } ?: checkpoint
+            }
             catch(cancel:CancellationException) { throw cancel }
             catch(_:Exception) { _message.value="DRAFT_RESTORE_FAILED" }
-            finally { initialized.complete(Unit) }
+            finally { initialized.complete(Unit); _workspaceReady.value=true }
             _form.debounce(300).collect { snapshot ->
-                try { drafts.saveWorkspace(snapshot) }
+                try { draftMutex.withLock { if(snapshot==_form.value) drafts.saveRecovery(snapshot) } }
                 catch(cancel:CancellationException) { throw cancel }
                 catch(_:Exception) { _message.value="DRAFT_SAVE_FAILED" }
             }
@@ -97,7 +128,36 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         refreshStorage()
     }
     fun dismissMessage() { _message.value=null; _undoTrashId.value=null }
-    fun notifyMessage(code:String) { errorLog.record(code,form.value.toolId); _message.value=code }
+    fun notifyMessage(code:String) {
+        _message.value=code
+        val tool=form.value.toolId
+        viewModelScope.launch(Dispatchers.IO) { runCatching { errorLog.record(code,tool) } }
+    }
+    fun saveWorkspaceDraft(onSaved:()->Unit) { viewModelScope.launch {
+        initialized.await(); beginBusy()
+        try {
+            val snapshot=form.value; val links=urls.value
+            draftMutex.withLock { drafts.saveWorkspaceAndRecovery(snapshot);savedWorkspace.value=snapshot;savedUrls.value=links }
+            _message.value="DRAFT_SAVED"
+            if(form.value==snapshot && urls.value==links) onSaved()
+        } catch(cancel:CancellationException) { throw cancel }
+        catch(_:Exception) { _message.value="DRAFT_SAVE_FAILED" }
+        finally { endBusy() }
+    } }
+    fun discardWorkspaceChanges(onDiscarded:()->Unit) { viewModelScope.launch {
+        initialized.await(); beginBusy()
+        try {
+            draftMutex.withLock {
+                val checkpoint=savedWorkspace.value
+                drafts.saveRecovery(checkpoint)
+                _form.value=checkpoint;_urls.value=savedUrls.value
+                lastFingerprint=null;lastJobId=null
+            }
+            onDiscarded()
+        } catch(cancel:CancellationException) { throw cancel }
+        catch(_:Exception) { _message.value="DRAFT_SAVE_FAILED" }
+        finally { endBusy() }
+    } }
     fun setUrls(value:String) {
         _urls.value=value.take(100000)
         val firstLine = value.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: ""
@@ -111,7 +171,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
     fun chooseTool(id:String):Boolean {
         if(!CapabilityRegistry.enabled(id)) { _message.value=CapabilityRegistry.reason(id); return false }
-        if(_form.value.toolId!=id) updateForm { WorkspaceDraft.forTool(id,it.sourceIds) }
+        if(_form.value.toolId!=id) updateForm { WorkspaceDraft.forTool(id,it.sourceIds).copy(wifiOnly=settings.value.wifiOnlyDefault) }
         return true
     }
     fun addSource(id:String) { updateForm { it.copy(sourceIds=(it.sourceIds+id).distinct().take(1000)) } }
@@ -123,10 +183,17 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         old.copy(sourceIds=list)
     } }
     fun intake(intake:Intake) {
-        intake.sharedText?.takeIf { it.isNotBlank() }?.let(::setUrls)
-        if(intake.uris.isEmpty()) return
         viewModelScope.launch {
-            initialized.await();_busy.value=true
+            initialized.await()
+            if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
+                val lines=text.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
+                if(lines.all { it.startsWith("https://",true) || it.startsWith("http://",true) }) {
+                    chooseTool(if(lines.size>1) "dl_03" else "dl_02")
+                    setUrls(text)
+                } else notifyMessage("INVALID_DOWNLOAD_LIST")
+            }
+            if(intake.uris.isEmpty()) return@launch
+            beginBusy()
             try {
                 for(uri in intake.uris) {
                     try { addSource(sources.inspect(uri,intake.offeredFlags).id) }
@@ -134,10 +201,10 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                     catch(error:Exception) { _message.value=stableError(error) }
                 }
                 refreshStorage()
-            } finally { _busy.value=false }
+            } finally { endBusy() }
         }
     }
-    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { try { addSource(sources.importLocalFile(file,displayName,mimeType).id); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } } }
+    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { addSource(sources.importLocalFile(file,displayName,mimeType).id); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
     fun trashOutput(record:OutputRecord) {
         viewModelScope.launch {
@@ -159,25 +226,30 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             catch(error:Exception) { _message.value=stableError(error) }
         }
     }
-    fun purgeTrashItem(outputId:String?=null) {
+    /** IDs are captured when the confirmation is shown, never expanded at deletion time. */
+    fun purgeTrashIds(outputIds:Set<String>) {
+        if(outputIds.isEmpty()) return
         viewModelScope.launch {
+            beginBusy()
             try {
-                outputStore.purgeTrash(outputId)
+                outputStore.purgeTrashIds(outputIds.toSet())
                 _message.value="TRASH_PURGED"
                 refreshStorage()
             } catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { _message.value=stableError(error) }
+            finally { endBusy() }
         }
     }
     fun submit(onQueued:(String)->Unit) {
         if(!submitting.compareAndSet(false,true)) return
-        _busy.value=true
+        beginBusy()
         viewModelScope.launch {
             var newHandle:String?=null
             try {
                 initialized.await()
+                submissionReset?.await()
                 val state=form.value
-                require(CapabilityRegistry.enabled(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
+                require(CapabilityRegistry.canProcess(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
                 val driveImport=state.toolId=="file_drive" && !state.flag1
                 require(download || state.toolId=="webpage_pdf" || driveImport || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
@@ -201,16 +273,32 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                     else -> null
                 }
                 val settings=state.executionSettings(newHandle)
-                val request=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download || driveImport) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
+                val candidate=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download || driveImport) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
+                val request=draftMutex.withLock { drafts.reserveSubmission(fingerprint,candidate,state) }
+                val reboundHandle=rebindDownloadSubmissionSecret(request,candidate,secrets)
                 val id=jobStore.enqueue(request)
-                lastFingerprint=fingerprint;lastJobId=id;newHandle=null
+                if(reboundHandle!=null) {
+                    // INSERT IGNORE preserves the old job's state. A recovered waiting job
+                    // needs an explicit state transition as well as fresh in-memory input.
+                    when(jobStore.observe(id).first().progress.stage) {
+                        JobStage.WAITING_FOR_INPUT -> jobStore.retryFailed(id)
+                        JobStage.COMPLETED,JobStage.CANCELLED -> secrets.remove(reboundHandle)
+                        else -> Unit
+                    }
+                }
+                lastFingerprint=fingerprint;lastJobId=id
+                if(request.id==candidate.id) newHandle=null
                 onQueued(id) // Queued is not completed. UI observes Room for every later transition.
             } catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { errorLog.record(stableError(error),form.value.toolId); _message.value=stableError(error) }
-            finally { newHandle?.let(secrets::remove);_busy.value=false;submitting.set(false) }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally { newHandle?.let(secrets::remove);endBusy();submitting.set(false) }
         }
     }
-    fun allowNewRun() { lastFingerprint=null;lastJobId=null }
+    fun allowNewRun() {
+        lastFingerprint=null;lastJobId=null
+        val previous=submissionReset
+        submissionReset=viewModelScope.async { previous?.await();draftMutex.withLock { drafts.clearSubmission() } }
+    }
     fun pause(job:String) { viewModelScope.launch { jobStore.pause(job) } }
     fun cancel(job:String) { viewModelScope.launch { jobStore.cancel(job) } }
     fun retry(job:JobSnapshot,replacementUrls:String?=null) { viewModelScope.launch {
@@ -224,10 +312,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         catch(error:Exception) { _message.value=stableError(error) }
     } }
     fun finishOnboarding() { viewModelScope.launch { preferences.setOnboardingCompleted(true) } }
-    fun setThemeMode(mode:ThemeMode) { viewModelScope.launch { preferences.setThemeMode(mode) } }
-    fun setLanguage(language:AppLanguage) { viewModelScope.launch { preferences.setLanguage(language) } }
-    fun setRespectReducedMotion(enabled:Boolean) { viewModelScope.launch { preferences.setRespectReducedMotion(enabled) } }
-    fun setHapticFeedback(enabled:Boolean) { viewModelScope.launch { preferences.setHapticOnCommit(enabled) } }
+    private fun savePreference(block:suspend ()->Unit) { viewModelScope.launch {
+        try { block() } catch(cancel:CancellationException) { throw cancel }
+        catch(_:Exception) { _message.value="SETTINGS_SAVE_FAILED" }
+    } }
+    fun setQuickActionIds(ids:List<String>) = savePreference {
+        val eligible=CapabilityRegistry.tools.filter {CapabilityRegistry.visible(it.id) && CapabilityRegistry.canProcess(it.id)}.map {it.id}
+        preferences.setQuickActionIds(com.jumlo.app.ui.home.HomeActionPolicy.resolve(ids,eligible))
+    }
+    fun setThemeMode(mode:ThemeMode) = savePreference { preferences.setThemeMode(mode) }
+    fun setLanguage(language:AppLanguage) = savePreference { preferences.setLanguage(language) }
+    fun setRespectReducedMotion(enabled:Boolean) = savePreference { preferences.setRespectReducedMotion(enabled) }
+    fun setHapticFeedback(enabled:Boolean) = savePreference { preferences.setHapticOnCommit(enabled) }
+    fun setWifiOnlyDefault(enabled:Boolean) = savePreference { preferences.setWifiOnlyDefault(enabled) }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }
@@ -247,9 +344,10 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         val output=pendingExport ?: return;pendingExport=null
         if(target==null) return
         viewModelScope.launch(Dispatchers.IO) {
-            _busy.value=true
+            beginBusy()
             try {
                 require(Uri.parse(target).scheme=="content") { "CONTENT_URI_REQUIRED" }
+                require(Uri.parse(target)!=Uri.parse(output.uri)) { "EXPORT_SAME_DOCUMENT" }
                 val resolver=app.contentResolver
                 resolver.openInputStream(Uri.parse(output.uri))?.use { input ->
                     resolver.openOutputStream(Uri.parse(target),"wt")?.use { sink ->
@@ -264,7 +362,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 _message.value="EXPORT_VERIFIED"
             } catch(cancel:CancellationException) { throw cancel }
             catch(_:Exception) { _message.value="EXPORT_UNVERIFIED_TARGET_MAY_BE_PARTIAL" }
-            finally { _busy.value=false }
+            finally { endBusy() }
         }
     }
     fun acceptTree(uri:String,flags:Int) { viewModelScope.launch { try { _tree.value=treeStore.accept(uri,flags) } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } } }
@@ -282,18 +380,21 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { _message.value=stableError(error) }
     } }
-    /** Retention cleanup: staging/seek/extract temp older than 7 days and trash older than 30 days are deleted. Sources and published outputs are never touched. */
+    /** Only old reproducible previews/extraction cache. Drafts, trash and resumable jobs stay intact. */
     fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
-        val cutoff=System.currentTimeMillis()-7L*24*3600*1000
-        val trashCutoff=System.currentTimeMillis()-30L*24*3600*1000
-        var freed=0L
-        fun sweep(dir:java.io.File) { if(!dir.exists()) return; dir.walkBottomUp().forEach { f -> if(f.isFile && f.lastModified()<cutoff) { freed+=f.length(); f.delete() } }; dir.walkBottomUp().forEach { d -> if(d.isDirectory && d.list().isNullOrEmpty() && d!=dir) d.delete() } }
-        sweep(java.io.File(app.cacheDir,"seek")); sweep(java.io.File(app.cacheDir,"extract")); sweep(java.io.File(app.filesDir,"processing/staging"))
-        outputStore.purgeTrash(null,trashCutoff)
-        _message.value="CLEANUP_DONE"; refreshStorage()
+        beginBusy()
+        try {
+            val cutoff=System.currentTimeMillis()-7L*24*3600*1000
+            val context=currentCoroutineContext()
+            com.jumlo.app.core.TemporaryCleanup.removeExpired(app.cacheDir,cutoff) { context.ensureActive() }
+            _message.value="CLEANUP_DONE";refreshStorage()
+        } catch(cancel:CancellationException) { throw cancel }
+        catch(_:Exception) { _message.value="CLEANUP_FAILED" }
+        finally { endBusy() }
     } }
-    fun refreshStorage() { viewModelScope.launch(Dispatchers.IO) {
-        fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { if(it.isFile) total+=it.length() };return total }
+    fun refreshStorage() { storageRefresh?.cancel();storageRefresh=viewModelScope.launch(Dispatchers.IO) {
+        val context=currentCoroutineContext()
+        fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { context.ensureActive();if(it.isFile) total+=it.length() };return total }
         _storage.value=StorageUsage(
             bytes(File(app.filesDir,"inbound")),
             bytes(File(app.filesDir,"processing/results")),

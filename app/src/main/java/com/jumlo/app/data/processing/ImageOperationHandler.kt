@@ -72,7 +72,9 @@ import kotlin.math.roundToInt
         val outcomes=mutableListOf<ItemOutcome>()
         suspend fun publishBytes(key:String,name:String,mime:String,write:(java.io.File)->Unit):ItemOutcome {
             context.outputs.find(request.id,key)?.let{ return ItemOutcome(key,ItemStatus.CREATED,it.id) }
+            context.checkCancellation()
             val ticket=context.outputs.reserve(request.id,key,name,mime); write(ticket.stageFile)
+            context.checkCancellation()
             val rec=context.outputs.publish(ticket){ context.outputs.inspect(it,ticket.mimeType) }
             return ItemOutcome(key,ItemStatus.CREATED,rec.id)
         }
@@ -128,7 +130,7 @@ import kotlin.math.roundToInt
                                     }
                                 }
                                 if(!settings.removeAll && preservedAttrs.isNotEmpty() && outSettings.format=="JPEG") {
-                                    runCatching {
+                                    run {
                                         val outExif=ExifInterface(stage)
                                         preservedAttrs.forEach { (k,v) -> outExif.setAttribute(k,v) }
                                         outExif.saveAttributes()
@@ -136,11 +138,14 @@ import kotlin.math.roundToInt
                                 }
                             }
                         }
-                    } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                    } catch(cancel:CancellationException) { throw cancel }
+                    catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
                 }
             }
             "img_watermark" -> {
                 val settings=Json.decodeFromString<ImageWatermarkSettings>(request.settingsJson)
+                require(settings.opacityPercent in 1..100) { "INVALID_OPACITY" }
+                require(if(settings.useLogo) request.sourceIds.size>=2 else settings.text.isNotBlank()) { "WATERMARK_CONTENT_REQUIRED" }
                 val logoId=request.sourceIds.getOrNull(1)?.takeIf{ settings.useLogo }
                 request.sourceIds.forEachIndexed{ index,id ->
                     if(settings.useLogo && index==1) return@forEachIndexed
@@ -150,11 +155,12 @@ import kotlin.math.roundToInt
                         val name=SafeNames.basename(settings.output.namePrefix+SafeNames.fromDisplayName(source.displayName,"image").substringBeforeLast('.')+"."+BitmapTransforms.extension(settings.output.format))
                         outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format)){ stage ->
                             kotlinx.coroutines.runBlocking { context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d ->
-                                val marked=if(logoId!=null){ var r:Bitmap?=null; kotlinx.coroutines.runBlocking{ context.sources.withSeekable(logoId,request.id){ lf -> BitmapTransforms.decode(lf,context.budget.maxBitmapBytes).use{ ld -> r=BitmapExtras.watermarkLogo(d.bitmap,ld.bitmap,context.budget.maxBitmapBytes) } } }; r!! } else BitmapExtras.watermarkText(d.bitmap,settings.text,settings.opacityPercent,context.budget.maxBitmapBytes)
-                                try{ BitmapTransforms.encode(marked,stage,settings.output,context.budget.maxBitmapBytes) } finally { marked.recycle() }
+                                val marked=if(logoId!=null){ var r:Bitmap?=null; kotlinx.coroutines.runBlocking{ context.sources.withSeekable(logoId,request.id){ lf -> BitmapTransforms.decode(lf,context.budget.maxBitmapBytes-d.bitmap.allocationByteCount.toLong()).use{ ld -> r=BitmapExtras.watermarkLogo(d.bitmap,ld.bitmap,context.budget.maxBitmapBytes,settings.opacityPercent) } } }; r!! } else BitmapExtras.watermarkText(d.bitmap,settings.text,settings.opacityPercent,context.budget.maxBitmapBytes)
+                                try{ BitmapTransforms.encode(marked,stage,settings.output,context.budget.maxBitmapBytes-d.bitmap.allocationByteCount.toLong()) } finally { marked.recycle() }
                             } } }
                         }
-                    } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                    } catch(cancel:CancellationException) { throw cancel }
+                    catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
                 }
             }
             "img_join","img_stitch" -> {
@@ -165,9 +171,13 @@ import kotlin.math.roundToInt
                     outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format)){ stage ->
                         kotlinx.coroutines.runBlocking {
                             val bitmaps=mutableListOf<Bitmap>()
-                            try { for(id in request.sourceIds){ context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d -> bitmaps.add(Bitmap.createBitmap(d.bitmap)) } } }
+                            try { for(id in request.sourceIds){
+                                context.checkCancellation()
+                                val resident=bitmaps.sumOf { it.allocationByteCount.toLong() }
+                                context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes-resident).use{ d -> bitmaps.add(requireNotNull(d.bitmap.copy(Bitmap.Config.ARGB_8888,false)) { "IMAGE_COPY_FAILED" }) } }
+                            }
                                 val joined=BitmapExtras.join(bitmaps,settings.layout,settings.gapPx,context.budget.maxBitmapBytes,settings.overlapPx)
-                                try{ BitmapTransforms.encode(joined,stage,settings.output,context.budget.maxBitmapBytes) } finally { joined.recycle() }
+                                try{ BitmapTransforms.encode(joined,stage,settings.output,context.budget.maxBitmapBytes-bitmaps.sumOf { it.allocationByteCount.toLong() }) } finally { joined.recycle() }
                             } finally { bitmaps.forEach{ if(!it.isRecycled) it.recycle() } }
                         }
                     }
@@ -183,15 +193,17 @@ import kotlin.math.roundToInt
                             outcomes+=ItemOutcome(capKey,ItemStatus.CREATED,rec.id)
                         }
                     }
-                } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                } catch(cancel:CancellationException) { throw cancel }
+                    catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
             }
             "img_adjust" -> {
                 val settings=Json.decodeFromString<ImageAdjustSettings>(request.settingsJson)
                 request.sourceIds.forEachIndexed{ index,id ->
                     val key="image:$index"
                     try { val source=context.sources.get(id); val name=SafeNames.basename(settings.output.namePrefix+SafeNames.fromDisplayName(source.displayName,"image").substringBeforeLast('.')+"."+BitmapTransforms.extension(settings.output.format))
-                        outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format)){ stage -> kotlinx.coroutines.runBlocking{ context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d -> val a=BitmapExtras.adjust(d.bitmap,settings.brightness,settings.contrastPercent,settings.saturationPercent,settings.padPx,context.budget.maxBitmapBytes); try{ BitmapTransforms.encode(a,stage,settings.output,context.budget.maxBitmapBytes) } finally { a.recycle() } } } } }
-                    } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                        outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format)){ stage -> kotlinx.coroutines.runBlocking{ context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d -> val a=BitmapExtras.adjust(d.bitmap,settings.brightness,settings.contrastPercent,settings.saturationPercent,settings.padPx,context.budget.maxBitmapBytes); try{ BitmapTransforms.encode(a,stage,settings.output,context.budget.maxBitmapBytes-d.bitmap.allocationByteCount.toLong()) } finally { a.recycle() } } } } }
+                    } catch(cancel:CancellationException) { throw cancel }
+                    catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
                 }
             }
             "img_target" -> {
@@ -202,10 +214,12 @@ import kotlin.math.roundToInt
                         outcomes+=publishBytes(key,name,"image/jpeg"){ stage -> kotlinx.coroutines.runBlocking{ context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d ->
                             var lo=1; var hi=100; var best:java.io.File?=null
                             val tmp=java.io.File(stage.parentFile,"qtmp.jpg")
-                            while(lo<=hi){ val mid=(lo+hi)/2; BitmapTransforms.encode(d.bitmap,tmp,ImageConversionSettings(format="JPEG",quality=mid),context.budget.maxBitmapBytes); if(tmp.length()<=settings.targetBytes){ best=java.io.File(stage.parentFile,"qbest.jpg"); tmp.copyTo(best,true); lo=mid+1 } else hi=mid-1 }
-                            val chosen=best ?: tmp; chosen.copyTo(stage,overwrite=true); tmp.delete(); best?.delete()
+                            while(lo<=hi){ context.checkCancellation(); val mid=(lo+hi)/2; BitmapTransforms.encode(d.bitmap,tmp,ImageConversionSettings(format="JPEG",quality=mid),context.budget.maxBitmapBytes); if(tmp.length()<=settings.targetBytes){ best=java.io.File(stage.parentFile,"qbest.jpg"); tmp.copyTo(best,true); lo=mid+1 } else hi=mid-1 }
+                            val chosen=best ?: run { tmp.delete();throw OperationFailure("TARGET_SIZE_UNREACHABLE") }
+                            try { chosen.copyTo(stage,overwrite=true) } finally { tmp.delete(); chosen.delete() }
                         } } } }
-                    } catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                    } catch(cancel:CancellationException) { throw cancel }
+                    catch(e:Exception){ outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
                 }
             }
             "img_compare" -> {
@@ -216,7 +230,7 @@ import kotlin.math.roundToInt
                     kotlinx.coroutines.runBlocking {
                         var dims=""; var diff=-1.0
                         context.sources.withSeekable(request.sourceIds[0],request.id){ a -> context.sources.withSeekable(request.sourceIds[1],request.id){ b ->
-                            BitmapTransforms.decode(a,context.budget.maxBitmapBytes).use{ da -> BitmapTransforms.decode(b,context.budget.maxBitmapBytes).use{ db -> dims="${da.bitmap.width}x${da.bitmap.height} vs ${db.bitmap.width}x${db.bitmap.height}"; diff=BitmapExtras.meanDifference(da.bitmap,db.bitmap) } }
+                            BitmapTransforms.decode(a,context.budget.maxBitmapBytes).use{ da -> BitmapTransforms.decode(b,context.budget.maxBitmapBytes-da.bitmap.allocationByteCount.toLong()).use{ db -> dims="${da.bitmap.width}x${da.bitmap.height} vs ${db.bitmap.width}x${db.bitmap.height}"; diff=BitmapExtras.meanDifference(da.bitmap,db.bitmap) } }
                         } }
                         ticket.stageFile.writeText("dimensions=$dims\nmeanAbsDifference=${if(diff<0) "SIZE_MISMATCH" else diff.toString()}\nidentical=${diff==0.0}\n")
                     }

@@ -1,84 +1,92 @@
-# Feature status — honest accounting
+# Jumlo feature status — current isolated source ZIP
 
-Statuses:
-- **VERIFIED (<test name>)** = verified in this session via host Python/SQLite/FFmpeg/static verification suites (`test-source-static.py`, `test-storage-sql.py`, `test-media-bootstrap.py`, `test-media-ffmpeg.py`, `restore-wrapper.sh --check`, `test-verify-local.sh`, `test-launcher.sh`); note that Android Gradle/emulator tests did not run in this session (see Environment Honesty Note below);
-- **IMPLEMENTED_UNTESTED** = backend + UI + JVM/instrumented tests implemented and statically verified in source, but Gradle/JDK/Android SDK/emulator execution was blocked in this sandbox environment;
-- **PARTIAL** = works for a documented subset with explicit bounds;
-- **REMOVED** = UI entry removed so no non-functional control ships.
+Updated 2026-10-17 (continued hardened-ZIP execution; **no installed-Android VERIFICATION**).
+Latest local host verification: **117 Kotlin + 8 guard + 10 SQL + 14 source checks**, followed by
+workspace 6, Home 11, FFmpeg synthetic 5, release-source gate 5. None is a
+reference-reader Android feature qualification. See
+`verification/current-session/followup-2026-10-17/REPORT.md`.
 
-> **Important Environment Honesty Note**: The execution environment for this session has OpenJDK 17 JRE (`java` only, no `javac` or `kotlinc`), no cached Gradle 8.14 distribution, no Android SDK (`ANDROID_HOME` unset, no `emulator`/`adb`), and no outbound internet access. Therefore, Gradle tasks (`:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintDebug`, `:app:assembleRelease`, `:app:connectedDebugAndroidTest`) and live network media extractions did not run in this session. Every feature whose verification relies on running the Android/JVM JUnit or instrumented suite is marked `IMPLEMENTED_UNTESTED` (with its target test class/method recorded) until `.github/workflows/ci.yml` executes in a full Android SDK runner.
+This file describes **this execution**, not the evidence pasted into the input archive. The original archive was never treated as a verified installed-app build. The current modified source could not be compiled with Gradle (Android SDK and cached wrapper distribution unavailable; outbound DNS failed). Existing historic native logs are not test results for this modified source.
 
-## Core Pipeline (`tasks.json` F01–F04)
+**VERIFIED (complete Android input → output → independent reference reader): none in this session.** This is not a claim that every implementation is broken: no device was available to establish the necessary end-to-end qualification.
 
-| Feature | Status | Evidence / limit |
-|---|---|---|
-| F01 Source intake & immutable snapshots | IMPLEMENTED_UNTESTED | `SourceStore` + `FileIntakeGuard` (max 100 files, 512 MiB/file, 1.5 GiB total, 64 MiB free-space headroom); JVM tests in `PureDomainAlgorithmsTest.FileIntakeGuardTest` |
-| F02 Persistent recoverable drafts | VERIFIED (`test-storage-sql.py::test_schema_v2_creates_and_roundtrips`) + IMPLEMENTED_UNTESTED (device UI) | `WorkspaceDraftRepository` + Room `workspace_drafts` table + schema v1/v2 verified in `test-storage-sql.py` (9/9 pass) |
-| F03 Real job execution, progress, cancel & verified publication | VERIFIED (`test-storage-sql.py::test_lease_claim_and_stale_worker_fence`, `test_cancel_prevents_late_completion`) + IMPLEMENTED_UNTESTED (device runner) | `ProcessingJobRunner`, `OutputStore`, `ProcessingDao` lease/cancel SQL verified in `test-storage-sql.py`; `PublicationRecoveryTest` covers process death during publication, download, PDF merge, and scan |
-| F04 Images → PDF | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.imagesToPdf` (sampled decode, EXIF rotation, incremental page streaming); JVM tests in `ImagesToPdfLayoutTest` |
+- `PARTIAL`: relevant code and/or a separately reproduced host test exists, but the complete installed feature was not verified, or it is security-gated.
+- `IMPLEMENTED_UNTESTED`: a handler/navigation source exists; the specified end-to-end result was not executed in this session.
+- `REMOVED`: no supported public capability (source may remain as an explicitly unavailable placeholder).
+- `VERIFIED (test name)`: reserved for fully executed tests with actual file-reader check and successful input→output path; none qualify in this handoff.
 
-## PDF (`tasks.json` P01–P03, E01–E11)
+### Per-registry capability status (all 45 definitions)
 
-| Feature | Status | Evidence / limit |
-|---|---|---|
-| P01 Page → PNG/JPEG export & real viewer | IMPLEMENTED_UNTESTED | `PdfRenderer` handler + page range syntax (`PageSelection.parse`); JVM tests in `PureDomainAlgorithmsTest.PageSelectionTest` |
-| P02 Merge & Split/Extract | IMPLEMENTED_UNTESTED | `PdfBoxBackend.merge` / `split` / `extract`; JVM tests in `PdfStructureCoreTest.merge_combines_page_counts_and_preserves_order` & `split_extracts_selected_pages_in_order` |
-| P03 Organize (reorder, rotate, delete, insert) | IMPLEMENTED_UNTESTED | `PdfBoxBackend.organize` / `rotate` / `insert`; JVM tests in `PdfStructureCoreTest.organize_reorders_and_deletes_pages` & `rotate_adds_normalized_rotation_to_selected_pages` |
-| E01 Compress (text preserved) | IMPLEMENTED_UNTESTED | `PdfBoxBackend.compressImages` downscales Flate 8-bit RGB/Gray embedded images above target DPI while keeping text/vector streams untouched; `PdfStructureCoreTest.compress_preserves_extractable_text` |
-| E02 Crop / page geometry | IMPLEMENTED_UNTESTED | `PdfBoxBackend.setCrop` sets normalized `PDRectangle(x0, y0, width, height)` on `cropBox`; `PdfStructureCoreTest.crop_updates_page_crop_box_dimensions` |
-| E03 Annotations & overlay text | IMPLEMENTED_UNTESTED | `PdfBoxBackend.overlayText` (Helvetica stream) & `addTextAnnotation` (`PDAnnotationText`); `PdfStructureCoreTest.overlay_text_and_annotation_are_written_to_page` |
-| E04 Watermark & page numbers | IMPLEMENTED_UNTESTED | `PdfBoxBackend.stampWatermarkAndNumbers` with graphics-state alpha and bottom-center numbering; `PdfStructureCoreTest.watermark_and_page_numbers_preserve_document_validity` |
-| E05 Signature (drawn + imported) | IMPLEMENTED_UNTESTED | `SignaturePadScreen` (Compose canvas → PNG snapshot) + `PdfBoxBackend.stampImage` |
-| E06 Password protect / remove (owned files) | IMPLEMENTED_UNTESTED | `PdfBoxBackend.protect` / `removeProtection` with `EphemeralSecretStore` session-only password handles and `CharArray` zeroization in `finally`; rejects encrypted PDFs on non-`pdf_protect` tools (`PDF_ENCRYPTED`); `PdfStructureCoreTest.password_protect_and_remove_round_trip` |
-| E07 Metadata edit & page insertion | IMPLEMENTED_UNTESTED | `PdfBoxBackend.setMetadata` + 2-PDF `insert` at `insertAtPage`; `PdfStructureCoreTest.metadata_and_insert_update_document_info_and_page_count` |
-| E08 Camera scan + Webpage → PDF | IMPLEMENTED_UNTESTED | CameraX capture (`LocalLifecycleOwner`) + luminance-gradient auto quad detection (`detectDocumentQuad`) with draggable four-corner override + homography perspective warp (`Perspective.warpQuad`, `PerspectiveTest`); WebView print adapter with HTTPS guard |
-| E09 AcroForm fill + explicit flatten | IMPLEMENTED_UNTESTED | `PdfBoxBackend.fillForm` (supports both `key=value` lines and JSON map) + widget appearance stream stamp on flatten; `PdfStructureCoreTest.acroform_fill_and_flatten_removes_editable_fields` |
-| E10 Compare (non-AI) | IMPLEMENTED_UNTESTED | `PdfBoxBackend.compareText` deterministic page-by-page text diff report; `PdfStructureCoreTest.compare_produces_deterministic_page_diff` |
-| E11 Redaction with verification | IMPLEMENTED_UNTESTED | `PdfBoxBackend.redact` rewrites content stream text operators (`Tj`, `TJ`, `'`, `"`), paints black rectangles, re-extracts page text to verify target removal, and fails loudly (`REDACTION_VERIFICATION_FAILED`) on unsupported nested XObjects; `PdfStructureCoreTest.redact_removes_target_text_from_stream_and_verifies` |
-| OCR → searchable PDF + `.txt` | PARTIAL | ML Kit on-device text recognition exports `.txt` + stamps `RenderingMode.NEITHER` invisible text layer per page (`stampInvisibleText`); coarse line placement rather than word-box alignment |
+| ID | Feature | Session status | Public availability | Reproduced evidence / missing proof |
+|---|---|---|---|---|
+| `pdf_02` | Images to PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | One-decoded-bitmap-at-a-time improvement; real Android PDF creation/reader **not run** |
+| `pdf_03` | Merge PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_05` | Split PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_04` | Organize Pages | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_06` | Extract Pages | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_07` | PDF to Images | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_01` | View PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_compress` | Compress PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_crop` | Crop PDF Pages | **PARTIAL** | Visible in source catalog; not device-qualified | Host `CoreTests` validated PDF top-left→bottom-left coordinates; real PdfBox crop/output **not run** |
+| `pdf_annotate` | Annotate PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_stamp` | Watermark & Page Numbers | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_signature` | Sign PDF | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_protect` | Password Protect PDF | **PARTIAL** | Hidden / blocked by policy | PdfBox handler source; password roundtrip/owner-proof **not run** |
+| `pdf_metadata` | PDF Metadata | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_forms` | Fill PDF Form | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_compare` | Compare PDFs | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `pdf_redact` | Redact PDF | **PARTIAL** | Hidden / blocked by policy | PdfBox handler source; negative extraction and metadata proof **not run** |
+| `pdf_ocr` | OCR to Searchable PDF / Text | **PARTIAL** | Hidden / blocked by policy | OCR/ML Kit handler source; searchable-layer device/reference check **not run** |
+| `scan_doc` | Scan Document | **PARTIAL** | Hidden / blocked by policy | CameraX internal screen and quad code; device capture/correction **not run** |
+| `webpage_pdf` | Webpage to PDF | **PARTIAL** | Hidden / blocked by policy | WebView print handler source; site lifecycle/redirect checks **not run** |
+| `img_01` | Convert Images | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_02` | Resize Images | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_03` | Crop, Rotate & Flip | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_04` | Compress Images | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_exif` | EXIF Inspector | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_watermark` | Watermark Images | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_join` | Join / Collage | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_adjust` | Adjust & Pad | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_target` | Target Size | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_compare` | Compare Images | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `img_stitch` | Stitch Screenshots | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `dl_media` | Video & Audio Downloader | **PARTIAL** | Hidden / blocked by policy | MediaPolicy host; FFmpeg synthetic 5/5; rights opt-in and no-unpinned-update source checks 5/5; no live platform |
+| `dl_02` | New Direct Download | **PARTIAL** | Visible in source catalog; not device-qualified | TransferTests: loopback HTTP GET, resume, redirects, size/error tests; Android WorkManager **not run** |
+| `dl_03` | Batch URL Intake | **PARTIAL** | Visible in source catalog; not device-qualified | TransferTests: single URL transfer; batch worker/device **not run** |
+| `dl_settings` | Download Settings | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `file_02` | Browse Storage | **IMPLEMENTED_UNTESTED** | Visible in source catalog; not device-qualified | Handler/route exists; prior authored test source is **not** a pass in this execution |
+| `file_07` | Create ZIP Archive | **PARTIAL** | Visible in source catalog; not device-qualified | CoreTests: zip roundtrip reads original bytes; ArchiveHandlerTest **not run** |
+| `file_08` | Extract ZIP Archive | **PARTIAL** | Visible in source catalog; not device-qualified | CoreTests: ZIP traversal/byte/count/Unicode regressions; ArchiveHandlerTest **not run** |
+| `file_encrypted_zip` | Encrypted ZIP | **PARTIAL** | Hidden / blocked by policy | AES-256 header and staging checks; EncryptedZipSafetyTest **authored, not run**; SafeNames host traversal checks passed |
+| `file_batch_rename` | Batch Rename (copies) | **PARTIAL** | Visible in source catalog; not device-qualified | CopyDestinationTests (host copy only); actual Android rename flow **not run** |
+| `file_duplicates` | Duplicate Finder | **PARTIAL** | Visible in source catalog; not device-qualified | CoreTests hash primitive; Android duplicate grouping/export **not run** |
+| `file_trash` | Managed Trash Info | **PARTIAL** | Visible in source catalog; not device-qualified | TrashTests host filesystem journal/crash tests; provider/UI **not run** |
+| `file_drive` | Google Drive Import / Export | **PARTIAL** | Hidden / blocked by policy | Official Drive client code; strict DriveLink host tests passed; create-new upload/download JUnit **authored, not run**; OAuth/API live **not run** |
+| `xf_05` | Private Vault (unavailable) | **REMOVED** | Hidden / blocked by policy | No qualified vault backend; policy fails closed |
+| `sha256` | SHA-256 verification | **PARTIAL** | Visible in source catalog; not device-qualified | CoreTests: hash verification and invalid digest; Android end-to-end **not run** |
 
-## Images (`tasks.json` I01–I02, E12–E17)
+### Subfeatures and operational qualifications still missing
 
-| Feature | Status | Evidence / limit |
-|---|---|---|
-| I01 Convert JPEG/PNG/WebP & Resize | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.convertAndResizeImages` + `CodecCapability` matrix (`codec_capabilities.txt`) |
-| I02 Crop, Rotate, Flip & Quality Compress | IMPLEMENTED_UNTESTED | `ImageTransformMath` + `BitmapTransforms` + `PureDomainAlgorithmsTest.ImageGeometryTest` |
-| E12 EXIF inspection & selective removal | IMPLEMENTED_UNTESTED | Exports `exif_report.txt` and cleans images: `removeLocation = true` strips GPS tags while preserving non-location EXIF tags; `removeAll = true` strips all metadata |
-| E13 Text & logo watermark | IMPLEMENTED_UNTESTED | `BitmapExtras.watermarkText` & `watermarkLogo` (uses 2nd selected image as logo) |
-| E14 Join, collage & screenshot stitch | IMPLEMENTED_UNTESTED | `BitmapExtras.join` (`VERTICAL`, `HORIZONTAL`, `GRID`, plus `overlapPx` top-overlap trimming for screenshot stitching) |
-| E15 Adjustments & canvas padding | IMPLEMENTED_UNTESTED | `BitmapExtras.adjust` (`ColorMatrix` brightness/contrast/saturation + canvas padding) |
-| E16 Target-size compression | IMPLEMENTED_UNTESTED | `BitmapExtras.compressToTarget` binary search + iterative downscale fallback |
-| E17 Image comparison | IMPLEMENTED_UNTESTED | `BitmapExtras.compare` pixel diff ratio, mean channel delta, and `image_diff.png` heatmap |
+PDF: opened PDFs in a reference reader, text integrity after non-rasterizing compression, page transforms/crops/insertion/removal, overlays/annotations, imported/drawn signature, forms flatten, searchable OCR in RTL and multiple scripts, redaction negative-search including hidden objects/metadata, encryption owner proof, and image roundtrips were **not reproduced here**. Imported/drawn signature modes and all error/cancel variants require independent acceptance.
 
-## Files (`tasks.json` A01–A02, E18, E21–E25, Google Drive)
+Images: actual JPEG/PNG/WebP codec decode/encode, EXIF removal verification, watermark alpha and logo behavior, collage/stitch memory pressure, target-size failure semantics, pixel comparison and appearance on API 26/36 were **not reproduced on device**.
 
-| Feature | Status | Evidence / limit |
-|---|---|---|
-| A01 SAF tree browser & provider-aware file ops | IMPLEMENTED_UNTESTED | `DocumentTreeStore` browse, create folder, rename, delete, `copyOrMove` with `CollisionPolicy` (`KEEP_BOTH`, `SKIP`, `REPLACE`) and SHA-256 verification |
-| A02 ZIP create/extract + SHA-256 verify | IMPLEMENTED_UNTESTED | `ZipArchiveEngine` + `ZipSafetyValidator` (slip, symlink, ratio, count, byte caps) + `Sha256VerifyEngine`; `PureDomainAlgorithmsTest.ZipSafetyAndChecksumTest` |
-| E21 Encrypted ZIP create/extract | IMPLEMENTED_UNTESTED | `EncryptedZip` (zip4j AES-256) with pre-extraction and streaming `ZipSafetyValidator` checks (rejects `..`, `/`, `\`, `:`, symlinks, entry-count overflow, and streamed byte-limit overflow) + session-only password zeroization; `PureDomainAlgorithmsTest.EncryptedZipTest` |
-| E22 Batch rename (preview; copies only) | IMPLEMENTED_UNTESTED | `FileExtras.batchRename` (`{name}`, `{n}` pattern + collision avoidance, copies only) + `rename_preview.txt`; `PureDomainAlgorithmsTest.FileExtrasTest` |
-| E23 Duplicate detection by SHA-256 | IMPLEMENTED_UNTESTED | `FileExtras.duplicateGroups` exact SHA-256 grouping report (`duplicates_report.txt`); `PureDomainAlgorithmsTest.FileExtrasTest` |
-| E24 Managed trash & retention cleanup | VERIFIED (`test-storage-sql.py::test_output_lookup_and_delete`) + IMPLEMENTED_UNTESTED (device UI) | `OutputStore.moveToTrash`, `restoreFromTrash`, `purgeTrash`, and `cleanExpiredTempFiles`; snackbar Undo on trash; SQL delete/lookup verified in `test-storage-sql.py` |
-| Google Drive official API import/export (`file_drive`) | IMPLEMENTED_UNTESTED | `GoogleDriveClient` (`https://www.googleapis.com/drive/v3/files` & `/upload/drive/v3/files?uploadType=multipart`) + `AccountManager` OAuth2 (`drive.file`) session-only token in `EphemeralSecretStore` + `FileExtrasHandler.driveTransfer`; `PureDomainAlgorithmsTest.GoogleDriveClientTest` |
-| E25 Encrypted vault (`xf_05`) | REMOVED | Removed from Tools catalog and navigation (`JumloDestination.entries.none { it.id == "xf_05" }`) so no unimplemented vault control is shipped |
+Files: standard ZIP/sha256 and HTTP transports have reproducible host regressions, but Android intake/SAF publication, encrypted ZIP zip4j integration, provider rename, clipboard/export and live Drive OAuth/API operations still require installed-app checks. No source in the archive proves account-granted Drive transfer.
 
-## Downloads & Media (`tasks.json` D01–D02, E19, Phase 2)
+OCR, scan/perspective adjustment, webpage-to-PDF, video/audio platform media and background WorkManager publication/crash-recovery need connected-device and real-file acceptance. Process-death host simulations and authored instrumentation are not device tests.
 
-| Feature | Status | Evidence / limit |
-|---|---|---|
-| D01–D02 Direct URL download + pause/resume + retry with backoff | VERIFIED (`test-media-bootstrap.py`) + IMPLEMENTED_UNTESTED (device runner) | `OkHttpDownloadEngine` + `StreamTransfer` (exponential backoff retry on transient `IOException` / HTTP 429/502/503/504, range-safe `.part` + `.properties` ETag/`Last-Modified` validators, honest restart note when validators absent) + `JobStore.pause`; URL/redirect guards verified in `test-media-bootstrap.py` (8/8 pass); unit tests in `PublicationAndErrorLogTest` & `TransferTests` |
-| Phase 2 Media analysis, format picker, audio-only (MP3/M4A/Opus + source codec), thumbnail & metadata | VERIFIED (`test-media-ffmpeg.py` — 5/5 pass for FFmpeg mux/transcode) / IMPLEMENTED_UNTESTED (live platforms) | FFmpeg merge/transcode verified in `test-media-ffmpeg.py` (5/5 pass); granular error mapping (`MEDIA_PRIVATE_CONTENT`, `MEDIA_GEO_BLOCKED`, `MEDIA_REMOVED`, `MEDIA_ENCRYPTED_SOURCE`, `MEDIA_RATE_LIMITED`, `MEDIA_SESSION_REQUIRED`, `MEDIA_SITE_UNSUPPORTED`, `MEDIA_NETWORK_ERROR`); persisted first-use rights dialog (`mediaTermsAccepted`); disabled in release builds pending GPL-3.0 sign-off |
-| Per-platform live capability matrix (YouTube, TikTok, Instagram, Facebook, LinkedIn, X, Reddit, Vimeo, Dailymotion, SoundCloud, Google Drive) | UNVERIFIED (live network) | Not run in this session (sandbox VM has no internet access and no Android runtime); marked `UNVERIFIED` in UI (`MediaPlatformMatrix`) and `docs/MEDIA_CAPABILITY_MATRIX.md` |
+Navigation Compose type-safe routes are present; share intents, predictive back, deep-link restoration, talkback, 200% text, EN/AR RTL screenshots and physical macrobenchmark targets remain **UNVERIFIED**. Existing handwritten baseline profile ART rules are not measured and were removed from packaging.
 
-## Backend, Navigation, Animation & UI (Steps 4–6)
+### Actual current-session commands
 
-| Item | Status | Evidence / limit |
-|---|---|---|
-| Room exported schemas v1 & v2 + MigrationTestHelper | VERIFIED (`test-source-static.py`, `test-storage-sql.py`) + IMPLEMENTED_UNTESTED (`DatabaseMigrationAndDaoTest`) | `app/schemas/com.jumlo.app.data.local.AppDatabase/1.json` & `2.json` validated in `test-source-static.py` and `test-storage-sql.py` (v1→v2 migration verified on real SQLite); `MigrationTestHelper` in `DatabaseMigrationAndDaoTest` |
-| Parser property & fuzz tests | IMPLEMENTED_UNTESTED | Deterministic fuzz tests for ZIP entry paths (including malicious ZIP-slip entries), PDF page ranges, and URL/redirect policies in `PureDomainAlgorithmsTest` |
-| Sanitized local error log + export | IMPLEMENTED_UNTESTED | `ErrorLog` strips URLs/paths/tokens (`PureDomainAlgorithmsTest.ErrorLogSanitizationTest`) and exports from Settings |
-| Type-safe Navigation Compose + deep links + Predictive Back | IMPLEMENTED_UNTESTED | `@Serializable` routes (`HomeRoute`, `ToolsRoute`, `DownloadsRoute`, `FilesRoute`, `SettingsRoute`, `ScanRoute`, `SignatureRoute`, `WorkspaceRoute`, `ActivityRoute`), `BackHandler`, `SharedTransitionLayout` |
-| Baseline Profile & Macrobenchmark | IMPLEMENTED_UNTESTED | `:benchmark` module with `StartupTimingMetric`, `FrameTimingMetric`, and `BaselineProfileRule` + `app/src/main/baseline-prof.txt` |
-| Full English + Arabic localization & RTL parity | VERIFIED (`test-source-static.py::test_string_parity_and_references`) | 100% key and format-placeholder parity across `values/` and `values-ar/` (317 strings each) verified by `test-source-static.py` (12/12 pass) |
-| Screenshot & 200% font-scale semantics tests (light/dark, EN/AR) | IMPLEMENTED_UNTESTED | `ScreenConfigSemanticsTest` covers EN/AR RTL, light/dark themes, 200% font scale, and PNG screenshot capture across core surfaces |
+`LC_ALL=C.UTF-8 LANG=C.UTF-8 bash scripts/verify-host.sh` — **PASS**: 113/113 final Kotlin host tests, including 3 deterministic fuzz-property checks covering 256 trials each; 8/8 media bootstrap guards, 9/9 SQL fixtures, 12/12 source consistency tests and launcher checks. Earlier executions had 108 and 110 core tests before the additional cases. Details: `verification/current-session/verify-host-final.log`. End-to-end Android UI was not part of either command.
+
+`python3 scripts/test-media-ffmpeg.py` — **PASS 5/5**, synthetic local FFmpeg remux/transcode/invalid-input checks, *not* a platform download or bundled mobile FFmpeg license result.
+
+`bash scripts/test-workspace.sh` — **PASS 6/6** host cleanup safety cases. `bash verification/production-2026-10-17/ui/run-home-layout-tests.sh` — **PASS 11/11** pure layout/home selection cases.
+
+`python3 scripts/test-release-media-isolation.py` — **PASS 3/3** source-only checks. Native Gradle release dependency graph is checked by new CI gate but **NOT EXECUTED** locally.
+
+`./gradlew --no-daemon --offline :app:assembleDebug` — **BLOCKED / exit 1**: no cached Gradle distribution; wrapper cannot download due DNS; Android SDK unavailable. Debug, JVM Android unit, Android lint, optimized R8 release and all API 26/36 instrumentation **UNVERIFIED** for the updated archive.
+
+For the exact log and limitations see `verification/current-session/` and [RELEASE.md](RELEASE.md). Until native gates, real readers and security acceptance complete, do not assert production readiness or all-platform support.

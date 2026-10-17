@@ -50,13 +50,10 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
     }
     override fun refreshExtractor(): String {
         initialize()
-        return try {
-            val status = YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel._STABLE)
-            status?.name ?: "EXTRACTOR_UP_TO_DATE"
-        } catch (_: Exception) {
-            refreshBundledPayload()
-            "EXTRACTOR_RESTORED_FROM_APK"
-        }
+        // Never fetch unpinned remote code at runtime. This action restores the
+        // version embedded in the vetted APK (it is not an online updater).
+        refreshBundledPayload()
+        return "EXTRACTOR_RESTORED_FROM_APK"
     }
     private fun execute(args: List<String>, directory: File, allowHttp: Boolean, probe: Boolean,
         check: () -> Unit, progress: (MediaProgress) -> Unit = {}): String {

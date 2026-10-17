@@ -1,28 +1,25 @@
 package com.jumlo.app.ui
 
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
 import com.jumlo.app.MainActivity
+import com.jumlo.app.R
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * Smoke tests against the REAL current UI text (previous version asserted
- * fixture-era strings such as "Pdf Merge Workspace" that no longer exist).
- * The four-configuration (light/dark × en/ar) matrix is covered by
- * ScreenConfigSemanticsTest for theme/locale composition; golden-image
- * screenshot tests still require recorded Paparazzi goldens (see
- * docs/FEATURE_STATUS.md).
- */
+/** Real activity smoke coverage; execution requires an Android device/emulator. */
 class JumloUiTest {
+    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
-    @get:Rule
-    val composeTestRule = createAndroidComposeRule<MainActivity>()
-
-    @Test
-    fun homeScreen_showsAppNameAndHero() {
-        composeTestRule.onNodeWithText("Jumlo").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Powerful file tools").assertIsDisplayed()
+    @Test fun homeShowsWorkingFrequentActionsWithoutHeroDashboard() {
+        compose.waitForIdle()
+        val welcome=compose.activity.getString(R.string.welcome_get_started)
+        if(compose.onAllNodesWithText(welcome).fetchSemanticsNodes().isNotEmpty()) compose.onNodeWithText(welcome).performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.ui_images_pdf)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.ui_merge_pdf)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.ui_resize_image)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.ui_new_download)).assertIsDisplayed().performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.workspace_direct_url_single)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.workspace_queue_download)).assertIsNotEnabled()
     }
 }

@@ -1,0 +1,13 @@
+7a17531932015c99e87c94a91a00e093f1c0d32451293092e2ba33c1b81acee5  app/src/main/java/com/jumlo/app/MainActivity.kt
+5214281fe0f630d0967823f4b4715c4aa2ee098d9f3266be31307c3fd6f3169a  app/src/main/java/com/jumlo/app/ui/AppViewModel.kt
+32d250837bec27857d62599b97d526a51d4ddd5b4ed4ae3667b1e1a898922b8d  app/src/main/java/com/jumlo/app/data/jobs/DraftStore.kt
+2127387c59b3454dd1fb84edf5a26dc7870a38fa4c95958481cdfb47918c9023  app/src/main/java/com/jumlo/app/data/jobs/SubmissionSecrets.kt
+fc7e4000d7a95bf6eee439cb5127eac9d00cc32873da0067727dec7a4f3b2b32  app/src/main/java/com/jumlo/app/core/CopyDestinationPolicy.kt
+53f43e143264b2d0d4110399f59d2e692f19749035a5339704f32ce183d6ca41  app/src/main/java/com/jumlo/app/data/files/DocumentTreeStore.kt
+d8176196579258cf438f71e2c9a2afd0f33fd1334f365353dd5df0bf0b572068  app/src/main/java/com/jumlo/app/ui/workspace/WorkspaceScreen.kt
+883869d7c48ca219ab1f653fd41172a0b9acded9afb1a98fe33b1ed9f2d2c8e4  app/src/main/java/com/jumlo/app/model/WorkspaceDraft.kt
+66dd3fd01c92bd50f5eca264b9e48a70b33102b7755ed29c5b0ad0c3f8bd2ba1  app/src/main/java/com/jumlo/app/ui/components/ProductionRows.kt
+23af5d3354fad176075896016a019b7aa745a6b316a71452307c767506d84bb5  app/src/main/java/com/jumlo/app/ui/downloads/DownloadsScreen.kt
+296e4586fa174b571420d7f66a4cc5e13a0871c8676430b39dff1755702bb5fc  app/src/test/java/com/jumlo/app/model/WorkspaceSettingsTest.kt
+37feb69287b9192aa4d50eea9a74ac25517008060218126541ca57605eaee584  app/src/test/java/com/jumlo/app/model/SubmissionSecretsTest.kt
+0b53eb3a7316e495e69ad74d02259fca8bec08d870d7e1869e2f6a234fdb3479  app/src/androidTest/java/com/jumlo/app/ui/WorkspaceRecoveryInteractionTest.kt

@@ -55,6 +55,35 @@ class SourceAndPublicationTest {
             catch(expected: java.io.IOException) { assertEquals("SOURCE_NOT_FOUND",expected.message) }
         } finally { db.close() }
     }
+    @Test fun reservedTrashMetadataFilenameRoundTripsWithoutChangingBytes()=runBlocking {
+        val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
+        try {
+            val store=OutputStore(context,db)
+            val ticket=store.reserve(UUID.randomUUID().toString(),"reserved-name","record.json","application/octet-stream")
+            val bytes="original payload, never trash metadata".toByteArray()
+            ticket.stageFile.writeBytes(bytes)
+            val record=store.publish(ticket) { OutputMetadata() }
+            store.moveToTrash(record.id)
+            assertNull(db.processingDao().outputById(record.id))
+            assertTrue(store.refreshTrash().any { it.id==record.id })
+            val restored=store.restoreFromTrash(record.id)!!
+            assertEquals(record.sha256,restored.sha256)
+            assertArrayEquals(bytes,context.contentResolver.openInputStream(android.net.Uri.parse(restored.uri))!!.use { it.readBytes() })
+        } finally { db.close() }
+    }
+    @Test fun repeatedPublicationRevalidatesMissingPublishedBytes()=runBlocking {
+        val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
+        try {
+            val store=OutputStore(context,db)
+            val ticket=store.reserve(UUID.randomUUID().toString(),"missing","missing.bin","application/octet-stream")
+            ticket.stageFile.writeText("real")
+            val record=store.publish(ticket) { OutputMetadata() }
+            assertTrue(File(context.filesDir,"processing/results/${record.id}/${record.displayName}").delete())
+            try { store.publish(ticket) { OutputMetadata() };fail("Missing output accepted as success") }
+            catch(expected:IllegalArgumentException) { assertEquals("PUBLICATION_INTEGRITY_ERROR",expected.message) }
+            finally { File(context.filesDir,"processing/results/${record.id}/${record.displayName}").writeText("real") }
+        } finally { db.close() }
+    }
     @Test fun repeatedPublicationHasOneIdentityAndRealDigest() = runBlocking {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {

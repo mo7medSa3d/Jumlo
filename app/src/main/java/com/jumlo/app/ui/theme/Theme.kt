@@ -97,6 +97,7 @@ fun JumloTheme(
     val pillarColors: PillarColors = if (darkTheme) DarkPillarColors else LightPillarColors
     val layoutDirection = if (language == AppLanguage.ARABIC) LayoutDirection.Rtl else LayoutDirection.Ltr
 
+    val fontFamily = if(language.isRtl) IbmPlexSansArabicFont else IbmPlexSansFont
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -111,14 +112,14 @@ fun JumloTheme(
 
     CompositionLocalProvider(
         LocalPillarColors provides pillarColors,
-        LocalQuietTypography provides DefaultQuietTypography,
+        LocalQuietTypography provides DefaultQuietTypography.withFont(fontFamily),
         LocalQuietShapes provides QuietPrecisionShapes(),
         LocalQuietSpacing provides QuietPrecisionSpacing(),
         LocalLayoutDirection provides layoutDirection
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Material3Typography,
+            typography = Material3Typography.withFont(fontFamily),
             shapes = Material3Shapes,
             content = content
         )

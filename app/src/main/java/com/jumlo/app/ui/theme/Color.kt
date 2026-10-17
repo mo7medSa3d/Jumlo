@@ -5,27 +5,27 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
-// Jumlo "Aurora" palette: a 2026-style tonal system.
-// Vivid indigo primary, teal tertiary, soft layered surfaces, high contrast text.
+// Jumlo Quiet Precision semantic palette.
+// Quiet violet primary, warm neutral surfaces, high contrast text.
 // Token names are kept stable so every screen picks up the new look.
 // ============================================================================
 
 // ---- Light Palette (Clean SaaS / 2026 Expressive) ----
-val LightBackground = Color(0xFFF8FAFC)
+val LightBackground = Color(0xFFFAFAF9)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceDim = Color(0xFFE2E8F0)
+val LightSurfaceDim = Color(0xFFE5E3E9)
 val LightSurfaceBright = Color(0xFFFFFFFF)
 val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
-val LightSurfaceContainerLow = Color(0xFFF1F5F9)
-val LightSurfaceContainer = Color(0xFFE2E8F0)
-val LightSurfaceContainerHigh = Color(0xFFCBD5E1)
-val LightSurfaceContainerHighest = Color(0xFF94A3B8)
-val LightOnSurface = Color(0xFF0F172A)
-val LightOnSurfaceVariant = Color(0xFF475569)
-val LightOutline = Color(0xFF94A3B8)
-val LightOutlineVariant = Color(0xFFE2E8F0)
-val LightPrimary = Color(0xFF4F46E5)
-val LightPrimaryButton = Color(0xFF4F46E5)
+val LightSurfaceContainerLow = Color(0xFFF3F2F6)
+val LightSurfaceContainer = Color(0xFFE5E3E9)
+val LightSurfaceContainerHigh = Color(0xFFDCD9E3)
+val LightSurfaceContainerHighest = Color(0xFFD3CFD9)
+val LightOnSurface = Color(0xFF19171F)
+val LightOnSurfaceVariant = Color(0xFF585361)
+val LightOutline = Color(0xFF827A8F)
+val LightOutlineVariant = Color(0xFFE5E3E9)
+val LightPrimary = Color(0xFF4F3DFF)
+val LightPrimaryButton = Color(0xFF4F3DFF)
 val LightOnPrimary = Color(0xFFFFFFFF)
 val LightPrimaryContainer = Color(0xFFEEF2FF)
 val LightOnPrimaryContainer = Color(0xFF312E81)
@@ -33,11 +33,11 @@ val LightPrimaryFixed = Color(0xFFEEF2FF)
 val LightPrimaryFixedDim = Color(0xFFC7D2FE)
 val LightOnPrimaryFixed = Color(0xFF1E1B4B)
 val LightOnPrimaryFixedVariant = Color(0xFF3730A3)
-val LightSecondary = Color(0xFF0284C7)
+val LightSecondary = Color(0xFF0369A1)
 val LightOnSecondary = Color(0xFFFFFFFF)
 val LightSecondaryContainer = Color(0xFFE0F2FE)
 val LightOnSecondaryContainer = Color(0xFF0369A1)
-val LightTertiary = Color(0xFF0D9488)
+val LightTertiary = Color(0xFF0F766E)
 val LightOnTertiary = Color(0xFFFFFFFF)
 val LightTertiaryContainer = Color(0xFFCCFBF1)
 val LightOnTertiaryContainer = Color(0xFF115E59)
@@ -45,25 +45,25 @@ val LightError = Color(0xFFDC2626)
 val LightOnError = Color(0xFFFFFFFF)
 val LightErrorContainer = Color(0xFFFEE2E2)
 val LightOnErrorContainer = Color(0xFF991B1B)
-val LightCardBorder = Color(0xFFE2E8F0)
+val LightCardBorder = Color(0xFFE5E3E9)
 
 // ---- Dark Palette (Deep Obsidian / Luminous Accents) ----
-val DarkBackground = Color(0xFF0B0F17)
-val DarkSurface = Color(0xFF111827)
-val DarkSurfaceDim = Color(0xFF0B0F17)
+val DarkBackground = Color(0xFF0B0B0D)
+val DarkSurface = Color(0xFF141416)
+val DarkSurfaceDim = Color(0xFF0B0B0D)
 val DarkSurfaceBright = Color(0xFF1F2937)
 val DarkSurfaceContainerLowest = Color(0xFF070A10)
-val DarkSurfaceContainerLow = Color(0xFF131D2E)
-val DarkSurfaceContainer = Color(0xFF1A2639)
-val DarkSurfaceContainerHigh = Color(0xFF22324B)
-val DarkSurfaceContainerHighest = Color(0xFF2E4261)
-val DarkOnSurface = Color(0xFFF8FAFC)
-val DarkOnSurfaceVariant = Color(0xFF94A3B8)
+val DarkSurfaceContainerLow = Color(0xFF19191D)
+val DarkSurfaceContainer = Color(0xFF202025)
+val DarkSurfaceContainerHigh = Color(0xFF29292F)
+val DarkSurfaceContainerHighest = Color(0xFF33333B)
+val DarkOnSurface = Color(0xFFFAFAF9)
+val DarkOnSurfaceVariant = Color(0xFFAAA5B5)
 val DarkOutline = Color(0xFF64748B)
 val DarkOutlineVariant = Color(0xFF1E293B)
 val DarkPrimary = Color(0xFF818CF8)
-val DarkPrimaryButton = Color(0xFF6366F1)
-val DarkOnPrimary = Color(0xFF0B0F17)
+val DarkPrimaryButton = Color(0xFFB8ADFF)
+val DarkOnPrimary = Color(0xFF0B0B0D)
 val DarkPrimaryContainer = Color(0xFF2E2D68)
 val DarkOnPrimaryContainer = Color(0xFFE0E7FF)
 val DarkPrimaryFixed = Color(0xFFEEF2FF)
@@ -142,8 +142,8 @@ val LightPillarColors = PillarColors(
     warningPrimary = Color(0xFFD97706),
     warningContainer = Color(0xFFFEF3C7),
     cardSurface = Color(0xFFFFFFFF),
-    cardBorder = Color(0xFFE2E8F0),
-    primaryActionBackground = Color(0xFF4F46E5),
+    cardBorder = Color(0xFFE5E3E9),
+    primaryActionBackground = Color(0xFF4F3DFF),
     primaryActionText = Color(0xFFFFFFFF),
     dockSurface = Color(0xF5FFFFFF),
     dockBorder = Color(0x1E0F172A),
@@ -174,10 +174,10 @@ val DarkPillarColors = PillarColors(
     successContainer = Color(0xFF062A1F),
     warningPrimary = Color(0xFFFBBF24),
     warningContainer = Color(0xFF2E1A08),
-    cardSurface = Color(0xFF111827),
+    cardSurface = Color(0xFF141416),
     cardBorder = Color(0xFF1E293B),
-    primaryActionBackground = Color(0xFF6366F1),
-    primaryActionText = Color(0xFFFFFFFF),
+    primaryActionBackground = Color(0xFFB8ADFF),
+    primaryActionText = Color(0xFF19123E),
     dockSurface = Color(0xF2111827),
     dockBorder = Color(0x28FFFFFF),
     activePillContainer = Color(0xFF2E2D68),

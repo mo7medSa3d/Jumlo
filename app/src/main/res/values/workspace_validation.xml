@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_watermark_text_required">Enter watermark text, or use a second image as the logo.</string>
+    <string name="ui_watermark_logo_required">Select at least two images. The second image is used only as the logo.</string>
+    <string name="ui_annotation_text_required">Enter the annotation text.</string>
+    <string name="ui_stamp_content_required">Enter stamp text or enable page numbers.</string>
+    <string name="ui_rename_pattern_invalid">Use a valid filename pattern of at most 200 characters.</string>
+    <string name="ui_rename_preview_name">New copy: %1$s</string>
+    <string name="ui_rename_checking">Checking proposed names…</string>
+    <string name="ui_rename_preview_open">Preview %1$d new names</string>
+    <string name="ui_rename_preview_title">Rename preview</string>
+    <string name="ui_rename_copy_note">This creates renamed copies. Your original files stay unchanged.</string>
+</resources>

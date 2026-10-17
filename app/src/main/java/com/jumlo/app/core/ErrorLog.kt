@@ -29,9 +29,21 @@ class ErrorLog(private val file: File, private val maxBytes: Long = 256L * 1024)
         }
     }
 
-    fun read(): String = synchronized(lock) { if (file.exists()) file.readText() else "" }
+    // Include the previous bounded rotation in a user-initiated export. Neither
+    // content is ever sent or exported without the user's explicit action.
+    fun read(): String = synchronized(lock) {
+        val archived = File(file.parentFile, file.name + ".1")
+        (if (archived.isFile) archived.readText() else "") +
+            (if (file.isFile) file.readText() else "")
+    }
 
-    fun clear() = synchronized(lock) { if (file.exists()) file.delete() }
+    // Clearing diagnostics must also clear the previous rotation. Keeping .1
+    // would contradict the user's expectation that local log data was removed.
+    fun clear() = synchronized(lock) {
+        if (file.exists()) file.delete()
+        val archived = File(file.parentFile, file.name + ".1")
+        if (archived.exists()) archived.delete()
+    }
 
     private fun rotate() {
         val archive = File(file.parentFile, file.name + ".1")

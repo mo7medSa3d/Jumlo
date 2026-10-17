@@ -17,7 +17,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
-import java.io.FileOutputStream
+import java.nio.channels.Channels
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 import java.io.IOException
 import java.net.URLEncoder
 
@@ -43,23 +45,9 @@ class GoogleDriveClient(
     private val okHttpClient: OkHttpClient? = null
 ) {
     companion object {
-        private val FILE_ID_REGEX = Regex("^[A-Za-z0-9_-]{10,128}$")
-        private val URL_PATTERNS = listOf(
-            Regex("drive\\.google\\.com/file/d/([A-Za-z0-9_-]{10,128})"),
-            Regex("drive\\.google\\.com/open\\?id=([A-Za-z0-9_-]{10,128})"),
-            Regex("docs\\.google\\.com/(?:document|spreadsheets|presentation)/d/([A-Za-z0-9_-]{10,128})")
-        )
         private val json = Json { ignoreUnknownKeys = true }
 
-        fun extractFileId(rawInput: String): String {
-            val trimmed = rawInput.trim()
-            for (pattern in URL_PATTERNS) {
-                val match = pattern.find(trimmed)
-                if (match != null) return match.groupValues[1]
-            }
-            require(FILE_ID_REGEX.matches(trimmed)) { "INVALID_DRIVE_FILE_ID" }
-            return trimmed
-        }
+        fun extractFileId(rawInput: String): String = com.jumlo.app.core.DriveLink.fileId(rawInput)
 
         fun classifyStatus(code: Int, bodySnippet: String = ""): String = when (code) {
             401 -> "LOGIN_REQUIRED"
@@ -80,7 +68,7 @@ class GoogleDriveClient(
         val authHeader = "Bearer " + String(accessToken)
         try {
             transport.open(url, mapOf("Authorization" to authHeader, "Accept" to "application/json")).use { resp ->
-                val text = resp.body.bufferedReader().use { it.readText() }
+                val text = resp.body.bufferedReader().use { it.readTextBounded() }
                 if (resp.code != 200) {
                     throw OperationFailure(classifyStatus(resp.code, text))
                 }
@@ -107,6 +95,9 @@ class GoogleDriveClient(
         checkCancel: () -> Unit = {}
     ): DriveFileMetadata {
         require(accessToken.isNotEmpty()) { "LOGIN_REQUIRED" }
+        // The API writes a new staged file only. Refusing existing destinations
+        // avoids truncating (and then deleting) a caller's preexisting file.
+        require(!targetFile.exists()) { "OUTPUT_ALREADY_EXISTS" }
         checkCancel()
         val meta = fetchMetadata(fileIdOrUrl, accessToken)
         if (meta.sizeBytes != null && meta.sizeBytes > maxBytes) {
@@ -128,15 +119,23 @@ class GoogleDriveClient(
         val resolvedMime = if (isGoogleWorkspaceDoc) "application/pdf" else meta.mimeType
         val authHeader = "Bearer " + String(accessToken)
         targetFile.parentFile?.mkdirs()
+        // Recheck immediately before creating the destination. The public
+        // feature stays gated until provider race and cancellation tests run.
+        require(!targetFile.exists()) { "OUTPUT_ALREADY_EXISTS" }
+        var ownsTarget = false
         try {
             transport.open(downloadUrl, mapOf("Authorization" to authHeader)).use { resp ->
                 if (resp.code != 200) {
-                    val errText = runCatching { resp.body.bufferedReader().use { it.readText().take(512) } }.getOrDefault("")
+                    val errText = runCatching { resp.body.bufferedReader().use { it.readTextBounded(512) } }.getOrDefault("")
                     throw OperationFailure(classifyStatus(resp.code, errText))
                 }
                 var total = 0L
                 val buffer = ByteArray(64 * 1024)
-                FileOutputStream(targetFile).use { out ->
+                // CREATE_NEW is atomic even if another writer races our preflight.
+                // Never truncate an existing target or delete a file we did not create.
+                FileChannel.open(targetFile.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use { channel ->
+                    ownsTarget = true
+                    val out = Channels.newOutputStream(channel)
                     while (true) {
                         checkCancel()
                         val n = resp.body.read(buffer)
@@ -151,12 +150,12 @@ class GoogleDriveClient(
                             total += n
                         }
                     }
-                    out.fd.sync()
+                    channel.force(true)
                 }
                 return DriveFileMetadata(meta.id, resolvedName, resolvedMime, total)
             }
         } catch (t: Throwable) {
-            targetFile.delete()
+            if (ownsTarget) targetFile.delete()
             if (t is OperationFailure) throw t
             if (t is IOException) throw OperationFailure("NETWORK_ERROR")
             throw t
@@ -197,7 +196,7 @@ class GoogleDriveClient(
                 .build()
             try {
                 client.newCall(req).execute().use { resp ->
-                    val bodyText = resp.body?.string().orEmpty()
+                    val bodyText = resp.body?.charStream()?.use { it.readTextBounded() }.orEmpty()
                     if (resp.code !in 200..201) {
                         throw OperationFailure(classifyStatus(resp.code, bodyText))
                     }
@@ -225,7 +224,7 @@ class GoogleDriveClient(
                         "X-Upload-Content-Length" to sourceFile.length().toString()
                     )
                 ).use { resp: TransportResponse ->
-                    val text = resp.body.bufferedReader().use { it.readText() }
+                    val text = resp.body.bufferedReader().use { it.readTextBounded() }
                     if (resp.code !in 200..201) {
                         throw OperationFailure(classifyStatus(resp.code, text))
                     }
@@ -243,6 +242,18 @@ class GoogleDriveClient(
                 throw OperationFailure("NETWORK_ERROR")
             }
         }
+    }
+
+    private fun java.io.Reader.readTextBounded(maxChars: Int = 64 * 1024): String {
+        val buffer = CharArray(2048)
+        val out = StringBuilder()
+        while (out.length <= maxChars) {
+            val count = read(buffer, 0, minOf(buffer.size, maxChars + 1 - out.length))
+            if (count < 0) break
+            if (count > 0) out.append(buffer, 0, count)
+        }
+        require(out.length <= maxChars) { "DRIVE_METADATA_LIMIT" }
+        return out.toString()
     }
 
     private fun JsonObject.str(key: String): String = (this[key] as? JsonPrimitive)?.contentOrNull ?: ""

@@ -309,6 +309,13 @@ class GoogleDriveClientTest {
             assertEquals("report.pdf", meta.name)
             assertEquals("%PDF-1.4-ok", target.readText())
 
+            // A failed API attempt must never clobber a preexisting target.
+            val preserved = File(dir, "preexisting.pdf").apply { writeText("ORIGINAL CONTENT") }
+            assertTrue(runCatching {
+                client.downloadFile("goodFileId12345", "valid-session-token".toCharArray(), preserved, 1024 * 1024, 0)
+            }.isFailure)
+            assertEquals("ORIGINAL CONTENT", preserved.readText())
+
             // Upload test
             val toUpload = File(dir, "notes.txt").apply { writeText("hello") }
             val uploaded = client.uploadFile(toUpload, "notes.txt", "text/plain", null, "valid-session-token".toCharArray())

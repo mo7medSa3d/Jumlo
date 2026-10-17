@@ -1,53 +1,148 @@
-# Changelog
+# Jumlo — continued engineering changelog (2026-10-17)
 
-All changes made in the working copy during this engineering session, grouped by step and file path.
+**Baseline:** `Jumlo_Updated_Source_Hardened_2026-10-17.zip`, not a git repository.
+All changes were applied in a separate unpacked copy and packaged as a NEW ZIP.
+The original and the prior hardened archive remain unchanged. **NO-GO** for release:
+Android Debug/Unit/Lint/R8/devices/live platforms were NOT verified.
 
-## Step 1 — Build, Compile Fixes, Encrypted ZIP Hardening & Static Checks
+**Every file changed, including every added test/evidence file, relative to that ZIP:**
 
-- `app/schemas/com.jumlo.app.data.local.AppDatabase/1.json` (**Created**): Restored missing Room database schema version 1 (`source_snapshots`, `workspace_drafts`, `processing_jobs`, `published_outputs`) so Room `MigrationTestHelper` and `scripts/test-storage-sql.py` can verify the v1 → v2 migration.
-- `scripts/test-media-ffmpeg.py` (**Created**): Added host-executable FFmpeg + ffprobe verification suite testing video+audio MP4 remuxing, MP3 extraction, M4A source-codec stream copy, Opus encoding, and malformed input rejection.
-- `app/src/main/java/com/jumlo/app/JumloApplication.kt` (**Modified**): Added `PDFBoxResourceLoader.init(applicationContext)` in `onCreate()` so `com.tom_roush.pdfbox` loads bundled font metrics and resources on Android.
-- `app/src/main/java/com/jumlo/app/data/pdf/PdfBoxBackend.kt` (**Modified**): Added `extract`, `compressImages`, `overlayText`, `stampWatermarkAndNumbers`, and `compareText` methods so all PDF handler calls and test references resolve cleanly.
-- `app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt` (**Modified**): Enforced `PDF_ENCRYPTED` rejection on non-`pdf_protect` operations and added dual format parsing (`key=value` lines and JSON map) for `pdf_forms` AcroForm filling.
-- `app/src/main/java/com/jumlo/app/data/files/EncryptedZip.kt` (**Created**): Extracted and hardened AES-256 zip4j `EncryptedZip` helper to prevent ZIP-slip and resource exhaustion. Pre-validates every header via `ZipSafetyValidator.validateEntryPath`, rejects symlinks (`header.isSymbolicLink`), enforces `maxEntries` (`ARCHIVE_ENTRY_LIMIT`), and streams entry payloads via `zip.getInputStream(header)` while enforcing `maxBytes` (`ARCHIVE_SIZE_LIMIT`) and canonical target boundary checks.
-- `app/src/main/java/com/jumlo/app/data/processing/FileExtrasHandler.kt` (**Modified**): Updated `encryptedZip` to call `EncryptedZip.create` / `EncryptedZip.extract` with `ZipSafetyValidator` limits and wired `driveTransfer` (`file_drive`).
-- `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt` (**Modified**): Fixed CameraX lifecycle binding to use `LocalLifecycleOwner.current` (instead of `ctx as? LifecycleOwner` which fails under Hilt `ContextWrapper`), switched `takePicture` executor to `ContextCompat.getMainExecutor(context)`, replaced `Card` with `QuietCard`, and localized UI strings.
-- `app/src/androidTest/java/com/jumlo/app/ui/ScreenConfigSemanticsTest.kt` (**Modified**): Fixed broken imports and non-existent symbol references (`JumloDestination`, `QuietHeader`, `QuietPrimaryActionButton`, `Icons.Outlined.Folder`, `actionText`) to match the actual `DockTab` and `Quiet*` component signatures, and added a 200% font scale (`fontScale = 2.0f`) semantics + screenshot test.
-- `app/proguard-rules.pro` (**Modified**): Hardened R8 keep rules for `@kotlinx.serialization.Serializable` navigation routes, `com.jumlo.app.data.processing.**`, `com.tom_roush.**`, `net.lingala.zip4j.**`, and `com.google.mlkit.**`.
-- `app/src/main/baseline-prof.txt` (**Modified**): Added startup baseline profile rules for `MainActivity`, `JumloApplication`, `AppViewModel`, `JumloNavHost`, and `ui/components/**`.
-- `scripts/test-source-static.py` (**Modified**): Added static verification for `EncryptedZip.kt` ZIP-slip protection and English/Arabic `String.format` specifier parity (`test_string_format_placeholders_match`).
+| File | Action | Change / evidence boundary |
+|---|---|---|
+| `.github/workflows/ci.yml` | MODIFIED | Added a required synthetic FFmpeg/ffprobe host-fixture step before native qualification. |
+| `AUDIT.md` | MODIFIED | Added current risk/fix/evidence matrix, distinguished current tests from historic native logs. |
+| `CHANGELOG.md` | MODIFIED | Added this exact all-file inventory relative to the previously hardened ZIP. |
+| `README.md` | MODIFIED | Summarized latest source-only changes, pass counts and build blockers. |
+| `README_AR.md` | MODIFIED | Updated Arabic handoff with the current NO-GO Android verification boundary. |
+| `app/src/androidTest/java/com/jumlo/app/data/DatabaseMigrationAndDaoTest.kt` | MODIFIED | Authored persistent Room re-open test to scrub legacy signed URLs while preserving progress; NOT EXECUTED. |
+| `app/src/hostTest/kotlin/CoreTests.kt` | MODIFIED | Added host validation of PDF crop origins and strict Drive link identifiers. |
+| `app/src/main/java/com/jumlo/app/core/DriveLink.kt` | ADDED | NEW pure HTTPS Drive/Docs ID parser rejecting impostors, raw text and credentials. |
+| `app/src/main/java/com/jumlo/app/core/PdfCropCoordinates.kt` | ADDED | NEW pure geometry mapping UI top-origin normalized selection to bottom-origin PDF points. |
+| `app/src/main/java/com/jumlo/app/data/files/EncryptedZip.kt` | MODIFIED | Enforced AES-256, preflight unsafe paths before streaming, staged extraction and overwrite refusals. |
+| `app/src/main/java/com/jumlo/app/data/files/GoogleDriveClient.kt` | MODIFIED | Strict official-ID extraction, bounded responses, CREATE_NEW output channel and guarded cleanup. |
+| `app/src/main/java/com/jumlo/app/data/local/AppDatabase.kt` | MODIFIED | DAO insertion wrappers redact signed/full direct URL legacy column. |
+| `app/src/main/java/com/jumlo/app/data/local/LegacyDownloadPrivacyCallback.kt` | ADDED | NEW on-open SQL scrub for previously persisted signed URLs, keeping job status/bytes. |
+| `app/src/main/java/com/jumlo/app/data/media/MediaOperationHandler.kt` | MODIFIED | Checked persisted rights acceptance at execution boundary; fail closed on missing consent. |
+| `app/src/main/java/com/jumlo/app/data/pdf/PdfBoxBackend.kt` | MODIFIED | Fixed crop box vertical origin via pure coordinate mapper. |
+| `app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt` | MODIFIED | Stopped aggregating recycled input bitmap bytes over pages; bounded input page count. |
+| `app/src/main/java/com/jumlo/app/di/AppModule.kt` | MODIFIED | Installed Room legacy signed-URL scrub callback in production database builder. |
+| `app/src/main/java/com/jumlo/app/ui/downloads/MediaViewModel.kt` | MODIFIED | Removed default/auto acceptance of download terms and default cleartext opt-in. |
+| `app/src/main/java/com/jumlo/app/ui/downloads/MediaWorkspace.kt` | MODIFIED | Added explicit rights checkbox and blocked download until accepted. |
+| `app/src/main/res/values-ar/strings.xml` | MODIFIED | Added Arabic confirmation/error strings for rights and terms. |
+| `app/src/main/res/values/strings.xml` | MODIFIED | Added English confirmation/error strings for rights and terms. |
+| `app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt` | MODIFIED | Disabled unpinned online yt-dlp updater; restore packaged extractor only. |
+| `app/src/test/java/com/jumlo/app/data/files/EncryptedZipSafetyTest.kt` | MODIFIED | Authored zip4j real integration tests for plaintext/encrypted paths, traversal, limits and password; NOT EXECUTED. |
+| `app/src/test/java/com/jumlo/app/domain/PureDomainAlgorithmsTest.kt` | MODIFIED | Authored JUnit regression that Drive downloads refuse clobbering existing destination; NOT EXECUTED. |
+| `docs/DEPENDENCY_NOTICES.md` | MODIFIED | Updated SIL OFL pinned-font choice and outstanding FFmpeg/yt-dlp binary licensing. |
+| `docs/FEATURE_STATUS.md` | MODIFIED | Reviewed 45 capabilities with zero unearned VERIFIED claims, new partial host coverage. |
+| `docs/MEDIA_CAPABILITY_MATRIX.md` | MODIFIED | Kept every live platform UNVERIFIED; clarified host FFmpeg and gated downloader. |
+| `docs/PRIVACY.md` | MODIFIED | Explained DAO/legacy scrub, WebView persistent cookie risk and need for validation. |
+| `docs/RELEASE.md` | MODIFIED | Specified latest counts, missing Android SDK/Gradle/device and owner release gates. |
+| `scripts/test-release-media-isolation.py` | MODIFIED | Two added consent/pinned extractor static source tests (5 in suite). |
+| `scripts/test-source-static.py` | MODIFIED | Added source assertions for DAO redaction/Drive CREATE_NEW; closed SQLite fixture connection (14 tests). |
+| `scripts/test-storage-sql.py` | MODIFIED | Added executed SQLite regression for legacy signed URLs and progress preservation. |
+| `verification/TASK_STATUS.md` | MODIFIED | Updated matrix with current commands/exits and explicit NO-GO. |
+| `verification/current-session/followup-2026-10-17/REPORT.md` | ADDED | Independent current-session commands/results, negative gates and owner sign-off report. |
+| `verification/current-session/followup-2026-10-17/android-build-attempt.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/environment.txt` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/feature-generator.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/home-layout.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/media-ffmpeg.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/release-media.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/verify-host.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
+| `verification/current-session/followup-2026-10-17/workspace.log` | ADDED | Retained current executed test stdout/stderr or environment/build blocker evidence. |
 
-## Step 2 & Step 3 — Feature Completeness, Official Google Drive API & Media Downloader
+| `CONTENTS_SHA256.json` | REGENERATED IN NEW ZIP | Per-file SHA-256/size/mode manifest produced and verified by packaging tool; no stale manifest. |
 
-- `app/src/main/java/com/jumlo/app/data/files/GoogleDriveClient.kt` (**Created**): Implemented official Google Drive v3 REST client (`fetchMetadata`, `downloadFile`, `uploadFile`, `extractFileId`, `classifyHttpError`) restricted to files accessible by the signed-in user's session-only OAuth2 token.
-- `app/src/main/java/com/jumlo/app/domain/model/Capabilities.kt` (**Modified**): Added `file_drive` (`Google Drive Import & Export`) to `CapabilityRegistry`.
-- `app/src/main/java/com/jumlo/app/domain/model/Settings.kt` (**Modified**): Added `driveMode` and `driveFileIdOrUrl` to `ProcessingOptions`, plus `mediaTermsAccepted` to `UserSettings`.
-- `app/src/main/java/com/jumlo/app/domain/model/Models.kt` (**Modified**): Added `MEDIA_NETWORK_ERROR` to `FailureCode`.
-- `app/src/main/java/com/jumlo/app/domain/model/Validation.kt` (**Modified**): Added `file_drive` preflight validation (`DRIVE_TOKEN_REQUIRED`, `DRIVE_FILE_ID_REQUIRED`, and local source requirement for export).
-- `app/src/main/java/com/jumlo/app/data/local/WorkspaceDraft.kt` (**Modified**): Added serialization and restoration of `driveMode` and `driveFileIdOrUrl` in `DraftOptionsJson`.
-- `app/src/main/java/com/jumlo/app/data/processing/OperationDispatcher.kt` (**Modified**): Routed `file_drive` to `FileExtrasHandler.driveTransfer`.
-- `app/src/main/java/com/jumlo/app/core/StreamTransfer.kt` (**Modified**): Added bounded retry with exponential backoff (`maxRetries = 2`, `retryBackoffMs = 150L`) on transient `IOException` and HTTP `429`/`502`/`503`/`504`, plus `RetryableHttpException`.
-- `app/src/main/java/com/jumlo/app/data/jobs/JobStore.kt` (**Modified**): Added `pause(jobId)` to transition active downloads into `INTERRUPTED` state while keeping `.part` and `.properties` ETag/`Last-Modified` validators intact for range-safe resume.
-- `app/src/main/java/com/jumlo/app/core/media/MediaModels.kt` (**Modified**): Added `MediaPlatformStatus`, `MediaPlatformCapability`, and `MediaPlatformMatrix` covering YouTube, TikTok, Instagram, Facebook, LinkedIn, X, Reddit, Vimeo, Dailymotion, SoundCloud, Google Drive (`UNVERIFIED`), and Direct File HTTPS (`HOST_VERIFIED`).
-- `app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt` (**Modified**): Persisted `mediaTermsAccepted` in DataStore preferences and added `setMediaTermsAccepted(Boolean)`.
-- `app/src/main/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt` (**Modified**): Mapped network/timeout/DNS failures to `FailureCode.MEDIA_NETWORK_ERROR`.
-- `app/src/main/java/com/jumlo/app/ui/media/MediaViewModel.kt` (**Modified**): Connected `termsAccepted` to persisted `UserPreferencesRepository.settingsFlow` (`mediaTermsAccepted`), exposed `platformMatrix`, and mapped `MEDIA_NETWORK_ERROR` to localized `R.string.media_error_network`.
-- `app/src/main/java/com/jumlo/app/ui/media/MediaWorkspace.kt` (**Modified**): Unified all UI controls on `Quiet*` design system components (`QuietHero`, `QuietCard`, `QuietSectionTitle`, `QuietPrimaryButton`, `QuietTonalButton`, `QuietTonalIconButton`) and added the Platform Capability Matrix card displaying per-platform `UNVERIFIED` / `HOST_VERIFIED` badges.
+Current test evidence: `verification/current-session/followup-2026-10-17/REPORT.md` and log files.
 
-## Step 4, Step 5 & Step 6 — Backend Hardening, Navigation, Localization & UI Design System
+---
 
-- `app/src/main/java/com/jumlo/app/ui/AppViewModel.kt` (**Modified**): Added `driveSessionAccount` state, `setDriveAccessToken(accountName, accessToken)` storing the OAuth2 token in `EphemeralSecretStore`, `clearDriveSession()`, `updateDriveOptions(...)`, and `pauseDownload(jobId)`.
-- `app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt` (**Modified**):
-  - Added Google Drive workspace UI (`file_drive`) with Android `AccountManager.newChooseAccountIntent` + `getAuthToken("oauth2:https://www.googleapis.com/auth/drive.file")` sign-in, session clear, Import/Export mode toggle, and file ID/URL input.
-  - Added Pause action button on active downloads alongside Resume, Retry, and Cancel.
-  - Replaced raw `Card`/`Button`/`OutlinedButton` across Home, Tools, Downloads, Files, Workspace, and Settings with `QuietCard`, `QuietPrimaryButton`, `QuietTonalButton`, `QuietFileRow`, `QuietBeforeAfterPreview`, and `QuietStateCard`, and localized all remaining inline strings.
-- `app/src/main/res/values/strings.xml` & `app/src/main/res/values-ar/strings.xml` (**Modified**): Fixed format placeholders (`home_resume_workspace`, `settings_storage_summary`, `workspace_queue_summary`) and added 20 new English and Arabic strings for Google Drive, scan status, and download pause/resume controls (317 total keys in each locale).
-- `app/src/main/res/values/media_strings.xml` & `app/src/main/res/values-ar/media_strings.xml` (**Modified**): Added `media_error_network` in English and Arabic.
-- `app/src/test/java/com/jumlo/app/domain/PureDomainAlgorithmsTest.kt` (**Modified**): Added `EncryptedZipTest` (round-trip AES-256 ZIP, wrong password rejection, malicious ZIP-slip entry rejection, entry-count limit, total-byte limit) and `GoogleDriveClientTest` (URL/ID parsing, HTTP status classification, metadata & download with mock OkHttp interceptor, oversized file rejection).
-- `app/src/test/java/com/jumlo/app/core/PublicationAndErrorLogTest.kt` (**Modified**): Added process-death recovery tests for PDF merge (`recoverInterruptedJobs_marks_running_pdf_merge_interrupted_and_cleans_staging`) and document scan (`recoverInterruptedJobs_marks_running_scan_interrupted_and_cleans_staging`), plus `downloadToFile_retries_transient_503_with_backoff_and_succeeds`.
-- `app/src/hostTest/kotlin/TransferTests.kt` (**Modified**): Added `downloadToFile_retries_transient_503_with_backoff_and_succeeds` to the standalone host test suite.
+# Changelog — updated uploaded-source follow-up (2026-10-17)
 
-## Step 7 — Release Readiness & Documentation
+This section records **every changed/added file relative to the exact user-uploaded source ZIP**. All changes were performed in a copy. No remote commits, release signing or device build. **Release: NO-GO.** Original archive SHA-256: `855314d2150e32a990ec1f5a03f6c29e04fe8f578a38beefa879b036a5dcecd3`.
 
-- `CHANGELOG.md` (**Created**): Recorded every file created or modified in this session.
-- `AUDIT.md`, `README.md`, `verification/TASK_STATUS.md`, `docs/FEATURE_STATUS.md`, `docs/MEDIA_CAPABILITY_MATRIX.md`, `docs/PRIVACY.md`, `docs/RELEASE.md` (**Modified**): Updated with honest session verification results, Google Drive v3 API documentation, ZIP-slip test evidence, and owner sign-off items.
+| File | Modification | Why / test boundary |
+|---|---|---|
+| `.github/workflows/ci.yml` | MODIFIED | Added source guard verifying optional media cannot be advertised as release-ready; native CI remains mandatory. |
+| `AUDIT.md` | MODIFIED | Prepended modified-revision audit scope and remaining unverified gates. |
+| `CHANGELOG.md` | MODIFIED | This complete file-by-file delivery changelog and historical section retained. |
+| `CONTENTS_SHA256.json` | REGENERATED | Regenerated in delivered ZIP for every included source file, SHA-256, length and executable mode. |
+| `README.md` | MODIFIED | Explained follow-up changes, source-only verification and decision boundary. |
+| `app/build.gradle.kts` | MODIFIED | Scoped optional yt-dlp/FFmpeg artifacts to opted-in debug build; kept release and benchmark stubs. |
+| `app/src/hostTest/kotlin/CoreTests.kt` | MODIFIED | Added ErrorLog tests and three 256-case seeded page/URL/path property regressions; 113/113 host passed. |
+| `app/src/main/java/com/jumlo/app/core/ErrorLog.kt` | MODIFIED | Include rotated diagnostic entry in local read/export and remove rotation on clear. |
+| `app/src/main/java/com/jumlo/app/data/files/EncryptedZip.kt` | MODIFIED | Guard encrypted ZIP creation/extraction against ZIP-slip/collisions, size limits and overwriting existing outputs; stage and publish safely. |
+| `app/src/main/java/com/jumlo/app/data/processing/FileExtrasHandler.kt` | MODIFIED | Budget source staging, unique extraction paths, guarded output publication and cleanup of own partials. |
+| `app/src/test/java/com/jumlo/app/core/PublicationAndErrorLogTest.kt` | MODIFIED | Additional Android JVM diagnostic-retention test (not run: SDK unavailable). |
+| `app/src/test/java/com/jumlo/app/data/files/EncryptedZipSafetyTest.kt` | ADDED | New Android JVM zip4j malicious filename/collision/password/limits tests (not run). |
+| `docs/DEPENDENCY_NOTICES.md` | MODIFIED | Documented font SHA/OFL decision, yt-dlp/FFmpeg licensing unknowns and release approval requirement. |
+| `docs/FEATURE_STATUS.md` | MODIFIED | Per-capability source/evidence classification with zero unearned device-qualified entries. |
+| `docs/MEDIA_CAPABILITY_MATRIX.md` | MODIFIED | Ten platforms explicitly UNVERIFIED; separately labeled synthetic host tests. |
+| `docs/PERFORMANCE_REPORT.md` | MODIFIED | Corrected performance measurements and Baseline Profile verification gap. |
+| `docs/PRIVACY.md` | MODIFIED | Documented local error log retention/clearing and privacy boundaries. |
+| `docs/RELEASE.md` | MODIFIED | Current execution gate, commands/results, no-go decision and signing/legal gates. |
+| `docs/dependencies.md` | MODIFIED | Updated current native isolation and remaining artifact/license audits. |
+| `docs/media/IMPLEMENTATION.md` | MODIFIED | Clarified internal media visibility, platform status and release exclusions. |
+| `scripts/package-source.py` | MODIFIED | Pinned uploaded ZIP SHA; regenerate checked content manifest from current source including old-manifest replacement. |
+| `scripts/test-release-media-isolation.py` | ADDED | New host source tests for debug-only media packaging assumptions (not a native proof). |
+| `scripts/verify-native.sh` | MODIFIED | CI Gradle release dependency graph guard with extendedMedia=true as well as base config. |
+| `verification/TASK_STATUS.md` | MODIFIED | Corrected current source execution pass/block status table. |
+| `verification/current-session/REPORT.md` | ADDED | Standalone current execution report and owner sign-offs. |
+| `verification/current-session/feature-matrix-generator.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/home-layout.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/media-ffmpeg.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/native-environment.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/release-media-isolation.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/results.json` | ADDED | Machine-readable execution ledger and unverified native/device items. |
+| `verification/current-session/test-core-after.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/verify-host-final.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/verify-host-utf8.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/verify-host.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+| `verification/current-session/workspace-safety.log` | ADDED | Reproduced host check or blocked native attempt stdout/stderr evidence; not a mobile/device PASS. |
+
+## Verification summary for this follow-up
+
+Host: **113/113 core**, **8/8 media bootstrap**, **9/9 SQLite**, **12/12 source checks**, **6/6 workspace**, **11/11 layout**, **5/5 synthetic FFmpeg**, **3/3 release media source checks**. These overlap in scope and are not a count of fully qualified user-facing features. New zip4j Android JUnit tests are authored **not run**. Gradle debug/unit/lint/R8/device results for this edited source: **BLOCKED/UNVERIFIED**, not inherited from historical logs. See `verification/current-session/REPORT.md`.
+
+---
+
+## Preserved historical changelog (input archive, not this modification)
+
+# Changelog — production source execution, 2026-10-17
+
+This records the changes made to the supplied ZIP in this delivery. Earlier supplied changelog claims are retained as historical material in `verification/production-2026-10-17/baseline-documents/source_CHANGELOG.md`; they are not evidence that an authentic v1 schema or native verification existed.
+
+## Build and verification
+
+- KSP 2.0.21-1.0.28/KSP2, Room 2.7.2 and Hilt 2.54 after reproduced processor compatibility failures. Kotlin/Compose compiler 2.0.21, AGP 8.10.1 and Compose BOM 2024.11.00 remain pinned; actual final outcomes are in RELEASE.
+- CameraX 1.3.4 → 1.4.0 after the built APK exposed 4KB ELF load alignment in its image-processing library. Added 64-bit ELF alignment rejection and APK ZIP alignment checks to the native artifact gate; physical 16KB-device behavior remains a release qualification step.
+- Central Android app/test plugin ownership; restored benchmark module; corrected its invalid build-type/signing configuration.
+- Standard debug signing and correctly resolved optional release key paths; no private key included.
+- Profileable optimized benchmark app; actual baseline-generation workflow. Removed invalid, unmeasured handwritten ART rules; retained comment-only active pointers and each original file as historical evidence.
+- Separate native task logs/statuses, serial native gate before API 26/36 CI, SHA-specific artifacts. Reproduced KSP shadow-output collision is documented with its full-processing build workaround.
+- Honest reconstructed legacy structural fixture, real v2 KSP identity evidence and data-preserving Room migration tests. Authentic historical v1 remains unavailable and is an explicit release blocker.
+
+## Product and state
+
+- Quiet Home with four working actions, actual tasks/results/drafts; real searchable/filterable Tools count.
+- Feature screens and shared components split by purpose; lifecycle-aware targeted collections.
+- Local Account & Data; grouped Settings, persisted theme/language/motion/haptics/network defaults and actual notification state.
+- Explicit saved checkpoint separate from automatic recovery; Save/Discard/Keep dirty-back choices; startup restoration gate.
+- Durable submission identity with correct fresh URL binding and waiting-state retry; preserved export picker state.
+- Actual bounded preview, single workspace CTA, meaningful per-tool controls, fixed-JPEG target policy and hidden unused options.
+- Flat file/transfer rows, contextual selection, overflow, waiting-job recovery, paired EN/AR copy and bundled Arabic typography.
+
+## Integrity and safety
+
+- Shared capability policy independent of DEBUG at UI/submission/enqueue/dispatch. 32 processing tools and a PDF viewer appear in Tools; unqualified/security-sensitive definitions are blocked.
+- Exact-ID permanent-trash confirmation; durable trash/restore intent and fixed payload names; validated legacy migration.
+- Safe cache-only cleanup; no silent trash purge or deletion of staging/resumed transfers.
+- Unicode-safe output/archive names, existing-output hash checks, resumed transfer stale-offset fix.
+- Aggregate bitmap budgets, correct alpha comparison/watermark opacity, cancellation and target-size failure behavior.
+- Provider capability checks, safe KEEP_BOTH same-folder copy, blocked destructive replacement and validated move/delete boundaries.
+- Five independent-review P1 corrections, focused JVM/UI/regression sources and actual host red/green evidence.
+
+## Delivery status
+
+See `AUDIT.md`, `docs/RELEASE.md` and `verification/production-2026-10-17/` for actual command results. No device screenshots, physical performance numbers, authentic old-install migration, owner-signed release or remote exact-SHA CI pass is invented. The source handoff does not approve production release.

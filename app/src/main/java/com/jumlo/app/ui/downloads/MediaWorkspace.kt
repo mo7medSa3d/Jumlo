@@ -55,7 +55,7 @@ fun MediaWorkspace(
     LaunchedEffect(initialUrl) {
         if (initialUrl.isNotBlank()) {
             viewModel.acceptSharedUrl(initialUrl)
-            viewModel.analyze()
+            if (s.termsAccepted) viewModel.analyze()
         }
     }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
@@ -419,6 +419,29 @@ fun MediaWorkspace(
             }
         }
 
+        // Every first download requires explicit rights/terms consent; never pre-check this.
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = s.termsAccepted,
+                    onCheckedChange = viewModel::acceptTerms,
+                    enabled = !s.submitting
+                )
+                Text(
+                    text = stringResource(R.string.media_rights_confirmation),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
         // Prominent Sticky Bottom Bar with Direct Download Button
         Surface(
             tonalElevation = 6.dp,
@@ -436,7 +459,7 @@ fun MediaWorkspace(
                         haptics.toolExecute()
                         viewModel.submit(onQueued)
                     },
-                    enabled = s.selectedKey != null && !s.analyzing && !s.submitting,
+                    enabled = s.termsAccepted && s.selectedKey != null && !s.analyzing && !s.submitting,
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -474,6 +497,7 @@ private fun mediaError(code: String): String = stringResource(when (code) {
     "NETWORK_UNAVAILABLE", "MEDIA_NETWORK_ERROR", "MEDIA_TLS_FAILED", "NETWORK_ERROR" -> R.string.media_error_network
     "MEDIA_NO_USABLE_FORMAT", "MEDIA_REANALYSIS_REQUIRED" -> R.string.media_error_format
     "INVALID_URL", "MULTIPLE_MEDIA_LINKS" -> R.string.media_error_url
+    "MEDIA_TERMS_REQUIRED" -> R.string.media_rights_required
     "MEDIA_BUILD_NOT_ENABLED", "MEDIA_NATIVE_ABI_UNAVAILABLE", "MEDIA_RUNTIME_INITIALIZATION_FAILED" -> R.string.media_error_runtime
     else -> R.string.media_error_generic
 })

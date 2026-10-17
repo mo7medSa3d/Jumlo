@@ -46,6 +46,31 @@ fun transferTests(test:(String,()->Unit)->Unit) {
             return TransportResponse(code,responseHeaders,body) { connection.disconnect() }
         }
     }
+    test("resume interruption preserves appended bytes and original I/O failure without stale retry") {
+        val dir=Files.createTempDirectory("jumlo-resume-interrupt-").toFile()
+        try {
+            val file=File(dir,"a.part").apply { writeText("01234") }
+            var attempts=0
+            val broken=object:HttpTransport {
+                override fun open(url:String,headers:Map<String,String>):TransportResponse {
+                    attempts++
+                    val stream=object:ByteArrayInputStream("56789".toByteArray()) {
+                        var delivered=false
+                        override fun read(b:ByteArray,off:Int,len:Int):Int {
+                            if(delivered) throw IOException("CONNECTION_RESET_FIXTURE")
+                            delivered=true;return super.read(b,off,minOf(len,2))
+                        }
+                    }
+                    return TransportResponse(206,mapOf("content-range" to "bytes 5-9/10","content-length" to "5","etag" to "\"v1\""),stream)
+                }
+            }
+            var error:Throwable?=null
+            try { StreamTransfer(broken).execute(TransferRequest("https://example.org/resume",file,5,"\"v1\"",knownTotalBytes=10,minFreeBytes=0,finalUrlSha256=fingerprint("https://example.org/resume"),retryBackoffMs=0)) }
+            catch(t:Throwable) { error=t }
+            check(error is IOException && error.message=="CONNECTION_RESET_FIXTURE")
+            check(attempts==1 && file.readText()=="0123456")
+        } finally { dir.deleteRecursively() }
+    }
     test("real HTTP GET writes exact bytes and measured size") { fixture { base,dir ->
         val out=File(dir,"a.part"); val result=StreamTransfer(transport).execute(TransferRequest("$base/file",out,cleartextConsent=true,maxBytes=1000,minFreeBytes=0))
         check(out.readText()=="0123456789" && result.bytes==10L && result.totalBytes==10L)

@@ -1,5 +1,4 @@
 import java.util.Properties
-import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,7 +14,7 @@ val extendedMedia = providers.gradleProperty("extendedMedia").map(String::toBool
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
 
 android {
@@ -31,7 +30,8 @@ android {
         // (or set them in gradle.properties); defaults keep local builds working.
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
         versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
-        buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
+        // The public and benchmark artifacts never claim or package media support.
+        buildConfigField("boolean", "EXTENDED_MEDIA", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -40,23 +40,15 @@ android {
         resourceConfigurations += listOf("en", "ar")
     }
 
-    sourceSets["main"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
-    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
-
     // pdfbox-android keeps standard-14 font metrics in AAR assets (loaded via
     // PDFBoxResourceLoader on device); expose them on the unit-test classpath for JVM.
     sourceSets["test"].resources.srcDir(layout.buildDirectory.dir("generated/pdfboxTestAssets/assets"))
 
     signingConfigs {
-        create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
+        // AGP owns the default debug configuration and creates its local keystore.
         create("release") {
             if (keystorePropertiesFile.exists()) {
-                storeFile = file(keystoreProperties.getProperty("storeFile", "release-keystore.jks"))
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile", "release-keystore.jks"))
                 storePassword = keystoreProperties.getProperty("storePassword", "")
                 keyAlias = keystoreProperties.getProperty("keyAlias", "")
                 keyPassword = keystoreProperties.getProperty("keyPassword", "")
@@ -66,7 +58,7 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debugConfig")
+            buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
@@ -82,7 +74,20 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
+        }
     }
+
+    // Optional media is strictly debug-only. A -PextendedMedia=true RELEASE build
+    // still compiles the safe stub and cannot accidentally ship yt-dlp / FFmpeg.
+    sourceSets["debug"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    sourceSets["release"].java.srcDir("src/base/java")
+    sourceSets["benchmark"].java.srcDir("src/base/java")
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -129,8 +134,8 @@ val pdfboxAar = configurations.create("pdfboxAar") {
 
 dependencies {
     if (extendedMedia) {
-        implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
-        implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+        debugImplementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+        debugImplementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

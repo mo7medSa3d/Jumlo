@@ -23,7 +23,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private val bitmapSlot=Semaphore(1)
     private val downloadSlots=Semaphore(2)
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
-        if(!CapabilityRegistry.enabled(request.toolId)) throw OperationFailure("CAPABILITY_UNAVAILABLE")
+        if(!CapabilityRegistry.canProcess(request.toolId)) throw OperationFailure("CAPABILITY_UNAVAILABLE")
         return if(request.toolId.startsWith("img_") || request.toolId.startsWith("pdf_")) {
             bitmapSlot.withPermit { dispatch(request,context) }
         } else if(request.toolId.startsWith("dl_") || request.toolId=="file_drive") downloadSlots.withPermit { dispatch(request,context) } else dispatch(request,context)

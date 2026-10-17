@@ -30,8 +30,8 @@ object ArchiveCore {
         require(!out.exists() && inputs.isNotEmpty() && inputs.size<=limits.maxEntries && level in 0..9) { "INVALID_ARCHIVE_REQUEST" }
         val names=HashSet<String>()
         inputs.forEach { input ->
-            SafeNames.entry(out.parentFile,input.name,limits.maxDepth)
-            require(names.add(input.name.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
+            val normalized=SafeNames.entry(out.parentFile,input.name,limits.maxDepth).path
+            require(names.add(normalized.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
         }
         out.parentFile.mkdirs()
         var total=0L
@@ -68,9 +68,9 @@ object ArchiveCore {
             val entries=zip.entries()
             while(entries.hasMoreElements()) {
                 checkCancel(); val e=entries.nextElement()
-                SafeNames.entry(out,e.name,limits.maxDepth)
+                val normalized=SafeNames.entry(out,e.name,limits.maxDepth).path
                 require(!e.isDirectory || e.size==0L) { "ARCHIVE_DIRECTORY_PAYLOAD" }
-                val key=e.name.removeSuffix("/")
+                val key=normalized
                 require(folded.add(key.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
                 require(e.size<=limits.maxBytes) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
                 planned.add(e.name)

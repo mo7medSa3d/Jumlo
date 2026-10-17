@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="msg_draft_saved">تم حفظ مساحة العمل.</string>
+    <string name="msg_draft_failed">تعذر حفظ مساحة العمل أو استعادتها. أبقِ هذه الشاشة مفتوحة وحاول مجددًا.</string>
+    <string name="msg_settings_failed">تعذرت قراءة إعداداتك أو حفظها. حاول مجددًا.</string>
+    <string name="msg_trashed">تم النقل إلى المهملات. يمكنك التراجع.</string>
+    <string name="msg_restored">تمت استعادة الملف.</string>
+    <string name="msg_purged">تم حذف الملفات المحددة من المهملات نهائيًا.</string>
+    <string name="msg_cleanup_done">تم تنظيف الملفات المؤقتة.</string>
+    <string name="msg_cleanup_failed">تعذر إكمال تنظيف الملفات المؤقتة. حاول مجددًا.</string>
+    <string name="msg_export_verified">تم حفظ النسخة والتحقق منها.</string>
+    <string name="msg_log_exported">تم تصدير سجل التشخيص.</string>
+    <string name="msg_copy_verified">تم نسخ الملف والتحقق منه.</string>
+    <string name="msg_move_verified">تم نقل الملف والتحقق منه.</string>
+    <string name="msg_collision_skipped">تم تخطي ملف موجود.</string>
+    <string name="msg_export_failed">تعذر التحقق من النسخة المحفوظة وقد تكون غير مكتملة. تم الاحتفاظ بنتيجة التطبيق. اختر وجهة أخرى وحاول مجددًا.</string>
+    <string name="msg_choose_files">اختر الملفات المطلوبة لهذه الأداة.</string>
+    <string name="msg_choose_folder">اختر مجلدًا على الجهاز أولًا.</string>
+    <string name="msg_access_lost">فُقد الوصول إلى الملف. اختر الملف أو المجلد مجددًا.</string>
+    <string name="msg_provider_unavailable">موفر التخزين لا يسمح بهذا الإجراء. اختر وجهة أخرى.</string>
+    <string name="msg_no_viewer">تعذر فتح الملف. تحقق من صلاحية الوصول ومن وجود تطبيق متوافق.</string>
+    <string name="msg_preview_unavailable">المعاينة غير متاحة لهذا الملف.</string>
+    <string name="msg_size_limit">تتجاوز هذه الملفات حد المعالجة الآمن. جرّب ملفات أقل أو أبعادًا أصغر.</string>
+    <string name="msg_file_type">نوع الملف غير مدعوم في الأداة المحددة.</string>
+    <string name="msg_https">استخدم رابط HTTPS. يتطلب HTTP غير المشفر إذنًا صريحًا في إعدادات التنزيل.</string>
+    <string name="msg_network">تعذر إكمال التنزيل. تحقق من الاتصال وحاول مجددًا.</string>
+    <string name="msg_url">أدخل رابط تنزيل مباشر صالحًا، رابطًا واحدًا في كل سطر.</string>
+    <string name="msg_check_settings">تحقق من القيم المدخلة ونطاقات الصفحات، ثم حاول مجددًا.</string>
+    <string name="msg_unavailable">هذه الأداة غير متاحة في هذا الإصدار. اختر أداة أخرى.</string>
+    <string name="msg_login">سجّل الدخول للمتابعة.</string>
+    <string name="msg_failed">تعذر إكمال هذا الإجراء. حاول مجددًا.</string>
+    <string name="msg_one_file">اختر ملفًا واحدًا فقط لهذه الأداة.</string>
+</resources>

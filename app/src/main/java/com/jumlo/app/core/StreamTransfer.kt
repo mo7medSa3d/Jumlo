@@ -19,7 +19,8 @@ class StreamTransfer(private val transport:HttpTransport) {
                     if(request.retryBackoffMs>0) Thread.sleep(request.retryBackoffMs*(1L shl (attempt-1)))
                 } else throw arg
             } catch(io:IOException) {
-                if(attempt<request.maxRetries && io !is EOFException && io.message!="DOWNLOAD_LENGTH_MISMATCH") {
+                if(attempt<request.maxRetries && io !is EOFException && io.message!="DOWNLOAD_LENGTH_MISMATCH" &&
+                    (request.offset==0L || request.partialFile.length()==request.offset)) {
                     attempt++
                     checkCancel()
                     if(request.retryBackoffMs>0) Thread.sleep(request.retryBackoffMs*(1L shl (attempt-1)))

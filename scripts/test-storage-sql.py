@@ -64,17 +64,27 @@ class ActualSqlTests(unittest.TestCase):
     def test_worker_start_failure_never_overwrites_cancelled_state(self):
         self.job(stage='CANCELLED')
         self.assertEqual(0,self.run_query('failBeforeClaim',id='job',snapshot='failed'))
-    def test_migration_sql_retains_preexisting_table_rows_and_matches_schema_v1_to_v2(self):
-        s1 = json.loads((SCHEMA_DIR / '1.json').read_text())
+    def test_legacy_download_url_scrub_removes_signed_queries_without_losing_progress(self):
+        self.db.execute("CREATE TABLE download_tasks (id TEXT PRIMARY KEY, fullUrl TEXT, downloadedBytes INTEGER)")
+        self.db.execute("INSERT INTO download_tasks VALUES ('signed', 'https://file.test?a=signed_secret', 42)")
+        callback = (ROOT / 'app/src/main/java/com/jumlo/app/data/local/LegacyDownloadPrivacyCallback.kt').read_text()
+        match = re.search(r'REDACT_LEGACY_URLS\s*=\s*"([^"]+)"', callback)
+        self.assertIsNotNone(match)
+        sql = match.group(1)
+        self.db.execute(sql)
+        self.assertEqual([('signed','',42)], self.db.execute('SELECT id, fullUrl, downloadedBytes FROM download_tasks').fetchall())
+
+    def test_migration_sql_retains_legacy_fixture_rows_and_matches_current_schema(self):
         s2 = json.loads((SCHEMA_DIR / '2.json').read_text())
         conn = sqlite3.connect(':memory:')
         try:
-            for entity in s1['database']['entities']:
-                conn.execute(entity['createSql'].replace('${TABLE_NAME}', entity['tableName']))
-            conn.execute("INSERT INTO managed_files VALUES ('legacy','original','/p','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','now',0,0)")
+            conn.executescript((ROOT / 'app/schemas/legacy-v1-structure.sql').read_text())
+            conn.execute("INSERT INTO managed_files VALUES ('legacy','أصل.pdf','/p','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','now',1,0)")
+            conn.execute("INSERT INTO download_tasks VALUES ('download','file.zip','zip','example.com','https://example.com/file.zip','application/zip',7,20,1.0,'waiting','PAUSED','/downloads')")
             for statement in MIGRATIONS:
                 conn.execute(statement)
-            self.assertEqual([('legacy','original')], conn.execute('SELECT id, name FROM managed_files').fetchall())
+            self.assertEqual([('legacy','أصل.pdf',1,None)], conn.execute('SELECT id, name, isDraft, pageCount FROM managed_files').fetchall())
+            self.assertEqual([('download',7,'PAUSED')], conn.execute('SELECT id, downloadedBytes, statusName FROM download_tasks').fetchall())
             for entity in s2['database']['entities']:
                 cols = [r[1] for r in conn.execute(f"PRAGMA table_info(`{entity['tableName']}`)").fetchall()]
                 expected_cols = [f['columnName'] for f in entity['fields']]

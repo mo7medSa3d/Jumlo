@@ -20,8 +20,8 @@ import javax.inject.Inject
 data class MediaUiState(
     val url: String="",val asset: MediaAsset?=null,val choices: List<MediaChoice> = emptyList(),
     val selectedKey: String?=null,val mode: MediaMode=MediaMode.VIDEO,val audio: AudioOutput=AudioOutput.ORIGINAL,
-    val bitrate: Int=192,val name: String="",val allowHttp: Boolean=true,val wifiOnly: Boolean=false,val unmetered: Boolean=false,
-    val termsAccepted: Boolean=true,val analyzing: Boolean=false,val submitting: Boolean=false,val updatingExtractor: Boolean=false,
+    val bitrate: Int=192,val name: String="",val allowHttp: Boolean=false,val wifiOnly: Boolean=false,val unmetered: Boolean=false,
+    val termsAccepted: Boolean=false,val analyzing: Boolean=false,val submitting: Boolean=false,val updatingExtractor: Boolean=false,
     val extractorStatus: String?=null,val error: String?=null
 )
 
@@ -43,9 +43,8 @@ data class MediaUiState(
 
     init {
         viewModelScope.launch {
-            preferences.setMediaTermsAccepted(true)
             preferences.settingsFlow.map { it.mediaTermsAccepted }.distinctUntilChanged().collect { accepted ->
-                _state.update { it.copy(termsAccepted = true) }
+                _state.update { it.copy(termsAccepted = accepted) }
             }
         }
     }

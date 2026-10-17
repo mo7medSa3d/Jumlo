@@ -277,21 +277,21 @@ import kotlin.math.roundToInt
 
     private suspend fun imagesToPdf(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         val settings=Json.decodeFromString<ImagesToPdfSettings>(request.settingsJson)
-        require(request.sourceIds.isNotEmpty() && settings.paperWidthPt in 72..14400 && settings.paperHeightPt in 72..14400 && settings.marginMm>=0) { "INVALID_PDF_SETTINGS" }
+        require(request.sourceIds.isNotEmpty() && request.sourceIds.size <= context.budget.maxOutputFiles &&
+            settings.paperWidthPt in 72..14400 && settings.paperHeightPt in 72..14400 && settings.marginMm>=0) { "INVALID_PDF_SETTINGS" }
         val margin=settings.marginMm*72f/25.4f
         require(margin*2<minOf(settings.paperWidthPt,settings.paperHeightPt) && settings.orientation in setOf("AUTO","PORTRAIT","LANDSCAPE")) { "INVALID_PDF_SETTINGS" }
         context.outputs.find(request.id,"document")?.let { return listOf(ItemOutcome("document",ItemStatus.CREATED,it.id)) }
         val ticket=context.outputs.reserve(request.id,"document",SafeNames.basename(settings.displayName.let { if(it.endsWith(".pdf",true)) it else "$it.pdf" }),"application/pdf")
-        var retainedBytes=0L
+        // One decoded bitmap is resident at a time and is recycled by use{}.
+        // Do not add released pages to the next page's memory budget.
         val document=PdfDocument()
         try {
         for ((index, id) in request.sourceIds.withIndex()) {
                 context.checkCancellation()
                 context.sources.withSeekable(id,request.id) { file ->
-                    BitmapTransforms.decode(file,context.budget.maxBitmapBytes-retainedBytes).use { decoded ->
+                    BitmapTransforms.decode(file,context.budget.maxBitmapBytes).use { decoded ->
                         val bitmap=decoded.bitmap
-                        retainedBytes+=bitmap.allocationByteCount.toLong()
-                        require(retainedBytes<=context.budget.maxBitmapBytes) { "PDF_PAGE_MEMORY_BUDGET_EXCEEDED" }
                         val landscape=settings.orientation=="LANDSCAPE" || (settings.orientation=="AUTO" && bitmap.width>bitmap.height)
                         val w=if(landscape) maxOf(settings.paperWidthPt,settings.paperHeightPt) else minOf(settings.paperWidthPt,settings.paperHeightPt)
                         val h=if(landscape) minOf(settings.paperWidthPt,settings.paperHeightPt) else maxOf(settings.paperWidthPt,settings.paperHeightPt)

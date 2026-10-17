@@ -1,39 +1,41 @@
-# Media downloader capability matrix — NOT LIVE-TESTED IN THIS SESSION
+# Jumlo media capability matrix — live qualification
 
-No live platform was tested in this session because the sandbox VM has no
-outbound internet access and no Android SDK/emulator runtime.
-**No platform is claimed supported in docs or in the UI (`MediaPlatformMatrix.entries` sets every external platform status to `UNVERIFIED`, and the Media Workspace renders an explicit `UNVERIFIED` status badge on each platform chip).**
 
-Rule for upgrading a row: a passing live test on a public, rights-clear
-test item (e.g. a Creative-Commons / public-domain upload) for both Video (at a reported resolution) and Audio, recorded with CI run ID, test URL, URL type, resolution/codec, and date below.
+> **2026-10-17 hardened ZIP follow-up:** All 10 named media platforms and
+> Google Drive remain **UNVERIFIED**. No platform video, audio, authenticated
+> content or official Drive API was fetched in this execution. The host's 5/5
+> FFmpeg tests involve synthetic local fixtures and the host-installed binary,
+> not Android FFmpeg. The executable extraction update was changed to restore
+> only the packaged yt-dlp payload, never auto-install an unpinned download.
+> Explicit content-rights consent now defaults unchecked, with a handler gate;
+> neither change qualifies a platform or unlocks `dl_media` in release.
 
-| Platform | Extractor / API path | URL type | Video test (resolution / codec) | Audio test (MP3 / M4A / Opus / source) | Live test date | Status in UI & docs |
-|---|---|---|---|---|---|---|
-| YouTube | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public watch/short URL (`https://www.youtube.com/watch?v=aqz-KE-bpKQ`) | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| TikTok | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public video URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| Instagram | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public reel/post URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| Facebook | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public watch video URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| LinkedIn | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public post video URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| X | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public status video URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| Reddit | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public post / `v.redd.it` URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| Vimeo | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public video URL (`https://vimeo.com/1084537`) | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| Dailymotion | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public video URL | Not run (no network/SDK in VM) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| SoundCloud | Pinned yt-dlp (`-PextendedMedia=true`) + FFmpeg | Single public track URL | N/A (audio platform) | Not run (no network/SDK in VM) | Not run | **UNVERIFIED** |
-| Google Drive | Official Drive v3 API (`GoogleDriveClient`) | `drive.google.com/file/d/<id>` or file ID (signed-in user's accessible files only) | Unit-tested in source (`GoogleDriveClientTest`); live API not run in VM | Unit-tested in source (`GoogleDriveClientTest`); live API not run in VM | Not run | **UNVERIFIED** |
-| Direct File (HTTPS) | `OkHttpDownloadEngine` + `StreamTransfer` | Direct HTTPS media/file URL | Host guard & FFmpeg mux verified (`test-media-bootstrap.py`, `test-media-ffmpeg.py`) | Host FFmpeg MP3/M4A/Opus verified (`test-media-ffmpeg.py`) | 2026-10-17 | **HOST_VERIFIED (8/8 URL/redirect tests & 5/5 FFmpeg tests pass; device test not run)** |
+Updated 2026-10-17. **No external platform download was executed in this session**, and the complete media capability remains hidden/denied by `CapabilityPolicy` in debug and release. Network from the build container was unavailable; no Android device/SDK or bundled extractor binary was available for a live end-to-end check. FFmpeg host fixtures are not substitutes for a platform result. The public UI must **not** label any platform VERIFIED.
 
-## What WAS Verified in This Session
+All media testing must use public, rights-clear *single items*, the resolution/codec reported by the real extractor, real on-device output opening and an inspected log with no signed URLs, passwords, cookies or tokens. Record CI/run SHA, test date, URL **type** rather than credentials, actual resolution, audio format, reader and error classification; do not embed signed test URLs in the report.
 
-1. **FFmpeg Media Remux & Audio Transcoding (`python3 scripts/test-media-ffmpeg.py` — 5/5 PASS)**:
-   - Merging separate video (`1280x720` H.264) and audio (AAC) into MP4 (`-c:v copy -c:a aac`) while preserving exact dimensions and streams.
-   - Audio-only extraction to `.mp3` (`libmp3lame`), `.m4a` (source-codec `-c:a copy`), and `.opus` (`libopus` in Ogg container).
-   - Malformed input rejection with zero leftover output files.
-2. **URL, Redirect & Credential Guards (`python3 scripts/test-media-bootstrap.py` — 8/8 PASS)**:
-   - HTTPS enforcement, explicit per-job HTTP consent, HTTPS→HTTP downgrade blocking, cross-origin `Authorization` stripping, and unconditional `Cookie` header blocking.
-3. **Hard Constraints Enforced in Source**:
-   - Public single-item content by default (`--no-playlist`); no DRM/encryption circumvention (`drm` / `widevine` / `fairplay` / `playready` / `hlse` / `cenc` formats rejected at metadata parsing and classified as `MEDIA_ENCRYPTED_SOURCE`).
-   - Account-gated content only through the user-initiated in-app WebView (`MediaBrowserSheet`), whose cookies are never read, exported, logged, or passed to `YoutubeDLRequest`.
-   - Google Drive downloads and exports use the official Google Drive v3 REST API (`GoogleDriveClient`) with a session-only OAuth2 token (`EphemeralSecretStore`), restricted to files the signed-in user can access.
-   - First-use rights & terms confirmation required and persisted (`mediaTermsAccepted` in DataStore) before URL analysis or queueing.
-   - Error categories surfaced clearly in UI: `private`, `removed`, `geo-blocked`, `login-required`, `unsupported`, `rate-limited`, `network`.
-   - Disabled in release builds (`BuildConfig.DEBUG && BuildConfig.EXTENDED_MEDIA` gate in `Capabilities.kt`) pending owner sign-off on GPL-3.0 obligations documented in `docs/DEPENDENCY_NOTICES.md`.
+| Platform | URL type to qualify | Video + reported resolution/codec | Audio + actual codec | Live date | Session status |
+|---|---|---|---|---|---|
+| YouTube | Single public watch/short video | Not run | Not run | — | **UNVERIFIED** |
+| TikTok | Single public post/video | Not run | Not run | — | **UNVERIFIED** |
+| Instagram | Single public Reel/post | Not run | Not run | — | **UNVERIFIED** |
+| Facebook | Single public video/post | Not run | Not run | — | **UNVERIFIED** |
+| LinkedIn | Single public public post | Not run | Not run | — | **UNVERIFIED** |
+| X | Single public status | Not run | Not run | — | **UNVERIFIED** |
+| Reddit | Single public media post | Not run | Not run | — | **UNVERIFIED** |
+| Vimeo | Single public video | Not run | Not run | — | **UNVERIFIED** |
+| Dailymotion | Single public video | Not run | Not run | — | **UNVERIFIED** |
+| SoundCloud | Single public audio track | N/A — audio-first service | Not run | — | **UNVERIFIED** |
+| Google Drive | User-owned or explicitly shared Drive file ID | N/A (file API) | N/A (file API) | — | **UNVERIFIED** (OAuth + official Drive v3 real transfer not run) |
+| Direct HTTPS download | Public test file URL without signed query | Host HTTP streamed bytes, redirects/resume: PASS; Android output opening not run | N/A | 2026-10-17 (host only) | **PARTIAL — host transport only** |
+
+### What the current session actually proved
+
+- `python3 scripts/test-media-ffmpeg.py`: **5/5** synthetic local video/audio mux/transcode/invalid-input checks (host `/usr/bin/ffmpeg`, NOT the optional mobile FFmpeg binary).
+- `scripts/verify-host.sh`: media subprocess/metadata/format policies and network guard tests passed against local fakes/loopback, not these named live platforms.
+- The media extractor runtime remains **unqualified**: no pinned yt-dlp binary execution, no platform video/audio download, no exact bundled FFmpeg `-buildconf` / hash, no permissions or device test, no verified codec/resolution per service.
+- The Gradle source configuration was hardened so `-PextendedMedia=true` supplies optional media runtime and its binaries to **debug only**. Release and benchmark source sets compile the base no-media factory and have no direct optional media dependencies. The native Gradle dependency verification still needs to run.
+
+### Owner release/licensing decision
+
+Do **not** turn on `dl_media` in public builds. Obtain actual native FFmpeg binary build flags and component source, GPL/LGPL obligations, runtime/license/copyright attributions, ffmpeg/yt-dlp/wrapper license texts, platform usage policy review, signed release contents and 10-platform live acceptance before the owner approves a redistribution route. See [DEPENDENCY_NOTICES.md](DEPENDENCY_NOTICES.md) and [RELEASE.md](RELEASE.md).

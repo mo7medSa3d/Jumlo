@@ -51,7 +51,8 @@ import kotlin.math.roundToInt
 
     private suspend fun ocr(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         require(request.sourceIds.size == 1) { "ONE_PDF_REQUIRED" }
-        val settings = runCatching { Json.decodeFromString<PdfImagesSettings>(request.settingsJson) }.getOrDefault(PdfImagesSettings())
+        val settings = Json.decodeFromString<PdfImagesSettings>(request.settingsJson)
+        require(settings.dpi in 36..600) { "INVALID_RASTER_SETTINGS" }
         val itemKey = "ocr-text"
         val existingTxt = context.outputs.find(request.id, itemKey)
         val existingPdf = context.outputs.find(request.id, "searchable-pdf")
@@ -77,7 +78,7 @@ import kotlin.math.roundToInt
                             val index = pageNum - 1
                             context.checkCancellation()
                             renderer.openPage(index).use { page ->
-                                val width = (page.width * 200 / 72.0).roundToInt(); val height = (page.height * 200 / 72.0).roundToInt()
+                                val width = (page.width * settings.dpi / 72.0).roundToInt(); val height = (page.height * settings.dpi / 72.0).roundToInt()
                                 MemoryBudget.requireBitmaps(width, height, 1, context.budget.maxBitmapBytes)
                                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                                 try {
@@ -117,11 +118,8 @@ import kotlin.math.roundToInt
                     com.jumlo.app.data.pdf.PdfBoxBackend.open(src, null).use { doc ->
                         perPageTexts.forEach { (pageIdx, pageText) ->
                             if (pageIdx in 0 until doc.numberOfPages && pageText.isNotBlank()) {
-                                runCatching {
-                                    com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(
-                                        doc, pageIdx, pageText.replace(Regex("[^\\x20-\\x7E\\n]"), " "), 0.05, 0.05, 10f
-                                    )
-                                }
+                                context.checkCancellation()
+                                com.jumlo.app.data.pdf.PdfBoxBackend.stampInvisibleText(doc, pageIdx, pageText, 0.05, 0.05, 10f)
                             }
                         }
                         doc.save(sTicket.stageFile)
@@ -130,7 +128,8 @@ import kotlin.math.roundToInt
                 val sRec = context.outputs.publish(sTicket) { context.outputs.inspect(it, "application/pdf") }
                 outcomes += ItemOutcome(sKey, ItemStatus.CREATED, sRec.id)
             }
-        } catch (e: Exception) { outcomes += ItemOutcome("searchable-pdf", ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (e: Exception) { outcomes += ItemOutcome("searchable-pdf", ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
         return outcomes
     }
 

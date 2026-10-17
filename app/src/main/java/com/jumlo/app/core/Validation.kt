@@ -50,8 +50,8 @@ object SafeNames {
         require(value.isNotEmpty() && '\\' !in value && !value.startsWith('/') && ':' !in value) { "UNSAFE_ARCHIVE_PATH" }
         val parts = value.removeSuffix("/").split('/')
         require(parts.size <= maxDepth && parts.none { it.isEmpty() || it == "." || it == ".." }) { "UNSAFE_ARCHIVE_PATH" }
-        parts.forEach(::basename)
-        val destination = File(root, parts.joinToString(File.separator)).canonicalFile
+        val normalizedParts=parts.map(::basename)
+        val destination = File(root, normalizedParts.joinToString(File.separator)).canonicalFile
         require(destination.path.startsWith(root.canonicalPath + File.separator)) { "UNSAFE_ARCHIVE_PATH" }
         return destination
     }
@@ -127,11 +127,7 @@ object HttpPolicy {
     fun origin(u: URI): String = "${u.scheme.lowercase(Locale.ROOT)}://${u.host.lowercase(Locale.ROOT)}:${if(u.port>=0) u.port else if(u.scheme.equals("https",true)) 443 else 80}"
 }
 
-/** Candidate features are distinct from device/security qualification. */
+/** Compatibility facade. Standard availability is defined solely by CapabilityPolicy. */
 object Capabilities {
-    private val implemented = setOf("pdf_02", "pdf_07", "pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
-        "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_protect", "pdf_metadata", "pdf_forms", "pdf_compare", "pdf_redact", "pdf_ocr", "webpage_pdf",
-        "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch",
-        "dl_02", "dl_03", "dl_media", "file_02", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename", "file_duplicates", "file_trash", "file_drive", "sha256")
-    fun isEnabled(tool: String): Boolean = tool in implemented
+    fun isEnabled(tool: String): Boolean = CapabilityPolicy.availability(tool).enabled
 }

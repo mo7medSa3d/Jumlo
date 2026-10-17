@@ -1,61 +1,48 @@
-# Verification & Task Status (`docs/approved/tasks.json`)
+# Current ZIP execution — 2026-10-17
 
-## Session Verification Summary
+## Newest follow-up (working from previously hardened source ZIP)
 
-| Check / Command | Status in This Session | Details |
+This section supersedes prior current-session test counts below. Source changes
+are **not Android compiled**; the local SDK is absent and Gradle 8.14 could not
+download. Actual host results from `followup-2026-10-17/`:
+
+| Test/command | Result | Exact evidence |
 |---|---|---|
-| `bash scripts/restore-wrapper.sh --check` | **PASS** | `gradle/wrapper/gradle-wrapper.jar` matches official Gradle 8.14 SHA-256 (`7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172`). |
-| `python3 scripts/test-source-static.py` | **PASS (12/12)** | Balanced delimiters & compile-hazard scan across all 61 `.kt` files, XML parse across all 15 `.xml` files, 100% English/Arabic string key & format-placeholder parity (317 keys each), every `R.string.*` code reference resolved, Room schemas v1 & v2 validated, `CancelJobReceiver` non-exported, FileProvider restricted to `processing/outputs/`, pinned IBM Plex fonts verified. |
-| `python3 scripts/test-storage-sql.py` | **PASS (9/9)** | Real SQLite verification of Room schema v1→v2 migration, job lease claiming, stale-worker fencing, cancellation atomicity, immutable snapshot indexing, and output lookup/trash deletion queries. |
-| `python3 scripts/test-media-bootstrap.py` | **PASS (8/8)** | URL schemes, explicit HTTP consent, HTTPS→HTTP downgrade rejection, cross-origin `Authorization` stripping, and `Cookie` header blocking. |
-| `python3 scripts/test-media-ffmpeg.py` | **PASS (5/5)** | Real FFmpeg + ffprobe verification of video+audio MP4 remuxing, MP3/M4A/Opus audio-only extraction, and malformed input rejection. |
-| `bash scripts/tests/test-verify-local.sh` & `test-launcher.sh` | **PASS** | Fail-closed offline wrapper and local verification gate behavior verified. |
-| `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease` | **NOT RUN (Blocked by VM)** | Blocked in this sandbox VM because only JRE 17 (`java`) is installed (no `javac`, no `kotlinc`, no cached Gradle distribution, no `ANDROID_HOME`, no internet). Configured in `.github/workflows/ci.yml`. |
-| `./gradlew :app:connectedDebugAndroidTest` (API 26 & API 36) | **NOT RUN (Blocked by VM)** | Blocked in this sandbox VM because no Android SDK or emulator is installed. Configured in `.github/workflows/ci.yml`. |
+| `LC_ALL=C.UTF-8 LANG=C.UTF-8 bash scripts/verify-host.sh` | PASS 117 Kotlin / 8 media / 10 SQLite / 14 resource | `followup-2026-10-17/verify-host.log` |
+| `bash scripts/test-workspace.sh` | PASS 6 | `followup-2026-10-17/workspace.log` |
+| `bash verification/production-2026-10-17/ui/run-home-layout-tests.sh` | PASS 11 | `followup-2026-10-17/home-layout.log` |
+| `python3 scripts/test-media-ffmpeg.py` | PASS 5 synthetic | `followup-2026-10-17/media-ffmpeg.log` |
+| `python3 scripts/test-release-media-isolation.py` | PASS 5 source assertions | `followup-2026-10-17/release-media.log` |
+| `python3 scripts/generate-feature-matrix.py` | exit 0; 45 inventory entries | `followup-2026-10-17/feature-generator.log` |
+| `./gradlew --no-daemon --offline :app:assembleDebug` | BLOCKED before compile: `UnknownHostException: services.gradle.org` | `followup-2026-10-17/android-build-attempt.log` |
+| Android debug/unit/lint/R8/emulator/screenshots/performance, full PDF/image/ZIP end-to-end | **NOT RUN** | SDK/Gradle/devices unavailable; see report |
+| Media live matrix (all named services), Google OAuth/API | **NOT RUN** | no external live qualification; remain gated |
 
-## All Approved Tasks (`docs/approved/tasks.json`) + Google Drive (`file_drive`)
+**NO-GO** until all required gates pass and the owner approves media licenses,
+font approach, signing and platform enablement. Final report in
+`followup-2026-10-17/REPORT.md`.
 
-| ID | Title | Status | Implementation & Test Evidence |
-|---|---|---|---|
-| F01 | Real File Intake, URI Permissions, and Source Snapshot Layer | IMPLEMENTED_UNTESTED | `SourceStore`, `FileIntakeGuard`, `PureDomainAlgorithmsTest` |
-| F02 | Persistent Workspace Drafts and Selection Recovery | VERIFIED (`test-storage-sql.py`) + IMPLEMENTED_UNTESTED | `WorkspaceDraftRepository`, `ProcessingDao`, `test-storage-sql.py` |
-| F03 | Real Job Execution, Progress, Cancellation, and Verified Output Publication | VERIFIED (`test-storage-sql.py`) + IMPLEMENTED_UNTESTED | `ProcessingJobRunner`, `OutputStore`, `CancelJobReceiver`, `test-storage-sql.py`, `PublicationAndErrorLogTest` |
-| F04 | Real Images-to-PDF Engine | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.imagesToPdf`, `ImagesToPdfLayoutTest` |
-| P01 | Real PDF Viewer and PDF-to-Images Export | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.pdfToImages`, `PageSelection`, `PureDomainAlgorithmsTest` |
-| P02 | Real PDF Merge and Split/Extract Engine | IMPLEMENTED_UNTESTED | `PdfBoxBackend.merge` / `split` / `extract`, `PdfStructureCoreTest` |
-| P03 | Real PDF Page Organizer (Reorder, Rotate, Delete, Insert) | IMPLEMENTED_UNTESTED | `PdfBoxBackend.organize` / `rotate` / `insert`, `PdfStructureCoreTest` |
-| I01 | Real Image Convert and Resize Engine | IMPLEMENTED_UNTESTED | `RealFileProcessingEngine.convertAndResizeImages`, `BitmapExtras.codecCapabilities` |
-| I02 | Real Image Crop, Rotate, Flip, and Quality/Size Compression | IMPLEMENTED_UNTESTED | `ImageTransformMath`, `BitmapTransforms`, `ImageGeometryTest` |
-| A01 | Real Storage Browser and File Operations | IMPLEMENTED_UNTESTED | `DocumentTreeStore` (browse, create folder, rename, delete, `copyOrMove` with collision policy & SHA-256 verify) |
-| A02 | Real ZIP Create, ZIP Extract, and Checksum Verification | IMPLEMENTED_UNTESTED | `ZipArchiveEngine`, `ZipSafetyValidator`, `Sha256VerifyEngine`, `ZipSafetyAndChecksumTest` |
-| D01 | Real Direct-URL Download Engine | VERIFIED (`test-media-bootstrap.py`) + IMPLEMENTED_UNTESTED | `OkHttpDownloadEngine`, `HttpRedirectPolicy`, `test-media-bootstrap.py` |
-| D02 | Download Queue Controls, Pause/Resume Honesty, and Retry | IMPLEMENTED_UNTESTED | `DownloadResumePolicy`, `StreamTransfer` backoff retry, `JobStore.pause`, `EphemeralSecretStore`, `PublicationAndErrorLogTest` |
-| Q01 | Truthful Home, Search, Activity, and Settings Wiring | IMPLEMENTED_UNTESTED | `JumloNavHost`, `AppViewModel`, `ErrorLog` |
-| Q02 | Honest Capability Gate for Deferred / Unqualified Surfaces | VERIFIED (`test-source-static.py`) | `Capabilities.kt`, `xf_05` removed from UI/navigation, `test-source-static.py` |
-| Q03 | End-to-End Verification Matrix and Zero-Fake Regression Gate | VERIFIED (Host Suite) + CI Configured | `.github/workflows/ci.yml`, `test-source-static.py`, `DatabaseMigrationAndDaoTest`, `ScreenConfigSemanticsTest` |
-| E01 | PDF Size Compression Without Flattening Text | IMPLEMENTED_UNTESTED | `PdfBoxBackend.compressImages`, `PdfStructureCoreTest` |
-| E02 | PDF Crop and Page Geometry | IMPLEMENTED_UNTESTED | `PdfBoxBackend.setCrop` (normalized `PDRectangle` width/height), `PdfStructureCoreTest` |
-| E03 | PDF Annotations and Overlay Text | IMPLEMENTED_UNTESTED | `PdfBoxBackend.overlayText` & `addTextAnnotation`, `PdfStructureCoreTest` |
-| E04 | PDF Watermark and Page Numbers | IMPLEMENTED_UNTESTED | `PdfBoxBackend.stampWatermarkAndNumbers`, `PdfStructureCoreTest` |
-| E05 | PDF Signature (Drawn and Imported) | IMPLEMENTED_UNTESTED | `SignaturePadScreen`, `PdfBoxBackend.stampImage` |
-| E06 | PDF Password Protect and Remove | IMPLEMENTED_UNTESTED | `PdfBoxBackend.protect` / `removeProtection`, session-only `EphemeralSecretStore`, `PdfStructureCoreTest` |
-| E07 | PDF Metadata Edit and Page Insertion | IMPLEMENTED_UNTESTED | `PdfBoxBackend.setMetadata` + 2-PDF `insert` in `PdfOperationHandler.metadata`, `PdfStructureCoreTest` |
-| E08 | Scan to PDF and Webpage to PDF | IMPLEMENTED_UNTESTED | `ScanScreen` (`LocalLifecycleOwner` + `detectDocumentQuad` + `Perspective.warpQuad`), `OcrWebHandler.webpage` |
-| E09 | PDF Form Fill and Explicit Flatten | IMPLEMENTED_UNTESTED | `PdfBoxBackend.fillForm`, `PdfStructureCoreTest` |
-| E10 | Non-AI PDF Comparison | IMPLEMENTED_UNTESTED | `PdfBoxBackend.compareText`, `PdfStructureCoreTest` |
-| E11 | True PDF Redaction | IMPLEMENTED_UNTESTED | `PdfBoxBackend.redact` (`ContentRedactor` operator & CTM handling + verification step), `PdfStructureCoreTest` |
-| E12 | EXIF Viewer and Selective Metadata Removal | IMPLEMENTED_UNTESTED | `ImageOperationHandler.exif` (`removeLocation` vs `removeAll` selective preservation) |
-| E13 | Image Text and Logo Watermark | IMPLEMENTED_UNTESTED | `BitmapExtras.watermarkText` & `watermarkLogo` |
-| E14 | Image Join, Collage, and Screenshot Stitch | IMPLEMENTED_UNTESTED | `BitmapExtras.join` (`VERTICAL`, `HORIZONTAL`, `GRID`, `overlapPx` trim) |
-| E15 | Image Adjustments and Padding/Canvas | IMPLEMENTED_UNTESTED | `BitmapExtras.adjust` (`ColorMatrix` + canvas padding) |
-| E16 | Target-Size Image Compression | IMPLEMENTED_UNTESTED | `BitmapExtras.compressToTarget` |
-| E17 | Image Comparison and Optional Format Encoders | IMPLEMENTED_UNTESTED | `BitmapExtras.compare` + `BitmapExtras.codecCapabilities` |
-| E18 | Provider-Aware File Copy/Move and Conflict Handling | IMPLEMENTED_UNTESTED | `DocumentTreeStore.copyOrMove` (`KEEP_BOTH`, `SKIP`, `REPLACE` + SHA-256 check) |
-| E19 | Authorized-Source Media and Site Extraction | VERIFIED (`test-media-ffmpeg.py` / `test-media-bootstrap.py`) / UNVERIFIED (Live Sites) | `MediaRuntime`, `MediaFfmpegTools`, `MediaWorkspace`, `test-media-ffmpeg.py` |
-| E20 | Camera Document Scan Pipeline | IMPLEMENTED_UNTESTED | `ScanScreen.kt`, `Perspective.kt`, `PerspectiveTest` |
-| E21 | Encrypted ZIP Support | IMPLEMENTED_UNTESTED | `EncryptedZip.kt` (zip4j AES-256 + pre-extraction & streaming `ZipSafetyValidator`), `EncryptedZipTest` |
-| E22 | Batch Rename Engine | IMPLEMENTED_UNTESTED | `FileExtras.batchRename`, `FileExtrasTest` |
-| E23 | Duplicate Detection by Content Hash | IMPLEMENTED_UNTESTED | `FileExtras.duplicateGroups`, `FileExtrasTest` |
-| E24 | App-Managed Trash and Retention Policy | VERIFIED (`test-storage-sql.py`) + IMPLEMENTED_UNTESTED | `OutputStore.moveToTrash` / `restoreFromTrash` / `purgeTrash` / `cleanExpiredTempFiles`, `test-storage-sql.py` |
-| E25 | Real Encrypted Vault (`xf_05`) | REMOVED | Removed from `JumloDestination` and Tools catalog (`Q02` rule: never ship a control without a qualified crypto backend) |
-| G01 | Official Google Drive v3 API Import/Export (`file_drive`) | IMPLEMENTED_UNTESTED | `GoogleDriveClient`, `FileExtrasHandler.driveTransfer`, `GoogleDriveClientTest` |
+---
+
+This replaces any blanket PASS claims for **this modified source**. The historical files below `production-2026-10-17/` refer to the original input revision and do **not** qualify the current changes.
+
+| Gate | Current-session result | Actual evidence |
+|---|---|---|
+| Host Kotlin core (initial, UTF-8) | PASS 108 / 108 | `current-session/verify-host-utf8.log` |
+| Host Kotlin core (after diagnostic changes) | PASS 110 / 110 | `current-session/test-core-after.log` |
+| Host Kotlin core (final with deterministic property tests) | **PASS 113 / 113** | `current-session/verify-host-final.log` |
+| Repeated final auxiliary host checks (media/SQL/source) | **PASS 8 / 8, 9 / 9, 12 / 12** | `current-session/verify-host-final.log` |
+| Media URL guard / bootstrap (initial) | PASS 8 / 8 | `current-session/verify-host-utf8.log` |
+| SQL fixtures (initial) | PASS 9 / 9 | `current-session/verify-host-utf8.log` |
+| Source/locale/font SHA static (initial) | PASS 12 / 12 | `current-session/verify-host-utf8.log` |
+| Workspace cleanup | PASS 6 / 6 | `current-session/workspace-safety.log` |
+| Home/fold pure policy | PASS 11 / 11 | `current-session/home-layout.log` |
+| Host FFmpeg synthetic codec tests | PASS 5 / 5 | `current-session/media-ffmpeg.log` |
+| Release media isolation source checks | PASS 3 / 3 | `current-session/release-media-isolation.log` |
+| Android SDK and Gradle debug build | BLOCKED / exit 1 before compile | `current-session/native-environment.log` |
+| Debug Android unit tests, new real zip4j tests, Android lint | NOT RUN | SDK and wrapper unavailable |
+| R8 optimized release APK / AAB, dependency graphs and artifact inspection | NOT RUN | SDK and wrapper unavailable |
+| API 26/36 emulator/device, screenshots, real file reader, release signing | NOT RUN | No installed app/device/keystore |
+| yt-dlp live video/audio for 10 platforms, official Drive live OAuth | NOT RUN | Network/device qualification missing |
+
+Feature-level statuses: `docs/FEATURE_STATUS.md`. Media live matrix: `docs/MEDIA_CAPABILITY_MATRIX.md`. Release owner gates: `docs/RELEASE.md`.

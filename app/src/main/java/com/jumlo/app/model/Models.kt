@@ -266,7 +266,7 @@ data class StorageBreakdown(
 
 data class AppSettingsState(
     val hasCompletedOnboarding: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.LIGHT,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val language: AppLanguage = AppLanguage.ENGLISH,
     val respectReducedMotion: Boolean = false,
     val hapticFeedbackOnCommit: Boolean = true,
@@ -279,5 +279,7 @@ data class AppSettingsState(
     val notificationsGranted: Boolean = false,
     val vaultAutoLockSeconds: Int = 120,
     val mediaTermsAccepted: Boolean = false,
-    val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_02")
+    val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_02"),
+    /** The initial ViewModel placeholder is never presented as a saved preference. */
+    val isLoaded: Boolean = false
 )

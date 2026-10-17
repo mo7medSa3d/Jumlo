@@ -98,7 +98,8 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
         for ((index, id) in job.sourceIds.withIndex()) {
             val key="sha256:$index"
             ctx.checkCancellation()
-            ctx.outputs.find(job.id,key)?.let { outcomes+=ItemOutcome(key,ItemStatus.CREATED,it.id) }
+            val existing=ctx.outputs.find(job.id,key)
+            if(existing!=null) { outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id);continue }
             try {
                 val source=ctx.sources.get(id)
                 val digest=ctx.sources.openRead(id).use { Hashing.sha256(it,ctx.checkCancellation) }

@@ -344,4 +344,6 @@
     <string name="home_browse_catalog_btn">فتح دليل الأدوات</string>
     <string name="home_no_recent_outputs">لا توجد نتائج معالجة حديثة بعد. اختر إحدى الأدوات للبدء فوراً!</string>
     <string name="home_active_tasks_title">مهام قيد المعالجة الآن</string>
+    <string name="media_rights_confirmation">أؤكد أن لدي الحق في تنزيل هذا المحتوى وأنني سألتزم بشروط المنصة.</string>
+    <string name="media_rights_required">أكّد حقوق التنزيل وشروط المنصة أولًا.</string>
 </resources>

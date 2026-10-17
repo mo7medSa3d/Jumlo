@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_customize_actions">Customize quick actions</string>
+    <string name="ui_actions_local">Choose up to four tools and arrange their order. Your choices are saved on this device.</string>
+    <string name="ui_action_up">Move %1$s earlier</string>
+    <string name="ui_action_down">Move %1$s later</string>
+    <string name="ui_action_add">Add %1$s</string>
+    <string name="ui_actions_reset">Restore the four defaults</string>
+    <string name="ui_actions_available">Available tools</string>
+    <string name="ui_actions_save">Save actions</string>
+</resources>

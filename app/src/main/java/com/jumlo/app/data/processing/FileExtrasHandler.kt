@@ -24,6 +24,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,10 +63,19 @@ import javax.inject.Singleton
             try {
                 val source = context.sources.get(id)
                 val ticket = context.outputs.reserve(request.id, key, preview[index], source.mimeType ?: "application/octet-stream")
-                context.sources.openRead(id).use { input -> FileOutputStream(ticket.stageFile).use { input.copyTo(it); it.fd.sync() } }
+                context.sources.openRead(id).use { input -> FileOutputStream(ticket.stageFile).use { output ->
+                    val buffer=ByteArray(64*1024);var copied=0L
+                    while(true) {
+                        context.checkCancellation();val n=input.read(buffer);if(n<0) break
+                        require(n.toLong()<=context.budget.maxTemporaryBytes-copied && ticket.stageFile.parentFile.usableSpace>=context.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
+                        if(n>0) { output.write(buffer,0,n);copied+=n }
+                    };output.fd.sync()
+                } }
+                context.checkCancellation()
                 val rec = context.outputs.publish(ticket) { OutputMetadata() }
                 outcomes += ItemOutcome(key, ItemStatus.CREATED, rec.id)
-            } catch (e: Exception) { outcomes += ItemOutcome(key, ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (e: Exception) { outcomes += ItemOutcome(key, ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
         }
         return outcomes
     }
@@ -111,16 +121,34 @@ import javax.inject.Singleton
                 context.outputs.find(request.id, itemKey)?.let { listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) } ?: run {
                     val outName = SafeNames.basename(settings.displayName.let { if (it.endsWith(".zip", true)) it else "$it.zip" })
                     val ticket = context.outputs.reserve(request.id, itemKey, outName, "application/zip")
-                    val tempSourcesDir = File(ticket.stageFile.parentFile, "ezip-inputs").apply { mkdirs() }
+                    val tempSourcesDir = File(ticket.stageFile.parentFile, "ezip-inputs-${UUID.randomUUID()}").apply { mkdirs() }
                     try {
+                        var stagedBytes = 0L
                         val entrySources = request.sourceIds.mapIndexed { idx, id ->
+                            context.checkCancellation()
                             val ref = context.sources.get(id)
                             val tempFile = File(tempSourcesDir, "src-$idx.bin")
                             context.sources.openRead(id).use { input ->
-                                FileOutputStream(tempFile).use { out -> input.copyTo(out); out.fd.sync() }
+                                FileOutputStream(tempFile).use { out ->
+                                    val buffer = ByteArray(64 * 1024)
+                                    while (true) {
+                                        context.checkCancellation()
+                                        val count = input.read(buffer)
+                                        if (count < 0) break
+                                        require(count.toLong() <= limits.maxBytes - stagedBytes) { "ARCHIVE_SIZE_LIMIT" }
+                                        if (count > 0) {
+                                            require(tempSourcesDir.usableSpace >= context.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
+                                            out.write(buffer, 0, count)
+                                            stagedBytes += count
+                                        }
+                                    }
+                                    out.fd.sync()
+                                }
                             }
                             EncryptedZipEntrySource(ref.displayName, tempFile)
                         }
+                        // Owned, unjournaled partials from a previous attempt cannot be resumed.
+                        if (ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
                         EncryptedZip.create(ticket.stageFile, entrySources, password, limits, context.checkCancellation)
                     } finally {
                         tempSourcesDir.deleteRecursively()
@@ -132,7 +160,7 @@ import javax.inject.Singleton
                 require(request.sourceIds.size == 1) { "ONE_ZIP_REQUIRED" }
                 val outcomes = mutableListOf<ItemOutcome>()
                 context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
-                    val dir = File(src.parentFile, "ezx")
+                    val dir = File(src.parentFile, "ezx-${UUID.randomUUID()}")
                     try {
                         val extractedFiles = EncryptedZip.extract(src, dir, password, limits, context.checkCancellation)
                         extractedFiles.forEachIndexed { index, f ->
@@ -141,7 +169,22 @@ import javax.inject.Singleton
                                 outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, it.id)
                             } ?: run {
                                 val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), "application/octet-stream")
-                                f.copyTo(ticket.stageFile, overwrite = true)
+                                require(f.length() <= context.budget.maxTemporaryBytes) { "ARCHIVE_SIZE_LIMIT" }
+                                f.inputStream().use { input ->
+                                    FileOutputStream(ticket.stageFile).use { out ->
+                                        val buffer = ByteArray(64 * 1024)
+                                        while (true) {
+                                            context.checkCancellation()
+                                            val count = input.read(buffer)
+                                            if (count < 0) break
+                                            if (count > 0) {
+                                                require(ticket.stageFile.parentFile.usableSpace >= context.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
+                                                out.write(buffer, 0, count)
+                                            }
+                                        }
+                                        out.fd.sync()
+                                    }
+                                }
                                 val rec = context.outputs.publish(ticket) { OutputMetadata() }
                                 outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
                             }

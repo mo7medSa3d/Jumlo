@@ -53,7 +53,8 @@ class StartupBenchmark {
     ) {
         startActivityAndWait()
         device.wait(Until.hasObject(By.pkg("com.jumlo.app")), 5_000)
-        device.findObject(By.scrollable(true))?.scroll(Direction.DOWN, 0.8f)
+        checkNotNull(device.findObject(By.scrollable(true))) { "No scrollable catalog found; refusing a no-op measurement" }
+            .scroll(Direction.DOWN, 0.8f)
         device.waitForIdle()
     }
 }

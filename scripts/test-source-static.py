@@ -44,9 +44,14 @@ class SourceConsistencyTests(unittest.TestCase):
             self.assertFalse(list(CODE.rglob(f'{name}.kt')),name)
             for path in CODE.rglob('*.kt'):
                 self.assertIsNone(re.search(r'\b'+name+r'\b',path.read_text()),str(path))
-    def test_candidate_gate_is_enforced_at_dispatch(self):
-        self.assertIn('CapabilityRegistry.enabled(request.toolId)',(CODE/'data/jobs/OperationDispatcher.kt').read_text())
-        self.assertIn('BuildConfig.DEBUG && Capabilities.isEnabled(id)',(CODE/'data/jobs/CapabilityRegistry.kt').read_text())
+    def test_capability_policy_is_enforced_at_enqueue_and_dispatch(self):
+        # Behavioral policy cases run in CoreTests; this check verifies all entry points use it.
+        self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/OperationDispatcher.kt').read_text())
+        self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/JobStore.kt').read_text())
+        self.assertIn('CapabilityRegistry.canProcess(state.toolId)',(CODE/'ui/AppViewModel.kt').read_text())
+        registry=(CODE/'data/jobs/CapabilityRegistry.kt').read_text()
+        self.assertIn('CapabilityPolicy.availability(id)',registry)
+        self.assertNotIn('BuildConfig.DEBUG',registry)
     def test_only_published_files_have_fileprovider_paths(self):
         entries=list(ET.parse(MAIN/'res/xml/file_paths.xml').getroot())
         self.assertTrue(entries)
@@ -65,16 +70,42 @@ class SourceConsistencyTests(unittest.TestCase):
         self.assertEqual(set(pinned),set(found))
         for name,path in found.items():
             self.assertEqual(pinned[name],hashlib.sha256(path.read_bytes()).hexdigest(),name)
-    def test_room_exported_schemas_v1_and_v2_exist_and_parse(self):
+    def test_room_download_url_writes_are_redacted_and_legacy_urls_scrubbed(self):
+        local = (CODE / 'data/local/AppDatabase.kt').read_text()
+        module = (CODE / 'di/AppModule.kt').read_text()
+        callback = (CODE / 'data/local/LegacyDownloadPrivacyCallback.kt').read_text()
+        test = (ROOT / 'app/src/androidTest/java/com/jumlo/app/data/DatabaseMigrationAndDaoTest.kt').read_text()
+        self.assertIn('tasks.map { it.copy(fullUrl = "") }', local)
+        self.assertIn('task.copy(fullUrl = "")', local)
+        self.assertIn('.addCallback(com.jumlo.app.data.local.LegacyDownloadPrivacyCallback)', module)
+        self.assertIn("fullUrl = '' WHERE fullUrl <> ''", callback)
+        self.assertIn('val restored = open()', test)
+        self.assertIn('assertEquals("", download.fullUrl)', test)
+
+    def test_drive_output_is_not_truncated_and_failure_does_not_delete_another_output(self):
+        drive = (CODE / 'data/files/GoogleDriveClient.kt').read_text()
+        self.assertIn('StandardOpenOption.CREATE_NEW', drive)
+        self.assertIn('var ownsTarget = false', drive)
+        self.assertIn('if (ownsTarget) targetFile.delete()', drive)
+        self.assertNotIn('FileOutputStream(targetFile)', drive)
+
+    def test_current_room_schema_and_legacy_structural_fixture_are_packaged(self):
         schema_dir=ROOT/'app/schemas/com.jumlo.app.data.local.AppDatabase'
-        s1=json.loads((schema_dir/'1.json').read_text())
         s2=json.loads((schema_dir/'2.json').read_text())
-        self.assertEqual(1,s1['database']['version'])
         self.assertEqual(2,s2['database']['version'])
-        t1={e['tableName'] for e in s1['database']['entities']}
         t2={e['tableName'] for e in s2['database']['entities']}
-        self.assertEqual({'managed_files','download_tasks'},t1)
         self.assertEqual({'managed_files','download_tasks','sources','jobs','outputs','drafts'},t2)
+        import sqlite3
+        connection=sqlite3.connect(':memory:')
+        try:
+            connection.executescript((ROOT/'app/schemas/legacy-v1-structure.sql').read_text())
+            tables={row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertEqual({'managed_files','download_tasks'},tables)
+        finally:
+            connection.close()
+        # This fixture validates structure only. Historical exported identity is a release gate,
+        # documented explicitly; inventing a 1.json to satisfy an existence assertion is forbidden.
+        self.assertTrue((ROOT/'app/schemas/schema-provenance.md').is_file())
     def test_kotlin_files_have_balanced_delimiters_and_no_known_compile_hazards(self):
         for path in (ROOT/'app/src').rglob('*.kt'):
             text=path.read_text()

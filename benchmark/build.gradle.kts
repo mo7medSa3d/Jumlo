@@ -17,11 +17,7 @@ android {
         create("benchmark") {
             isDebuggable = true
             // Benchmarks run against the release-like profile; signing falls back to debug.
-            signingConfig = getByName("debug")
-            matchingFallbacks += listOf("release")
-        }
-        release {
-            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

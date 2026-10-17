@@ -23,6 +23,7 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     private object Keys {
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+        val QUICK_ACTION_IDS = stringPreferencesKey("quick_action_ids")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val LANGUAGE = stringPreferencesKey("language")
         val RESPECT_REDUCED_MOTION = booleanPreferencesKey("respect_reduced_motion")
@@ -39,24 +40,32 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     val settingsFlow: Flow<AppSettingsState> = context.dataStore.data.map { prefs ->
-        val themeStr = prefs[Keys.THEME_MODE] ?: ThemeMode.LIGHT.name
-        val langStr = prefs[Keys.LANGUAGE] ?: AppLanguage.ENGLISH.name
+        val themeStr = prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name
+        val defaultLanguage = if (java.util.Locale.getDefault().language == "ar") AppLanguage.ARABIC else AppLanguage.ENGLISH
+        val langStr = prefs[Keys.LANGUAGE] ?: defaultLanguage.name
         AppSettingsState(
             hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
-            themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.LIGHT),
-            language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(AppLanguage.ENGLISH),
+            themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM),
+            language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(defaultLanguage),
             respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false,
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             reorderHandleHaptics = prefs[Keys.REORDER_HAPTICS] ?: true,
             defaultDestinationFolder = prefs[Keys.DEFAULT_DEST_FOLDER] ?: "My files / Results",
             downloadDestinationFolder = prefs[Keys.DOWNLOAD_DEST_FOLDER] ?: "My files / Downloads",
-            maxConcurrentDownloads = prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2,
+            maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
             wifiOnlyDefault = prefs[Keys.WIFI_ONLY_DEFAULT] ?: true,
             stripExifByDefault = prefs[Keys.STRIP_EXIF_DEFAULT] ?: true,
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             vaultAutoLockSeconds = prefs[Keys.VAULT_AUTO_LOCK_SEC] ?: 120,
-            mediaTermsAccepted = prefs[Keys.MEDIA_TERMS_ACCEPTED] ?: false
+            mediaTermsAccepted = prefs[Keys.MEDIA_TERMS_ACCEPTED] ?: false,
+            quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
+            isLoaded = true
         )
+    }
+
+    suspend fun setQuickActionIds(ids: List<String>) {
+        val safe=ids.filter { Regex("[a-z0-9_]{1,64}").matches(it) }.distinct().take(4)
+        context.dataStore.edit { it[Keys.QUICK_ACTION_IDS] = safe.joinToString("|") }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {

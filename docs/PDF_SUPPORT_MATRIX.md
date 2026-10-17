@@ -1,10 +1,9 @@
 # PDF support matrix (source state, NOT device-verified)
 
 Backend: PDFBox-Android 2.0.27.0 (Apache-2.0), see `docs/DEPENDENCY_NOTICES.md`.
-All operations run through the Room/WorkManager job pipeline with verified
-publication. Everything below is **implemented in source with JVM tests in
-`PdfStructureCoreTest`, not compiled or device-verified in this environment**
-(no `javac`/`kotlinc`/Android SDK available in the sandbox VM).
+Eligible operations use the Room/WorkManager pipeline with verified publication. The table describes retained handler source and its limits. Actual current build/JVM results are in `docs/RELEASE.md`; Android device behavior remains separately unverified.
+
+**Public availability override:** password protection/removal, redaction, searchable OCR, webpage capture and scanner entries are hidden and blocked by `CapabilityPolicy`. Their rows below describe retained implementation, not an enabled product promise. `pdf_01` is a read-only viewer and never queues a processing job. See FEATURE_QUALIFICATION_MATRIX for the authoritative entry list.
 
 | Operation | Status | Implementation & Limits |
 |---|---|---|
@@ -14,7 +13,7 @@ publication. Everything below is **implemented in source with JVM tests in
 | Crop / page geometry | Implemented (`PdfBoxBackend.setCrop` + `PdfStructureCoreTest`) | Sets normalized `PDRectangle(x0, y0, width, height)` on page `cropBox` |
 | Annotations & overlay text | Implemented (`PdfBoxBackend.overlayText` / `addTextAnnotation` + `PdfStructureCoreTest`) | Supports both visible Helvetica stream overlay and collapsible `PDAnnotationText` note annotations |
 | Watermark & page numbers | Implemented (`PdfBoxBackend.stampWatermarkAndNumbers` + `PdfStructureCoreTest`) | Extended graphics state alpha watermark stamp and bottom-center page numbering |
-| Signature (drawn + imported) | Implemented (`SignaturePadScreen` + `PdfBoxBackend.stampImage`) | Drawn signature saved as PNG snapshot or imported image stamped onto normalized page box |
+| Signature (drawn + imported) | Implemented (`SignaturePad in ScanScreen.kt` + `PdfBoxBackend.stampImage`) | Drawn signature saved as PNG snapshot or imported image stamped onto normalized page box |
 | Password protect/remove | Implemented (`PdfBoxBackend.protect` / `removeProtection` + `PdfStructureCoreTest`) | AES-128 standard security; session-only password handles via `EphemeralSecretStore` with `CharArray` zeroization in `finally`; owned files only |
 | Metadata edit | Implemented (`PdfBoxBackend.setMetadata` + `PdfStructureCoreTest`) | Edits title, author, subject, keywords, creator, and producer |
 | AcroForm fill + flatten | Implemented (`PdfBoxBackend.fillForm` + `PdfStructureCoreTest`) | Populates text/checkbox/radio fields; explicit flatten stamps widget appearance streams and removes `/AcroForm` |

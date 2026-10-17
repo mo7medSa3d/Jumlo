@@ -10,6 +10,8 @@ import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.processing.DownloadSettings
 import com.jumlo.app.data.source.EphemeralSecretStore
+import com.jumlo.app.data.preferences.UserPreferencesRepository
+import kotlinx.coroutines.flow.first
 import com.jumlo.app.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
@@ -22,9 +24,10 @@ import javax.inject.Inject
 
 class MediaOperationHandler @Inject constructor(
     @ApplicationContext private val app: Context, private val runtime: MediaRuntime,
-    private val secrets: EphemeralSecretStore
+    private val secrets: EphemeralSecretStore, private val preferences: UserPreferencesRepository
 ) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
+        if (!preferences.settingsFlow.first().mediaTermsAccepted) throw OperationFailure("MEDIA_TERMS_REQUIRED")
         val settings = Json.decodeFromString<DownloadSettings>(request.settingsJson)
         val selection = settings.media ?: throw OperationFailure("MEDIA_SELECTION_REQUIRED")
         require(request.sourceIds.isEmpty() && request.toolId == "dl_media") { "INVALID_MEDIA_JOB" }

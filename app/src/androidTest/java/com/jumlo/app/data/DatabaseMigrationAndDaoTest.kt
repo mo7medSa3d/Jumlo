@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.jumlo.app.data.local.AppDatabase
 import com.jumlo.app.data.local.DatabaseMigrations
 import com.jumlo.app.data.local.JobEntity
+import com.jumlo.app.data.local.LegacyDownloadPrivacyCallback
 import com.jumlo.app.data.local.OutputEntity
 import com.jumlo.app.data.local.SourceEntity
 import kotlinx.coroutines.flow.first
@@ -22,8 +23,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Room 1 -> 2 migration tests (both MigrationTestHelper against exported 1.json/2.json
- * and direct SQLite DDL verification) plus ProcessingDao round-trip and delete tests.
+ * Structural 1 -> 2 migration coverage. No authentic exported v1 identity hash was
+ * found in repository history. The fixture preserves the two legacy tables from
+ * known entity declarations; it is NOT an exported schema or old-install proof.
+ * MigrationTestHelper validates the migrated structure against KSP's v2 export,
+ * then Room itself opens the migrated database and verifies generated metadata.
  */
 @RunWith(AndroidJUnit4::class)
 class DatabaseMigrationAndDaoTest {
@@ -37,47 +41,82 @@ class DatabaseMigrationAndDaoTest {
     )
 
     @Test
-    fun migration_1_to_2_validates_exported_schemas_with_MigrationTestHelper() {
-        val dbName = "migration-helper-test.db"
-        migrationHelper.createDatabase(dbName, 1).apply {
-            execSQL("INSERT INTO managed_files (id,name,path,folder,extension,mimeType,sizeBytes,formattedSize,pageCount,dimensions,itemCount,modifiedLabelEn,modifiedLabelAr,isDraft,isArchive) VALUES ('m1','a.pdf','/x','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','now',0,0)")
-            close()
+    fun migration_1_to_2_preserves_legacy_records_and_opens_with_Room() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val dbName = "migration-structural-test.db"
+        context.deleteDatabase(dbName)
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(dbName)
+                .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(1) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        val sql = InstrumentationRegistry.getInstrumentation().context.assets
+                            .open("legacy-v1-structure.sql").bufferedReader().use { it.readText() }
+                        sql.lineSequence().filterNot { it.trimStart().startsWith("--") }.joinToString("\n")
+                            .split(';').map(String::trim).filter(String::isNotEmpty).forEach(db::execSQL)
+                    }
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+                }).build()
+        )
+        helper.writableDatabase.apply {
+            execSQL("INSERT INTO managed_files VALUES ('m1','أصل.pdf','/x','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','الآن',0,0)")
+            execSQL("INSERT INTO managed_files VALUES ('draft1','draft.pdf','/d','f','pdf','application/pdf',0,'0 B',2,'20x30',NULL,'old','قديم',1,0)")
+            execSQL("INSERT INTO download_tasks VALUES ('d1','a.zip','zip','example.test','https://example.test/a','application/zip',7,10,1.5,'3s','PAUSED','/downloads/a')")
         }
-        val migrated = migrationHelper.runMigrationsAndValidate(dbName, 2, true, DatabaseMigrations.FROM_1_TO_2)
-        migrated.query("SELECT name FROM managed_files WHERE id='m1'").use { cursor ->
-            assertTrue(cursor.moveToFirst())
-            assertEquals("a.pdf", cursor.getString(0))
-        }
-        migrated.close()
+        helper.close()
+        try {
+            // Only v2 export is required. A made-up v1 identity hash is never written.
+            migrationHelper.runMigrationsAndValidate(dbName, 2, true, DatabaseMigrations.FROM_1_TO_2).close()
+            val room = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
+                .addMigrations(DatabaseMigrations.FROM_1_TO_2)
+                .addCallback(LegacyDownloadPrivacyCallback).build()
+            try {
+                val files = room.managedFileDao().observeAllFiles().first()
+                assertEquals(2, files.size)
+                assertEquals("أصل.pdf", files.single { it.id == "m1" }.name)
+                assertNull(files.single { it.id == "m1" }.pageCount)
+                assertTrue(files.single { it.id == "draft1" }.isDraft)
+                val download = room.downloadTaskDao().observeAllDownloads().first().single()
+                assertEquals(7L, download.downloadedBytes)
+                assertEquals("PAUSED", download.statusName)
+                assertEquals("", download.fullUrl) // Legacy URL scrubbed on first Room open.
+                assertTrue(room.processingDao().jobs().first().isEmpty())
+                room.processingDao().insertJob(JobEntity("new-job", "{}", "{}", "QUEUED"))
+                assertEquals("new-job", room.processingDao().job("new-job")?.id)
+            } finally { room.close() }
+        } finally { context.deleteDatabase(dbName) }
     }
 
     @Test
-    fun migration_1_to_2_keeps_legacy_rows_and_adds_processing_tables() {
+    fun downloadDao_neverPersistsSignedUrlsAndScrubsLegacyRecords() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val helper = FrameworkSQLiteOpenHelperFactory().create(
-            androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)
-                .name("migration-test.db")
-                .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(1) {
-                    override fun onCreate(db: SupportSQLiteDatabase) {
-                        db.execSQL("CREATE TABLE IF NOT EXISTS `managed_files` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `path` TEXT NOT NULL, `folder` TEXT NOT NULL, `extension` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `sizeBytes` INTEGER NOT NULL, `formattedSize` TEXT NOT NULL, `pageCount` INTEGER, `dimensions` TEXT, `itemCount` INTEGER, `modifiedLabelEn` TEXT NOT NULL, `modifiedLabelAr` TEXT NOT NULL, `isDraft` INTEGER NOT NULL, `isArchive` INTEGER NOT NULL, PRIMARY KEY(`id`))")
-                        db.execSQL("CREATE TABLE IF NOT EXISTS `download_tasks` (`id` TEXT NOT NULL, `fileName` TEXT NOT NULL, `extension` TEXT NOT NULL, `domain` TEXT NOT NULL, `fullUrl` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `downloadedBytes` INTEGER NOT NULL, `totalBytes` INTEGER NOT NULL, `speedMbps` REAL NOT NULL, `etaLabel` TEXT NOT NULL, `statusName` TEXT NOT NULL, `destinationPath` TEXT NOT NULL, PRIMARY KEY(`id`))")
-                    }
-                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
-                })
-                .build()
-        )
-        val db = helper.writableDatabase
-        db.execSQL("INSERT INTO managed_files (id,name,path,folder,extension,mimeType,sizeBytes,formattedSize,pageCount,dimensions,itemCount,modifiedLabelEn,modifiedLabelAr,isDraft,isArchive) VALUES ('m1','a.pdf','/x','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','now',0,0)")
-        DatabaseMigrations.FROM_1_TO_2.migrate(db)
-        db.query("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('sources','jobs','outputs','drafts')").use { cursor ->
-            assertEquals(4, cursor.count)
-        }
-        db.query("SELECT name FROM managed_files WHERE id='m1'").use { cursor ->
-            assertTrue(cursor.moveToFirst())
-            assertEquals("a.pdf", cursor.getString(0))
-        }
-        db.close()
-        context.deleteDatabase("migration-test.db")
+        val dbName = "download-privacy-open-test.db"
+        context.deleteDatabase(dbName)
+        fun open() = Room.databaseBuilder(context, AppDatabase::class.java, dbName)
+            .addCallback(LegacyDownloadPrivacyCallback).build()
+        try {
+            val first = open()
+            try {
+                val row = DownloadTaskEntity(
+                    "signed", "file.zip", "zip", "example.test", "https://example.test/file?token=very-private",
+                    "application/zip", 0L, 100L, 0f, "", "QUEUED", ""
+                )
+                first.downloadTaskDao().insert(row)
+                assertEquals("", first.downloadTaskDao().observeAllDownloads().first().single().fullUrl)
+                // Emulate a database written by an older app version. This must be
+                // cleared on the NEXT open without losing progress or job status.
+                first.openHelper.writableDatabase.execSQL(
+                    "UPDATE download_tasks SET fullUrl = 'https://example.test/legacy?sig=private', downloadedBytes = 42 WHERE id = 'signed'"
+                )
+            } finally { first.close() }
+            val restored = open()
+            try {
+                val download = restored.downloadTaskDao().observeAllDownloads().first().single()
+                assertEquals("", download.fullUrl)
+                assertEquals(42L, download.downloadedBytes)
+                assertEquals("QUEUED", download.statusName)
+            } finally { restored.close() }
+        } finally { context.deleteDatabase(dbName) }
     }
 
     @Test

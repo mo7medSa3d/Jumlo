@@ -179,15 +179,13 @@ object PdfBoxBackend {
 
     fun setCrop(doc: PDDocument, zeroBasedPage: Int, left: Double, top: Double, right: Double, bottom: Double) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
-        listOf(left, top, right, bottom).forEach { require(it in 0.0..1.0) { "INVALID_CROP" } }
-        require(left < right && top < bottom) { "INVALID_CROP" }
         val page = doc.getPage(zeroBasedPage)
         val media = page.mediaBox
-        val x0 = (media.lowerLeftX + left * media.width).toFloat()
-        val y0 = (media.lowerLeftY + top * media.height).toFloat()
-        val w = ((right - left) * media.width).toFloat()
-        val h = ((bottom - top) * media.height).toFloat()
-        page.cropBox = PDRectangle(x0, y0, w, h)
+        val box = com.jumlo.app.core.PdfCropCoordinates.fromTopLeft(
+            media.lowerLeftX, media.lowerLeftY, media.width, media.height,
+            left, top, right, bottom
+        )
+        page.cropBox = PDRectangle(box.x, box.y, box.width, box.height)
     }
 
     fun setMetadata(doc: PDDocument, values: Map<String, String>) {
@@ -355,7 +353,9 @@ object PdfBoxBackend {
         if (colorSpace != COSName.DEVICERGB && colorSpace != COSName.DEVICEGRAY) return null
         if (dict.getDictionaryObject(COSName.SMASK) != null) return null
         val bytesPerPixel = if (colorSpace == COSName.DEVICERGB) 3 else 1
-        val raw = ByteArray(image.width * image.height * bytesPerPixel)
+        val decodedBytes=image.width.toLong()*image.height*bytesPerPixel
+        require(image.width>0 && image.height>0 && decodedBytes<=minOf(Runtime.getRuntime().maxMemory()/6,64L*1024*1024)) { "BITMAP_BUDGET_EXCEEDED" }
+        val raw = ByteArray(decodedBytes.toInt())
         // createInputStream() applies the single flate decode in this port.
         image.createInputStream().use { input ->
             var read = 0
@@ -432,12 +432,13 @@ object PdfBoxBackend {
     /** Invisible (but extractable/searchable) text layer for OCR output. */
     fun stampInvisibleText(doc: PDDocument, zeroBasedPage: Int, text: String, xNorm: Double, yNormTop: Double, fontSize: Float) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
+        val lines=com.jumlo.app.core.OcrTextPolicy.requireRepresentable(text)
         val page = doc.getPage(zeroBasedPage); val media = page.mediaBox
         PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
             cs.beginText(); cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
-            try { cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.NEITHER) } catch (_: Exception) {}
+            cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.NEITHER)
             cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
-            text.lines().take(200).forEachIndexed { i, line -> if (i > 0) cs.newLineAtOffset(0f, -fontSize * 1.2f); runCatching { cs.showText(line.take(500)) } }
+            lines.forEachIndexed { i, line -> if (i > 0) cs.newLineAtOffset(0f, -fontSize * 1.2f); cs.showText(line) }
             cs.endText()
         }
     }

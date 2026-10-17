@@ -7,3 +7,6 @@ User-requested outcome: browse/paste/share a resource, inspect actual media form
 4. Run available host tests, real media processing using installed FFmpeg, native preflight and whole-source consistency checks. Deliver changed source, exact evidence, feature-gap inventory and limitations. Native build/device and real-platform support are distinct checks.
 
 Dependency ruling: `-PextendedMedia=true` enables the separately declared media runtime source set/dependencies. The default base build keeps its prior dependency boundary. GPL-3.0 upstream wrapper + FFmpeg build licensing require review before distribution; this source handoff is not publication or a licensing decision for the owner.
+
+
+Follow-up: `-PextendedMedia=true` is now **debug-only**; it cannot select the media implementation for release or benchmark. This source-level safety gate is tested statically, but the Gradle release dependency graph check and live platform qualification are **not yet executed**.

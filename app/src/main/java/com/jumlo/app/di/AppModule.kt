@@ -30,7 +30,9 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "universal_utilities_sandbox.db"
-        ).addMigrations(com.jumlo.app.data.local.DatabaseMigrations.FROM_1_TO_2).build()
+        ).addMigrations(com.jumlo.app.data.local.DatabaseMigrations.FROM_1_TO_2)
+            .addCallback(com.jumlo.app.data.local.LegacyDownloadPrivacyCallback)
+            .build()
     }
 
     @Provides

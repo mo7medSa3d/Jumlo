@@ -5,6 +5,7 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -85,8 +86,11 @@ class AppHaptics(
     }
 }
 
+/** The persisted preference is shared by every descendant control, including dialogs. */
+val LocalAppHapticsEnabled = staticCompositionLocalOf { true }
+
 @Composable
-fun rememberAppHaptics(enabled: Boolean = true): AppHaptics {
+fun rememberAppHaptics(enabled: Boolean = LocalAppHapticsEnabled.current): AppHaptics {
     val hapticFeedback = LocalHapticFeedback.current
     val view = LocalView.current
     return remember(hapticFeedback, view, enabled) {

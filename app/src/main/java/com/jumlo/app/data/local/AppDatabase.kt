@@ -71,11 +71,18 @@ interface DownloadTaskDao {
     @Query("SELECT * FROM download_tasks")
     fun observeAllDownloads(): Flow<List<DownloadTaskEntity>>
 
+    // v1/v2 keeps a legacy fullUrl column for schema compatibility, but the active
+    // application MUST NOT persist a URL, even one containing a signed query.
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(tasks: List<DownloadTaskEntity>)
+    suspend fun insertRedactedBatch(tasks: List<DownloadTaskEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(task: DownloadTaskEntity)
+    suspend fun insertRedacted(task: DownloadTaskEntity)
+
+    suspend fun insertAll(tasks: List<DownloadTaskEntity>) =
+        insertRedactedBatch(tasks.map { it.copy(fullUrl = "") })
+
+    suspend fun insert(task: DownloadTaskEntity) = insertRedacted(task.copy(fullUrl = ""))
 
     @Query("DELETE FROM download_tasks WHERE id = :id")
     suspend fun deleteById(id: String)

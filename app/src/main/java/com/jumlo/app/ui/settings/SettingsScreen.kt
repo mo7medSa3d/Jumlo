@@ -1,0 +1,147 @@
+package com.jumlo.app.ui.settings
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jumlo.app.R
+import com.jumlo.app.model.AppLanguage
+import com.jumlo.app.model.ThemeMode
+import com.jumlo.app.ui.AppViewModel
+
+@Composable fun SettingsScreen(viewModel: AppViewModel, onRequestNotifications: () -> Unit,
+    onExportLogs: () -> Unit, onOpenFiles: () -> Unit, onChooseFolder: () -> Unit) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val storage by viewModel.storage.collectAsStateWithLifecycle()
+    val trash by viewModel.trashed.collectAsStateWithLifecycle()
+    val tree by viewModel.tree.collectAsStateWithLifecycle()
+    val busy by viewModel.busy.collectAsStateWithLifecycle()
+    var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    // Only this captured set is authorized. Later trash arrivals are excluded.
+    var purgeIds by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
+    DisposableEffect(lifecycle, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(settings.notificationsGranted) { notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled() }
+    LaunchedEffect(Unit) { viewModel.refreshStorage() }
+    LazyColumn(Modifier.fillMaxSize().testTag("settings.screen"), contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp)) {
+        item("appearance") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
+        item("theme") { PreferenceRow(stringResource(R.string.pref_theme), themeLabel(settings.themeMode), Icons.Rounded.Palette,
+            { panel = "theme" }, Modifier.testTag("settings.theme")) }
+        item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language), Icons.Rounded.Language,
+            { panel = "language" }, Modifier.testTag("settings.language")) }
+        item("motion") { TogglePreference(stringResource(R.string.pref_reduce_motion), stringResource(R.string.pref_reduce_motion_summary),
+            settings.respectReducedMotion, viewModel::setRespectReducedMotion, "settings.motion") }
+        item("haptics") { TogglePreference(stringResource(R.string.pref_haptics), null, settings.hapticFeedbackOnCommit,
+            viewModel::setHapticFeedback, "settings.haptics") }
+        item("downloads") { PreferenceHeading(stringResource(R.string.pref_downloads)) }
+        item("wifi") { TogglePreference(stringResource(R.string.pref_wifi_only), stringResource(R.string.pref_wifi_summary),
+            settings.wifiOnlyDefault, viewModel::setWifiOnlyDefault, "settings.wifi") }
+        item("location") { PreferenceRow(stringResource(R.string.pref_save_location), stringResource(R.string.pref_save_location_summary),
+            Icons.Rounded.FolderOpen, onOpenFiles, Modifier.testTag("settings.downloadLocation")) }
+        item("notifications") { PreferenceRow(stringResource(R.string.pref_notifications),
+            stringResource(if (notificationsEnabled) R.string.pref_enabled else R.string.pref_disabled), Icons.Rounded.Notifications, {
+                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) onRequestNotifications()
+                else try { context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)) }
+                catch (_: Exception) { viewModel.notifyMessage("EXTERNAL_APP_UNAVAILABLE") }
+            }, Modifier.testTag("settings.notifications")) }
+        item("files_storage") { PreferenceHeading(stringResource(R.string.pref_files_storage)) }
+        item("storage") { PreferenceRow(stringResource(R.string.account_storage), null, Icons.Rounded.Storage,
+            { viewModel.refreshStorage(); panel = "storage" }, Modifier.testTag("settings.storage")) }
+        item("folder") { PreferenceRow(stringResource(R.string.pref_folder_access), tree?.name ?: stringResource(R.string.pref_folder_access_summary),
+            Icons.Rounded.FolderShared, onChooseFolder, Modifier.testTag("settings.permissions")) }
+        item("cache") { PreferenceRow(stringResource(R.string.pref_clear_temporary), stringResource(R.string.pref_clear_temporary_summary),
+            Icons.Rounded.CleaningServices, { panel = "cache" }, Modifier.testTag("settings.cache"), enabled = !busy) }
+        item("trash") { PreferenceRow(stringResource(R.string.pref_empty_trash), stringResource(R.string.pref_trash_count, trash.size),
+            Icons.Rounded.DeleteOutline, { purgeIds = trash.map { it.id } }, Modifier.testTag("settings.trash"),
+            enabled = trash.isNotEmpty() && !busy, destructive = true) }
+        item("privacy_about") { PreferenceHeading(stringResource(R.string.pref_privacy_about)) }
+        item("privacy") { PreferenceRow(stringResource(R.string.account_privacy), null, Icons.Rounded.PrivacyTip, { panel = "privacy" }) }
+        item("diagnostics") { PreferenceRow(stringResource(R.string.pref_export_diagnostics), stringResource(R.string.pref_export_diagnostics_summary),
+            Icons.Rounded.Description, onExportLogs, Modifier.testTag("settings.diagnostics")) }
+        item("about") { PreferenceRow(stringResource(R.string.account_help_about), null, Icons.Rounded.Info, { panel = "about" }) }
+        item("bottom") { Spacer(Modifier.height(24.dp)) }
+    }
+    when (panel) {
+        "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) }, settings.themeMode.ordinal,
+            { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
+        "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) }, settings.language.ordinal,
+            { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
+        "storage" -> StorageOverviewDialog(storage) { panel = null }
+        "privacy" -> PrivacyDialog { panel = null }
+        "about" -> AboutDialog { panel = null }
+        "cache" -> AlertDialog(onDismissRequest = { panel = null }, title = { Text(stringResource(R.string.pref_clear_temporary)) },
+            text = { Text(stringResource(R.string.pref_clear_temporary_body)) },
+            confirmButton = { TextButton(onClick = { panel = null; viewModel.cleanTemporary() }, enabled = !busy) { Text(stringResource(R.string.pref_clear)) } },
+            dismissButton = { TextButton({ panel = null }) { Text(stringResource(R.string.account_cancel)) } })
+    }
+    purgeIds?.let { ids ->
+        AlertDialog(onDismissRequest = { purgeIds = null }, title = { Text(stringResource(R.string.pref_purge_title, ids.size)) },
+            text = { Text(stringResource(R.string.pref_purge_body)) },
+            confirmButton = { TextButton(onClick = { purgeIds = null; viewModel.purgeTrashIds(ids.toSet()) }, enabled = !busy,
+                modifier = Modifier.testTag("settings.confirmPurge")) {
+                Text(stringResource(R.string.pref_delete_forever), color = MaterialTheme.colorScheme.error)
+            } }, dismissButton = { TextButton({ purgeIds = null }, Modifier.testTag("settings.cancelPurge")) { Text(stringResource(R.string.account_cancel)) } })
+    }
+}
+
+@Composable private fun themeLabel(mode: ThemeMode): String = stringResource(when(mode) {
+    ThemeMode.SYSTEM -> R.string.pref_theme_system; ThemeMode.LIGHT -> R.string.pref_theme_light; ThemeMode.DARK -> R.string.pref_theme_dark
+})
+@Composable private fun languageLabel(language: AppLanguage): String = stringResource(
+    if(language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
+
+@Composable private fun TogglePreference(title: String, summary: String?, checked: Boolean, onChanged: (Boolean) -> Unit, tag: String) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).testTag(tag).toggleable(checked, role = Role.Switch, onValueChange = onChanged)
+        .padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            summary?.let { Text(it, Modifier.padding(top = 3.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        Spacer(Modifier.width(16.dp)); Switch(checked, onCheckedChange = null)
+    }
+}
+
+@Composable private fun ChoiceDialog(title: String, labels: List<String>, selected: Int, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = {
+        Column(Modifier.selectableGroup()) {
+            labels.forEachIndexed { index, label ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(index == selected, role = Role.RadioButton,
+                    onClick = { onSelected(index) }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(index == selected, onClick = null); Text(label, Modifier.padding(start = 12.dp))
+                }
+            }
+        }
+    }, confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.account_cancel)) } })
+}

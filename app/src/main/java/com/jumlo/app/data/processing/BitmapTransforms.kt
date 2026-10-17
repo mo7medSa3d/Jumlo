@@ -122,9 +122,9 @@ object BitmapTransforms {
 /** Expansion transforms: watermark, join/stitch, adjustments, codec matrix. All budget-checked. */
 object BitmapExtras {
     fun codecCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): List<CodecCapability> = listOf(
-        CodecCapability("JPEG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = listOf("jpeg_srgb_baseline")),
-        CodecCapability("PNG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = listOf("png_rgba_lossless")),
-        CodecCapability("WEBP", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = listOf("webp_lossy")),
+        CodecCapability("JPEG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = emptyList()),
+        CodecCapability("PNG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = emptyList()),
+        CodecCapability("WEBP", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = emptyList()),
         CodecCapability("HEIC", canDecode = sdkInt >= 28, canEncode = false, canPreserveAnimation = false, supportedApiRange = 28..36, verifiedFixtureIds = emptyList())
     )
 
@@ -136,12 +136,15 @@ object BitmapExtras {
             canvas.drawText(text,source.width*0.08f,source.height*0.92f,paint); return out
         } catch(t:Throwable){ out.recycle(); throw t }
     }
-    fun watermarkLogo(source:Bitmap,logo:Bitmap,budget:Long):Bitmap {
-        MemoryBudget.requireBitmaps(source.width,source.height,2,budget)
+    fun watermarkLogo(source:Bitmap,logo:Bitmap,budget:Long,opacityPercent:Int=100):Bitmap {
+        MemoryBudget.requireBitmaps(source.width,source.height,2,budget-logo.allocationByteCount.toLong())
         val out=Bitmap.createBitmap(source.width,source.height,Bitmap.Config.ARGB_8888)
         try { val canvas=Canvas(out); canvas.drawBitmap(source,0f,0f,null)
-            val w=source.width/4; val h=(logo.height*w.toFloat()/logo.width).toInt().coerceAtLeast(1)
-            canvas.drawBitmap(logo,null,RectF((source.width-w-16).toFloat(),(source.height-h-16).toFloat(),(source.width-16).toFloat(),(source.height-16).toFloat()),Paint(Paint.FILTER_BITMAP_FLAG)); return out
+            require(opacityPercent in 1..100) { "INVALID_OPACITY" }
+            val pad=minOf(16,source.width/20,source.height/20)
+            val w=(source.width/4).coerceAtLeast(1)
+            val h=(logo.height*w.toFloat()/logo.width).toInt().coerceIn(1,(source.height-pad*2).coerceAtLeast(1))
+            canvas.drawBitmap(logo,null,RectF((source.width-w-pad).toFloat(),(source.height-h-pad).toFloat(),(source.width-pad).toFloat(),(source.height-pad).toFloat()),Paint(Paint.FILTER_BITMAP_FLAG).apply { alpha=opacityPercent*255/100 }); return out
         } catch(t:Throwable){ out.recycle(); throw t }
     }
     fun join(bitmaps:List<Bitmap>,layout:String,gapPx:Int,budget:Long,overlapPx:Int=0):Bitmap {
@@ -156,7 +159,8 @@ object BitmapExtras {
             "HSTRIP" -> bitmaps.sumOf{it.width}+gap*(bitmaps.size-1) to bitmaps.maxOf{it.height}
             else -> { val cols=2; val rows=(bitmaps.size+cols-1)/cols; val cw=bitmaps.maxOf{it.width}; val ch=bitmaps.maxOf{it.height}; (cw*cols+gap*(cols-1)) to (ch*rows+gap*(rows-1)) }
         }
-        MemoryBudget.requireBitmaps(w,h,1,budget)
+        val resident=bitmaps.sumOf { it.allocationByteCount.toLong() }
+        MemoryBudget.requireBitmaps(w,h,1,budget-resident)
         val out=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
         try { val canvas=Canvas(out); canvas.drawColor(Color.WHITE); var x=0; var y=0; var col=0; val cw=bitmaps.maxOf{it.width}; val ch=bitmaps.maxOf{it.height}
             bitmaps.forEachIndexed{ idx,b ->
@@ -188,8 +192,13 @@ object BitmapExtras {
     /** Mean absolute per-pixel difference 0..255 between same-size images (else -1). */
     fun meanDifference(a:Bitmap,b:Bitmap):Double {
         if(a.width!=b.width||a.height!=b.height) return -1.0
-        val pa=IntArray(a.width*a.height); val pb=IntArray(b.width*b.height); a.getPixels(pa,0,a.width,0,0,a.width,a.height); b.getPixels(pb,0,b.width,0,0,b.width,b.height)
-        var sum=0L; for(i in pa.indices){ sum+=kotlin.math.abs(Color.red(pa[i])-Color.red(pb[i]))+kotlin.math.abs(Color.green(pa[i])-Color.green(pb[i]))+kotlin.math.abs(Color.blue(pa[i])-Color.blue(pb[i])) }
-        return sum.toDouble()/pa.size/3.0
+        // One scanline at a time: comparison must not allocate two full-size pixel arrays.
+        val pa=IntArray(a.width); val pb=IntArray(b.width)
+        var sum=0L
+        for(y in 0 until a.height) {
+            a.getPixels(pa,0,a.width,0,y,a.width,1);b.getPixels(pb,0,b.width,0,y,b.width,1)
+            for(i in pa.indices) sum+=abs(Color.red(pa[i])-Color.red(pb[i]))+abs(Color.green(pa[i])-Color.green(pb[i]))+abs(Color.blue(pa[i])-Color.blue(pb[i]))+abs(Color.alpha(pa[i])-Color.alpha(pb[i]))
+        }
+        return sum.toDouble()/a.width/a.height/4.0
     }
 }
