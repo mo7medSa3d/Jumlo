@@ -7,7 +7,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,7 +48,13 @@ import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.intake.Intake
 import com.jumlo.app.ui.intake.IntakeController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navDeepLink
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.Serializable
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -62,6 +67,16 @@ private fun bytes(value:Long?):String {
     return String.format(Locale.ROOT,"%.1f %s",n,units[index])
 }
 private fun title(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) tool.titleAr else tool.titleEn
+
+/** Type-safe Navigation Compose routes (Phase 4). */
+@Serializable object HomeRoute
+@Serializable object ToolsRoute
+@Serializable object DownloadsRoute
+@Serializable object FilesRoute
+@Serializable object SettingsRoute
+@Serializable object ScanRoute
+@Serializable object WorkspaceRoute
+@Serializable object ActivityRoute
 
 @Composable
 fun JumloNavHost(viewModel:AppViewModel) {
@@ -76,8 +91,39 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val tree by viewModel.tree.collectAsStateWithLifecycle()
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val context=LocalContext.current
-    var route by rememberSaveable { mutableStateOf("home") }
+    val navController = rememberNavController()
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val route: String = when (currentEntry?.destination?.route) {
+        ToolsRoute::class.qualifiedName -> "tools_catalog"
+        DownloadsRoute::class.qualifiedName -> "downloads"
+        FilesRoute::class.qualifiedName -> "files_overview"
+        SettingsRoute::class.qualifiedName -> "settings"
+        ScanRoute::class.qualifiedName -> "scan"
+        WorkspaceRoute::class.qualifiedName -> "workspace"
+        ActivityRoute::class.qualifiedName -> "activity"
+        else -> "home"
+    }
     var tab by rememberSaveable { mutableStateOf(DockTab.HOME) }
+    fun destinationFor(name: String): Any = when (name) {
+        "tools_catalog" -> ToolsRoute
+        "downloads" -> DownloadsRoute
+        "files_overview" -> FilesRoute
+        "settings" -> SettingsRoute
+        "scan" -> ScanRoute
+        "workspace" -> WorkspaceRoute
+        "activity" -> ActivityRoute
+        else -> HomeRoute
+    }
+    fun navigateTo(name: String) { navController.navigate(destinationFor(name)) { launchSingleTop = true } }
+    fun navigateTab(next: DockTab) {
+        tab = next
+        navController.navigate(destinationFor(next.route)) {
+            popUpTo(HomeRoute) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+    fun goBack() { if (!navController.popBackStack()) navigateTab(tab) }
     var selectedJob by rememberSaveable { mutableStateOf<String?>(null) }
     var search by rememberSaveable { mutableStateOf("") }
     var deleteEntry by remember { mutableStateOf<DocumentEntry?>(null) }
@@ -87,7 +133,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     var folderName by remember { mutableStateOf("") }
     val snackbar=remember { SnackbarHostState() }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it.replace('_',' '));viewModel.dismissMessage() } }
-    BackHandler(route !in setOf("home","tools_catalog","downloads","files_overview")) { route=tab.route }
+    // Predictive/system back is handled by NavController (enableOnBackInvokedCallback=true).
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==Activity.RESULT_OK) viewModel.intake(IntakeController.collect(result.data))
     }
@@ -122,33 +168,35 @@ fun JumloNavHost(viewModel:AppViewModel) {
         exportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=output.mimeType;putExtra(Intent.EXTRA_TITLE,output.displayName) })
     }
     fun openTool(tool:UtilityTool) {
-        if(tool.id=="scan_doc") { route="scan"; return }
-        if(viewModel.chooseTool(tool.id)) route=if(tool.id=="file_02") "files_overview" else "workspace"
+        if(tool.id=="scan_doc") { navigateTo("scan"); return }
+        if(viewModel.chooseTool(tool.id)) navigateTo(if(tool.id=="file_02") "files_overview" else "workspace")
     }
-    val root=route in setOf("home","tools_catalog","downloads","files_overview")
+    // Renders the scaffold UI for one logical (type-safe) destination.
+    @Composable fun Shell(shellRoute: String) {
+        val root = shellRoute in setOf("home","tools_catalog","downloads","files_overview")
     Scaffold(snackbarHost={ SnackbarHost(snackbar) },contentWindowInsets=WindowInsets(0,0,0,0)) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
             val wide=maxWidth>=840.dp
             Row(Modifier.fillMaxSize()) {
-                if(wide && root) QuietExpandedNavigationRail(tab,settings.language,{ next ->tab=next;route=next.route })
+                if(wide && root) QuietExpandedNavigationRail(tab,settings.language,{ next -> navigateTab(next) })
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     Column(Modifier.fillMaxSize()) {
-                        if(root) QuietRootTopBar(title=when(route) { "home"->stringResource(R.string.app_name);"tools_catalog"->stringResource(R.string.tools_catalog_title);"downloads"->stringResource(R.string.nav_downloads);else->stringResource(R.string.nav_files) },onSettingsClick={ route="settings" })
-                        else QuietWorkspaceTopBar(title=when(route) { "workspace"->CapabilityRegistry.tools.find { it.id==form.toolId }?.let { title(it,settings.language) } ?: "Workspace";"activity"->"Activity & outputs";else->stringResource(R.string.settings_title) },onBack={ route=tab.route })
-                        if(route=="scan") {
-                            com.jumlo.app.ui.scan.ScanScreen(onCaptured={ file -> viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg"); viewModel.chooseTool("pdf_02"); route="workspace" }, onBack={ route=tab.route })
-                        } else if(route=="workspace" && form.toolId=="dl_media") {
-                            com.jumlo.app.ui.downloads.MediaWorkspace(urls,{ selectedJob=it;route="activity" },{ value ->viewModel.chooseTool("dl_02");viewModel.setUrls(value);route="workspace" })
-                        } else if(route=="workspace") {
-                            WorkspaceScreen(viewModel,form,imported,busy,urls,settings.language,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}) { viewModel.submit { selectedJob=it;route="activity" } }
+                        if(root) QuietRootTopBar(title=when(shellRoute) { "home"->stringResource(R.string.app_name);"tools_catalog"->stringResource(R.string.tools_catalog_title);"downloads"->stringResource(R.string.nav_downloads);else->stringResource(R.string.nav_files) },onSettingsClick={ navigateTo("settings") })
+                        else QuietWorkspaceTopBar(title=when(shellRoute) { "workspace"->CapabilityRegistry.tools.find { it.id==form.toolId }?.let { title(it,settings.language) } ?: "Workspace";"activity"->"Activity & outputs";else->stringResource(R.string.settings_title) },onBack={ goBack() })
+                        if(shellRoute=="scan") {
+                            com.jumlo.app.ui.scan.ScanScreen(onCaptured={ file -> viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg"); viewModel.chooseTool("pdf_02"); navigateTo("workspace") }, onBack={ goBack() })
+                        } else if(shellRoute=="workspace" && form.toolId=="dl_media") {
+                            com.jumlo.app.ui.downloads.MediaWorkspace(urls,{ selectedJob=it;navigateTo("activity") },{ value ->viewModel.chooseTool("dl_02");viewModel.setUrls(value);navigateTo("workspace") })
+                        } else if(shellRoute=="workspace") {
+                            WorkspaceScreen(viewModel,form,imported,busy,urls,settings.language,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))}) { viewModel.submit { selectedJob=it;navigateTo("activity") } }
                         } else {
                             LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max=900.dp).align(Alignment.CenterHorizontally),contentPadding=PaddingValues(start=20.dp,end=20.dp,top=16.dp,bottom=if(root && !wide) 124.dp else 32.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                                if(route=="home" || route=="tools_catalog") {
+                                if(shellRoute=="home" || shellRoute=="tools_catalog") {
                                     item { CandidateNotice() }
-                                    if(route=="home") {
+                                    if(shellRoute=="home") {
                                         item { QuietHero(title=stringResource(R.string.home_hero_title),subtitle=stringResource(R.string.home_hero_subtitle),icon=Icons.Rounded.Bolt) }
                                         item { QuietPrimaryButton(stringResource(R.string.import_device_files),::importFiles,Modifier.fillMaxWidth(),leadingIcon=Icons.Rounded.Add,enabled=!busy) }
-                                        item { TextButton(onClick={ route="workspace" }) { Text("Resume saved workspace (${form.sourceIds.size} files)") } }
+                                        item { TextButton(onClick={ navigateTo("workspace") }) { Text("Resume saved workspace (${form.sourceIds.size} files)") } }
                                     }
                                     item { QuietSearchBar(query=search,placeholder=stringResource(R.string.home_search_placeholder),onQueryChange={ search=it },onClear={ search="" }) }
                                     val catalog=CapabilityRegistry.tools.filter { search.isBlank() || title(it,settings.language).contains(search,true) || it.id.contains(search,true) }
@@ -157,20 +205,20 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                         if(tools.isNotEmpty()) item(key="heading-${pillar.name}") { QuietSectionTitle(if(settings.language.isRtl) pillar.labelAr else pillar.labelEn) }
                                         items(tools,key={it.id}) { tool -> ToolCard(tool,settings.language,{ openTool(tool) }) }
                                     }
-                                    if(route=="home") {
+                                    if(shellRoute=="home") {
                                         item { QuietSectionTitle(stringResource(R.string.recent_results_title)) }
-                                        items(outputs.take(5),key={"recent-${it.id}"}) { output -> OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);route="workspace"}) }
+                                        items(outputs.take(5),key={"recent-${it.id}"}) { output -> OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);navigateTo("workspace")}) }
                                     }
                                 }
-                                if(route=="downloads") {
+                                if(shellRoute=="downloads") {
                                     item { CandidateNotice() }
                                     items(CapabilityRegistry.tools.filter { it.id in setOf("dl_02","dl_03","dl_media") },key={it.id}) { tool ->ToolCard(tool,settings.language,{openTool(tool)}) }
                                     item { QuietSectionTitle(stringResource(R.string.transfer_activity_title)) }
                                     val downloads=jobs.filter { it.request.toolId.startsWith("dl_") }
                                     if(downloads.isEmpty()) item { Text("No transfers. Network failures are reported, never replaced by sample files.") }
-                                    items(downloads,key={it.request.id}) { job -> JobCard(job,{ selectedJob=job.request.id;route="activity" },{viewModel.cancel(job.request.id)},{viewModel.retry(job)}) }
+                                    items(downloads,key={it.request.id}) { job -> JobCard(job,{ selectedJob=job.request.id;navigateTo("activity") },{viewModel.cancel(job.request.id)},{viewModel.retry(job)}) }
                                 }
-                                if(route=="files_overview") {
+                                if(shellRoute=="files_overview") {
                                     item { Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) { OutlinedButton(onClick=::importFiles) { Text(stringResource(R.string.import_device_files)) };OutlinedButton(onClick={pickFolder()}) {Text(stringResource(R.string.tool_browse_storage))} } }
                                     item { Text("Imported snapshots",style=MaterialTheme.typography.titleLarge);Text("Originals remain unchanged. Selecting a snapshot adds it to the workspace.") }
                                     if(imported.isEmpty()) item { Text("No imported files yet.") }
@@ -178,24 +226,24 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                         QuietCard {
                                             Text(source.displayName,style=MaterialTheme.typography.titleMedium)
                                             Text("${bytes(source.sizeBytes)} | ${source.mimeType ?: "Unknown type"}")
-                                            TextButton(onClick={viewModel.addSource(source.id);route="workspace"}) { Text("Add to workspace") }
+                                            TextButton(onClick={viewModel.addSource(source.id);navigateTo("workspace")}) { Text("Add to workspace") }
                                         }
                                     }
                                     item { QuietSectionTitle(stringResource(R.string.recent_results_title)) }
-                                    items(outputs,key={it.id}) { output ->OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);route="workspace"}) }
+                                    items(outputs,key={it.id}) { output ->OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);navigateTo("workspace")}) }
                                     tree?.let { listing ->
                                         item { Text(listing.name,style=MaterialTheme.typography.titleLarge);TextButton(onClick={newFolder=true;folderName=""}) {Text("New folder")} }
                                         items(listing.entries,key={"tree-${it.uri}"}) { entry -> QuietCard {
                                             Text(entry.name,style=MaterialTheme.typography.titleMedium);Text(if(entry.isDirectory) "Folder" else bytes(entry.sizeBytes))
                                             if(entry.isDirectory) TextButton(onClick={pickFolder(entry.uri)}) {Text("Browse inside")}
                                             else {
-                                                Row { TextButton(onClick={launchExternal(entry.uri,entry.mimeType,false)}) {Text(stringResource(R.string.action_open))};TextButton(onClick={viewModel.intake(Intake(listOf(entry.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null));route="workspace"}) {Text("Import")} }
+                                                Row { TextButton(onClick={launchExternal(entry.uri,entry.mimeType,false)}) {Text(stringResource(R.string.action_open))};TextButton(onClick={viewModel.intake(Intake(listOf(entry.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null));navigateTo("workspace")}) {Text("Import")} }
                                                 Row { TextButton(enabled=entry.writable,onClick={renameEntry=entry;renameText=entry.name}) {Text("Rename")};TextButton(enabled=entry.writable,onClick={deleteEntry=entry}) {Text("Delete original")} }
                                             }
                                         } }
                                     }
                                 }
-                                if(route=="activity") {
+                                if(shellRoute=="activity") {
                                     item { Text("Only published output records appear below. A queued job is not a completed result.") }
                                     val displayed=if(selectedJob==null) jobs else jobs.filter { it.request.id==selectedJob }
                                     items(displayed,key={it.request.id}) { job ->
@@ -208,10 +256,10 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                         }
                                         if(job.outcomes.isNotEmpty()) Text(job.outcomes.joinToString("\n") { "${it.itemKey}: ${it.status}${it.errorCode?.let { code->" | $code" } ?: ""}" },style=MaterialTheme.typography.bodySmall)
                                     }
-                                    items(outputs.filter { selectedJob==null || it.jobId==selectedJob },key={it.id}) { output ->OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);route="workspace"}) }
-                                    item { TextButton(onClick={viewModel.allowNewRun();route="workspace"}) {Text("Start a new run")} }
+                                    items(outputs.filter { selectedJob==null || it.jobId==selectedJob },key={it.id}) { output ->OutputCard(output,{launchExternal(output.uri,output.mimeType,false)},{launchExternal(output.uri,output.mimeType,true)},{exportOutput(output)},{viewModel.importOutput(output);navigateTo("workspace")}) }
+                                    item { TextButton(onClick={viewModel.allowNewRun();navigateTo("workspace")}) {Text("Start a new run")} }
                                 }
-                                if(route=="settings") {
+                                if(shellRoute=="settings") {
                                     item { Text(stringResource(R.string.settings_appearance_language),style=MaterialTheme.typography.titleLarge) }
                                     items(ThemeMode.entries) { mode -> Row(verticalAlignment=Alignment.CenterVertically) { RadioButton(settings.themeMode==mode,{viewModel.setThemeMode(mode)});Text(if(settings.language.isRtl) mode.labelAr else mode.labelEn) } }
                                     items(AppLanguage.entries) { lang -> Row(verticalAlignment=Alignment.CenterVertically) { RadioButton(settings.language==lang,{viewModel.setLanguage(lang)});Text(lang.displayName) } }
@@ -228,6 +276,18 @@ fun JumloNavHost(viewModel:AppViewModel) {
                 }
             }
         }
+    }
+    }
+
+    NavHost(navController = navController, startDestination = HomeRoute, modifier = Modifier.fillMaxSize()) {
+        composable<HomeRoute> { Shell("home") }
+        composable<ToolsRoute> { Shell("tools_catalog") }
+        composable<DownloadsRoute> { Shell("downloads") }
+        composable<FilesRoute> { Shell("files_overview") }
+        composable<SettingsRoute> { Shell("settings") }
+        composable<ScanRoute> { Shell("scan") }
+        composable<WorkspaceRoute>(deepLinks = listOf(navDeepLink<WorkspaceRoute>(basePath = "jumlo://workspace"))) { Shell("workspace") }
+        composable<ActivityRoute> { Shell("activity") }
     }
     if(!settings.hasCompletedOnboarding) AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.welcome_title))},text={Text("Select your files, configure a tool, then run it locally. This source candidate has not passed Android device qualification. Existing originals are never replaced by processing jobs.")},confirmButton={TextButton(onClick=viewModel::finishOnboarding) {Text(stringResource(R.string.welcome_get_started))}})
     deleteEntry?.let { entry -> AlertDialog(onDismissRequest={deleteEntry=null},title={Text("Delete original file?")},text={Text(entry.name+"\nThis requests permanent deletion from the selected provider. Imported snapshots are separate copies.")},confirmButton={TextButton(onClick={deleteEntry=null;viewModel.deleteFile(entry)}) {Text("Delete")}},dismissButton={TextButton(onClick={deleteEntry=null}) {Text(stringResource(R.string.action_cancel))}}) }
