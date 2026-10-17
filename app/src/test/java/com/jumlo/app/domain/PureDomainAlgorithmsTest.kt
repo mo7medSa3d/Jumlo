@@ -127,3 +127,30 @@ class ZipSlipTest {
         }
     }
 }
+
+class EncryptedZipTest {
+    @org.junit.Test fun zip4j_aes_roundtrip_and_wrong_password_rejected() {
+        val dir = java.nio.file.Files.createTempDirectory("ezip").toFile()
+        val src = java.io.File(dir, "hello.txt").apply { writeText("secret contents") }
+        val zipFile = java.io.File(dir, "out.zip")
+        val params = net.lingala.zip4j.model.ZipParameters().apply {
+            compressionMethod = net.lingala.zip4j.model.enums.CompressionMethod.DEFLATE
+            compressionLevel = net.lingala.zip4j.model.enums.CompressionLevel.NORMAL
+            isEncryptFiles = true
+            encryptionMethod = net.lingala.zip4j.model.enums.EncryptionMethod.AES
+            aesKeyStrength = net.lingala.zip4j.model.enums.AesKeyStrength.KEY_STRENGTH_256
+        }
+        net.lingala.zip4j.ZipFile(zipFile, "correct horse".toCharArray()).addFile(src, params)
+        // Wrong password must fail, not silently produce output.
+        var rejected = false
+        try {
+            val wrongDir = java.io.File(dir, "wrong").apply { mkdirs() }
+            net.lingala.zip4j.ZipFile(zipFile, "wrong".toCharArray()).extractAll(wrongDir.path)
+            rejected = java.io.File(wrongDir, "hello.txt").let { !it.exists() || it.readText() != "secret contents" }
+        } catch (e: Exception) { rejected = true }
+        org.junit.Assert.assertTrue("wrong password must not yield plaintext", rejected)
+        val okDir = java.io.File(dir, "ok").apply { mkdirs() }
+        net.lingala.zip4j.ZipFile(zipFile, "correct horse".toCharArray()).extractAll(okDir.path)
+        org.junit.Assert.assertEquals("secret contents", java.io.File(okDir, "hello.txt").readText())
+    }
+}

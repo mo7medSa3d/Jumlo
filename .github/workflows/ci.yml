@@ -2,61 +2,52 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'arena/**']
   pull_request:
     branches: [main]
 
 jobs:
   build-test-lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    timeout-minutes: 45
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: temurin
           cache: gradle
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Restore Gradle wrapper
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0 platform-tools'
+      - name: Gradle (debug build, unit tests, lint, release)
+        shell: bash
         run: |
+          set -o pipefail
           chmod +x gradlew
-          ./gradlew --version --no-daemon --console=plain
-
-      - name: Debug build
-        run: ./gradlew :app:assembleDebug --no-daemon --console=plain
-
-      - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest --no-daemon --console=plain
-
-      - name: Lint (fail on errors)
-        run: ./gradlew :app:lintDebug --no-daemon --console=plain
-
-      - name: Release build (when signing config available)
-        if: env.RELEASE_STORE_PASSWORD != ''
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: |
-          if [ ! -f keystore.properties ]; then
-            echo "keystore.properties not found; skipping release build"
-            exit 0
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:assembleRelease --no-daemon --console=plain --stacktrace 2>&1 | tee gradle.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            echo "## Gradle failures" >> "$GITHUB_STEP_SUMMARY"
+            grep -nE '(^e: |error:|FAILED|Exception|Caused by)' gradle.log | head -60 | while IFS= read -r line; do
+              echo "::error::${line}"
+              echo "- ${line}" >> "$GITHUB_STEP_SUMMARY"
+            done
           fi
-          ./gradlew :app:assembleRelease --no-daemon --console=plain
-
-      - name: Upload APKs
+          exit $code
+      - name: Upload Gradle logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: apks
-          path: app/build/outputs/apk/
+          name: gradle-logs
+          path: |
+            gradle.log
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
 
   instrumented:
     runs-on: ubuntu-latest
@@ -68,14 +59,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: temurin
           cache: gradle
-
       - name: Run instrumented tests (API ${{ matrix.api }})
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -85,4 +74,3 @@ jobs:
           script: |
             chmod +x gradlew
             ./gradlew :app:connectedDebugAndroidTest --no-daemon --console=plain
-

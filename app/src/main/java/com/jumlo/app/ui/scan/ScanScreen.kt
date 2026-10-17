@@ -59,7 +59,7 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                         val provider = providerFuture.get()
                         val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                         val capture = ImageCapture.Builder().build(); imageCapture = capture
-                        try { provider.unbindAll(); provider.bindToLifecycle(ctx as androidx.lifecycle.LifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture) }
+                        try { val owner = ctx as? androidx.lifecycle.LifecycleOwner ?: throw IllegalStateException("NO_LIFECYCLE_OWNER"); provider.unbindAll(); provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture) }
                         catch (e: Exception) { error = "CAMERA_BIND_FAILED" }
                     }, ContextCompat.getMainExecutor(ctx))
                 }

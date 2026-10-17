@@ -12,7 +12,6 @@ import com.jumlo.app.model.ItemStatus
 import com.jumlo.app.model.JobRequest
 import com.jumlo.app.model.OutputMetadata
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -76,7 +75,12 @@ import javax.inject.Singleton
     private suspend fun encryptedZip(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         val settings = Json.decodeFromString<EncryptedArchiveSettings>(request.settingsJson)
         val raw = secrets.copy(settings.secretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
+        // zip4j 2.11.5: ZipFile(File, char[]) is the password constructor; this tool only
+        // handles encrypted archives, so an empty password fails instead of weakening it.
+        require(raw.isNotEmpty()) { "ZIP_PASSWORD_REQUIRED" }
         val password = String(raw).toCharArray()
+        raw.fill('\u0000')
+        require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
         return if (!settings.extract) {
             val itemKey = "archive"
             context.outputs.find(request.id, itemKey)?.let { listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) } ?: run {
@@ -118,6 +122,9 @@ import javax.inject.Singleton
                         if (!header.isDirectory) { totalBytes += header.uncompressedSize; require(totalBytes <= context.budget.maxExpandedArchiveBytes) { "ARCHIVE_SIZE_LIMIT" } }
                     }
                     zip.extractAll(dir.path)
+                    var actualBytes = 0L
+                    dir.walkTopDown().filter { it.isFile }.forEach { actualBytes += it.length() }
+                    require(actualBytes <= context.budget.maxExpandedArchiveBytes) { "ARCHIVE_SIZE_LIMIT" }
                     dir.walkTopDown().filter { it.isFile }.forEachIndexed { index, f ->
                         val itemKey = "entry:$index"
                         val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), "application/octet-stream")
