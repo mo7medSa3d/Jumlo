@@ -37,7 +37,7 @@ removed or made non-actionable.
 | Redaction | IMPLEMENTED_UNTESTED | `redaction_removes_text_glyphs_in_region`, `redaction_outside_region_keeps_text` written; complex/multi-stream pages fail the job (`REDACTION_VERIFICATION_FAILED`) instead of faking removal |
 | OCR → .txt | IMPLEMENTED_UNTESTED | ML Kit on-device; needs instrumented test |
 | OCR → searchable PDF | PARTIAL | invisible text layer with coarse per-page-block positioning; word boxes not preserved |
-| Camera scan | PARTIAL | CameraX capture + fixed inset-quad perspective; **no automatic edge detection**, quad is not user-draggable (fixed inset) — UI says so |
+| Camera scan | IMPLEMENTED_UNTESTED | CameraX capture + **user-draggable four-corner quad** (initial inset guess; no automatic edge detection claimed in UI/docs) + perspective correction/crop; not device-tested |
 | Webpage → PDF | IMPLEMENTED_UNTESTED | WebView print adapter; login/DRM pages may print blank |
 
 ## Images (I01–I02, E12–E17)
@@ -64,7 +64,7 @@ removed or made non-actionable.
 | Encrypted ZIP create / extract | IMPLEMENTED_UNTESTED | zip4j AES-256; JVM `EncryptedZipTest` (round-trip + wrong password) written; ZIP-slip validated before extraction (`ZipSlipTest`) |
 | Batch rename | IMPLEMENTED_UNTESTED | preview in handler (`batchRename_applies_pattern_and_uniquifies` written); renamed **copies** only, originals untouched |
 | Duplicate detection (SHA-256) | IMPLEMENTED_UNTESTED | `duplicateGroups_finds_exact_groups` written; report only, no deletion |
-| Managed trash | PARTIAL | no trash store; published outputs remain recoverable in Files until user deletes them. This is **not** a move-to-trash implementation — rename in UI/docs must not claim otherwise |
+| Managed trash | PARTIAL | no dedicated trash store/retention policy yet; published outputs remain recoverable in Files until user deletes them, and 7-day temp retention cleanup is implemented. This is **not** a move-to-trash implementation and the UI must not claim otherwise |
 | SHA-256 verification | IMPLEMENTED_UNTESTED | pre-existing handler |
 
 ## Downloads / media (D01–D02, Phase 2)
@@ -81,6 +81,7 @@ removed or made non-actionable.
 |---|---|---|
 | Room schema export | PARTIAL | v2 exported; **v1 JSON missing** — MigrationTestHelper blocked; manual migration test written (`DatabaseMigrationAndDaoTest`) |
 | DAO tests | IMPLEMENTED_UNTESTED | instrumented `processingDao_roundTrips_jobs_outputs_sources` written |
+| Retention cleanup | IMPLEMENTED_UNTESTED | Settings action deletes staging/seek/extract temp older than 7 days; sources/outputs untouched |
 | Process-death / interrupted publication | IMPLEMENTED_UNTESTED | JVM `PublicationRecoveryTest`: interrupted publication recovered by `reconcile()`, incomplete stage never published, publish idempotent. WorkManager process-death during download/merge/scan still lacks dedicated fault-injection tests |
 | Local error log + export | IMPLEMENTED_UNTESTED | `ErrorLog` (codes only, sanitized, JVM `ErrorLogTest`) + Settings export action |
 | Navigation Compose type-safe routes | IMPLEMENTED_UNTESTED | `@Serializable` routes + NavHost, tab saveState/restoreState, `jumlo://workspace` deep link, singleTop share-intent handling; not CI/device verified |
