@@ -160,4 +160,6 @@
     <string name="scan_adjust_hint">Drag the four corners onto the document edges.</string>
     <string name="scan_apply">Apply correction</string>
     <string name="scan_retake">Retake</string>
+    <string name="settings_refresh_storage">Refresh storage</string>
+    <string name="settings_clean_temp">Clean temporary files</string>
 </resources>

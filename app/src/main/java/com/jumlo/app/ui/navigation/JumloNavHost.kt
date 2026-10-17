@@ -23,6 +23,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -91,6 +98,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val tree by viewModel.tree.collectAsStateWithLifecycle()
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val context=LocalContext.current
+    val haptics=LocalHapticFeedback.current
+    val reduceMotion=remember { try { android.provider.Settings.Global.getFloat(context.contentResolver,android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,1f)==0f } catch(_:Exception) { false } }
     val navController = rememberNavController()
     val currentEntry by navController.currentBackStackEntryAsState()
     val route: String = when (currentEntry?.destination?.route) {
@@ -267,6 +276,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     items(ThemeMode.entries) { mode -> Row(verticalAlignment=Alignment.CenterVertically) { RadioButton(settings.themeMode==mode,{viewModel.setThemeMode(mode)});Text(if(settings.language.isRtl) mode.labelAr else mode.labelEn) } }
                                     items(AppLanguage.entries) { lang -> Row(verticalAlignment=Alignment.CenterVertically) { RadioButton(settings.language==lang,{viewModel.setLanguage(lang)});Text(lang.displayName) } }
                                     item { if(Build.VERSION.SDK_INT>=33) OutlinedButton(onClick={notifications.launch(Manifest.permission.POST_NOTIFICATIONS)}) {Text("Allow job notifications") } }
+                                    item { Row { TextButton(onClick=viewModel::refreshStorage) {Text(stringResource(R.string.settings_refresh_storage))};TextButton(onClick=viewModel::cleanTemporary) {Text(stringResource(R.string.settings_clean_temp))} } }
                                     item { TextButton(onClick=viewModel::refreshStorage) {Text("Refresh storage totals")};Text("Imported snapshots: ${bytes(storage.sources)}\nPublished outputs: ${bytes(storage.outputs)}\nDownload partials: ${bytes(storage.partials)}\nTemporary cache: ${bytes(storage.temporary)}") }
                                     item { Text("No AI, OCR, analytics, or cloud document processing. Media extraction and browser pages can contact the submitted site and its associated media/CDN services. A file selected through Android's document picker may itself be hosted by that provider.") }
                                     item { CandidateNotice() }
@@ -283,7 +293,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     }
 
-    NavHost(navController = navController, startDestination = HomeRoute, modifier = Modifier.fillMaxSize()) {
+    NavHost(navController = navController, startDestination = HomeRoute, modifier = Modifier.fillMaxSize(),
+        enterTransition = { if (reduceMotion) EnterTransition.None else fadeIn(spring(dampingRatio = 0.9f, stiffness = 380f)) },
+        exitTransition = { if (reduceMotion) ExitTransition.None else fadeOut(spring(dampingRatio = 0.9f, stiffness = 380f)) },
+        popEnterTransition = { if (reduceMotion) EnterTransition.None else fadeIn(spring(dampingRatio = 0.9f, stiffness = 380f)) },
+        popExitTransition = { if (reduceMotion) ExitTransition.None else fadeOut(spring(dampingRatio = 0.9f, stiffness = 380f)) }) {
         composable<HomeRoute> { Shell("home") }
         composable<ToolsRoute> { Shell("tools_catalog") }
         composable<DownloadsRoute> { Shell("downloads") }
@@ -355,6 +369,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
 }
 
 @Composable private fun WorkspaceScreen(vm:AppViewModel,form:WorkspaceDraft,imported:List<SourceRef>,busy:Boolean,urls:String,language:AppLanguage,onImport:()->Unit,onPhotos:()->Unit,onExecute:()->Unit) {
+    val haptics=LocalHapticFeedback.current
     val tool=form.toolId
     val download=tool.startsWith("dl_")
     val viewer=tool=="pdf_01"
@@ -378,7 +393,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             if(!viewer) item { WorkspaceFields(form,vm::updateForm) }
         }
         if(!viewer) Surface(shadowElevation=6.dp) {
-            QuietPrimaryButton(if(download) "Queue download" else "Process selected files",onExecute,Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal=20.dp,vertical=12.dp),enabled=!busy && CapabilityRegistry.enabled(tool) && (tool=="webpage_pdf" || (download && urls.isNotBlank() || !download && form.sourceIds.isNotEmpty())))
+            QuietPrimaryButton(if(download) "Queue download" else "Process selected files",{ haptics.performHapticFeedback(HapticFeedbackType.LongPress); onExecute() },Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal=20.dp,vertical=12.dp),enabled=!busy && CapabilityRegistry.enabled(tool) && (tool=="webpage_pdf" || (download && urls.isNotBlank() || !download && form.sourceIds.isNotEmpty())))
         }
     }
     previewId?.let { id -> AlertDialog(onDismissRequest={previewId=null},title={Text("Input preview")},text={InputPreview(vm,id)},confirmButton={TextButton(onClick={previewId=null}) {Text("Close")}}) }

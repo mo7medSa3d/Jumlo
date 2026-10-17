@@ -227,6 +227,14 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { _message.value=stableError(error) }
     } }
+    /** Retention cleanup: staging/seek/extract temp older than 7 days is deleted. Sources and published outputs are never touched. */
+    fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
+        val cutoff=System.currentTimeMillis()-7L*24*3600*1000
+        var freed=0L
+        fun sweep(dir:java.io.File) { if(!dir.exists()) return; dir.walkBottomUp().forEach { f -> if(f.isFile && f.lastModified()<cutoff) { freed+=f.length(); f.delete() } }; dir.walkBottomUp().forEach { d -> if(d.isDirectory && d.list().isNullOrEmpty() && d!=dir) d.delete() } }
+        sweep(java.io.File(app.cacheDir,"seek")); sweep(java.io.File(app.cacheDir,"extract")); sweep(java.io.File(app.filesDir,"processing/staging"))
+        _message.value="CLEANUP_DONE"; refreshStorage()
+    } }
     fun refreshStorage() { viewModelScope.launch(Dispatchers.IO) {
         fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { if(it.isFile) total+=it.length() };return total }
         _storage.value=StorageUsage(bytes(File(app.filesDir,"inbound")),bytes(File(app.filesDir,"processing/results")),bytes(File(app.filesDir,"transfers")),bytes(app.cacheDir))

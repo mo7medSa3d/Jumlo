@@ -160,4 +160,6 @@
     <string name="scan_adjust_hint">اسحب الزوايا الأربع إلى حواف المستند.</string>
     <string name="scan_apply">تطبيق التصحيح</string>
     <string name="scan_retake">إعادة الالتقاط</string>
+    <string name="settings_refresh_storage">تحديث التخزين</string>
+    <string name="settings_clean_temp">تنظيف الملفات المؤقتة</string>
 </resources>
