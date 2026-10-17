@@ -312,6 +312,7 @@ import kotlin.math.roundToInt
                                     modifier=Modifier.weight(1f)
                                 )
                             }
+                            if (asset.formats.any { it.hasAudio }) {
                             ModeSelectionCard(
                                 title=stringResource(R.string.media_audio_only),
                                 icon=Icons.Rounded.Audiotrack,
@@ -319,6 +320,7 @@ import kotlin.math.roundToInt
                                 onClick={haptics.selectionToggle();viewModel.mode(MediaMode.AUDIO)},
                                 modifier=Modifier.weight(1f)
                             )
+                            }
                         }
                     }
                 }

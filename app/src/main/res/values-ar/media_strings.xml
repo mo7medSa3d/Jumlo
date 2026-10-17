@@ -59,11 +59,11 @@
     <string name="media_status_host_verified">متحقق محلياً</string>
     <string name="media_select_type">١. اختر نوع التنزيل</string>
     <string name="media_select_quality">٢. اختر الجودة والصيغة</string>
-    <string name="media_pdf_original">ملف PDF الأصلي (جودة 100% بدون ضغط)</string>
+    <string name="media_pdf_original" formatted="false">ملف PDF الأصلي (جودة 100% بدون ضغط)</string>
     <string name="media_pdf_recommended">ضغط PDF متوازن (150 DPI · حجم أصغر مع دقة عالية)</string>
     <string name="media_pdf_extreme">أقصى ضغط PDF (96 DPI · أصغر حجم ممكن)</string>
     <string name="media_pdf_to_images">تنزيل وتحويل صفحات الـ PDF إلى صور PNG</string>
-    <string name="media_img_original">الصورة الأصلية (جودة 100%)</string>
+    <string name="media_img_original" formatted="false">الصورة الأصلية (جودة 100%)</string>
     <string name="media_img_compressed">صورة مضغوطة (حجم أصغر وتوفير المساحة)</string>
     <string name="media_img_to_pdf">تحويل الصورة المنزّلة إلى ملف PDF</string>
     <string name="media_switch_to_extractor">تحليل جودات الفيديو أو استخراج الصوت MP3 / M4A</string>

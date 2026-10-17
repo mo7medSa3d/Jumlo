@@ -19,7 +19,6 @@ enum class AppLanguage(val code: String, val displayName: String, val nativeSubt
     ARABIC("ar", "العربية (Arabic)", "العربية - واجهة كاملة من اليمين لليسار", true)
 }
 
-enum class DownloadQuality { BALANCED, BEST, DATA_SAVER }
 enum class FileViewMode { LIST, GRID, GALLERY }
 enum class HapticIntensity { OFF, LIGHT, MEDIUM, STRONG }
 
@@ -111,8 +110,6 @@ data class AppSettingsState(
     val defaultDestinationFolder: String = "My files / Results",
     val downloadDestinationFolder: String = "Download/Jumlo",
     val maxConcurrentDownloads: Int = 2,
-    val downloadQuality: DownloadQuality = DownloadQuality.BALANCED,
-    val audioOnlyDefault: Boolean = false,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
     val accentColor: String = "VIOLET",
     val fontScale: String = "NORMAL",

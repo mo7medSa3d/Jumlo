@@ -414,8 +414,6 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setHapticFeedback(enabled:Boolean) = savePreference { preferences.setHapticOnCommit(enabled) }
     fun setHapticIntensity(intensity:com.jumlo.app.model.HapticIntensity) = savePreference { preferences.setHapticIntensity(intensity) }
     fun setSoundsEnabled(enabled:Boolean) = savePreference { preferences.setSoundsEnabled(enabled) }
-    fun setDownloadQuality(value:DownloadQuality) = savePreference { preferences.setDownloadQuality(value) }
-    fun setAudioOnlyDefault(value:Boolean) = savePreference { preferences.setAudioOnlyDefault(value) }
     fun setFileViewMode(value:FileViewMode) = savePreference { preferences.setFileViewMode(value) }
     fun setAccentColor(value:String) = savePreference { preferences.setAccentColor(value) }
     fun setFontScale(value:String) = savePreference { preferences.setFontScale(value) }

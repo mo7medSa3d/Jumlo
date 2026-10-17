@@ -33,7 +33,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
-import com.jumlo.app.model.DownloadQuality
 import com.jumlo.app.model.FileViewMode
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
@@ -123,10 +122,6 @@ import com.jumlo.app.ui.AppViewModel
         item("sounds") { TogglePreference(stringResource(R.string.brand_settings_sound),null,
             settings.soundsEnabled,viewModel::setSoundsEnabled,"settings.sounds") }
         item("downloads") { PreferenceHeading(stringResource(R.string.pref_downloads)) }
-        item("quality") { PreferenceRow(stringResource(R.string.redesign_download_quality),
-            when(settings.downloadQuality) {DownloadQuality.BALANCED->stringResource(R.string.redesign_quality_balanced);DownloadQuality.BEST->stringResource(R.string.redesign_quality_best);DownloadQuality.DATA_SAVER->stringResource(R.string.redesign_quality_saver)},
-            Icons.Rounded.HighQuality,{panel="quality"}) }
-        item("audio") { TogglePreference(stringResource(R.string.redesign_audio_only),null,settings.audioOnlyDefault,viewModel::setAudioOnlyDefault,"settings.audio") }
         item("concurrent") { PreferenceRow(stringResource(R.string.redesign_concurrent),settings.maxConcurrentDownloads.toString(),Icons.Rounded.Download,{panel="concurrent"}) }
         item("location") { PreferenceRow(stringResource(R.string.pref_save_location),
             if(settings.downloadDestinationFolder.startsWith("content://")) stringResource(R.string.redesign_custom_location) else stringResource(R.string.redesign_storage_path),
@@ -169,8 +164,6 @@ import com.jumlo.app.ui.AppViewModel
             { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) }, settings.language.ordinal,
             { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
-        "quality" -> ChoiceDialog(stringResource(R.string.redesign_download_quality),listOf(stringResource(R.string.redesign_quality_balanced),stringResource(R.string.redesign_quality_best),stringResource(R.string.redesign_quality_saver)),settings.downloadQuality.ordinal,
-            {viewModel.setDownloadQuality(DownloadQuality.entries[it]);panel=null},{panel=null})
         "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..4).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,4)-1,
             {viewModel.setMaxConcurrentDownloads(it+1);panel=null},{panel=null})
         "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,

@@ -10,7 +10,6 @@ import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.media.MediaRuntime
 import com.jumlo.app.data.media.MediaSessionStore
-import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.*
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.model.JobRequest
@@ -60,7 +59,6 @@ data class MediaUiState(
     private val runtime: MediaRuntime,
     private val jobs: JobStore,
     private val secrets: EphemeralSecretStore,
-    private val preferences: UserPreferencesRepository,
     private val client: OkHttpClient,
     private val sessionStore: MediaSessionStore
 ): ViewModel() {
@@ -73,7 +71,6 @@ data class MediaUiState(
     private var lastJob: String?=null
     private val submissions=MediaSubmissionSlot<JobRequest>()
     private val probeClient=client.newBuilder().followRedirects(false).followSslRedirects(false).build()
-    private var modeChangedByUser = false
     private fun probeDirect(url:String,allowHttp:Boolean,check:()->Unit):DirectPreview {
         var uri=HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(url),allowHttp)
         var useRangeGet = false
@@ -116,22 +113,7 @@ data class MediaUiState(
         throw IllegalArgumentException("TOO_MANY_REDIRECTS")
     }
 
-    init {
-        refreshSessionState()
-        viewModelScope.launch {
-            preferences.settingsFlow.collect { pref ->
-                val desiredMode = if (pref.audioOnlyDefault) MediaMode.AUDIO else MediaMode.VIDEO
-                // DataStore updates must never overwrite a deliberate video/audio selection.
-                if (!modeChangedByUser) {
-                    _state.update { current ->
-                        if (current.asset == null && current.direct == null && !current.analyzing)
-                            current.copy(mode = desiredMode)
-                        else current
-                    }
-                }
-            }
-        }
-    }
+    init { refreshSessionState() }
 
     private fun refreshSessionState() {
         _state.update {
@@ -150,12 +132,11 @@ data class MediaUiState(
         generation++
         analysis?.cancel()
         analyzedUrl=null
-        modeChangedByUser = false
         newCopy()
         val trimmed = initialUrl.trim().take(32768)
         _state.value=MediaUiState(
             url=trimmed,
-            mode=_state.value.mode,
+            mode=MediaMode.VIDEO,
             platformBadge=DownloadLinkPolicy.detectPlatformName(trimmed),
             hasSavedSession=sessionStore.hasSavedCookies(),
             activeDomains=sessionStore.activeDomainsSummary(),
@@ -238,7 +219,6 @@ data class MediaUiState(
     fun select(key:String) { if(_state.value.choices.any { it.key==key }) { newCopy(); _state.update { it.copy(selectedKey=key) } } }
     fun mode(value:MediaMode) {
         if (_state.value.mode == value) return
-        modeChangedByUser = true
         newCopy()
         val asset = _state.value.asset
         val choices = asset?.let { MediaCatalog.choices(it, value) }.orEmpty()

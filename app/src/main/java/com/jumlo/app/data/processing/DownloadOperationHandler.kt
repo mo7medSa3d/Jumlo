@@ -57,6 +57,11 @@ class DownloadOperationHandler @Inject constructor(
     private val secrets:EphemeralSecretStore,
     private val sessionStore:MediaSessionStore
 ):OperationHandler {
+    // StreamTransfer performs redirects itself, then obtains host-scoped cookies
+    // for each hop. OkHttp must not automatically forward cookies to new hosts.
+    private val redirectSafeClient = client.newBuilder()
+        .followRedirects(false).followSslRedirects(false).build()
+
     private fun buildHeadersForUrl(targetUrl: String): Map<String, String> {
         val extraMap = sessionStore.getExtraHeaders().lineSequence()
             .map { it.trim() }
@@ -95,7 +100,7 @@ class DownloadOperationHandler @Inject constructor(
                 if(partial.length()>0L && old.getProperty("urlDigest")!=urlDigest) throw OperationFailure("DOWNLOAD_RESTART_REQUIRED")
                 try {
                     var lastReport=0L
-                    val result=StreamTransfer(OkHttpTransport(client, ::buildHeadersForUrl)).execute(
+                    val result=StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl)).execute(
                         TransferRequest(url,partial,partial.length(),old.getProperty("etag"),old.getProperty("modified"),old.getProperty("total")?.toLongOrNull(),settings.cleartextConsent,context.budget.maxExpandedArchiveBytes,context.budget.minFreeBytes,finalUrlSha256=old.getProperty("finalUrlSha256")),
                         checkCancel={ context.checkCancellation(); networkPolicy(settings) },
                         progress={ bytes,total ->

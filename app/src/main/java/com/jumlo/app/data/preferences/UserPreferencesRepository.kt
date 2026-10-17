@@ -11,7 +11,6 @@ import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.AppSettingsState
 import com.jumlo.app.model.ThemeMode
-import com.jumlo.app.model.DownloadQuality
 import com.jumlo.app.model.FileViewMode
 import com.jumlo.app.model.HapticIntensity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -42,8 +41,6 @@ class UserPreferencesRepository @Inject constructor(
         val DOWNLOAD_DEST_FOLDER = stringPreferencesKey("download_dest_folder")
         val MAX_CONCURRENT_DOWNLOADS = intPreferencesKey("max_concurrent_downloads")
         val WIFI_ONLY_DEFAULT = booleanPreferencesKey("wifi_only_default")
-        val DOWNLOAD_QUALITY = stringPreferencesKey("download_quality")
-        val AUDIO_ONLY_DEFAULT = booleanPreferencesKey("audio_only_default")
         val FILE_VIEW_MODE = stringPreferencesKey("file_view_mode")
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val FONT_SCALE = stringPreferencesKey("font_scale")
@@ -71,8 +68,6 @@ class UserPreferencesRepository @Inject constructor(
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
             wifiOnlyDefault = false,
-            downloadQuality = runCatching { DownloadQuality.valueOf(prefs[Keys.DOWNLOAD_QUALITY] ?: "BALANCED") }.getOrDefault(DownloadQuality.BALANCED),
-            audioOnlyDefault = prefs[Keys.AUDIO_ONLY_DEFAULT] ?: false,
             fileViewMode = runCatching { FileViewMode.valueOf(prefs[Keys.FILE_VIEW_MODE] ?: "GRID") }.getOrDefault(FileViewMode.GRID),
             accentColor = (prefs[Keys.ACCENT_COLOR] ?: "VIOLET").takeIf { it in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC") } ?: "VIOLET",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
@@ -145,8 +140,6 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.DOWNLOAD_DEST_FOLDER] = treeUri }
     }
 
-    suspend fun setDownloadQuality(value: DownloadQuality) { context.dataStore.edit { it[Keys.DOWNLOAD_QUALITY] = value.name } }
-    suspend fun setAudioOnlyDefault(value: Boolean) { context.dataStore.edit { it[Keys.AUDIO_ONLY_DEFAULT] = value } }
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }
     suspend fun setAccentColor(value: String) {
         require(value in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC"))

@@ -59,11 +59,11 @@
     <string name="media_status_host_verified">HOST_VERIFIED</string>
     <string name="media_select_type">1. Choose download type</string>
     <string name="media_select_quality">2. Choose quality &amp; format</string>
-    <string name="media_pdf_original">Original PDF (100% full quality, no compression)</string>
+    <string name="media_pdf_original" formatted="false">Original PDF (100% full quality, no compression)</string>
     <string name="media_pdf_recommended">Balanced PDF Compression (150 DPI · Smaller size)</string>
     <string name="media_pdf_extreme">Maximum PDF Compression (96 DPI · Smallest size)</string>
     <string name="media_pdf_to_images">Download &amp; Convert PDF Pages to PNG Images</string>
-    <string name="media_img_original">Original Image (100% quality)</string>
+    <string name="media_img_original" formatted="false">Original Image (100% quality)</string>
     <string name="media_img_compressed">Compressed Image (Smaller file size)</string>
     <string name="media_img_to_pdf">Convert Downloaded Image to PDF</string>
     <string name="media_switch_to_extractor">Analyze qualities or extract MP3 / M4A audio</string>
