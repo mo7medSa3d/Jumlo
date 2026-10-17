@@ -101,8 +101,23 @@ import javax.inject.Singleton
             val outcomes = mutableListOf<ItemOutcome>()
             context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
                 val dir = File(src.parentFile, "ezx").apply { mkdirs() }
+                val canonicalDir = dir.canonicalFile
                 try {
-                    val zip = ZipFile(src, password); zip.extractAll(dir.path)
+                    val zip = ZipFile(src, password)
+                    val headers = zip.fileHeaders
+                    require(headers.size <= context.budget.maxArchiveEntries) { "ARCHIVE_ENTRY_LIMIT" }
+                    var totalBytes = 0L
+                    // Validate every entry name BEFORE extracting anything (ZIP-slip),
+                    // and enforce the expanded-byte budget from declared sizes.
+                    headers.forEach { header ->
+                        val name = header.fileName
+                        require(name.isNotBlank() && !name.startsWith("/") && !name.startsWith("\\") && !name.contains("\\")) { "UNSAFE_ARCHIVE_PATH" }
+                        require(!name.split('/').any { it == ".." || it == "." }) { "UNSAFE_ARCHIVE_PATH" }
+                        val dest = File(canonicalDir, name).canonicalFile
+                        require(dest.path.startsWith(canonicalDir.path + File.separator)) { "UNSAFE_ARCHIVE_PATH" }
+                        if (!header.isDirectory) { totalBytes += header.uncompressedSize; require(totalBytes <= context.budget.maxExpandedArchiveBytes) { "ARCHIVE_SIZE_LIMIT" } }
+                    }
+                    zip.extractAll(dir.path)
                     dir.walkTopDown().filter { it.isFile }.forEachIndexed { index, f ->
                         val itemKey = "entry:$index"
                         val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), "application/octet-stream")
