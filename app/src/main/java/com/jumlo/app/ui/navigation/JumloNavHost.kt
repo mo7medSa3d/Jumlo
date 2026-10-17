@@ -307,7 +307,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         val swipeDistance=with(LocalDensity.current) { 54.dp.toPx() }
         com.jumlo.app.ui.adaptive.HingeSafeViewport {
         Scaffold(snackbarHost={SnackbarHost(snackbar)},contentWindowInsets=WindowInsets(0,0,0,0)) { padding ->
-            BoxWithConstraints(Modifier.fillMaxSize().padding(padding).graphicsLayer {
+            Box(Modifier.fillMaxSize().padding(padding).graphicsLayer {
                 if(shellRoute=="workspace" && !reduceMotion) {
                     translationX=(if(rtl) -1f else 1f)*backSwipe*swipeDistance
                     scaleX=1f-.035f*backSwipe

@@ -54,6 +54,7 @@ import javax.inject.Singleton
         try { copyVerified(output.uri,file,sha256); return output.uri.toString() }
         catch(e:Exception) { output.delete(); throw e }
     }
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.Q)
     private fun saveMediaStore(file:File,name:String,mime:String,sha256:String):String {
         val resolver=app.contentResolver
         val path=StoragePaths.relativePath(mime)
