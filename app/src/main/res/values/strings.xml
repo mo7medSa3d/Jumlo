@@ -144,4 +144,5 @@
     <string name="processing_title">Processing files on this device</string>
     <string name="processing_body">Open the app to see actual progress and results.</string>
     <string name="processing_cancel">Cancel</string>
+    <string name="settings_export_error_log">Export error log</string>
 </resources>

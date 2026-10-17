@@ -147,6 +147,9 @@ fun JumloNavHost(viewModel:AppViewModel) {
         viewModel.export(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
     }
     val notifications=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(),viewModel::notificationsGranted)
+    val errorLogExportPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        viewModel.exportErrorLog(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
+    }
     fun importFiles() {
         val mime=when(form.toolId) { "pdf_02","img_01","img_02","img_03","img_04"->"image/*";"pdf_01","pdf_07"->"application/pdf";"file_08"->"application/zip";else->"*/*" }
         picker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=mime;putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
@@ -268,6 +271,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     item { Text("No AI, OCR, analytics, or cloud document processing. Media extraction and browser pages can contact the submitted site and its associated media/CDN services. A file selected through Android's document picker may itself be hosted by that provider.") }
                                     item { CandidateNotice() }
                                     item { Text("Release verification and feature limitations are documented in the source package's verification report.") }
+                                    item { OutlinedButton(onClick={ viewModel.prepareErrorLogExport(); errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt") }) }) { Text(stringResource(R.string.settings_export_error_log)) } }
                                 }
                             }
                         }

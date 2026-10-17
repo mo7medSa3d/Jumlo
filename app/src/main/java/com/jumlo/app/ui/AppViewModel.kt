@@ -69,6 +69,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     private var lastFingerprint:String?=null
     private var lastJobId:String?=null
     var pendingExport:OutputRecord?=null
+    private val errorLog=com.jumlo.app.core.ErrorLog(java.io.File(app.filesDir,"error-log.txt"))
+    @Volatile var pendingErrorLogExport:Boolean=false
+        private set
         private set
 
     init {
@@ -92,7 +95,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         refreshStorage()
     }
     fun dismissMessage() { _message.value=null }
-    fun notifyMessage(code:String) { _message.value=code }
+    fun notifyMessage(code:String) { errorLog.record(code,form.value.toolId); _message.value=code }
     fun setUrls(value:String) { _urls.value=value.take(100000) }
     fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
     fun chooseTool(id:String):Boolean {
@@ -157,7 +160,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 lastFingerprint=fingerprint;lastJobId=id;newHandle=null
                 onQueued(id) // Queued is not completed. UI observes Room for every later transition.
             } catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { _message.value=stableError(error) }
+            catch(error:Exception) { errorLog.record(stableError(error),state.toolId); _message.value=stableError(error) }
             finally { newHandle?.let(secrets::remove);_busy.value=false;submitting.set(false) }
         }
     }
@@ -178,6 +181,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setLanguage(language:AppLanguage) { viewModelScope.launch { preferences.setLanguage(language) } }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
+    fun prepareErrorLogExport() { pendingErrorLogExport=true }
+    fun exportErrorLog(target:String?) {
+        if(!pendingErrorLogExport) return; pendingErrorLogExport=false
+        if(target==null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                app.contentResolver.openOutputStream(Uri.parse(target),"wt")?.use { it.write(errorLog.read().toByteArray(Charsets.UTF_8)) }
+                    ?: throw OperationFailure("EXPORT_WRITE_FAILED")
+                _message.value="ERROR_LOG_EXPORTED"
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(_:Exception) { _message.value="EXPORT_FAILED" }
+        }
+    }
     fun export(target:String?) {
         val output=pendingExport ?: return;pendingExport=null
         if(target==null) return
