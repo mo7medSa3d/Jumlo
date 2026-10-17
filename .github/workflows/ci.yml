@@ -64,8 +64,20 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug \
-            -PextendedMedia=true --no-daemon --console=plain 2>&1 | tee gradle.log
-          test -s app/build/outputs/apk/debug/app-debug.apk
+            --no-daemon --console=plain 2>&1 | tee gradle.log
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$apk"
+          bytes=$(stat -c '%s' "$apk")
+          echo "APK size: $bytes bytes (hard limit: 60000000)"
+          echo "### APK: $bytes / 60000000 bytes" >> "$GITHUB_STEP_SUMMARY"
+          if (( bytes > 60000000 )); then
+            echo "::error::APK exceeds the hard 60 MB limit: $bytes bytes"
+            exit 1
+          fi
+          if unzip -Z1 "$apk" | grep -E '^lib/.*/lib(ffmpeg|python|qjs)\.so$|^res/raw/ytdlp(\.|$)'; then
+            echo "::error::Forbidden heavy media runtime found in APK"
+            exit 1
+          fi
           (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
 
       - name: Upload installable debug APK
@@ -87,7 +99,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew :app:assembleRelease -PextendedMedia=true --no-daemon --console=plain 2>&1 | tee -a gradle.log
+          ./gradlew :app:assembleRelease --no-daemon --console=plain 2>&1 | tee -a gradle.log
 
       - name: Upload logs on failure
         if: failure()
@@ -129,4 +141,4 @@ jobs:
           disable-animations: true
           script: |
             chmod +x gradlew
-            ./gradlew :app:connectedDebugAndroidTest -PextendedMedia=true --no-daemon --console=plain
+            ./gradlew :app:connectedDebugAndroidTest --no-daemon --console=plain

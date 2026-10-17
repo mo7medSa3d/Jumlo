@@ -226,7 +226,7 @@ data class MediaUiState(
             error = if (asset != null && choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null) }
     }
 
-    /** Forces full media-extractor inspection on a direct video/audio link so the user can pick qualities or extract MP3 audio. */
+    /** Inspect a direct media URL; the small engine reports source format only. */
     fun analyzeAsMediaStream() {
         analyze(forceExtractor = true)
     }

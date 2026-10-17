@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="media_intro">Paste any video, audio, social platform, PDF, or Google Drive link, choose your exact quality and format, and download directly to your device.</string>
-    <string name="media_link">Video, audio, PDF, or platform link</string>
+    <string name="media_intro">Paste a direct video, audio, PDF, image or Google Drive link. Downloads stay on device without a cloud converter.</string>
+    <string name="media_link">Direct video, audio, PDF or file URL</string>
     <string name="media_analyze">Analyze link</string>
     <string name="media_browser">Platform Login &amp; Cookies</string>
     <string name="media_update_extractor">Update extractor</string>
     <string name="media_cancel">Cancel</string>
-    <string name="media_analyzing">Analyzing link and reading all available qualities &amp; formats...</string>
-    <string name="media_video">Video (with Audio)</string>
-    <string name="media_audio_only">Audio only (MP3 / M4A / OPUS)</string>
+    <string name="media_analyzing">Checking direct file format and size...</string>
+    <string name="media_video">Video file</string>
+    <string name="media_audio_only">Original audio file</string>
     <string name="media_duration">Duration: %1$d seconds</string>
-    <string name="media_actual_qualities">All real qualities reported by the source. Select any resolution or audio format below.</string>
+    <string name="media_actual_qualities">Original source format only; no artificial qualities or audio conversion.</string>
     <string name="media_resolution_unknown">Resolution not reported</string>
     <string name="media_bitrate_unknown">Bitrate not reported</string>
     <string name="media_size_unknown">Size calculated on download</string>
@@ -30,7 +30,7 @@
     <string name="media_direct_instead">Download as a direct file</string>
     <string name="media_queueing">Starting download...</string>
     <string name="media_download_selected">Download selected quality</string>
-    <string name="media_error_site">The current extractor does not recognize this link. Try logging into the platform or using direct download.</string>
+    <string name="media_error_site">This is a webpage rather than a direct media file. Social-page extraction is unavailable in this lightweight build.</string>
     <string name="media_error_private">This media requires a logged-in account. Tap Platform Login &amp; Cookies to sign in.</string>
     <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>
     <string name="media_error_removed">This media has been removed or is no longer available at the source URL.</string>
@@ -41,14 +41,14 @@
     <string name="media_error_format">The selected format changed or is unavailable. Analyze the link again.</string>
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
     <string name="media_error_runtime">The media runtime is not available in this build or device ABI.</string>
-    <string name="media_error_generic">Media processing did not finish. Try signing in via Platform Login &amp; Cookies and retry.</string>
+    <string name="media_error_generic">Direct media download could not finish. Check the file URL, network and access permissions.</string>
     <string name="media_browser_address">HTTPS address</string>
     <string name="media_go">Go</string>
     <string name="media_close_browser">Close</string>
     <string name="media_analyze_page">Analyze page</string>
     <string name="media_found">Found (%1$d)</string>
     <string name="media_browser_error">The page could not be opened securely.</string>
-    <string name="media_browser_scope">Browser sessions sync directly to your local extractor cookies.txt.</string>
+    <string name="media_browser_scope">Authorized cookies remain on device and are used only for requests to their host.</string>
     <string name="media_candidates_note">Analyze a detected stream to inspect actual formats.</string>
     <string name="media_no_candidates">No media resource detected yet.</string>
     <string name="media_new_copy">Create an additional copy on the next download</string>
@@ -66,15 +66,15 @@
     <string name="media_img_original" formatted="false">Original Image (100% quality)</string>
     <string name="media_img_compressed">Compressed Image (Smaller file size)</string>
     <string name="media_img_to_pdf">Convert Downloaded Image to PDF</string>
-    <string name="media_switch_to_extractor">Analyze qualities or extract MP3 / M4A audio</string>
-    <string name="media_supported_platforms">Supports YouTube, TikTok, Instagram, Facebook, X, LinkedIn, SoundCloud, Vimeo, Reddit, Google Drive, PDF &amp; direct links</string>
+    <string name="media_switch_to_extractor">Inspect original audio/video file</string>
+    <string name="media_supported_platforms">Direct video and audio files, PDFs, images and Google Drive. Social pages are not extracted.</string>
     <string name="media_with_audio">With Audio</string>
     <string name="media_without_audio">No audio</string>
     <string name="media_video_only">Video</string>
     <string name="media_session_btn">Platform Login, Cookies &amp; Headers</string>
     <string name="media_session_active_badge">Session Active (%1$d)</string>
     <string name="media_session_hub_title">Platform Login, Cookies &amp; Headers</string>
-    <string name="media_session_hub_subtitle">Sign in to Instagram, Facebook, TikTok, YouTube, X, or customize headers to download from any platform.</string>
+    <string name="media_session_hub_subtitle">Cookies and headers may authorize direct file URLs. Social-page extraction is unavailable.</string>
     <string name="media_session_active_domains">Saved session cookies for: %1$s</string>
     <string name="media_session_clear">Clear All</string>
     <string name="media_tab_webview_login">WebView Login</string>
@@ -88,4 +88,7 @@
     <string name="media_custom_headers_label">Custom HTTP Headers (Key: Value per line)</string>
     <string name="media_headers_save_btn">Save Custom Headers &amp; Re-Analyze</string>
     <string name="media_choose_quality_hint">Choose a quality above to download in the background.</string>
+    <string name="media_error_conversion">Audio transcoding to MP3 or another codec is unavailable in this lightweight build. Download the original audio file.</string>
+    <string name="media_direct_url_hint">Use a direct HTTPS media file URL (MP4, WebM, MP3, M4A) instead of a social media page.</string>
+    <string name="media_audio_not_probed">Audio track checked after download</string>
 </resources>

@@ -1,5 +1,16 @@
 # Jumlo
 
+## Current 60 MB APK size policy
+
+Android CI enforces **60,000,000 bytes (60 MB)** for the installable APK,
+not the GitHub artifact ZIP. Python, yt-dlp, FFmpeg and inactive bundled OCR
+models are excluded. Existing PDF, image, file and direct HTTP(S) media
+downloads remain part of the lightweight, on-device app. Social-media page
+extraction and transcoding to MP3 are no longer advertised as built in.
+See [docs/APP_SIZE_POLICY.md](docs/APP_SIZE_POLICY.md). Earlier sections below
+describe older revisions and superseded architectures.
+
+
 ## Jumlo 2026 motion redesign, phases 0–6 (2026-10-17)
 
 The **Jumlo** name is used consistently throughout the user interface and resources. Its new abstract PDF/download icon is a neutral symbol without lettering. This native Android/Kotlin source candidate has a Jumlo launcher/visual brand, adaptive/themed SVG-derived icons, Android 12+ launch styling, exported iOS icon sources (NO iOS application), a five-tab animated dock, spring press/entrance/route motion, Android predictive-back gesture feedback, original small UI audio cues, per-setting haptic intensity/sounds persistence, and a grid-first Files screen. See [Jumlo implementation audit](docs/JUMLO_2026_MOTION_BRAND_QA.md).

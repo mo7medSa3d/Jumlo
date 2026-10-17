@@ -40,10 +40,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Universal 2026 Platform & File Downloader:
- * Supports YouTube, TikTok, Instagram, Facebook, X/Twitter, LinkedIn, SoundCloud, Vimeo, Reddit,
- * Google Drive, PDF documents, and direct files with real-time type detection, full quality/format selection,
- * and built-in WebView Login / Cookies.txt / Custom HTTP Headers studio.
+ * Lightweight direct media and file downloader with the original source format.
+ * Social landing-page extraction and audio transcoding require heavier engines.
  */
 @Composable fun MediaWorkspace(
     initialUrl:String,
@@ -131,11 +129,13 @@ import kotlin.math.roundToInt
             }
             state.error?.let { code -> item("error") {
                 val needsSession = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_SOURCE_REJECTED","HTTP_401","HTTP_403")
+                val unsupported = code in setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
                 QuietStateCard(
                     title=mediaError(code),
-                    subtitle=stringResource(if(needsSession) R.string.media_error_session else R.string.redesign_download_retry_hint),
-                    actionLabel=stringResource(if(needsSession) R.string.media_browser else R.string.media_analyze),
-                    onAction={if(needsSession) showSessionSheet=true else viewModel.analyze()},
+                    subtitle=stringResource(if(unsupported) R.string.media_direct_url_hint
+                        else if(needsSession) R.string.media_error_session else R.string.redesign_download_retry_hint),
+                    actionLabel=if(unsupported) null else stringResource(if(needsSession) R.string.media_browser else R.string.media_analyze),
+                    onAction=if(unsupported) null else ({if(needsSession) showSessionSheet=true else viewModel.analyze()}),
                     isError=true
                 )
             }}
@@ -249,7 +249,7 @@ import kotlin.math.roundToInt
             }
 
             // =========================================================================
-            // CASE 2: SOCIAL / VIDEO / AUDIO PLATFORM STREAM (YouTube, TikTok, IG, FB, X, SoundCloud, etc.)
+            // CASE 2: DIRECT VIDEO / AUDIO SOURCE (ORIGINAL FORMAT ONLY)
             // =========================================================================
             state.asset?.let { asset ->
                 item("media-preview") {
@@ -331,12 +331,7 @@ import kotlin.math.roundToInt
                                 Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
                                 val originalAudioLabel = stringResource(R.string.media_original_audio)
                                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                    val audioFormats = listOf(
-                                        AudioOutput.MP3 to "MP3",
-                                        AudioOutput.M4A to "M4A (AAC)",
-                                        AudioOutput.OPUS to "OPUS",
-                                        AudioOutput.ORIGINAL to originalAudioLabel
-                                    )
+                                    val audioFormats = listOf(AudioOutput.ORIGINAL to originalAudioLabel)
                                     items(audioFormats, key={it.first.name}) { (fmt, label) ->
                                         FilterChip(
                                             selected=state.audio==fmt,
@@ -384,8 +379,10 @@ import kotlin.math.roundToInt
                                 choice.container.uppercase(Locale.ROOT)
                             }
                             val subBadge = if (choice.mode == MediaMode.VIDEO) {
-                                "$containerLabel · ${stringResource(if (choice.expectsAudio)
-                                    R.string.media_with_audio else R.string.media_without_audio)}"
+                                val audioLabel = if (asset.extractor == "DirectMedia")
+                                    R.string.media_audio_not_probed else if (choice.expectsAudio)
+                                    R.string.media_with_audio else R.string.media_without_audio
+                                "$containerLabel · ${stringResource(audioLabel)}"
                             } else {
                                 containerLabel
                             }

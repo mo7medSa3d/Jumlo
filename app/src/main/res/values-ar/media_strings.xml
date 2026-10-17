@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="media_link">رابط فيديو، صوت، PDF، أو أي منصة</string>
+    <string name="media_link">رابط مباشر لفيديو أو صوت أو PDF أو ملف</string>
     <string name="media_analyze">تحليل الرابط والجودات</string>
     <string name="media_browser">تسجيل دخول المنصات والكوكيز</string>
     <string name="media_update_extractor">تحديث المحرك</string>
     <string name="media_cancel">إلغاء</string>
-    <string name="media_analyzing">جاري تحليل الرابط واستخراج جميع الجودات والصيغ المتاحة...</string>
-    <string name="media_video">فيديو (مع الصوت)</string>
-    <string name="media_audio_only">صوت فقط (MP3 / M4A / OPUS)</string>
+    <string name="media_analyzing">جارٍ فحص صيغة الملف المباشر وحجمه...</string>
+    <string name="media_video">ملف فيديو</string>
+    <string name="media_audio_only">ملف صوت بالصيغة الأصلية</string>
     <string name="media_duration">المدة: %1$d ثانية</string>
     <string name="media_resolution_unknown">الدقة غير مذكورة</string>
     <string name="media_bitrate_unknown">معدل البت غير مذكور</string>
@@ -31,12 +31,12 @@
     <string name="media_analyze_page">تحليل الصفحة</string>
     <string name="media_found">الروابط (%1$d)</string>
     <string name="media_error_url">أدخل رابط HTTP أو HTTPS كاملًا وواحدًا.</string>
-    <string name="media_intro">الصق رابط أي منصة أو فيديو أو صوت أو ملف PDF، واختر النوع والجودة والصيغة قبل التنزيل مباشرة.</string>
-    <string name="media_actual_qualities">جميع الجودات الفعلية المتاحة من المصدر. اختر الدقة أو صيغة الصوت المناسبة لك بالأسفل.</string>
+    <string name="media_intro">الصق رابط فيديو أو صوت أو PDF مباشر أو رابط Drive؛ يعمل التنزيل محليًا بدون محركات ضخمة.</string>
+    <string name="media_actual_qualities">الصيغة الأصلية التي يوفرها الرابط؛ بدون تحويل أو رفع وهمي للجودة.</string>
     <string name="media_no_choices">لا يوجد مسار متاح لهذا الوضع. جرب الوضع الآخر أو التنزيل المباشر.</string>
     <string name="media_no_upscale">ترميز المصدر الأصلي يحافظ على الجودة الصوتية بدون إعادة ترميز إضافية.</string>
     <string name="media_limits">حد المساحة المؤقتة: 8 GiB حسب المساحة المتاحة. إعادة المحاولة تستكمل التنزيل.</string>
-    <string name="media_error_site">لم يتعرف المحرك على الرابط. جرب تسجيل الدخول للمنصة أو التنزيل المباشر.</string>
+    <string name="media_error_site">هذا رابط صفحة وليس رابط ملف وسائط مباشر. استخراج صفحات المنصات غير مضمّن في النسخة الخفيفة.</string>
     <string name="media_error_private">هذا المحتوى يتطلب حسابًا مسجلًا. اضغط على «تسجيل دخول المنصات والكوكيز» للمتابعة.</string>
     <string name="media_error_geoblocked">هذا المحتوى محجوب جغرافيًا في منطقتك من قِبل المنصة المصدر.</string>
     <string name="media_error_removed">تمت إزالة هذا المحتوى أو لم يعد متاحًا على الرابط المصدر.</string>
@@ -46,9 +46,9 @@
     <string name="media_error_network">تعذر الاتصال بالمصدر بسبب خطأ في الشبكة. تحقق من الاتصال وحاول مجدداً.</string>
     <string name="media_error_format">الجودة المختارة تغيرت أو غير متاحة. حلل الرابط من جديد.</string>
     <string name="media_error_runtime">محرك الوسائط غير متاح في معمارية هذا الجهاز.</string>
-    <string name="media_error_generic">تعذر استخراج الرابط مباشرة. جرب فتح «تسجيل دخول المنصات والكوكيز» وتخصيص الـ Headers ثم أعد المحاولة.</string>
+    <string name="media_error_generic">تعذر تنزيل الوسائط المباشرة. تأكد من الرابط وصلاحيات الوصول والشبكة.</string>
     <string name="media_browser_error">تعذر فتح الصفحة بأمان.</string>
-    <string name="media_browser_scope">يتم حفظ كوكيز الجلسة محلياً لتمريرها تلقائياً إلى محرك التنزيل.</string>
+    <string name="media_browser_scope">تبقى الكوكيز محلية وتُستخدم مع طلبات المضيف المناسب فقط.</string>
     <string name="media_candidates_note">حلل الرابط لعرض جميع جوداته المتاحة.</string>
     <string name="media_no_candidates">لم يتم اكتشاف رابط وسائط بعد.</string>
     <string name="media_new_copy">إنشاء نسخة إضافية عند التنزيل التالي</string>
@@ -66,15 +66,15 @@
     <string name="media_img_original" formatted="false">الصورة الأصلية (جودة 100%)</string>
     <string name="media_img_compressed">صورة مضغوطة (حجم أصغر وتوفير المساحة)</string>
     <string name="media_img_to_pdf">تحويل الصورة المنزّلة إلى ملف PDF</string>
-    <string name="media_switch_to_extractor">تحليل جودات الفيديو أو استخراج الصوت MP3 / M4A</string>
-    <string name="media_supported_platforms">يدعم YouTube وTikTok وInstagram وFacebook وX وLinkedIn وSoundCloud وVimeo وReddit وGoogle Drive وملفات PDF والروابط المباشرة</string>
+    <string name="media_switch_to_extractor">فحص ملف الفيديو أو الصوت الأصلي</string>
+    <string name="media_supported_platforms">يدعم روابط الفيديو والصوت المباشرة وملفات PDF والصور وGoogle Drive، دون استخراج صفحات المنصات.</string>
     <string name="media_with_audio">مع الصوت</string>
     <string name="media_without_audio">بدون صوت</string>
     <string name="media_video_only">فيديو</string>
     <string name="media_session_btn">تسجيل دخول المنصات والكوكيز والـ Headers</string>
     <string name="media_session_active_badge">جلسة نشطة (%1$d)</string>
     <string name="media_session_hub_title">تسجيل دخول المنصات والكوكيز والـ Headers</string>
-    <string name="media_session_hub_subtitle">سجّل الدخول إلى Instagram أو Facebook أو TikTok أو YouTube أو X أو خصّص الـ Headers لسحب الفيديوهات والملفات من أي منصة.</string>
+    <string name="media_session_hub_subtitle">يمكن استخدام كوكيز وترويسات مخصصة لروابط الملفات المباشرة المصرح بها؛ دون استخراج صفحات المنصات.</string>
     <string name="media_session_active_domains">الكوكيز والجلسات المحفوظة: %1$s</string>
     <string name="media_session_clear">مسح الجلسات</string>
     <string name="media_tab_webview_login">دخول مباشر</string>
@@ -88,4 +88,7 @@
     <string name="media_custom_headers_label">ترويسات HTTP إضافية مخصصة (Header: Value في كل سطر)</string>
     <string name="media_headers_save_btn">حفظ الـ Headers والـ User-Agent وإعادة التحليل</string>
     <string name="media_choose_quality_hint">اختَر الجودة المناسبة بالأعلى لبدء التنزيل في الخلفية.</string>
+    <string name="media_error_conversion">تحويل الصوت إلى MP3 أو ترميزات أخرى غير متاح في النسخة الخفيفة. يمكنك تنزيل الملف الأصلي.</string>
+    <string name="media_direct_url_hint">استخدم رابط HTTPS مباشر لملف MP4 أو WebM أو MP3 أو M4A بدل صفحة منصة.</string>
+    <string name="media_audio_not_probed">يتم التحقق من المسار الصوتي بعد التنزيل</string>
 </resources>

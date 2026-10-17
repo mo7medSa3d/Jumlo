@@ -9,7 +9,7 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-val extendedMedia = providers.gradleProperty("extendedMedia").map(String::toBoolean).orElse(true).get()
+// Direct media only: no embedded Python, FFmpeg, yt-dlp or model payloads.
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
@@ -30,7 +30,7 @@ android {
         // (or set them in gradle.properties); defaults keep local builds working.
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
         versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
-        buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
+        buildConfigField("boolean", "EXTENDED_MEDIA", "false")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,7 +57,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
+            buildConfigField("boolean", "EXTENDED_MEDIA", "false")
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
@@ -81,10 +81,10 @@ android {
         }
     }
 
-    // Media is included by default in all variants; -PextendedMedia=false builds the lite stub.
-    sourceSets["debug"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
-    sourceSets["release"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
-    sourceSets["benchmark"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    // The actual direct-download runtime is compiled into every variant.
+    sourceSets["debug"].java.srcDir("src/base/java")
+    sourceSets["release"].java.srcDir("src/base/java")
+    sourceSets["benchmark"].java.srcDir("src/base/java")
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     compileOptions {
@@ -131,10 +131,6 @@ val pdfboxAar = configurations.create("pdfboxAar") {
 }
 
 dependencies {
-    if (extendedMedia) {
-        implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
-        implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
-    }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -176,7 +172,6 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.camera2)
     implementation(libs.camera.view)
-    implementation(libs.mlkit.text.recognition)
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)

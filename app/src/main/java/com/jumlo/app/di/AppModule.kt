@@ -17,8 +17,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-    @Provides @Singleton fun provideMediaRuntime(@ApplicationContext context: Context): com.jumlo.app.data.media.MediaRuntime =
-        com.jumlo.app.data.media.MediaRuntimeFactory.create(context)
+    @Provides @Singleton fun provideMediaRuntime(
+        @ApplicationContext context: Context,
+        client: OkHttpClient,
+        sessions: com.jumlo.app.data.media.MediaSessionStore
+    ): com.jumlo.app.data.media.MediaRuntime =
+        com.jumlo.app.data.media.MediaRuntimeFactory.create(context, client, sessions)
 
     @Provides @Singleton fun provideWorkBudget() = com.jumlo.app.data.jobs.WorkBudget()
 

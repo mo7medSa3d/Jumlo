@@ -20,6 +20,8 @@ import com.jumlo.app.R
     code=="COLLISION_SKIPPED" -> R.string.msg_collision_skipped
     code.startsWith("EXPORT_") -> R.string.msg_export_failed
     code=="UNSUPPORTED_SOCIAL_PLATFORM" -> R.string.msg_unsupported_social_platform
+    code=="MEDIA_SITE_UNSUPPORTED" -> R.string.media_error_site
+    code=="MEDIA_CONVERSION_UNAVAILABLE" -> R.string.media_error_conversion
     code=="HTTP_401" || code=="LOGIN_REQUIRED" || code=="GOOGLE_DRIVE_TOKEN_REQUIRED" -> R.string.msg_http_401
     code=="HTTP_403" || code=="PRIVATE_CONTENT" -> R.string.msg_http_403
     code=="HTTP_404" || code=="REMOVED" -> R.string.msg_http_404
