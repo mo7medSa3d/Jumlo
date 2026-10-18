@@ -31,7 +31,7 @@
     <string name="msg_login">Sign in to continue.</string>
     <string name="msg_failed">Could not complete this action. Please try again.</string>
     <string name="msg_one_file">Choose exactly one file for this tool.</string>
-    <string name="msg_unsupported_social_platform">Downloading from YouTube, TikTok, Instagram, Facebook, and LinkedIn is not supported because it violates platform terms and Google Play / App Store policies.</string>
+    <string name="msg_unsupported_social_platform">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
     <string name="msg_http_401">This link requires sign-in or authorization (HTTP 401).</string>
     <string name="msg_http_403">Access to this link is restricted or expired (HTTP 403). If using Google Drive, set sharing to "Anyone with the link".</string>
     <string name="msg_http_404">The requested file was not found at this link (HTTP 404).</string>
@@ -52,7 +52,7 @@
     <string name="msg_sha256_mismatch">File SHA-256 digest does not match the expected checksum.</string>
     <string name="msg_no_acroform">This PDF does not contain interactive form fields.</string>
     <string name="msg_redaction_failed">Could not verify complete text removal in the selected region.</string>
-    <string name="msg_social_policy_detail">Downloading from YouTube, TikTok, Instagram, Facebook, and LinkedIn is not supported because it violates platform terms and Google Play / App Store policies.</string>
+    <string name="msg_social_policy_detail">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
     <string name="jumlo_paper_mode">PDF page size</string>
     <string name="jumlo_custom_paper">Custom dimensions</string>
     <string name="msg_pdf_not_compressible">This PDF cannot be made smaller without lowering content quality. Your original file is unchanged.</string>

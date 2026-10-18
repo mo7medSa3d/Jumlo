@@ -31,7 +31,7 @@
     <string name="msg_login">سجّل الدخول للمتابعة.</string>
     <string name="msg_failed">تعذر إكمال هذا الإجراء. حاول مجددًا.</string>
     <string name="msg_one_file">اختر ملفًا واحدًا فقط لهذه الأداة.</string>
-    <string name="msg_unsupported_social_platform">التنزيل من YouTube وTikTok وInstagram وFacebook وLinkedIn غير مدعوم لأنه يخالف شروط المنصات وسياسات Google Play وApp Store.</string>
+    <string name="msg_unsupported_social_platform">لا يمكن تنزيل الفيديو من هذه الصفحة باستخدام المحرك المتاح. جرّب رابط وسائط مباشرًا أو مصدرًا آخر مدعومًا.</string>
     <string name="msg_http_401">هذا الرابط يتطلب تسجيل الدخول أو صلاحية وصول (HTTP 401).</string>
     <string name="msg_http_403">الوصول إلى هذا الرابط مرفوض أو منتهي الصلاحية (HTTP 403). في Google Drive، تأكد أن المشاركة مضبوطة على "أي شخص لديه الرابط".</string>
     <string name="msg_http_404">الملف المطلوب غير موجود على هذا الرابط (HTTP 404).</string>
@@ -52,7 +52,7 @@
     <string name="msg_sha256_mismatch">بصمة SHA-256 للملف لا تطابق القيمة المتوقعة.</string>
     <string name="msg_no_acroform">لا يحتوي ملف PDF هذا على حقول نماذج تفاعلية قابلة للتعبئة.</string>
     <string name="msg_redaction_failed">تعذر التحقق من إزالة النص بالكامل في المنطقة المحددة.</string>
-    <string name="msg_social_policy_detail">التنزيل من YouTube وTikTok وInstagram وFacebook وLinkedIn غير مدعوم لأنه يخالف شروط المنصات وسياسات Google Play وApp Store.</string>
+    <string name="msg_social_policy_detail">لا يمكن تنزيل الفيديو من هذه الصفحة باستخدام المحرك المتاح. جرّب رابط وسائط مباشرًا أو مصدرًا آخر مدعومًا.</string>
     <string name="jumlo_paper_mode">حجم صفحة PDF</string>
     <string name="jumlo_custom_paper">مقاسات مخصصة</string>
     <string name="msg_pdf_not_compressible">لا يمكن تقليل حجم ملف PDF دون فقد جودة المحتوى. تم الحفاظ على الملف الأصلي.</string>
