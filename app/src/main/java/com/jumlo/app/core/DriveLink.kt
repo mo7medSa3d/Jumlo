@@ -6,8 +6,8 @@ import java.util.Locale
 /** Parse only canonical Google Drive/Docs links or opaque Drive IDs; never search inside arbitrary text. */
 object DriveLink {
     private val ID = Regex("[A-Za-z0-9_-]{10,128}")
-    private val DRIVE_FILE = Regex("/file/d/([A-Za-z0-9_-]{10,128})(?:/.*)?")
-    private val DOC_FILE = Regex("/(document|spreadsheets|presentation)/d/([A-Za-z0-9_-]{10,128})(?:/.*)?")
+    private val DRIVE_FILE = Regex("/file/(?:u/[0-9]+/)?d/([A-Za-z0-9_-]{10,128})(?:/.*)?")
+    private val DOC_FILE = Regex("/(document|spreadsheets|presentation)/(?:u/[0-9]+/)?d/([A-Za-z0-9_-]{10,128})(?:/.*)?")
 
     fun fileId(input: String): String {
         val value = input.trim()

@@ -31,7 +31,7 @@
     <string name="msg_login">Sign in to continue.</string>
     <string name="msg_failed">Could not complete this action. Please try again.</string>
     <string name="msg_one_file">Choose exactly one file for this tool.</string>
-    <string name="msg_unsupported_social_platform">Downloading from YouTube, TikTok, Instagram, Facebook, and LinkedIn is not supported because it violates platform terms and Google Play / App Store policies.</string>
+    <string name="msg_unsupported_social_platform">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
     <string name="msg_http_401">This link requires sign-in or authorization (HTTP 401).</string>
     <string name="msg_http_403">Access to this link is restricted or expired (HTTP 403). If using Google Drive, set sharing to "Anyone with the link".</string>
     <string name="msg_http_404">The requested file was not found at this link (HTTP 404).</string>
@@ -39,6 +39,9 @@
     <string name="msg_too_many_redirects">The download link redirected too many times. Use a direct file link.</string>
     <string name="msg_insecure_redirect">Blocked an unsafe redirect from HTTPS to unencrypted HTTP.</string>
     <string name="msg_download_not_a_file">This link points to a web page instead of a downloadable file. Check link sharing permissions.</string>
+    <string name="msg_empty_download">The server returned an empty file. Check the download link or try again.</string>
+    <string name="msg_download_restart_required">The file on the server changed or cannot be resumed safely. Re-enter the link or restart the download.</string>
+    <string name="msg_transfer_incomplete">The server closed the connection before sending the complete file. Retry the download.</string>
     <string name="msg_network_timeout">Connection timed out while contacting the server. Check your internet and try again.</string>
     <string name="msg_network_unavailable">No internet connection or server address could not be reached.</string>
     <string name="msg_wifi_required">Waiting for a Wi-Fi connection as configured in download settings.</string>
@@ -51,7 +54,10 @@
     <string name="msg_sha256_mismatch">File SHA-256 digest does not match the expected checksum.</string>
     <string name="msg_no_acroform">This PDF does not contain interactive form fields.</string>
     <string name="msg_redaction_failed">Could not verify complete text removal in the selected region.</string>
-    <string name="msg_social_policy_detail">Downloading from YouTube, TikTok, Instagram, Facebook, and LinkedIn is not supported because it violates platform terms and Google Play / App Store policies.</string>
+    <string name="msg_animated_image_unsupported">Animated images are not supported by this tool. Choose a static JPG, PNG, or WebP image.</string>
+    <string name="msg_image_corrupt">This image could not be decoded or verified. Try another image file.</string>
+    <string name="msg_pdf_corrupt">This PDF file is empty or damaged and could not be processed. Choose another PDF.</string>
+    <string name="msg_social_policy_detail">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
     <string name="jumlo_paper_mode">PDF page size</string>
     <string name="jumlo_custom_paper">Custom dimensions</string>
     <string name="msg_pdf_not_compressible">This PDF cannot be made smaller without lowering content quality. Your original file is unchanged.</string>

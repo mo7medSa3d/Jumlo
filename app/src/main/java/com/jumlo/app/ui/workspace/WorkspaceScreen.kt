@@ -15,7 +15,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
 import androidx.compose.material.icons.automirrored.rounded.NavigateNext
@@ -104,7 +106,15 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             if(download && urls.isNotBlank()) {
                 val lines=urls.lineSequence().map {it.trim()}.filter {it.isNotEmpty()}.toList()
                 require(lines.size<=100 && (tool=="dl_03" || lines.size==1)) {"INVALID_DOWNLOAD_LIST"}
-                lines.forEach {com.jumlo.app.core.HttpPolicy.url(it,form.cleartextConsent)}
+                lines.forEach { line ->
+                    if(com.jumlo.app.core.DownloadLinkPolicy.requiresMediaExtractor(line)) {
+                        throw com.jumlo.app.data.jobs.OperationFailure("MEDIA_SELECTION_REQUIRED")
+                    }
+                    com.jumlo.app.core.HttpPolicy.url(
+                        com.jumlo.app.core.DownloadLinkPolicy.resolveDirectUrl(line),
+                        form.cleartextConsent
+                    )
+                }
             }
         }.exceptionOrNull()?.let(::stableError)
     }
@@ -159,6 +169,13 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 OutlinedTextField(urls,vm::setUrls,label={Text(stringResource(if(tool=="dl_03") R.string.workspace_direct_urls_batch else R.string.workspace_direct_url_single))},modifier=Modifier.fillMaxWidth(),minLines=if(tool=="dl_03") 4 else 2,textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),trailingIcon={IconButton(onClick={clipboard.getText()?.text?.takeIf {it.isNotBlank()}?.let(vm::setUrls)}) {Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))}})
                 Text(stringResource(R.string.workspace_direct_url_hint),style=QuietTheme.typography.metadata)
                 Text(stringResource(R.string.ui_sensitive_draft_note),style=QuietTheme.typography.metadata)
+            }
+            if(tool in setOf("pdf_stamp","pdf_annotate","img_watermark")) {
+                item(key="inline-content-settings") {
+                    QuietCard {
+                        ContentToolSettings(form,vm::updateForm)
+                    }
+                }
             }
             if(!viewer) {
                 item(key="essential-settings") {
@@ -413,14 +430,14 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         IconButton(
                             enabled = pagerState.currentPage > 0,
                             onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(Icons.AutoMirrored.Rounded.NavigateBefore, stringResource(R.string.action_previous))
                         }
                         IconButton(
                             enabled = pagerState.currentPage < pageCount - 1,
                             onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(Icons.AutoMirrored.Rounded.NavigateNext, stringResource(R.string.action_next))
                         }
@@ -481,7 +498,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         }
     }
 }
-@Composable private fun Toggle(label:String,checked:Boolean,onChange:(Boolean)->Unit) { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {Text(label,Modifier.weight(1f));Switch(checked,onChange)} }
+@Composable private fun Toggle(label:String,checked:Boolean,onChange:(Boolean)->Unit) { Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=checked,role=Role.Switch,onValueChange=onChange),verticalAlignment=Alignment.CenterVertically) {Text(label,Modifier.weight(1f));Switch(checked,null)} }
 
 @Composable private fun WorkspaceFields(vm:AppViewModel,f:WorkspaceDraft,edit:((WorkspaceDraft)->WorkspaceDraft)->Unit,onGoogleSignIn:()->Unit={}) {
     QuietCard {

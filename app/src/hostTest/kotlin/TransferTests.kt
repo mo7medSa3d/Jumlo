@@ -80,6 +80,18 @@ fun transferTests(test:(String,()->Unit)->Unit) {
         val result=StreamTransfer(transport).execute(TransferRequest("$base/flaky",out,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,maxRetries=2,retryBackoffMs=10L))
         check(out.readText()=="0123456789" && result.bytes==10L)
     } }
+    test("empty HTTP 200 body is never published as a successful download") {
+        val dir=Files.createTempDirectory("jumlo-empty-download-").toFile()
+        try {
+            val out=File(dir,"empty.part")
+            val empty=HttpTransport { _,_ -> TransportResponse(200,emptyMap(),ByteArrayInputStream(byteArrayOf())) }
+            val error=runCatching {
+                StreamTransfer(empty).execute(TransferRequest("https://example.org/empty",out,minFreeBytes=0,maxRetries=0))
+            }.exceptionOrNull()
+            check(error is IOException && error.message=="EMPTY_HTTP_BODY")
+            check(out.length()==0L)
+        } finally { dir.deleteRecursively() }
+    }
     test("unknown HTTP size stays unknown") { fixture { base,dir ->
         val result=StreamTransfer(transport).execute(TransferRequest("$base/unknown",File(dir,"a.part"),cleartextConsent=true,maxBytes=1000,minFreeBytes=0))
         check(result.bytes==10L && result.totalBytes==null)

@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -61,12 +62,15 @@ fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
     val pillars = QuietTheme.pillars
     val reduced = LocalReducedMotion.current
     val direction = LocalLayoutDirection.current
+    // Five destinations cannot fit translated labels at very large text scales.
+    // Keep full TalkBack labels and show the current destination in the root app bar.
+    val showLabels = LocalDensity.current.fontScale < 1.5f
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val tabs = DockTab.entries
     Box(modifier.fillMaxWidth().padding(bottom=bottom + 12.dp),contentAlignment=Alignment.BottomCenter) {
         Surface(
             modifier=Modifier.widthIn(max=400.dp).fillMaxWidth(.94f).height(74.dp)
-                .shadow(20.dp,QuietTheme.shapes.dockPill,ambientColor=Color.Black.copy(alpha=.16f)),
+                .shadow(12.dp,QuietTheme.shapes.dockPill,ambientColor=Color.Black.copy(alpha=.12f)),
             shape=QuietTheme.shapes.dockPill, color=pillars.dockSurface,
             tonalElevation=6.dp,
             border=BorderStroke(1.dp,pillars.dockBorder)
@@ -86,11 +90,11 @@ fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
                 )
                 Box(Modifier.offset(x=x).align(Alignment.CenterStart)
                     .width(segment).height(57.dp).padding(horizontal=2.dp)
-                    .background(pillars.activePillContainer, RoundedCornerShape(27.dp)))
+                    .background(pillars.activePillContainer,QuietTheme.shapes.activeIndicatorPill))
                 Row(Modifier.fillMaxSize().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
                     tabs.forEach { tab ->
                         val label=if(language.isRtl) tab.labelAr else tab.labelEn
-                        DockItem(tab,label,tab==selectedTab,
+                        DockItem(tab,label,tab==selectedTab,showLabels,
                             modifier=Modifier.weight(1f),onClick={onSelectTab(tab)})
                     }
                 }
@@ -100,11 +104,12 @@ fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
 }
 
 @Composable
-private fun DockItem(tab:DockTab,label:String,selected:Boolean,modifier:Modifier=Modifier,onClick:()->Unit) {
+private fun DockItem(tab:DockTab,label:String,selected:Boolean,showLabel:Boolean,
+    modifier:Modifier=Modifier,onClick:()->Unit) {
     val haptics=rememberAppHaptics()
     val colors=QuietTheme.pillars
     val reduced=LocalReducedMotion.current
-    val bounce by animateFloatAsState(if(selected && !reduced) 1.13f else 1f,
+    val bounce by animateFloatAsState(if(selected && !reduced) 1.07f else 1f,
         animationSpec=if(reduced) snap() else spring(dampingRatio=.68f,stiffness=Spring.StiffnessMedium),label="dock-icon")
     Column(modifier.pressFeedback().heightIn(min=52.dp).clickable {
         haptics.navigationTab()
@@ -114,9 +119,11 @@ private fun DockItem(tab:DockTab,label:String,selected:Boolean,modifier:Modifier
         Icon(dockIcon(tab),contentDescription=null,modifier=Modifier.size(23.dp).graphicsLayer {
             scaleX=bounce;scaleY=bounce
         },tint=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(3.dp))
-        Text(label,maxLines=1,overflow=TextOverflow.Ellipsis,
-            style=QuietTheme.typography.navigation.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
-            color=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
+        if (showLabel) {
+            Spacer(Modifier.height(3.dp))
+            Text(label,maxLines=1,overflow=TextOverflow.Ellipsis,
+                style=QuietTheme.typography.navigation.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
+                color=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

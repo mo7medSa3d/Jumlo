@@ -74,18 +74,18 @@ import com.jumlo.app.ui.AppViewModel
                 Text(stringResource(R.string.settings_title),style=QuietTheme.typography.screenTitle,fontWeight=FontWeight.Bold)
                 Text(stringResource(R.string.brand_settings_shortcuts),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Surface(onClick={viewModel.refreshStorage();panel="storage"},modifier=Modifier.weight(1f).pressFeedback().height(108.dp),
-                        shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.primaryContainer) {
-                        Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                    Surface(onClick={viewModel.refreshStorage();panel="storage"},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=108.dp),
+                        shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.primaryContainer) {
+                        Column(Modifier.fillMaxWidth().heightIn(min=108.dp).padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
                             Icon(Icons.Rounded.Storage,null,tint=MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(stringResource(R.string.brand_settings_storage),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),color=MaterialTheme.colorScheme.onPrimaryContainer,maxLines=2)
                         }
                     }
-                    Surface(onClick={panel="haptic-intensity"},modifier=Modifier.weight(1f).pressFeedback().height(108.dp),
-                        shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerHigh) {
-                        Column(Modifier.fillMaxSize().padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
-                            Icon(Icons.Rounded.Vibration,null,tint=MaterialTheme.colorScheme.primary)
-                            Text(stringResource(R.string.brand_haptics_level),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=2)
+                    Surface(onClick={onOpenFiles()},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=108.dp),
+                        shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.surface) {
+                        Column(Modifier.fillMaxWidth().heightIn(min=108.dp).padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                            Icon(Icons.Rounded.FolderOpen,null,tint=MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.nav_files),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=2)
                         }
                     }
                 }
@@ -122,10 +122,21 @@ import com.jumlo.app.ui.AppViewModel
         item("sounds") { TogglePreference(stringResource(R.string.brand_settings_sound),null,
             settings.soundsEnabled,viewModel::setSoundsEnabled,"settings.sounds") }
         item("downloads") { PreferenceHeading(stringResource(R.string.pref_downloads)) }
+        item("wifiOnly") { TogglePreference(stringResource(R.string.pref_wifi_only), stringResource(R.string.pref_wifi_summary),
+            settings.wifiOnlyDefault, viewModel::setWifiOnlyDefault, "settings.wifiOnly") }
         item("concurrent") { PreferenceRow(stringResource(R.string.redesign_concurrent),settings.maxConcurrentDownloads.toString(),Icons.Rounded.Download,{panel="concurrent"}) }
-        item("location") { PreferenceRow(stringResource(R.string.pref_save_location),
-            if(settings.downloadDestinationFolder.startsWith("content://")) stringResource(R.string.redesign_custom_location) else stringResource(R.string.redesign_storage_path),
-            Icons.Rounded.FolderOpen, onChooseDownloadFolder, Modifier.testTag("settings.downloadLocation")) }
+        item("location") {
+            Column {
+                PreferenceRow(stringResource(R.string.pref_save_location),
+                    if(settings.downloadDestinationFolder.startsWith("content://")) stringResource(R.string.redesign_custom_location) else stringResource(R.string.redesign_storage_path),
+                    Icons.Rounded.FolderOpen, onChooseDownloadFolder, Modifier.testTag("settings.downloadLocation"))
+                if(settings.downloadDestinationFolder.startsWith("content://")) {
+                    TextButton(onClick = viewModel::resetDownloadDestinationFolder, modifier = Modifier.testTag("settings.resetDownloadLocation")) {
+                        Text(stringResource(R.string.action_reset) + " (" + stringResource(R.string.redesign_storage_path) + ")")
+                    }
+                }
+            }
+        }
         item("openSaved") { PreferenceRow(stringResource(R.string.redesign_open_folder),stringResource(R.string.redesign_storage_folder),Icons.Rounded.FolderOpen,onOpenSavedFolder) }
         item("notifications") { PreferenceRow(stringResource(R.string.pref_notifications),
             stringResource(if (notificationsEnabled) R.string.pref_enabled else R.string.pref_disabled), Icons.Rounded.Notifications, {
@@ -164,7 +175,7 @@ import com.jumlo.app.ui.AppViewModel
             { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) }, settings.language.ordinal,
             { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
-        "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..4).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,4)-1,
+        "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..6).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,6)-1,
             {viewModel.setMaxConcurrentDownloads(it+1);panel=null},{panel=null})
         "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,
             {viewModel.setFileViewMode(FileViewMode.entries[it]);panel=null},{panel=null})

@@ -3,8 +3,10 @@ package com.jumlo.app.data.jobs
 import android.content.Context
 import androidx.work.*
 import com.jumlo.app.data.local.*
+import com.jumlo.app.core.JobLifecyclePolicy
 import com.jumlo.app.data.output.OutputStore
 import com.jumlo.app.data.preferences.UserPreferencesRepository
+import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.model.*
 import com.jumlo.app.worker.EngineOperationWorker
@@ -14,19 +16,27 @@ import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import org.json.JSONObject
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton class JobStore @Inject constructor(@ApplicationContext private val app:Context,private val db:AppDatabase,private val sources:SourceStore,private val outputs:OutputStore,private val budget:WorkBudget,
-    private val preferences:UserPreferencesRepository,private val admission:DownloadAdmission) {
+    private val preferences:UserPreferencesRepository,private val admission:DownloadAdmission,private val secrets:EphemeralSecretStore) {
     private val dao get()=db.processingDao()
     private val work get()=WorkManager.getInstance(app)
     val snapshots=dao.jobs().map { rows -> rows.map { Json.decodeFromString<JobSnapshot>(it.snapshotJson) } }
     fun observe(jobId:String):Flow<JobSnapshot> = dao.observeJob(jobId).filterNotNull().map { Json.decodeFromString(it.snapshotJson) }
     suspend fun recoverPending() {
-        dao.jobs().first().filter { it.stage in setOf("QUEUED","VALIDATING","RUNNING","FINALIZING","INTERRUPTED") }.forEach { row -> schedule(Json.decodeFromString(row.requestJson)) }
+        val now=System.currentTimeMillis()
+        dao.jobs().first().filter { row ->
+            JobLifecyclePolicy.shouldRecover(row.stage) && (row.leaseOwner==null || row.leaseUntil<now)
+        }.forEach { row ->
+            val policy=if(row.stage==JobStage.INTERRUPTED.name) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+            schedule(Json.decodeFromString(row.requestJson),policy)
+        }
     }
     suspend fun enqueue(request:JobRequest):String {
         require(CapabilityRegistry.canProcess(request.toolId)) { "CAPABILITY_UNAVAILABLE" }
@@ -47,27 +57,54 @@ import javax.inject.Singleton
         }
         work.enqueueUniqueWork("job:${request.id}",policy,builder.build())
     }
+    private fun cleanupCancelledArtifacts(jobId:String,request:JobRequest) {
+        if(runCatching { UUID.fromString(jobId).toString()==jobId }.getOrDefault(false)) {
+            runCatching { File(app.filesDir,"transfers/$jobId").deleteRecursively() }
+            runCatching { File(app.noBackupFilesDir,"media-transfers/$jobId").deleteRecursively() }
+        }
+        runCatching {
+            val obj=JSONObject(request.settingsJson)
+            for(key in listOf("urlSecretHandle","secretHandle","tokenSecretHandle")) {
+                val handle=obj.optString(key,"")
+                if(handle.isNotBlank()) secrets.remove(handle)
+            }
+        }
+    }
     suspend fun pause(jobId:String) {
         val row=dao.job(jobId) ?: return
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
-        if(old.progress.stage !in setOf(JobStage.QUEUED,JobStage.VALIDATING,JobStage.RUNNING)) return
-        val paused=old.copy(progress=old.progress.copy(stage=JobStage.INTERRUPTED),updatedAtEpochMs=System.currentTimeMillis())
-        dao.setStage(jobId,JobStage.INTERRUPTED.name,Json.encodeToString(paused))
-        work.cancelUniqueWork("job:$jobId")
+        if(!old.request.toolId.startsWith("dl_") || !JobLifecyclePolicy.canPause(old.progress.stage.name)) return
+        val paused=old.copy(progress=old.progress.copy(stage=JobStage.PAUSED),updatedAtEpochMs=System.currentTimeMillis())
+        if(dao.pauseIfActive(jobId,Json.encodeToString(paused))==1) work.cancelUniqueWork("job:$jobId")
     }
     suspend fun cancel(jobId:String) {
         val row=dao.job(jobId) ?: return
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
         if(old.progress.stage in setOf(JobStage.COMPLETED,JobStage.CANCELLED)) return
         val cancelled=old.copy(progress=old.progress.copy(stage=JobStage.CANCELLED),updatedAtEpochMs=System.currentTimeMillis())
-        dao.setStage(jobId,JobStage.CANCELLED.name,Json.encodeToString(cancelled))
-        work.cancelUniqueWork("job:$jobId")
+        if(dao.cancelIfOpen(jobId,Json.encodeToString(cancelled))==1) {
+            work.cancelUniqueWork("job:$jobId")
+            withContext(Dispatchers.IO) {
+                val current=dao.job(jobId)
+                if(current?.leaseOwner==null || current.leaseUntil<System.currentTimeMillis()) {
+                    cleanupCancelledArtifacts(jobId,old.request)
+                }
+            }
+        }
     }
     suspend fun retryFailed(jobId:String):String {
         val row=dao.job(jobId) ?: throw OperationFailure("JOB_NOT_FOUND")
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
         // Same logical job/output keys: successfully published members are not reproduced.
         val next=old.copy(progress=JobProgress(JobStage.QUEUED,0,null),updatedAtEpochMs=System.currentTimeMillis())
+        // Wait briefly for the cancelled/interrupted worker to release its fenced lease.
+        if(row.stage in setOf(JobStage.PAUSED.name,JobStage.INTERRUPTED.name,JobStage.WAITING_FOR_INPUT.name)) {
+            for(attempt in 0 until 20) {
+                val current=dao.job(jobId)
+                if(current?.leaseOwner==null || current.leaseUntil<System.currentTimeMillis()) break
+                delay(100)
+            }
+        }
         if(dao.retry(jobId,Json.encodeToString(next))!=1) throw OperationFailure("JOB_NOT_RETRYABLE")
         schedule(old.request,ExistingWorkPolicy.REPLACE)
         return jobId
@@ -83,7 +120,7 @@ import javax.inject.Singleton
     /** Returns false only when another worker still holds the durable lease. */
     suspend fun execute(jobId:String,dispatcher:OperationDispatcher):Boolean=coroutineScope {
         val row=dao.job(jobId) ?: throw OperationFailure("JOB_NOT_FOUND")
-        if(row.stage in listOf("COMPLETED","PARTIAL","FAILED","CANCELLED","WAITING_FOR_INPUT")) return@coroutineScope true
+        if(row.stage in listOf("COMPLETED","PARTIAL","FAILED","CANCELLED","PAUSED","WAITING_FOR_INPUT")) return@coroutineScope true
         val owner=UUID.randomUUID().toString(); val now=System.currentTimeMillis()
         if(dao.claim(jobId,owner,now,now+60000)!=1) return@coroutineScope false
         var snapshot=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
@@ -123,7 +160,7 @@ import javax.inject.Singleton
         } catch(cancel:CancellationException) {
             withContext(NonCancellable+Dispatchers.IO) {
                 val current=dao.job(jobId)
-                if(current?.stage!="CANCELLED") {
+                if(current?.stage !in setOf("CANCELLED","PAUSED")) {
                     val interrupted=snapshot.copy(progress=snapshot.progress.copy(stage=JobStage.INTERRUPTED),updatedAtEpochMs=System.currentTimeMillis())
                     dao.updateOwned(jobId,owner,Json.encodeToString(interrupted),JobStage.INTERRUPTED.name)
                 }
@@ -140,7 +177,10 @@ import javax.inject.Singleton
         } finally {
             withContext(NonCancellable+Dispatchers.IO) {
                 heartbeat.cancelAndJoin()
-                try { outputs.discardIncomplete(jobId) } finally { dao.release(jobId,owner) }
+                try {
+                    outputs.discardIncomplete(jobId)
+                    if(dao.job(jobId)?.stage=="CANCELLED") cleanupCancelledArtifacts(jobId,snapshot.request)
+                } finally { dao.release(jobId,owner) }
             }
         }
     }

@@ -250,7 +250,10 @@ import kotlin.math.sqrt
                 val page=s.optInt("page",1).coerceIn(1,doc.numberOfPages.coerceAtLeast(1))
                 val text=s.optString("text","").ifBlank { "Note" }
                 val x=s.optDouble("x",0.1); val y=s.optDouble("y",0.1)
-                if(s.optBoolean("asAnnotation",false)) PdfBoxBackend.addTextAnnotation(doc,page-1,text,x,y)
+                // Standard-14 Helvetica cannot encode Arabic/non-ASCII glyphs in content streams;
+                // store non-ASCII text in a Unicode PDF text annotation so user text is never lost.
+                val requiresUnicodeAnnotation = text.any { it !in ' '..'~' }
+                if(s.optBoolean("asAnnotation",false) || requiresUnicodeAnnotation) PdfBoxBackend.addTextAnnotation(doc,page-1,text,x,y)
                 else PdfBoxBackend.overlayText(doc,listOf(page-1),text,x,y,12f,0.1f)
                 runBlocking { context.report(JobProgress(JobStage.RUNNING,1L,1L)) }
                 doc.save(out)
@@ -496,8 +499,10 @@ import kotlin.math.sqrt
         val effectiveBaseName = customBase?.let { AutoOutputName.cleanBaseName(it, originalPdfFolder) } ?: originalPdfFolder
         val ext = BitmapTransforms.extension(settings.format)
         return context.sources.withSeekable(request.sourceIds.single(),request.id) { source ->
+            openUnencrypted(source).close()
             ParcelFileDescriptor.open(source,ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                PdfRenderer(fd).use { renderer ->
+                val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                renderer.use { renderer ->
                     val pages=PageSelection.parse(if(settings.pages.isBlank() || settings.pages.trim().equals("all",true)) "1-${renderer.pageCount}" else settings.pages,renderer.pageCount)
                     val outputMime=BitmapTransforms.mime(settings.format)
 
@@ -507,8 +512,7 @@ import kotlin.math.sqrt
                         renderer.openPage(number-1).use { page ->
                             var width=(page.width*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
                             var height=(page.height*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
-                            val bitmapCount=if(settings.grayscale) 2 else 1
-                            val maxPixels=(context.budget.maxBitmapBytes / 4L / bitmapCount).coerceAtLeast(512L * 512L)
+                            val maxPixels=(context.budget.maxBitmapBytes / 4L).coerceAtLeast(512L * 512L)
                             if(width.toLong()*height > maxPixels) {
                                 val scale=sqrt(maxPixels.toDouble()/(width.toDouble()*height))
                                 width=(width*scale).roundToInt().coerceAtLeast(1)
@@ -517,14 +521,18 @@ import kotlin.math.sqrt
                             val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
                             try {
                                 bitmap.eraseColor(Color.WHITE)
-                                page.render(bitmap,null,Matrix().apply {
-                                    setScale(width.toFloat()/page.width,height.toFloat()/page.height)
-                                },PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                page.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
                                 if(settings.grayscale) {
-                                    val paint=Paint().apply { colorFilter=ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) }) }
-                                    val gray=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
-                                    try { Canvas(gray).drawBitmap(bitmap,0f,0f,paint); Canvas(bitmap).drawBitmap(gray,0f,0f,null) }
-                                    finally { gray.recycle() }
+                                    val rowPixels=IntArray(width)
+                                    for(y in 0 until height) {
+                                        bitmap.getPixels(rowPixels,0,width,0,y,width,1)
+                                        for(x in 0 until width) {
+                                            val c=rowPixels[x]
+                                            val luma=(((c shr 16 and 0xff)*77)+((c shr 8 and 0xff)*150)+((c and 0xff)*29)) shr 8
+                                            rowPixels[x]=(c and -0x1000000) or (luma shl 16) or (luma shl 8) or luma
+                                        }
+                                        bitmap.setPixels(rowPixels,0,width,0,y,width,1)
+                                    }
                                 }
                                 context.checkCancellation()
                                 BitmapTransforms.encode(bitmap,target,ImageConversionSettings(format=settings.format,quality=settings.quality),context.budget.maxBitmapBytes)

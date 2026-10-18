@@ -36,9 +36,43 @@ object PageSelection {
 }
 
 object SafeNames {
+    /** Public provider names have a byte budget, not a UTF-16 character budget.
+     * Keep the original suffix and stop at complete Unicode code points. */
+    fun fitUtf8(value: String, maxBytes: Int = 200): String {
+        require(maxBytes in 1..200) { "INVALID_FILENAME" }
+        val normalized = Normalizer.normalize(value, Normalizer.Form.NFC)
+        val dot = normalized.lastIndexOf('.').takeIf { it > 0 && normalized.length - it <= 16 }
+        val suffix = dot?.let { normalized.substring(it) }.orEmpty()
+        val budget = maxBytes - suffix.toByteArray(Charsets.UTF_8).size
+        require(budget > 0) { "INVALID_FILENAME" }
+        val prefix = if (dot != null) normalized.substring(0, dot) else normalized
+        val result = StringBuilder()
+        var index = 0
+        var used = 0
+        while (index < prefix.length) {
+            val codePoint = Character.codePointAt(prefix, index)
+            require(codePoint !in 0xD800..0xDFFF) { "INVALID_FILENAME" }
+            val encodedLength = when {
+                codePoint <= 0x7F -> 1
+                codePoint <= 0x7FF -> 2
+                codePoint <= 0xFFFF -> 3
+                else -> 4
+            }
+            if (used + encodedLength > budget) break
+            result.appendCodePoint(codePoint)
+            used += encodedLength
+            index += Character.charCount(codePoint)
+        }
+        // Do not permit a malformed surrogate anywhere in a name, including
+        // text beyond the truncation boundary or an untrusted extension.
+        require(normalized.codePoints().noneMatch { it in 0xD800..0xDFFF }) { "INVALID_FILENAME" }
+        return basename(result.toString().trimEnd(' ', '.') + suffix)
+    }
+
     fun basename(value: String): String {
         val name = Normalizer.normalize(value, Normalizer.Form.NFC)
         require(name.isNotBlank() && name != "." && name != ".." && name.toByteArray(Charsets.UTF_8).size <= 200) { "INVALID_FILENAME" }
+        require(name.codePoints().noneMatch { it in 0xD800..0xDFFF }) { "INVALID_FILENAME" }
         require(name.none { it < ' ' || it == '\u007f' || it in "/\\:" }) { "INVALID_FILENAME" }
         require(!name.endsWith('.') && !name.endsWith(' ')) { "INVALID_FILENAME" }
         return name
@@ -60,8 +94,16 @@ object SafeNames {
         val folded = existing.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
         if (safe.lowercase(Locale.ROOT) !in folded) return safe
         val dot = safe.lastIndexOf('.').takeIf { it > 0 } ?: safe.length
+        val suffixPart = safe.drop(dot)
         for (n in 1..100000) {
-            val candidate = "${safe.take(dot)} ($n)${safe.drop(dot)}"
+            val counterPart = " ($n)$suffixPart"
+            val maxBaseBytes = (200 - counterPart.toByteArray(Charsets.UTF_8).size).coerceAtLeast(1)
+            var prefixPart = safe.take(dot)
+            while (prefixPart.toByteArray(Charsets.UTF_8).size > maxBaseBytes && prefixPart.isNotEmpty()) {
+                val drop = if (prefixPart.length >= 2 && Character.isLowSurrogate(prefixPart.last()) && Character.isHighSurrogate(prefixPart[prefixPart.lastIndex - 1])) 2 else 1
+                prefixPart = prefixPart.dropLast(drop).trimEnd(' ', '.')
+            }
+            val candidate = "${prefixPart.ifBlank { "file" }}$counterPart"
             if (candidate.lowercase(Locale.ROOT) !in folded) return basename(candidate)
         }
         error("NAME_SPACE_EXHAUSTED")

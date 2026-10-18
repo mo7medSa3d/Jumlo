@@ -3,6 +3,7 @@ package com.jumlo.app.ui.home
 import com.jumlo.app.ui.theme.pressFeedback
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,7 +49,7 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val columns=if(maxWidth>=840.dp) 4 else 2
         LazyColumn(
-            modifier=Modifier.fillMaxSize().widthIn(max=960.dp).align(Alignment.TopCenter),
+            modifier=Modifier.widthIn(max=960.dp).fillMaxSize().align(Alignment.TopCenter),
             contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
             verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
@@ -73,17 +74,31 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
                     row.forEach {tool->
                         StaggeredReveal(rowIndex,Modifier.weight(1f)) {
+                            val pillars=QuietTheme.pillars
+                            val (accent,accentSurface)=when(tool.pillar) {
+                                PillarCategory.PDF -> pillars.pdfPrimary to pillars.pdfContainer
+                                PillarCategory.IMAGES -> pillars.imagesPrimary to pillars.imagesContainer
+                                PillarCategory.DOWNLOADS -> pillars.downloadsPrimary to pillars.downloadsContainer
+                                PillarCategory.FILES -> pillars.filesPrimary to pillars.filesContainer
+                                PillarCategory.VAULT -> pillars.vaultPrimary to pillars.vaultContainer
+                            }
                             Surface(
                                 onClick={onTool(tool)},
-                                modifier=Modifier.pressFeedback().fillMaxWidth().height(136.dp),
+                                modifier=Modifier.pressFeedback().fillMaxWidth().heightIn(min=128.dp),
                                 shape=QuietTheme.shapes.card,
-                                color=MaterialTheme.colorScheme.surfaceContainerLow
+                                color=MaterialTheme.colorScheme.surface,
+                                border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Column(
-                                    modifier=Modifier.fillMaxSize().padding(18.dp),
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=128.dp).padding(16.dp),
                                     verticalArrangement=Arrangement.SpaceBetween
                                 ) {
-                                    Icon(resolveStitchIcon(tool.iconName),null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(28.dp))
+                                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                                        QuietIconTile(resolveStitchIcon(tool.iconName),accent,accentSurface,size=46.dp)
+                                        Spacer(Modifier.weight(1f))
+                                        Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,
+                                            tint=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(18.dp))
+                                    }
                                     Text(
                                         text=when(tool.id) {
                                             "pdf_02"->stringResource(R.string.ui_images_pdf)

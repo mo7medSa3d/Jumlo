@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="premium_download_tip">الصق رابطًا، واختر الملف، واحفظه على جهازك.</string>
+    <string name="premium_download_empty">اضغط تنزيل جديد بالأعلى لإضافة أول رابط.</string>
+    <string name="premium_progress_percent">%1$d%%</string>
+</resources>

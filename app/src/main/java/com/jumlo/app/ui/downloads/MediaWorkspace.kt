@@ -1,6 +1,11 @@
 package com.jumlo.app.ui.downloads
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,6 +53,7 @@ import kotlin.math.roundToInt
     sessionEpoch:Long,
     onQueued:(String)->Unit,
     onDirect:(String)->Unit,
+    defaultWifiOnly:Boolean=false,
     viewModel:MediaViewModel=hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -53,7 +61,8 @@ import kotlin.math.roundToInt
     val haptics=rememberAppHaptics()
     var advanced by rememberSaveable { mutableStateOf(false) }
     val clipboardSuggestion=remember { clipboard.getText()?.text?.toString()?.takeIf { it.trim().startsWith("https://",true) } }
-    LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl) }
+    LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl, defaultWifiOnly) }
+    LaunchedEffect(defaultWifiOnly) { viewModel.wifi(defaultWifiOnly) }
     // Also re-inspect on a fresh entry with the exact same shared URL.
     LaunchedEffect(sessionEpoch, state.url) {
         if(state.url.startsWith("https://",true) || (state.allowHttp && state.url.startsWith("http://",true))) {
@@ -61,10 +70,11 @@ import kotlin.math.roundToInt
             viewModel.analyze()
         }
     }
+    LaunchedEffect(state.error) { if(state.error!=null) haptics.error() }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(
-            modifier=Modifier.weight(1f).fillMaxWidth(),
+            modifier=Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
             contentPadding=PaddingValues(horizontal=20.dp,vertical=20.dp),
             verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
@@ -85,11 +95,28 @@ import kotlin.math.roundToInt
                         placeholder={Text(stringResource(R.string.redesign_link_hint))},
                         label={Text(stringResource(R.string.media_link))},
                         modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp),
+                        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Go),
+                        keyboardActions=KeyboardActions(onGo={viewModel.analyze()}),
                         textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),
                         leadingIcon={Icon(Icons.Rounded.Link,null)},
-                        trailingIcon={IconButton(onClick={clipboard.getText()?.text?.toString()?.let(viewModel::editUrl)}) {
-                            Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))
-                        }}
+                        trailingIcon={
+                            Row(verticalAlignment=Alignment.CenterVertically) {
+                                if(state.url.isNotEmpty()) {
+                                    IconButton(onClick={haptics.selectionToggle();viewModel.editUrl("")}) {
+                                        Icon(Icons.Rounded.Close,stringResource(R.string.signature_clear))
+                                    }
+                                }
+                                IconButton(onClick={
+                                    clipboard.getText()?.text?.toString()?.let { clip ->
+                                        haptics.actionClick()
+                                        viewModel.editUrl(clip)
+                                        viewModel.analyze()
+                                    }
+                                }) {
+                                    Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))
+                                }
+                            }
+                        }
                     )
                     Row(
                         modifier=Modifier.fillMaxWidth(),
@@ -117,7 +144,7 @@ import kotlin.math.roundToInt
                 }
             }
             if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
-                SuggestionChip(onClick={viewModel.editUrl(clipboardSuggestion)},
+                SuggestionChip(onClick={haptics.actionClick();viewModel.editUrl(clipboardSuggestion);viewModel.analyze()},
                     label={Text(stringResource(R.string.redesign_paste_suggestion))},icon={Icon(Icons.Rounded.ContentPaste,null)})
             }
             if(state.analyzing) item("loading") {
@@ -199,11 +226,10 @@ import kotlin.math.roundToInt
                             pdfModes.forEach { (modeKey, modeLabel) ->
                                 val selected = state.directMode == modeKey
                                 Surface(
-                                    onClick={haptics.selectionToggle();viewModel.directMode(modeKey)},
                                     shape=RoundedCornerShape(18.dp),
                                     color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                                     border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                                    modifier=Modifier.fillMaxWidth().pressFeedback()
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick={haptics.selectionToggle();viewModel.directMode(modeKey)}).pressFeedback()
                                 ) {
                                     Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                         RadioButton(selected=selected,onClick=null)
@@ -226,11 +252,10 @@ import kotlin.math.roundToInt
                             imgModes.forEach { (modeKey, modeLabel) ->
                                 val selected = state.directMode == modeKey
                                 Surface(
-                                    onClick={haptics.selectionToggle();viewModel.directMode(modeKey)},
                                     shape=RoundedCornerShape(18.dp),
                                     color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                                     border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                                    modifier=Modifier.fillMaxWidth().pressFeedback()
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick={haptics.selectionToggle();viewModel.directMode(modeKey)}).pressFeedback()
                                 ) {
                                     Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                         RadioButton(selected=selected,onClick=null)
@@ -334,8 +359,18 @@ import kotlin.math.roundToInt
                             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                                 Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
                                 val originalAudioLabel = stringResource(R.string.media_original_audio)
+                                val hasNativeOnlyChoice = state.choices.any { MediaEngineRouting.isNativeChoice(it) }
+                                val audioFormats = if (BuildConfig.EXTENDED_MEDIA && !hasNativeOnlyChoice) {
+                                    listOf(
+                                        AudioOutput.ORIGINAL to originalAudioLabel,
+                                        AudioOutput.MP3 to "MP3",
+                                        AudioOutput.M4A to "M4A",
+                                        AudioOutput.OPUS to "OPUS"
+                                    )
+                                } else {
+                                    listOf(AudioOutput.ORIGINAL to originalAudioLabel)
+                                }
                                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                    val audioFormats = listOf(AudioOutput.ORIGINAL to originalAudioLabel)
                                     items(audioFormats, key={it.first.name}) { (fmt, label) ->
                                         FilterChip(
                                             selected=state.audio==fmt,
@@ -395,10 +430,10 @@ import kotlin.math.roundToInt
                                 shape=RoundedCornerShape(20.dp),
                                 color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                                 border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                                modifier=Modifier.weight(1f).height(96.dp).pressFeedback()
+                                modifier=Modifier.weight(1f).heightIn(min=96.dp).pressFeedback()
                             ) {
                                 Column(
-                                    modifier=Modifier.fillMaxSize().padding(14.dp),
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=96.dp).padding(14.dp),
                                     verticalArrangement=Arrangement.SpaceBetween
                                 ) {
                                     Row(
@@ -465,29 +500,30 @@ import kotlin.math.roundToInt
                 item("network-toggles") {
                     Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=state.wifiOnly,role=Role.Switch,onValueChange=viewModel::wifi),verticalAlignment=Alignment.CenterVertically) {
                                 Text(stringResource(R.string.media_wifi),Modifier.weight(1f))
-                                Switch(checked=state.wifiOnly,onCheckedChange=viewModel::wifi)
+                                Switch(checked=state.wifiOnly,onCheckedChange=null)
                             }
-                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=state.unmetered,role=Role.Switch,onValueChange=viewModel::unmetered),verticalAlignment=Alignment.CenterVertically) {
                                 Text(stringResource(R.string.media_unmetered),Modifier.weight(1f))
-                                Switch(checked=state.unmetered,onCheckedChange=viewModel::unmetered)
+                                Switch(checked=state.unmetered,onCheckedChange=null)
                             }
-                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=state.allowHttp,role=Role.Switch,onValueChange=viewModel::allowHttp),verticalAlignment=Alignment.CenterVertically) {
                                 Text(stringResource(R.string.media_http),Modifier.weight(1f))
-                                Switch(checked=state.allowHttp,onCheckedChange=viewModel::allowHttp)
+                                Switch(checked=state.allowHttp,onCheckedChange=null)
                             }
                         }
                     }
                 }
             }
         }
-        Surface(tonalElevation=3.dp,shadowElevation=7.dp) {
+        Surface(tonalElevation=2.dp) {
+            Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
             Button(
                 onClick={haptics.toolExecute();viewModel.submit(onQueued)},
                 enabled=!state.analyzing && !state.submitting && (state.direct!=null || state.selectedKey!=null),
-                modifier=Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
-                shape=RoundedCornerShape(18.dp)
+                modifier=Modifier.widthIn(max=840.dp).fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
+                shape=QuietTheme.shapes.button
             ) {
                 Icon(Icons.Rounded.Download,null);Spacer(Modifier.width(8.dp))
                 Text(
@@ -498,6 +534,7 @@ import kotlin.math.roundToInt
                     },
                     style=QuietTheme.typography.button
                 )
+            }
             }
         }
     }
@@ -518,10 +555,10 @@ private fun ModeSelectionCard(
         shape = RoundedCornerShape(20.dp),
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.height(64.dp).pressFeedback()
+        modifier = modifier.heightIn(min = 64.dp).pressFeedback()
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {

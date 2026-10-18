@@ -26,23 +26,27 @@ import com.jumlo.app.R
 import com.jumlo.app.ui.StorageUsage
 import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.core.StoragePaths
+import com.jumlo.app.ui.components.QuietIconTile
 
 @Composable internal fun PreferenceHeading(text: String) {
-    Text(text, Modifier.padding(top = 24.dp, bottom = 8.dp).semantics { heading() },
-        style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    Text(text, Modifier.padding(top = 26.dp, bottom = 8.dp).semantics { heading() },
+        style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
 }
 
 @Composable fun PreferenceRow(title: String, summary: String?, icon: ImageVector, onClick: () -> Unit,
     modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false) {
     val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     val haptics=rememberAppHaptics()
-    Row(modifier.pressFeedback().fillMaxWidth().heightIn(min = 64.dp).clickable(enabled = enabled, onClick = {
+    Row(modifier.pressFeedback().fillMaxWidth().heightIn(min = 72.dp).clickable(enabled = enabled, onClick = {
             if(destructive) haptics.secondaryAction() else haptics.actionClick()
             onClick()
         })
-        .padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, Modifier.size(24.dp), tint = if (enabled) color else MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(16.dp))
+        .padding(vertical = 10.dp, horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        QuietIconTile(icon,
+            tint=if(destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            container=if(destructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+            size=44.dp)
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
             summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }

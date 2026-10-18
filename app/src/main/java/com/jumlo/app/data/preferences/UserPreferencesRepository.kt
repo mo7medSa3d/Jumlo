@@ -38,18 +38,13 @@ class UserPreferencesRepository @Inject constructor(
         val HAPTIC_ON_COMMIT = booleanPreferencesKey("haptic_on_commit")
         val HAPTIC_INTENSITY = stringPreferencesKey("haptic_intensity")
         val UI_SOUNDS = booleanPreferencesKey("ui_sounds")
-        val REORDER_HAPTICS = booleanPreferencesKey("reorder_haptics")
-        val DEFAULT_DEST_FOLDER = stringPreferencesKey("default_dest_folder")
         val DOWNLOAD_DEST_FOLDER = stringPreferencesKey("download_dest_folder")
         val MAX_CONCURRENT_DOWNLOADS = intPreferencesKey("max_concurrent_downloads")
         val WIFI_ONLY_DEFAULT = booleanPreferencesKey("wifi_only_default")
         val FILE_VIEW_MODE = stringPreferencesKey("file_view_mode")
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val FONT_SCALE = stringPreferencesKey("font_scale")
-        val STRIP_EXIF_DEFAULT = booleanPreferencesKey("strip_exif_default")
         val NOTIFICATIONS_GRANTED = booleanPreferencesKey("notifications_granted")
-        val VAULT_AUTO_LOCK_SEC = intPreferencesKey("vault_auto_lock_sec")
-        val MEDIA_TERMS_ACCEPTED = booleanPreferencesKey("media_terms_accepted")
     }
 
     val settingsFlow: Flow<AppSettingsState> = context.dataStore.data.map { prefs ->
@@ -63,20 +58,15 @@ class UserPreferencesRepository @Inject constructor(
             respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false,
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             hapticIntensity = if(prefs[Keys.HAPTIC_ON_COMMIT]==false) HapticIntensity.OFF else
-                runCatching {HapticIntensity.valueOf(prefs[Keys.HAPTIC_INTENSITY] ?: "LIGHT")}.getOrDefault(HapticIntensity.LIGHT),
+                runCatching {HapticIntensity.valueOf(prefs[Keys.HapticIntensity_Fallback(prefs)])}.getOrDefault(HapticIntensity.LIGHT),
             soundsEnabled = prefs[Keys.UI_SOUNDS] ?: true,
-            reorderHandleHaptics = prefs[Keys.REORDER_HAPTICS] ?: true,
-            defaultDestinationFolder = prefs[Keys.DEFAULT_DEST_FOLDER] ?: "My files / Results",
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
-            wifiOnlyDefault = false,
+            wifiOnlyDefault = prefs[Keys.WIFI_ONLY_DEFAULT] ?: false,
             fileViewMode = runCatching { FileViewMode.valueOf(prefs[Keys.FILE_VIEW_MODE] ?: "GRID") }.getOrDefault(FileViewMode.GRID),
             accentColor = (prefs[Keys.ACCENT_COLOR] ?: "VIOLET").takeIf { it in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC") } ?: "VIOLET",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
-            stripExifByDefault = prefs[Keys.STRIP_EXIF_DEFAULT] ?: true,
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
-            vaultAutoLockSeconds = prefs[Keys.VAULT_AUTO_LOCK_SEC] ?: 120,
-            mediaTermsAccepted = prefs[Keys.MEDIA_TERMS_ACCEPTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
             recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter {it.matches(Regex("[a-z0-9_]{1,64}"))}?.take(8).orEmpty(),
             mostUsedToolIds = prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull {value->
@@ -89,6 +79,9 @@ class UserPreferencesRepository @Inject constructor(
             isLoaded = true
         )
     }
+
+    private fun Keys.HapticIntensity_Fallback(prefs: androidx.datastore.preferences.core.Preferences): String =
+        prefs[HAPTIC_INTENSITY] ?: "LIGHT"
 
     suspend fun recordToolOpen(id:String) {
         if(!id.matches(Regex("[a-z0-9_]{1,64}"))) return
@@ -150,6 +143,10 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun setDownloadDestinationFolder(treeUri: String) {
         require(treeUri.startsWith("content://")) { "INVALID_TREE_URI" }
         context.dataStore.edit { it[Keys.DOWNLOAD_DEST_FOLDER] = treeUri }
+    }
+
+    suspend fun resetDownloadDestinationFolder() {
+        context.dataStore.edit { it.remove(Keys.DOWNLOAD_DEST_FOLDER) }
     }
 
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }

@@ -82,6 +82,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             val previous=lastStages.put(id,job.progress.stage)
             if(previous!=null && previous!=JobStage.COMPLETED && job.progress.stage==JobStage.COMPLETED &&
                 job.request.toolId.startsWith("dl_")) appHaptics.downloadComplete()
+            else if(previous!=null && previous!=JobStage.FAILED && job.progress.stage==JobStage.FAILED) appHaptics.error()
         }
     }
     val reduceMotion=LocalReducedMotion.current
@@ -105,6 +106,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     var lastTab by rememberSaveable { mutableStateOf(DockTab.HOME) }
     val tab = DockTab.entries.firstOrNull { it.route==route } ?: lastTab
+    var selectedJob by rememberSaveable { mutableStateOf<String?>(null) }
     fun destinationFor(name: String): Any = when (name) {
         "tools_catalog" -> ToolsRoute
         "downloads" -> DownloadsRoute
@@ -122,6 +124,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     fun navigateTab(next: DockTab) {
         lastTab = next
         if(route=="workspace") viewModel.closeToolSession()
+        if(route=="activity") selectedJob = null
         navController.navigate(destinationFor(next.route)) {
             popUpTo(HomeRoute) { saveState = true }
             launchSingleTop = true
@@ -131,6 +134,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     fun leaveWorkspace() {
         appHaptics.navigationTab()
         if(route=="workspace") viewModel.closeToolSession()
+        if(route=="activity") selectedJob = null
         if (!navController.popBackStack()) navigateTab(tab) 
     }
     val dirty by viewModel.hasUnsavedWorkspace.collectAsStateWithLifecycle()
@@ -144,7 +148,6 @@ fun JumloNavHost(viewModel:AppViewModel) {
         } finally { backSwipe=0f }
     }
 
-    var selectedJob by rememberSaveable { mutableStateOf<String?>(null) }
     var deleteEntry by remember { mutableStateOf<DocumentEntry?>(null) }
     var renameEntry by remember { mutableStateOf<DocumentEntry?>(null) }
     var renameText by remember { mutableStateOf("") }
@@ -168,7 +171,10 @@ fun JumloNavHost(viewModel:AppViewModel) {
         }
     }
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if(result.resultCode==Activity.RESULT_OK) viewModel.intake(IntakeController.collect(result.data))
+        if(result.resultCode==Activity.RESULT_OK) viewModel.intake(IntakeController.collect(result.data), attachToWorkspace=true)
+    }
+    val libraryPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if(result.resultCode==Activity.RESULT_OK) viewModel.intake(IntakeController.collect(result.data), attachToWorkspace=false)
     }
     val photos=rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(100)) { uris ->
         viewModel.intake(Intake(uris.map(Uri::toString),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))
@@ -224,6 +230,9 @@ fun JumloNavHost(viewModel:AppViewModel) {
     fun importFiles() {
         val mime=when(form.toolId) { "pdf_02","img_01","img_02","img_03","img_04"->"image/*";"pdf_01","pdf_03","pdf_07"->"application/pdf";"file_08"->"application/zip";else->"*/*" }
         picker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=mime;putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
+    }
+    fun importLibraryFiles() {
+        libraryPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type="*/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
     }
     fun pickFolder(initial:String?=null) {
         folderPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);if(initial!=null) putExtra(DocumentsContract.EXTRA_INITIAL_URI,Uri.parse(initial)) })
@@ -296,17 +305,13 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             "tools_catalog" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool)
                             "downloads" -> com.jumlo.app.ui.downloads.DownloadsScreen(viewModel,::openTool,{selectedJob=it;navigateTo("activity")})
                             "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,
-                                ::importFiles, {pickFolder()}, ::openSavedFolder,
+                                ::importLibraryFiles, {pickFolder()}, ::openSavedFolder,
                                 {launchExternal(it.uri,it.mimeType,false)},
                                 {launchExternal(it.uri,it.mimeType,true)}, ::exportOutput,
                                 {record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },
                                 {sourceId->viewModel.prepareSourceWorkflow(sourceId) {navigateTo("workspace")} },
                                 {pickFolder(it.uri)}, {launchExternal(it.uri,it.mimeType,false)},
-                                {entry->
-                                    viewModel.chooseTool(OutputWorkflowPolicy.reuseTool(entry.mimeType.orEmpty()))
-                                    viewModel.intake(Intake(listOf(entry.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))
-                                    navigateTo("workspace")
-                                },
+                                {entry->viewModel.importProviderEntryToWorkspace(entry.uri,Intent.FLAG_GRANT_READ_URI_PERMISSION) {navigateTo("workspace")} },
                                 {viewModel.copyOrMoveFile(it,false,CollisionPolicy.KEEP_BOTH)},
                                 {renameEntry=it;renameText=it.name}, {deleteEntry=it}, {newFolder=true;folderName=""},
                                 {chosen,toolId->viewModel.prepareOutputWorkflow(toolId,chosen) {navigateTo("workspace")} },
@@ -326,10 +331,10 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     subtitle=stringResource(R.string.ui_unavailable_body),
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
-                                ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")})
+                                ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultWifiOnly=settings.wifiOnlyDefault)
                                 else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
-                            "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{viewModel.allowNewRun();navigateTo("workspace")})
+                            "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(selectedJob!=null) ({selectedJob=null}) else null)
                         }
                         if(root) QuietFloatingDock(
                             selectedTab=tab,
@@ -410,7 +415,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         AlertDialog(
             onDismissRequest={newFolder=false},
             title={Text(stringResource(R.string.files_new_folder))},
-            text={OutlinedTextField(folderName,{folderName=it},singleLine=true)},
+            text={OutlinedTextField(folderName,{folderName=it},singleLine=true,label={Text(stringResource(R.string.files_new_folder))})},
             confirmButton={TextButton(onClick={newFolder=false;viewModel.createFolder(folderName)}) {Text(stringResource(R.string.action_create))}},
             dismissButton={TextButton(onClick={newFolder=false}) {Text(stringResource(R.string.action_cancel))}}
         )

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -48,6 +49,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
@@ -187,7 +189,8 @@ fun QuietSearchBar(
             .heightIn(min = 56.dp)
             .then(if (onClickBar != null) Modifier.clickable(onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.button,
-        color = colors.surfaceContainerHigh
+        color = colors.surfaceContainerLow,
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
@@ -212,9 +215,10 @@ fun QuietSearchBar(
                         value = query,
                         onValueChange = onQueryChange,
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         textStyle = QuietTheme.typography.body.copy(color = colors.onSurface),
                         cursorBrush = SolidColor(colors.primary),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = placeholder }
                     )
                 }
             }

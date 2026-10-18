@@ -38,18 +38,18 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
         animationSpec=if(reduced) snap() else spring(dampingRatio=.68f,stiffness=Spring.StiffnessMediumLow),label="splash-logo")
     val alpha by animateFloatAsState(if(visible) 1f else 0f,
         animationSpec=if(reduced) snap() else spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMedium),label="splash-opacity")
-    Box(modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF2221A1),Color(0xFF7651EC)))),
+    Box(modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF31206F),Color(0xFF5638D8)))),
         contentAlignment=Alignment.Center) {
         Column(Modifier.graphicsLayer {scaleX=scale;scaleY=scale;this.alpha=alpha},horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Box(Modifier.size(132.dp).clip(RoundedCornerShape(32.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF3121BA),Color(0xFF8869FF)))),
+                .background(Brush.linearGradient(listOf(Color(0xFF4A2DA2),Color(0xFF6C54DB)))),
                 contentAlignment=Alignment.Center) {
                 Image(painterResource(R.drawable.ic_launcher_foreground),contentDescription=null,
                     modifier=Modifier.fillMaxSize())
             }
             Text(stringResource(R.string.app_name),fontSize=34.sp,fontWeight=FontWeight.Bold,color=Color.White)
-            Text(stringResource(R.string.brand_splash_tagline),fontSize=14.sp,color=Color(0xFFE3DFFD))
+            Text(stringResource(R.string.brand_splash_tagline),fontSize=14.sp,color=Color(0xFFF6F3FF))
         }
     }
 }

@@ -216,23 +216,47 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val source = index?.let { found.streams.getOrNull(it) } ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
         if (source.extension != choice.formats.single().extension) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
         val partial = File(directory, "native-media.part")
-        // Direct transfers can retry safely; incomplete sources are never published.
-        if (partial.exists() && !partial.delete()) throw OperationFailure("MEDIA_WORKSPACE_LIMIT")
+        val journal = File(directory, "native-media.properties")
+        val old = java.util.Properties().apply { if (journal.isFile) journal.inputStream().use(::load) }
+        val urlDigest = Hashing.sha256(ByteArrayInputStream(source.url.toByteArray(Charsets.UTF_8)))
+        // Direct transfers resume safely when validators match; reset only if URL or validator is absent.
+        if (partial.exists() && (old.getProperty("urlDigest") != urlDigest ||
+            (old.getProperty("etag").isNullOrBlank() && old.getProperty("modified").isNullOrBlank()))) {
+            if (!partial.delete()) throw OperationFailure("MEDIA_WORKSPACE_LIMIT")
+            journal.delete()
+        }
         val target = File(directory, "media.${source.extension}")
         val result = StreamTransfer(OkHttpTransport(http, ::headers)).execute(
-            TransferRequest(url = source.url, partialFile = partial,
+            TransferRequest(
+                url = source.url, partialFile = partial, offset = partial.length(),
+                strongEtag = old.getProperty("etag"), lastModified = old.getProperty("modified"),
+                knownTotalBytes = old.getProperty("total")?.toLongOrNull(),
                 cleartextConsent = allowHttp, maxBytes = 8L * 1024 * 1024 * 1024,
-                minFreeBytes = 64L * 1024 * 1024),
+                minFreeBytes = 64L * 1024 * 1024, finalUrlSha256 = old.getProperty("finalUrlSha256")
+            ),
             checkCancel = check,
-            progress = { done, total -> progress(MediaProgress(id, done, total, null, null, null)) }
+            progress = { done, total -> progress(MediaProgress(id, done, total, null, null, null)) },
+            onMetadata = { metadata ->
+                val p = java.util.Properties().apply {
+                    setProperty("urlDigest", urlDigest)
+                    metadata.finalUrlSha256?.let { setProperty("finalUrlSha256", it) }
+                    metadata.strongEtag?.let { setProperty("etag", it) }
+                    metadata.lastModified?.let { setProperty("modified", it) }
+                    metadata.totalBytes?.let { setProperty("total", it.toString()) }
+                }
+                val pending = File(directory, "native-media.pending")
+                java.io.FileOutputStream(pending).use { p.store(it, null); it.fd.sync() }
+                Files.move(pending.toPath(), journal.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            }
         )
         check()
         if (result.mimeType in setOf("text/html", "application/xhtml+xml")) {
-            partial.delete()
+            partial.delete(); journal.delete()
             throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
         }
         Files.move(partial.toPath(), target.toPath(),
             StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        journal.delete()
         try { MediaOutputPolicy.inspect(target) }
         catch (error: Exception) { target.delete(); throw error }
         check()

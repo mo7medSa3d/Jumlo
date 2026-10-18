@@ -51,6 +51,7 @@
     <string name="action_share">Share</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
     <string name="action_change">Change</string>
     <string name="action_reset">Reset</string>
     <string name="action_copy">Copy</string>
@@ -361,4 +362,6 @@
     <string name="files_merge_selected">Merge PDFs (%1$d)</string>
     <string name="files_images_to_pdf_selected">Images to PDF (%1$d)</string>
     <string name="files_batch_tool_hint">Choose files and create a PDF or ZIP without re-importing.</string>
+    <string name="output_saved_location">Saved in %1$s</string>
+    <string name="output_saved_privately">Saved inside Jumlo only. Use Share or Export to save a copy outside the app.</string>
 </resources>

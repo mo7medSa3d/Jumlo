@@ -5,6 +5,7 @@ import com.jumlo.app.ui.theme.StaggeredReveal
 import com.jumlo.app.ui.theme.QuietTheme
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -16,8 +17,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.ui.AppViewModel
@@ -34,8 +38,11 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     val byId=remember(eligible) {eligible.associateBy {it.id}}
     val recent=settings.recentToolIds.mapNotNull(byId::get).filter {it in visible}.take(4)
     val frequent=settings.mostUsedToolIds.mapNotNull(byId::get).filter {it in visible}.take(4)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    // Width is measured inside the fold-safe root viewport, not from physical display metrics.
+    val columns=when { maxWidth >= 840.dp -> 4; maxWidth >= 600.dp -> 3; else -> 2 }
     LazyColumn(
-        modifier=Modifier.fillMaxSize(),
+        modifier=Modifier.widthIn(max=1000.dp).fillMaxSize().align(Alignment.TopCenter),
         contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
         verticalArrangement=Arrangement.spacedBy(16.dp)
     ) {
@@ -66,48 +73,55 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
             val group=visible.filter {it.pillar==pillar}
             if(group.isNotEmpty()) {
                 item("heading-${pillar.name}") {QuietSectionTitle(if(settings.language.isRtl) pillar.labelAr else pillar.labelEn)}
-                itemsIndexed(group.chunked(2),key={_,row->"${pillar.name}-"+row.joinToString("-") {it.id}}) {rowIndex,row->
+                itemsIndexed(group.chunked(columns),key={_,row->"${pillar.name}-"+row.joinToString("-") {it.id}}) {rowIndex,row->
                     Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { t-> StaggeredReveal(rowIndex.coerceAtMost(10),Modifier.weight(1f)) {BentoTile(t,settings.language,onTool)} }
-                        if(row.size==1) Spacer(Modifier.weight(1f))
+                        repeat(columns-row.size) {Spacer(Modifier.weight(1f))}
                     }
                 }
             }
         }
     }
+    }
 }
 
 @Composable private fun BentoTile(tool:UtilityTool,language:AppLanguage,onTool:(UtilityTool)->Unit) {
     val palette=MaterialTheme.colorScheme
-    val (surface,tint)=when(tool.pillar) {
-        PillarCategory.PDF -> palette.primaryContainer to palette.onPrimaryContainer
-        PillarCategory.IMAGES -> palette.tertiaryContainer to palette.onTertiaryContainer
-        PillarCategory.DOWNLOADS -> palette.secondaryContainer to palette.onSecondaryContainer
-        PillarCategory.FILES -> palette.surfaceContainerHigh to palette.onSurface
-        PillarCategory.VAULT -> palette.errorContainer to palette.onErrorContainer
+    val pillars=QuietTheme.pillars
+    val (tint,iconSurface)=when(tool.pillar) {
+        PillarCategory.PDF -> pillars.pdfPrimary to pillars.pdfContainer
+        PillarCategory.IMAGES -> pillars.imagesPrimary to pillars.imagesContainer
+        PillarCategory.DOWNLOADS -> pillars.downloadsPrimary to pillars.downloadsContainer
+        PillarCategory.FILES -> pillars.filesPrimary to pillars.filesContainer
+        PillarCategory.VAULT -> pillars.vaultPrimary to pillars.vaultContainer
     }
     Surface(
         onClick={onTool(tool)},
-        shape=RoundedCornerShape(24.dp),
-        color=surface,
-        modifier=Modifier.pressFeedback().fillMaxWidth().height(148.dp)
+        shape=QuietTheme.shapes.card,
+        color=palette.surface,
+        border=BorderStroke(1.dp,palette.outlineVariant),
+        modifier=Modifier.pressFeedback().fillMaxWidth().heightIn(min=148.dp)
     ) {
         Column(
-            modifier=Modifier.fillMaxSize().padding(18.dp),
-            verticalArrangement=Arrangement.SpaceBetween
+            modifier=Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement=Arrangement.spacedBy(12.dp)
         ) {
-            Icon(resolveStitchIcon(tool.iconName),null,tint=tint,modifier=Modifier.size(26.dp))
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                QuietIconTile(resolveStitchIcon(tool.iconName),tint,iconSurface,size=46.dp)
+                Spacer(Modifier.weight(1f))
+                Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,tint=palette.onSurfaceVariant,modifier=Modifier.size(18.dp))
+            }
             Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                 Text(
                     text=if(language.isRtl) tool.titleAr else tool.titleEn,
-                    color=tint,
+                    color=palette.onSurface,
                     style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),
                     maxLines=2,
                     overflow=TextOverflow.Ellipsis
                 )
                 Text(
                     text=if(language.isRtl) tool.subtitleAr else tool.subtitleEn,
-                    color=tint.copy(alpha=0.82f),
+                    color=palette.onSurfaceVariant,
                     style=QuietTheme.typography.metadata,
                     maxLines=2,
                     overflow=TextOverflow.Ellipsis

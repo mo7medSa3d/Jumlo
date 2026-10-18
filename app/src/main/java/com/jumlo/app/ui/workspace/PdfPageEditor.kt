@@ -10,6 +10,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -126,7 +129,7 @@ internal fun PdfPageEditor(
                         edit { it.copy(text1=previous) }
                     }
                 },enabled=undo.isNotEmpty()) {
-                    Icon(Icons.Rounded.Undo,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_undo))
+                    Icon(Icons.AutoMirrored.Rounded.Undo,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_undo))
                 }
                 TextButton(onClick={
                     redo.lastOrNull()?.let { next ->
@@ -134,7 +137,7 @@ internal fun PdfPageEditor(
                         edit { it.copy(text1=next) }
                     }
                 },enabled=redo.isNotEmpty()) {
-                    Icon(Icons.Rounded.Redo,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_redo))
+                    Icon(Icons.AutoMirrored.Rounded.Redo,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_redo))
                 }
                 TextButton(onClick={
                     persistOrder(ordered.deleteSelected().order)
@@ -145,7 +148,7 @@ internal fun PdfPageEditor(
             }
             if (selected.isNotEmpty()) {
                 TextButton(onClick={ edit { it.copy(text2=selected.sorted().joinToString(","),num1="90") } }) {
-                    Icon(Icons.Rounded.RotateRight,null,Modifier.size(18.dp))
+                    Icon(Icons.AutoMirrored.Rounded.RotateRight,null,Modifier.size(18.dp))
                     Text(stringResource(R.string.jumlo_rotate_selection))
                 }
             }
@@ -225,11 +228,11 @@ private fun PdfPageTile(
             Text(stringResource(R.string.jumlo_page_label,page),style=QuietTheme.typography.metadata)
         }
         if(reorder) Row(horizontalArrangement=Arrangement.spacedBy(2.dp)) {
-            IconButton(onClick={onMove(-1)},modifier=Modifier.size(40.dp)) {
-                Icon(Icons.Rounded.ChevronLeft,stringResource(R.string.jumlo_move_earlier))
+            IconButton(onClick={onMove(-1)},modifier=Modifier.size(48.dp)) {
+                Icon(if(rtl) Icons.Rounded.ChevronRight else Icons.Rounded.ChevronLeft,stringResource(R.string.jumlo_move_earlier))
             }
-            IconButton(onClick={onMove(1)},modifier=Modifier.size(40.dp)) {
-                Icon(Icons.Rounded.ChevronRight,stringResource(R.string.jumlo_move_later))
+            IconButton(onClick={onMove(1)},modifier=Modifier.size(48.dp)) {
+                Icon(if(rtl) Icons.Rounded.ChevronLeft else Icons.Rounded.ChevronRight,stringResource(R.string.jumlo_move_later))
             }
         }
     }

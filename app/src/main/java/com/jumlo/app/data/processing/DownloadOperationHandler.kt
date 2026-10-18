@@ -14,6 +14,7 @@ import com.jumlo.app.data.media.MediaSessionStore
 import com.jumlo.app.data.pdf.PdfBoxBackend
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.model.*
+import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
@@ -163,7 +164,9 @@ class DownloadOperationHandler @Inject constructor(
                         fileKind == DirectFileKind.PDF && settings.directMode == "PDF_TO_IMAGES" -> {
                             val pdfFolder = AutoOutputName.cleanBaseName(name, "PDF")
                             ParcelFileDescriptor.open(partial, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                                PdfRenderer(fd).use { renderer ->
+                                val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                                renderer.use { renderer ->
+                                    require(renderer.pageCount > 0) { "EMPTY_PDF" }
                                     for (pageIdx in 0 until renderer.pageCount) {
                                         context.checkCancellation()
                                         val pageNum = pageIdx + 1
@@ -179,7 +182,7 @@ class DownloadOperationHandler @Inject constructor(
                                             val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                                             try {
                                                 bmp.eraseColor(Color.WHITE)
-                                                page.render(bmp, null, Matrix().apply { setScale(w.toFloat() / page.width, h.toFloat() / page.height) }, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
                                                 val imgName = AutoOutputName.pageImageName(pdfFolder, pageNum, "png")
                                                 val ticket = context.outputs.reserve(request.id, pageKey, imgName, "image/png")
                                                 BitmapTransforms.encode(bmp, ticket.stageFile, ImageConversionSettings(format = "PNG", quality = 90), context.budget.maxBitmapBytes)
@@ -194,27 +197,36 @@ class DownloadOperationHandler @Inject constructor(
                             journal.delete()
                         }
                         fileKind == DirectFileKind.IMAGE && settings.directMode == "IMAGE_COMPRESSED" -> {
-                            val ticket = context.outputs.reserve(request.id, key, SafeNames.basename(name), resolvedMime)
-                            BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
-                                BitmapTransforms.encodeGuaranteedSmaller(
-                                    decoded.bitmap, ticket.stageFile, result.bytes,
-                                    ImageConversionSettings(format = "JPEG", quality = 78),
-                                    context.budget.maxBitmapBytes, context.checkCancellation
-                                )
-                            }
-                            partial.delete()
-                            val output = context.outputs.publish(ticket) { file ->
-                                context.outputs.inspect(file, ticket.mimeType, originalSizeBytes = result.bytes)
-                            }
-                            journal.delete()
-                            outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
+                            // Conversion is always JPEG; never publish JPEG bytes under a .png/.webp label.
+                            // Compression is optional: if the encoded file is not smaller, preserve the original.
+                            val candidate=File(folder,"$index-compressed.jpg")
+                            try {
+                                BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
+                                    BitmapTransforms.encodeGuaranteedSmaller(
+                                        decoded.bitmap, candidate, result.bytes,
+                                        ImageConversionSettings(format = "JPEG", quality = 78),
+                                        context.budget.maxBitmapBytes, context.checkCancellation
+                                    )
+                                }
+                                context.checkCancellation()
+                                val choice=DownloadCompressionPolicy.choose(name,resolvedMime,result.bytes,candidate.length())
+                                val ticket=context.outputs.reserve(request.id,key,choice.filename,choice.mimeType)
+                                val source=if(choice.useCompressed) candidate else partial
+                                Files.move(source.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+                                val output=context.outputs.publish(ticket) { file ->
+                                    context.outputs.inspect(file,ticket.mimeType,originalSizeBytes=result.bytes)
+                                }
+                                partial.delete()
+                                journal.delete()
+                                outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
+                            } finally { candidate.delete() }
                         }
                         fileKind == DirectFileKind.IMAGE && settings.directMode == "IMAGE_TO_PDF" -> {
                             val pdfName = SafeNames.basename(AutoOutputName.cleanBaseName(name, "Image") + ".pdf")
                             val ticket = context.outputs.reserve(request.id, key, pdfName, "application/pdf")
                             BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
                                 val bmp = decoded.bitmap
-                                PDDocument().use { doc ->
+                                PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { doc ->
                                     val geometry = PdfPageGeometry.resolve(bmp.width,bmp.height)
                                     val page = PDPage(PDRectangle(geometry.widthPt, geometry.heightPt))
                                     doc.addPage(page)

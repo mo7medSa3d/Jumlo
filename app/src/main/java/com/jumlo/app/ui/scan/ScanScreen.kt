@@ -18,17 +18,22 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -39,6 +44,10 @@ import com.jumlo.app.ui.components.QuietPrimaryButton
 import com.jumlo.app.ui.components.QuietStateCard
 import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.theme.QuietTheme
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.abs
@@ -52,11 +61,14 @@ import kotlin.math.abs
 fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
     var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var captured by remember { mutableStateOf<File?>(null) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var capturedPath by rememberSaveable { mutableStateOf<String?>(null) }
+    var processing by remember { mutableStateOf(false) }
+    val captured = remember(capturedPath) { capturedPath?.let(::File)?.takeIf(File::isFile) }
     Column(Modifier.fillMaxSize().padding(QuietTheme.spacing.canvasGutterCompact), verticalArrangement = Arrangement.spacedBy(QuietTheme.spacing.interCardGap)) {
         Text(stringResource(R.string.scan_hint), style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
         error?.let { code ->
@@ -69,7 +81,11 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                 title = stringResource(resId),
                 subtitle = stringResource(R.string.scan_hint),
                 actionLabel = stringResource(R.string.scan_retake),
-                onAction = { error = null; captured = null },
+                onAction = {
+                    captured?.delete()
+                    error = null
+                    capturedPath = null
+                },
                 isError = true
             )
         }
@@ -112,8 +128,14 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                         ImageCapture.OutputFileOptions.Builder(file).build(),
                         ContextCompat.getMainExecutor(context),
                         object : ImageCapture.OnImageSavedCallback {
-                            override fun onImageSaved(output: ImageCapture.OutputFileResults) { captured = file }
-                            override fun onError(exception: ImageCaptureException) { error = "scan_error_capture" }
+                            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                error = null
+                                capturedPath = file.absolutePath
+                            }
+                            override fun onError(exception: ImageCaptureException) {
+                                file.delete()
+                                error = "scan_error_capture"
+                            }
                         }
                     )
                 },
@@ -121,12 +143,34 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
             )
         }
         captured?.let { file ->
+            if (processing) LinearProgressIndicator(Modifier.fillMaxWidth())
             QuadAdjust(
                 file = file,
+                busy = processing,
                 onApply = { quad ->
-                    try { onCaptured(perspectiveQuad(file, quad)) } catch (_: Exception) { error = "scan_error_process" }
+                    if (processing) return@QuadAdjust
+                    processing = true
+                    scope.launch {
+                        try {
+                            val warped = withContext(Dispatchers.IO) { perspectiveQuad(file, quad) }
+                            file.delete()
+                            capturedPath = null
+                            onCaptured(warped)
+                        } catch (cancel: CancellationException) {
+                            throw cancel
+                        } catch (_: Exception) {
+                            error = "scan_error_process"
+                        } finally {
+                            processing = false
+                        }
+                    }
                 },
-                onRetake = { captured = null }
+                onRetake = {
+                    if (!processing) {
+                        file.delete()
+                        capturedPath = null
+                    }
+                }
             )
         }
     }
@@ -176,9 +220,22 @@ internal fun detectDocumentQuad(bitmap: Bitmap): List<Offset> {
  * Perspective correction with a user-adjusted quad (corners normalized 0..1,
  * order: TL, TR, BR, BL). Output size uses the longer of each edge pair.
  */
+internal fun decodeScanBitmapBounded(file: File, maxEdge: Int = 2048): Bitmap? {
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(file.path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxEdge) sample *= 2
+    val opts = android.graphics.BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.ARGB_8888
+    }
+    return android.graphics.BitmapFactory.decodeFile(file.path, opts)
+}
+
 internal fun perspectiveQuad(file: File, quad: List<Offset>): File {
     require(quad.size == 4) { "SCAN_QUAD_INVALID" }
-    val src = android.graphics.BitmapFactory.decodeFile(file.path) ?: throw IllegalArgumentException("SCAN_DECODE_FAILED")
+    val src = decodeScanBitmapBounded(file, 2400) ?: throw IllegalArgumentException("SCAN_DECODE_FAILED")
     val w = src.width; val h = src.height
     val srcPts = FloatArray(8)
     quad.forEachIndexed { i, o ->
@@ -204,10 +261,10 @@ internal fun perspectiveQuad(file: File, quad: List<Offset>): File {
 
 /** Draggable four-corner quad over the captured photo (normalized coordinates). */
 @Composable
-private fun QuadAdjust(file: File, onApply: (List<Offset>) -> Unit, onRetake: () -> Unit) {
+private fun QuadAdjust(file: File, busy: Boolean = false, onApply: (List<Offset>) -> Unit, onRetake: () -> Unit) {
     val guideColor = MaterialTheme.colorScheme.tertiary
     val canvasBg = MaterialTheme.colorScheme.surfaceContainerLowest
-    val bitmap = remember(file) { android.graphics.BitmapFactory.decodeFile(file.path) }
+    val bitmap = remember(file) { decodeScanBitmapBounded(file, 1600) }
     var corners by remember(file, bitmap) {
         mutableStateOf(bitmap?.let(::detectDocumentQuad) ?: listOf(Offset(0.08f, 0.08f), Offset(0.92f, 0.08f), Offset(0.92f, 0.92f), Offset(0.08f, 0.92f)))
     }
@@ -224,7 +281,8 @@ private fun QuadAdjust(file: File, onApply: (List<Offset>) -> Unit, onRetake: ()
                     modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit
                 )
             }
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize().pointerInput(Unit) {
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize().pointerInput(busy) {
+                if (busy) return@pointerInput
                 detectDragGestures(
                     onDragStart = { start ->
                         val nx = start.x / size.width; val ny = start.y / size.height
@@ -252,7 +310,7 @@ private fun QuadAdjust(file: File, onApply: (List<Offset>) -> Unit, onRetake: ()
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             QuietTonalButton(text = stringResource(R.string.scan_retake), onClick = onRetake)
-            QuietPrimaryButton(text = stringResource(R.string.scan_apply), onClick = { onApply(corners) })
+            QuietPrimaryButton(text = stringResource(R.string.scan_apply), enabled = !busy, onClick = { onApply(corners) })
         }
     }
 }
@@ -263,23 +321,75 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
     val context = LocalContext.current
     val strokeColor = MaterialTheme.colorScheme.onSurface
     val padSurface = MaterialTheme.colorScheme.surfaceContainerLowest
-    var path by remember { mutableStateOf(androidx.compose.ui.graphics.Path()) }
-    var strokes by remember { mutableStateOf(0) }
+    val completedStrokes = remember { mutableStateListOf<List<Offset>>() }
+    val activePoints = remember { mutableStateListOf<Offset>() }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val hasInk = completedStrokes.isNotEmpty() || activePoints.size >= 2
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.signature_title), style = QuietTheme.typography.metadataStrong)
-        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(140.dp).clip(QuietTheme.shapes.thumbnail).background(padSurface).pointerInput(Unit) {
-            detectDragGestures(onDragStart = { path.moveTo(it.x, it.y); strokes++ }, onDrag = { change, _ -> path.lineTo(change.position.x, change.position.y) })
-        }) { drawPath(path, strokeColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)) }
+        androidx.compose.foundation.Canvas(
+            Modifier.fillMaxWidth().height(140.dp).clip(QuietTheme.shapes.thumbnail).background(padSurface)
+                .onSizeChanged { canvasSize = it }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { start ->
+                            activePoints.clear()
+                            activePoints.add(start)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            activePoints.add(change.position)
+                        },
+                        onDragEnd = {
+                            if (activePoints.size >= 2) completedStrokes.add(activePoints.toList())
+                            activePoints.clear()
+                        },
+                        onDragCancel = { activePoints.clear() }
+                    )
+                }
+        ) {
+            fun drawStroke(pts: List<Offset>) {
+                if (pts.size < 2) return
+                val strokePath = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(pts.first().x, pts.first().y)
+                    for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+                }
+                drawPath(
+                    strokePath,
+                    strokeColor,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+            }
+            completedStrokes.forEach(::drawStroke)
+            drawStroke(activePoints)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            QuietTonalButton(text = stringResource(R.string.signature_clear), onClick = { path = androidx.compose.ui.graphics.Path(); strokes = 0 })
+            QuietTonalButton(text = stringResource(R.string.signature_clear), onClick = { completedStrokes.clear(); activePoints.clear() })
             QuietPrimaryButton(
                 text = stringResource(R.string.signature_save),
-                enabled = strokes > 0,
+                enabled = hasInk,
                 onClick = {
-                    val bitmap = Bitmap.createBitmap(600, 252, Bitmap.Config.ARGB_8888)
+                    val outWidth = 600
+                    val outHeight = 252
+                    val sx = outWidth.toFloat() / canvasSize.width.coerceAtLeast(1).toFloat()
+                    val sy = outHeight.toFloat() / canvasSize.height.coerceAtLeast(1).toFloat()
+                    val bitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
                     val canvas = Canvas(bitmap)
-                    val androidPath = Path(path.asAndroidPath())
-                    canvas.drawPath(androidPath, Paint().apply { color = android.graphics.Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 7f; isAntiAlias = true })
+                    val androidPath = Path()
+                    val allStrokes = completedStrokes.toList() + if (activePoints.size >= 2) listOf(activePoints.toList()) else emptyList()
+                    for (stroke in allStrokes) {
+                        if (stroke.size < 2) continue
+                        androidPath.moveTo(stroke.first().x * sx, stroke.first().y * sy)
+                        for (i in 1 until stroke.size) androidPath.lineTo(stroke[i].x * sx, stroke[i].y * sy)
+                    }
+                    canvas.drawPath(androidPath, Paint().apply {
+                        color = android.graphics.Color.BLACK
+                        style = Paint.Style.STROKE
+                        strokeWidth = 7f
+                        strokeCap = Paint.Cap.ROUND
+                        strokeJoin = Paint.Join.ROUND
+                        isAntiAlias = true
+                    })
                     val file = File(context.cacheDir, "signature-${System.currentTimeMillis()}.png")
                     FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
                     bitmap.recycle()

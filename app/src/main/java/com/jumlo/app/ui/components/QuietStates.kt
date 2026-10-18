@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -166,19 +170,24 @@ fun QuietStateCard(
     val colors = MaterialTheme.colorScheme
     QuietCard(
         modifier = modifier.fillMaxWidth(),
-        containerColor = if (isError) colors.errorContainer.copy(alpha = 0.35f) else QuietTheme.pillars.cardSurface,
-        borderColor = if (isError) colors.error.copy(alpha = 0.45f) else QuietTheme.pillars.cardBorder
+        containerColor = if (isError) colors.errorContainer else QuietTheme.pillars.cardSurface,
+        borderColor = if (isError) colors.error.copy(alpha = 0.65f) else QuietTheme.pillars.cardBorder
     ) {
-        Text(
-            text = title,
-            style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = if (isError) colors.onErrorContainer else colors.onSurface
-        )
-        Text(
-            text = subtitle,
-            style = QuietTheme.typography.metadata,
-            color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant
-        )
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            QuietIconTile(
+                icon = if (isError) Icons.Rounded.Warning else Icons.Rounded.Info,
+                tint = if (isError) colors.onErrorContainer else colors.primary,
+                container = if (isError) colors.errorContainer else colors.primaryContainer,
+                size = 44.dp
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = title, modifier = Modifier.semantics { heading() },
+                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = if (isError) colors.onErrorContainer else colors.onSurface)
+                Text(text = subtitle, style = QuietTheme.typography.metadata,
+                    color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+            }
+        }
         if (actionLabel != null && onAction != null) {
             QuietTonalButton(
                 text = actionLabel,

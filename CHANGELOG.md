@@ -1,3 +1,10 @@
+## 2026-10-18 — Color Designer UI/UX source refresh (NO-GO)
+
+- Rebuilt light/dark Material 3 and category theme tokens around an indigo/lilac design system; preserved alternate accent preferences and Arabic/English.
+- Applied coordinated cards, icon tiles, responsive Home/Tools discovery, improved Files import and type labels, prominent reversible download controls and progress, accessible search/dock interactions, and a matching splash.
+- Added `scripts/test-premium-ux.py` and wired it into host verification. No processing engine, database, or download transport rewrite.
+- Android compilation, on-device UI testing, real download providers and iOS are **not verified**. See `docs/UX_COLOR_DESIGNER_REFRESH_2026-10-18.md`.
+
 ## 2026-10-18 — Large PDF reliability, disk-spillable processing, and verified batch exports
 
 - Removed the blanket 4 GiB cap for imported files and selected-result byte totals; admission is bounded by real disk availability.

@@ -1,6 +1,7 @@
 package com.jumlo.app.hosttest
 
 import com.jumlo.app.core.*
+import com.jumlo.app.core.media.MediaSubmissionSlot
 import java.io.*
 import java.nio.file.Files
 import java.util.UUID
@@ -10,7 +11,7 @@ private var passed = 0
 private var failed = 0
 private fun test(name: String, block: () -> Unit) {
     try { block(); passed++; println("PASS $name") }
-    catch (e: Throwable) { failed++; println("FAIL $name: ${e.javaClass.simpleName}: ${e.message}") }
+    catch (e: Throwable) { failed++; println("FAIL $name: ${e.javaClass.simpleName}: ${e.message}"); e.printStackTrace() }
 }
 private inline fun <reified T : Throwable> rejects(block: () -> Unit) {
     try { block() } catch (e: Throwable) { check(e is T) { "Expected ${T::class}, got ${e.javaClass}" }; return }
@@ -27,6 +28,37 @@ private fun zip(file: File, entries: List<Pair<String, ByteArray>>) {
 }
 
 fun main() {
+    test("download compression chooses a truthful image name and format") {
+        val compressed=DownloadCompressionPolicy.choose("صورة جميلة.png","image/png",4000,1500)
+        check(compressed.useCompressed)
+        check(compressed.filename=="صورة جميلة.jpg")
+        check(compressed.mimeType=="image/jpeg")
+        val retained=DownloadCompressionPolicy.choose("graphic.webp","image/webp",800,950)
+        check(!retained.useCompressed)
+        check(retained.filename=="graphic.webp" && retained.mimeType=="image/webp")
+        val tiny=DownloadCompressionPolicy.choose("small.jpg","image/jpeg",100,250)
+        check(!tiny.useCompressed)
+        val emoji=DownloadCompressionPolicy.choose("لقطة 📷.png","image/png",12000,3000)
+        check(emoji.filename=="لقطة 📷.jpg")
+    }
+    test("manual pause is durable and distinct from crash recovery") {
+        check(JobLifecyclePolicy.shouldRecover("INTERRUPTED"))
+        check(JobLifecyclePolicy.shouldRecover("RUNNING"))
+        check(!JobLifecyclePolicy.shouldRecover("PAUSED"))
+        check(!JobLifecyclePolicy.shouldRecover("WAITING_FOR_INPUT"))
+        check(JobLifecyclePolicy.canPause("RUNNING"))
+        check(!JobLifecyclePolicy.canPause("FINALIZING"))
+    }
+    test("PDF compression image decoding has bounded ARGB heap cost") {
+        val heap = 256L * 1024 * 1024
+        check(PdfCompressionPolicy.canDecodeImage(1000, 1000, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(4000, 3000, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(Int.MAX_VALUE, Int.MAX_VALUE, Long.MAX_VALUE))
+        check(!PdfCompressionPolicy.canDecodeImage(0, 100, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(-1, 100, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(1000, 1000, 0))
+        check(PdfCompressionPolicy.canDecodeImage(1000, 1000, Long.MAX_VALUE))
+    }
     test("workflow batch accepts selected outputs in visual order") {
         val files = listOf(
             OutputFileChoice("00000000-0000-4000-8000-000000000001", "a.pdf", "application/pdf", 300),
@@ -181,6 +213,9 @@ fun main() {
         check(DriveLink.fileId("https://drive.google.com/open?id=$id&usp=sharing") == id)
         check(DriveLink.fileId("https://docs.google.com/document/d/$id/edit") == id)
         check(DriveLink.fileId("https://docs.google.com/spreadsheets/d/$id/edit") == id)
+        check(DriveLink.fileId("https://drive.google.com/file/u/0/d/$id/view?usp=sharing") == id)
+        check(DriveLink.fileId("https://docs.google.com/document/u/1/d/$id/edit") == id)
+        check(DriveLink.toDirectDownloadUrl("https://drive.google.com/file/u/0/d/$id/view#heading=h.123") == "https://drive.usercontent.google.com/download?id=$id&export=download&confirm=t")
     }
     test("Drive link parser rejects impostors, credentials and embedded links") {
         val id = "1abcDE_fgHiJ23KLmno"
@@ -319,6 +354,17 @@ fun main() {
     test("missing and weak resume validators are rejected") { for (tag in listOf(null,"W/\"v1\"")) rejects<RestartRequired> { ResumePolicy.validate(10,tag,null,20,206,mapOf("content-range" to "bytes 10-19/20")) } }
     test("legacy and security gates stay closed") { check(!Capabilities.isEnabled("legacy_demo_engine")); check(!Capabilities.isEnabled("xf_05")); check(!Capabilities.isEnabled("xp_redaction")) }
     test("keep both respects case-insensitive filesystem names") { check(SafeNames.unique(setOf("Photo.JPG"),"photo.jpg")=="photo (1).jpg") }
+    test("Arabic and emoji collision resolution stays within 200 UTF-8 bytes without splitting surrogates") {
+        val longArabic = "\u0645\u0633\u062a\u0646\u062f_\u0639\u0631\u0628\u064a_".repeat(12) + "\uD83D\uDCF7"
+        val clean = AutoOutputName.cleanBaseName("$longArabic.pdf")
+        check(clean.toByteArray(Charsets.UTF_8).size <= 140)
+        val derived = AutoOutputName.fromSource("pdf_03", "$longArabic.pdf")!!
+        check(derived.toByteArray(Charsets.UTF_8).size <= 200)
+        val unique1 = SafeNames.unique(setOf(derived), derived)
+        check(unique1.endsWith(" (1).pdf") && unique1.toByteArray(Charsets.UTF_8).size <= 200)
+        val unique2 = StoragePaths.uniqueName(derived, setOf(derived, unique1))
+        check(unique2.endsWith(" (2).pdf") && unique2.toByteArray(Charsets.UTF_8).size <= 200)
+    }
     test("padding without upscaling keeps requested canvas") {
         val g=ImageGeometry.resolve(100,50,400,400,FitMode.PAD,false)
         check(g.width==400 && g.height==400); check(g.draw.width==100.0 && g.draw.height==50.0)
@@ -379,6 +425,43 @@ fun main() {
         check(DownloadLinkPolicy.cleanName("https://example.com/anything", "attachment; filename*=UTF-8''hello%20world.mp4", "video/mp4")=="hello world.mp4")
         check(DownloadLinkPolicy.cleanName("https://example.com/video.mp3", null, "video/mp4")=="video.mp4")
         check(!DownloadLinkPolicy.cleanName("https://example.com/file.pdf", "attachment; filename=../evil.zip", "application/zip").contains('/'))
+    }
+    test("media job idempotency binds network restrictions without merging different intents") {
+        val original=MediaSubmissionKey.key("direct:ORIGINAL","https://example.org/file.pdf","file.pdf",false,false,false)
+        val wifi=MediaSubmissionKey.key("direct:ORIGINAL","https://example.org/file.pdf","file.pdf",true,false,false)
+        val unmetered=MediaSubmissionKey.key("direct:ORIGINAL","https://example.org/file.pdf","file.pdf",false,true,false)
+        val allowHttp=MediaSubmissionKey.key("direct:ORIGINAL","https://example.org/file.pdf","file.pdf",false,false,true)
+        check(setOf(original,wifi,unmetered,allowHttp).size==4)
+        check(MediaSubmissionKey.key("direct:ORIGINAL","https://example.org/file.pdf","file.pdf",false,false,false)==original)
+        check(MediaSubmissionKey.key("ab","c","name",false,false,false)!=MediaSubmissionKey.key("a","bc","name",false,false,false))
+        val submissions=MediaSubmissionSlot<String>()
+        var serial=0
+        check(submissions.prepare(original) { (++serial).toString() }=="1")
+        check(submissions.prepare(original) { (++serial).toString() }=="1")
+        check(submissions.prepare(wifi) { (++serial).toString() }=="2")
+    }
+    test("download names keep whole Unicode code points and fit the public filename budget") {
+        val emoji = "\uD83D\uDE00"
+        val title = emoji.repeat(70) + ".pdf"
+        val safe = DownloadLinkPolicy.cleanName("https://example.org/get", "attachment; filename=\"$title\"", "application/pdf")
+        check(safe.endsWith(".pdf") && safe.contains(emoji))
+        check(safe.toByteArray(Charsets.UTF_8).size <= 200)
+        check(safe.codePoints().noneMatch { cp -> cp in 0xD800..0xDFFF })
+        check(SafeNames.basename(safe) == safe)
+    }
+    test("automatic names and collision suffixes never split a UTF-16 surrogate pair") {
+        val emoji = "\uD83D\uDE00"
+        val long = "a".repeat(179) + emoji + ".pdf"
+        val suffixed = StoragePaths.uniqueName(long, setOf(long))
+        check(suffixed.contains(emoji) && suffixed.endsWith(" (2).pdf"))
+        check(suffixed.codePoints().noneMatch { cp -> cp in 0xD800..0xDFFF })
+        val suggested = AutoOutputName.cleanBaseName("a".repeat(111) + emoji + ".pdf")
+        check(suggested.codePoints().noneMatch { cp -> cp in 0xD800..0xDFFF })
+    }
+    test("download naming keeps RFC5987 plus signs and catches case-only collisions") {
+        check(DownloadLinkPolicy.cleanName("https://example.org/get", "attachment; filename*=UTF-8''hello+team.pdf", "application/pdf") == "hello+team.pdf")
+        check(StoragePaths.uniqueName("report.pdf", setOf("REPORT.pdf")) == "report (2).pdf")
+        rejects<IllegalArgumentException> { SafeNames.basename("\uD83D.pdf") }
     }
     test("HTML payloads are never published as file results") {
         check(DownloadLinkPolicy.unexpectedHtml("text/html", byteArrayOf(1,2,3)))

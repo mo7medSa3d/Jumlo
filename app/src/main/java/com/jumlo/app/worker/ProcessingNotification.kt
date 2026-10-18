@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
 import com.jumlo.app.MainActivity
@@ -39,6 +40,11 @@ object ProcessingNotification {
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
             .addAction(android.R.drawable.ic_delete,context.getString(R.string.processing_cancel),cancel)
             .build()
-        return ForegroundInfo(jobId.hashCode().and(Int.MAX_VALUE).coerceAtLeast(1),notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        val notificationId=jobId.hashCode().and(Int.MAX_VALUE).coerceAtLeast(1)
+        return if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.Q) {
+            ForegroundInfo(notificationId,notification,ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(notificationId,notification)
+        }
     }
 }

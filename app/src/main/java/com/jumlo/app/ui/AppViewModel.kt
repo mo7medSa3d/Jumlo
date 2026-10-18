@@ -175,9 +175,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setUrls(value:String) {
         _urls.value=value.take(100000)
         val firstLine = value.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: ""
-        if (firstLine.isNotBlank()) {
-            val candidate = firstLine.substringBefore('?').substringBefore('#').substringAfterLast('/').trim()
-            if (candidate.isNotBlank() && candidate.contains('.') && !candidate.endsWith('.')) {
+        if (firstLine.isNotBlank() && DownloadLinkPolicy.isDirect(firstLine)) {
+            val candidate = DownloadLinkPolicy.cleanName(firstLine)
+            if (candidate.isNotBlank() && candidate != "download") {
                 updateForm { it.copy(outputName = candidate) }
             }
         }
@@ -186,7 +186,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
 
     private fun smartDefaultsForTool(draft: WorkspaceDraft): WorkspaceDraft = when (draft.toolId) {
         "pdf_stamp" -> draft.copy(flag1 = true)
-        "pdf_annotate" -> draft.copy(text1 = "ملاحظة", num1 = "1")
+        "pdf_annotate" -> draft.copy(text1 = "Jumlo", num1 = "1")
         "img_watermark" -> draft.copy(text1 = "Jumlo", num1 = "40")
         "file_batch_rename" -> draft.copy(text1 = "{name}_{n}", num1 = "1")
         "pdf_05" -> draft.copy(flag1 = true, num1 = "1", pages = "all")
@@ -200,7 +200,8 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         _sessionEpoch.value++
         savePreference { preferences.recordToolOpen(id) }
         _urls.value=""
-        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool(id,emptyList()))
+        val wifiDefault=if(id.startsWith("dl_")) settings.value.wifiOnlyDefault else false
+        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool(id,emptyList()).copy(wifiOnly=wifiDefault))
         savedWorkspace.value=_form.value
         savedUrls.value=""
         lastFingerprint=null;lastJobId=null
@@ -235,7 +236,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         if(index in list.indices && to in list.indices) list.add(to,list.removeAt(index))
         old.copy(sourceIds=list)
     } }
-    fun intake(intake:Intake) {
+    fun intake(intake:Intake, attachToWorkspace:Boolean=true) {
         viewModelScope.launch {
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
@@ -264,12 +265,31 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             beginBusy()
             try {
                 for(uri in intake.uris) {
-                    try { val source=sources.inspect(uri,intake.offeredFlags);addSource(source.id,source.displayName) }
+                    try {
+                        val source=sources.inspect(uri,intake.offeredFlags)
+                        if(attachToWorkspace) addSource(source.id,source.displayName)
+                    }
                     catch(cancel:CancellationException) { throw cancel }
                     catch(error:Exception) { _message.value=stableError(error) }
                 }
                 refreshStorage()
             } finally { endBusy() }
+        }
+    }
+    /** Imports a SAF provider entry and opens the matching tool only after true MIME inspection finishes. */
+    fun importProviderEntryToWorkspace(uri:String,offeredFlags:Int,onReady:()->Unit) {
+        viewModelScope.launch {
+            initialized.await()
+            beginBusy()
+            try {
+                val source=sources.inspect(uri,offeredFlags)
+                val tool=OutputWorkflowPolicy.reuseTool(source.mimeType.orEmpty())
+                require(chooseToolWithSources(tool,listOf(source.id))) { "CAPABILITY_UNAVAILABLE" }
+                refreshStorage()
+                onReady()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally { endBusy() }
         }
     }
     fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { val source=sources.importLocalFile(file,displayName,mimeType);addSource(source.id,source.displayName); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
@@ -535,7 +555,13 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         } catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { _message.value=stableError(error) }
     } }
-    fun setWifiOnlyDefault(enabled:Boolean) = savePreference { preferences.setWifiOnlyDefault(enabled) }
+    fun resetDownloadDestinationFolder() = savePreference { preferences.resetDownloadDestinationFolder() }
+    fun setWifiOnlyDefault(enabled:Boolean) = savePreference {
+        preferences.setWifiOnlyDefault(enabled)
+        if(_form.value.toolId.startsWith("dl_")) {
+            _form.update { it.copy(wifiOnly = enabled) }
+        }
+    }
     fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }
@@ -609,7 +635,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         _storage.value=StorageUsage(
             bytes(File(app.filesDir,"inbound")),
             bytes(File(app.filesDir,"processing/results")),
-            bytes(File(app.filesDir,"transfers")),
+            bytes(File(app.filesDir,"transfers")) + bytes(File(app.noBackupFilesDir,"media-transfers")),
             bytes(app.cacheDir),
             bytes(File(app.filesDir,"processing/trash"))
         )
@@ -630,7 +656,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         return sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
             currentCoroutineContext().ensureActive()
             val pdf=file.inputStream().use { val signature=ByteArray(5);it.read(signature)==5 && String(signature,Charsets.US_ASCII)=="%PDF-" }
-            if(pdf) ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer ->
+            if(pdf) ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                renderer.use { renderer ->
                 require(page in 1..renderer.pageCount) { "PAGE_OUT_OF_RANGE" }
                 renderer.openPage(page-1).use { p ->
                     val scale=minOf(2.0,maxEdge.toDouble()/maxOf(p.width,p.height).coerceAtLeast(1))
@@ -643,7 +671,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                         h=(h*down).roundToInt().coerceAtLeast(1)
                     }
                     val bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
-                    try { bitmap.eraseColor(Color.WHITE);p.render(bitmap,null,Matrix().apply { setScale(w.toFloat()/p.width,h.toFloat()/p.height) },PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);PreviewFrame(bitmap,page,renderer.pageCount,p.width,p.height) }
+                    try { bitmap.eraseColor(Color.WHITE);p.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);PreviewFrame(bitmap,page,renderer.pageCount,p.width,p.height) }
                     catch(t:Throwable) { bitmap.recycle();throw t }
                 }
             } }

@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -53,14 +54,16 @@ fun Modifier.pressFeedback(): Modifier = composed {
     }.graphicsLayer { scaleX = scale; scaleY = scale; alpha = brightness }
 }
 
-/** Lightweight entrance choreography: key by row identity to avoid replay on every recomposition. */
+/** Lightweight entrance choreography: key by row identity to avoid replay on every recomposition or scroll recycle. */
 @Composable
 fun StaggeredReveal(index: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val reduced = LocalReducedMotion.current
-    var shown by remember { mutableStateOf(false) }
+    var shown by rememberSaveable { mutableStateOf(reduced) }
     LaunchedEffect(reduced) {
-        if (!reduced) delay(index.coerceIn(0, JumloMotion.maxStaggered).toLong() * JumloMotion.staggerMs)
-        shown = true
+        if (!shown) {
+            if (!reduced) delay(index.coerceIn(0, JumloMotion.maxStaggered).toLong() * JumloMotion.staggerMs)
+            shown = true
+        }
     }
     val alpha by animateFloatAsState(if (shown) 1f else 0f,
         animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium, dampingRatio = JumloMotion.enterDamping),

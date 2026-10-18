@@ -1,5 +1,5 @@
 command: ["python3", "scripts/test-source-static.py"]
-started_at_utc: 2026-10-17T19:29:43.392717+00:00
+started_at_utc: 2026-10-18T05:25:15.102777+00:00
 scope: Narrow static consistency checks; not Android lint/compilation
 
 test_bundled_fonts_are_exactly_the_pinned_plex_files (__main__.SourceConsistencyTests.test_bundled_fonts_are_exactly_the_pinned_plex_files) ... ok
@@ -18,7 +18,7 @@ test_string_format_placeholders_match_between_en_and_ar (__main__.SourceConsiste
 test_xml_files_parse (__main__.SourceConsistencyTests.test_xml_files_parse) ... ok
 
 ----------------------------------------------------------------------
-Ran 14 tests in 12.685s
+Ran 14 tests in 21.217s
 
 OK
 

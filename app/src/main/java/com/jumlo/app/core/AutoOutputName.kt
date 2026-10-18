@@ -11,8 +11,9 @@ object AutoOutputName {
         "file_07" to "Archive", "file_encrypted_zip" to "Archive"
     )
     fun cleanBaseName(displayName:String, fallback:String="File"):String {
-        return displayName.substringBeforeLast('.',displayName).replace(Regex("[\\/:*?\"<>|\\p{Cc}\\p{Cf}]")," ")
-            .replace(Regex("\\s+")," ").trim(' ','.').take(112).ifBlank { fallback }
+        val clean = displayName.substringBeforeLast('.',displayName).replace(Regex("[\\/:*?\"<>|\\p{Cc}\\p{Cf}]")," ")
+            .replace(Regex("\\s+")," ").trim(' ','.')
+        return SafeNames.fitUtf8(clean.ifBlank { fallback }, 140)
     }
     fun fromSource(toolId:String,displayName:String):String? {
         val operation=operations[toolId] ?: return null

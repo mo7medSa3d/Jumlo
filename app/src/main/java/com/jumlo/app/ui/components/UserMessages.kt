@@ -22,14 +22,29 @@ import com.jumlo.app.R
     code=="UNSUPPORTED_SOCIAL_PLATFORM" -> R.string.msg_unsupported_social_platform
     code=="MEDIA_SITE_UNSUPPORTED" -> R.string.media_error_site
     code=="MEDIA_CONVERSION_UNAVAILABLE" -> R.string.media_error_conversion
+    code=="MEDIA_SESSION_REQUIRED" -> R.string.media_error_session
+    code=="MEDIA_PRIVATE_CONTENT" -> R.string.media_error_private
+    code=="MEDIA_GEO_BLOCKED" -> R.string.media_error_geoblocked
+    code=="MEDIA_REMOVED" -> R.string.media_error_removed
+    code=="MEDIA_ENCRYPTED_SOURCE" -> R.string.media_error_drm
+    code=="MEDIA_RATE_LIMITED" -> R.string.media_error_rate
+    code in setOf("MEDIA_NETWORK_ERROR","MEDIA_TLS_FAILED") -> R.string.media_error_network
+    code in setOf("MEDIA_REANALYSIS_REQUIRED","MEDIA_SELECTION_REQUIRED","MEDIA_NO_USABLE_FORMAT","AUDIO_TRACK_UNAVAILABLE") -> R.string.media_error_format
+    code in setOf("MEDIA_NATIVE_ABI_UNAVAILABLE","MEDIA_RUNTIME_INITIALIZATION_FAILED","MEDIA_BUILD_NOT_ENABLED") -> R.string.media_error_runtime
+    code in setOf("PLAYLIST_REQUIRES_ITEM_SELECTION","LIVE_MEDIA_NOT_FINITE","MULTIPLE_MEDIA_LINKS") -> R.string.media_error_url
+    code in setOf("MEDIA_EXTRACTION_FAILED","MEDIA_AUDIO_EXTRACTION_FAILED","MEDIA_AUDIO_MISSING","MEDIA_VIDEO_MISSING","MEDIA_EMPTY_TRACK","MEDIA_QUALITY_MISMATCH") -> R.string.media_error_generic
+    code=="SECRET_EXPIRED" -> R.string.ui_sensitive_draft_note
     code=="HTTP_401" || code=="LOGIN_REQUIRED" || code=="GOOGLE_DRIVE_TOKEN_REQUIRED" -> R.string.msg_http_401
-    code=="HTTP_403" || code=="PRIVATE_CONTENT" -> R.string.msg_http_403
+    code=="HTTP_403" || code=="PRIVATE_CONTENT" || code=="MEDIA_SOURCE_REJECTED" -> R.string.msg_http_403
     code=="HTTP_404" || code=="REMOVED" -> R.string.msg_http_404
     code=="HTTP_429" || code=="RATE_LIMITED" -> R.string.msg_http_429
     code=="TOO_MANY_REDIRECTS" -> R.string.msg_too_many_redirects
     code=="INSECURE_REDIRECT" -> R.string.msg_insecure_redirect
     code=="DOWNLOAD_NOT_A_FILE" -> R.string.msg_download_not_a_file
-    code=="NETWORK_TIMEOUT" -> R.string.msg_network_timeout
+    code=="EMPTY_HTTP_BODY" -> R.string.msg_empty_download
+    code in setOf("DOWNLOAD_RESTART_REQUIRED","FINAL_URL_CHANGED","MISSING_RESUME_VALIDATOR") -> R.string.msg_download_restart_required
+    code in setOf("TRUNCATED_HTTP_BODY","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH") -> R.string.msg_transfer_incomplete
+    code in setOf("NETWORK_TIMEOUT","MEDIA_PROCESS_TIMEOUT","MEDIA_PROCESS_STREAM_TIMEOUT") -> R.string.msg_network_timeout
     code=="NETWORK_UNAVAILABLE" -> R.string.msg_network_unavailable
     code=="WIFI_REQUIRED" -> R.string.msg_wifi_required
     code=="UNMETERED_NETWORK_REQUIRED" -> R.string.msg_unmetered_required
@@ -50,11 +65,15 @@ import com.jumlo.app.R
     code=="SHA256_MISMATCH" -> R.string.msg_sha256_mismatch
     code in setOf("NO_ACROFORM","FORM_FIELD_NOT_FOUND","FORM_FIELD_TYPE_MISMATCH") -> R.string.msg_no_acroform
     code=="REDACTION_VERIFICATION_FAILED" -> R.string.msg_redaction_failed
+    code=="ANIMATED_IMAGE_UNSUPPORTED" -> R.string.msg_animated_image_unsupported
+    code in setOf("MALFORMED_IMAGE","IMAGE_DECODE_FAILED","IMAGE_ENCODE_FAILED","IMAGE_VERIFY_FAILED") -> R.string.msg_image_corrupt
+    code in setOf("EMPTY_PDF","PDF_VERIFY_FAILED") -> R.string.msg_pdf_corrupt
     code=="ONE_PDF_REQUIRED" || code=="ONE_ZIP_REQUIRED" || code=="ONE_SOURCE_REQUIRED" -> R.string.msg_one_file
-    code in setOf("NO_SOURCES","TWO_SOURCES_REQUIRED","TWO_PDFS_REQUIRED","TWO_IMAGES_REQUIRED","PDF_MERGE_NEEDS_TWO_FILES","PDF_AND_SIGNATURE_IMAGE_REQUIRED") -> R.string.msg_choose_files
+    code in setOf("NO_SOURCES","ONE_OR_TWO_PDFS_REQUIRED","TWO_SOURCES_REQUIRED","TWO_PDFS_REQUIRED","TWO_IMAGES_REQUIRED","PDF_MERGE_NEEDS_TWO_FILES","PDF_AND_SIGNATURE_IMAGE_REQUIRED","AT_LEAST_ONE_PAGE_REQUIRED") -> R.string.msg_choose_files
     code=="NO_FOLDER_SELECTED" -> R.string.msg_choose_folder
-    code in setOf("ACCESS_LOST","PERSISTABLE_GRANT_REQUIRED","CONTENT_URI_REQUIRED","OUTPUT_MISSING","SOURCE_NOT_FOUND") -> R.string.msg_access_lost
-    code.startsWith("PROVIDER_") || code=="FILE_DELETE_UNAVAILABLE" -> R.string.msg_provider_unavailable
+    code in setOf("ACCESS_LOST","PERSISTABLE_GRANT_REQUIRED","CONTENT_URI_REQUIRED","OUTPUT_MISSING","SOURCE_NOT_FOUND","DESTINATION_ACCESS_LOST") -> R.string.msg_access_lost
+    code=="DESTINATION_EXISTS" -> R.string.files_rename_exists
+    code.startsWith("PROVIDER_") || code=="FILE_DELETE_UNAVAILABLE" || code in setOf("DESTINATION_READ_ONLY","DESTINATION_CREATE_FAILED","DESTINATION_WRITE_UNAVAILABLE","DESTINATION_VERIFY_FAILED","DESTINATION_VERIFY_UNAVAILABLE") -> R.string.msg_provider_unavailable
     code in setOf("NO_COMPATIBLE_APP_OR_ACCESS_LOST","EXTERNAL_APP_UNAVAILABLE") -> R.string.msg_no_viewer
     code=="PREVIEW_UNAVAILABLE" -> R.string.msg_preview_unavailable
     code.contains("BUDGET") || code.contains("TOO_LARGE") || code.contains("SIZE_LIMIT") -> R.string.msg_size_limit

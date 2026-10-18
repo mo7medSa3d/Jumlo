@@ -25,11 +25,13 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     @Query("SELECT * FROM jobs ORDER BY rowid DESC") fun jobs():Flow<List<JobEntity>>
     @Query("UPDATE jobs SET leaseOwner=:owner, leaseUntil=:until, generation=generation+1 WHERE id=:id AND stage IN ('QUEUED','VALIDATING','RUNNING','FINALIZING','INTERRUPTED') AND (leaseOwner IS NULL OR leaseUntil<:now)")
     suspend fun claim(id:String,owner:String,now:Long,until:Long):Int
-    @Query("UPDATE jobs SET leaseUntil=:until WHERE id=:id AND leaseOwner=:owner AND stage NOT IN ('CANCELLED','COMPLETED','FAILED','PARTIAL','WAITING_FOR_INPUT')") suspend fun heartbeat(id:String,owner:String,until:Long):Int
-    @Query("UPDATE jobs SET snapshotJson=:snapshot,stage=:stage WHERE id=:id AND leaseOwner=:owner AND stage!='CANCELLED'") suspend fun updateOwned(id:String,owner:String,snapshot:String,stage:String):Int
+    @Query("UPDATE jobs SET leaseUntil=:until WHERE id=:id AND leaseOwner=:owner AND stage NOT IN ('CANCELLED','COMPLETED','FAILED','PARTIAL','WAITING_FOR_INPUT','PAUSED')") suspend fun heartbeat(id:String,owner:String,until:Long):Int
+    @Query("UPDATE jobs SET snapshotJson=:snapshot,stage=:stage WHERE id=:id AND leaseOwner=:owner AND stage NOT IN ('CANCELLED','PAUSED')") suspend fun updateOwned(id:String,owner:String,snapshot:String,stage:String):Int
     @Query("UPDATE jobs SET leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND leaseOwner=:owner") suspend fun release(id:String,owner:String)
-    @Query("UPDATE jobs SET stage=:stage,snapshotJson=:snapshot WHERE id=:id AND stage NOT IN ('COMPLETED','CANCELLED')") suspend fun setStage(id:String,stage:String,snapshot:String)
-    @Query("UPDATE jobs SET stage='QUEUED',snapshotJson=:snapshot,leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND stage IN ('FAILED','PARTIAL','INTERRUPTED','WAITING_FOR_INPUT') AND leaseOwner IS NULL") suspend fun retry(id:String,snapshot:String):Int
+    // Atomically reject stale UI actions after a worker has advanced to final publication or a terminal stage.
+    @Query("UPDATE jobs SET stage='PAUSED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','VALIDATING','RUNNING')") suspend fun pauseIfActive(id:String,snapshot:String):Int
+    @Query("UPDATE jobs SET stage='CANCELLED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','VALIDATING','RUNNING','FINALIZING','INTERRUPTED','PAUSED')") suspend fun cancelIfOpen(id:String,snapshot:String):Int
+    @Query("UPDATE jobs SET stage='QUEUED',snapshotJson=:snapshot,leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND stage IN ('FAILED','PARTIAL','INTERRUPTED','PAUSED','WAITING_FOR_INPUT') AND leaseOwner IS NULL") suspend fun retry(id:String,snapshot:String):Int
     @Query("UPDATE jobs SET stage='FAILED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','INTERRUPTED') AND leaseOwner IS NULL")
     suspend fun failBeforeClaim(id:String,snapshot:String):Int
     @Insert(onConflict=OnConflictStrategy.IGNORE) suspend fun insertOutput(output:OutputEntity):Long

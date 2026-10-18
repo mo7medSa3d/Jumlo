@@ -9,7 +9,7 @@ policy=(root/'app/src/main/java/com/jumlo/app/core/CapabilityPolicy.kt').read_te
 
 class MediaBuildConfiguration(unittest.TestCase):
     def test_default_includes_real_media_in_all_variants(self):
-        self.assertIn('orElse(true).get()',build)
+        self.assertIn('orElse(false).get()',build)
         for variant in ('debug','release','benchmark'):
             self.assertIn(f'sourceSets["{variant}"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")',build)
         for coordinate in ('library:0.18.1','ffmpeg:0.18.1'):
@@ -17,7 +17,7 @@ class MediaBuildConfiguration(unittest.TestCase):
         self.assertIn('if (extendedMedia)',build)
     def test_lite_build_remains_possible(self):
         self.assertTrue((root/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').is_file())
-        self.assertIn('MEDIA_BUILD_NOT_ENABLED',(root/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text())
+        self.assertIn('NativeDirectMediaRuntime(client, sessions)',(root/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text())
     def test_release_policy_exposes_media(self):
         self.assertIn('"dl_media"',policy)
         self.assertNotIn('"dl_media" to "EXTENDED_MEDIA_QUALIFICATION_PENDING"',policy)

@@ -51,6 +51,7 @@
     <string name="action_share">مشاركة</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_pause">إيقاف مؤقت</string>
+    <string name="action_resume">استئناف</string>
     <string name="action_change">تغيير</string>
     <string name="action_reset">إعادة ضبط</string>
     <string name="action_copy">نسخ</string>
@@ -361,4 +362,6 @@
     <string name="files_merge_selected">دمج PDF (%1$d)</string>
     <string name="files_images_to_pdf_selected">صور إلى PDF (%1$d)</string>
     <string name="files_batch_tool_hint">اختر الملفات وحوّلها إلى PDF أو ZIP بدون إعادة الاستيراد.</string>
+    <string name="output_saved_location">محفوظ في %1$s</string>
+    <string name="output_saved_privately">محفوظ داخل جملو فقط. استخدم مشاركة أو تصدير لحفظ نسخة خارج التطبيق.</string>
 </resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="premium_download_tip">Paste a link, choose a file, and save it locally.</string>
+    <string name="premium_download_empty">Use New download above to add your first link.</string>
+    <string name="premium_progress_percent">%1$d%%</string>
+</resources>

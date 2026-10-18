@@ -115,6 +115,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                     }
                     out.fd.sync()
                 }
+                if(written==0L) throw IOException("EMPTY_HTTP_BODY")
                 if(total!=null && written!=total) throw IOException(if(written<total) "TRUNCATED_HTTP_BODY" else "OVERFLOW_HTTP_BODY")
                 val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
                 val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }

@@ -22,6 +22,7 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.model.*
 import com.jumlo.app.data.jobs.CapabilityRegistry
+import com.jumlo.app.core.StoragePaths
 
 @Composable fun DownloadsScreen(vm:AppViewModel,onTool:(UtilityTool)->Unit,onJob:(String)->Unit) {
     val haptics=rememberAppHaptics()
@@ -29,14 +30,17 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     val settings by vm.settings.collectAsStateWithLifecycle()
     var selecting by remember {mutableStateOf(false)}
     var selected by remember {mutableStateOf(setOf<String>())}
-    val downloads=remember(jobs) {jobs.filter {it.request.toolId.startsWith("dl_")}}
-    val activeDownloads=downloads.filter(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs)
-    val previousDownloads=downloads.filterNot(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs)
+    val (downloads, activeDownloads, previousDownloads) = remember(jobs) {
+        val downloads=jobs.filter {it.request.toolId.startsWith("dl_")}.sortedByDescending(JobSnapshot::updatedAtEpochMs)
+        val activeDownloads=downloads.filter(JobSnapshot::isActive)
+        val previousDownloads=downloads.filterNot(JobSnapshot::isActive)
+        Triple(downloads, activeDownloads, previousDownloads)
+    }
     LaunchedEffect(downloads) {
         selected=selected.intersect(activeDownloads.map {it.request.id}.toSet())
         if(activeDownloads.isEmpty()) selecting=false
     }
-    val completed=downloads.count {it.progress.stage==JobStage.COMPLETED}
+    val completed=remember(downloads) {downloads.count {it.progress.stage==JobStage.COMPLETED}}
     val mediaTool=CapabilityRegistry.tools.find {it.id=="dl_media" && CapabilityRegistry.enabled(it.id)}
         ?: CapabilityRegistry.tools.find {it.id=="dl_02" && CapabilityRegistry.enabled(it.id)}
     val batchTool=CapabilityRegistry.tools.find {it.id=="dl_03" && CapabilityRegistry.enabled(it.id)}
@@ -51,7 +55,7 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
                     Icon(Icons.Rounded.Download,null,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.primary)
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
                         Text(stringResource(R.string.redesign_download_hero),style=QuietTheme.typography.screenTitle)
-                        Text(stringResource(R.string.media_supported_platforms),style=QuietTheme.typography.metadata,
+                        Text(stringResource(R.string.premium_download_tip),style=QuietTheme.typography.metadata,
                             color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
                     }
                 }
@@ -104,26 +108,34 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
             }
         }
         if(downloads.isEmpty()) item("empty") {
-            QuietStateCard(stringResource(R.string.downloads_empty_title),stringResource(R.string.media_supported_platforms))
+            QuietStateCard(stringResource(R.string.downloads_empty_title),stringResource(R.string.premium_download_empty))
         }
     }
 }
 
 /** Priority-first operation history: ongoing work, durable results, then past operations. */
-@Composable fun ActivityScreen(vm:AppViewModel,selectedJob:String?,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onNewRun:()->Unit) {
+@Composable fun ActivityScreen(vm:AppViewModel,selectedJob:String?,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onNewRun:()->Unit,onShowAll:(()->Unit)?=null) {
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    var details by remember { mutableStateOf<OutputRecord?>(null) }
     val relevantJobs=remember(jobs,selectedJob) { jobs.filter { selectedJob==null || it.request.id==selectedJob } }
     val activeJobs=remember(relevantJobs) { relevantJobs.filter(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val recentJobs=remember(relevantJobs) { relevantJobs.filterNot(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val availableOutputs=remember(outputs,selectedJob) { outputs.filter { selectedJob==null || it.jobId==selectedJob } }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item("activity-summary") {
-            Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                Text(stringResource(R.string.activity_title),style=QuietTheme.typography.screenTitle)
-                Text(stringResource(R.string.jumlo_activity_summary, activeJobs.size, availableOutputs.size),
-                    style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                    Text(stringResource(R.string.activity_title),style=QuietTheme.typography.screenTitle)
+                    Text(stringResource(R.string.jumlo_activity_summary, activeJobs.size, availableOutputs.size),
+                        style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if(selectedJob!=null && onShowAll!=null) {
+                    TextButton(onClick=onShowAll) {
+                        Text(stringResource(R.string.ui_all),style=QuietTheme.typography.metadataStrong)
+                    }
+                }
             }
         }
         if(activeJobs.isEmpty() && recentJobs.isEmpty() && availableOutputs.isEmpty()) {
@@ -146,7 +158,9 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
                 }
             }
             items(availableOutputs,key={"output-${it.id}"},contentType={"result"}) { output ->
-                OutputRow(output,{onOpen(output)},{onShare(output)},{onExport(output)},{onReuse(output)},{vm.trashOutput(output)})
+                OutputRow(output,{onOpen(output)},{onShare(output)},{onExport(output)},{onReuse(output)},{vm.trashOutput(output)},
+                    onDetails={details=output},isFavorite=output.id in settings.favoriteOutputIds,
+                    onFavorite={vm.toggleOutputFavorite(output.id)})
             }
         }
         if(recentJobs.isNotEmpty()) {
@@ -158,6 +172,29 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
         item("new-run") {
             TextButton(onClick=onNewRun) { Text(stringResource(R.string.activity_start_new_run),style=QuietTheme.typography.metadataStrong) }
         }
+    }
+    details?.let { output ->
+        AlertDialog(
+            onDismissRequest={details=null},
+            title={Text(output.displayName)},
+            text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text(output.mimeType,style=QuietTheme.typography.metadata)
+                Text(formatOutputSizeSummary(output),style=QuietTheme.typography.bodyMedium)
+                output.metadata.pageCount?.let { Text(stringResource(R.string.output_pages_count, it),style=QuietTheme.typography.metadata) }
+                Text(stringResource(R.string.output_sha256_label, output.sha256.take(16) + "…"),style=QuietTheme.typography.metadata)
+                val savedDescription=if(output.publicUri.isNullOrBlank()) {
+                    stringResource(R.string.output_saved_privately)
+                } else {
+                    val folder=buildString {
+                        append("Jumlo / ").append(StoragePaths.category(output.mimeType))
+                        output.metadata.subfolder?.takeIf { it.isNotBlank() }?.let { append(" / ").append(it) }
+                    }
+                    stringResource(R.string.output_saved_location,folder)
+                }
+                Text(savedDescription,style=QuietTheme.typography.metadata)
+            }},
+            confirmButton={TextButton(onClick={details=null}) {Text(stringResource(R.string.account_done))}}
+        )
     }
 }
 

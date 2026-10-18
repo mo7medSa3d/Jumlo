@@ -46,6 +46,20 @@ class ActualSqlTests(unittest.TestCase):
         self.assertEqual(0,self.run_query('retry',id='job',snapshot='queued'))
         self.run_query('release',id='job',owner='old')
         self.assertEqual(1,self.run_query('retry',id='job',snapshot='queued'))
+    def test_pause_is_atomic_and_cannot_overwrite_finalizing_or_terminal_results(self):
+        for stage, expected in [('QUEUED',1),('VALIDATING',1),('RUNNING',1),('FINALIZING',0),('COMPLETED',0),('CANCELLED',0)]:
+            self.job(stage=stage)
+            self.assertEqual(expected,self.run_query('pauseIfActive',id='job',snapshot='paused'),stage)
+            row=self.db.execute('SELECT stage FROM jobs WHERE id=?',('job',)).fetchone()
+            self.assertEqual('PAUSED' if expected else stage,row[0])
+            self.db.execute('DELETE FROM jobs')
+    def test_stale_cancel_cannot_overwrite_completed_or_failed_results(self):
+        for stage, expected in [('QUEUED',1),('RUNNING',1),('FINALIZING',1),('PAUSED',1),('FAILED',0),('PARTIAL',0),('COMPLETED',0),('CANCELLED',0)]:
+            self.job(stage=stage)
+            self.assertEqual(expected,self.run_query('cancelIfOpen',id='job',snapshot='cancelled'),stage)
+            row=self.db.execute('SELECT stage FROM jobs WHERE id=?',('job',)).fetchone()
+            self.assertEqual('CANCELLED' if expected else stage,row[0])
+            self.db.execute('DELETE FROM jobs')
     def test_output_logical_identity_is_unique(self):
         self.db.execute('INSERT INTO outputs VALUES (?, ?, ?, ?)',('one','job','item','a'))
         with self.assertRaises(sqlite3.IntegrityError):

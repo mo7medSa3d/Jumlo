@@ -1,6 +1,7 @@
 package com.jumlo.app.data.pdf
 
 import com.jumlo.app.core.PageTextComparison
+import com.jumlo.app.core.PdfCompressionPolicy
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSDictionary
@@ -104,7 +105,7 @@ object PdfBoxBackend {
         val blank = !hasText
         val warnings = mutableListOf<String>()
         if (doc.isEncrypted) warnings += "WARNING_DOCUMENT_IS_ENCRYPTED"
-        if (texts.isNotEmpty() && blank) warnings += "WARNING_NO_SELECTABLE_TEXT"
+        if (doc.numberOfPages > 0 && blank) warnings += "WARNING_NO_SELECTABLE_TEXT"
         return PdfInfo(doc.numberOfPages, boxes, !blank, PdfCapabilityPolicy.capabilities, warnings)
     }
 

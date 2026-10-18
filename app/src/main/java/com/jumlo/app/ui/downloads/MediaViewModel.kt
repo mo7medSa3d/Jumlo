@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jumlo.app.core.DirectFileKind
 import com.jumlo.app.core.DownloadLinkPolicy
+import com.jumlo.app.core.MediaSubmissionKey
 import com.jumlo.app.core.HttpPolicy
 import com.jumlo.app.core.PlatformHeaderPolicy
 import com.jumlo.app.core.BrowserProfilePolicy
@@ -115,7 +116,8 @@ data class MediaUiState(
     }
 
     /** Reset ViewModel-scoped media state on every workspace entry, including same-route reentry. */
-    fun beginSession(initialUrl:String) {
+    fun beginSession(initialUrl:String) = beginSession(initialUrl, false)
+    fun beginSession(initialUrl:String, defaultWifiOnly:Boolean) {
         generation++
         analysis?.cancel()
         analyzedUrl=null
@@ -124,6 +126,7 @@ data class MediaUiState(
         _state.value=MediaUiState(
             url=trimmed,
             mode=MediaMode.VIDEO,
+            wifiOnly=defaultWifiOnly,
             platformBadge=DownloadLinkPolicy.detectPlatformName(trimmed)
         )
     }
@@ -249,7 +252,10 @@ data class MediaUiState(
             try {
                 val selection=if(direct==null) MediaSelectionSettings(MediaCatalog.identity(requireNotNull(asset),url),requireNotNull(choice).key,MediaCatalog.fingerprint(choice),s.mode.name,s.audio.name,s.bitrate) else null
                 val customName = s.name.trim().ifBlank { direct?.title ?: asset?.title.orEmpty().ifBlank { "download" } }
-                val signature=(selection?.let { Json.encodeToString(it) } ?: "direct:${s.directMode}")+"|"+url+"|"+customName
+                val signature=MediaSubmissionKey.key(
+                    selection?.let { Json.encodeToString(it) } ?: "direct:${s.directMode}",
+                    url,customName,s.wifiOnly,s.unmetered,s.allowHttp
+                )
                 if(signature==lastSignature && lastJob!=null) { onQueued(lastJob!!);return@launch }
                 val request=submissions.prepare(signature) {
                     val chars=url.toCharArray()

@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.automirrored.rounded.ViewList
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -25,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.jumlo.app.R
 import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.data.files.DocumentEntry
@@ -37,6 +41,7 @@ import com.jumlo.app.model.*
 @Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
     onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit) {
     val haptics=rememberAppHaptics()
+    val context=LocalContext.current
     val imported by vm.imported.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val trashed by vm.trashed.collectAsStateWithLifecycle()
@@ -63,6 +68,17 @@ import com.jumlo.app.model.*
             when(sort) {"name"->list.sortedBy {it.displayName.lowercase()};"size"->list.sortedByDescending {it.sizeBytes};"type"->list.sortedWith(compareBy({StoragePaths.category(it.mimeType)},{it.displayName}));else->list.sortedByDescending {it.createdAtEpochMs}}
         }
     }
+    val visibleSources=remember(imported,search,sort) {
+        imported.filter {it.displayName.contains(search,true)}.let {list->
+            if(sort=="name") list.sortedBy {it.displayName.lowercase()} else list
+        }
+    }
+    val visibleTrashed=remember(trashed,search) {
+        trashed.filter {it.displayName.contains(search,true)}
+    }
+    val visibleProviderEntries=remember(tree,search) {
+        tree?.entries?.filter {it.name.contains(search,true)}.orEmpty()
+    }
     LazyColumn(
         modifier=Modifier.fillMaxSize(),
         contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
@@ -74,7 +90,8 @@ import com.jumlo.app.model.*
                 else stringResource(R.string.redesign_storage_path),style=QuietTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={haptics.actionClick();onSavedFolder()},modifier=Modifier.weight(1f).pressFeedback()) { Icon(Icons.Rounded.FolderOpen,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.redesign_open_folder),maxLines=1,overflow=TextOverflow.Ellipsis) }
-                OutlinedButton(onClick={haptics.actionClick();onImport()},modifier=Modifier.weight(1f).pressFeedback()) { Icon(Icons.Rounded.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.import_device_files),maxLines=1,overflow=TextOverflow.Ellipsis) }
+                QuietPrimaryButton(text=stringResource(R.string.import_device_files),
+                    onClick={onImport()},modifier=Modifier.weight(1f),leadingIcon=Icons.Rounded.Add)
             }
         } }
         item("search") {QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})}
@@ -96,9 +113,9 @@ import com.jumlo.app.model.*
                         }
                     }
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                        TextButton(onClick={haptics.actionClick();sortPicker=true}) { Icon(Icons.Rounded.Sort,null,Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.redesign_sort),style=QuietTheme.typography.metadataStrong) }
+                        TextButton(onClick={haptics.actionClick();sortPicker=true}) { Icon(Icons.AutoMirrored.Rounded.Sort,null,Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.redesign_sort),style=QuietTheme.typography.metadataStrong) }
                         IconButton(onClick={haptics.selectionToggle();vm.setFileViewMode(when(settings.fileViewMode) {FileViewMode.LIST->FileViewMode.GRID;FileViewMode.GRID->FileViewMode.GALLERY;FileViewMode.GALLERY->FileViewMode.LIST})}) {
-                            Icon(when(settings.fileViewMode){FileViewMode.LIST->Icons.Rounded.ViewList;FileViewMode.GRID->Icons.Rounded.GridView;FileViewMode.GALLERY->Icons.Rounded.PhotoLibrary},stringResource(R.string.redesign_file_view))
+                            Icon(when(settings.fileViewMode){FileViewMode.LIST->Icons.AutoMirrored.Rounded.ViewList;FileViewMode.GRID->Icons.Rounded.GridView;FileViewMode.GALLERY->Icons.Rounded.PhotoLibrary},stringResource(R.string.redesign_file_view))
                         }
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick={haptics.selectionToggle();selecting=!selecting;selected=emptySet()},enabled=outputs.isNotEmpty()) {Text(stringResource(if(selecting) R.string.action_cancel else R.string.ui_select_files),style=QuietTheme.typography.metadataStrong)}
@@ -149,7 +166,10 @@ import com.jumlo.app.model.*
                                 ) {
                                     Column(Modifier.fillMaxSize().padding(12.dp),verticalArrangement=Arrangement.SpaceBetween) {
                                         Box(Modifier.fillMaxWidth().height(if(settings.fileViewMode==FileViewMode.GALLERY) 118.dp else 72.dp),contentAlignment=Alignment.Center) {
-                                            if(output.mimeType.startsWith("image/")) AsyncImage(model=output.uri,contentDescription=output.displayName,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize().clip(MaterialTheme.shapes.medium))
+                                            if(output.mimeType.startsWith("image/")) {
+                                                val imgModel=remember(context,output.uri) { ImageRequest.Builder(context).data(output.uri).size(480).crossfade(false).build() }
+                                                AsyncImage(model=imgModel,contentDescription=output.displayName,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize().clip(MaterialTheme.shapes.medium))
+                                            }
                                             else Icon(when {output.mimeType=="application/pdf"->Icons.Rounded.PictureAsPdf;output.mimeType.startsWith("video/")->Icons.Rounded.Movie;output.mimeType.startsWith("audio/")->Icons.Rounded.AudioFile;else->Icons.Rounded.InsertDriveFile},null,Modifier.size(36.dp),tint=MaterialTheme.colorScheme.primary)
                                         }
                                         Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -157,13 +177,26 @@ import com.jumlo.app.model.*
                                             Text(formatOutputSizeSummary(output),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                                         }
                                         if(selecting) Checkbox(checked=output.id in selected,onCheckedChange={selected=selected.symmetric(output.id)})
-                                        else Row(horizontalArrangement=Arrangement.End,modifier=Modifier.fillMaxWidth()) {
-                                            IconButton(onClick={haptics.selectionToggle();vm.toggleOutputFavorite(output.id)},modifier=Modifier.pressFeedback().size(40.dp)) {
-                                                Icon(if(output.id in settings.favoriteOutputIds) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                                    stringResource(if(output.id in settings.favoriteOutputIds) R.string.files_unmark_favorite else R.string.files_mark_favorite),Modifier.size(20.dp))
+                                        else {
+                                            var actionsExpanded by remember(output.id) { mutableStateOf(false) }
+                                            Row(horizontalArrangement=Arrangement.End,modifier=Modifier.fillMaxWidth()) {
+                                                IconButton(onClick={haptics.selectionToggle();vm.toggleOutputFavorite(output.id)},modifier=Modifier.pressFeedback().size(48.dp)) {
+                                                    Icon(if(output.id in settings.favoriteOutputIds) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                                        stringResource(if(output.id in settings.favoriteOutputIds) R.string.files_unmark_favorite else R.string.files_mark_favorite),Modifier.size(20.dp))
+                                                }
+                                                Box {
+                                                    IconButton(onClick={haptics.actionClick();actionsExpanded=true},modifier=Modifier.pressFeedback().size(48.dp)) {
+                                                        Icon(Icons.Rounded.MoreVert,stringResource(R.string.ui_more_actions),Modifier.size(22.dp))
+                                                    }
+                                                    DropdownMenu(expanded=actionsExpanded,onDismissRequest={actionsExpanded=false}) {
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={actionsExpanded=false;onShare(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={actionsExpanded=false;details=output})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={actionsExpanded=false;onExport(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={actionsExpanded=false;onReuse(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_move_to_trash))},onClick={actionsExpanded=false;deleteIds=setOf(output.id)})
+                                                    }
+                                                }
                                             }
-                                            IconButton(onClick={haptics.actionClick();onShare(output)},modifier=Modifier.pressFeedback().size(36.dp)) {Icon(Icons.Rounded.Share,null,Modifier.size(18.dp))}
-                                            IconButton(onClick={haptics.actionClick();details=output},modifier=Modifier.pressFeedback().size(36.dp)) {Icon(Icons.Rounded.Info,null,Modifier.size(18.dp))}
                                         }
                                     }
                                 }
@@ -183,12 +216,11 @@ import com.jumlo.app.model.*
                     }
                 }
                 if(selectingSources) item("source-batch-actions") {
-                    val matching=imported.filter { it.id in selectedSources && it.displayName.contains(search,true) }
-                        .let { if(sort=="name") it.sortedBy {entry->entry.displayName.lowercase()} else it }
+                    val matching=visibleSources.filter { it.id in selectedSources }
                     val onlyPdfs=matching.size>=2 && matching.all {it.mimeType.equals("application/pdf",true)}
                     val onlyImages=matching.isNotEmpty() && matching.all {it.mimeType?.startsWith("image/")==true}
                     Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                        TextButton(onClick={selectedSources=imported.filter {it.displayName.contains(search,true)}.map {it.id}.toSet()}) {
+                        TextButton(onClick={selectedSources=visibleSources.map {it.id}.toSet()}) {
                             Text(stringResource(R.string.redesign_select_all))
                         }
                         if(matching.isNotEmpty()) {
@@ -212,8 +244,8 @@ import com.jumlo.app.model.*
                         } else Text(stringResource(R.string.files_batch_tool_hint),style=QuietTheme.typography.metadata)
                     }
                 }
-                if(imported.isEmpty()) item {Text(stringResource(R.string.files_empty_snapshots),style=QuietTheme.typography.bodyMedium)}
-                items(imported.filter {it.displayName.contains(search,true)}.sortedBy {if(sort=="name") it.displayName.lowercase() else ""},key={it.id}) {source->
+                if(imported.isEmpty()) item("sources-empty") {QuietStateCard(stringResource(R.string.files_empty_snapshots),stringResource(R.string.files_snapshots_sub),stringResource(R.string.import_device_files),onImport)}
+                items(visibleSources,key={it.id}) {source->
                     FileMenuRow(source.displayName,formatBytes(source.sizeBytes),
                         {if(selectingSources) selectedSources=selectedSources.symmetric(source.id) else onSource(source.id)},
                         selection=if(selectingSources) source.id in selectedSources else null,
@@ -224,9 +256,9 @@ import com.jumlo.app.model.*
             }
             "trash" -> {
                 item {Text(stringResource(R.string.ui_trash_notice),style=QuietTheme.typography.metadata)}
-                if(trashed.isEmpty()) item {Text(stringResource(R.string.files_trash_empty),style=QuietTheme.typography.bodyMedium)}
+                if(trashed.isEmpty()) item("trash-empty") {QuietStateCard(stringResource(R.string.files_trash_title),stringResource(R.string.files_trash_empty))}
                 else item {TextButton(onClick={purgeIds=trashed.map {it.id}.toSet()}) {Text(stringResource(R.string.files_purge_trash))}}
-                items(trashed.filter {it.displayName.contains(search,true)},key={it.id}) {entry->FileMenuRow(entry.displayName,formatBytes(entry.sizeBytes),{vm.restoreOutput(entry.id)},Icons.Rounded.DeleteOutline) {close->
+                items(visibleTrashed,key={it.id}) {entry->FileMenuRow(entry.displayName,formatBytes(entry.sizeBytes),{vm.restoreOutput(entry.id)},Icons.Rounded.DeleteOutline) {close->
                     DropdownMenuItem(text={Text(stringResource(R.string.action_restore))},onClick={close();vm.restoreOutput(entry.id)})
                     DropdownMenuItem(text={Text(stringResource(R.string.action_delete))},onClick={close();purgeIds=setOf(entry.id)})
                 }}
@@ -234,11 +266,11 @@ import com.jumlo.app.model.*
             "folder" -> {
                 item {OutlinedButton(onClick=onFolder) {Text(stringResource(R.string.tool_browse_storage))}}
                 val listing=tree
-                if(listing==null) item {Text(stringResource(R.string.ui_folder_empty),style=QuietTheme.typography.bodyMedium)}
+                if(listing==null) item("folder-empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder)}
                 else {
                     item {Text(listing.name,style=QuietTheme.typography.sectionTitle);Text(stringResource(R.string.ui_provider_notice),style=QuietTheme.typography.metadata)}
                     if(listing.writable) item {TextButton(onClick=onNewFolder) {Text(stringResource(R.string.files_new_folder))}}
-                    items(listing.entries.filter {it.name.contains(search,true)},key={it.uri}) {entry->ProviderFileRow(entry,listing.writable,{onBrowse(entry)},{onProviderOpen(entry)},{onProviderImport(entry)},{onCopy(entry)},{onRename(entry)},{onDelete(entry)})}
+                    items(visibleProviderEntries,key={it.uri}) {entry->ProviderFileRow(entry,listing.writable,{onBrowse(entry)},{onProviderOpen(entry)},{onProviderImport(entry)},{onCopy(entry)},{onRename(entry)},{onDelete(entry)})}
                 }
             }
         }
@@ -256,7 +288,16 @@ import com.jumlo.app.model.*
         Text(formatOutputSizeSummary(output),style=QuietTheme.typography.bodyMedium)
         output.metadata.pageCount?.let { Text(stringResource(R.string.output_pages_count, it),style=QuietTheme.typography.metadata) }
         Text(stringResource(R.string.output_sha256_label, output.sha256.take(16) + "…"),style=QuietTheme.typography.metadata)
-        Text(stringResource(R.string.redesign_storage_folder),style=QuietTheme.typography.metadata)
+        val savedDescription=if(output.publicUri.isNullOrBlank()) {
+            stringResource(R.string.output_saved_privately)
+        } else {
+            val folder=buildString {
+                append("Jumlo / ").append(StoragePaths.category(output.mimeType))
+                output.metadata.subfolder?.takeIf { it.isNotBlank() }?.let { append(" / ").append(it) }
+            }
+            stringResource(R.string.output_saved_location,folder)
+        }
+        Text(savedDescription,style=QuietTheme.typography.metadata)
     }},confirmButton={TextButton(onClick={details=null}) {Text(stringResource(R.string.account_done))}})}
     purgeIds?.let {ids->AlertDialog(onDismissRequest={purgeIds=null},title={Text(stringResource(R.string.ui_purge_title))},text={Text(stringResource(R.string.ui_purge_body,ids.size))},confirmButton={TextButton(onClick={purgeIds=null;vm.purgeTrashIds(ids)}) {Text(stringResource(R.string.ui_delete_forever))}},dismissButton={TextButton(onClick={purgeIds=null}) {Text(stringResource(R.string.action_cancel))}})}
 }

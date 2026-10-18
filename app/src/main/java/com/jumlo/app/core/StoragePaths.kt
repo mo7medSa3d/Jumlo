@@ -1,5 +1,7 @@
 package com.jumlo.app.core
 
+import java.util.Locale
+
 /** Pure path policy used by MediaStore and the user's optional SAF destination. */
 object StoragePaths {
     fun category(mime:String):String=when {
@@ -21,13 +23,17 @@ object StoragePaths {
         saved?.takeIf { it.startsWith("content://") } ?: "Download/Jumlo"
     fun uniqueName(desired:String,existing:Set<String>):String {
         val name=SafeNames.basename(desired)
-        if(name !in existing) return name
+        val folded = existing.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
+        if(name.lowercase(Locale.ROOT) !in folded) return name
         val ext=name.substringAfterLast('.',"")
         val base=if(ext.isNotBlank() && ext.length<12) name.dropLast(ext.length+1) else name
         val suffix=if(base==name) "" else ".$ext"
         for(i in 2..9999) {
-            val proposed="${base.take(180)} ($i)$suffix"
-            if(proposed !in existing) return SafeNames.basename(proposed)
+            val counterSuffix=" ($i)$suffix"
+            val maxBaseBytes=(200 - counterSuffix.toByteArray(Charsets.UTF_8).size).coerceAtLeast(1)
+            val trimmedBase = SafeNames.fitUtf8(base, maxBaseBytes)
+            val proposed="${trimmedBase.ifBlank { "file" }}$counterSuffix"
+            if(proposed.lowercase(Locale.ROOT) !in folded) return SafeNames.basename(proposed)
         }
         throw IllegalStateException("NAME_COLLISION_LIMIT")
     }

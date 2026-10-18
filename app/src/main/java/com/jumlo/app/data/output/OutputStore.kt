@@ -6,6 +6,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import androidx.core.content.FileProvider
 import com.jumlo.app.core.*
+import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.local.*
 import com.jumlo.app.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -140,7 +141,13 @@ import javax.inject.Singleton
     suspend fun inspect(file:File,mime:String,originalSizeBytes:Long?=null,subfolder:String?=null):OutputMetadata=withContext(Dispatchers.IO) {
         require(file.isFile) { "OUTPUT_MISSING" }
         when {
-            mime=="application/pdf" -> ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer -> require(renderer.pageCount>0) { "EMPTY_PDF" }; OutputMetadata(pageCount=renderer.pageCount,originalSizeBytes=originalSizeBytes,subfolder=subfolder) } }
+            mime=="application/pdf" -> ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                renderer.use { r ->
+                    require(r.pageCount>0) { "EMPTY_PDF" }
+                    OutputMetadata(pageCount=r.pageCount,originalSizeBytes=originalSizeBytes,subfolder=subfolder)
+                }
+            }
             mime.startsWith("image/") -> {
                 val options=BitmapFactory.Options().apply { inJustDecodeBounds=true }
                 BitmapFactory.decodeFile(file.path,options)

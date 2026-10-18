@@ -18,7 +18,9 @@ import kotlinx.coroutines.CancellationException
         val id=inputData.getString("job_id") ?: return Result.failure()
         return try {
             // WorkManager owns the foreground service lifecycle and OS stop handling.
-            setForeground(ProcessingNotification.create(applicationContext,id))
+            // On Android 12+ background starts or restricted notification states, foreground promotion
+            // can throw ForegroundServiceStartNotAllowedException/SecurityException; continue job execution.
+            runCatching { setForeground(ProcessingNotification.create(applicationContext,id)) }
             if(jobs.execute(id,dispatcher)) Result.success() else Result.retry()
         }
         catch(cancel:CancellationException) { throw cancel }
