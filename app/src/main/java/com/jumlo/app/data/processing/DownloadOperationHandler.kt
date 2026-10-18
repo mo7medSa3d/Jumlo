@@ -194,20 +194,29 @@ class DownloadOperationHandler @Inject constructor(
                             journal.delete()
                         }
                         fileKind == DirectFileKind.IMAGE && settings.directMode == "IMAGE_COMPRESSED" -> {
-                            val ticket = context.outputs.reserve(request.id, key, SafeNames.basename(name), resolvedMime)
-                            BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
-                                BitmapTransforms.encodeGuaranteedSmaller(
-                                    decoded.bitmap, ticket.stageFile, result.bytes,
-                                    ImageConversionSettings(format = "JPEG", quality = 78),
-                                    context.budget.maxBitmapBytes, context.checkCancellation
-                                )
-                            }
-                            partial.delete()
-                            val output = context.outputs.publish(ticket) { file ->
-                                context.outputs.inspect(file, ticket.mimeType, originalSizeBytes = result.bytes)
-                            }
-                            journal.delete()
-                            outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
+                            // Conversion is always JPEG; never publish JPEG bytes under a .png/.webp label.
+                            // Compression is optional: if the encoded file is not smaller, preserve the original.
+                            val candidate=File(folder,"$index-compressed.jpg")
+                            try {
+                                BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
+                                    BitmapTransforms.encodeGuaranteedSmaller(
+                                        decoded.bitmap, candidate, result.bytes,
+                                        ImageConversionSettings(format = "JPEG", quality = 78),
+                                        context.budget.maxBitmapBytes, context.checkCancellation
+                                    )
+                                }
+                                context.checkCancellation()
+                                val choice=DownloadCompressionPolicy.choose(name,resolvedMime,result.bytes,candidate.length())
+                                val ticket=context.outputs.reserve(request.id,key,choice.filename,choice.mimeType)
+                                val source=if(choice.useCompressed) candidate else partial
+                                Files.move(source.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+                                val output=context.outputs.publish(ticket) { file ->
+                                    context.outputs.inspect(file,ticket.mimeType,originalSizeBytes=result.bytes)
+                                }
+                                partial.delete()
+                                journal.delete()
+                                outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
+                            } finally { candidate.delete() }
                         }
                         fileKind == DirectFileKind.IMAGE && settings.directMode == "IMAGE_TO_PDF" -> {
                             val pdfName = SafeNames.basename(AutoOutputName.cleanBaseName(name, "Image") + ".pdf")

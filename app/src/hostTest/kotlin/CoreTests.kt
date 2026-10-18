@@ -27,6 +27,19 @@ private fun zip(file: File, entries: List<Pair<String, ByteArray>>) {
 }
 
 fun main() {
+    test("download compression chooses a truthful image name and format") {
+        val compressed=DownloadCompressionPolicy.choose("صورة جميلة.png","image/png",4000,1500)
+        check(compressed.useCompressed)
+        check(compressed.filename=="صورة جميلة.jpg")
+        check(compressed.mimeType=="image/jpeg")
+        val retained=DownloadCompressionPolicy.choose("graphic.webp","image/webp",800,950)
+        check(!retained.useCompressed)
+        check(retained.filename=="graphic.webp" && retained.mimeType=="image/webp")
+        val tiny=DownloadCompressionPolicy.choose("small.jpg","image/jpeg",100,250)
+        check(!tiny.useCompressed)
+        val emoji=DownloadCompressionPolicy.choose("لقطة 📷.png","image/png",12000,3000)
+        check(emoji.filename=="لقطة 📷.jpg")
+    }
     test("manual pause is durable and distinct from crash recovery") {
         check(JobLifecyclePolicy.shouldRecover("INTERRUPTED"))
         check(JobLifecyclePolicy.shouldRecover("RUNNING"))
