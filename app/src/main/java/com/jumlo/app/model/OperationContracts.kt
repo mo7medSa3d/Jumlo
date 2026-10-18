@@ -8,7 +8,7 @@ import java.io.File
     val readable:Boolean,val writable:Boolean,val persistedReadGrant:Boolean,val modifiedAtEpochMs:Long?
 )
 @Serializable data class JobRequest(val id:String,val toolId:String,val sourceIds:List<String>,val schemaVersion:Int,val settingsJson:String,val submittedAtEpochMs:Long)
-@Serializable enum class JobStage { VALIDATING, QUEUED, RUNNING, FINALIZING, COMPLETED, PARTIAL, FAILED, CANCELLED, INTERRUPTED, WAITING_FOR_INPUT }
+@Serializable enum class JobStage { VALIDATING, QUEUED, RUNNING, FINALIZING, COMPLETED, PARTIAL, FAILED, CANCELLED, INTERRUPTED, PAUSED, WAITING_FOR_INPUT }
 @Serializable data class JobProgress(val stage:JobStage,val completedUnits:Long,val totalUnits:Long?)
 @Serializable data class OutputMetadata(
     val pageCount:Int?=null,

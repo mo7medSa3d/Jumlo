@@ -27,6 +27,14 @@ private fun zip(file: File, entries: List<Pair<String, ByteArray>>) {
 }
 
 fun main() {
+    test("manual pause is durable and distinct from crash recovery") {
+        check(JobLifecyclePolicy.shouldRecover("INTERRUPTED"))
+        check(JobLifecyclePolicy.shouldRecover("RUNNING"))
+        check(!JobLifecyclePolicy.shouldRecover("PAUSED"))
+        check(!JobLifecyclePolicy.shouldRecover("WAITING_FOR_INPUT"))
+        check(JobLifecyclePolicy.canPause("RUNNING"))
+        check(!JobLifecyclePolicy.canPause("FINALIZING"))
+    }
     test("PDF compression image decoding has bounded ARGB heap cost") {
         val heap = 256L * 1024 * 1024
         check(PdfCompressionPolicy.canDecodeImage(1000, 1000, heap))

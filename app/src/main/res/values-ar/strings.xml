@@ -51,6 +51,7 @@
     <string name="action_share">مشاركة</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_pause">إيقاف مؤقت</string>
+    <string name="action_resume">استئناف</string>
     <string name="action_change">تغيير</string>
     <string name="action_reset">إعادة ضبط</string>
     <string name="action_copy">نسخ</string>

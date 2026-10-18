@@ -94,7 +94,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 }
 
 @Composable fun stageLabel(stage:JobStage):String=stringResource(when(stage) {
-    JobStage.QUEUED->R.string.ui_stage_queued;JobStage.VALIDATING->R.string.ui_stage_validating;JobStage.RUNNING->R.string.ui_stage_running;JobStage.FINALIZING->R.string.ui_stage_finalizing;JobStage.COMPLETED->R.string.ui_stage_completed;JobStage.PARTIAL->R.string.ui_stage_partial;JobStage.FAILED->R.string.ui_stage_failed;JobStage.CANCELLED->R.string.ui_stage_cancelled;JobStage.INTERRUPTED->R.string.ui_stage_interrupted;JobStage.WAITING_FOR_INPUT->R.string.ui_stage_waiting
+    JobStage.QUEUED->R.string.ui_stage_queued;JobStage.VALIDATING->R.string.ui_stage_validating;JobStage.RUNNING->R.string.ui_stage_running;JobStage.FINALIZING->R.string.ui_stage_finalizing;JobStage.COMPLETED->R.string.ui_stage_completed;JobStage.PARTIAL->R.string.ui_stage_partial;JobStage.FAILED->R.string.ui_stage_failed;JobStage.CANCELLED->R.string.ui_stage_cancelled;JobStage.INTERRUPTED->R.string.ui_stage_interrupted;JobStage.PAUSED->R.string.ui_stage_paused;JobStage.WAITING_FOR_INPUT->R.string.ui_stage_waiting
 })
 fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALIDATING,JobStage.RUNNING,JobStage.FINALIZING)
 
@@ -102,13 +102,14 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
     val tool=CapabilityRegistry.tools.find {it.id==job.request.toolId}
     val name=tool?.let {if(language.isRtl) it.titleAr else it.titleEn} ?: job.request.toolId
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        FileMenuRow(name,stageLabel(job.progress.stage),onOpen,Icons.Rounded.Download,selection=selection,onSelect=onSelect,showOverflow=onOpen!=null || job.isActive() || job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.INTERRUPTED,JobStage.WAITING_FOR_INPUT)) {close->
+        FileMenuRow(name,stageLabel(job.progress.stage),onOpen,Icons.Rounded.Download,selection=selection,onSelect=onSelect,showOverflow=onOpen!=null || job.isActive() || job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.INTERRUPTED,JobStage.PAUSED,JobStage.WAITING_FOR_INPUT)) {close->
             if(onOpen!=null) DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={close();onOpen()})
-            if(job.isActive()) {
-                if(job.request.toolId.startsWith("dl_")) DropdownMenuItem(text={Text(stringResource(R.string.action_pause))},onClick={close();onPause()})
+            if(job.isActive() || job.progress.stage==JobStage.PAUSED) {
+                if(job.isActive() && job.progress.stage!=JobStage.FINALIZING && job.request.toolId.startsWith("dl_")) DropdownMenuItem(text={Text(stringResource(R.string.action_pause))},onClick={close();onPause()})
                 DropdownMenuItem(text={Text(stringResource(R.string.action_cancel))},onClick={close();onCancel()})
             }
-            if(job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.INTERRUPTED,JobStage.WAITING_FOR_INPUT)) DropdownMenuItem(text={Text(stringResource(R.string.action_retry_failed))},onClick={close();onRetry()})
+            if(job.progress.stage==JobStage.PAUSED) DropdownMenuItem(text={Text(stringResource(R.string.action_resume))},onClick={close();onRetry()})
+            else if(job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.INTERRUPTED,JobStage.WAITING_FOR_INPUT)) DropdownMenuItem(text={Text(stringResource(R.string.action_retry_failed))},onClick={close();onRetry()})
         }
         if(job.isActive()) {
             val total=job.progress.totalUnits
