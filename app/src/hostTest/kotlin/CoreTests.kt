@@ -27,6 +27,16 @@ private fun zip(file: File, entries: List<Pair<String, ByteArray>>) {
 }
 
 fun main() {
+    test("PDF compression image decoding has bounded ARGB heap cost") {
+        val heap = 256L * 1024 * 1024
+        check(PdfCompressionPolicy.canDecodeImage(1000, 1000, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(4000, 3000, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(Int.MAX_VALUE, Int.MAX_VALUE, Long.MAX_VALUE))
+        check(!PdfCompressionPolicy.canDecodeImage(0, 100, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(-1, 100, heap))
+        check(!PdfCompressionPolicy.canDecodeImage(1000, 1000, 0))
+        check(PdfCompressionPolicy.canDecodeImage(1000, 1000, Long.MAX_VALUE))
+    }
     test("workflow batch accepts selected outputs in visual order") {
         val files = listOf(
             OutputFileChoice("00000000-0000-4000-8000-000000000001", "a.pdf", "application/pdf", 300),
