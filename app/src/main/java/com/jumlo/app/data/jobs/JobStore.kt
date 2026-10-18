@@ -53,16 +53,14 @@ import javax.inject.Singleton
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
         if(!old.request.toolId.startsWith("dl_") || !JobLifecyclePolicy.canPause(old.progress.stage.name)) return
         val paused=old.copy(progress=old.progress.copy(stage=JobStage.PAUSED),updatedAtEpochMs=System.currentTimeMillis())
-        dao.setStage(jobId,JobStage.PAUSED.name,Json.encodeToString(paused))
-        work.cancelUniqueWork("job:$jobId")
+        if(dao.pauseIfActive(jobId,Json.encodeToString(paused))==1) work.cancelUniqueWork("job:$jobId")
     }
     suspend fun cancel(jobId:String) {
         val row=dao.job(jobId) ?: return
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
         if(old.progress.stage in setOf(JobStage.COMPLETED,JobStage.CANCELLED)) return
         val cancelled=old.copy(progress=old.progress.copy(stage=JobStage.CANCELLED),updatedAtEpochMs=System.currentTimeMillis())
-        dao.setStage(jobId,JobStage.CANCELLED.name,Json.encodeToString(cancelled))
-        work.cancelUniqueWork("job:$jobId")
+        if(dao.cancelIfOpen(jobId,Json.encodeToString(cancelled))==1) work.cancelUniqueWork("job:$jobId")
     }
     suspend fun retryFailed(jobId:String):String {
         val row=dao.job(jobId) ?: throw OperationFailure("JOB_NOT_FOUND")

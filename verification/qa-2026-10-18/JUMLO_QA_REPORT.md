@@ -36,6 +36,7 @@ The repository has iOS icon art but **no** iOS project or app binary.
 | JML-009 | Minor | File-grid actions `ui/files/FilesScreen.kt:159-166` | Grid mode, attempt to tap Share/Info at 36dp. **Source:** less than 44dp touch target. **Expected:** accessible touch areas with fewer controls. | **Patched:** 48dp favorite + 48dp overflow, with Share, Details, Save as, Reuse and Trash preserved. Device/TalkBack verification outstanding. |
 | JML-010 | Major | Image-download compression `data/processing/DownloadOperationHandler.kt:203-217` | Download PNG/WebP using image-compressed action. **Source:** encoder generated JPEG but ticket kept original name/MIME; compressor could produce more bytes than source. **Expected:** matching bytes/extension/MIME and preserve smaller original. | **Patched:** `DownloadCompressionPolicy`, JPEG ticket on shrink, original fallback on larger output, atomic stage, host + JVM tests authored. Runtime unverified. |
 | JML-011 | Polish | Media error copy `res/values[-ar]/error_messages.xml:34,54` | Unsupported social site. **Before:** blanket claim all such downloading necessarily violates terms/app-store policies; could mislead. **Expected:** accurate actionable limitation. | **Patched:** concise EN/AR link guidance, no unsupported legal generalization. |
+| JML-012 | Major | Job transition races `data/jobs/JobStore.kt:51-65`; `data/local/ProcessingEntities.kt:32-39` | Tap Pause or Cancel while worker transitions to FINALIZING or terminal state. **Before:** generic setStage could overwrite a newer FINALIZING, FAILED or PARTIAL stage after the UI read. **Expected:** never resurrect/erase a terminal result, never pause mid-publication. | **Patched:** atomic, guarded SQL pause/cancel transitions; SQL regression fixtures authored, device race test unverified. |
 
 ### Verification matrix
 
@@ -54,7 +55,7 @@ The repository has iOS icon art but **no** iOS project or app binary.
 
 ### Changes and decisions
 
-1. **Phase 1 / durability:** classify intentional pauses separately from crashes and prevent recovery from auto-rescheduling PAUSED work; preserve fences. No persistent cleartext URL secrets added; process-death re-entry remains a documented limitation.
+1. **Phase 1 / durability:** classify intentional pauses separately from crashes and prevent recovery from auto-rescheduling PAUSED work; use guarded atomic stage transitions and preserve fences. No persistent cleartext URL secrets added; process-death re-entry remains a documented limitation.
 2. **Phase 2 / correctness:** fail empty transfers, preserve image source if JPEG compression grows, always publish truthfully labelled JPEG when compressed, expose all supported concurrency values.
 3. **Phase 3 / performance:** review bounded stream buffer and PDF decode budgets; no performance measurements or speculative rewrites. Representative device profiling remains required.
 4. **Phase 4 / UX:** localized PAUSED/Resume/error copy, per-output internal-only notice, grid 48dp controls and overflow.
