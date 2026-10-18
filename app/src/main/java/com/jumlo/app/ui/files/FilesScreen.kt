@@ -157,13 +157,26 @@ import com.jumlo.app.model.*
                                             Text(formatOutputSizeSummary(output),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                                         }
                                         if(selecting) Checkbox(checked=output.id in selected,onCheckedChange={selected=selected.symmetric(output.id)})
-                                        else Row(horizontalArrangement=Arrangement.End,modifier=Modifier.fillMaxWidth()) {
-                                            IconButton(onClick={haptics.selectionToggle();vm.toggleOutputFavorite(output.id)},modifier=Modifier.pressFeedback().size(40.dp)) {
-                                                Icon(if(output.id in settings.favoriteOutputIds) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                                    stringResource(if(output.id in settings.favoriteOutputIds) R.string.files_unmark_favorite else R.string.files_mark_favorite),Modifier.size(20.dp))
+                                        else {
+                                            var actionsExpanded by remember(output.id) { mutableStateOf(false) }
+                                            Row(horizontalArrangement=Arrangement.End,modifier=Modifier.fillMaxWidth()) {
+                                                IconButton(onClick={haptics.selectionToggle();vm.toggleOutputFavorite(output.id)},modifier=Modifier.pressFeedback().size(48.dp)) {
+                                                    Icon(if(output.id in settings.favoriteOutputIds) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                                        stringResource(if(output.id in settings.favoriteOutputIds) R.string.files_unmark_favorite else R.string.files_mark_favorite),Modifier.size(20.dp))
+                                                }
+                                                Box {
+                                                    IconButton(onClick={haptics.actionClick();actionsExpanded=true},modifier=Modifier.pressFeedback().size(48.dp)) {
+                                                        Icon(Icons.Rounded.MoreVert,stringResource(R.string.ui_more_actions),Modifier.size(22.dp))
+                                                    }
+                                                    DropdownMenu(expanded=actionsExpanded,onDismissRequest={actionsExpanded=false}) {
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={actionsExpanded=false;onShare(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={actionsExpanded=false;details=output})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={actionsExpanded=false;onExport(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={actionsExpanded=false;onReuse(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_move_to_trash))},onClick={actionsExpanded=false;deleteIds=setOf(output.id)})
+                                                    }
+                                                }
                                             }
-                                            IconButton(onClick={haptics.actionClick();onShare(output)},modifier=Modifier.pressFeedback().size(36.dp)) {Icon(Icons.Rounded.Share,null,Modifier.size(18.dp))}
-                                            IconButton(onClick={haptics.actionClick();details=output},modifier=Modifier.pressFeedback().size(36.dp)) {Icon(Icons.Rounded.Info,null,Modifier.size(18.dp))}
                                         }
                                     }
                                 }
