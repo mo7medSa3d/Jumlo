@@ -58,7 +58,7 @@ class UserPreferencesRepository @Inject constructor(
             respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false,
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             hapticIntensity = if(prefs[Keys.HAPTIC_ON_COMMIT]==false) HapticIntensity.OFF else
-                runCatching {HapticIntensity.valueOf(prefs[Keys.HapticIntensity_Fallback(prefs)])}.getOrDefault(HapticIntensity.LIGHT),
+                runCatching { HapticIntensity.valueOf(prefs[Keys.HAPTIC_INTENSITY] ?: "LIGHT") }.getOrDefault(HapticIntensity.LIGHT),
             soundsEnabled = prefs[Keys.UI_SOUNDS] ?: true,
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
@@ -79,9 +79,6 @@ class UserPreferencesRepository @Inject constructor(
             isLoaded = true
         )
     }
-
-    private fun Keys.HapticIntensity_Fallback(prefs: androidx.datastore.preferences.core.Preferences): String =
-        prefs[HAPTIC_INTENSITY] ?: "LIGHT"
 
     suspend fun recordToolOpen(id:String) {
         if(!id.matches(Regex("[a-z0-9_]{1,64}"))) return
