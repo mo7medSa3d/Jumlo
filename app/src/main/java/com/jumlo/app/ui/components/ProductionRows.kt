@@ -79,6 +79,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 
 @Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null,isFavorite:Boolean=false,onFavorite:(()->Unit)?=null) {
     val summary = "${formatOutputSizeSummary(output)} · ${output.mimeType}"
+    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
     FileMenuRow(output.displayName,summary,onOpen,selection=selection,onSelect=onSelect) {close->
         DropdownMenuItem(text={Text(stringResource(R.string.action_open))},onClick={close();onOpen()})
         if(onFavorite!=null) DropdownMenuItem(
@@ -90,6 +91,13 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
         DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={close();onExport()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={close();onReuse()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_move_to_trash))},onClick={close();onTrash()})
+    }
+    if(output.publicUri==null) Text(
+        stringResource(R.string.ui_private_output_save_as),
+        modifier=Modifier.padding(horizontal=12.dp),
+        style=QuietTheme.typography.metadata,
+        color=MaterialTheme.colorScheme.error
+    )
     }
 }
 
