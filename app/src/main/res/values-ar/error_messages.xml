@@ -39,6 +39,7 @@
     <string name="msg_too_many_redirects">قام الرابط بإعادة التوجيه مرات كثيرة جدًا. استخدم رابط ملف مباشر.</string>
     <string name="msg_insecure_redirect">تم حظر إعادة توجيه غير آمنة من HTTPS إلى اتصال HTTP غير مشفر.</string>
     <string name="msg_download_not_a_file">هذا الرابط يوجه إلى صفحة ويب وليس ملفًا قابلاً للتنزيل. تحقق من صلاحية مشاركة الرابط.</string>
+    <string name="msg_empty_download">أعاد الخادم ملفًا فارغًا. تحقق من رابط التنزيل أو حاول مجددًا.</string>
     <string name="msg_network_timeout">انتهت مهلة الاتصال بالخادم. تحقق من اتصال الإنترنت وحاول مجددًا.</string>
     <string name="msg_network_unavailable">لا يوجد اتصال بالإنترنت أو تعذر الوصول إلى عنوان الخادم.</string>
     <string name="msg_wifi_required">بانتظار اتصال Wi-Fi حسب إعدادات التنزيل.</string>

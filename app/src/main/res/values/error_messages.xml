@@ -39,6 +39,7 @@
     <string name="msg_too_many_redirects">The download link redirected too many times. Use a direct file link.</string>
     <string name="msg_insecure_redirect">Blocked an unsafe redirect from HTTPS to unencrypted HTTP.</string>
     <string name="msg_download_not_a_file">This link points to a web page instead of a downloadable file. Check link sharing permissions.</string>
+    <string name="msg_empty_download">The server returned an empty file. Check the download link or try again.</string>
     <string name="msg_network_timeout">Connection timed out while contacting the server. Check your internet and try again.</string>
     <string name="msg_network_unavailable">No internet connection or server address could not be reached.</string>
     <string name="msg_wifi_required">Waiting for a Wi-Fi connection as configured in download settings.</string>

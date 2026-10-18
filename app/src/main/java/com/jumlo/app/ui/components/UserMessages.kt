@@ -29,6 +29,7 @@ import com.jumlo.app.R
     code=="TOO_MANY_REDIRECTS" -> R.string.msg_too_many_redirects
     code=="INSECURE_REDIRECT" -> R.string.msg_insecure_redirect
     code=="DOWNLOAD_NOT_A_FILE" -> R.string.msg_download_not_a_file
+    code=="EMPTY_HTTP_BODY" -> R.string.msg_empty_download
     code=="NETWORK_TIMEOUT" -> R.string.msg_network_timeout
     code=="NETWORK_UNAVAILABLE" -> R.string.msg_network_unavailable
     code=="WIFI_REQUIRED" -> R.string.msg_wifi_required
