@@ -23,17 +23,20 @@ class PreferencesPersistenceTest {
             preferences.setLanguage(AppLanguage.ARABIC)
             preferences.setWifiOnlyDefault(false)
             preferences.setRespectReducedMotion(true)
+            preferences.setMaxConcurrentDownloads(6)
             val restored = UserPreferencesRepository(context).settingsFlow.first()
             assertTrue(restored.isLoaded)
             assertEquals(ThemeMode.DARK, restored.themeMode)
             assertEquals(AppLanguage.ARABIC, restored.language)
             assertFalse(restored.wifiOnlyDefault)
             assertTrue(restored.respectReducedMotion)
+            assertEquals(6, restored.maxConcurrentDownloads)
         } finally {
             preferences.setThemeMode(original.themeMode)
             preferences.setLanguage(original.language)
             preferences.setWifiOnlyDefault(original.wifiOnlyDefault)
             preferences.setRespectReducedMotion(original.respectReducedMotion)
+            preferences.setMaxConcurrentDownloads(original.maxConcurrentDownloads)
         }
     }
 }

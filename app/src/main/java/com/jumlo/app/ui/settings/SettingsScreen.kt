@@ -164,7 +164,7 @@ import com.jumlo.app.ui.AppViewModel
             { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) }, settings.language.ordinal,
             { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
-        "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..4).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,4)-1,
+        "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..6).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,6)-1,
             {viewModel.setMaxConcurrentDownloads(it+1);panel=null},{panel=null})
         "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,
             {viewModel.setFileViewMode(FileViewMode.entries[it]);panel=null},{panel=null})
