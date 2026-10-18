@@ -1,3 +1,7 @@
+> **2026-10-18 commercial workflow increment:** Batch from saved/imported files, Favorites, correct result reuse and generic SAF file magic implemented in source; 149 Kotlin host tests passed, Android compile/device **NOT EXECUTED**. See [COMMERCIAL_READINESS.md](COMMERCIAL_READINESS.md). This does not upgrade any of the 45 tools to device-verified or store-ready.
+
+> **2026-10-18 source follow-up supersedes below verification counts:** 135/135 Kotlin host, 6/6 media source, 10/10 SQLite structural, 14/14 source/resource, 12/12 redesign wiring, 14/14 brand/motion, 4/4 shell checks. See `verification/current-session/2026-10-18/REPORT.md`. No feature has an installed-Android end-to-end PASS in this session. New code for `pdf_02`, `pdf_04`, `pdf_05`, `pdf_06`, `pdf_compress`, and `dl_media` is **IMPLEMENTED_UNTESTED**, not flagship-qualified. The 45-item inventory below remains the source-level traceability matrix; it does not verify processing, UI, or saved output.
+
 # Jumlo feature status — current isolated source ZIP
 
 Updated 2026-10-17 (continued hardened-ZIP execution; **no installed-Android VERIFICATION**).

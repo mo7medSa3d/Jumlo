@@ -1,3 +1,5 @@
+> **2026-10-18 current lightweight-source update:** `dl_media` is present/enabled in `CapabilityPolicy` and now probes discoverable static HTML5 media URLs in addition to direct HTTP(S) media files. Source-level Kotlin tests verified parsing and controlled local transfer; **no real provider, Android player, video resolution or audio format has been qualified**. No native bundled extractor, HLS/DASH muxer or DRM support was added. The 10-platform table below remains **UNVERIFIED** and the old notes about debug-only yt-dlp are historic revision details; do not infer that those binaries ship in this source.
+
 # Jumlo media capability matrix — live qualification
 
 

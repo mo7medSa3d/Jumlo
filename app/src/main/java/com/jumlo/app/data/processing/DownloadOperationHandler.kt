@@ -35,18 +35,30 @@ import kotlin.math.roundToInt
 
 class OkHttpTransport(
     private val client: OkHttpClient,
-    private val defaultHeadersProvider: (String) -> Map<String, String> = { PlatformHeaderPolicy.headersFor(it) }
+    private val defaultHeadersProvider: (String, Int) -> Map<String, String> = { url, profileIndex ->
+        PlatformHeaderPolicy.headersFor(url, compatibilityAttempt = profileIndex)
+    }
 ): HttpTransport {
     override fun open(url:String,headers:Map<String,String>):TransportResponse {
-        val builder=Request.Builder().url(url).get()
-        val merged = LinkedHashMap<String, String>()
-        merged.putAll(defaultHeadersProvider(url))
-        merged.putAll(headers)
-        merged.forEach { (key,value)->builder.header(key,value) }
-        val response=client.newCall(builder.build()).execute()
-        val body=response.body
-        if(body==null) { response.close(); throw IOException("EMPTY_HTTP_BODY") }
-        return TransportResponse(response.code,response.headers.names().associate { it.lowercase(Locale.ROOT) to response.header(it).orEmpty() },body.byteStream()) { response.close() }
+        val profiles = BrowserProfilePolicy.forUrl(url)
+        for (profileIndex in profiles.indices) {
+            val builder=Request.Builder().url(url).get()
+            val merged = LinkedHashMap<String, String>()
+            merged.putAll(defaultHeadersProvider(url, profileIndex))
+            merged.putAll(headers)
+            merged.forEach { (key,value)->builder.header(key,value) }
+            val response=client.newCall(builder.build()).execute()
+            // The GET request is idempotent. Only content-negotiation errors
+            // may trigger a second profile; never rotate to work around denial.
+            if (BrowserProfilePolicy.tryNext(response.code, profileIndex, profiles.size)) {
+                response.close()
+                continue
+            }
+            val body=response.body
+            if(body==null) { response.close(); throw IOException("EMPTY_HTTP_BODY") }
+            return TransportResponse(response.code,response.headers.names().associate { it.lowercase(Locale.ROOT) to response.header(it).orEmpty() },body.byteStream()) { response.close() }
+        }
+        throw IOException("MEDIA_PROFILE_NEGOTIATION_FAILED")
     }
 }
 
@@ -62,7 +74,7 @@ class DownloadOperationHandler @Inject constructor(
     private val redirectSafeClient = client.newBuilder()
         .followRedirects(false).followSslRedirects(false).build()
 
-    private fun buildHeadersForUrl(targetUrl: String): Map<String, String> {
+    private fun buildHeadersForUrl(targetUrl: String, profileIndex: Int): Map<String, String> {
         val extraMap = sessionStore.getExtraHeaders().lineSequence()
             .map { it.trim() }
             .filter { ':' in it }
@@ -72,7 +84,8 @@ class DownloadOperationHandler @Inject constructor(
             customUserAgent = sessionStore.getCustomUserAgent(),
             preferDesktop = sessionStore.isPreferDesktopUa(),
             cookieHeader = sessionStore.cookieHeaderFor(targetUrl),
-            customHeaders = extraMap
+            customHeaders = extraMap,
+            compatibilityAttempt = profileIndex
         )
     }
 
@@ -101,7 +114,7 @@ class DownloadOperationHandler @Inject constructor(
                 try {
                     var lastReport=0L
                     val result=StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl)).execute(
-                        TransferRequest(url,partial,partial.length(),old.getProperty("etag"),old.getProperty("modified"),old.getProperty("total")?.toLongOrNull(),settings.cleartextConsent,context.budget.maxExpandedArchiveBytes,context.budget.minFreeBytes,finalUrlSha256=old.getProperty("finalUrlSha256")),
+                        TransferRequest(url,partial,partial.length(),old.getProperty("etag"),old.getProperty("modified"),old.getProperty("total")?.toLongOrNull(),settings.cleartextConsent,context.budget.maxMediaWorkspaceBytes,context.budget.minFreeBytes,finalUrlSha256=old.getProperty("finalUrlSha256")),
                         checkCancel={ context.checkCancellation(); networkPolicy(settings) },
                         progress={ bytes,total ->
                             val now=android.os.SystemClock.elapsedRealtime()
@@ -156,8 +169,13 @@ class DownloadOperationHandler @Inject constructor(
                                         val pageNum = pageIdx + 1
                                         val pageKey = "download:$index:page:$pageNum"
                                         renderer.openPage(pageIdx).use { page ->
-                                            val w = (page.width * 144 / 72.0).roundToInt().coerceAtLeast(1)
-                                            val h = (page.height * 144 / 72.0).roundToInt().coerceAtLeast(1)
+                                            val nominalW = (page.width * 144 / 72.0).roundToInt().coerceAtLeast(1)
+                                            val nominalH = (page.height * 144 / 72.0).roundToInt().coerceAtLeast(1)
+                                            val maxPixels = (context.budget.maxBitmapBytes / 4L).coerceAtLeast(256L * 256L)
+                                            val shrink = minOf(1.0, kotlin.math.sqrt(maxPixels.toDouble() /
+                                                (nominalW.toDouble() * nominalH.toDouble())))
+                                            val w = (nominalW * shrink).roundToInt().coerceAtLeast(1)
+                                            val h = (nominalH * shrink).roundToInt().coerceAtLeast(1)
                                             val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                                             try {
                                                 bmp.eraseColor(Color.WHITE)
@@ -197,11 +215,12 @@ class DownloadOperationHandler @Inject constructor(
                             BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
                                 val bmp = decoded.bitmap
                                 PDDocument().use { doc ->
-                                    val page = PDPage(PDRectangle(bmp.width.toFloat(), bmp.height.toFloat()))
+                                    val geometry = PdfPageGeometry.resolve(bmp.width,bmp.height)
+                                    val page = PDPage(PDRectangle(geometry.widthPt, geometry.heightPt))
                                     doc.addPage(page)
                                     val pdImg = JPEGFactory.createFromImage(doc, bmp, 0.85f)
                                     PDPageContentStream(doc, page).use { cs ->
-                                        cs.drawImage(pdImg, 0f, 0f, bmp.width.toFloat(), bmp.height.toFloat())
+                                        cs.drawImage(pdImg, 0f, 0f, geometry.widthPt, geometry.heightPt)
                                     }
                                     doc.save(ticket.stageFile)
                                 }
@@ -238,59 +257,27 @@ class DownloadOperationHandler @Inject constructor(
     }
 
     private fun compressDownloadedPdf(source: File, dest: File, maxDpi: Int, quality: Int, context: ExecutionContext) {
-        val originalSize = source.length()
-        val candidate = File(dest.parentFile, "dl-compress-candidate.pdf")
+        // A downloaded document must not become a flattened bitmap just to make the size smaller.
+        // Preserve vectors, text, selectable content, page dimensions and the original partial file.
+        val originalBytes=source.length()
+        val candidate=File(dest.parentFile,"download-compress-candidate.pdf")
         try {
-            runCatching {
-                PdfBoxBackend.open(source, null).use { doc ->
-                    if (!doc.isEncrypted) {
-                        PdfBoxBackend.compressImages(doc, maxDpi, quality) { _, _ -> context.checkCancellation() }
-                        doc.save(candidate)
-                    }
-                }
+            val sourcePages = PdfBoxBackend.open(source,null).use { doc ->
+                require(!doc.isEncrypted) { "PDF_ENCRYPTED" }
+                doc.numberOfPages
             }
-            if (candidate.isFile && candidate.length() in 1 until originalSize) {
-                candidate.copyTo(dest, overwrite = true)
-                return
-            }
-            // Fallback page rasterization if structural pass did not shrink
-            runCatching {
-                ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                    PdfRenderer(fd).use { renderer ->
-                        PDDocument().use { outDoc ->
-                            for (i in 0 until renderer.pageCount) {
-                                context.checkCancellation()
-                                renderer.openPage(i).use { page ->
-                                    val pw = page.width.coerceAtLeast(1)
-                                    val ph = page.height.coerceAtLeast(1)
-                                    val rw = (pw * maxDpi / 72.0).roundToInt().coerceAtLeast(16)
-                                    val rh = (ph * maxDpi / 72.0).roundToInt().coerceAtLeast(16)
-                                    val bmp = Bitmap.createBitmap(rw, rh, Bitmap.Config.ARGB_8888)
-                                    try {
-                                        bmp.eraseColor(Color.WHITE)
-                                        page.render(bmp, null, Matrix().apply { setScale(rw.toFloat() / pw, rh.toFloat() / ph) }, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                                        val pdPage = PDPage(PDRectangle(pw.toFloat(), ph.toFloat()))
-                                        outDoc.addPage(pdPage)
-                                        val pdImg = JPEGFactory.createFromImage(outDoc, bmp, quality / 100f)
-                                        PDPageContentStream(outDoc, pdPage).use { cs ->
-                                            cs.drawImage(pdImg, 0f, 0f, pw.toFloat(), ph.toFloat())
-                                        }
-                                    } finally { bmp.recycle() }
-                                }
-                            }
-                            outDoc.save(candidate)
-                        }
-                    }
-                }
-            }
-            if (candidate.isFile && candidate.length() in 1 until originalSize) {
-                candidate.copyTo(dest, overwrite = true)
-            } else {
-                source.copyTo(dest, overwrite = true)
-            }
-        } finally {
             candidate.delete()
-        }
+            PdfBoxBackend.open(source,null).use { doc ->
+                PdfBoxBackend.compressImages(doc, maxDpi, quality) { _, _ -> context.checkCancellation() }
+                doc.save(candidate)
+            }
+            val validPages = runCatching { PdfBoxBackend.open(candidate,null).use { it.numberOfPages } }.getOrNull()
+            // Downloaded PDFs that cannot get smaller are still useful and valid.
+            // Preserve the original stream instead of failing the whole download.
+            if (validPages != null && PdfCompressionPolicy.accept(originalBytes,candidate.length(),sourcePages,validPages))
+                candidate.copyTo(dest,overwrite=true)
+            else source.copyTo(dest,overwrite=true)
+        } finally { candidate.delete() }
     }
 
     private fun networkPolicy(settings:DownloadSettings) {

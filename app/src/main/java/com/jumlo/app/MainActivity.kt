@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.CircularProgressIndicator
 import com.jumlo.app.ui.components.JumloSplash
-import kotlinx.coroutines.delay
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -63,11 +62,8 @@ import dagger.hilt.android.AndroidEntryPoint
                     LocalReducedMotion provides (settings.respectReducedMotion || systemReduced)) {
                     var showLaunch by rememberSaveable { mutableStateOf(true) }
                     val ready=settings.isLoaded && workspaceReady
-                    LaunchedEffect(ready,systemReduced,settings.respectReducedMotion) {
-                        if(ready) {
-                            delay(if(systemReduced || settings.respectReducedMotion) 80L else 450L)
-                            showLaunch=false
-                        }
+                    LaunchedEffect(ready) {
+                        if(ready) showLaunch=false
                     }
                     Box(Modifier.fillMaxSize()) {
                         if(ready) {

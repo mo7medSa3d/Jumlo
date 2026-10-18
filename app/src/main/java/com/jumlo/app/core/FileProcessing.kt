@@ -20,12 +20,66 @@ object Hashing {
 }
 
 data class ArchiveInput(val name: String, val open: () -> InputStream)
+data class ArchiveSummary(val entryCount: Int, val expandedBytes: Long)
 data class ArchiveLimits(val maxBytes: Long, val maxEntries: Int, val maxDepth: Int) {
     init { require(maxBytes>0 && maxEntries>0 && maxDepth in 1..128) }
 }
 
 /** Pure byte engine shared by Android handlers and executable host tests. */
 object ArchiveCore {
+    /** Verify every payload and its CRC against the central directory without extracting to disk.
+     * Opening a ZIP or counting its central entries alone does not verify its file bytes. */
+    fun verify(input: File, limits: ArchiveLimits, checkCancel: () -> Unit = {}): ArchiveSummary {
+        require(input.isFile && input.length() > 0L) { "INVALID_ARCHIVE_REQUEST" }
+        val root = File(input.parentFile, "archive-validation-root")
+        val central = linkedMapOf<String, Pair<Long, Long>>()
+        val folded = HashSet<String>()
+        ZipFile(input).use { archive ->
+            require(archive.size() in 1..limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
+            val entries = archive.entries()
+            while (entries.hasMoreElements()) {
+                checkCancel()
+                val entry = entries.nextElement()
+                val path = SafeNames.entry(root, entry.name, limits.maxDepth).path
+                require(folded.add(path.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
+                require(entry.size >= 0L && entry.size <= limits.maxBytes && entry.crc >= 0L) { "ARCHIVE_VERIFICATION_FAILED" }
+                require(!entry.isDirectory || entry.size == 0L) { "ARCHIVE_DIRECTORY_PAYLOAD" }
+                central[entry.name] = entry.size to entry.crc
+            }
+        }
+        var total = 0L
+        var count = 0
+        val remaining = central.toMutableMap()
+        ZipInputStream(BufferedInputStream(input.inputStream())).use { zip ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                checkCancel()
+                val entry = zip.nextEntry ?: break
+                count++
+                require(count <= limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
+                val expected = remaining.remove(entry.name) ?: throw IllegalArgumentException("ARCHIVE_DIRECTORY_MISMATCH")
+                val checksum = CRC32()
+                var entryBytes = 0L
+                while (true) {
+                    checkCancel()
+                    val read = zip.read(buffer)
+                    if (read < 0) break
+                    if (read > 0) {
+                        require(read.toLong() <= limits.maxBytes - total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
+                        total += read
+                        entryBytes += read
+                        checksum.update(buffer, 0, read)
+                    }
+                }
+                zip.closeEntry() // Also validates the local ZIP CRC and size.
+                require(entryBytes == expected.first && checksum.value == expected.second) { "ARCHIVE_VERIFICATION_FAILED" }
+                require(!entry.isDirectory || entryBytes == 0L) { "ARCHIVE_DIRECTORY_PAYLOAD" }
+            }
+        }
+        require(remaining.isEmpty() && count == central.size) { "ARCHIVE_DIRECTORY_MISMATCH" }
+        return ArchiveSummary(count, total)
+    }
+
     fun create(out: File, inputs: List<ArchiveInput>, level: Int, limits: ArchiveLimits, checkCancel: () -> Unit = {}) {
         require(!out.exists() && inputs.isNotEmpty() && inputs.size<=limits.maxEntries && level in 0..9) { "INVALID_ARCHIVE_REQUEST" }
         val names=HashSet<String>()
@@ -54,8 +108,9 @@ object ArchiveCore {
                     zip.finish(); zip.flush(); file.fd.sync()
                 }
             }
-            // Re-open the completed central directory; never publish an unfinished ZIP.
-            ZipFile(out).use { require(it.size()==inputs.size) { "ARCHIVE_VERIFICATION_FAILED" } }
+            // Never declare a generated archive complete before re-reading every payload.
+            // This catches CRC mismatches, truncated member streams and false central entries.
+            require(verify(out, limits, checkCancel).entryCount == inputs.size) { "ARCHIVE_VERIFICATION_FAILED" }
         } catch(t: Throwable) { out.delete(); throw t }
     }
 

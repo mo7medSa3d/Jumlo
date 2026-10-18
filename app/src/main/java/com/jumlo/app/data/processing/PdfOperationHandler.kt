@@ -8,6 +8,7 @@ import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.pdf.*
 import com.jumlo.app.model.*
 import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
@@ -19,6 +20,8 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
+import java.io.FilterInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
@@ -119,25 +122,70 @@ import kotlin.math.sqrt
                 context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
                     openUnencrypted(src).use{ doc ->
                         val count=doc.numberOfPages
-                        val groups:List<Pair<Int,Int>> = if(s.optString("mode","RANGES")=="EVERY"){
-                            val every=s.optInt("every",1).coerceAtLeast(1); (0 until count step every).map{ it to minOf(every,count-it) }
-                        } else {
-                            val selected=pages(s.optString("pages","all"),count); selected.map{ (it-1) to 1 }
+                        val groups:List<Pair<Int,Int>> = when(s.optString("mode","RANGES")) {
+                            "EVERY" -> {
+                                val every=s.optInt("every",1).coerceAtLeast(1)
+                                (0 until count step every).map { it to minOf(every,count-it) }
+                            }
+                            "BOUNDARIES" -> PdfSplitPlan.splitAfter(count,s.optString("pages",""))
+                            "RANGES" -> pages(s.optString("pages","all"),count).map { (it-1) to 1 }
+                            else -> throw OperationFailure("INVALID_SPLIT_MODE")
                         }
-                        groups.forEachIndexed{ gi,g ->
-                            context.checkCancellation()
-                            val key="part:${gi+1}"
+                        if (LargeResultStrategy.forPageOutputs(groups.size, context.budget.maxOutputFiles) == LargeResultStrategy.ARCHIVE) {
+                            // Large fan-outs are streamed into ONE ZIP rather than writing
+                            // thousands of separate Room/MediaStore outputs or failing at 512.
+                            val key="split-archive"
                             val existing=context.outputs.find(request.id,key)
-                            if(existing!=null) {
-                                outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
-                            } else {
-                                val partDisplayName = AutoOutputName.splitPartName(s.optString("displayName",""), firstSourceName, gi + 1)
-                                val ticket=context.outputs.reserve(request.id,key,partDisplayName,"application/pdf")
-                                PdfBoxBackend.split(doc,listOf(PageGroup(g.first,g.second)),listOf(ticket.stageFile))
-                                val rec=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf") }
+                            if (existing != null) outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
+                            else {
+                                val base=AutoOutputName.cleanBaseName(firstSourceName ?: "PDF", "PDF")
+                                val display=SafeNames.fromDisplayName("$base - pages.zip", "Split pages.zip")
+                                val ticket=context.outputs.reserve(request.id,key,display,"application/zip")
+                                val entries=groups.mapIndexed { gi,group -> ArchiveInput(
+                                    "Part ${(gi+1).toString().padStart(6,'0')}.pdf"
+                                ) {
+                                    context.checkCancellation()
+                                    val temp=File.createTempFile("split-page-",".pdf",ticket.stageFile.parentFile)
+                                    try {
+                                        PdfBoxBackend.split(doc,listOf(PageGroup(group.first,group.second)),listOf(temp))
+                                        // CRC alone only proves ZIP integrity: validate the PDF
+                                        // structure and the expected page count BEFORE packing.
+                                        PdfBoxBackend.open(temp,null).use { part ->
+                                            require(part.numberOfPages == group.second) { "PDF_VERIFY_FAILED" }
+                                        }
+                                        object:FilterInputStream(FileInputStream(temp)) {
+                                            override fun close() {
+                                                try { super.close() } finally {
+                                                    temp.delete()
+                                                    runBlocking { context.report(JobProgress(JobStage.RUNNING,(gi+1).toLong(),groups.size.toLong())) }
+                                                }
+                                            }
+                                        }
+                                    } catch(t:Throwable) { temp.delete(); throw t }
+                                } }
+                                ArchiveCore.create(ticket.stageFile,entries,6,ArchiveLimits(Long.MAX_VALUE,groups.size,1)) {
+                                    context.checkCancellation()
+                                    if(ticket.stageFile.parentFile.usableSpace<context.budget.minFreeBytes)
+                                        throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                                }
+                                val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip") }
                                 outcomes+=ItemOutcome(key,ItemStatus.CREATED,rec.id)
                             }
-                            context.report(JobProgress(JobStage.RUNNING,(gi+1).toLong(),groups.size.toLong()))
+                        } else {
+                            groups.forEachIndexed{ gi,g ->
+                                context.checkCancellation()
+                                val key="part:${gi+1}"
+                                val existing=context.outputs.find(request.id,key)
+                                if(existing!=null) outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
+                                else {
+                                    val partDisplayName = AutoOutputName.splitPartName(s.optString("displayName",""), firstSourceName, gi + 1)
+                                    val ticket=context.outputs.reserve(request.id,key,partDisplayName,"application/pdf")
+                                    PdfBoxBackend.split(doc,listOf(PageGroup(g.first,g.second)),listOf(ticket.stageFile))
+                                    val rec=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf") }
+                                    outcomes+=ItemOutcome(key,ItemStatus.CREATED,rec.id)
+                                }
+                                context.report(JobProgress(JobStage.RUNNING,(gi+1).toLong(),groups.size.toLong()))
+                            }
                         }
                     }
                 }
@@ -155,8 +203,9 @@ import kotlin.math.sqrt
                                 PdfBoxBackend.extract(doc,selected.map{ it-1 },out)
                             } else {
                                 val orderSpec=s.optString("order","")
-                                val order=if(orderSpec.isBlank()) (1..count).toList() else orderSpec.split(",").mapNotNull{ it.trim().toIntOrNull() }
-                                require(order.isNotEmpty() && order.all{ it in 1..count }){"INVALID_PAGE_INDEX"}
+                                // Parse the exact intended order. mapNotNull() previously dropped malformed
+                                // tokens and could publish a PDF with missing pages as a successful edit.
+                                val order=PdfPageOrder.parse(orderSpec,count)
                                 val rotateSpec=s.optString("rotatePages","")
                                 val rotateSet=if(rotateSpec.isBlank()) emptySet() else pages(rotateSpec,count).toSet()
                                 val degrees=s.optInt("rotateDegrees",90)
@@ -302,7 +351,7 @@ import kotlin.math.sqrt
                 val verify=s.optString("verifyText","")
                 doc.save(out)
                 if(verify.isNotBlank()){
-                    openUnencrypted(out).use{ check -> require(!PdfBoxBackend.pageTexts(check).joinToString(" ").contains(verify)){"REDACTION_VERIFICATION_FAILED"} }
+                    openUnencrypted(out).use{ check -> require(!PdfBoxBackend.containsText(check,verify)){"REDACTION_VERIFICATION_FAILED"} }
                 }
             }
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
@@ -310,115 +359,42 @@ import kotlin.math.sqrt
     }
 
     /**
-     * Multi-stage PDF compression that guarantees the output file is strictly smaller than [source].
-     * Stage 1: Structural PDImageXObject recompression at requested (maxDpi, jpegQuality).
-     * Stage 2: Tighter structural recompression at (min(maxDpi, 108), min(jpegQuality, 55)).
-     * Stage 3: Page-by-page rasterized JPEG PDF reconstruction at progressive (DPI, quality) steps.
+     * Never turn text/vector pages into lossy screenshots just to claim a size reduction.
+     * A candidate is eligible only when the PDF parser reopens it, page count is preserved,
+     * and its measured size is strictly below the original. Page image recompression is lossy;
+     * original input is never modified. The more aggressive pass is reserved for smaller-file presets.
      */
     private suspend fun compressPdfGuaranteedSmaller(
-        source: File,
-        out: File,
-        requestedDpi: Int,
-        requestedQuality: Int,
+        source: File, out: File, requestedDpi: Int, requestedQuality: Int,
         context: ExecutionContext
     ) {
         val originalSize = source.length()
-        val candidate = File(out.parentFile, "compress-candidate.pdf")
+        val originalPages = openUnencrypted(source).use { it.numberOfPages }
+        require(originalPages > 0) { "PDF_VERIFY_FAILED" }
+        val candidate = File(out.parentFile, "compress-${context.hashCode()}-candidate.pdf")
         try {
-            // Stage 1: Requested structural compression
-            openUnencrypted(source).use { doc ->
-                PdfBoxBackend.compressImages(doc, requestedDpi.coerceIn(36, 600), requestedQuality.coerceIn(10, 95)) { done, total ->
-                    context.checkCancellation()
-                    runBlocking { context.report(JobProgress(JobStage.RUNNING, done.toLong(), total.toLong())) }
-                }
-                doc.save(candidate)
-            }
-            if (candidate.isFile && candidate.length() in 1 until originalSize) {
-                candidate.copyTo(out, overwrite = true)
-                return
-            }
-
-            // Stage 2: Tighter structural compression
-            val tighterDpi = minOf(requestedDpi, 108).coerceAtLeast(50)
-            val tighterQuality = minOf(requestedQuality, 55).coerceAtLeast(25)
-            openUnencrypted(source).use { doc ->
-                PdfBoxBackend.compressImages(doc, tighterDpi, tighterQuality) { done, total ->
-                    context.checkCancellation()
-                    runBlocking { context.report(JobProgress(JobStage.RUNNING, done.toLong(), total.toLong())) }
-                }
-                doc.save(candidate)
-            }
-            if (candidate.isFile && candidate.length() in 1 until originalSize) {
-                candidate.copyTo(out, overwrite = true)
-                return
-            }
-
-            // Stage 3: Progressive page-by-page JPEG rasterization for vector/stream-heavy PDFs
-            val attempts = listOf(120 to 65, 96 to 50, 72 to 38, 54 to 28)
-            for ((dpi, quality) in attempts) {
+            val passes = PdfCompressionPolicy.profiles(requestedDpi, requestedQuality)
+            for ((dpi, quality) in passes) {
                 context.checkCancellation()
-                rasterizeCompressedPdf(source, candidate, dpi, quality, context)
-                if (candidate.isFile && candidate.length() in 1 until originalSize) {
+                candidate.delete()
+                openUnencrypted(source).use { doc ->
+                    PdfBoxBackend.compressImages(doc, dpi, quality) { done, total ->
+                        context.checkCancellation()
+                        runBlocking { context.report(JobProgress(JobStage.RUNNING, done.toLong(), total.toLong())) }
+                    }
+                    doc.save(candidate)
+                }
+                val validPages = runCatching { openUnencrypted(candidate).use { it.numberOfPages } }.getOrNull()
+                if (validPages != null && PdfCompressionPolicy.accept(originalSize, candidate.length(), originalPages, validPages)) {
                     candidate.copyTo(out, overwrite = true)
                     return
                 }
             }
-            // If all attempts complete, pick the smallest generated candidate
-            if (candidate.isFile && candidate.length() > 0) {
-                candidate.copyTo(out, overwrite = true)
-            }
+            // A valid already-optimized document is still a valid result. Return its
+            // verified original bytes rather than fail or silently rasterize text.
+            source.copyTo(out, overwrite = true)
         } finally {
             candidate.delete()
-        }
-    }
-
-    private suspend fun rasterizeCompressedPdf(
-        source: File,
-        dest: File,
-        dpi: Int,
-        jpegQuality: Int,
-        context: ExecutionContext
-    ) {
-        ParcelFileDescriptor.open(source, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-            PdfRenderer(fd).use { renderer ->
-                PDDocument().use { outDoc ->
-                    val count = renderer.pageCount
-                    for (i in 0 until count) {
-                        context.checkCancellation()
-                        renderer.openPage(i).use { page ->
-                            val pageW = page.width.coerceAtLeast(1)
-                            val pageH = page.height.coerceAtLeast(1)
-                            var renderW = (pageW * dpi / 72.0).roundToInt().coerceAtLeast(16)
-                            var renderH = (pageH * dpi / 72.0).roundToInt().coerceAtLeast(16)
-                            val maxPixels = (context.budget.maxBitmapBytes / 8L).coerceAtLeast(512L * 512L)
-                            if (renderW.toLong() * renderH > maxPixels) {
-                                val scale = sqrt(maxPixels.toDouble() / (renderW.toDouble() * renderH))
-                                renderW = (renderW * scale).roundToInt().coerceAtLeast(16)
-                                renderH = (renderH * scale).roundToInt().coerceAtLeast(16)
-                            }
-                            val bitmap = Bitmap.createBitmap(renderW, renderH, Bitmap.Config.ARGB_8888)
-                            try {
-                                bitmap.eraseColor(Color.WHITE)
-                                page.render(
-                                    bitmap, null,
-                                    Matrix().apply { setScale(renderW.toFloat() / pageW, renderH.toFloat() / pageH) },
-                                    PdfRenderer.Page.RENDER_MODE_FOR_PRINT
-                                )
-                                val pdPage = PDPage(PDRectangle(pageW.toFloat(), pageH.toFloat()))
-                                outDoc.addPage(pdPage)
-                                val pdImage = JPEGFactory.createFromImage(outDoc, bitmap, (jpegQuality.coerceIn(15, 90) / 100f))
-                                PDPageContentStream(outDoc, pdPage).use { cs ->
-                                    cs.drawImage(pdImage, 0f, 0f, pageW.toFloat(), pageH.toFloat())
-                                }
-                            } finally {
-                                bitmap.recycle()
-                            }
-                        }
-                        context.report(JobProgress(JobStage.RUNNING, (i + 1).toLong(), count.toLong()))
-                    }
-                    outDoc.save(dest)
-                }
-            }
         }
     }
 
@@ -439,30 +415,34 @@ import kotlin.math.sqrt
 
     private suspend fun imagesToPdf(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         val settings=Json.decodeFromString<ImagesToPdfSettings>(request.settingsJson)
-        require(request.sourceIds.isNotEmpty() &&
-            settings.paperWidthPt in 72..14400 && settings.paperHeightPt in 72..14400 && settings.marginMm>=0) { "INVALID_PDF_SETTINGS" }
+        require(request.sourceIds.isNotEmpty() && settings.marginMm in 0..200 &&
+            settings.pageMode in setOf("AUTO", "A4", "LETTER", "CUSTOM")) { "INVALID_PDF_SETTINGS" }
         val margin=settings.marginMm*72f/25.4f
-        require(margin*2<minOf(settings.paperWidthPt,settings.paperHeightPt) && settings.orientation in setOf("AUTO","PORTRAIT","LANDSCAPE")) { "INVALID_PDF_SETTINGS" }
         context.outputs.find(request.id,"document")?.let { return listOf(ItemOutcome("document",ItemStatus.CREATED,it.id)) }
         val firstSourceName = runCatching { context.sources.get(request.sourceIds.first()).displayName }.getOrNull()
         val chosenName = settings.displayName.trim().takeUnless { it.isEmpty() || it == "Images.pdf" || it == "download.bin" }
             ?: firstSourceName?.let { AutoOutputName.fromSource("pdf_02", it) } ?: "Images.pdf"
         val ticket=context.outputs.reserve(request.id,"document",SafeNames.basename(chosenName.let { if(it.endsWith(".pdf",true)) it else "$it.pdf" }),"application/pdf")
         var totalInputBytes=0L
-        PDDocument().use { outDoc ->
+        PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { outDoc ->
             for ((index, id) in request.sourceIds.withIndex()) {
                 context.checkCancellation()
                 context.sources.withSeekable(id,request.id) { file ->
                     totalInputBytes+=file.length()
                     BitmapTransforms.decode(file,context.budget.maxBitmapBytes).use { decoded ->
                         val bitmap=decoded.bitmap
-                        val landscape=settings.orientation=="LANDSCAPE" || (settings.orientation=="AUTO" && bitmap.width>bitmap.height)
-                        val w=if(landscape) maxOf(settings.paperWidthPt,settings.paperHeightPt) else minOf(settings.paperWidthPt,settings.paperHeightPt)
-                        val h=if(landscape) minOf(settings.paperWidthPt,settings.paperHeightPt) else maxOf(settings.paperWidthPt,settings.paperHeightPt)
-                        val pdPage=PDPage(PDRectangle(w.toFloat(),h.toFloat()))
+                        val geometry=PdfPageGeometry.resolve(bitmap.width, bitmap.height,
+                            settings.pageMode, settings.paperWidthPt, settings.paperHeightPt, settings.orientation)
+                        val w=geometry.widthPt
+                        val h=geometry.heightPt
+                        // Automatic geometry also scales the margin for unusually narrow images.
+                        val pageMargin = if (settings.pageMode == "AUTO") minOf(margin, minOf(w,h)*0.08f)
+                            else margin
+                        require(pageMargin*2<minOf(w,h)) { "INVALID_PDF_SETTINGS" }
+                        val pdPage=PDPage(PDRectangle(w,h))
                         outDoc.addPage(pdPage)
-                        val aw=(w-2*margin).coerceAtLeast(1f)
-                        val ah=(h-2*margin).coerceAtLeast(1f)
+                        val aw=w-2*pageMargin
+                        val ah=h-2*pageMargin
                         if (settings.fill) {
                             val renderScale=minOf(2048f/maxOf(w,h), 2.5f).coerceAtLeast(1f)
                             val canvasW=(w*renderScale).roundToInt().coerceAtLeast(64)
@@ -471,7 +451,7 @@ import kotlin.math.sqrt
                             try {
                                 val canvas=Canvas(pageBmp)
                                 canvas.drawColor(Color.WHITE)
-                                val mPx=margin*renderScale
+                                val mPx=pageMargin*renderScale
                                 val awPx=canvasW-2*mPx; val ahPx=canvasH-2*mPx
                                 val scale=maxOf(awPx/bitmap.width,ahPx/bitmap.height)
                                 val dw=bitmap.width*scale; val dh=bitmap.height*scale
@@ -519,44 +499,93 @@ import kotlin.math.sqrt
             ParcelFileDescriptor.open(source,ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                 PdfRenderer(fd).use { renderer ->
                     val pages=PageSelection.parse(if(settings.pages.isBlank() || settings.pages.trim().equals("all",true)) "1-${renderer.pageCount}" else settings.pages,renderer.pageCount)
-                    val outcomes=mutableListOf<ItemOutcome>()
-                    pages.forEachIndexed { index,number ->
-                        context.checkCancellation(); val key="page:$number"
-                        val existing=context.outputs.find(request.id,key)
-                        if(existing!=null) outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
-                        else try {
-                            renderer.openPage(number-1).use { page ->
-                                var width=(page.width*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
-                                var height=(page.height*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
-                                val bitmapCount = if(settings.grayscale) 2 else 1
-                                val maxPixels = (context.budget.maxBitmapBytes / 4L / bitmapCount).coerceAtLeast(512L * 512L)
-                                if(width.toLong() * height > maxPixels) {
-                                    val downScale = sqrt(maxPixels.toDouble() / (width.toDouble() * height))
-                                    width = (width * downScale).roundToInt().coerceAtLeast(1)
-                                    height = (height * downScale).roundToInt().coerceAtLeast(1)
-                                }
-                                val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
-                                try {
-                                    bitmap.eraseColor(Color.WHITE)
-                                    page.render(bitmap,null,Matrix().apply { setScale(width.toFloat()/page.width,height.toFloat()/page.height) },PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                                    if(settings.grayscale) {
-                                        val paint=Paint().apply { colorFilter=ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) }) }
-                                        val gray=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
-                                        try { Canvas(gray).drawBitmap(bitmap,0f,0f,paint); Canvas(bitmap).drawBitmap(gray,0f,0f,null) } finally { gray.recycle() }
-                                    }
-                                    val pageFileName = AutoOutputName.pageImageName(effectiveBaseName, number, ext)
-                                    val ticket=context.outputs.reserve(request.id,key,pageFileName,BitmapTransforms.mime(settings.format))
-                                    context.checkCancellation()
-                                    BitmapTransforms.encode(bitmap,ticket.stageFile,ImageConversionSettings(format=settings.format,quality=settings.quality),context.budget.maxBitmapBytes)
-                                    val record=context.outputs.publish(ticket) { context.outputs.inspect(it,ticket.mimeType,subfolder=originalPdfFolder) }
-                                    outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
-                                } finally { bitmap.recycle() }
+                    val outputMime=BitmapTransforms.mime(settings.format)
+
+                    // One bitmap at a time: no full-document rasterization in resident memory.
+                    fun renderPage(number:Int, target:File) {
+                        context.checkCancellation()
+                        renderer.openPage(number-1).use { page ->
+                            var width=(page.width*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
+                            var height=(page.height*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
+                            val bitmapCount=if(settings.grayscale) 2 else 1
+                            val maxPixels=(context.budget.maxBitmapBytes / 4L / bitmapCount).coerceAtLeast(512L * 512L)
+                            if(width.toLong()*height > maxPixels) {
+                                val scale=sqrt(maxPixels.toDouble()/(width.toDouble()*height))
+                                width=(width*scale).roundToInt().coerceAtLeast(1)
+                                height=(height*scale).roundToInt().coerceAtLeast(1)
                             }
-                        } catch(cancel:CancellationException) { throw cancel }
-                        catch(e:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
-                        context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pages.size.toLong()))
+                            val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+                            try {
+                                bitmap.eraseColor(Color.WHITE)
+                                page.render(bitmap,null,Matrix().apply {
+                                    setScale(width.toFloat()/page.width,height.toFloat()/page.height)
+                                },PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                if(settings.grayscale) {
+                                    val paint=Paint().apply { colorFilter=ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) }) }
+                                    val gray=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+                                    try { Canvas(gray).drawBitmap(bitmap,0f,0f,paint); Canvas(bitmap).drawBitmap(gray,0f,0f,null) }
+                                    finally { gray.recycle() }
+                                }
+                                context.checkCancellation()
+                                BitmapTransforms.encode(bitmap,target,ImageConversionSettings(format=settings.format,quality=settings.quality),context.budget.maxBitmapBytes)
+                            } finally { bitmap.recycle() }
+                        }
                     }
-                    outcomes
+
+                    if (LargeResultStrategy.forPageOutputs(pages.size, context.budget.maxOutputFiles) == LargeResultStrategy.ARCHIVE) {
+                        val key="images-archive"
+                        val existing=context.outputs.find(request.id,key)
+                        if(existing!=null) listOf(ItemOutcome(key,ItemStatus.CREATED,existing.id))
+                        else {
+                            val display=SafeNames.fromDisplayName("$effectiveBaseName - images.zip", "PDF images.zip")
+                            val ticket=context.outputs.reserve(request.id,key,display,"application/zip")
+                            val inputs=pages.mapIndexed { index,number ->
+                                ArchiveInput(AutoOutputName.pageImageName(effectiveBaseName,number,ext)) {
+                                    context.checkCancellation()
+                                    val temp=File.createTempFile("render-page-",".$ext",ticket.stageFile.parentFile)
+                                    try {
+                                        renderPage(number,temp)
+                                        val options=BitmapFactory.Options().apply { inJustDecodeBounds=true }
+                                        BitmapFactory.decodeFile(temp.path,options)
+                                        require(options.outWidth>0 && options.outHeight>0) { "IMAGE_VERIFY_FAILED" }
+                                        object:FilterInputStream(FileInputStream(temp)) {
+                                            override fun close() {
+                                                try { super.close() } finally {
+                                                    temp.delete()
+                                                    runBlocking { context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pages.size.toLong())) }
+                                                }
+                                            }
+                                        }
+                                    } catch(t:Throwable) { temp.delete(); throw t }
+                                }
+                            }
+                            ArchiveCore.create(ticket.stageFile,inputs,6,ArchiveLimits(Long.MAX_VALUE,inputs.size,1)) {
+                                context.checkCancellation()
+                                if(ticket.stageFile.parentFile.usableSpace<context.budget.minFreeBytes)
+                                    throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                            }
+                            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip",subfolder=originalPdfFolder) }
+                            listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
+                        }
+                    } else {
+                        val outcomes=mutableListOf<ItemOutcome>()
+                        pages.forEachIndexed { index,number ->
+                            context.checkCancellation()
+                            val key="page:$number"
+                            val existing=context.outputs.find(request.id,key)
+                            if(existing!=null) outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
+                            else try {
+                                val pageFileName=AutoOutputName.pageImageName(effectiveBaseName,number,ext)
+                                val ticket=context.outputs.reserve(request.id,key,pageFileName,outputMime)
+                                renderPage(number,ticket.stageFile)
+                                val record=context.outputs.publish(ticket) { context.outputs.inspect(it,ticket.mimeType,subfolder=originalPdfFolder) }
+                                outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
+                            } catch(cancel:CancellationException) { throw cancel }
+                            catch(e:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                            context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pages.size.toLong()))
+                        }
+                        outcomes
+                    }
                 }
             }
         }

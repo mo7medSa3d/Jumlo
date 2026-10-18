@@ -1,3 +1,32 @@
+## 2026-10-18 — Large PDF reliability, disk-spillable processing, and verified batch exports
+
+- Removed the blanket 4 GiB cap for imported files and selected-result byte totals; admission is bounded by real disk availability.
+- Stopped duplicating app-private imported source snapshots for every PDF/image operation; retained an authenticated path check and legacy SAF spool fallback.
+- Routed PDFBox open/build paths through disk-backed scratch memory where compatible with the used PDFBox-Android API.
+- Split and PDF-to-image jobs that would exceed 512 individual result records now produce one streamed, CRC-verified archive; generated PDF page counts and image geometry checked before packing.
+- Fixed PDF comparison, PDF metadata, redaction inspections to avoid collecting extracted text/page objects for the full document; comparison returns early at the first mismatch.
+- Kept valid source bytes as a new verified PDF output if compression cannot reduce size without unacceptable damage.
+- Expanded Kotlin host coverage to **172** tests. Android build remains blocked on uncached Gradle 8.14; **not production-qualified**. See AUDIT.md.
+
+## 2026-10-18 — Flagship safety, PDF split and sharing follow-up (source-only)
+
+- Fix falsely completed HTTP resumed downloads by requiring true Content-Range total and validating truncated content.
+- Verify generated ZIP member content and CRC, not only directory metadata; enforce pre-extraction caps.
+- Add visual PDF split boundaries and strict page reorder parsing; correct the every-page preset.
+- Make shared-link discovery work with prose/multiple URLs, avoid silently saving HTML webpages, and explain unsupported social-link batches.
+- Remove artificial startup delay; preserve Jumlo product identity and Room data compatibility.
+- Host validation: 165 Kotlin tests passed. Android build not executed successfully (Gradle 8.14 download blocked); production release NO-GO.
+
+## 2026-10-18 — Commercial-grade file workflows (source iteration; NO-GO for store sales)
+
+- Source/result reuse now opens a compatible tool rather than always Images-to-PDF.
+- Added multi-selection from **published outputs AND imported source snapshots** for ordered ZIP creation, PDF merge, and images-to-PDF, using existing durable processing; published bytes SHA-checked and copied into new immutable sources.
+- Added cleanup for newly staged copies if handoff fails, preserving published originals; added local DataStore Favorites and Home shortcuts, adaptive Files grid, paired Arabic/English strings.
+- Added signature-derived SAF MIME correction (PDF/JPEG/PNG/GIF/WebP/ZIP/HEIC/AVIF/MP4/M4A/MP3), not filename guessing; host test-first red/green on type confusion.
+- `scripts/verify-host.sh` green, 149/149 Kotlin host; Android Gradle build blocked by unavailable distribution, and no billing or production APK shipped. See `docs/COMMERCIAL_READINESS.md`.
+
+---
+
 # Jumlo — continued engineering changelog (2026-10-17)
 
 **Baseline:** `Jumlo_Updated_Source_Hardened_2026-10-17.zip`, not a git repository.

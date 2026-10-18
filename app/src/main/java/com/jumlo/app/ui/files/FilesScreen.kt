@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -33,7 +34,8 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.model.*
 
-@Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit) {
+@Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
+    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit) {
     val haptics=rememberAppHaptics()
     val imported by vm.imported.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
@@ -47,33 +49,37 @@ import com.jumlo.app.model.*
     var sortPicker by rememberSaveable {mutableStateOf(false)}
     var selected by remember {mutableStateOf(setOf<String>())}
     var selecting by rememberSaveable {mutableStateOf(false)}
+    var selectedSources by remember { mutableStateOf(setOf<String>()) }
+    var selectingSources by rememberSaveable { mutableStateOf(false) }
     var deleteIds by remember {mutableStateOf<Set<String>?>(null)}
     var purgeIds by remember {mutableStateOf<Set<String>?>(null)}
     var details by remember {mutableStateOf<OutputRecord?>(null)}
     LaunchedEffect(outputs) {selected=selected.intersect(outputs.map {it.id}.toSet())}
-    val visible=remember(outputs,search,sort,type) {
-        outputs.filter {it.displayName.contains(search,true) && (type=="all" || StoragePaths.category(it.mimeType)==type)}.let {list->
+    LaunchedEffect(imported) {selectedSources=selectedSources.intersect(imported.map {it.id}.toSet())}
+    val screenWidth=LocalConfiguration.current.screenWidthDp
+    val columns=when { screenWidth>=840->4;screenWidth>=600->3;else->2 }
+    val visible=remember(outputs,search,sort,type,settings.favoriteOutputIds) {
+        outputs.filter {it.displayName.contains(search,true) && (type=="all" || (type=="favorites" && it.id in settings.favoriteOutputIds) || StoragePaths.category(it.mimeType)==type)}.let {list->
             when(sort) {"name"->list.sortedBy {it.displayName.lowercase()};"size"->list.sortedByDescending {it.sizeBytes};"type"->list.sortedWith(compareBy({StoragePaths.category(it.mimeType)},{it.displayName}));else->list.sortedByDescending {it.createdAtEpochMs}}
         }
     }
     LazyColumn(
         modifier=Modifier.fillMaxSize(),
         contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
-        verticalArrangement=Arrangement.spacedBy(16.dp)
+        verticalArrangement=Arrangement.spacedBy(12.dp)
     ) {
         item("heading") { Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.nav_files),style=QuietTheme.typography.screenTitle)
             Text(if(settings.downloadDestinationFolder.startsWith("content://")) stringResource(R.string.redesign_custom_saved_path)
                 else stringResource(R.string.redesign_storage_path),style=QuietTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.redesign_storage_folder),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick={haptics.actionClick();onSavedFolder()},modifier=Modifier.weight(1f).pressFeedback()) { Icon(Icons.Rounded.FolderOpen,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.redesign_open_folder),maxLines=1,overflow=TextOverflow.Ellipsis) }
                 OutlinedButton(onClick={haptics.actionClick();onImport()},modifier=Modifier.weight(1f).pressFeedback()) { Icon(Icons.Rounded.Add,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.import_device_files),maxLines=1,overflow=TextOverflow.Ellipsis) }
             }
         } }
-        item("search") {QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it},{search=""})}
+        item("search") {QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})}
         item("sections") {LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-            items(listOf("outputs" to R.string.ui_outputs,"sources" to R.string.ui_imported,"folder" to R.string.ui_granted_folder,"trash" to R.string.files_trash_title),key={it.first}) {(key,label)->FilterChip(section==key,{haptics.selectionToggle();section=key;selecting=false;selected=emptySet()},label={Text(stringResource(label),style=QuietTheme.typography.metadataStrong)})}
+            items(listOf("outputs" to R.string.ui_outputs,"sources" to R.string.ui_imported,"folder" to R.string.ui_granted_folder,"trash" to R.string.files_trash_title),key={it.first}) {(key,label)->FilterChip(section==key,{haptics.selectionToggle();section=key;selecting=false;selected=emptySet();selectingSources=false;selectedSources=emptySet()},label={Text(stringResource(label),style=QuietTheme.typography.metadataStrong)})}
         }}
         if(section=="outputs" && outputs.any { it.publicUri==null }) item("public-store-warning") {
             Surface(color=MaterialTheme.colorScheme.errorContainer.copy(alpha=0.65f),shape=MaterialTheme.shapes.medium) {
@@ -85,8 +91,8 @@ import com.jumlo.app.model.*
             "outputs" -> {
                 item("filter") { Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                        items(listOf("all","Video","Audio","PDF","Images","Documents")) {filter->
-                            FilterChip(type==filter,{haptics.selectionToggle();type=filter},label={Text(when(filter){"all"->stringResource(R.string.ui_all);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->"PDF";"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
+                        items(listOf("all","favorites","Video","Audio","PDF","Images","Documents")) {filter->
+                            FilterChip(type==filter,{haptics.selectionToggle();type=filter;selected=emptySet()},label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->"PDF";"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
                         }
                     }
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
@@ -97,16 +103,40 @@ import com.jumlo.app.model.*
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick={haptics.selectionToggle();selecting=!selecting;selected=emptySet()},enabled=outputs.isNotEmpty()) {Text(stringResource(if(selecting) R.string.action_cancel else R.string.ui_select_files),style=QuietTheme.typography.metadataStrong)}
                     }
-                    if(selecting) Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        TextButton(enabled=selected.isNotEmpty(),onClick={haptics.secondaryAction();deleteIds=selected}) {Text(stringResource(R.string.ui_trash_selected,selected.size))}
-                        TextButton(onClick={haptics.selectionToggle();selected=visible.map {it.id}.toSet()}) {Text(stringResource(R.string.redesign_select_all))}
+                    if(selecting) {
+                        val selectedVisible=visible.filter { it.id in selected }
+                        val onlyPdfs=selectedVisible.size>=2 && selectedVisible.all { it.mimeType=="application/pdf" }
+                        val onlyImages=selectedVisible.isNotEmpty() && selectedVisible.all { it.mimeType.startsWith("image/") }
+                        Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                TextButton(enabled=selectedVisible.isNotEmpty(),onClick={haptics.secondaryAction();deleteIds=selectedVisible.map {it.id}.toSet()}) {Text(stringResource(R.string.ui_trash_selected,selectedVisible.size))}
+                                TextButton(onClick={haptics.selectionToggle();selected=visible.map {it.id}.toSet()}) {Text(stringResource(R.string.redesign_select_all))}
+                            }
+                            if(selectedVisible.isNotEmpty()) {
+                                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                    FilledTonalButton(onClick={
+                                        haptics.actionClick();onOutputWorkflow(selectedVisible,"file_07");selecting=false;selected=emptySet()
+                                    },modifier=Modifier.weight(1f)) {
+                                        Icon(Icons.Rounded.FolderZip,null,Modifier.size(18.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(stringResource(R.string.files_bundle_selected,selectedVisible.size),maxLines=1)
+                                    }
+                                    if(onlyPdfs) FilledTonalButton(onClick={
+                                        haptics.actionClick();onOutputWorkflow(selectedVisible,"pdf_03");selecting=false;selected=emptySet()
+                                    },modifier=Modifier.weight(1f)) {Text(stringResource(R.string.files_merge_selected,selectedVisible.size),maxLines=1)}
+                                    if(onlyImages) FilledTonalButton(onClick={
+                                        haptics.actionClick();onOutputWorkflow(selectedVisible,"pdf_02");selecting=false;selected=emptySet()
+                                    },modifier=Modifier.weight(1f)) {Text(stringResource(R.string.files_images_to_pdf_selected,selectedVisible.size),maxLines=1)}
+                                }
+                            } else Text(stringResource(R.string.files_batch_tool_hint),style=QuietTheme.typography.metadata)
+                        }
                     } else if(outputs.isNotEmpty()) TextButton(onClick={haptics.secondaryAction();deleteIds=outputs.map {it.id}.toSet()}) {Text(stringResource(R.string.redesign_delete_all),color=MaterialTheme.colorScheme.error)}
                 } }
                 if(visible.isEmpty()) item("empty") {QuietStateCard(stringResource(R.string.ui_recent_empty),stringResource(R.string.redesign_storage_folder))}
                 if(settings.fileViewMode==FileViewMode.LIST) {
-                    items(visible,key={it.id},contentType={"output"}) {output -> OutputRow(output,{if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},{onShare(output)},{onExport(output)},{onReuse(output)},{deleteIds=setOf(output.id)},if(selecting) output.id in selected else null,{selected=selected.symmetric(output.id)},onDetails={details=output})}
+                    items(visible,key={it.id},contentType={"output"}) {output -> OutputRow(output,{if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},{onShare(output)},{onExport(output)},{onReuse(output)},{deleteIds=setOf(output.id)},if(selecting) output.id in selected else null,{selected=selected.symmetric(output.id)},onDetails={details=output},isFavorite=output.id in settings.favoriteOutputIds,
+                        onFavorite={vm.toggleOutputFavorite(output.id)})}
                 } else {
-                    val columns=2 // A readable, consistent two-column gallery on phones
                     items(visible.chunked(columns),key={it.joinToString("-") {f->f.id}},contentType={"tileRow"}) {row->
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
                             row.forEach {output->
@@ -128,6 +158,10 @@ import com.jumlo.app.model.*
                                         }
                                         if(selecting) Checkbox(checked=output.id in selected,onCheckedChange={selected=selected.symmetric(output.id)})
                                         else Row(horizontalArrangement=Arrangement.End,modifier=Modifier.fillMaxWidth()) {
+                                            IconButton(onClick={haptics.selectionToggle();vm.toggleOutputFavorite(output.id)},modifier=Modifier.pressFeedback().size(40.dp)) {
+                                                Icon(if(output.id in settings.favoriteOutputIds) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                                                    stringResource(if(output.id in settings.favoriteOutputIds) R.string.files_unmark_favorite else R.string.files_mark_favorite),Modifier.size(20.dp))
+                                            }
                                             IconButton(onClick={haptics.actionClick();onShare(output)},modifier=Modifier.pressFeedback().size(36.dp)) {Icon(Icons.Rounded.Share,null,Modifier.size(18.dp))}
                                             IconButton(onClick={haptics.actionClick();details=output},modifier=Modifier.pressFeedback().size(36.dp)) {Icon(Icons.Rounded.Info,null,Modifier.size(18.dp))}
                                         }
@@ -140,9 +174,53 @@ import com.jumlo.app.model.*
                 }
             }
             "sources" -> {
-                item {Text(stringResource(R.string.files_snapshots_sub),style=QuietTheme.typography.metadata)}
+                item("source-controls") {
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        Text(stringResource(R.string.files_snapshots_sub),style=QuietTheme.typography.metadata,modifier=Modifier.weight(1f))
+                        TextButton(enabled=imported.isNotEmpty(),onClick={
+                            haptics.selectionToggle();selectingSources=!selectingSources;selectedSources=emptySet()
+                        }) {Text(stringResource(if(selectingSources) R.string.action_cancel else R.string.ui_select_files))}
+                    }
+                }
+                if(selectingSources) item("source-batch-actions") {
+                    val matching=imported.filter { it.id in selectedSources && it.displayName.contains(search,true) }
+                        .let { if(sort=="name") it.sortedBy {entry->entry.displayName.lowercase()} else it }
+                    val onlyPdfs=matching.size>=2 && matching.all {it.mimeType.equals("application/pdf",true)}
+                    val onlyImages=matching.isNotEmpty() && matching.all {it.mimeType?.startsWith("image/")==true}
+                    Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                        TextButton(onClick={selectedSources=imported.filter {it.displayName.contains(search,true)}.map {it.id}.toSet()}) {
+                            Text(stringResource(R.string.redesign_select_all))
+                        }
+                        if(matching.isNotEmpty()) {
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                FilledTonalButton(onClick={
+                                    haptics.actionClick();onSourceWorkflow(matching,"file_07");selectingSources=false;selectedSources=emptySet()
+                                },modifier=Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.files_bundle_selected,matching.size),maxLines=1)
+                                }
+                                if(onlyPdfs) FilledTonalButton(onClick={
+                                    haptics.actionClick();onSourceWorkflow(matching,"pdf_03");selectingSources=false;selectedSources=emptySet()
+                                },modifier=Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.files_merge_selected,matching.size),maxLines=1)
+                                }
+                                if(onlyImages) FilledTonalButton(onClick={
+                                    haptics.actionClick();onSourceWorkflow(matching,"pdf_02");selectingSources=false;selectedSources=emptySet()
+                                },modifier=Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.files_images_to_pdf_selected,matching.size),maxLines=1)
+                                }
+                            }
+                        } else Text(stringResource(R.string.files_batch_tool_hint),style=QuietTheme.typography.metadata)
+                    }
+                }
                 if(imported.isEmpty()) item {Text(stringResource(R.string.files_empty_snapshots),style=QuietTheme.typography.bodyMedium)}
-                items(imported.filter {it.displayName.contains(search,true)}.sortedBy {if(sort=="name") it.displayName.lowercase() else ""},key={it.id}) {source->FileMenuRow(source.displayName,formatBytes(source.sizeBytes),{onSource(source.id)}) {close->DropdownMenuItem(text={Text(stringResource(R.string.files_add_to_workspace))},onClick={close();onSource(source.id)})}}
+                items(imported.filter {it.displayName.contains(search,true)}.sortedBy {if(sort=="name") it.displayName.lowercase() else ""},key={it.id}) {source->
+                    FileMenuRow(source.displayName,formatBytes(source.sizeBytes),
+                        {if(selectingSources) selectedSources=selectedSources.symmetric(source.id) else onSource(source.id)},
+                        selection=if(selectingSources) source.id in selectedSources else null,
+                        onSelect={selectedSources=selectedSources.symmetric(source.id)}) {close->
+                        DropdownMenuItem(text={Text(stringResource(R.string.files_add_to_workspace))},onClick={close();onSource(source.id)})
+                    }
+                }
             }
             "trash" -> {
                 item {Text(stringResource(R.string.ui_trash_notice),style=QuietTheme.typography.metadata)}

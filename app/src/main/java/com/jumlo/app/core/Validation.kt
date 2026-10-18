@@ -9,7 +9,7 @@ import kotlin.math.*
 /** UI page numbers are physical, one-based, and preserve the user's order. */
 object PageSelection {
     fun parse(value: String, count: Int): List<Int> {
-        require(count in 1..100000) { "INVALID_PAGE_COUNT" }
+        require(count > 0) { "INVALID_PAGE_COUNT" }
         val normalized = value.map { c -> when (c) {
             in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
             in '\u06f0'..'\u06f9' -> '0' + (c - '\u06f0')
@@ -30,7 +30,7 @@ object PageSelection {
         return result.toList()
     }
     fun groups(count: Int, every: Int): List<List<Int>> {
-        require(count in 1..100000 && every > 0) { "INVALID_SPLIT_SIZE" }
+        require(count > 0 && every > 0) { "INVALID_SPLIT_SIZE" }
         return (1..count).toList().chunked(every)
     }
 }

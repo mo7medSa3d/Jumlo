@@ -9,10 +9,6 @@ import java.util.Locale
  * headers to redirects or unrelated download hosts.
  */
 object PlatformHeaderPolicy {
-    private const val desktopAgent =
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-    private const val mobileAgent =
-        "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
     private val safeExtras = setOf(
         "accept", "accept-language", "accept-encoding", "range",
         "origin", "referer", "user-agent", "dnt", "x-requested-with"
@@ -24,7 +20,8 @@ object PlatformHeaderPolicy {
         customUserAgent: String = "",
         preferDesktop: Boolean = true,
         cookieHeader: String? = null,
-        customHeaders: Map<String, String> = emptyMap()
+        customHeaders: Map<String, String> = emptyMap(),
+        compatibilityAttempt: Int = 0
     ): Map<String, String> {
         val uri = runCatching { URI(url) }.getOrNull()
             ?: throw IllegalArgumentException("INVALID_URL")
@@ -32,9 +29,15 @@ object PlatformHeaderPolicy {
             !uri.host.isNullOrBlank() && uri.rawUserInfo == null) { "INVALID_URL" }
 
         val agent = customUserAgent.trim().takeIf {
-            it.isNotEmpty() && it.length <= 320 && it.none(Char::isISOControl)
-        } ?: if (preferDesktop) desktopAgent else mobileAgent
+            compatibilityAttempt == 0 && it.isNotEmpty() && it.length <= 320 && it.none(Char::isISOControl)
+        } ?: BrowserProfilePolicy.forUrl(url).let { profiles ->
+            // Attempt 0 is stable for an origin; attempt 1 is used only after
+            // a 406/415 content-negotiation response, never after 401/403.
+            profiles[compatibilityAttempt.coerceIn(0, profiles.lastIndex)].userAgent
+        }
         val headers = linkedMapOf("User-Agent" to agent, "Accept" to "*/*")
+        // The browser identity isn't a permission token; no credentials are
+        // created, copied or migrated between different hosts.
         val safeCookie = cookieHeader?.trim()?.takeIf {
             uri.scheme.equals("https", true) && it.isNotEmpty() &&
                 it.length <= 32768 && it.none(Char::isISOControl)
@@ -46,6 +49,7 @@ object PlatformHeaderPolicy {
             val name = key.trim()
             val text = value.trim()
             if (!headerName.matches(name) || name.lowercase(Locale.ROOT) !in safeExtras ||
+                (compatibilityAttempt > 0 && name.equals("user-agent", true)) ||
                 text.isEmpty() || text.length > 2048 || text.any(Char::isISOControl)) continue
             headers[name] = text
         }

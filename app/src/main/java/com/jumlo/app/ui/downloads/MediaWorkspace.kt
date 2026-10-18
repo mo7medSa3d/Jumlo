@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.jumlo.app.BuildConfig
 import com.jumlo.app.R
 import com.jumlo.app.core.DirectFileKind
 import com.jumlo.app.core.media.*
@@ -39,10 +40,7 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/**
- * Lightweight direct media and file downloader with the original source format.
- * Social landing-page extraction and audio transcoding require heavier engines.
- */
+/** Direct media by default; optionally uses the APK-packaged multi-site extractor. */
 @Composable fun MediaWorkspace(
     initialUrl:String,
     sessionEpoch:Long,
@@ -54,7 +52,6 @@ import kotlin.math.roundToInt
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var advanced by rememberSaveable { mutableStateOf(false) }
-    var showSessionSheet by rememberSaveable { mutableStateOf(false) }
     val clipboardSuggestion=remember { clipboard.getText()?.text?.toString()?.takeIf { it.trim().startsWith("https://",true) } }
     LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl) }
     // Also re-inspect on a fresh entry with the exact same shared URL.
@@ -74,7 +71,11 @@ import kotlin.math.roundToInt
             item("hero") {
                 Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.redesign_download_hero),style=QuietTheme.typography.screenTitle,fontWeight=FontWeight.Bold)
-                    Text(stringResource(R.string.media_supported_platforms),color=MaterialTheme.colorScheme.onSurfaceVariant,style=QuietTheme.typography.metadata)
+                    Text(
+                        stringResource(if (BuildConfig.EXTENDED_MEDIA) R.string.media_supported_platforms_extended else R.string.media_supported_platforms),
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,
+                        style=QuietTheme.typography.metadata
+                    )
                 }
             }
             item("input") {
@@ -128,14 +129,17 @@ import kotlin.math.roundToInt
                 }
             }
             state.error?.let { code -> item("error") {
-                val needsSession = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_SOURCE_REJECTED","HTTP_401","HTTP_403")
+                val restricted = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_SOURCE_REJECTED","HTTP_401","HTTP_403")
                 val unsupported = code in setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
                 QuietStateCard(
                     title=mediaError(code),
-                    subtitle=stringResource(if(unsupported) R.string.media_direct_url_hint
-                        else if(needsSession) R.string.media_error_session else R.string.redesign_download_retry_hint),
-                    actionLabel=if(unsupported) null else stringResource(if(needsSession) R.string.media_browser else R.string.media_analyze),
-                    onAction=if(unsupported) null else ({if(needsSession) showSessionSheet=true else viewModel.analyze()}),
+                    subtitle=stringResource(when {
+                        restricted -> R.string.media_restricted_hint
+                        unsupported -> R.string.media_direct_url_hint
+                        else -> R.string.redesign_download_retry_hint
+                    }),
+                    actionLabel=if(restricted || unsupported) null else stringResource(R.string.media_analyze),
+                    onAction=if(restricted || unsupported) null else ({ viewModel.analyze() }),
                     isError=true
                 )
             }}
@@ -379,7 +383,7 @@ import kotlin.math.roundToInt
                                 choice.container.uppercase(Locale.ROOT)
                             }
                             val subBadge = if (choice.mode == MediaMode.VIDEO) {
-                                val audioLabel = if (asset.extractor == "DirectMedia")
+                                val audioLabel = if (asset.extractor in setOf("DirectMedia", "Html5"))
                                     R.string.media_audio_not_probed else if (choice.expectsAudio)
                                     R.string.media_with_audio else R.string.media_without_audio
                                 "$containerLabel · ${stringResource(audioLabel)}"
@@ -458,13 +462,6 @@ import kotlin.math.roundToInt
                         singleLine=true,label={Text(stringResource(R.string.media_filename))},
                         modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp))
                 }
-                item("session-settings") {
-                    TextButton(onClick={haptics.actionClick();showSessionSheet=true}) {
-                        Icon(Icons.Rounded.Lock,null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.media_session_btn))
-                    }
-                }
                 item("network-toggles") {
                     Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -505,21 +502,7 @@ import kotlin.math.roundToInt
         }
     }
 
-    if (showSessionSheet) {
-        PlatformSessionSheet(
-            initialUrl = state.url,
-            hasSavedSession = state.hasSavedSession,
-            activeDomains = state.activeDomains,
-            initialUserAgent = state.customUserAgent,
-            initialExtraHeaders = state.extraHeaders,
-            initialPreferDesktop = state.preferDesktopUa,
-            onSyncWebView = viewModel::syncWebViewSession,
-            onImportCookies = viewModel::importCookies,
-            onSaveHeaders = viewModel::saveHeaderConfig,
-            onClearSessions = viewModel::clearSessions,
-            onDismiss = { showSessionSheet = false }
-        )
-    }
+
 }
 
 @Composable

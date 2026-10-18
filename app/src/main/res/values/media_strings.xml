@@ -1,16 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="media_intro">Paste a direct video, audio, PDF, image or Google Drive link. Downloads stay on device without a cloud converter.</string>
-    <string name="media_link">Direct video, audio, PDF or file URL</string>
+    <string name="media_intro">Paste a file link or publicly downloadable media page. Content stays on your device.</string>
+    <string name="media_link">Video, audio, document or media-page link</string>
     <string name="media_analyze">Analyze link</string>
-    <string name="media_browser">Platform Login &amp; Cookies</string>
     <string name="media_update_extractor">Update extractor</string>
     <string name="media_cancel">Cancel</string>
-    <string name="media_analyzing">Checking direct file format and size...</string>
+    <string name="media_analyzing">Checking source and available media files...</string>
     <string name="media_video">Video file</string>
     <string name="media_audio_only">Original audio file</string>
     <string name="media_duration">Duration: %1$d seconds</string>
-    <string name="media_actual_qualities">Original source format only; no artificial qualities or audio conversion.</string>
+    <string name="media_actual_qualities">Only formats verified at the source are shown. Resolution or bitrate may be unknown until the file is downloaded.</string>
     <string name="media_resolution_unknown">Resolution not reported</string>
     <string name="media_bitrate_unknown">Bitrate not reported</string>
     <string name="media_size_unknown">Size calculated on download</string>
@@ -30,25 +29,19 @@
     <string name="media_direct_instead">Download as a direct file</string>
     <string name="media_queueing">Starting download...</string>
     <string name="media_download_selected">Download selected quality</string>
-    <string name="media_error_site">This is a webpage rather than a direct media file. Social-page extraction is unavailable in this lightweight build.</string>
-    <string name="media_error_private">This media requires a logged-in account. Tap Platform Login &amp; Cookies to sign in.</string>
+    <string name="media_error_site">No downloadable video or audio resource was found. Jumlo supports direct media links and pages exposing HTML5 media files; dynamic or protected streams may not be available.</string>
+    <string name="media_error_private">This resource requires sign-in or private access. Use an authorized direct download provided by the source.</string>
     <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>
     <string name="media_error_removed">This media has been removed or is no longer available at the source URL.</string>
     <string name="media_error_drm">This media uses DRM protection and cannot be downloaded.</string>
-    <string name="media_error_session">This platform requires a login session or cookies. Tap Platform Login &amp; Cookies to sign in and retry.</string>
-    <string name="media_error_rate">The source rate-limited the request. Sign in via Platform Login &amp; Cookies or retry shortly.</string>
+    <string name="media_error_session">The source requires authentication. This downloader does not ask for passwords or import browser cookies.</string>
+    <string name="media_error_rate">The source is limiting requests. Try again later; repeated browser retries will not restore access.</string>
     <string name="media_error_network">A network or TLS error prevented reaching the source. Check connectivity and try again.</string>
     <string name="media_error_format">The selected format changed or is unavailable. Analyze the link again.</string>
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
     <string name="media_error_runtime">The media runtime is not available in this build or device ABI.</string>
     <string name="media_error_generic">Direct media download could not finish. Check the file URL, network and access permissions.</string>
-    <string name="media_browser_address">HTTPS address</string>
-    <string name="media_go">Go</string>
-    <string name="media_close_browser">Close</string>
-    <string name="media_analyze_page">Analyze page</string>
     <string name="media_found">Found (%1$d)</string>
-    <string name="media_browser_error">The page could not be opened securely.</string>
-    <string name="media_browser_scope">Authorized cookies remain on device and are used only for requests to their host.</string>
     <string name="media_candidates_note">Analyze a detected stream to inspect actual formats.</string>
     <string name="media_no_candidates">No media resource detected yet.</string>
     <string name="media_new_copy">Create an additional copy on the next download</string>
@@ -60,35 +53,23 @@
     <string name="media_select_type">1. Choose download type</string>
     <string name="media_select_quality">2. Choose quality &amp; format</string>
     <string name="media_pdf_original" formatted="false">Original PDF (100% full quality, no compression)</string>
-    <string name="media_pdf_recommended">Balanced PDF Compression (150 DPI · Smaller size)</string>
-    <string name="media_pdf_extreme">Maximum PDF Compression (96 DPI · Smallest size)</string>
+    <string name="media_pdf_recommended">Recommended PDF compression (preserve text and vectors)</string>
+    <string name="media_pdf_extreme">Smaller PDF (more image recompression, preserve text and vectors)</string>
     <string name="media_pdf_to_images">Download &amp; Convert PDF Pages to PNG Images</string>
     <string name="media_img_original" formatted="false">Original Image (100% quality)</string>
     <string name="media_img_compressed">Compressed Image (Smaller file size)</string>
     <string name="media_img_to_pdf">Convert Downloaded Image to PDF</string>
     <string name="media_switch_to_extractor">Inspect original audio/video file</string>
-    <string name="media_supported_platforms">Direct video and audio files, PDFs, images and Google Drive. Social pages are not extracted.</string>
+    <string name="media_supported_platforms">Direct files and HTML5 media sources. Downloading depends on source permission and accessibility.</string>
+    <string name="media_supported_platforms_extended">Public media pages and direct files. Available formats depend on the source and access permissions.</string>
     <string name="media_with_audio">With Audio</string>
     <string name="media_without_audio">No audio</string>
     <string name="media_video_only">Video</string>
-    <string name="media_session_btn">Platform Login, Cookies &amp; Headers</string>
-    <string name="media_session_active_badge">Session Active (%1$d)</string>
-    <string name="media_session_hub_title">Platform Login, Cookies &amp; Headers</string>
-    <string name="media_session_hub_subtitle">Cookies and headers may authorize direct file URLs. Social-page extraction is unavailable.</string>
-    <string name="media_session_active_domains">Saved session cookies for: %1$s</string>
-    <string name="media_session_clear">Clear All</string>
-    <string name="media_tab_webview_login">WebView Login</string>
-    <string name="media_tab_cookies_import">Cookies.txt</string>
-    <string name="media_tab_custom_headers">Headers &amp; UA</string>
-    <string name="media_session_save_and_retry">Save Login Cookies &amp; Re-Analyze Link</string>
-    <string name="media_cookies_import_hint">Paste Netscape cookies.txt content or raw Cookie headers (e.g. sessionid=...; csrftoken=...) to authenticate directly.</string>
-    <string name="media_cookies_input_label">Cookies (Netscape format or key=value)</string>
-    <string name="media_cookies_save_btn">Save Cookies &amp; Re-Analyze</string>
-    <string name="media_prefer_desktop_ua">Prefer Desktop Chrome User-Agent (recommended for Facebook, Instagram &amp; YouTube HD)</string>
-    <string name="media_custom_headers_label">Custom HTTP Headers (Key: Value per line)</string>
-    <string name="media_headers_save_btn">Save Custom Headers &amp; Re-Analyze</string>
     <string name="media_choose_quality_hint">Choose a quality above to download in the background.</string>
-    <string name="media_error_conversion">Audio transcoding to MP3 or another codec is unavailable in this lightweight build. Download the original audio file.</string>
-    <string name="media_direct_url_hint">Use a direct HTTPS media file URL (MP4, WebM, MP3, M4A) instead of a social media page.</string>
-    <string name="media_audio_not_probed">Audio track checked after download</string>
+    <string name="media_error_conversion">This source cannot be converted to the requested audio format. Try its original audio format.</string>
+    <string name="media_direct_url_hint">Try a direct downloadable media URL or an authorized page containing HTML5 video/audio files.</string>
+    <string name="media_audio_not_probed">Audio tracks checked after download</string>
+    <string name="media_restricted_hint">This link requires a login or its provider has restricted access. Jumlo will not request cookies or bypass protected content. Try an openly downloadable link.</string>
+    <string name="downloads_live_count">%1$d active</string>
+    <string name="downloads_completed_count">%1$d completed</string>
 </resources>

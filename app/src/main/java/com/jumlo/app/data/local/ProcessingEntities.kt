@@ -17,6 +17,7 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     @Query("SELECT * FROM sources WHERE uri=:uri ORDER BY rowid DESC LIMIT 1") suspend fun sourceByUri(uri:String):SourceEntity?
     @Query("SELECT * FROM sources ORDER BY rowid DESC") fun sources():Flow<List<SourceEntity>>
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun putSource(source:SourceEntity)
+    @Query("DELETE FROM sources WHERE id=:id") suspend fun deleteSource(id:String):Int
     @Query("UPDATE sources SET readable=0 WHERE id=:id") suspend fun accessLost(id:String)
     @Insert(onConflict=OnConflictStrategy.IGNORE) suspend fun insertJob(job:JobEntity):Long
     @Query("SELECT * FROM jobs WHERE id=:id") suspend fun job(id:String):JobEntity?

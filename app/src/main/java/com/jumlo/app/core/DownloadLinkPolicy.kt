@@ -83,6 +83,11 @@ object DownloadLinkPolicy {
     fun requiresMediaExtractor(url: String): Boolean =
         detectPlatformName(url)?.let { it != "Google Drive" } == true
 
+    /** Route non-direct public pages into inspect/probe; the media workspace still
+     * probes direct files with no extension before trying a supported page extractor. */
+    fun prefersMediaAnalysis(url: String): Boolean =
+        requiresMediaExtractor(url) || (!isDirect(url) && !isGoogleDriveDownload(url))
+
     fun isDirect(url: String): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
         if (uri.scheme?.lowercase(Locale.ROOT) !in setOf("http", "https")) return false

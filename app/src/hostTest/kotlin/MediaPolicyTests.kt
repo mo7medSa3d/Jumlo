@@ -112,6 +112,17 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         fail("INVALID_URL") { MediaLinks.normalize("https://u:p@example.test/file") }
         check(MediaLinks.normalize("http://example.test/file",true).startsWith("http:"))
     }
+    test("sharing social posts extracts more than one real link from surrounding prose") {
+        val message = "Video A: https://example.test/clip?id=1\nVideo B (https://media.test/short/2).\nVideo A again: https://example.test/clip?id=1"
+        check(MediaLinks.sharedUrls(message) == listOf("https://example.test/clip?id=1", "https://media.test/short/2"))
+    }
+    test("share URL parser rejects local networks, credentials and runaway batches") {
+        check(MediaLinks.sharedUrls("Hello, no URLs here.").isEmpty())
+        check(MediaLinks.sharedUrls("Ignore https://127.0.0.1/private and https://user:pass@evil.test/file; keep https://example.test/allowed") == listOf("https://example.test/allowed"))
+        val big=(0..100).joinToString(" ") { "https://example.test/clip/$it" }
+        fail("TOO_MANY_DOWNLOAD_URLS") { MediaLinks.sharedUrls(big) }
+        fail("INVALID_DOWNLOAD_LIST") { MediaLinks.sharedUrls("x".repeat(100001)) }
+    }
     test("media probe arguments do not download, execute a shell or bypass TLS") {
         val args=MediaArguments.probe("https://example.test/watch?v=hello&x=world")
         check("--dump-single-json" in args && "--skip-download" in args && "--ignore-config" in args)
@@ -139,6 +150,31 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         val args=MediaArguments.download("https://example.test/video",c,AudioOutput.ORIGINAL)
         check(args[args.indexOf("--audio-format")+1]=="best" && "--audio-quality" !in args)
         fail("INVALID_AUDIO_BITRATE") { MediaArguments.download("https://example.test/video",c,AudioOutput.MP3,999) }
+    }
+    test("known social platform pages prioritize the full extractor but direct files stay native") {
+        for (url in listOf(
+            "https://www.youtube.com/watch?v=abc", "https://youtu.be/xyz", "https://www.instagram.com/reel/xyz/",
+            "https://m.tiktok.com/@user/video/123", "https://www.facebook.com/watch/",
+            "https://www.linkedin.com/posts/someone_123", "https://vimeo.com/123",
+            "https://soundcloud.com/a/b", "https://www.reddit.com/r/a/comments/ab/")) {
+            check(MediaEngineRouting.preferExtractor(url)) { url }
+        }
+        check(!MediaEngineRouting.preferExtractor("https://cdn.example.org/video.mp4"))
+        check(!MediaEngineRouting.preferExtractor("https://youtube.com.fake.site/watch"))
+        check(!MediaEngineRouting.preferExtractor("https://example.net/?url=https://youtube.com"))
+    }
+    test("native candidate choices never route a file into a webpage extractor") {
+        val original=MediaFormat("source","mp4","direct","none")
+        check(MediaEngineRouting.isNativeChoice(MediaChoice("x",MediaMode.VIDEO,listOf(original),"mp4",false,null,null,false)))
+        check(!MediaEngineRouting.isNativeChoice(MediaChoice("x",MediaMode.VIDEO,listOf(muxed),"mp4",false,360,null,false)))
+        check(!MediaEngineRouting.isNativeChoice(MediaChoice("x",MediaMode.VIDEO,listOf(original.copy(id="source",videoCodec="avc1")),"mp4",false,null,null,false)))
+    }
+    test("public fallback never retries private paywalled or rate-limited sources") {
+        check(MediaEngineRouting.canUseAlternate("MEDIA_SITE_UNSUPPORTED"))
+        check(!MediaEngineRouting.canUseAlternate("MEDIA_SESSION_REQUIRED"))
+        check(!MediaEngineRouting.canUseAlternate("MEDIA_PRIVATE_CONTENT"))
+        check(!MediaEngineRouting.canUseAlternate("MEDIA_RATE_LIMITED"))
+        check(!MediaEngineRouting.canUseAlternate("HTTP_403"))
     }
     test("output publication rejects partial files and ambiguous multiple outputs") {
         val root=Files.createTempDirectory("uu-media-output-").toFile()

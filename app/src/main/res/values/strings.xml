@@ -346,4 +346,19 @@
     <string name="home_active_tasks_title">Active Tasks in Progress</string>
     <string name="media_rights_confirmation">I confirm I have rights to download this content and will follow the platform terms.</string>
     <string name="media_rights_required">Confirm your rights and the platform terms first.</string>
+    <!-- Customer-grade batch result workflows; output selection never edits originals. -->
+    <string name="home_favorite_results">Pinned files</string>
+    <string name="files_workflow_incompatible">These files can’t be combined with this tool. Select only PDFs for merge or only images for image-to-PDF.</string>
+    <string name="files_workflow_missing">A selected result is missing or has changed. Refresh Files and try again; originals were not modified.</string>
+    <string name="files_workflow_size">The selected files may exceed available device storage. Free up space and try again; originals are unchanged.</string>
+    <string name="files_workflow_invalid">Some selected files could not be prepared. Refresh Files and choose accessible files again.</string>
+    <string name="files_workflow_limit">Select up to 1,000 files in one batch. Larger sets can be processed in more than one job.</string>
+    <string name="files_workflow_duplicates">The same file was selected twice. Please choose unique results.</string>
+    <string name="files_favorites">Favorites</string>
+    <string name="files_mark_favorite">Add to favorites</string>
+    <string name="files_unmark_favorite">Remove from favorites</string>
+    <string name="files_bundle_selected">Make ZIP (%1$d)</string>
+    <string name="files_merge_selected">Merge PDFs (%1$d)</string>
+    <string name="files_images_to_pdf_selected">Images to PDF (%1$d)</string>
+    <string name="files_batch_tool_hint">Choose files and create a PDF or ZIP without re-importing.</string>
 </resources>

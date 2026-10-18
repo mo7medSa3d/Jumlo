@@ -136,7 +136,7 @@ class MediaOperationHandler @Inject constructor(
                 if (expected != null && height != null) {
                     val matchesHeight = abs(height - expected) <= 32
                     val matchesWidth = width != null && abs(width - expected) <= 32
-                    require(matchesHeight || matchesWidth || height > 0) { "MEDIA_QUALITY_MISMATCH" }
+                    require(matchesHeight || matchesWidth) { "MEDIA_QUALITY_MISMATCH" }
                 }
             } else require(audio && !video) { "MEDIA_AUDIO_EXTRACTION_FAILED" }
             return OutputMetadata(width=width,height=height)

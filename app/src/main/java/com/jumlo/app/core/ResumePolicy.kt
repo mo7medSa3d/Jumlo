@@ -20,7 +20,9 @@ object ResumePolicy {
         if(validator==null && modified.isNullOrBlank()) restart()
         if(status!=206) restart()
         val r=range(headers["content-range"]) ?: restart()
-        if(r.start!=offset || (total!=null && r.total!=total)) restart()
+        // A resumed 206 must identify the full object length. An arbitrary byte
+        // slice (Content-Range: bytes 5-9/*) cannot establish completion.
+        if(r.start!=offset || r.total==null || (total!=null && r.total!=total)) restart()
         if(validator!=null && headers["etag"]!=validator) restart()
         if(validator==null && headers["last-modified"]!=modified) restart()
         val length=headers["content-length"]?.toLongOrNull()

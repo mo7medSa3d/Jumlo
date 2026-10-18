@@ -77,10 +77,14 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
     }
 }
 
-@Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null) {
+@Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null,isFavorite:Boolean=false,onFavorite:(()->Unit)?=null) {
     val summary = "${formatOutputSizeSummary(output)} · ${output.mimeType}"
     FileMenuRow(output.displayName,summary,onOpen,selection=selection,onSelect=onSelect) {close->
         DropdownMenuItem(text={Text(stringResource(R.string.action_open))},onClick={close();onOpen()})
+        if(onFavorite!=null) DropdownMenuItem(
+            text={Text(stringResource(if(isFavorite) R.string.files_unmark_favorite else R.string.files_mark_favorite))},
+            leadingIcon={Icon(if(isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,null)},
+            onClick={close();onFavorite()})
         if(onDetails!=null) DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={close();onDetails()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={close();onShare()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={close();onExport()})

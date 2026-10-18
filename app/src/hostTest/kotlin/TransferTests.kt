@@ -89,6 +89,39 @@ fun transferTests(test:(String,()->Unit)->Unit) {
         val result=StreamTransfer(transport).execute(TransferRequest("$base/resume",out,5,"\"v1\"",knownTotalBytes=10,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,finalUrlSha256=fingerprint("$base/resume")))
         check(result.bytes==10L && out.readText()=="0123456789")
     } }
+    test("resume derives the whole object length from Content-Range when journal lacked size") { fixture { base,dir ->
+        val out=File(dir,"unknown-total.part"); out.writeText("01234")
+        val result=StreamTransfer(transport).execute(TransferRequest("$base/resume",out,5,"\"v1\"",knownTotalBytes=null,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,finalUrlSha256=fingerprint("$base/resume")))
+        check(result.bytes==10L && result.totalBytes==10L && out.readText()=="0123456789")
+    } }
+    test("resuming a bounded partial range never reports a truncated file as complete") {
+        val dir=Files.createTempDirectory("jumlo-partial-range-").toFile()
+        try {
+            val out=File(dir,"partial.part").apply { writeText("01234") }
+            val sliced=object:HttpTransport {
+                override fun open(url:String,headers:Map<String,String>)=TransportResponse(206,
+                    mapOf("content-range" to "bytes 5-6/10", "content-length" to "2", "etag" to "\"v1\""),
+                    ByteArrayInputStream("56".toByteArray()))
+            }
+            val error=runCatching { StreamTransfer(sliced).execute(TransferRequest("https://example.org/file",out,5,"\"v1\"",knownTotalBytes=null,minFreeBytes=0,maxRetries=0,finalUrlSha256=fingerprint("https://example.org/file"))) }.exceptionOrNull()
+            check(error is IOException) { "Expected truncated-content failure, got $error" }
+            check(out.readText()=="0123456")
+        } finally { dir.deleteRecursively() }
+    }
+    test("resume rejects an unknown representation total rather than publishing an arbitrary slice") {
+        val dir=Files.createTempDirectory("jumlo-range-unknown-").toFile()
+        try {
+            val out=File(dir,"partial.part").apply { writeText("01234") }
+            val unknown=object:HttpTransport {
+                override fun open(url:String,headers:Map<String,String>)=TransportResponse(206,
+                    mapOf("content-range" to "bytes 5-9/*", "content-length" to "5", "etag" to "\"v1\""),
+                    ByteArrayInputStream("56789".toByteArray()))
+            }
+            val error=runCatching { StreamTransfer(unknown).execute(TransferRequest("https://example.org/file",out,5,"\"v1\"",minFreeBytes=0,maxRetries=0,finalUrlSha256=fingerprint("https://example.org/file"))) }.exceptionOrNull()
+            check(error is RestartRequired) { "Expected unknown-total restart, got $error" }
+            check(out.readText()=="01234")
+        } finally { dir.deleteRecursively() }
+    }
     test("real changed ETag leaves prior partial bytes untouched") { fixture { base,dir ->
         val out=File(dir,"a.part"); out.writeText("01234"); var rejected=false
         try { StreamTransfer(transport).execute(TransferRequest("$base/changed",out,5,"\"v1\"",knownTotalBytes=10,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,finalUrlSha256=fingerprint("$base/changed"))) } catch(_:RestartRequired) { rejected=true }

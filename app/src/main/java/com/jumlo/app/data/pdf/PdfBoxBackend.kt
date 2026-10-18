@@ -1,5 +1,6 @@
 package com.jumlo.app.data.pdf
 
+import com.jumlo.app.core.PageTextComparison
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSDictionary
@@ -84,11 +85,11 @@ object PdfCapabilityPolicy {
  */
 object PdfBoxBackend {
 
-    fun open(file: File, password: CharArray?): PDDocument = PDDocument.load(file, password?.let { String(it) } ?: "")
+    fun open(file: File, password: CharArray?): PDDocument =
+        PDDocument.load(file, password?.let { String(it) } ?: "", MemoryUsageSetting.setupTempFileOnly())
 
     fun info(doc: PDDocument): PdfInfo {
-        val pages = doc.pages.toList()
-        val boxes = pages.map { page ->
+        val boxes = doc.pages.map { page ->
             val media = page.mediaBox
             val crop = page.cropBox ?: media
             PageBox(
@@ -97,23 +98,32 @@ object PdfBoxBackend {
                 page.rotation
             )
         }
-        val texts = pageTexts(doc)
-        val blank = texts.isEmpty() || texts.none { it.isNotBlank() }
+        // Probe on demand; never materialize every page's extracted text for a
+        // potentially many-thousand-page document just to classify it.
+        val hasText = (0 until doc.numberOfPages).any { pageText(doc,it).isNotBlank() }
+        val blank = !hasText
         val warnings = mutableListOf<String>()
         if (doc.isEncrypted) warnings += "WARNING_DOCUMENT_IS_ENCRYPTED"
         if (texts.isNotEmpty() && blank) warnings += "WARNING_NO_SELECTABLE_TEXT"
-        return PdfInfo(pages.size, boxes, !blank, PdfCapabilityPolicy.capabilities, warnings)
+        return PdfInfo(doc.numberOfPages, boxes, !blank, PdfCapabilityPolicy.capabilities, warnings)
     }
 
-    fun pageTexts(doc: PDDocument): List<String> {
-        val stripper = PDFTextStripper()
-        stripper.sortByPosition = false
-        return (0 until doc.pages.count).map { index ->
-            stripper.startPage = index + 1
-            stripper.endPage = index + 1
-            stripper.getText(doc).trim()
-        }
+    fun pageText(doc: PDDocument, zeroBasedIndex: Int): String {
+        require(zeroBasedIndex in 0 until doc.numberOfPages) { "INVALID_PAGE_INDEX" }
+        return PDFTextStripper().apply {
+            sortByPosition = false
+            startPage = zeroBasedIndex + 1
+            endPage = zeroBasedIndex + 1
+        }.getText(doc).trim()
     }
+
+    // Retained for bounded consumers that explicitly need every page's text.
+    fun pageTexts(doc: PDDocument): List<String> = (0 until doc.numberOfPages).map { pageText(doc,it) }
+
+    /** Redaction verification must inspect every page but must not concatenate
+     * a possibly multi-GB extracted text stream in memory. */
+    fun containsText(doc: PDDocument, needle: String): Boolean =
+        PageTextComparison.anyPageContains(doc.numberOfPages, needle) { pageText(doc,it) }
 
     fun merge(inputs: List<PdfInput>, out: File) {
         require(inputs.isNotEmpty()) { "NO_PDF_INPUTS" }
@@ -124,11 +134,12 @@ object PdfBoxBackend {
     }
 
     fun split(doc: PDDocument, groups: List<PageGroup>, destinations: List<File>): List<File> {
-        val pages = doc.pages.toList()
+        val pageCount = doc.numberOfPages
         require(groups.isNotEmpty() && groups.size == destinations.size) { "INVALID_SPLIT_GROUPS" }
         return groups.mapIndexed { index, group ->
-            require(group.first >= 0 && group.count > 0 && group.first + group.count <= pages.size) { "INVALID_SPLIT_GROUP" }
-            writeAssembled(pages.subList(group.first, group.first + group.count).map { it to 0 }, destinations[index])
+            require(group.first >= 0 && group.count > 0 && group.first.toLong() + group.count <= pageCount) { "INVALID_SPLIT_GROUP" }
+            val pages = (group.first until group.first + group.count).map { doc.getPage(it) to 0 }
+            writeAssembled(pages, destinations[index])
         }
     }
 
@@ -138,28 +149,28 @@ object PdfBoxBackend {
     }
 
     fun organize(doc: PDDocument, ops: List<OrganizeOp>, out: File) {
-        val pages = doc.pages.toList()
-        require(ops.isNotEmpty() && ops.all { it.sourceIndex in pages.indices }) { "INVALID_PAGE_INDEX" }
-        writeAssembled(ops.map { op -> pages[op.sourceIndex] to op.rotationDegrees }, out)
+        val pageCount = doc.numberOfPages
+        require(ops.isNotEmpty() && ops.all { it.sourceIndex in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
+        writeAssembled(ops.map { op -> doc.getPage(op.sourceIndex) to op.rotationDegrees }, out)
     }
 
     fun insert(doc: PDDocument, other: PdfInput, atZeroIndex: Int, out: File) {
         require(atZeroIndex in 0..doc.pages.count) { "INVALID_INSERT_POSITION" }
-        val source = open(other.file, other.password)
-        try {
-            val imported = (0 until source.pages.count).map { source.getPage(it) }
-            val ordered = mutableListOf<Pair<PDPage, Int>>()
-            doc.pages.toList().forEachIndexed { index, page ->
-                if (index == atZeroIndex) imported.forEach { ordered += it to 0 }
-                ordered += page to 0
+        open(other.file, other.password).use { source ->
+            PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { target ->
+                for (index in 0..doc.numberOfPages) {
+                    if (index == atZeroIndex) {
+                        for (otherIndex in 0 until source.numberOfPages) target.importPage(source.getPage(otherIndex))
+                    }
+                    if (index < doc.numberOfPages) target.importPage(doc.getPage(index))
+                }
+                target.save(out)
             }
-            if (atZeroIndex == doc.pages.count) imported.forEach { ordered += it to 0 }
-            writeAssembled(ordered, out)
-        } finally { source.close() }
+        }
     }
 
     private fun writeAssembled(ordered: List<Pair<PDPage, Int>>, out: File): File {
-        PDDocument().use { target ->
+        PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { target ->
             ordered.forEach { (page, _) -> target.importPage(page) }
             ordered.forEachIndexed { index, (_, degrees) -> rotateInside(target.getPage(index), degrees) }
             target.save(out)
@@ -322,8 +333,8 @@ object PdfBoxBackend {
         require(maxDpi in 36..600) { "INVALID_COMPRESS_SETTINGS" }
         require(jpegQuality in 0..100) { "INVALID_COMPRESS_SETTINGS" }
         var replaced = 0
-        val pages = doc.pages.toList()
-        pages.forEachIndexed { pageIndex, page ->
+        val pageCount = doc.numberOfPages
+        doc.pages.forEachIndexed { pageIndex, page ->
             val resources = page.resources
             if (resources != null) {
                 val media = page.mediaBox
@@ -340,7 +351,7 @@ object PdfBoxBackend {
                     replaced++
                 }
             }
-            onPage?.invoke(pageIndex + 1, pages.size)
+            onPage?.invoke(pageIndex + 1, pageCount)
         }
         return replaced
     }
@@ -353,6 +364,13 @@ object PdfBoxBackend {
         jpegQuality: Int
     ): PDImageXObject? = runCatching {
         val originalLength = (image.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
+        // Never decode an unbounded scan into an ARGB bitmap. Large assets remain
+        // untouched rather than risking process death or corrupting the output.
+        if (!PdfCompressionPolicy.canDecodeImage(image.width, image.height, Runtime.getRuntime().maxMemory())) return null
+        // JPEGFactory does not preserve transparency/masks: keep those XObjects intact.
+        val dict = image.cosObject as? COSDictionary ?: return null
+        if (dict.getDictionaryObject(COSName.SMASK) != null ||
+            dict.getDictionaryObject(COSName.MASK) != null) return null
         val bitmap = image.image ?: return null
         try {
             val scale = minOf(1.0, minOf(maxWidth.toDouble() / bitmap.width.coerceAtLeast(1), maxHeight.toDouble() / bitmap.height.coerceAtLeast(1)))
@@ -520,16 +538,13 @@ object PdfBoxBackend {
     fun compareText(a: PDDocument, b: PDDocument): CompareResult = compare(a, b)
 
     fun compare(a: PDDocument, b: PDDocument): CompareResult {
-        val aTexts = pageTexts(a)
-        val bTexts = pageTexts(b)
-        if (aTexts.size != bTexts.size) return CompareResult(aTexts.size, bTexts.size, CompareVerdict.DIFFERENT, null)
-        aTexts.forEachIndexed { index, aText ->
-            if (normalize(aText) != normalize(bTexts[index])) return CompareResult(aTexts.size, bTexts.size, CompareVerdict.DIFFERENT, index + 1)
-        }
-        return CompareResult(aTexts.size, bTexts.size, CompareVerdict.SAME, null)
+        val countA = a.numberOfPages
+        val countB = b.numberOfPages
+        if (countA != countB) return CompareResult(countA,countB,CompareVerdict.DIFFERENT,null)
+        val first = PageTextComparison.firstMismatch(countA,
+            left = { pageText(a,it) }, right = { pageText(b,it) })
+        return CompareResult(countA,countB,if(first == null) CompareVerdict.SAME else CompareVerdict.DIFFERENT,first)
     }
-
-    private fun normalize(text: String): String = text.split(Regex("\\s+")).joinToString(" ").trim()
 
     /**
      * Operator-level redaction: removes text-showing operands, fully-covered images and
@@ -541,7 +556,7 @@ object PdfBoxBackend {
         var removedImages = 0
         val fallbacks = mutableListOf<Int>()
         val fragments = mutableMapOf<Int, Set<String>>()
-        doc.pages.toList().forEachIndexed { pageIndex, page ->
+        doc.pages.forEachIndexed { pageIndex, page ->
             val regions = regionsByPage[pageIndex].orEmpty()
             if (regions.isEmpty()) return@forEachIndexed
             val media = page.mediaBox
@@ -571,10 +586,10 @@ object PdfBoxBackend {
 
     private fun leftoverAfterRedact(doc: PDDocument, fragments: Map<Int, Set<String>>): Map<Int, List<String>> {
         if (fragments.isEmpty()) return emptyMap()
-        val texts = pageTexts(doc)
         val leftover = mutableMapOf<Int, List<String>>()
         fragments.forEach { (page, words) ->
-            val text = texts.getOrNull(page) ?: return@forEach
+            if (page !in 0 until doc.numberOfPages) return@forEach
+            val text = pageText(doc,page)
             val stuck = words.filter { it.isNotBlank() && text.contains(it) }
             if (stuck.isNotEmpty()) leftover[page] = stuck
         }
@@ -744,7 +759,7 @@ object PdfBoxBackend {
 
     private fun stripAnnotations(doc: PDDocument, regionsByPage: Map<Int, List<RedactRegion>>): Int {
         var removed = 0
-        doc.pages.toList().forEachIndexed { pageIndex, page ->
+        doc.pages.forEachIndexed { pageIndex, page ->
             val regions = regionsByPage[pageIndex].orEmpty()
             if (regions.isEmpty()) return@forEachIndexed
             val media = page.mediaBox

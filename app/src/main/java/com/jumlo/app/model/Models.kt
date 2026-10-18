@@ -121,6 +121,8 @@ data class AppSettingsState(
     val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_media"),
     val recentToolIds: List<String> = emptyList(),
     val mostUsedToolIds: List<String> = emptyList(),
+    /** Local only; UUIDs of outputs pinned by the user, not cloud identities. */
+    val favoriteOutputIds: Set<String> = emptySet(),
     /** The initial ViewModel placeholder is never presented as a saved preference. */
     val isLoaded: Boolean = false
 )

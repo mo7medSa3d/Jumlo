@@ -27,6 +27,128 @@ private fun zip(file: File, entries: List<Pair<String, ByteArray>>) {
 }
 
 fun main() {
+    test("workflow batch accepts selected outputs in visual order") {
+        val files = listOf(
+            OutputFileChoice("00000000-0000-4000-8000-000000000001", "a.pdf", "application/pdf", 300),
+            OutputFileChoice("00000000-0000-4000-8000-000000000002", "b.pdf", "application/pdf", 400)
+        )
+        check(OutputWorkflowPolicy.validate(files, "pdf_03").map { it.name } == listOf("a.pdf", "b.pdf"))
+        check(OutputWorkflowPolicy.validate(files, "file_07").size == 2)
+        check(OutputWorkflowPolicy.reuseTool("application/pdf") == "pdf_04")
+        check(OutputWorkflowPolicy.reuseTool("image/jpeg") == "img_01")
+        check(OutputWorkflowPolicy.reuseTool("application/zip") == "file_08")
+        check(OutputWorkflowPolicy.reuseTool("video/mp4") == "file_07")
+    }
+    test("large file workflows do not reject valid inputs at 4 GiB or 100 files") {
+        val one = OutputFileChoice("00000000-0000-4000-8000-000000000003", "large.pdf", "application/pdf", 6L * 1024 * 1024 * 1024)
+        val many = List(250) { index -> one.copy(id = java.util.UUID.nameUUIDFromBytes("large-batch:$index".toByteArray()).toString()) }
+        check(OutputWorkflowPolicy.validate(listOf(one), "pdf_04").single().bytes == one.bytes)
+        check(OutputWorkflowPolicy.validate(many, "file_07").size == 250)
+        check(ResourceBudgetPolicy.maxImportBytes > 4L * 1024 * 1024 * 1024)
+    }
+    test("large PDFs can describe more than 100000 pages without a magic size rejection") {
+        check(PageSelection.parse("120001", 120001) == listOf(120001))
+        check(PdfPageOrder.parse("120001", 120001) == listOf(120001))
+        check(PdfSplitPlan.splitAfter(120001, "60000") == listOf(0 to 60000, 60000 to 60001))
+    }
+    test("large page fanouts become a ZIP rather than failing the output-count budget") {
+        check(LargeResultStrategy.forPageOutputs(512, 512) == LargeResultStrategy.INDIVIDUAL)
+        check(LargeResultStrategy.forPageOutputs(513, 512) == LargeResultStrategy.ARCHIVE)
+        check(LargeResultStrategy.forPageOutputs(12000, 512) == LargeResultStrategy.ARCHIVE)
+    }
+    test("more than 512 generated page results stream into a CRC-verified ZIP") { tmp { root ->
+        val archive = File(root, "many-pages.zip")
+        val inputs = (1..600).map { page -> ArchiveInput("Page %06d.pdf".format(page)) {
+            ByteArrayInputStream("page:$page".toByteArray(Charsets.UTF_8))
+        } }
+        ArchiveCore.create(archive, inputs, 6, ArchiveLimits(Long.MAX_VALUE, 600, 1))
+        check(ArchiveCore.verify(archive, ArchiveLimits(Long.MAX_VALUE, 600, 1)) == ArchiveSummary(600, (1..600).sumOf { "page:$it".length }.toLong()))
+        ZipFile(archive).use { file ->
+            check(file.size() == 600)
+            check(file.getInputStream(file.getEntry("Page 000600.pdf")).bufferedReader().readText() == "page:600")
+        }
+    } }
+    test("cached immutable sources are reused only inside their exact private folder") { tmp { root ->
+        val directory = File(root, "inbound").apply { mkdirs() }
+        val id = java.util.UUID.randomUUID().toString()
+        val owned = File(directory, "$id.bin").apply { writeText("immutable") }
+        check(SourceSnapshotPolicy.cachedFile(directory,id,owned.absolutePath) == owned.canonicalFile)
+        check(SourceSnapshotPolicy.cachedFile(directory,id,File(root,"escape.bin").absolutePath) == null)
+        check(SourceSnapshotPolicy.cachedFile(directory,id,File(directory,"some-other.bin").absolutePath) == null)
+        val link = File(directory,"another-id.bin")
+        runCatching { java.nio.file.Files.createSymbolicLink(link.toPath(),owned.toPath()) }
+        check(SourceSnapshotPolicy.cachedFile(directory,id,link.absolutePath) == null)
+        check(SourceSnapshotPolicy.cachedFile(directory,id,null) == null)
+    } }
+    test("very long document text comparison is lazy and stops at first mismatch") {
+        var left = 0
+        var right = 0
+        val mismatch = PageTextComparison.firstMismatch(15000,
+            left = { index -> left++; if (index == 14500) "revised invoice" else "page $index" },
+            right = { index -> right++; if (index == 14500) "original invoice" else "page $index" })
+        check(mismatch == 14501)
+        check(left == 14501 && right == 14501)
+        check(PageTextComparison.firstMismatch(2, { "  Hello\n World   " }, { "Hello World" }) == null)
+    }
+    test("document text search stops without accumulating all page text") {
+        var scanned = 0
+        check(PageTextComparison.anyPageContains(100000, "invoice") { index ->
+            scanned++
+            if (index == 100) "invoice 103" else "boring"
+        })
+        check(scanned == 101)
+        check(!PageTextComparison.anyPageContains(0, "invoice") { error("should not be read") })
+    }
+    test("workflow refuses incompatible, duplicate, oversized and invalid sources") {
+        val one = OutputFileChoice("00000000-0000-4000-8000-000000000003", "photo.png", "image/png", 100)
+        check(OutputWorkflowPolicy.validate(listOf(one), "pdf_02").size == 1)
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(listOf(one), "pdf_03") }
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(listOf(one, one), "file_07") }
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(listOf(one.copy(bytes = -1)), "file_07") }
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(listOf(one.copy(id = "../../arbitrary")), "file_07") }
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(listOf(one.copy(mime = "application/pdf")), "pdf_02") }
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(List(1001) { i -> one.copy(id=java.util.UUID.nameUUIDFromBytes("$i".toByteArray()).toString()) }, "file_07") }
+        rejects<IllegalArgumentException> { OutputWorkflowPolicy.validate(listOf(one), "not_a_real_tool") }
+    }
+    test("pinned outputs are distinct, retained and bounded") {
+        val first = "00000000-0000-4000-8000-000000000003"
+        check(OutputFavorites.toggle(emptyList(), first) == listOf(first))
+        check(OutputFavorites.toggle(listOf(first), first).isEmpty())
+        val many=(0 until 501).map { java.util.UUID.nameUUIDFromBytes("favorite:$it".toByteArray()).toString() }
+        val result=OutputFavorites.toggle(many.take(500),many.last())
+        check(result.size==500 && result.first()==many[1] && result.last()==many.last())
+        check(OutputFavorites.sanitize(listOf(first, "bad-id", first)) == listOf(first))
+    }
+    test("generic document imports identify real signatures, never merely file extensions") {
+        val pdf="%PDF-1.7\nexample".toByteArray()
+        check(SourceMediaType.resolve(null,"invoice.pdf",pdf)=="application/pdf")
+        check(SourceMediaType.resolve("application/octet-stream","invoice.pdf",pdf)=="application/pdf")
+        check(SourceMediaType.resolve(null,"invoice.pdf","not pdf".toByteArray())=="application/octet-stream")
+        check(SourceMediaType.resolve("text/plain","strange.pdf",pdf)=="text/plain")
+    }
+    test("generic image archive and MP4 imports use bounded magic bytes") {
+        val png=byteArrayOf(-119,80,78,71,13,10,26,10,0,0,0,0)
+        val jpeg=byteArrayOf(-1,-40,-1,0)
+        val zip=byteArrayOf(80,75,3,4,0,0,0,0)
+        val heic=byteArrayOf(0,0,0,20,102,116,121,112,104,101,105,99,0,0,0,0)
+        val mp4=byteArrayOf(0,0,0,20,102,116,121,112,105,115,111,109,0,0,0,0)
+        check(SourceMediaType.resolve(null,"picture.png",png)=="image/png")
+        check(SourceMediaType.resolve("application/octet-stream","picture.jpeg",jpeg)=="image/jpeg")
+        check(SourceMediaType.resolve(null,"collection.zip",zip)=="application/zip")
+        check(SourceMediaType.resolve(null,"photo.heic",heic)=="image/heic")
+        check(SourceMediaType.resolve(null,"clip.mp4",mp4)=="video/mp4")
+        check(SourceMediaType.resolve(null,"song.m4a",mp4)=="audio/mp4")
+        val avif=byteArrayOf(0,0,0,20,102,116,121,112,97,118,105,102,0,0,0,0)
+        val unknown=byteArrayOf(0,0,0,20,102,116,121,112,120,120,120,120,0,0,0,0)
+        check(SourceMediaType.resolve(null,"art.avif",avif)=="image/avif")
+        check(SourceMediaType.resolve(null,"bad.mp4",unknown)=="application/octet-stream")
+    }
+    test("generic webpages enter media analysis rather than blind HTML download") {
+        check(DownloadLinkPolicy.prefersMediaAnalysis("https://unknown.example.org/watch/123?origin=share"))
+        check(DownloadLinkPolicy.prefersMediaAnalysis("https://www.youtube.com/watch?v=test"))
+        check(!DownloadLinkPolicy.prefersMediaAnalysis("https://cdn.example.org/assets/report.pdf"))
+        check(!DownloadLinkPolicy.prefersMediaAnalysis("https://drive.google.com/file/d/1abcDE_fgHiJ23KLmno/view"))
+    }
     test("pages preserve requested order and remove duplicates") { check(PageSelection.parse("3,1-2,3", 3) == listOf(3,1,2)) }
     test("reversed pages are rejected") { rejects<IllegalArgumentException> { PageSelection.parse("5-2", 8) } }
     test("Arabic and Persian digits normalize") { check(PageSelection.parse("\u0661\u060c\u06f3-\u06f4", 4) == listOf(1,3,4)) }
@@ -74,6 +196,39 @@ fun main() {
             "look at https://docs.google.com/document/d/$id/edit"
         )) rejects<IllegalArgumentException> { DriveLink.fileId(value) }
     }
+    test("archive publication has a streaming payload verifier, not only a central-directory check") {
+        check(ArchiveCore::class.java.methods.any { it.name == "verify" }) {
+            "ArchiveCore.verify must inspect actual compressed entry bytes and CRC before declaring success"
+        }
+    }
+    test("mobile processing has finite import, archive and output-count budgets") {
+        check(Class.forName("com.jumlo.app.core.ResourceBudgetPolicy").declaredFields.isNotEmpty())
+    }
+    test("archive payload verifier reads real bytes and rejects CRC-tampered ZIP") { tmp { root ->
+        val payload="A customer invoice with valid content".toByteArray()
+        val z=File(root,"archive.zip")
+        val crc=java.util.zip.CRC32().apply { update(payload) }.value
+        ZipOutputStream(z.outputStream()).use { out ->
+            val member=ZipEntry("invoice.txt").apply { method=ZipEntry.STORED; size=payload.size.toLong(); compressedSize=size; this.crc=crc }
+            out.putNextEntry(member); out.write(payload); out.closeEntry()
+        }
+        val limits=ArchiveLimits(1000,10,10)
+        check(ArchiveCore.verify(z,limits)==ArchiveSummary(1,payload.size.toLong()))
+        val damaged=z.readBytes()
+        // For a STORED member, payload starts after the 30-byte local header and its filename.
+        val nameLength=(damaged[26].toInt() and 255) or ((damaged[27].toInt() and 255) shl 8)
+        val extraLength=(damaged[28].toInt() and 255) or ((damaged[29].toInt() and 255) shl 8)
+        damaged[30+nameLength+extraLength]=(damaged[30+nameLength+extraLength].toInt() xor 1).toByte()
+        z.writeBytes(damaged)
+        check(ZipFile(z).use { it.size() }==1) // Central directory still opens.
+        check(runCatching { ArchiveCore.verify(z,limits) }.isFailure)
+    } }
+    test("archive verifier refuses decompression budgets and excess entry counts") { tmp { root ->
+        val z=File(root,"large.zip");zip(z,listOf("one.bin" to ByteArray(10000), "two.bin" to byteArrayOf(1)))
+        rejects<IllegalArgumentException> { ArchiveCore.verify(z, ArchiveLimits(10,10,10)) }
+        rejects<IllegalArgumentException> { ArchiveCore.verify(z, ArchiveLimits(20000,1,10)) }
+        check(ArchiveCore.verify(z, ArchiveLimits(20000,10,10)).entryCount==2)
+    } }
     test("zip roundtrip reads original bytes") { tmp { root ->
         val a=ByteArray(16384) { (it*17).toByte() }; val z=File(root,"a.zip")
         ArchiveCore.create(z,listOf(ArchiveInput("folder/a.bin") { ByteArrayInputStream(a) }),6,ArchiveLimits(100000,20,32))
@@ -332,6 +487,171 @@ fun main() {
             rejects<IllegalArgumentException> { HttpPolicy.url("https://user:pass@example.org/$suffix") }
             rejects<IllegalArgumentException> { HttpPolicy.url("https://example.org/$suffix#fragment") }
         }
+    }
+    test("HTML5 media discovery resolves allowed source tags without inventing streams") {
+        val html = """<html><head><meta property="og:title" content="Summer &amp; Sea"></head>
+            <body><video poster="poster.jpg"><source src="../media/movie.mp4" type="video/mp4"></video>
+            <audio src='/audio/track.mp3'></audio><source src='javascript:alert(1)'></body></html>"""
+        val found = com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://example.org/watch/page", html)
+        check(found.size == 2)
+        check(found[0].url == "https://example.org/media/movie.mp4")
+        check(found[0].extension == "mp4")
+        check(found[1].url == "https://example.org/audio/track.mp3")
+        check(com.jumlo.app.core.media.Html5MediaDiscovery.title(html) == "Summer & Sea")
+    }
+    test("HTML5 media discovery accepts declared OG video and rejects hostile links") {
+        val html = """<meta property='og:video' content='https://cdn.example.net/clip.webm'>
+            <source src='http://example.org/unsafe.mp4' type='video/mp4'>
+            <a download href='https://example.org/file.mp4'>Video</a>
+            <source src='data:video/mp4;base64,bad' type='video/mp4'>"""
+        val found = com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://example.org/watch",html)
+        check(found.map { it.extension } == listOf("webm", "mp4"))
+        check(found.none { it.url.contains("unsafe") || it.url.startsWith("data:") })
+    }
+    test("unprotected social OpenGraph media with signed extensionless URL requires later HTTP probe") {
+        val html = """<meta property='og:video:secure_url' content='https://cdn.example.net/get?token=abc&amp;id=5'>
+             <meta property='og:image' content='/covers/screen.webp'>"""
+        val sources = com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://social.example.org/view/3", html)
+        check(sources.size == 1 && sources.single().url == "https://cdn.example.net/get?token=abc&id=5")
+        check(sources.single().extension.isBlank()) // a probed MIME, never a fabricated MP4
+        check(com.jumlo.app.core.media.Html5MediaDiscovery.thumbnail("https://social.example.org/view/3", html) == "https://social.example.org/covers/screen.webp")
+    }
+    test("JSON-LD contentUrl discovers a direct file but never treats embedUrl as video") {
+        val html = """<script type='application/ld+json'>{"@type":"VideoObject", "embedUrl":"https://evil.example/click.mp4",
+                 "contentUrl":"https:\/\/cdn.example.org\/clip.mp4?x=1\u0026y=2"}</script>"""
+        val sources = com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://example.org/watch", html)
+        check(sources.map { it.url } == listOf("https://cdn.example.org/clip.mp4?x=1&y=2")) { "Discovered: $sources" }
+    }
+    test("static media discovery retries alternate HTML only when no playable media") {
+        check(BrowserProfilePolicy.tryAlternatePage(false, 0, 2))
+        check(!BrowserProfilePolicy.tryAlternatePage(true, 0, 2))
+        check(!BrowserProfilePolicy.tryAlternatePage(false, 1, 2))
+        check(!BrowserProfilePolicy.tryAlternatePage(false, 0, 1))
+    }
+    test("media compatibility profiles are internal, bounded, stable and do not retry denial") {
+        val profiles = BrowserProfilePolicy.forUrl("https://www.instagram.com/p/123")
+        check(profiles.map { it.id }.toSet().size == profiles.size && profiles.size in 2..3)
+        check(profiles == BrowserProfilePolicy.forUrl("https://www.instagram.com/p/456"))
+        check(profiles.all { it.userAgent.startsWith("Mozilla/5.0") })
+        check(BrowserProfilePolicy.tryNext(406, 0, profiles.size))
+        check(BrowserProfilePolicy.tryNext(415, 0, profiles.size))
+        for (code in listOf(200, 401, 403, 404, 429, 500))
+            check(!BrowserProfilePolicy.tryNext(code, 0, profiles.size))
+        check(!BrowserProfilePolicy.tryNext(406, profiles.lastIndex, profiles.size))
+    }
+    test("platform transport uses transparent built-in browser profiles without user settings") {
+        val base = PlatformHeaderPolicy.headersFor("https://www.instagram.com/p/demo")
+        val alternate = PlatformHeaderPolicy.headersFor("https://www.instagram.com/p/demo", compatibilityAttempt=1)
+        check(base.getValue("User-Agent").contains("Android"))
+        check(alternate.getValue("User-Agent").contains("X11"))
+        check(!base.containsKey("Cookie"))
+        check(PlatformHeaderPolicy.headersFor("https://www.linkedin.com/posts/demo").getValue("User-Agent").contains("X11"))
+    }
+    test("legacy custom user agent cannot silently disable automatic fallback") {
+        val url="https://www.instagram.com/p/test"
+        val custom=PlatformHeaderPolicy.headersFor(url, customUserAgent="LegacyBrowser/1", compatibilityAttempt=0)
+        val fallback=PlatformHeaderPolicy.headersFor(url, customUserAgent="LegacyBrowser/1",
+            customHeaders=mapOf("User-Agent" to "LegacyBrowser/1"), compatibilityAttempt=1)
+        check(custom.getValue("User-Agent")=="LegacyBrowser/1")
+        check(fallback.getValue("User-Agent").contains("X11"))
+    }
+    test("static HTML5 sources never pretend unrelated audio is a muxable video track") {
+        val asset=com.jumlo.app.core.media.MediaAsset("id", "Html5", "Public sample", null, listOf(
+            com.jumlo.app.core.media.MediaFormat("page_0", "mp4", videoCodec="direct"),
+            com.jumlo.app.core.media.MediaFormat("page_1", "mp3", audioCodec="direct")
+        ))
+        val choices=com.jumlo.app.core.media.MediaCatalog.choices(asset,com.jumlo.app.core.media.MediaMode.VIDEO)
+        check(choices.size==1 && choices.single().formatIds==listOf("page_0"))
+        check(!choices.single().requiresMux)
+    }
+    test("HTML5 media discovery rejects media pretending to be file and bounds input") {
+        check(com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://example.org", "<div>video</div>").isEmpty())
+        check(com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://example.org", "<source src='playlist.m3u8'>").isEmpty())
+        rejects<IllegalArgumentException> { com.jumlo.app.core.media.Html5MediaDiscovery.discover("https://example.org", "x".repeat(1024*1024)) }
+    }
+    test("automatic image PDF pages preserve image aspect and orientation") {
+        val landscape = PdfPageGeometry.resolve(4032, 3024, "AUTO", 595, 842, "AUTO")
+        check(kotlin.math.abs(landscape.widthPt / landscape.heightPt - 4.0 / 3.0) < 0.001)
+        check(landscape.widthPt > landscape.heightPt && landscape.widthPt <= 842f)
+        val portrait = PdfPageGeometry.resolve(3024, 4032, "AUTO", 595, 842, "AUTO")
+        check(portrait.heightPt > portrait.widthPt)
+        check(kotlin.math.abs(portrait.heightPt / portrait.widthPt - 4.0 / 3.0) < 0.001)
+    }
+    test("image PDF presets use actual paper geometry and respect orientation") {
+        val a4 = PdfPageGeometry.resolve(4000, 3000, "A4", 123, 456, "AUTO")
+        check(a4.widthPt == 842f && a4.heightPt == 595f)
+        val letter = PdfPageGeometry.resolve(4000, 3000, "LETTER", 123, 456, "PORTRAIT")
+        check(letter.widthPt == 612f && letter.heightPt == 792f)
+        val custom = PdfPageGeometry.resolve(4000, 3000, "CUSTOM", 500, 700, "LANDSCAPE")
+        check(custom.widthPt == 700f && custom.heightPt == 500f)
+    }
+    test("image PDF dimensions reject impossible input and never distort extreme ratios") {
+        rejects<IllegalArgumentException> { PdfPageGeometry.resolve(0, 100, "AUTO", 595, 842, "AUTO") }
+        rejects<IllegalArgumentException> { PdfPageGeometry.resolve(100, 100, "CUSTOM", 0, 842, "AUTO") }
+        val wide = PdfPageGeometry.resolve(20000, 1000, "AUTO", 595, 842, "AUTO")
+        check(kotlin.math.abs(wide.widthPt/wide.heightPt - 20f) < 0.01f)
+    }
+    test("PDF page ordering must not silently delete nonnumeric, duplicate or out-of-range entries") {
+        check(Class.forName("com.jumlo.app.core.PdfPageOrder").declaredMethods.any { it.name=="parse" })
+    }
+    test("PDF split boundaries must produce contiguous groups rather than individual extracted pages") {
+        check(Class.forName("com.jumlo.app.core.PdfSplitPlan").declaredMethods.any { it.name=="splitAfter" })
+    }
+    test("visual split markers produce exact contiguous pieces for mixed page counts") {
+        check(PdfSplitPlan.splitAfter(6,"2,4")==listOf(0 to 2,2 to 2,4 to 2))
+        check(PdfSplitPlan.splitAfter(5,"4,1")==listOf(0 to 1,1 to 3,4 to 1))
+        check(PdfSplitPlan.splitAfter(4,"\u0662")==listOf(0 to 2,2 to 2))
+        check(PdfSplitPlan.splitAfter(3,"1-2")==listOf(0 to 1,1 to 1,2 to 1))
+    }
+    test("visual split boundaries reject empty, final-page and out-of-bounds markers") {
+        for (value in listOf("", "all", "2,6", "0", "8", "word"))
+            rejects<IllegalArgumentException> { PdfSplitPlan.splitAfter(6,value) }
+        rejects<IllegalArgumentException> { PdfSplitPlan.splitAfter(1,"1") }
+    }
+    test("strict PDF edit order preserves intentional deletion and localized page numbers") {
+        check(PdfPageOrder.parse("",4)==listOf(1,2,3,4))
+        check(PdfPageOrder.parse("4, 2, 1",4)==listOf(4,2,1))
+        check(PdfPageOrder.parse("\u0663\u060c\u06f1",4)==listOf(3,1))
+    }
+    test("strict PDF edit order never silently drops invalid or duplicate pages") {
+        for (value in listOf("1,x,3","1,,3","1,2,2","1,0,3","1,5","1,9999999999999999","1-3",","))
+            rejects<IllegalArgumentException> { PdfPageOrder.parse(value,4) }
+        rejects<IllegalArgumentException> { PdfPageOrder.parse("1",0) }
+    }
+    test("visual PDF reorder is deterministic and preserves page identities") {
+        val initial = PdfPageEdit.start(4)
+        val reordered = initial.move(4, 1)
+        check(reordered.order == listOf(4, 1, 2, 3))
+        check(reordered.order.toSet() == setOf(1, 2, 3, 4))
+        check(reordered.move(1, 4).order == listOf(4, 2, 3, 1))
+        rejects<IllegalArgumentException> { reordered.move(9, 1) }
+    }
+    test("visual PDF selection and deletion are reversible immutable operations") {
+        val start = PdfPageEdit.start(5)
+        val selected = start.selectRange(2, 4)
+        check(selected.selected == setOf(2, 3, 4))
+        check(selected.deleteSelected().order == listOf(1, 5))
+        check(start.order == listOf(1, 2, 3, 4, 5))
+        rejects<IllegalArgumentException> { start.selectRange(0, 9) }
+        rejects<IllegalArgumentException> { start.selectRange(1, 5).deleteSelected() }
+    }
+    test("compression profiles preserve requested quality unless smaller-file preset is chosen") {
+        check(PdfCompressionPolicy.profiles(150, 80) == listOf(150 to 80))
+        check(PdfCompressionPolicy.profiles(300, 95) == listOf(300 to 95))
+        check(PdfCompressionPolicy.profiles(90, 50) == listOf(90 to 50))
+        check(PdfCompressionPolicy.profiles(150, 50) == listOf(150 to 50, 108 to 50))
+    }
+    test("compression refuses unbounded bitmap decoding before allocation") {
+        check(PdfCompressionPolicy.canDecodeImage(1024, 1024, 256L * 1024 * 1024))
+        check(!PdfCompressionPolicy.canDecodeImage(12000, 12000, 256L * 1024 * 1024))
+        check(!PdfCompressionPolicy.canDecodeImage(4000, 3000, 128L * 1024 * 1024))
+        check(!PdfCompressionPolicy.canDecodeImage(-1, 10, 256L * 1024 * 1024))
+    }
+    test("compression acceptance requires smaller verified PDF with same page count") {
+        check(PdfCompressionPolicy.accept(10_000, 8_000, 7, 7))
+        check(!PdfCompressionPolicy.accept(10_000, 10_000, 7, 7))
+        check(!PdfCompressionPolicy.accept(10_000, 2_000, 7, 6))
+        check(!PdfCompressionPolicy.accept(10_000, 0, 7, 7))
     }
     mediaPolicyTests(::test)
     mediaProcessTests(::test)

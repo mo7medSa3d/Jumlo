@@ -47,6 +47,36 @@ class SourceAndPublicationTest {
             assertEquals("replacement",store.openRead(second.id).bufferedReader().use { it.readText() })
         } finally { db.close() }
     }
+    @Test fun genericLocalFileIsIdentifiedFromItsBytesNotItsExtension() = runBlocking {
+        val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
+        val input=File(context.cacheDir,"jumlo-sniff-${UUID.randomUUID()}.pdf")
+        try {
+            val store=SourceStore(context,db,WorkBudget())
+            input.writeBytes("%PDF-1.7\nfixture".toByteArray())
+            val pdf=store.importLocalFile(input,"received.pdf","application/octet-stream")
+            assertEquals("application/pdf",pdf.mimeType)
+            assertArrayEquals(input.readBytes(),store.openRead(pdf.id).use { it.readBytes() })
+            input.writeBytes("invalid document payload".toByteArray())
+            val invalid=store.importLocalFile(input,"wrong.pdf",null)
+            assertEquals("application/octet-stream",invalid.mimeType)
+        } finally { input.delete();db.close() }
+    }
+    @Test fun abandonedBatchImportRollbackNeverDeletesTheOriginalOutput() = runBlocking {
+        val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
+        val original=File(context.filesDir,"processing/results/fixture/${UUID.randomUUID()}.pdf")
+        original.parentFile!!.mkdirs()
+        val bytes="%PDF-1.4\ntest content preserved".toByteArray()
+        original.writeBytes(bytes)
+        try {
+            val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",original)
+            val store=SourceStore(context,db,WorkBudget())
+            val imported=store.inspect(uri.toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            assertNotNull(db.processingDao().source(imported.id))
+            store.discardNewImport(imported.id)
+            assertNull(db.processingDao().source(imported.id))
+            assertArrayEquals(bytes,original.readBytes())
+        } finally { original.delete();db.close() }
+    }
     @Test fun missingSourceNeverBecomesSyntheticContent() = runBlocking {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {

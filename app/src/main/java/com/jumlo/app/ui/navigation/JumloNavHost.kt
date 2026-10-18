@@ -42,6 +42,7 @@ import androidx.navigation.navDeepLink
 import com.jumlo.app.R
 import com.jumlo.app.data.files.DocumentEntry
 import com.jumlo.app.data.jobs.CapabilityRegistry
+import com.jumlo.app.core.OutputWorkflowPolicy
 import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
@@ -294,7 +295,22 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             "home" -> com.jumlo.app.ui.home.HomeScreen(viewModel,::openTool,{navigateTab(DockTab.TOOLS)},{selectedJob=it;navigateTo("activity")},{launchExternal(it.uri,it.mimeType,false)},{navigateTo("workspace")})
                             "tools_catalog" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool)
                             "downloads" -> com.jumlo.app.ui.downloads.DownloadsScreen(viewModel,::openTool,{selectedJob=it;navigateTo("activity")})
-                            "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,::importFiles,{pickFolder()},::openSavedFolder,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.chooseTool("pdf_02");viewModel.importOutput(it);navigateTo("workspace")},{viewModel.chooseTool("pdf_02");viewModel.addSource(it);navigateTo("workspace")},{pickFolder(it.uri)},{launchExternal(it.uri,it.mimeType,false)},{viewModel.chooseTool("pdf_02");viewModel.intake(Intake(listOf(it.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null));navigateTo("workspace")},{viewModel.copyOrMoveFile(it,false,CollisionPolicy.KEEP_BOTH)},{renameEntry=it;renameText=it.name},{deleteEntry=it},{newFolder=true;folderName=""})
+                            "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,
+                                ::importFiles, {pickFolder()}, ::openSavedFolder,
+                                {launchExternal(it.uri,it.mimeType,false)},
+                                {launchExternal(it.uri,it.mimeType,true)}, ::exportOutput,
+                                {record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },
+                                {sourceId->viewModel.prepareSourceWorkflow(sourceId) {navigateTo("workspace")} },
+                                {pickFolder(it.uri)}, {launchExternal(it.uri,it.mimeType,false)},
+                                {entry->
+                                    viewModel.chooseTool(OutputWorkflowPolicy.reuseTool(entry.mimeType.orEmpty()))
+                                    viewModel.intake(Intake(listOf(entry.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))
+                                    navigateTo("workspace")
+                                },
+                                {viewModel.copyOrMoveFile(it,false,CollisionPolicy.KEEP_BOTH)},
+                                {renameEntry=it;renameText=it.name}, {deleteEntry=it}, {newFolder=true;folderName=""},
+                                {chosen,toolId->viewModel.prepareOutputWorkflow(toolId,chosen) {navigateTo("workspace")} },
+                                {chosen,toolId->viewModel.prepareSourceBatchWorkflow(toolId,chosen) {navigateTo("workspace")} })
                             "settings" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
                                 onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
                                 onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
@@ -313,7 +329,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")})
                                 else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
-                            "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{viewModel.chooseTool("pdf_02");viewModel.importOutput(it);navigateTo("workspace")},{viewModel.allowNewRun();navigateTo("workspace")})
+                            "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{viewModel.allowNewRun();navigateTo("workspace")})
                         }
                         if(root) QuietFloatingDock(
                             selectedTab=tab,

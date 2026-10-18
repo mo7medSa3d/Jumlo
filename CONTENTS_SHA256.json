@@ -1,14 +1,14 @@
 {
   "files": {
     ".agent/SESSION_HANDOFF.md": {
-      "bytes": 19645,
-      "mode": 493,
-      "sha256": "63fe60b92325feb1d1029febedb88f20cad608690b353a12d50b3a0494a34162"
+      "bytes": 20876,
+      "mode": 420,
+      "sha256": "fd4105ae3d1c2d47c6614d95259bf8572b54b28daa3f18a85de713a63c6392d9"
     },
     ".github/workflows/ci.yml": {
-      "bytes": 4584,
-      "mode": 493,
-      "sha256": "837e9e954d931d69e3f7372e6622630477b9244a3e5dc2225ec4576a5eb04de9"
+      "bytes": 8244,
+      "mode": 420,
+      "sha256": "7f67438de28c248b906ce38986db1562fd649a73119c8e263ed9dee18ac043d1"
     },
     ".gitignore": {
       "bytes": 764,
@@ -17,33 +17,33 @@
     },
     ".superpowers/sdd/tasks.json/progress.md": {
       "bytes": 2248,
-      "mode": 493,
+      "mode": 420,
       "sha256": "9831b95716c293b1945219d535d846d700e98c74f855d6e6b25ea6c01208cd78"
     },
     "AUDIT.md": {
-      "bytes": 17843,
+      "bytes": 34033,
       "mode": 493,
-      "sha256": "89a10863e31b3dcde00164e90ea333ec7d18a400eca06bbf4f7b55cb9e004607"
+      "sha256": "e1b4ecad13f47177a41ce7001ff0a198d0277d5f5ff8ea0c285c6bb2952edf43"
     },
     "CHANGELOG.md": {
-      "bytes": 19183,
+      "bytes": 22088,
       "mode": 493,
-      "sha256": "0ce0b151b22d7f782bb87228d056c32ee3842ed0d496e02e0f23e78771fff14c"
+      "sha256": "3bee6ffdbdcdcfd4e7299c560ba9a80a06a758c0b7bd23531ee899f34f5ec305"
     },
     "README.md": {
-      "bytes": 9684,
-      "mode": 493,
-      "sha256": "b9375ced0377ea224735311b52a4612bdf25fc15c5ce2094c5406bb3b9411c6f"
+      "bytes": 14101,
+      "mode": 420,
+      "sha256": "55ad51af8d27482843b3df701a30669640b3483eae9538b7bb69691dde6f0db0"
     },
     "README_AR.md": {
-      "bytes": 10104,
-      "mode": 493,
-      "sha256": "9f09f24635520a8edf752900bc069833ef49f4c60648e7fad93af14462523d20"
+      "bytes": 13695,
+      "mode": 420,
+      "sha256": "d5788a567d7a1ddd4bed33247d3c9a22ee714714da8021a02dcf194511156eb3"
     },
     "app/build.gradle.kts": {
-      "bytes": 7692,
-      "mode": 493,
-      "sha256": "508114f438fd7a4ef07a4f877ad2ad96ab9c9377921af3f6468bbcf46eb7d1db"
+      "bytes": 8283,
+      "mode": 420,
+      "sha256": "e29416f26cbb77c1b52d7b102ee87ddc9a306f19c80188731b9bbe2bedb83bc7"
     },
     "app/proguard-rules.pro": {
       "bytes": 1055,
@@ -54,6 +54,16 @@
       "bytes": 12499,
       "mode": 493,
       "sha256": "40877ee6f5bbd8d6010665548494bc3600a9908826d6774c71e0a7ae630d51e6"
+    },
+    "app/schemas/legacy-v1-structure.sql": {
+      "bytes": 1062,
+      "mode": 420,
+      "sha256": "dc6ef579c56bb3ecf5241dda1162ef2657918b7c0fa371b21d4d16f09a69007d"
+    },
+    "app/schemas/schema-provenance.md": {
+      "bytes": 827,
+      "mode": 420,
+      "sha256": "84a69fb39c36ac8ffca92b01a130360d30007302e042d629021463e6292860cf"
     },
     "app/src/androidTest/java/com/jumlo/app/data/ArchiveHandlerTest.kt": {
       "bytes": 2413,
@@ -81,9 +91,9 @@
       "sha256": "ac5e307cbba10496ce7e38188a93809845ff9b3c2572ae4c2f28bf2219318b35"
     },
     "app/src/androidTest/java/com/jumlo/app/data/SourceAndPublicationTest.kt": {
-      "bytes": 5665,
+      "bytes": 7538,
       "mode": 493,
-      "sha256": "31896ea66e11c923035cae0f91b57a872292078e24a4255e3cc25d4e85197bca"
+      "sha256": "f0078c968e2661bfc2df01477e34467ae80b830595d924fdb0b60723bc4e8a1c"
     },
     "app/src/androidTest/java/com/jumlo/app/data/WorkspaceDraftPersistenceTest.kt": {
       "bytes": 3477,
@@ -131,9 +141,9 @@
       "sha256": "3ba10b48c49b22962833eda3aef525043f80e1d7f8715513e807bceaa7077977"
     },
     "app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt": {
-      "bytes": 712,
-      "mode": 493,
-      "sha256": "8d6c441557de6a1c65b3352fa2dda1fe00bc27fb33d4c639ef5aece83396dbc1"
+      "bytes": 398,
+      "mode": 420,
+      "sha256": "99ee23d362f20ef8d8833d1b2d0c75d734c46471e2661aeb5b72ac9e849b38aa"
     },
     "app/src/benchmark/AndroidManifest.xml": {
       "bytes": 203,
@@ -146,9 +156,9 @@
       "sha256": "e71a24e2c7b9102828d8ef6c317ecc183bb00919ada613b6da6ed013a4e714d5"
     },
     "app/src/hostTest/kotlin/CoreTests.kt": {
-      "bytes": 25869,
+      "bytes": 48687,
       "mode": 493,
-      "sha256": "4b7d6168dea35e9dfd38966a6d466431c6f3243e1b9382e1d01cafb277714d4d"
+      "sha256": "08ad9e1222d647c751e320e42ea5dec21f7088d19f31542bc4ef8158d095937d"
     },
     "app/src/hostTest/kotlin/HomeLayoutPolicyTests.kt": {
       "bytes": 211,
@@ -161,9 +171,9 @@
       "sha256": "cf2240ff09cbf2911c73f479c6b059a78403d781d97d73a0421164215264f9f7"
     },
     "app/src/hostTest/kotlin/MediaPolicyTests.kt": {
-      "bytes": 11145,
+      "bytes": 13986,
       "mode": 493,
-      "sha256": "6bd906f273661e1817fb8a17b0af5b49ba46f8554e3dd9e53693827bcfb0cb04"
+      "sha256": "f84fd3632dd1aa605e7b8039b34428fd78dbac7cc7cf466523bd88d1cd82a332"
     },
     "app/src/hostTest/kotlin/MediaProcessTests.kt": {
       "bytes": 3867,
@@ -171,9 +181,9 @@
       "sha256": "18c8121216dc77631aefdbea8492e451a86d64a44e63c4c476ff1c08941252a4"
     },
     "app/src/hostTest/kotlin/TransferTests.kt": {
-      "bytes": 9697,
+      "bytes": 12234,
       "mode": 493,
-      "sha256": "58d1d8584a5ae23c1aacdf98d4f56985857dac19bd33c9124a4b1ade20b5c88e"
+      "sha256": "df415bb88deda8409b125af6edeb5165ba0fb1eab248afdccfc571bf40b3ee8a"
     },
     "app/src/hostTest/kotlin/TrashTests.kt": {
       "bytes": 3124,
@@ -184,16 +194,6 @@
       "bytes": 4674,
       "mode": 493,
       "sha256": "f4a2dd489b63877de66414c6569f6e7822dc605dc933bafc17df73a7377a297f"
-    },
-    "app/src/main/assets/media/bootstrap.py": {
-      "bytes": 1298,
-      "mode": 493,
-      "sha256": "a0953b452c3ab660c15955264e8fdb6d4b941feab02b25765785ff04aa5d5f8f"
-    },
-    "app/src/main/assets/media/network_guard.py": {
-      "bytes": 2469,
-      "mode": 493,
-      "sha256": "a9e847bede52af868e0b60b2e7f935d23c0ed0c1e1546165b3b5625add4e0103"
     },
     "app/src/main/baseline-prof.txt": {
       "bytes": 346,
@@ -221,14 +221,19 @@
       "sha256": "61b82be5ceef0972b14386ffa7d9bb20c7f0ebf82d4569de43b54b98105c976e"
     },
     "app/src/main/java/com/jumlo/app/MainActivity.kt": {
-      "bytes": 4547,
+      "bytes": 4315,
       "mode": 493,
-      "sha256": "49fbf2cbe0b042b8609662b204800b3c7515d991ab6845e1a95a24080fd53b57"
+      "sha256": "7fdd5bf69bf119f215c5b22c6cd53e80c1e9283f2b15249c2fca1b2f21c3f2ad"
     },
     "app/src/main/java/com/jumlo/app/core/AutoOutputName.kt": {
       "bytes": 2254,
       "mode": 493,
       "sha256": "6efea867f6367fa589718c0d1dd98f09aa687ff5c5dae6386ccd883029237148"
+    },
+    "app/src/main/java/com/jumlo/app/core/BrowserProfilePolicy.kt": {
+      "bytes": 1823,
+      "mode": 420,
+      "sha256": "327a32888fb61ac7d91f940ded4e49b398883215814b2c7cdd5ccd04a104f588"
     },
     "app/src/main/java/com/jumlo/app/core/CapabilityPolicy.kt": {
       "bytes": 2717,
@@ -241,9 +246,9 @@
       "sha256": "fc7e4000d7a95bf6eee439cb5127eac9d00cc32873da0067727dec7a4f3b2b32"
     },
     "app/src/main/java/com/jumlo/app/core/DownloadLinkPolicy.kt": {
-      "bytes": 7346,
-      "mode": 493,
-      "sha256": "ea4cfdb7b6c430c43bafb30bc817f9deb2e9a9bb989c652f47518bcf42e52155"
+      "bytes": 7871,
+      "mode": 420,
+      "sha256": "4f6864b7ea26188c574e8507487cb952c15e0203f9c9a8c8035fabdd43b8db1e"
     },
     "app/src/main/java/com/jumlo/app/core/DriveLink.kt": {
       "bytes": 3240,
@@ -256,9 +261,14 @@
       "sha256": "0b9d85cccc31fbdc640127d3f6031f12acddddc827976d5126ff36addf28f56f"
     },
     "app/src/main/java/com/jumlo/app/core/FileProcessing.kt": {
-      "bytes": 5932,
+      "bytes": 9039,
       "mode": 493,
-      "sha256": "45fcc50c634d598259c996b17c4377ecca187ce93b82f9d005202e92ea2e0597"
+      "sha256": "a4e8d7802f526b7024700c88d07f11012225d7894c1a09409fe0a67d31b10931"
+    },
+    "app/src/main/java/com/jumlo/app/core/LargeFilePolicy.kt": {
+      "bytes": 1427,
+      "mode": 420,
+      "sha256": "6b9049e4fd6743f34730ac4ee40f039de0d4724529880a7678725f8a98030f2e"
     },
     "app/src/main/java/com/jumlo/app/core/ManagedTrashStorage.kt": {
       "bytes": 7054,
@@ -270,20 +280,60 @@
       "mode": 493,
       "sha256": "eca7ea44b8f63a0d9ebb92f8774944d72a9bdd711f635411b163f897309f42d6"
     },
+    "app/src/main/java/com/jumlo/app/core/OutputWorkflowPolicy.kt": {
+      "bytes": 2844,
+      "mode": 420,
+      "sha256": "e60a01e00f6e40a7bf21f6886b6d7e99852cf2640d330fb550c26a8d9e246321"
+    },
+    "app/src/main/java/com/jumlo/app/core/PageTextComparison.kt": {
+      "bytes": 1114,
+      "mode": 420,
+      "sha256": "3f86b1ea151f9c2d8ba012078a8b047927aaf129d349604f155d47ede58e86cc"
+    },
     "app/src/main/java/com/jumlo/app/core/PdfCropCoordinates.kt": {
       "bytes": 898,
       "mode": 493,
       "sha256": "c06bd62f082513c2b59ea320d9ca8daf176dd570524929244735007f257f1568"
+    },
+    "app/src/main/java/com/jumlo/app/core/PdfPageGeometry.kt": {
+      "bytes": 4365,
+      "mode": 420,
+      "sha256": "c8660065bca0d073930e8fa41e06b7212d1a633ee42dc26912dcd3e9ac875374"
+    },
+    "app/src/main/java/com/jumlo/app/core/PdfPageOrder.kt": {
+      "bytes": 1162,
+      "mode": 420,
+      "sha256": "7975241341f853be6026e97a070b774cd48fcb827c05a5d67843991c3e00c694"
+    },
+    "app/src/main/java/com/jumlo/app/core/PdfSplitPlan.kt": {
+      "bytes": 963,
+      "mode": 420,
+      "sha256": "f78a089c053370ad2a6f31e9c1b81f7b9726e971037c251206f38ce67fa00946"
+    },
+    "app/src/main/java/com/jumlo/app/core/PlatformHeaderPolicy.kt": {
+      "bytes": 2591,
+      "mode": 420,
+      "sha256": "a44b4606a7583c3e4bc2e82a538a11e23dabdbbd3355ece5379b769ac9fde0b8"
     },
     "app/src/main/java/com/jumlo/app/core/Publication.kt": {
       "bytes": 7097,
       "mode": 493,
       "sha256": "da888991768b1c418ab0a6f3adfdb5b01dc8e24fd25c2528cbad121aad31e709"
     },
+    "app/src/main/java/com/jumlo/app/core/ResourceBudgetPolicy.kt": {
+      "bytes": 756,
+      "mode": 420,
+      "sha256": "a5f7c148b9180e7be0c76b9c67e91c3b45d7014b25d8599d79b24520e6d35e86"
+    },
     "app/src/main/java/com/jumlo/app/core/ResumePolicy.kt": {
-      "bytes": 1755,
+      "bytes": 1928,
       "mode": 493,
-      "sha256": "fb0ad57c964d9cdd52e4024304f6e32041c6a5b56238d1734e8f390548b15ff8"
+      "sha256": "d174180ff6c7bb131bc2d7edf02d2705b392dc25ebae1f043849a47b1dc1a215"
+    },
+    "app/src/main/java/com/jumlo/app/core/SourceMediaType.kt": {
+      "bytes": 1917,
+      "mode": 420,
+      "sha256": "29b6128c76288b39da7d915cc1d9d7009c23e0a8d97871f8bfcdbf55ba57e8a4"
     },
     "app/src/main/java/com/jumlo/app/core/StoragePaths.kt": {
       "bytes": 1610,
@@ -291,9 +341,9 @@
       "sha256": "ce0d503fbf23face5de9c45a14fde4ea88554398ff4f8349b242a9b757d655de"
     },
     "app/src/main/java/com/jumlo/app/core/StreamTransfer.kt": {
-      "bytes": 8047,
+      "bytes": 8382,
       "mode": 493,
-      "sha256": "90ac9ce0d9926a38847b65af7f0bcfe4c2e793801fb654d202826fbfc4b04e57"
+      "sha256": "be4c742630ac37b92a5c3e28d277743d09ec75696b9a9b5a402cf014ffe430c3"
     },
     "app/src/main/java/com/jumlo/app/core/TemporaryCleanup.kt": {
       "bytes": 1952,
@@ -306,9 +356,19 @@
       "sha256": "b95ea351498b1a0e0108a7467163e3add63c0b91bd26c3523895649cdd6e7990"
     },
     "app/src/main/java/com/jumlo/app/core/Validation.kt": {
-      "bytes": 6567,
+      "bytes": 6549,
       "mode": 493,
-      "sha256": "91de16f520c8fe871343d3ce4f02101880088c4f21e166d25ba28164d693d155"
+      "sha256": "f7ad350469cf8994d1fefdb44ef40c118f193829af2c2d95f0af8ef354f01c8d"
+    },
+    "app/src/main/java/com/jumlo/app/core/media/Html5MediaDiscovery.kt": {
+      "bytes": 8068,
+      "mode": 420,
+      "sha256": "d352585da963941b70ae77df9edb6bb8849a3f1b6715b2d7ed049fb0c58b72d9"
+    },
+    "app/src/main/java/com/jumlo/app/core/media/MediaEngineRouting.kt": {
+      "bytes": 1051,
+      "mode": 420,
+      "sha256": "3fffa43d5647e97b0072f22e1ddc87957538df7acf85cef76044ce5cc5489a26"
     },
     "app/src/main/java/com/jumlo/app/core/media/MediaJsonGuard.kt": {
       "bytes": 1121,
@@ -321,9 +381,9 @@
       "sha256": "daad7162c5d2ec2246faa694d44e37c91b8b9c1c75ba469bef54f9bfb9156e1c"
     },
     "app/src/main/java/com/jumlo/app/core/media/MediaPolicies.kt": {
-      "bytes": 13754,
+      "bytes": 15865,
       "mode": 493,
-      "sha256": "f49cfcda4b7b45b7aea0593db277037af8924f5d59aa84e3f3d3e5e8cf9e773a"
+      "sha256": "b38ca91e340f65f5c5c2f048c61ae2e78dfb33ddcee1af76d507d492f62b74e6"
     },
     "app/src/main/java/com/jumlo/app/core/media/MediaProcessRunner.kt": {
       "bytes": 7406,
@@ -356,14 +416,14 @@
       "sha256": "8f8ce7075f43e1f8aebff7b3dd13558f3f0462aa9d1c62d6a344dab66df3fc43"
     },
     "app/src/main/java/com/jumlo/app/data/files/GoogleDriveClient.kt": {
-      "bytes": 12183,
-      "mode": 493,
-      "sha256": "cc82764ce8e5a9d3a91acf4d95fb1e41b1d0ead3c23dee8eb2798e6341fc223f"
+      "bytes": 12400,
+      "mode": 420,
+      "sha256": "83d6cfb4c5f40409c4f2ba6e9e94705a898c50e21f25e33b408274947abf4ba8"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt": {
-      "bytes": 10662,
-      "mode": 493,
-      "sha256": "99f66e7fafc31632fa3f992610f302020f7b005336d3569a1ac01c8fad06f3f2"
+      "bytes": 10617,
+      "mode": 420,
+      "sha256": "9eb040bf75ea9b33e6099d0e3fa6676ccc34f06fc069171849e6511d0e32d1f5"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/DownloadAdmission.kt": {
       "bytes": 797,
@@ -376,9 +436,9 @@
       "sha256": "32d250837bec27857d62599b97d526a51d4ddd5b4ed4ae3667b1e1a898922b8d"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/JobStore.kt": {
-      "bytes": 9226,
+      "bytes": 9214,
       "mode": 493,
-      "sha256": "e129b6ab0bd7015c30be04a03b9db9bed5338ef9be683a5cd52e33291646d15f"
+      "sha256": "3dd09beda64472da1aa6733831ac5e77f33435f75b007b69f462747fcc3df790"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/OperationDispatcher.kt": {
       "bytes": 2933,
@@ -391,9 +451,9 @@
       "sha256": "2127387c59b3454dd1fb84edf5a26dc7870a38fa4c95958481cdfb47918c9023"
     },
     "app/src/main/java/com/jumlo/app/data/jobs/WorkBudget.kt": {
-      "bytes": 1089,
+      "bytes": 1287,
       "mode": 493,
-      "sha256": "297a8875bf7492dc37f0e5cb1f7f5ad8b527d3daf6d3645f20bde791f09682e5"
+      "sha256": "2129a17a4d05b24f095fa3cf4e6a057c2cf7288b0908f5362603717bf3a78e7b"
     },
     "app/src/main/java/com/jumlo/app/data/local/AppDatabase.kt": {
       "bytes": 3105,
@@ -411,9 +471,9 @@
       "sha256": "60eda18655390eb37f872164c74166b0257778be25788ca9c5a073d69e689ec0"
     },
     "app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt": {
-      "bytes": 3987,
+      "bytes": 4074,
       "mode": 493,
-      "sha256": "c562f6e1f4961542e74888d1a78b054168255ccee7965a5588a190f1fc4e0bab"
+      "sha256": "dbd0bac658e9a1ca4c831efffd0b3f3651e3c7cca6662324450aadf68501dab0"
     },
     "app/src/main/java/com/jumlo/app/data/media/MediaMetadata.kt": {
       "bytes": 4134,
@@ -421,14 +481,24 @@
       "sha256": "16544b81b5bdee9ab5ba06c8451e27c24273efae38a6a43dc79bb68f29110cca"
     },
     "app/src/main/java/com/jumlo/app/data/media/MediaOperationHandler.kt": {
-      "bytes": 8627,
+      "bytes": 8613,
       "mode": 493,
-      "sha256": "57a95b38ab24a79764d2dfb4782642a2593691a24ea1c557f42d71c5972c402d"
+      "sha256": "bf29252292b6bb6ece981e6562c318236e9671b591c16d40e904973c312e2352"
     },
     "app/src/main/java/com/jumlo/app/data/media/MediaRuntime.kt": {
       "bytes": 544,
       "mode": 493,
       "sha256": "9c4c12efaad535f70451fb4606d25acbf5b40d07df6006a0c2ff84ace3ee6416"
+    },
+    "app/src/main/java/com/jumlo/app/data/media/MediaSessionStore.kt": {
+      "bytes": 8792,
+      "mode": 420,
+      "sha256": "f291eb9f3163812f61c4c109b15b52ac29c92a10621f305704cd1310550558a7"
+    },
+    "app/src/main/java/com/jumlo/app/data/media/NativeDirectMediaRuntime.kt": {
+      "bytes": 13818,
+      "mode": 420,
+      "sha256": "3b71a2e3360fba81a3d5ad5782c7a56b27ebd829741dc47c687faf0148cf0a14"
     },
     "app/src/main/java/com/jumlo/app/data/output/OutputStore.kt": {
       "bytes": 9621,
@@ -441,19 +511,19 @@
       "sha256": "84d707ebb34ff48b3d83f25d18ee75b1fbda0eabea5683a35c711c3556d1769c"
     },
     "app/src/main/java/com/jumlo/app/data/pdf/PdfBoxBackend.kt": {
-      "bytes": 40611,
+      "bytes": 41826,
       "mode": 493,
-      "sha256": "d3997d49efec9a943a457b918852997d2323c9f94d58ba387557f79c3c5d28eb"
+      "sha256": "410b03c0fb96f21c997ddf4a630b685a502dc1c37630438747445bd0cfffb283"
     },
     "app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt": {
-      "bytes": 9549,
-      "mode": 493,
-      "sha256": "910508187e1a5d46c7f5bb5cb190daca82a06aaf8b5c39584c816ffad72e58cc"
+      "bytes": 9488,
+      "mode": 420,
+      "sha256": "01c114976ffe558795a4e94255fc54cd1ff4360ef673f0ac1cf470843578f6c8"
     },
     "app/src/main/java/com/jumlo/app/data/processing/ArchiveOperationHandler.kt": {
-      "bytes": 7952,
+      "bytes": 8137,
       "mode": 493,
-      "sha256": "38b014532b87b0f346b437fa052b0823276c77be69211255312d28d5f00f2b7d"
+      "sha256": "f23f95b935fe040ad339ab0b36f57b69f491feb92e538e1bd2884ef743f06f7c"
     },
     "app/src/main/java/com/jumlo/app/data/processing/BitmapTransforms.kt": {
       "bytes": 16719,
@@ -461,9 +531,9 @@
       "sha256": "c12fbd460ed895a5110672e93690dd2e725700b6768881916c0d2286eb4af317"
     },
     "app/src/main/java/com/jumlo/app/data/processing/DownloadOperationHandler.kt": {
-      "bytes": 19210,
-      "mode": 493,
-      "sha256": "5e5cb633b8da5a5ce093f577089a85ab82d24b3b0c591449bd6e714ddbf24ca8"
+      "bytes": 19222,
+      "mode": 420,
+      "sha256": "f7e219fd54386862a80a5892f6201dc3812448b2cf8a5b661c957b17f836092b"
     },
     "app/src/main/java/com/jumlo/app/data/processing/FileExtrasHandler.kt": {
       "bytes": 16447,
@@ -476,19 +546,19 @@
       "sha256": "c8430d654f8a6247839a7717ad9f51d3ea66605f7e8db592005ffd3dae3ceee0"
     },
     "app/src/main/java/com/jumlo/app/data/processing/OcrWebHandler.kt": {
-      "bytes": 11984,
-      "mode": 493,
-      "sha256": "7e2a65d90e5862742a34aff670252883e2c42a9732031a6feb1c13193ca31273"
+      "bytes": 717,
+      "mode": 420,
+      "sha256": "b839a2a5d66c8a70130f714d6f9fccd29446068e3de00dabf372cef77b84d998"
     },
     "app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt": {
-      "bytes": 36001,
+      "bytes": 39301,
       "mode": 493,
-      "sha256": "a28c37aa1c28d438e13f1b49f3ff4107bee2cf0dab2c4af8df6bdcff796b517c"
+      "sha256": "1f29fe06f68cd4dc464e6f745b0381d88b17b7bfe2853a988d4ddd144195aae0"
     },
     "app/src/main/java/com/jumlo/app/data/processing/Settings.kt": {
-      "bytes": 5598,
+      "bytes": 5625,
       "mode": 493,
-      "sha256": "37f9ac1f89c328132f4d4afa72025f54e3b08f348e64d145dc466f16ccfee15f"
+      "sha256": "dae26e57b042c024bf56fd49695732c716ec5448729132e14ba18a89d44df5e9"
     },
     "app/src/main/java/com/jumlo/app/data/source/EphemeralSecretStore.kt": {
       "bytes": 860,
@@ -496,19 +566,19 @@
       "sha256": "4fbf28162559775c67fbf6bd4553d8d6c33b2d857f95c32d9e83aac68441f93d"
     },
     "app/src/main/java/com/jumlo/app/data/source/SourceStore.kt": {
-      "bytes": 7261,
+      "bytes": 9343,
       "mode": 493,
-      "sha256": "ab751db241660fddbde46d413c279393e556863f7796f1d7b061e388d3da7a83"
+      "sha256": "7f6e5c74aee886c5e8707303c80305e46b6048d2db33d6132b019ecdb760d054"
     },
     "app/src/main/java/com/jumlo/app/di/AppModule.kt": {
-      "bytes": 1806,
-      "mode": 493,
-      "sha256": "17f4ca6bd686638a1850e10f1021c82608d6c66953f0664e8b1f1edd17bac9ce"
+      "bytes": 1930,
+      "mode": 420,
+      "sha256": "e2ad2a62a695811523dd3e4d25655cac9e475b807acf1f1671d684e78bac7f61"
     },
     "app/src/main/java/com/jumlo/app/model/Models.kt": {
-      "bytes": 5198,
-      "mode": 493,
-      "sha256": "78092d25f9d0828e5ad234fe20178bdd3506f67a74de407655243f87ad684e47"
+      "bytes": 5163,
+      "mode": 420,
+      "sha256": "77a0a92db1ef232f34ef4ef492b5073b9c8fe4c95409c5c8f234cb3fa5341ce3"
     },
     "app/src/main/java/com/jumlo/app/model/OperationContracts.kt": {
       "bytes": 1734,
@@ -516,14 +586,14 @@
       "sha256": "a063e3b3ae10f7c47d18ba185ba5ae6411a0f2e313c2d3dd17d7b034cbd913f1"
     },
     "app/src/main/java/com/jumlo/app/model/WorkspaceDraft.kt": {
-      "bytes": 10760,
+      "bytes": 10847,
       "mode": 493,
-      "sha256": "8744b7e358cb2daf669c012560f5a297c257f7f985c8f25d0d2c251b44aba457"
+      "sha256": "853ddf527b235bd6cc218cc5f5548c664db8f944b8bf36d8eb2928aa03943163"
     },
     "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt": {
-      "bytes": 32036,
-      "mode": 493,
-      "sha256": "3f820caf49c3a60b0695518b661bb0eb67c7c734f07d582da2b3785ddf72c9d3"
+      "bytes": 38114,
+      "mode": 420,
+      "sha256": "cc5e4d92228c635f9270016baa6d8ff21fe3e68022df75811e0c600165c224cb"
     },
     "app/src/main/java/com/jumlo/app/ui/adaptive/HingeSafeViewport.kt": {
       "bytes": 2993,
@@ -551,9 +621,9 @@
       "sha256": "12e6aa215b5e38e912cf03ef9caa4c87042ee1df103849097b882ca50813f580"
     },
     "app/src/main/java/com/jumlo/app/ui/components/ProductionRows.kt": {
-      "bytes": 8962,
+      "bytes": 9330,
       "mode": 493,
-      "sha256": "fc7f4f4c86349e26d1273d7bf11c38892423cfea19de2e1669dfdc335d62c604"
+      "sha256": "c9c9d3f371ed42764648ff7513d8b92ed000e21b99c5ccd8b9b32288267dfd57"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietButtons.kt": {
       "bytes": 10552,
@@ -586,29 +656,29 @@
       "sha256": "eba9f1d3ab4da922f4280e2fc5a0fe90939010e8564154fa3f41d4440c6b8965"
     },
     "app/src/main/java/com/jumlo/app/ui/components/UserMessages.kt": {
-      "bytes": 4744,
-      "mode": 493,
-      "sha256": "1ff079720304184045909e88e27a03deb7ec74aaabbeeaf13bbd72fc337be356"
+      "bytes": 5822,
+      "mode": 420,
+      "sha256": "a5ec793aacbed19d14f939b65a43987261c47a620c235c093b182ba59a6ce9e0"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/DownloadsScreen.kt": {
-      "bytes": 8634,
+      "bytes": 11548,
       "mode": 493,
-      "sha256": "8fa91d58024ebbe043814b76025307ced0567e90a5b220222c9036c346eb5489"
+      "sha256": "5031aa9be173a72bf97f6c4c9ed0fe2b3a55154a0530ca2db635e9d19a8fce82"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/MediaViewModel.kt": {
-      "bytes": 16771,
-      "mode": 493,
-      "sha256": "f3eab4d1538e97aafbdef1cd22cfb22bc8f6c6367e604b4da1fada5150d05c36"
+      "bytes": 13804,
+      "mode": 420,
+      "sha256": "3c2ef2bdada36e2eaf15a0217400223eca2b0adf3eb7e71f2b0085091ab522b3"
     },
     "app/src/main/java/com/jumlo/app/ui/downloads/MediaWorkspace.kt": {
-      "bytes": 37045,
-      "mode": 493,
-      "sha256": "7a66437e23591a93207529b56ea65a2c3e4a9045881fbdc6cfd8b4fcd375a5dc"
+      "bytes": 34203,
+      "mode": 420,
+      "sha256": "314e0fb885fab5d635bda467519159fdf789a243b25866af05d4da3e506e46f5"
     },
     "app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt": {
-      "bytes": 21344,
+      "bytes": 28171,
       "mode": 493,
-      "sha256": "9202ae90f82786b8f63399199b4c253c709a590e44a4a02d7ca7ccc9ef6056f9"
+      "sha256": "a7f15bcc6350088ae100dd90f50e935a6cbd33495575cf40783125719a7a9c40"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeActionEditor.kt": {
       "bytes": 3310,
@@ -621,9 +691,9 @@
       "sha256": "dfc7abbf711080165e56aa47d2aed774015e2efc2946876f4090aa44dc4da342"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeScreen.kt": {
-      "bytes": 9340,
+      "bytes": 11100,
       "mode": 493,
-      "sha256": "60e87d29a668d241b56812439ecbc3a004b1e79d392c4c0b54da92caaa90c903"
+      "sha256": "02f97260c7a8b72c0b96326d27e5d7feec13d4a0bf3d4a657ab0226af81e78b4"
     },
     "app/src/main/java/com/jumlo/app/ui/intake/IntakeController.kt": {
       "bytes": 1332,
@@ -631,9 +701,9 @@
       "sha256": "71e6289461da2e70d6f38fd57f57bc81b34327bf4b516ac1a445a89d40fe4f38"
     },
     "app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt": {
-      "bytes": 25046,
-      "mode": 493,
-      "sha256": "4b1d1f3eb1d4e1de6fbcf0dd6af02d53d48dd91164ef8ca2c46396a4785b0bb1"
+      "bytes": 26139,
+      "mode": 420,
+      "sha256": "d20520cbca68cd0f2f681ec0753969257530d0143e3ebc3c9deddbc685ba60bb"
     },
     "app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt": {
       "bytes": 15114,
@@ -646,9 +716,9 @@
       "sha256": "0cbc644c16c7ab4a206ebfc548d6b5c5b935f4d8463aa234e857258159201c9e"
     },
     "app/src/main/java/com/jumlo/app/ui/settings/SettingsScreen.kt": {
-      "bytes": 18980,
-      "mode": 493,
-      "sha256": "b04a24921090904c7c8967ea646f90b100f939a369e5b896efe10058292d769f"
+      "bytes": 17980,
+      "mode": 420,
+      "sha256": "d00be87bed624db039de57e9dee2e8a807c7d5d7f373c306225660c56115242e"
     },
     "app/src/main/java/com/jumlo/app/ui/theme/Color.kt": {
       "bytes": 7218,
@@ -695,10 +765,15 @@
       "mode": 493,
       "sha256": "631d5568857b377828bd807e4f3cac2b47d61e97b0a662e0aece2681ca5d8f8f"
     },
+    "app/src/main/java/com/jumlo/app/ui/workspace/PdfPageEditor.kt": {
+      "bytes": 12024,
+      "mode": 420,
+      "sha256": "c96db41b8bb4ab819475e4d958d372484c4e29b9a29b0381b1bce3240ee3a3d7"
+    },
     "app/src/main/java/com/jumlo/app/ui/workspace/WorkspaceScreen.kt": {
-      "bytes": 47660,
+      "bytes": 48705,
       "mode": 493,
-      "sha256": "f7f95abe671a25c7abe7c66761c5c2decb909b7998ed61e7b64d3b181f37ca2a"
+      "sha256": "e20aed8a85d96371ef2d23776f8d3794a777dfcaf5af02735f9ce7cc3982c8f1"
     },
     "app/src/main/java/com/jumlo/app/worker/CancelJobReceiver.kt": {
       "bytes": 1046,
@@ -785,70 +860,15 @@
       "mode": 493,
       "sha256": "df738991e892b0a7bedf4ad114c4e58699cbd6d2d80c6106ad9363ac0e52a052"
     },
-    "app/src/main/res/values-ar/account_settings.xml": {
-      "bytes": 5895,
-      "mode": 493,
-      "sha256": "6cee9d37f35fae7facfcd49d3a885dbdeccf077279fc3e5de27243196a448068"
-    },
-    "app/src/main/res/values-ar/error_messages.xml": {
-      "bytes": 7066,
-      "mode": 493,
-      "sha256": "57ca0adc1877600dbe8aab80bfd3d268d4fa42da63b34f055d1f9f64292c1954"
-    },
-    "app/src/main/res/values-ar/files_recovery.xml": {
-      "bytes": 731,
-      "mode": 493,
-      "sha256": "f202ae2c82dc2fb2816425c09217f5e2a4b43ba0617e823d8f9e2fe67567d3a8"
-    },
-    "app/src/main/res/values-ar/home_actions.xml": {
-      "bytes": 777,
-      "mode": 493,
-      "sha256": "679c8eaa73b89b105ba5af264f0ceeef596be4ddd2012597ba7850e53e86ae66"
-    },
-    "app/src/main/res/values-ar/jumlo.xml": {
-      "bytes": 1043,
-      "mode": 493,
-      "sha256": "5f3fbbee4579288774308c414b85c8498ed47cba98a4bc0ec2a0e052a32439a1"
-    },
-    "app/src/main/res/values-ar/media_strings.xml": {
-      "bytes": 9885,
-      "mode": 493,
-      "sha256": "3dbaa66711e8bb562125197ee0ac890687984cec27945bbe3fa7d4dfce74e2e7"
-    },
-    "app/src/main/res/values-ar/production_ui.xml": {
-      "bytes": 6954,
-      "mode": 493,
-      "sha256": "e57d244612f01f10449590f2c64fb472a3f535225ccebc72d277704e86866d2f"
-    },
-    "app/src/main/res/values-ar/redesign.xml": {
-      "bytes": 4817,
-      "mode": 493,
-      "sha256": "9be4ebbaebbc0dc07252af7ec940b21029753cd1cd2742845bbc3fbc41127c7a"
-    },
-    "app/src/main/res/values-ar/strings.xml": {
-      "bytes": 31288,
-      "mode": 493,
-      "sha256": "cc1b19e918d3d98295be8832218f6b74fd22b164168a9c67273a5619aa5faebf"
-    },
-    "app/src/main/res/values-ar/workspace_validation.xml": {
-      "bytes": 1261,
-      "mode": 493,
-      "sha256": "e957ec8fa1a1008c63df158e4026163db58a0f9bd6464185c5677421f43edda3"
-    },
-    "app/src/main/res/values-v31/jumlo_splash.xml": {
-      "bytes": 511,
-      "mode": 493,
-      "sha256": "bc0bb738ebefa0bb0dcf9259b4cdb5a9d9b1c2e1461ec2d7d9c5ba1dba7fb3ec"
-    },
     "app/src/main/res/values/account_settings.xml": {
       "bytes": 4644,
       "mode": 493,
       "sha256": "2f287caa71202dbbbda6d76068433281c3c2d3628f60c2f71760fe3ad70a24d9"
     },
     "app/src/main/res/values/error_messages.xml": {
-      "bytes": 5482,
+      "bytes": 7588,
       "mode": 493,
-      "sha256": "ef10d4657fd9655905de2f523f1d36539196bd7dbba52fb620d0638346d241a7"
+      "sha256": "6b76faa86f0e906ef20576639d5595cb1c2b5ea54e0937ca55fd87ca536f8e53"
     },
     "app/src/main/res/values/files_recovery.xml": {
       "bytes": 567,
@@ -866,9 +886,9 @@
       "sha256": "755eca7f6ec4c8ce8b9d7b1911d682bb8f79f6e648ca4f4278c437ba0ef9abf4"
     },
     "app/src/main/res/values/media_strings.xml": {
-      "bytes": 8028,
-      "mode": 493,
-      "sha256": "76060d61ba57eeb309db22dfee1ca35b47fcbba09f5d0cd593d826b372ab4ee1"
+      "bytes": 7094,
+      "mode": 420,
+      "sha256": "86e697f284305157620f1718801ef9f4d33ba713988376e186b09a53ed5cc1f7"
     },
     "app/src/main/res/values/production_ui.xml": {
       "bytes": 5700,
@@ -881,9 +901,9 @@
       "sha256": "029d5719dc8e6b4b702a76d438c7b2b39e05e34c360a85771219416a4ffb22c5"
     },
     "app/src/main/res/values/strings.xml": {
-      "bytes": 25399,
+      "bytes": 26941,
       "mode": 493,
-      "sha256": "dd32838e379d28d356862ad88f4415065fd3b41d6eec487b8a1436fa3455520f"
+      "sha256": "ab910b04c54f25a4d0a770bde52a52fff0329d43a4784fd022eaf4da83355525"
     },
     "app/src/main/res/values/themes.xml": {
       "bytes": 314,
@@ -894,6 +914,61 @@
       "bytes": 984,
       "mode": 493,
       "sha256": "3414d138d771d157c6561a8c24bed2e0edaa1e09f717902d7b7abeef044f3122"
+    },
+    "app/src/main/res/values-ar/account_settings.xml": {
+      "bytes": 5895,
+      "mode": 493,
+      "sha256": "6cee9d37f35fae7facfcd49d3a885dbdeccf077279fc3e5de27243196a448068"
+    },
+    "app/src/main/res/values-ar/error_messages.xml": {
+      "bytes": 9718,
+      "mode": 493,
+      "sha256": "f438a79ee0d3cd4c562040b5bcbf48e181315fbd16db1520cbc1d53e589418b1"
+    },
+    "app/src/main/res/values-ar/files_recovery.xml": {
+      "bytes": 731,
+      "mode": 493,
+      "sha256": "f202ae2c82dc2fb2816425c09217f5e2a4b43ba0617e823d8f9e2fe67567d3a8"
+    },
+    "app/src/main/res/values-ar/home_actions.xml": {
+      "bytes": 777,
+      "mode": 493,
+      "sha256": "679c8eaa73b89b105ba5af264f0ceeef596be4ddd2012597ba7850e53e86ae66"
+    },
+    "app/src/main/res/values-ar/jumlo.xml": {
+      "bytes": 1043,
+      "mode": 493,
+      "sha256": "5f3fbbee4579288774308c414b85c8498ed47cba98a4bc0ec2a0e052a32439a1"
+    },
+    "app/src/main/res/values-ar/media_strings.xml": {
+      "bytes": 8719,
+      "mode": 420,
+      "sha256": "fee2598b3afea72652c5c61b705c0ef6b65b501ec248dc647fe0447a893edf05"
+    },
+    "app/src/main/res/values-ar/production_ui.xml": {
+      "bytes": 6954,
+      "mode": 493,
+      "sha256": "e57d244612f01f10449590f2c64fb472a3f535225ccebc72d277704e86866d2f"
+    },
+    "app/src/main/res/values-ar/redesign.xml": {
+      "bytes": 4817,
+      "mode": 493,
+      "sha256": "9be4ebbaebbc0dc07252af7ec940b21029753cd1cd2742845bbc3fbc41127c7a"
+    },
+    "app/src/main/res/values-ar/strings.xml": {
+      "bytes": 33246,
+      "mode": 493,
+      "sha256": "8ad7db0992aa0ee632664da6defb37da3e1a38e2fdc719e68907259c15bfc64d"
+    },
+    "app/src/main/res/values-ar/workspace_validation.xml": {
+      "bytes": 1261,
+      "mode": 493,
+      "sha256": "e957ec8fa1a1008c63df158e4026163db58a0f9bd6464185c5677421f43edda3"
+    },
+    "app/src/main/res/values-v31/jumlo_splash.xml": {
+      "bytes": 511,
+      "mode": 493,
+      "sha256": "bc0bb738ebefa0bb0dcf9259b4cdb5a9d9b1c2e1461ec2d7d9c5ba1dba7fb3ec"
     },
     "app/src/main/res/xml/data_extraction_rules.xml": {
       "bytes": 366,
@@ -915,10 +990,35 @@
       "mode": 493,
       "sha256": "759efd815d28c136f0605acc6279ef96b444d91ea35b3c3b0eb1912e55e7cae2"
     },
+    "app/src/media/AndroidManifest.xml": {
+      "bytes": 263,
+      "mode": 420,
+      "sha256": "c368634cce79582062074ac3685855468cfe3b405429f6caaaa9b8b6d5443551"
+    },
+    "app/src/media/assets/media/bootstrap.py": {
+      "bytes": 569,
+      "mode": 420,
+      "sha256": "678efe237bdb48f76a0b9920eb29d7340fff01bcaf6c2765239730964b22121a"
+    },
+    "app/src/media/assets/media/network_guard.py": {
+      "bytes": 3128,
+      "mode": 420,
+      "sha256": "7462a9834943f91ea3e194d8928e56f88f7bf4b02aa4597a967deb712a389376"
+    },
     "app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt": {
-      "bytes": 6839,
-      "mode": 493,
-      "sha256": "07253d9e330f03bd9bf5f507d591b926d7fd6d40772268820e91a9075ffccedc"
+      "bytes": 10768,
+      "mode": 420,
+      "sha256": "e3bebd1b992e6ec1e7ebc45ceb4d507d4b221eda4886a3d8e539b6b1cf4924de"
+    },
+    "app/src/test/java/com/jumlo/app/core/MediaLinkRoutingTest.kt": {
+      "bytes": 1124,
+      "mode": 420,
+      "sha256": "c7fc03d5edfcb57cf8af534085bb8189c27c5542a40e173c4bafaecf7c86aead"
+    },
+    "app/src/test/java/com/jumlo/app/core/PlatformHeaderPolicyTest.kt": {
+      "bytes": 941,
+      "mode": 420,
+      "sha256": "67a2b994cc60cf390078cd98d99bb69b4553d90379ae339199e8be5c18cbaa42"
     },
     "app/src/test/java/com/jumlo/app/core/PublicationAndErrorLogTest.kt": {
       "bytes": 9112,
@@ -1070,6 +1170,16 @@
       "mode": 493,
       "sha256": "12b86a30000d1429c7b438564038d8f79705dc173b49902c3344e9951c47dd03"
     },
+    "docs/APP_SIZE_POLICY.md": {
+      "bytes": 1603,
+      "mode": 420,
+      "sha256": "a96bbab33b1158cb6b9bd742221fcf8a2e4c40543d5fe22dae0a316e6c60be98"
+    },
+    "docs/COMMERCIAL_READINESS.md": {
+      "bytes": 7059,
+      "mode": 420,
+      "sha256": "be0300ac94d364b9fa6517589d48bc95856c5ad5a740c942a54a73778f29c07d"
+    },
     "docs/DEPENDENCY_NOTICES.md": {
       "bytes": 7273,
       "mode": 493,
@@ -1086,9 +1196,9 @@
       "sha256": "bf653162286ed0305804cbe0da0b795dc6c98e5d94a354eff4c11d39b50a6ee0"
     },
     "docs/FEATURE_STATUS.md": {
-      "bytes": 13580,
+      "bytes": 14558,
       "mode": 493,
-      "sha256": "b0429b08256663392e2f2dbb1049edbf52c79f5e3bf1a805e8b4482cec61bc89"
+      "sha256": "b200d71cf341eed939d3b1b92a0874f77ca85002a190d2ec84ab13e04ffef8a1"
     },
     "docs/JUMLO_2026_MOTION_BRAND_QA.md": {
       "bytes": 9341,
@@ -1096,9 +1206,9 @@
       "sha256": "6e3ed82ac9a57ddf2d499269214f060e1a3a623d1a5f314d34748e08e7e8d0ed"
     },
     "docs/MEDIA_CAPABILITY_MATRIX.md": {
-      "bytes": 4319,
+      "bytes": 4932,
       "mode": 493,
-      "sha256": "915585c77172d2c2d7bed7f28680d1827439ad1d643e3d7eb9b019705d4f9e0a"
+      "sha256": "c4f21f7eb364f208d0bece5bbd45a12b9a16d55264cead764c11df660def87bf"
     },
     "docs/PDF_SUPPORT_MATRIX.md": {
       "bytes": 4003,
@@ -1155,6 +1265,11 @@
       "mode": 493,
       "sha256": "781bdb9a0cce5aaf63b1847ca7086761179367edecf296ca5346197f4b689cf1"
     },
+    "docs/deferred/OcrWebHandler.kt": {
+      "bytes": 11984,
+      "mode": 420,
+      "sha256": "7e2a65d90e5862742a34aff670252883e2c42a9732031a6feb1c13193ca31273"
+    },
     "docs/dependencies.md": {
       "bytes": 6781,
       "mode": 493,
@@ -1174,6 +1289,11 @@
       "bytes": 2055,
       "mode": 493,
       "sha256": "18aa861a61b7b439bd203a1c954542cc1fe689e2c9b0eee63afe64f6d997cd60"
+    },
+    "docs/media/UNIVERSAL_ENGINE.md": {
+      "bytes": 8369,
+      "mode": 420,
+      "sha256": "dc7faae0c8b2a0a109f787f369bf9ffe3d8c28a885d0072de89a79f26475e210"
     },
     "docs/superpowers/plans/2026-10-16-completion-plan.md": {
       "bytes": 16009,
@@ -1230,11 +1350,6 @@
       "mode": 493,
       "sha256": "3f70818188469e82ad5a11ce3b5f4838f29b83500c9724e6dd2cb30f9888623a"
     },
-    "gradle.properties": {
-      "bytes": 534,
-      "mode": 493,
-      "sha256": "469d1859b1320979c712c10ad4f1917c9d637a64fc857808ed882460fa1cc1d1"
-    },
     "gradle/libs.versions.toml": {
       "bytes": 6330,
       "mode": 493,
@@ -1249,6 +1364,11 @@
       "bytes": 338,
       "mode": 493,
       "sha256": "9b55399efbcbda211f1fdc20cd216a37da878db14546567fa809d536896f14e0"
+    },
+    "gradle.properties": {
+      "bytes": 534,
+      "mode": 493,
+      "sha256": "469d1859b1320979c712c10ad4f1917c9d637a64fc857808ed882460fa1cc1d1"
     },
     "gradlew": {
       "bytes": 1204,
@@ -1308,7 +1428,7 @@
     "scripts/package-source.py": {
       "bytes": 9446,
       "mode": 493,
-      "sha256": "b7c3009cb503d5014866287bc00f05471db1a6aa7e9eed0824cd6f9b03bdd632"
+      "sha256": "faa356eb9bb007827cc488933a511e66d2e3edda1f7dcb4f7197b3d38817b6ff"
     },
     "scripts/restore-wrapper.ps1": {
       "bytes": 1154,
@@ -1330,15 +1450,30 @@
       "mode": 493,
       "sha256": "e72cf7e07d6701f74a296f9098f9c5ba6fe5d4c4e2c9480977b38cc2b431bb8f"
     },
+    "scripts/test-downloads-density.py": {
+      "bytes": 1992,
+      "mode": 420,
+      "sha256": "98e7cbee0153d9c73ae2e3737be3880818dac366f8b6195ac580425aad979e04"
+    },
+    "scripts/test-flagship-reliability-wiring.py": {
+      "bytes": 2457,
+      "mode": 420,
+      "sha256": "c7b156da1efd480605c27f6a085cae1f9fa612d3be118940de671daa4a300d95"
+    },
     "scripts/test-jumlo-brand-motion.py": {
-      "bytes": 7428,
+      "bytes": 7483,
       "mode": 493,
-      "sha256": "aa3b5ec240dfeb869e746e7d3094f48767d41a4560b4f2cb7ec51cbb0f40b2fe"
+      "sha256": "f06dddc4287072fc1fbce84d17d9fe0ba9727a5527249d37eb413c3421b7821c"
+    },
+    "scripts/test-large-pdf-wiring.py": {
+      "bytes": 2094,
+      "mode": 420,
+      "sha256": "7e6fe4b496e80df3838ebe078f53ac9430da113e541f439d93618f84bf06009e"
     },
     "scripts/test-media-bootstrap.py": {
-      "bytes": 2676,
+      "bytes": 5484,
       "mode": 493,
-      "sha256": "748635d43b00617d02a40421f4c329b210740ab584f2c4df7dc73c2bf0ba8907"
+      "sha256": "43ae1fd75b491d620847729213c20c9167948fbd279933e385e83fb921ccae99"
     },
     "scripts/test-media-ffmpeg.py": {
       "bytes": 4119,
@@ -1350,10 +1485,20 @@
       "mode": 493,
       "sha256": "d8438205d0eab7413870a5af7e92677b44c3424032a5be6916d9697e0baf4531"
     },
+    "scripts/test-media-network-guard.py": {
+      "bytes": 1815,
+      "mode": 420,
+      "sha256": "038fd95ac46d62a33c5703d42bb3018ba8131a5ef8c71f5f475ce9b3d6f97d6c"
+    },
+    "scripts/test-output-workflow-wiring.py": {
+      "bytes": 3611,
+      "mode": 420,
+      "sha256": "9c8077c3424498a06b29bbfd0f5ca8b679fd9793c170d5fce086a0efbad9bd8f"
+    },
     "scripts/test-redesign-static.py": {
-      "bytes": 3747,
+      "bytes": 4686,
       "mode": 493,
-      "sha256": "49224a62d3d9b075fca1fd66eae1a450b976dc9e74d5238ec35c44c161fae3fb"
+      "sha256": "ba4786fbafe5f5da4b2adc5fc46d42c60441277ac5d316051d5c72e8c8bc8b23"
     },
     "scripts/test-release-media-isolation.py": {
       "bytes": 1707,
@@ -1369,6 +1514,11 @@
       "bytes": 5997,
       "mode": 493,
       "sha256": "9c973094628e1571e1814269bd5ac502fbbf42f8466007efd1d9de25323f553a"
+    },
+    "scripts/test-universal-media-architecture.py": {
+      "bytes": 3878,
+      "mode": 420,
+      "sha256": "e04a38ef6d07a9ee56151160ec11d00cfea864eaf2ff2f2f7c12ee43271742a5"
     },
     "scripts/test-workspace.sh": {
       "bytes": 489,
@@ -1386,9 +1536,9 @@
       "sha256": "3f469ec4ccb5cfdbb52194703bf2c05bd0fb4ffef38f140125f9e252a94184eb"
     },
     "scripts/verify-host.sh": {
-      "bytes": 687,
+      "bytes": 1014,
       "mode": 493,
-      "sha256": "5129a2f782cd2a6c18cbfc6c0457372598fdaed13671553d17be262c217caaeb"
+      "sha256": "a88de36bfb6bd04a9f6fb2b3ef85a9b7aa4112775a0c7c0a2df36e17ffc59988"
     },
     "scripts/verify-local.sh": {
       "bytes": 1384,
@@ -1431,9 +1581,9 @@
       "sha256": "2cabf4f19678332fd9546102e95df7a7d314cdde666ac902b829cd4bfe71b0c0"
     },
     "verification/TASK_STATUS.md": {
-      "bytes": 3815,
+      "bytes": 6903,
       "mode": 493,
-      "sha256": "4d0b19442266edf980a5c734152fe8d240a6392ff915db3774cfdbb3a811f606"
+      "sha256": "0726c96e4fea8af0dd2145fe2a1eeb42fe569c2d5bfb89a2649c4fa9998a5372"
     },
     "verification/VERIFICATION.md": {
       "bytes": 5668,
@@ -1499,6 +1649,41 @@
       "bytes": 2600,
       "mode": 493,
       "sha256": "8ba4d36a465f7b088ec7224b8fdcf73535dadef330d6b3253ba9b2ac228744c1"
+    },
+    "verification/current-session/2026-10-18/REPORT.md": {
+      "bytes": 11170,
+      "mode": 420,
+      "sha256": "d562da95e6715396e5679eed029cad129dabb90e5f42f28dc149a24d45a55d30"
+    },
+    "verification/current-session/2026-10-18/host-verification.log": {
+      "bytes": 17366,
+      "mode": 420,
+      "sha256": "5b12a2bf43af701b60289b8e2becd558c7d71279956b498f1d00a44125f55b82"
+    },
+    "verification/current-session/2026-10-18/large-files-android-build-blocked.log": {
+      "bytes": 1857,
+      "mode": 420,
+      "sha256": "04b38b00c03367265c0b9db4a4692c602f4480a0e3d615ed3374576365e4f7c9"
+    },
+    "verification/current-session/2026-10-18/large-files-host.log": {
+      "bytes": 25559,
+      "mode": 420,
+      "sha256": "932458c341d7e1bb0c2480e5c870baba998a8330253f17c2540b807a06405dda"
+    },
+    "verification/current-session/2026-10-18/memory-guard-failing-test.log": {
+      "bytes": 840,
+      "mode": 420,
+      "sha256": "74e400338c1925a0c77008d0a275c7a3d9640f7c8f8c42589ffa9df81fc888db"
+    },
+    "verification/current-session/2026-10-18/pdf-preview-failing-test.log": {
+      "bytes": 12441,
+      "mode": 420,
+      "sha256": "1e949d7880cd2f1f6a7ad509919f52fdbd25b5b0d52e428f7df254a93e327713"
+    },
+    "verification/current-session/2026-10-18/quality-preset-failing-test.log": {
+      "bytes": 789,
+      "mode": 420,
+      "sha256": "20b747f3470c0c0572db4dd8000e16ba10bfc7b526828b4db4e3a59ebeb55740"
     },
     "verification/current-session/REPORT.md": {
       "bytes": 3551,
@@ -2005,16 +2190,6 @@
       "mode": 493,
       "sha256": "e804835d17b10b94e7b6690b16e21881b18c7623e1171aa6662a177129fc140e"
     },
-    "verification/production-2026-10-17/ui-brief.md": {
-      "bytes": 8591,
-      "mode": 493,
-      "sha256": "2e97098ccd55971e9a1f278ae435e59103737fed0caa1f4999b2d54e87aa7ef4"
-    },
-    "verification/production-2026-10-17/ui-report.md": {
-      "bytes": 8249,
-      "mode": 493,
-      "sha256": "45b6c1b27c4261e282d6029b5f6f5ab0fd78172da53c1634a383d9840e8efd19"
-    },
     "verification/production-2026-10-17/ui/HomeLayoutPolicyTests.kt": {
       "bytes": 2835,
       "mode": 493,
@@ -2024,6 +2199,16 @@
       "bytes": 548,
       "mode": 493,
       "sha256": "b7304ba95c7d863933c9c98f2adcc7148ff3bd502c8ffc616adcbed3366674fb"
+    },
+    "verification/production-2026-10-17/ui-brief.md": {
+      "bytes": 8591,
+      "mode": 493,
+      "sha256": "2e97098ccd55971e9a1f278ae435e59103737fed0caa1f4999b2d54e87aa7ef4"
+    },
+    "verification/production-2026-10-17/ui-report.md": {
+      "bytes": 8249,
+      "mode": 493,
+      "sha256": "45b6c1b27c4261e282d6029b5f6f5ab0fd78172da53c1634a383d9840e8efd19"
     },
     "verification/production-2026-10-17/workspace-report.md": {
       "bytes": 3327,
@@ -2080,7 +2265,5 @@
       "mode": 493,
       "sha256": "79f8c0815408e7d6376807c62df62b5707ed2c226f4b7592d248c330fe80d911"
     }
-  },
-  "formatVersion": 1,
-  "originalUserZipSha256": "d95badc55271f0a65c6b0ec92771be5dfec74f46bf115229247455deaab64da3"
+  }
 }

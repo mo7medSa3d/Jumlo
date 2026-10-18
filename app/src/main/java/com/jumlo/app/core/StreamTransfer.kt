@@ -90,7 +90,10 @@ class StreamTransfer(private val transport:HttpTransport) {
                     val end=response.headers.getValue("content-range").substringAfter("bytes ").substringBefore('/').substringAfter('-').toLong()
                     val expectedSlice=end-request.offset+1
                     if(declared!=null && declared!=expectedSlice) throw IOException("HTTP_CONTENT_LENGTH_MISMATCH")
-                    request.knownTotalBytes ?: (end+1)
+                    // The end of this 206 range may be just an intermediate chunk.
+                    // Completion is defined by Content-Range's representation total,
+                    // never by the end index of the returned slice.
+                    request.knownTotalBytes ?: requireNotNull(ResumePolicy.range(response.headers["content-range"])?.total) { "MISSING_RESUME_TOTAL" }
                 } else {
                     require(response.code==200) { "HTTP_${response.code}" }
                     declared

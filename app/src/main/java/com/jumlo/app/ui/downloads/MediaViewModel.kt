@@ -6,6 +6,7 @@ import com.jumlo.app.core.DirectFileKind
 import com.jumlo.app.core.DownloadLinkPolicy
 import com.jumlo.app.core.HttpPolicy
 import com.jumlo.app.core.PlatformHeaderPolicy
+import com.jumlo.app.core.BrowserProfilePolicy
 import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.media.MediaRuntime
@@ -41,11 +42,6 @@ data class MediaUiState(
     val bitrate: Int = 192,
     val directMode: String = "ORIGINAL",
     val platformBadge: String? = null,
-    val hasSavedSession: Boolean = false,
-    val activeDomains: List<String> = emptyList(),
-    val customUserAgent: String = "",
-    val extraHeaders: String = "",
-    val preferDesktopUa: Boolean = true,
     val name: String = "",
     val allowHttp: Boolean = false,
     val wifiOnly: Boolean = false,
@@ -74,11 +70,12 @@ data class MediaUiState(
     private fun probeDirect(url:String,allowHttp:Boolean,check:()->Unit):DirectPreview {
         var uri=HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(url),allowHttp)
         var useRangeGet = false
+        var profileIndex = 0
         val extraMap = sessionStore.getExtraHeaders().lineSequence()
             .map { it.trim() }
             .filter { ':' in it }
             .associate { it.substringBefore(':').trim() to it.substringAfter(':').trim() }
-        repeat(11) { hops ->
+        repeat(13) { hops ->
             check()
             val reqBuilder = Request.Builder().url(uri.toString())
             PlatformHeaderPolicy.headersFor(
@@ -86,7 +83,8 @@ data class MediaUiState(
                 customUserAgent = sessionStore.getCustomUserAgent(),
                 preferDesktop = sessionStore.isPreferDesktopUa(),
                 cookieHeader = sessionStore.cookieHeaderFor(uri.toString()),
-                customHeaders = extraMap
+                customHeaders = extraMap,
+                compatibilityAttempt = profileIndex
             ).forEach { (k, v) -> reqBuilder.header(k, v) }
             val req = if (useRangeGet) reqBuilder.get().header("Range", "bytes=0-0").build() else reqBuilder.head().build()
             probeClient.newCall(req).execute().use { response ->
@@ -96,6 +94,9 @@ data class MediaUiState(
                     val next=HttpPolicy.url(uri.resolve(location).toString(),allowHttp)
                     require(uri.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
                     uri=next
+                    profileIndex=0
+                } else if (BrowserProfilePolicy.tryNext(response.code, profileIndex, BrowserProfilePolicy.forUrl(uri.toString()).size)) {
+                    profileIndex++
                 } else if (!useRangeGet && response.code in setOf(400, 403, 405, 501)) {
                     useRangeGet = true
                 } else {
@@ -113,20 +114,6 @@ data class MediaUiState(
         throw IllegalArgumentException("TOO_MANY_REDIRECTS")
     }
 
-    init { refreshSessionState() }
-
-    private fun refreshSessionState() {
-        _state.update {
-            it.copy(
-                hasSavedSession = sessionStore.hasSavedCookies(),
-                activeDomains = sessionStore.activeDomainsSummary(),
-                customUserAgent = sessionStore.getCustomUserAgent(),
-                extraHeaders = sessionStore.getExtraHeaders(),
-                preferDesktopUa = sessionStore.isPreferDesktopUa()
-            )
-        }
-    }
-
     /** Reset ViewModel-scoped media state on every workspace entry, including same-route reentry. */
     fun beginSession(initialUrl:String) {
         generation++
@@ -137,50 +124,8 @@ data class MediaUiState(
         _state.value=MediaUiState(
             url=trimmed,
             mode=MediaMode.VIDEO,
-            platformBadge=DownloadLinkPolicy.detectPlatformName(trimmed),
-            hasSavedSession=sessionStore.hasSavedCookies(),
-            activeDomains=sessionStore.activeDomainsSummary(),
-            customUserAgent=sessionStore.getCustomUserAgent(),
-            extraHeaders=sessionStore.getExtraHeaders(),
-            preferDesktopUa=sessionStore.isPreferDesktopUa()
+            platformBadge=DownloadLinkPolicy.detectPlatformName(trimmed)
         )
-    }
-
-    fun syncWebViewSession(currentWebViewUrl: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            sessionStore.syncFromWebView(currentWebViewUrl, _state.value.url)
-            withContext(Dispatchers.Main) {
-                refreshSessionState()
-                if (_state.value.url.isNotBlank()) analyze()
-            }
-        }
-    }
-
-    fun importCookies(rawCookies: String, targetDomainOrUrl: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            sessionStore.importCookiesText(rawCookies, targetDomainOrUrl.ifBlank { _state.value.url })
-            withContext(Dispatchers.Main) {
-                refreshSessionState()
-                if (_state.value.url.isNotBlank()) analyze()
-            }
-        }
-    }
-
-    fun saveHeaderConfig(userAgent: String, extraHeaders: String, preferDesktop: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
-            sessionStore.setCustomConfig(userAgent, extraHeaders, preferDesktop)
-            withContext(Dispatchers.Main) {
-                refreshSessionState()
-                if (_state.value.url.isNotBlank()) analyze()
-            }
-        }
-    }
-
-    fun clearSessions() {
-        viewModelScope.launch(Dispatchers.IO) {
-            sessionStore.clearAllSessions()
-            withContext(Dispatchers.Main) { refreshSessionState() }
-        }
     }
 
     fun newCopy() { lastSignature=null;lastJob=null;submissions.clear() }
@@ -222,7 +167,7 @@ data class MediaUiState(
         newCopy()
         val asset = _state.value.asset
         val choices = asset?.let { MediaCatalog.choices(it, value) }.orEmpty()
-        _state.update { it.copy(mode = value, choices = choices, selectedKey = null,
+        _state.update { it.copy(mode = value, choices = choices, selectedKey = MediaCatalog.preferred(choices,value)?.key,
             error = if (asset != null && choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null) }
     }
 
@@ -277,7 +222,7 @@ data class MediaUiState(
                                     mode=effectiveMode,
                                     platformBadge=detectedPlatform ?: asset.extractor.takeIf { e -> !e.equals("generic", true) },
                                     choices=choices,
-                                    selectedKey=null,
+                                    selectedKey=MediaCatalog.preferred(choices,effectiveMode)?.key,
                                     name=asset.title.ifBlank { "media" },
                                     error=if(choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null
                                 )

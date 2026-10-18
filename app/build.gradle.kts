@@ -9,7 +9,9 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// Direct media only: no embedded Python, FFmpeg, yt-dlp or model payloads.
+// Opt-in source-only universal build uses the bundled yt-dlp Android wrapper.
+// Keep the normal APK lightweight and distribution-policy qualified independently.
+val extendedMedia = providers.gradleProperty("extendedMedia").map(String::toBoolean).orElse(false).get()
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
@@ -30,7 +32,7 @@ android {
         // (or set them in gradle.properties); defaults keep local builds working.
         versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
         versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
-        buildConfigField("boolean", "EXTENDED_MEDIA", "false")
+        buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -57,7 +59,6 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("boolean", "EXTENDED_MEDIA", "false")
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
@@ -81,10 +82,19 @@ android {
         }
     }
 
-    // The actual direct-download runtime is compiled into every variant.
-    sourceSets["debug"].java.srcDir("src/base/java")
-    sourceSets["release"].java.srcDir("src/base/java")
-    sourceSets["benchmark"].java.srcDir("src/base/java")
+    // One factory per variant: no reflection or unreachable external runtime in the standard APK.
+    sourceSets["debug"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    sourceSets["release"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    sourceSets["benchmark"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")
+    if (extendedMedia) {
+        for (variant in listOf("debug", "release", "benchmark")) {
+            sourceSets[variant].assets.srcDir("src/media/assets")
+        }
+        // Do not override benchmark's own profileable manifest overlay.
+        for (variant in listOf("debug", "release")) {
+            sourceSets[variant].manifest.srcFile("src/media/AndroidManifest.xml")
+        }
+    }
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     compileOptions {
@@ -131,6 +141,12 @@ val pdfboxAar = configurations.create("pdfboxAar") {
 }
 
 dependencies {
+    if (extendedMedia) {
+        // GPL-3.0 / native runtime: for source-qualified alternative APK only.
+        // Inspect licenses, ELF alignment, and total APK size before distribution.
+        implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+        implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+    }
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)

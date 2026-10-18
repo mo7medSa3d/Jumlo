@@ -14,6 +14,8 @@ import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.core.DownloadLinkPolicy
 import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.HttpPolicy
+import com.jumlo.app.core.OutputFileChoice
+import com.jumlo.app.core.OutputWorkflowPolicy
 import com.jumlo.app.core.media.MediaLinks
 import com.jumlo.app.data.files.*
 import com.jumlo.app.data.jobs.*
@@ -237,17 +239,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         viewModelScope.launch {
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
-                // Shared descriptions can surround one link; batches remain separate URL lines.
-                val normalizedSingle = runCatching { MediaLinks.normalize(text) }.getOrNull()
-                val lines = normalizedSingle?.let(::listOf)
-                    ?: text.lineSequence().map(String::trim).filter(String::isNotBlank).toList()
-                if (lines.isNotEmpty() && lines.size <= 100 && lines.all { line ->
-                    (line.startsWith("https://", true) || line.startsWith("http://", true)) &&
-                        line.none(Char::isWhitespace)
-                }) {
+                // Social shares may include titles, captions and multiple URLs in one paragraph.
+                // Extract only syntactically valid, non-local links; never guess a filename from text.
+                val lines = try { MediaLinks.sharedUrls(text) } catch(error:Exception) {
+                    notifyMessage(stableError(error)); return@let
+                }
+                if (lines.size > 1 && lines.any(DownloadLinkPolicy::prefersMediaAnalysis)) {
+                    // A web page needs per-link format analysis; passing it to direct batch
+                    // downloads would save HTML or fail after promising a working transfer.
+                    notifyMessage("MEDIA_BATCH_ANALYSIS_REQUIRED")
+                } else if (lines.isNotEmpty()) {
                     val tool = when {
                         lines.size > 1 -> "dl_03"
-                        DownloadLinkPolicy.requiresMediaExtractor(lines.single()) -> "dl_media"
+                        DownloadLinkPolicy.prefersMediaAnalysis(lines.single()) -> "dl_media"
                         else -> "dl_02"
                     }
                     if (chooseTool(tool)) {
@@ -270,6 +274,95 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     }
     fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { val source=sources.importLocalFile(file,displayName,mimeType);addSource(source.id,source.displayName); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
+
+    fun toggleOutputFavorite(id:String) = savePreference { preferences.toggleFavoriteOutput(id) }
+
+    /** Reuse an immutable imported source in an operation that actually accepts its MIME type. */
+    fun prepareSourceWorkflow(sourceId:String,onReady:()->Unit) { viewModelScope.launch {
+        try {
+            initialized.await()
+            val source=sources.get(sourceId)
+            val tool=OutputWorkflowPolicy.reuseTool(source.mimeType.orEmpty())
+            require(chooseToolWithSources(tool,listOf(sourceId))) { "CAPABILITY_UNAVAILABLE" }
+            onReady()
+        } catch(cancel:CancellationException) { throw cancel }
+        catch(error:Exception) { notifyMessage(stableError(error)) }
+    } }
+
+    /** Imported sources already are immutable app-owned snapshots. Reuse their IDs directly,
+     * without duplicating bytes or silently changing the selected order. */
+    fun prepareSourceBatchWorkflow(targetTool:String,chosen:List<SourceRef>,onReady:()->Unit) {
+        val captured=chosen.toList()
+        viewModelScope.launch {
+            initialized.await()
+            beginBusy()
+            try {
+                OutputWorkflowPolicy.validate(captured.map {
+                    OutputFileChoice(it.id,it.displayName,it.mimeType.orEmpty(),it.sizeBytes ?: -1L)
+                },targetTool)
+                require(CapabilityRegistry.canProcess(targetTool)) { "CAPABILITY_UNAVAILABLE" }
+                withContext(Dispatchers.IO) {
+                    captured.forEach { expected ->
+                        currentCoroutineContext().ensureActive()
+                        val source=sources.get(expected.id)
+                        require(source.readable && source.id==expected.id &&
+                            source.mimeType==expected.mimeType && source.sizeBytes==expected.sizeBytes) {
+                            "SOURCE_NOT_FOUND"
+                        }
+                        sources.openRead(source.id).use { it.read() } // Verify each snapshot still opens.
+                    }
+                }
+                require(chooseToolWithSources(targetTool,captured.map { it.id })) { "CAPABILITY_UNAVAILABLE" }
+                if(targetTool=="file_07") updateForm { it.copy(outputName="Jumlo_Collection.zip") }
+                onReady()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally { endBusy() }
+        }
+    }
+
+    /** User-selected outputs become owned source snapshots, then use the existing durable job pipeline.
+     * Original output bytes and records are never mutated. A failed multi-file handoff rolls back
+     * only copies created by this call. The underlying source files are rechecked by SHA-256.
+     */
+    fun prepareOutputWorkflow(targetTool:String, chosen:List<OutputRecord>,onReady:()->Unit) {
+        val captured=chosen.toList() // Freeze the actual selection before any suspension.
+        viewModelScope.launch {
+            initialized.await()
+            beginBusy()
+            val staged=mutableListOf<String>()
+            var attached=false
+            try {
+                OutputWorkflowPolicy.validate(captured.map {
+                    OutputFileChoice(it.id,it.displayName,it.mimeType,it.sizeBytes)
+                },targetTool)
+                require(CapabilityRegistry.canProcess(targetTool)) { "CAPABILITY_UNAVAILABLE" }
+                withContext(Dispatchers.IO) {
+                    for(record in captured) {
+                        currentCoroutineContext().ensureActive()
+                        val verified=outputStore.find(record.jobId,record.itemKey)
+                        require(verified!=null && verified.id==record.id && verified.sha256==record.sha256 &&
+                            verified.mimeType==record.mimeType) { "OUTPUT_NOT_AVAILABLE" }
+                        // The ContentProvider copies the private, verified published output.
+                        // No original output is moved, renamed, overwritten or removed.
+                        val snapshot=sources.inspect(verified.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        staged.add(snapshot.id)
+                    }
+                }
+                require(chooseToolWithSources(targetTool,staged.toList())) { "CAPABILITY_UNAVAILABLE" }
+                if(targetTool=="file_07") updateForm { it.copy(outputName="Jumlo_Collection.zip") }
+                attached=true
+                onReady()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally {
+                if(!attached) withContext(NonCancellable + Dispatchers.IO) {
+                    staged.forEach { id -> runCatching { sources.discardNewImport(id) } }
+                }
+                endBusy()
+            }
+        }
+    }
     private val _undoTrashIds=MutableStateFlow<List<String>>(emptyList())
     val undoTrashIds=_undoTrashIds.asStateFlow()
     /** Captured IDs only; a single Undo reverses the complete selection. */
@@ -521,24 +614,26 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             bytes(File(app.filesDir,"processing/trash"))
         )
     } }
-    suspend fun preview(sourceId:String,page:Int):PreviewFrame {
+    suspend fun preview(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 1600)
+    suspend fun thumbnail(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 240)
+    private suspend fun previewSized(sourceId:String,page:Int,maxEdge:Int):PreviewFrame {
         var pending:PreviewFrame?=null
         try {
-            val delivered=withContext(Dispatchers.IO) { decodePreview(sourceId,page).also { pending=it } }
+            val delivered=withContext(Dispatchers.IO) { decodePreview(sourceId,page,maxEdge).also { pending=it } }
             pending=null
             return delivered
         } finally {
             pending?.bitmap?.takeUnless { it.isRecycled }?.recycle()
         }
     }
-    private suspend fun decodePreview(sourceId:String,page:Int):PreviewFrame {
+    private suspend fun decodePreview(sourceId:String,page:Int,maxEdge:Int):PreviewFrame {
         return sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
             currentCoroutineContext().ensureActive()
             val pdf=file.inputStream().use { val signature=ByteArray(5);it.read(signature)==5 && String(signature,Charsets.US_ASCII)=="%PDF-" }
             if(pdf) ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer ->
                 require(page in 1..renderer.pageCount) { "PAGE_OUT_OF_RANGE" }
                 renderer.openPage(page-1).use { p ->
-                    val scale=minOf(2.0,1600.0/maxOf(p.width,p.height).coerceAtLeast(1))
+                    val scale=minOf(2.0,maxEdge.toDouble()/maxOf(p.width,p.height).coerceAtLeast(1))
                     var w=(p.width*scale).roundToInt().coerceAtLeast(1)
                     var h=(p.height*scale).roundToInt().coerceAtLeast(1)
                     val maxPixels=(budget.maxBitmapBytes/4L).coerceAtLeast(512L*512L)
@@ -556,7 +651,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 val options=BitmapFactory.Options().apply { inJustDecodeBounds=true };BitmapFactory.decodeFile(file.path,options)
                 require(options.outWidth>0 && options.outHeight>0) { "PREVIEW_UNAVAILABLE" }
                 val width=options.outWidth;val height=options.outHeight;var sample=1
-                while(maxOf(width,height)/sample>1600) sample*=2
+                while(maxOf(width,height)/sample>maxEdge) sample*=2
                 options.inJustDecodeBounds=false;options.inSampleSize=sample;options.inPreferredConfig=Bitmap.Config.ARGB_8888
                 val original=BitmapFactory.decodeFile(file.path,options) ?: throw OperationFailure("PREVIEW_UNAVAILABLE")
                 try {

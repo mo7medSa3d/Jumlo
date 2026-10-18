@@ -24,7 +24,7 @@ import kotlinx.serialization.json.Json
     val text1:String="",val text2:String="",val text3:String="",val text4:String="",
     val num1:String="",val num2:String="",val num3:String="",val num4:String="",
     val flag1:Boolean=false,val flag2:Boolean=false,
-    val secret1:String="",val secret2:String=""
+    val secret1:String="",val secret2:String="",val paperMode:String="AUTO"
 ) {
     fun executionSettings(downloadHandle:String?=null):String {
         require(version==1) { "UNSUPPORTED_DRAFT_VERSION" }
@@ -43,12 +43,12 @@ import kotlinx.serialization.json.Json
             }
             "img_03" -> { val l=fraction(cropLeft);val t=fraction(cropTop);val r=fraction(cropRight);val b=fraction(cropBottom); require(l<r && t<b) { "INVALID_CROP" }; Json.encodeToString(ImageCropSettings(l,t,r,b,turns,flipX,flipY,converted)) }
             "img_04" -> Json.encodeToString(ImageCompressionSettings(converted))
-            "pdf_02" -> Json.encodeToString(ImagesToPdfSettings(SafeNames.basename(outputName),number(paperWidth,72,14400),number(paperHeight,72,14400),orientation,number(margin,0,200),fill))
+            "pdf_02" -> Json.encodeToString(ImagesToPdfSettings(SafeNames.basename(outputName),number(paperWidth,72,14400),number(paperHeight,72,14400),orientation,number(margin,0,200),fill,paperMode))
             "pdf_07" -> Json.encodeToString(PdfImagesSettings(pages.trim().ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),if(format=="JPEG") "JPEG" else "PNG",if(format=="JPEG") number(quality,1,100) else 85,grayscale,outputName.trim()))
             "file_07","file_08" -> Json.encodeToString(ArchiveSettings(SafeNames.basename(outputName),number(zipLevel,0,9)))
             "sha256" -> Json.encodeToString(HashSettings(expectedHash.trim().takeIf { it.isNotEmpty() }))
             "pdf_03" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMergeSettings(SafeNames.basename(outputName)))
-            "pdf_05" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSplitSettings(SafeNames.basename(outputName),if(flag1) "EVERY" else "RANGES",pages.ifBlank{"all"},if(flag1) number(num1.ifBlank{"1"},1,1000) else 1))
+            "pdf_05" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSplitSettings(SafeNames.basename(outputName),if(flag1) "EVERY" else if(flag2) "BOUNDARIES" else "RANGES",if(flag2) pages else pages.ifBlank{"all"},if(flag1) number(num1.ifBlank{"1"},1,1000) else 1))
             "pdf_06" -> Json.encodeToString(com.jumlo.app.data.processing.PdfExtractSettings(SafeNames.basename(outputName),pages.ifBlank{"all"}))
             "pdf_04" -> Json.encodeToString(com.jumlo.app.data.processing.PdfOrganizeSettings(SafeNames.basename(outputName),text1,text2,number(num1.ifBlank{"90"},-360,360)))
             "pdf_crop" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCropSettings(SafeNames.basename(outputName),pages.ifBlank{"all"},fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))

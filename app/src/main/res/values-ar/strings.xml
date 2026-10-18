@@ -346,4 +346,19 @@
     <string name="home_active_tasks_title">مهام قيد المعالجة الآن</string>
     <string name="media_rights_confirmation">أؤكد أن لدي الحق في تنزيل هذا المحتوى وأنني سألتزم بشروط المنصة.</string>
     <string name="media_rights_required">أكّد حقوق التنزيل وشروط المنصة أولًا.</string>
+    <!-- مهام دفعية محلية من النتائج المحفوظة -->
+    <string name="home_favorite_results">الملفات المثبتة</string>
+    <string name="files_workflow_incompatible">لا يمكن دمج هذه الملفات بهذه الأداة. اختر ملفات PDF فقط للدمج، أو صورًا فقط للتحويل إلى PDF.</string>
+    <string name="files_workflow_missing">أحد النتائج مفقود أو تغيّر. حدّث صفحة الملفات وحاول مجددًا، لم تُعدّل الملفات الأصلية.</string>
+    <string name="files_workflow_size">قد لا تكفي مساحة الجهاز لمعالجة هذه الملفات. وفّر مساحة ثم أعد المحاولة؛ ملفاتك الأصلية لم تتغير.</string>
+    <string name="files_workflow_invalid">تعذّر تجهيز بعض الملفات المختارة. حدّث صفحة الملفات واختر ملفات يمكن الوصول إليها مرة أخرى.</string>
+    <string name="files_workflow_limit">يمكنك اختيار حتى ١٠٠٠ ملف في الدفعة الواحدة، وتقسيم المجموعات الأكبر إلى أكثر من مهمة.</string>
+    <string name="files_workflow_duplicates">تم اختيار الملف نفسه مرتين. اختر نتائج مختلفة.</string>
+    <string name="files_favorites">المفضلة</string>
+    <string name="files_mark_favorite">إضافة للمفضلة</string>
+    <string name="files_unmark_favorite">إزالة من المفضلة</string>
+    <string name="files_bundle_selected">إنشاء ZIP (%1$d)</string>
+    <string name="files_merge_selected">دمج PDF (%1$d)</string>
+    <string name="files_images_to_pdf_selected">صور إلى PDF (%1$d)</string>
+    <string name="files_batch_tool_hint">اختر الملفات وحوّلها إلى PDF أو ZIP بدون إعادة الاستيراد.</string>
 </resources>

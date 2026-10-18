@@ -130,7 +130,7 @@ import javax.inject.Singleton
             }
             throw cancel
         } catch(oom:OutOfMemoryError) {
-            save(snapshot.progress.copy(stage=JobStage.FAILED),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode="BITMAP_BUDGET_EXCEEDED"))
+            save(snapshot.progress.copy(stage=JobStage.FAILED),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode="LOW_MEMORY"))
             true
         } catch(e:Exception) {
             val code=stableError(e)

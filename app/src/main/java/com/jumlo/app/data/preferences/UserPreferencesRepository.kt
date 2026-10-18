@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.jumlo.app.core.OutputFavorites
 import com.jumlo.app.core.ToolUsagePolicy
 import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.model.AppLanguage
@@ -28,6 +29,7 @@ class UserPreferencesRepository @Inject constructor(
     private object Keys {
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val QUICK_ACTION_IDS = stringPreferencesKey("quick_action_ids")
+        val FAVORITE_OUTPUT_IDS = stringPreferencesKey("favorite_output_ids")
         val RECENT_TOOLS = stringPreferencesKey("recent_tools")
         val TOOL_COUNTS = stringPreferencesKey("tool_counts")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -81,6 +83,9 @@ class UserPreferencesRepository @Inject constructor(
                 val id=value.substringBefore('=');val n=value.substringAfter('=',"").toIntOrNull()
                 if(id.matches(Regex("[a-z0-9_]{1,64}")) && n!=null && n>0) id to n else null
             }.sortedByDescending {it.second}.take(5).map {it.first},
+            favoriteOutputIds = OutputFavorites.sanitize(
+                prefs[Keys.FAVORITE_OUTPUT_IDS].orEmpty().split('|').filter(String::isNotBlank)
+            ).toSet(),
             isLoaded = true
         )
     }
@@ -95,6 +100,13 @@ class UserPreferencesRepository @Inject constructor(
                 if(key.matches(Regex("[a-z0-9_]{1,64}")) && count!=null) key to count else null
             }.toMap()
             prefs[Keys.TOOL_COUNTS]=ToolUsagePolicy.count(oldCounts,id).entries.joinToString("|") { "${it.key}=${it.value}" }
+        }
+    }
+
+    suspend fun toggleFavoriteOutput(id: String) {
+        context.dataStore.edit { prefs ->
+            val old = prefs[Keys.FAVORITE_OUTPUT_IDS].orEmpty().split('|').filter(String::isNotBlank)
+            prefs[Keys.FAVORITE_OUTPUT_IDS] = OutputFavorites.toggle(old, id).joinToString("|")
         }
     }
 

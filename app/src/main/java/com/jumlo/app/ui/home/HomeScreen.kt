@@ -52,16 +52,19 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
             contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
             verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
-            item("hero") {Surface(onClick=onTools,modifier=Modifier.pressFeedback().fillMaxWidth(),color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(28.dp)) {
-                Column(Modifier.padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.redesign_home_hero),style=QuietTheme.typography.screenTitle,color=MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(stringResource(R.string.redesign_home_subtitle),style=QuietTheme.typography.body,color=MaterialTheme.colorScheme.onPrimaryContainer)
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                        Text(stringResource(R.string.redesign_explore_tools),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onPrimaryContainer)
-                        Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,tint=MaterialTheme.colorScheme.onPrimaryContainer)
+            item("hero") {
+                Column(modifier=Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(R.string.redesign_home_hero),style=QuietTheme.typography.screenTitle,
+                        color=MaterialTheme.colorScheme.onSurface)
+                    Text(stringResource(R.string.redesign_home_subtitle),style=QuietTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
+                    TextButton(onClick=onTools,contentPadding=PaddingValues(horizontal=4.dp)) {
+                        Text(stringResource(R.string.redesign_explore_tools),style=QuietTheme.typography.metadataStrong)
+                        Spacer(Modifier.width(5.dp))
+                        Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,Modifier.size(18.dp))
                     }
                 }
-            }}
+            }
             item {Row(verticalAlignment=Alignment.CenterVertically) {
                 Text(stringResource(R.string.redesign_featured_tools),style=QuietTheme.typography.sectionTitle,modifier=Modifier.weight(1f))
                 TextButton(onClick={pending=ArrayList(selected);editing=true}) {Text(stringResource(R.string.ui_customize_actions),style=QuietTheme.typography.metadataStrong)}
@@ -104,6 +107,35 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
             val active=jobs.filter {it.isActive()}.take(2)
             if(active.isNotEmpty()) item {QuietSectionTitle(stringResource(R.string.ui_active_tasks))}
             items(active,key={"job-${it.request.id}"}) {job->TransferRow(job,settings.language,{onJob(job.request.id)},{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)})}
+            val pinned=outputs.filter { it.id in settings.favoriteOutputIds }.take(6)
+            if(pinned.isNotEmpty()) {
+                item("home_favorite_results") {
+                    QuietSectionTitle(stringResource(R.string.home_favorite_results))
+                }
+                item("pinned-result-carousel") {
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                        items(pinned,key={it.id}) { output ->
+                            Surface(onClick={onOutput(output)},
+                                modifier=Modifier.pressFeedback().width(172.dp).height(88.dp),
+                                color=MaterialTheme.colorScheme.primaryContainer,
+                                shape=RoundedCornerShape(18.dp)) {
+                                Row(Modifier.fillMaxSize().padding(12.dp),
+                                    horizontalArrangement=Arrangement.spacedBy(8.dp),
+                                    verticalAlignment=Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Star,null,tint=MaterialTheme.colorScheme.primary,
+                                        modifier=Modifier.size(20.dp))
+                                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Text(output.displayName,style=QuietTheme.typography.metadataStrong,maxLines=2,
+                                            overflow=TextOverflow.Ellipsis)
+                                        Text(formatBytes(output.sizeBytes),style=QuietTheme.typography.metadata,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             item {QuietSectionTitle(stringResource(R.string.recent_results_title))}
             if(outputs.isEmpty()) item {Text(stringResource(R.string.ui_recent_empty),style=QuietTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
             if(outputs.isNotEmpty()) item("recent-carousel") {

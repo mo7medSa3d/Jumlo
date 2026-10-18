@@ -126,6 +126,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     val renamePreview=computedRename?.takeIf {it.input==renameInput}?.result
     val proposedNames=renamePreview?.getOrNull()
     val ready=CapabilityRegistry.enabled(tool) && !busy && !inputMismatch && settingsError==null && countValid &&
+        (tool!="pdf_05" || !form.flag2 || form.flag1 || form.pages.isNotBlank()) &&
         (tool!="file_batch_rename" || proposedNames!=null) &&
         (tool=="webpage_pdf" || driveImport || if(download) urls.isNotBlank() else queue.size>=minimum)
     Column(Modifier.fillMaxSize().imePadding()) {
@@ -139,7 +140,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
                 if(queue.isEmpty()) item {QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body))}
-                if(preview!=null) item(key="preview-${preview.id}") {InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer)}
+                if(preview!=null && !(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1))
+                    item(key="preview-${preview.id}") { InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer) }
+                if(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1 && queue.single().mimeType=="application/pdf")
+                    item(key="pdf-visual-editor-${queue.single().id}") { PdfPageEditor(vm,queue.single().id,form,vm::updateForm) }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
                 itemsIndexed(queue,key={_,it->it.id},contentType={_,_->"input"}) {index,source->
                     val detail=proposedNames?.getOrNull(index)?.let {stringResource(R.string.ui_rename_preview_name,it)} ?: formatBytes(source.sizeBytes)
@@ -521,8 +525,18 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     Toggle(stringResource(R.string.field_flip_horizontal),f.flipX) {v->edit {it.copy(flipX=v)}};Toggle(stringResource(R.string.field_flip_vertical),f.flipY) {v->edit {it.copy(flipY=v)}}
                 }
                 "pdf_02" -> {
-                    Field(stringResource(R.string.field_paper_width),f.paperWidth,{v->edit {it.copy(paperWidth=v)}},true)
-                    Field(stringResource(R.string.field_paper_height),f.paperHeight,{v->edit {it.copy(paperHeight=v)}},true)
+                    LabeledOptions(
+                        label=stringResource(R.string.jumlo_paper_mode),
+                        options=listOf(
+                            "AUTO" to stringResource(R.string.ui_orient_auto),
+                            "A4" to "A4", "LETTER" to "Letter",
+                            "CUSTOM" to stringResource(R.string.jumlo_custom_paper)
+                        ),selected=f.paperMode
+                    ) { mode -> edit {it.copy(paperMode=mode)} }
+                    if(f.paperMode == "CUSTOM") {
+                        Field(stringResource(R.string.field_paper_width),f.paperWidth,{v->edit {it.copy(paperWidth=v)}},true)
+                        Field(stringResource(R.string.field_paper_height),f.paperHeight,{v->edit {it.copy(paperHeight=v)}},true)
+                    }
                     Field(stringResource(R.string.field_margin_mm),f.margin,{v->edit {it.copy(margin=v)}},true)
                     LabeledOptions(
                         label=stringResource(R.string.field_orientation),
@@ -547,7 +561,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 "file_08" -> Text(stringResource(R.string.field_zip_extract_note),style=QuietTheme.typography.metadata)
                 "sha256" -> Field(stringResource(R.string.field_expected_sha256),f.expectedHash,{v->edit {it.copy(expectedHash=v)}})
                 "pdf_03" -> { Text(stringResource(R.string.field_merge_note),style=QuietTheme.typography.metadata) }
-                "pdf_05" -> { Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) Field(stringResource(R.string.field_pages_per_part),f.num1,{v->edit {it.copy(num1=v)}},true) else Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
+                "pdf_05" -> { Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) Field(stringResource(R.string.field_pages_per_part),f.num1,{v->edit {it.copy(num1=v)}},true) else Field(stringResource(if(f.flag2) R.string.jumlo_split_markers else R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
                 "pdf_06" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
                 "pdf_04" -> { Field(stringResource(R.string.field_organize_order),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_rotate_pages),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_rotate_degrees),f.num1,{v->edit {it.copy(num1=v)}},true) }
                 "pdf_crop" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }

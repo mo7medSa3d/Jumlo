@@ -108,7 +108,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_files_default_grid_preserves_explicit_user_choice(self):
         self.assertIn('fileViewMode: FileViewMode = FileViewMode.GRID',code('model/Models.kt'))
         self.assertIn('prefs[Keys.FILE_VIEW_MODE] ?: "GRID"',code('data/preferences/UserPreferencesRepository.kt'))
-        self.assertIn('val columns=2',code('ui/files/FilesScreen.kt'))
+        self.assertIn('val columns=when { screenWidth>=840->4;screenWidth>=600->3;else->2 }',code('ui/files/FilesScreen.kt'))
         self.assertIn('FileViewMode.LIST',code('ui/files/FilesScreen.kt'))
     def test_semantic_color_pairs_meet_aa_text_contrast(self):
         colors=code('ui/theme/Color.kt')

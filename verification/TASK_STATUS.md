@@ -1,3 +1,26 @@
+## 2026-10-18 — Large-file hardening (latest local source ZIP; not pushed)
+
+- **Input**: Jumlo-Flagship-Professional-Source-2026-10-18.zip.
+- **Implemented**: >4 GiB import eligibility, non-duplicating trusted snapshots, disk-backed PDFBox scratch, streamed page-fanout ZIP with member validation, lazy text comparison and verification, validated compression fallback, EN/AR error corrections.
+- **Fresh evidence**: 172/172 Kotlin host tests, complete `scripts/verify-host.sh` success; Android build blocked before compile due Gradle 8.14 download `UnknownHostException`.
+- **Not claimed**: no device/emulator trial; no real giant-PDF end-to-end, memory profile, live-site download, APK size, CI run or commercial release.
+- **Still guarded**: disk reserve/RAM budgets; untrusted archive expansion 4 GiB/2048 entries, up to 1000 sources per job. A very large job may still be limited by actual hardware.
+- **Next**: obtain Android build on SDK36/Gradle8.14, execute 500MB/2GB/5GB representative PDFs and 1000+ pages on API26/36, inspect resulting PDF structure and exported ZIP members, profile heap/native memory and free-space behavior, then release gating.
+
+---
+
+## 2026-10-18 flagship implementation pass — **source candidate, not released**
+
+Source snapshot: SHA-256 input `5d60b822ad328c00995c96d333e4b870efb55586dc370887cc251af890d16663`. Remote `main` checked read-only at `3044f345b1f9f2e529c51fff8845cd52022b3089`; no remote write occurred. Current evidence is in [`verification/current-session/2026-10-18/REPORT.md`](verification/current-session/2026-10-18/REPORT.md).
+
+**Verification:** `LANG=C.UTF-8 LC_ALL=C.UTF-8 bash scripts/verify-host.sh` exited **0** with **135 Kotlin host** tests, **6 media source**, **10 SQLite structural**, **14 consistency**, **12 redesign wiring**, **14 brand/motion** and **4 shell safety** checks. The four scopes are not Android builds, instrumented gestures, device runtime or external-source downloads. An Android APK/release measurement does **not** exist for this modified source; **NO-GO** until Android compilation, 16KB, API26/36, live licensed media downloads, document output checks and UI tests pass.
+
+**P0/P1 improvements in source:** replaced direct-only media webpage rejection with a bounded passive HTML5 source scanner and real source HEAD/range verification (no YouTube/HLS/DASH claim); introduced a PDF thumbnail-based visual page editor with reorder/selection/deletion/undo and visual split/extract; added automatic per-image page geometry; removed two PDF compression full-rasterization paths; bounded expensive image decoding; added accurate compression failure, bounded PDF preview failure, media audio-unknown labeling and grouped Activity/results. Persistent Room schema and `com.jumlo.app` identity remain unchanged.
+
+**Major unfinished work:** full UI redesign and drag integration on a device, independent PDF content fidelity, FFmpeg-free authorized HLS/DASH, live provider qualification, authenticated downloads, long-running UIDT scheduling decision, actual APK size and CI. These are not shown green.
+
+---
+
 # Current ZIP execution — 2026-10-17
 
 ## Newest follow-up (working from previously hardened source ZIP)

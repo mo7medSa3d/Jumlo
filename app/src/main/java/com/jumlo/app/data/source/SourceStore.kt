@@ -6,6 +6,8 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import com.jumlo.app.data.jobs.*
+import com.jumlo.app.core.SourceMediaType
+import com.jumlo.app.core.SourceSnapshotPolicy
 import com.jumlo.app.data.local.*
 import com.jumlo.app.model.SourceRef
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -56,7 +58,14 @@ import javax.inject.Singleton
                     cached=dest.absolutePath; size=dest.length()
                 } finally { partial.delete() }
             }
-            val entity=SourceEntity(id,uri,name,resolver.getType(parsed),size,true,writable,persisted,modified,cached)
+            // Providers regularly return null/octet-stream for genuine PDFs and images.
+            // Only identify a generic type when the saved bytes carry a matching signature.
+            val header=File(inbound,"$id.bin").inputStream().use { input ->
+                val buf=ByteArray(32); val n=input.read(buf)
+                if(n>0) buf.copyOf(n) else ByteArray(0)
+            }
+            val mime=SourceMediaType.resolve(resolver.getType(parsed),name,header)
+            val entity=SourceEntity(id,uri,name,mime,size,true,writable,persisted,modified,cached)
             db.processingDao().putSource(entity); entity.ref()
         } catch(cancel:CancellationException) { cleanupUnregistered(id,File(inbound,"$id.bin")); throw cancel }
         catch(e:Exception) { cleanupUnregistered(id,File(inbound,"$id.bin")); throw OperationFailure(stableError(e)) }
@@ -69,17 +78,34 @@ import javax.inject.Singleton
         try {
             file.inputStream().use { source -> FileOutputStream(partial).use { sink -> boundedCopy(source,sink,partial); sink.fd.sync() } }
             java.nio.file.Files.move(partial.toPath(),dest.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-            val entity=SourceEntity(id,"local://$id",displayName,mimeType,dest.length(),true,false,false,System.currentTimeMillis(),dest.absolutePath)
+            val header=dest.inputStream().use { input ->
+                val buf=ByteArray(32); val n=input.read(buf)
+                if(n>0) buf.copyOf(n) else ByteArray(0)
+            }
+            val inferred=SourceMediaType.resolve(mimeType,displayName,header)
+            val entity=SourceEntity(id,"local://$id",displayName,inferred,dest.length(),true,false,false,System.currentTimeMillis(),dest.absolutePath)
             db.processingDao().putSource(entity); entity.ref()
         } catch(t:Throwable) { cleanupUnregistered(id,dest);throw t }
         finally { partial.delete() }
     }
+    /** Roll back only newly imported, unsubmitted copies after a failed selection handoff. */
+    suspend fun discardNewImport(id:String):Unit=withContext(Dispatchers.IO) {
+        require(UUID.fromString(id).toString()==id) { "INVALID_SOURCE_ID" }
+        val source=db.processingDao().source(id) ?: return@withContext
+        // The underlying output URI is never touched: delete only this owned inbound snapshot.
+        require(source.cachedPath!=null &&
+            File(source.cachedPath).canonicalFile==File(inbound,"$id.bin").canonicalFile) { "INVALID_CACHED_SOURCE" }
+        db.processingDao().deleteSource(id)
+        File(inbound,"$id.bin").delete()
+        Unit
+    }
+
     suspend fun openRead(sourceId:String):InputStream=withContext(Dispatchers.IO) {
         val source=db.processingDao().source(sourceId) ?: throw OperationFailure("SOURCE_NOT_FOUND")
         try {
             source.cachedPath?.let { path ->
-                val f=File(path).canonicalFile
-                if(!f.path.startsWith(inbound.canonicalPath+File.separator)) throw OperationFailure("INVALID_CACHED_SOURCE")
+                val f=SourceSnapshotPolicy.cachedFile(inbound,sourceId,path)
+                    ?: throw OperationFailure("INVALID_CACHED_SOURCE")
                 return@withContext f.inputStream()
             }
             resolver.openInputStream(Uri.parse(source.uri)) ?: throw OperationFailure("ACCESS_LOST")
@@ -88,6 +114,15 @@ import javax.inject.Singleton
     }
     suspend fun <T> withSeekable(sourceId:String,jobId:String,block:suspend (File)->T):T=withContext(Dispatchers.IO) {
         require(UUID.fromString(jobId).toString()==jobId)
+        // Every newly imported source has an immutable, private snapshot. Reusing it
+        // avoids allocating a SECOND multi-GB copy before opening, merging or compressing.
+        val record=db.processingDao().source(sourceId) ?: throw OperationFailure("SOURCE_NOT_FOUND")
+        if(record.cachedPath != null) {
+            val owned=SourceSnapshotPolicy.cachedFile(inbound,sourceId,record.cachedPath)
+                ?: throw OperationFailure("INVALID_CACHED_SOURCE")
+            return@withContext block(owned)
+        }
+        // Legacy uncached records still work when their SAF grant remains available.
         val dir=File(context.cacheDir,"seek/$jobId").apply { mkdirs() }
         val temp=File.createTempFile("source-",".bin",dir)
         try {

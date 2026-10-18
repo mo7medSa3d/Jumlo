@@ -1,3 +1,56 @@
+## 2026-10-18 flagship reliability and direct-manipulation follow-up — SOURCE ONLY / NO-GO
+
+**Starting artifact:** the most recent delivered `Jumlo-Commercial-Workflows-2026-10-18.zip`, not the older GitHub `main`. Application ID `com.jumlo.app`, brand identity, Room database schema, user outputs, and existing functionality have not been intentionally changed or reset. This is a narrowly verified improvement cycle, **not** a claim that every feature is commercially qualified.
+
+| Priority | Verified source defect / cause | Implemented remediation | Verification |
+| --- | --- | --- | --- |
+| P0 | HTTP resumed 206 without stored total used range end as entire object, possibly publishing truncated content as success | Require full representation size in Content-Range, validate range, derive complete total and reject unknown total | New RED/GREEN actual transfer tests; host Kotlin suite |
+| P0 | Generated ZIP accepted central-directory listing even with corrupt member payload | Stream every member and validate CRC, decompressed size, entry identity and budget before publication; delete invalid output | New adversarial ZIP corruption tests; host Kotlin suite |
+| P1 | ZIP extraction could expand thousands of entries before rejecting too many output files | Cap extracted entries before writing temp files; enforce conservative per-job output, archive and disk budgets | Archive limit host tests and source wiring |
+| P1 | Invalid PDF order entries were dropped silently, creating PDFs with missing pages | Strict parser for localized digits, invalid tokens, bounds, duplicates; preserve order or fail without publication | New RED/GREEN order regression tests |
+| P1 | PDF split required range entry to define coherent multi-page parts | Visual split-after-page markers with derived contiguous segments, output count limit and preview | New grouping tests and EN/AR Compose source wiring |
+| P1 | The new Split every page chip selected the single-range path, not EVERY mode | Wire chip to `flag1=true`, `every=1` and disable irrelevant tile selection | RED/GREEN source contract check |
+| P1 | Browser share containing captions or several URLs was not handled reliably | Bounded deduplicating URL discovery, block obvious local/private literal targets from shared prose, reroute unknown webpage links to media inspection, and reject unsupported mixed social batches clearly | New Kotlin and source wiring tests |
+| P2 | Artificial splash delay added 450ms even when app state was ready | Transition directly when settings and workspace are ready; keep readiness gate | RED/GREEN source check |
+
+**Evidence this iteration:** `scripts/test-core.sh` returned `RESULT passed=165 failed=0`, including actual local HTTP responses/partial files, ZIP corruption, and PDF split policies. Python/UI/source/Room structural suites passed in individually observed runs. `./gradlew --offline :app:assembleDebug` **failed before compilation**, attempting to fetch uncached Gradle 8.14 and raising `UnknownHostException: services.gradle.org`. No SDK/device was available; Compose compilation, Android UI automation, real social-provider downloads, app performance measurements, APK/AAB sizes, Google Play billing, end-to-end output rendering and 16 KB native compatibility remain **NOT VERIFIED**. The source is **NO-GO** for commercial release. No GitHub push or commit was performed.
+
+## 2026-10-18 commercial workflows — latest source follow-up / **NO-GO**
+
+Continued from the most recent edited source ZIP (`Jumlo-Universal-Media-Source-2026-10-18.zip`), not a clean checkout or previous beta. Source fixes: correct result/source “Use as input” routing, batch ZIP/PDF/image handoff from saved outputs and imported snapshots, bounded local Favorites, safe rollback of newly imported copies, and 32-byte magic MIME inference for SAF-provided generic documents. Branding `Jumlo`, package `com.jumlo.app` and Room schema v2 unchanged. Not a complete flagship or SaaS/payments implementation.
+
+**Verified host:** `scripts/verify-host.sh` **exit 0**: 149/149 Kotlin host tests, 11/11 media-bootstrap, 4/4 network guard, 7/7 universal architecture, 4/4 downloader density, 10/10 SQLite checks, 14/14 source/resource, 12/12 redesign wiring, 14/14 new file workflows, 14/14 brand/motion plus shell prerequisites. Tests on Android for new source snapshots were **authored, not executed**.
+
+**Build blocker:** `./gradlew --offline :app:assembleDebug --no-daemon` exited 1 **before Kotlin/Android compilation** with `UnknownHostException: services.gradle.org`; Gradle 8.14 distribution not cached, Android SDK absent. No new APK, CI run, payment proof or real device output verification. Needs an Android build/device environment, compliant Play Billing and independent content-fidelity tests before charging customers. Detailed scope and business gates: `docs/COMMERCIAL_READINESS.md`.
+
+---
+
+## 2026-10-18 downloader UX and automatic source-compatibility follow-up — SOURCE ONLY / NO-GO
+
+**Actual source changes in this follow-up:** Removed `PlatformSessionSheet` and its in-app WebView, cookies.txt importer, and custom User-Agent/header settings controls from the downloader. Removed obsolete translated UI resources and corrected login/rate-limit errors so they no longer direct people to deleted controls. Existing app-private session data is preserved for migration/compatibility; cookies are not invented and no user credentials are collected. The backend now selects Android/desktop HTTP User-Agent profiles per source, tries at most one alternate on HTTP 406/415 or successful HTML without verifiable media, and stops on explicit 401/403/429 denials. Profile selection is also applied when transferring the file rather than only discovering it; a previous custom agent cannot disable fallback. See `core/BrowserProfilePolicy.kt` and `data/media/MediaRuntimeFactory.kt`.
+
+**Real source discovery improvements:** `Html5MediaDiscovery` accepts declared HTTPS OpenGraph/JSON-LD `contentUrl` sources, including extensionless signed URLs, but **only offers formats after live MIME/URL server verification**. Thumbnail discovery is bounded; local-address and unencrypted metadata candidates are rejected. No JavaScript runtime, ffmpeg, yt-dlp, DRM bypass, login circumvention, HLS/DASH or guaranteed social-platform extractor has been added. Source/page discovery is **not proof that a playable download succeeded**.
+
+**UI/UX touched in this iteration:** `MediaWorkspace` is link -> analyzing -> actual preview / format -> fixed Download button with honest restricted/unsupported states, no technical login sheet; `DownloadsScreen` now prioritizes active transfers before history, uses a compact summary and direct primary action; Home reduces oversized decorative hero; Files reduces redundant header copy/spacing. Other app-wide UI improvements inherited from the previous candidate remain, but **no all-screen device-verified redesign** is claimed.
+
+**Verification:** `LANG=C.UTF-8 LC_ALL=C.UTF-8 bash scripts/verify-host.sh` **exit 0**: **141 Kotlin host** regression tests (pure algorithms/HTTP loopback), **11 media source static contracts**, **4 downloader density/static UI contracts**, **10 SQLite structural**, **14 source/resource**, **12 previous UI wiring**, **14 brand/motion**, plus shell launch/prerequisite safety tests. This is **not** an Android compile/device/media-site test. `./gradlew --offline :app:assembleDebug` **exit 1** due absent cached Gradle 8.14 and `UnknownHostException: services.gradle.org`; Android SDK also unavailable. APK size, 16KB compatibility, emulator screenshots, actual provider transfers, YouTube/Meta/TikTok/LinkedIn support, local playback and release signing remain **NOT EXECUTED**. CI/GitHub untouched.
+
+**Source-of-truth evidence** is appended to `verification/current-session/2026-10-18/REPORT.md`. All older test totals in this audit refer to prior revisions and must not be added to the current 141 figure.
+
+---
+
+## 2026-10-18 flagship implementation pass — **source candidate, not released**
+
+Source snapshot: SHA-256 input `5d60b822ad328c00995c96d333e4b870efb55586dc370887cc251af890d16663`. Remote `main` checked read-only at `3044f345b1f9f2e529c51fff8845cd52022b3089`; no remote write occurred. Current evidence is in [`verification/current-session/2026-10-18/REPORT.md`](verification/current-session/2026-10-18/REPORT.md).
+
+**Verification:** `LANG=C.UTF-8 LC_ALL=C.UTF-8 bash scripts/verify-host.sh` exited **0** with **135 Kotlin host** tests, **6 media source**, **10 SQLite structural**, **14 consistency**, **12 redesign wiring**, **14 brand/motion** and **4 shell safety** checks. The four scopes are not Android builds, instrumented gestures, device runtime or external-source downloads. An Android APK/release measurement does **not** exist for this modified source; **NO-GO** until Android compilation, 16KB, API26/36, live licensed media downloads, document output checks and UI tests pass.
+
+**P0/P1 improvements in source:** replaced direct-only media webpage rejection with a bounded passive HTML5 source scanner and real source HEAD/range verification (no YouTube/HLS/DASH claim); introduced a PDF thumbnail-based visual page editor with reorder/selection/deletion/undo and visual split/extract; added automatic per-image page geometry; removed two PDF compression full-rasterization paths; bounded expensive image decoding; added accurate compression failure, bounded PDF preview failure, media audio-unknown labeling and grouped Activity/results. Persistent Room schema and `com.jumlo.app` identity remain unchanged.
+
+**Major unfinished work:** full UI redesign and drag integration on a device, independent PDF content fidelity, FFmpeg-free authorized HLS/DASH, live provider qualification, authenticated downloads, long-running UIDT scheduling decision, actual APK size and CI. These are not shown green.
+
+---
+
 ## Additional hardened-ZIP iteration, 2026-10-17 — current status
 
 Current execution continues **the updated hardened archive**, never the original
@@ -116,3 +169,47 @@ See [`docs/JUMLO_2026_MOTION_BRAND_QA.md`](docs/JUMLO_2026_MOTION_BRAND_QA.md) f
 ## Jumlo identity and asset integrity — 2026-10-17
 
 The app launcher, translated screens, splash, resource identifiers, sounds, SVG assets, public output directory, test scripts and documentation all use Jumlo. The redesigned neutral document/download emblem and motion system are unchanged. Custom SAF destinations, persisted output URIs, package identity and user data are preserved. The download preference accepts only custom SAF tree URIs; any stored generated-path default resolves to `Download/Jumlo`. Native Android CI/device checks are tracked separately.
+
+## 2026-10-18: Universal media-engine source candidate (not released)
+
+**Baseline:** prior default main intentionally removed native Python/yt-dlp/FFmpeg due to 60 MB APK gate. Static HTML5/HTTP cannot analyze many social pages. **Change:** preserved native direct engine, separated its implementation into shared code, added an opt-in APK-bundled yt-dlp/FFmpeg adapter (`-PextendedMedia=true`) with exact-format selection/worker integration, bounded process runner, no external code updater or cookie UI, and explicit error classification. Added offline routing/URL security tests. Default APK excludes the extended assets/dependencies and retains the size check.
+
+**Verification:** `scripts/test-core.sh` 144 host tests passed after routing work. Python security tests found then corrected invalid port/alternative-private-IP handling. Android Gradle build, APK/ABI alignment, real provider downloads, and device playback remain **NOT VERIFIED**. Do not claim YouTube, Instagram, TikTok, Facebook, LinkedIn or 'all sites' work. GPL-3.0 obligations and Google Play distribution policy require review. See `docs/media/UNIVERSAL_ENGINE.md` for acceptance gates.
+
+## 2026-10-18: Extended media source follow-up and CI evidence
+
+The new `extended_media` manual CI job builds/tests/lints an experimental GPL yt-dlp/FFmpeg Android APK and uploads an independent artifact and SHA-256 only on successful execution. The standard build's 60 MB size and native-exclusion gates are unchanged. The downloader now shows build-specific, localized media availability copy instead of advertising a lightweight limitation on the extended build. `verify-host.sh` runs network-guard and architecture regressions as part of its default checks.
+
+Observed: `bash scripts/verify-host.sh` exited 0, with 144 pure Kotlin host test passes and all configured Python/static/shell checks. A separate local media fixture log reported `RESULT passed=149 failed=0` (including real FFmpeg mux/transcode), but the execution tool timed out before returning the outer script exit code; **full shell status unobserved**. An extended Gradle build was attempted and blocked before compile by unavailable Gradle 8.14 download (`UnknownHostException: services.gradle.org`). No native package or real-platform download was executed. **NO-GO** for release. See `docs/media/UNIVERSAL_ENGINE.md`.
+
+
+## 2026-10-18 — Large-PDF/resource hardening on latest Flagship ZIP (source candidate)
+
+**Input**: `Jumlo-Flagship-Professional-Source-2026-10-18.zip` (not remote GitHub `main`). The customer symptom was arbitrary rejection of large PDFs / vague memory errors. Do **not** infer the reporter's precise failure mode without device logs.
+
+### Confirmed source findings and implementation
+
+| Finding | Severity | Root cause in source | Change | Verification scope |
+|---|---|---|---|---|
+| Large import rejected even with free disk | P1 | `maxImportBytes = 4 GiB` | Disk/SAF streaming admission without artificial 4 GiB byte ceiling; keep minimum free-space check and safe copy | Pure Kotlin policy tests, static wiring |
+| File batches rejected above 100 or 4 GiB aggregate | P1 | `OutputWorkflowPolicy` hard byte total and 100-item cap | Batch 1000 consistent with JobStore; no aggregate byte ceiling | Kotlin workflow tests |
+| Operations duplicated huge source on storage | P1 | `withSeekable` copied already-imported cached `.bin` on every action | Verified immutable app-private snapshot reused; legacy uncached imports still spooled; fail closed for forged paths | Kotlin security tests, wiring check |
+| PDFBox kept unrestricted PDF scratch in heap | P1 | Default `PDDocument.load(file)` / `PDDocument()` used in PDF paths | Temp-file scratch for PDFBox loads/creation, merge already disk-spillable | Source signature/API review, wiring check; Android compile NOT RUN |
+| One-page split/export rejected above 512 published files | P1 | Hard `requireOutputCount` irrespective of output type | Stream each member to one verified ZIP for larger fanout; preserve individual outputs for <=512 | Kotlin 600-member ZIP CRC roundtrip; Android handler wiring check |
+| PDF text comparison / redaction allocated full-page text lists | P1 | `pageTexts` used for both PDFs before comparing, also joined into one verification string | Lazy first-mismatch and early-match readers with bounded per-page text; redaction verifies only affected pages; metadata removes redundant page-object list | 2 Kotlin TDD tests, Android integration wiring |
+| Already-optimized PDF marked as failed | P2 | Throws after two unsuccessful size-reduction passes | Copy valid original to new output rather than fail or rasterize; original unchanged | Source inspection / static wiring; Android compression test NOT RUN |
+| Subarchive members not individually validated | P2 | ZIP byte integrity alone did not validate generated PDF/images | Validate PDF page count and image dimensions prior to packing; CRC-verified archive afterward | Static integration check only |
+
+### Safety limits retained on purpose
+
+- **Device**: real storage capacity, reserved free disk, RAM/bitmap budget, cancellation, Android/PDF codec limits.
+- **Adversarial ZIP extraction**: 4 GiB expanded archive byte budget, 2048 entries, 512 separately published outputs (zip-bomb / record fanout resistance). This is NOT the import/PDF size limit.
+- **Submission**: 1000 source IDs per job, to limit database/jobs state. >512 generated pages go to one archive. Huge jobs may still need practical batching.
+- **No cloud processing**, brand rename, Room migrations, or remote GitHub write.
+
+### Verification and blocker
+
+- Fresh `scripts/test-core.sh`: **172/172** passed.
+- Fresh `scripts/verify-host.sh`: see `verification/current-session/2026-10-18/large-files-host.log` and companion report. Includes Host Kotlin, Python/static/SQLite, resources, shell checks; NOT an Android test.
+- Android `./gradlew --offline :app:assembleDebug`: **blocked before compilation** by `java.net.UnknownHostException: services.gradle.org`, required Gradle 8.14 not cached.
+- Large encrypted/corrupted PDFs, 5+ GiB realistic PDF roundtrips, Android device tests, low-memory instrumented tests, UI performance, release APK size: **NOT EXECUTED**. Claiming zero possible errors would be false; release stays **NO-GO**.

@@ -26,7 +26,7 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }
-    private fun limits(ctx:ExecutionContext,base:File)=ArchiveLimits(minOf(ctx.budget.maxExpandedArchiveBytes,(base.usableSpace-ctx.budget.minFreeBytes).coerceAtLeast(1)),ctx.budget.maxArchiveEntries,32)
+    private fun limits(ctx:ExecutionContext,base:File,maxEntries:Int=ctx.budget.maxArchiveEntries)=ArchiveLimits(minOf(ctx.budget.maxExpandedArchiveBytes,(base.usableSpace-ctx.budget.minFreeBytes).coerceAtLeast(1)),maxEntries,32)
     private suspend fun create(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
         ctx.outputs.find(job.id,"archive")?.let { return listOf(ItemOutcome("archive",ItemStatus.CREATED,it.id)) }
         val settings=Json.decodeFromString<ArchiveSettings>(job.settingsJson)
@@ -63,11 +63,12 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
         val outcomes=mutableListOf<ItemOutcome>()
         try {
             ctx.sources.withSeekable(job.sourceIds.single(),job.id) { source ->
-                val entries=ArchiveCore.extract(source,directory,limits(ctx,app.cacheDir)) {
+                val entries=ArchiveCore.extract(source,directory,limits(ctx,app.cacheDir,minOf(ctx.budget.maxOutputFiles,ctx.budget.maxArchiveEntries))) {
                     ctx.checkCancellation()
                     if(app.cacheDir.usableSpace<ctx.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
                 }
                 require(entries.isNotEmpty()) { "ARCHIVE_HAS_NO_FILES" }
+                ResourceBudgetPolicy.requireOutputCount(entries.size, ctx.budget.maxOutputFiles)
                 for ((index, file) in entries.withIndex()) {
                     ctx.checkCancellation()
                     val key="entry:"+file.relativeTo(directory).invariantSeparatorsPath

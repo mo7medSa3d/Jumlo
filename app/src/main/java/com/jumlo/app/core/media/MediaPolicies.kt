@@ -44,7 +44,10 @@ object MediaCatalog {
                         else -> false
                     }
                 }.ifEmpty { audioOnly }
-                val audio = if (video.hasAudio) null else preferred.maxWithOrNull(audioOrder)
+                // A static webpage may link an unrelated standalone audio file. Never
+                // silently combine two sources without an extractor declaring them a pair.
+                val audio = if (video.hasAudio || asset.extractor in setOf("Html5", "DirectMedia"))
+                    null else preferred.maxWithOrNull(audioOrder)
                 val selected = listOfNotNull(video, audio)
                 val container = when {
                     audio == null -> video.extension
@@ -117,6 +120,35 @@ object MediaCatalog {
 }
 
 object MediaLinks {
+    /** Share intents often contain captions and several links. Return only validated, unique
+     * HTTP(S) URLs in their original order. Do not resolve DNS, execute page scripts, or
+     * interpret arbitrary prose as a URL. Transfer-time consent remains enforced separately. */
+    fun sharedUrls(text: String): List<String> {
+        require(text.length <= 100000) { "INVALID_DOWNLOAD_LIST" }
+        val seen = LinkedHashSet<String>()
+        val pattern = Regex("https?://[^\\s<>\\\"\\u0000-\\u001f]+", RegexOption.IGNORE_CASE)
+        for (match in pattern.findAll(text)) {
+            val candidate = match.value.trimEnd('.', ',', ';', ')', ']', '!').substringBefore('#')
+            val uri = runCatching { HttpPolicy.url(candidate, cleartext = true) }.getOrNull() ?: continue
+            if (privateSharedHost(uri.host.orEmpty())) continue
+            if (seen.add(uri.toASCIIString())) require(seen.size <= 100) { "TOO_MANY_DOWNLOAD_URLS" }
+        }
+        return seen.toList()
+    }
+
+    private fun privateSharedHost(hostInput: String): Boolean {
+        val host = hostInput.lowercase(Locale.ROOT).trimEnd('.').removePrefix("[").removeSuffix("]")
+        if (host.isEmpty() || host == "localhost" || host.endsWith(".localhost") ||
+            host.endsWith(".local") || host == "::1" || host == "::" ||
+            host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd")) return true
+        val ipv4 = host.split('.').map { it.toIntOrNull() }
+        if (ipv4.size != 4 || ipv4.any { it == null || it !in 0..255 }) return false
+        val a = ipv4[0]!!; val b = ipv4[1]!!
+        return a == 0 || a == 10 || a == 127 || a >= 224 ||
+            (a == 169 && b == 254) || (a == 172 && b in 16..31) ||
+            (a == 192 && (b == 168 || b == 0)) || (a == 100 && b in 64..127) ||
+            (a == 198 && b in 18..19)
+    }
     fun normalize(text: String, allowHttp: Boolean = false): String {
         require(text.length <= 32768) { "INVALID_URL" }
         val trimmed = text.trim()
