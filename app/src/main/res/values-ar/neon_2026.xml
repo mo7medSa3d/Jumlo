@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="neon_home_subtitle">امسح · حوّل · عدّل · نظّم</string>
+    <string name="neon_hero_title">كل شيء يبدأ بمسح مستند</string>
+    <string name="neon_hero_body">صوّر الصفحات وحوّلها إلى ملف PDF مرتب.</string>
+    <string name="neon_start_scan">ابدأ المسح</string>
+    <string name="neon_quick_actions">إجراءات سريعة</string>
+    <string name="neon_show_all">عرض الكل</string>
+    <string name="neon_recent">الملفات الأخيرة</string>
+    <string name="neon_recent_empty">ستظهر الملفات المكتملة هنا.</string>
+    <string name="neon_smart_tools">استكشف الأدوات</string>
+    <string name="neon_tools_import">استيراد</string>
+    <string name="neon_tools_convert">تحويل</string>
+    <string name="neon_tools_edit">تعديل وتنظيم</string>
+    <string name="neon_tools_download">تنزيل</string>
+    <string name="neon_tools_manage">إدارة الملفات</string>
+    <string name="neon_tools_other">أدوات أخرى</string>
+    <string name="neon_tools_search">ابحث عن أداة</string>
+    <string name="neon_files_subtitle">كل ملفاتك في مكان واحد</string>
+    <string name="neon_my_space">مساحتي</string>
+    <string name="neon_my_space_subtitle">خصوصية من البداية. محفوظ على جهازك.</string>
+    <string name="neon_storage_shortcut">التخزين</string>
+    <string name="neon_my_documents">مستنداتي</string>
+    <string name="neon_preference_title">خصّص جملو بطريقتك</string>
+    <string name="neon_download_headline">احتفظ به لوقت لاحق</string>
+    <string name="neon_download_subtitle">الصق رابطًا مباشرًا لحفظ نسخة على الجهاز.</string>
+    <string name="neon_selection_count">تم تحديد %1$d</string>
+    <string name="neon_selected_tools">الملفات المحددة</string>
+    <string name="neon_shortcut_download">تنزيل جديد</string>
+    <string name="neon_shortcut_pdf">أدوات PDF</string>
+    <string name="neon_shortcut_files">ملفاتك</string>
+    <string name="neon_workspace_saved">محفوظ على الجهاز</string>
+    <string name="neon_sort_filter">ابحث ورتّب وحدد</string>
+    <string name="neon_dock_me">أنا</string>
+    <string name="neon_dock_documents">المستندات</string>
+    <string name="neon_no_premium">مساحة عملك</string>
+    <string name="neon_batch_actions">إجراءات جماعية</string>
+    <string name="neon_tool_description">اختر أداة للبدء</string>
+    <string name="neon_scan_action">مسح مستند</string>
+</resources>

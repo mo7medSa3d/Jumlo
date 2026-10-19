@@ -50,29 +50,63 @@ import com.jumlo.app.core.StoragePaths
         verticalArrangement=Arrangement.spacedBy(12.dp)
     ) {
         item("download-summary") {
-            Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Rounded.Download,null,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.primary)
-                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                        Text(stringResource(R.string.redesign_download_hero),style=QuietTheme.typography.screenTitle)
-                        Text(stringResource(R.string.premium_download_tip),style=QuietTheme.typography.metadata,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2)
+            NeonPanel(accent=MaterialTheme.colorScheme.primary) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Surface(shape=RoundedCornerShape(19.dp),
+                        color=MaterialTheme.colorScheme.primaryContainer,
+                        modifier=Modifier.size(56.dp)) {
+                        Box(contentAlignment=Alignment.Center) {
+                            Icon(Icons.Rounded.Download,null,Modifier.size(28.dp),
+                                tint=MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Column(Modifier.weight(1f),
+                        verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                        Text(stringResource(R.string.neon_download_headline),
+                            style=QuietTheme.typography.screenTitle)
+                        Text(stringResource(R.string.neon_download_subtitle),
+                            style=QuietTheme.typography.metadata,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines=2)
                     }
                 }
-                if(!selecting && mediaTool!=null) QuietPrimaryButton(
-                    stringResource(R.string.ui_new_download),{onTool(mediaTool)},Modifier.fillMaxWidth(),Icons.Rounded.Download)
+                if(!selecting && mediaTool!=null) {
+                    QuietPrimaryButton(text=stringResource(R.string.ui_new_download),
+                        onClick={onTool(mediaTool)},modifier=Modifier.fillMaxWidth(),
+                        leadingIcon=Icons.Rounded.Download)
+                }
             }
         }
         item("download-stats") {
-            Surface(shape=RoundedCornerShape(16.dp),color=MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier=Modifier.fillMaxWidth()) {
-                Row(modifier=Modifier.fillMaxWidth().padding(horizontal=14.dp,vertical=11.dp),
-                    horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Bolt,null,Modifier.size(17.dp),tint=MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.downloads_live_count,activeDownloads.size),style=QuietTheme.typography.metadataStrong)
-                    Spacer(Modifier.weight(1f))
-                    Icon(Icons.Rounded.CheckCircle,null,Modifier.size(17.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(stringResource(R.string.downloads_completed_count,completed),style=QuietTheme.typography.metadataStrong)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                Surface(shape=RoundedCornerShape(20.dp),
+                    color=MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier=Modifier.weight(1f)) {
+                    Column(Modifier.padding(16.dp),
+                        verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Rounded.Bolt,null,Modifier.size(22.dp),
+                            tint=MaterialTheme.colorScheme.primary)
+                        Text(activeDownloads.size.toString(),
+                            style=MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.ui_active_tasks),
+                            style=QuietTheme.typography.metadata,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Surface(shape=RoundedCornerShape(20.dp),
+                    color=MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier=Modifier.weight(1f)) {
+                    Column(Modifier.padding(16.dp),
+                        verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Rounded.CheckCircle,null,Modifier.size(22.dp),
+                            tint=MaterialTheme.colorScheme.primary)
+                        Text(completed.toString(),
+                            style=MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.downloads_completed_count,completed),
+                            style=QuietTheme.typography.metadata,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }

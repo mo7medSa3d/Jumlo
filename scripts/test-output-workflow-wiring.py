@@ -5,7 +5,7 @@ root = Path(__file__).resolve().parents[1]
 
 def read(path): return (root/path).read_text(encoding='utf8')
 checks = {
-  'Files selection offers ZIP/PDF batch handoff': all(t in read('app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt') for t in ('files_bundle_selected','files_merge_selected','files_images_to_pdf_selected','onOutputWorkflow')),
+  'Files selection offers ZIP/PDF batch handoff': all(t in read('app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt') for t in ('"file_07"','"pdf_03"','"pdf_02"','onOutputWorkflow','NeonBatchAction')),
   'Previously imported sources can be selected in batches': all(t in read('app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt') for t in ('onSourceWorkflow','selectedSources','selectingSources')) and 'prepareSourceBatchWorkflow' in read('app/src/main/java/com/jumlo/app/ui/AppViewModel.kt'),
   'Favorites filter is coupled to persistent setting': all(t in read('app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt') for t in ('files_favorites','settings.favoriteOutputIds','toggleOutputFavorite')),
   'Output workflow validates published integrity before importing': all(t in read('app/src/main/java/com/jumlo/app/ui/AppViewModel.kt') for t in ('prepareOutputWorkflow','OutputWorkflowPolicy.validate','outputStore.find','sources.inspect')),

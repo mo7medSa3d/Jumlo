@@ -292,7 +292,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             }) {
                 Column(Modifier.fillMaxSize()) {
                     if(root) QuietRootTopBar(
-                        title=stringResource(when(shellRoute) { "home"->R.string.app_name;"tools_catalog"->R.string.tools_catalog_title;"downloads"->R.string.nav_downloads;"settings"->R.string.settings_title;else->R.string.nav_files }),
+                        title=stringResource(if(shellRoute=="settings") R.string.neon_dock_me else R.string.app_name),
                         onSearchClick=if(shellRoute=="home") ({navigateTab(DockTab.TOOLS)}) else null,
                         onSettingsClick={navigateTo("settings")},onAccountClick={showAccountHub=true}
                     ) else QuietWorkspaceTopBar(
@@ -301,7 +301,14 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     )
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when(shellRoute) {
-                            "home" -> com.jumlo.app.ui.home.HomeScreen(viewModel,::openTool,{navigateTab(DockTab.TOOLS)},{selectedJob=it;navigateTo("activity")},{launchExternal(it.uri,it.mimeType,false)},{navigateTo("workspace")})
+                            "home" -> com.jumlo.app.ui.home.HomeScreen(viewModel,::openTool,
+                                 {navigateTab(DockTab.TOOLS)},
+                                 {selectedJob=it;navigateTo("activity")},
+                                 {launchExternal(it.uri,it.mimeType,false)},
+                                 {navigateTo("workspace")},
+                                 {navigateTab(DockTab.FILES)},
+                                 {navigateTo("scan")},
+                                 {navigateTab(DockTab.DOWNLOADS)})
                             "tools_catalog" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool)
                             "downloads" -> com.jumlo.app.ui.downloads.DownloadsScreen(viewModel,::openTool,{selectedJob=it;navigateTo("activity")})
                             "files_overview" -> com.jumlo.app.ui.files.FilesScreen(viewModel,
@@ -340,6 +347,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             selectedTab=tab,
                             language=settings.language,
                             onSelectTab=::navigateTab,
+                            onScan={navigateTo("scan")},
                             modifier=Modifier.align(Alignment.BottomCenter)
                         )
                     }

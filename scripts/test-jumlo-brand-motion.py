@@ -91,7 +91,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
             self.assertIn(part,settings)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
-        for key in ('animateDpAsState','visualIndex=if(direction==LayoutDirection.Rtl)','modifier.pressFeedback()','navigationTab()','contentDescription=label'):
+        for key in ('animateDpAsState','val slot = when (selectedTab)','onScan: () -> Unit','modifier.pressFeedback()','navigationTab()','contentDescription = label'):
             self.assertIn(key,dock)
     def test_system_and_app_reduce_motion_are_respected(self):
         system=code('ui/theme/SystemMotion.kt')

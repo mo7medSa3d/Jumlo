@@ -9,13 +9,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,8 +28,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -37,8 +37,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
 import com.jumlo.app.ui.theme.JumloMotion
@@ -47,55 +47,95 @@ import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
-private fun dockIcon(tab: DockTab): ImageVector = when (tab) {
-    DockTab.HOME -> Icons.Rounded.Home
-    DockTab.TOOLS -> Icons.Rounded.GridView
-    DockTab.DOWNLOADS -> Icons.Rounded.Download
-    DockTab.FILES -> Icons.Rounded.Folder
-    DockTab.SETTINGS -> Icons.Rounded.Settings
-}
-
-/** One moving, spring-driven selection shape; automatically reverses in RTL via CenterStart + offset(x). */
+/** Floating four-destination dock plus the real camera-scanning action.
+ * Downloads remain reachable from Home and Tools; the route and history are preserved.
+ * Row start follows Compose RTL automatically, including the animated selection shape.
+ */
 @Composable
-fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
-    onSelectTab: (DockTab) -> Unit, modifier: Modifier = Modifier) {
+fun QuietFloatingDock(
+    selectedTab: DockTab,
+    language: AppLanguage,
+    onSelectTab: (DockTab) -> Unit,
+    onScan: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val palette = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     val reduced = LocalReducedMotion.current
-    val direction = LocalLayoutDirection.current
-    // Five destinations cannot fit translated labels at very large text scales.
-    // Keep full TalkBack labels and show the current destination in the root app bar.
+    val haptics = rememberAppHaptics()
     val showLabels = LocalDensity.current.fontScale < 1.5f
+    val scanLabel = stringResource(R.string.neon_scan_action)
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val tabs = DockTab.entries
-    Box(modifier.fillMaxWidth().padding(bottom=bottom + 12.dp),contentAlignment=Alignment.BottomCenter) {
+    val slot = when (selectedTab) {
+        DockTab.HOME -> 0
+        DockTab.FILES -> 1
+        DockTab.TOOLS -> 3
+        DockTab.SETTINGS -> 4
+        DockTab.DOWNLOADS -> -1
+    }
+    Box(
+        modifier.fillMaxWidth().padding(bottom = bottom + 12.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
         Surface(
-            modifier=Modifier.widthIn(max=400.dp).fillMaxWidth(.94f).height(74.dp)
-                .shadow(12.dp,QuietTheme.shapes.dockPill,ambientColor=Color.Black.copy(alpha=.12f)),
-            shape=QuietTheme.shapes.dockPill, color=pillars.dockSurface,
-            tonalElevation=6.dp,
-            border=BorderStroke(1.dp,pillars.dockBorder)
+            modifier = Modifier.widthIn(max = 460.dp).fillMaxWidth(.96f).height(78.dp)
+                .shadow(14.dp, QuietTheme.shapes.dockPill,
+                    ambientColor = Color.Black.copy(alpha = .22f)),
+            shape = QuietTheme.shapes.dockPill,
+            color = pillars.dockSurface,
+            tonalElevation = 8.dp,
+            border = BorderStroke(1.dp, pillars.dockBorder)
         ) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
-                val segment=(maxWidth-16.dp)/tabs.size
-                val index=tabs.indexOf(selectedTab).coerceAtLeast(0)
-                val visualIndex=if(direction==LayoutDirection.Rtl) tabs.lastIndex-index else index
-                // In Compose RTL, Alignment.CenterStart anchors to the right edge and Modifier.offset(x)
-                // shifts toward the end (left), so 8.dp + segment * index moves from Right to Left in Arabic.
-                val startOffset=if(direction==LayoutDirection.Rtl) (tabs.lastIndex - visualIndex) else visualIndex
-                val x by animateDpAsState(
-                    targetValue=8.dp + segment * startOffset,
-                    animationSpec=if(reduced) snap() else spring(
-                        dampingRatio=JumloMotion.indicatorDamping,stiffness=Spring.StiffnessMedium),
-                    label="dock-morph-offset"
+                val segment = (maxWidth - 12.dp) / 5
+                val position by animateDpAsState(
+                    targetValue = 6.dp + segment * slot.coerceAtLeast(0),
+                    animationSpec = if (reduced) snap()
+                        else spring(dampingRatio = JumloMotion.indicatorDamping,
+                            stiffness = Spring.StiffnessMedium),
+                    label = "neon-dock-position"
                 )
-                Box(Modifier.offset(x=x).align(Alignment.CenterStart)
-                    .width(segment).height(57.dp).padding(horizontal=2.dp)
-                    .background(pillars.activePillContainer,QuietTheme.shapes.activeIndicatorPill))
-                Row(Modifier.fillMaxSize().padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
-                    tabs.forEach { tab ->
-                        val label=if(language.isRtl) tab.labelAr else tab.labelEn
-                        DockItem(tab,label,tab==selectedTab,showLabels,
-                            modifier=Modifier.weight(1f),onClick={onSelectTab(tab)})
+                if (slot >= 0) {
+                    Box(Modifier.align(Alignment.CenterStart)
+                        .offset(x = position).width(segment).height(62.dp)
+                        .padding(horizontal = 2.dp)
+                        .background(pillars.activePillContainer.copy(alpha = .67f),
+                            QuietTheme.shapes.activeIndicatorPill))
+                }
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DockDestination(DockTab.HOME, if (language.isRtl) DockTab.HOME.labelAr
+                        else DockTab.HOME.labelEn, slot == 0, showLabels,
+                        Modifier.weight(1f)) { onSelectTab(DockTab.HOME) }
+                    DockDestination(DockTab.FILES, stringResource(R.string.neon_dock_documents),
+                        slot == 1, showLabels, Modifier.weight(1f)) {
+                        onSelectTab(DockTab.FILES)
+                    }
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Surface(
+                            onClick = { haptics.actionClick(); onScan() },
+                            shape = CircleShape,
+                            color = palette.primary,
+                            contentColor = palette.onPrimary,
+                            shadowElevation = 8.dp,
+                            modifier = Modifier.pressFeedback().offset(y = (-9).dp)
+                                .size(66.dp).semantics {
+                                    contentDescription = scanLabel
+                                }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.DocumentScanner, null, Modifier.size(28.dp))
+                            }
+                        }
+                    }
+                    DockDestination(DockTab.TOOLS, if (language.isRtl) DockTab.TOOLS.labelAr
+                        else DockTab.TOOLS.labelEn, slot == 3, showLabels,
+                        Modifier.weight(1f)) { onSelectTab(DockTab.TOOLS) }
+                    DockDestination(DockTab.SETTINGS, stringResource(R.string.neon_dock_me),
+                        slot == 4, showLabels, Modifier.weight(1f)) {
+                        onSelectTab(DockTab.SETTINGS)
                     }
                 }
             }
@@ -103,27 +143,53 @@ fun QuietFloatingDock(selectedTab: DockTab, language: AppLanguage,
     }
 }
 
+private fun icon(tab: DockTab): ImageVector = when (tab) {
+    DockTab.HOME -> Icons.Rounded.Home
+    DockTab.FILES -> Icons.Rounded.Folder
+    DockTab.TOOLS -> Icons.Rounded.GridView
+    DockTab.SETTINGS -> Icons.Rounded.Person
+    DockTab.DOWNLOADS -> Icons.Rounded.Folder
+}
+
 @Composable
-private fun DockItem(tab:DockTab,label:String,selected:Boolean,showLabel:Boolean,
-    modifier:Modifier=Modifier,onClick:()->Unit) {
-    val haptics=rememberAppHaptics()
-    val colors=QuietTheme.pillars
-    val reduced=LocalReducedMotion.current
-    val bounce by animateFloatAsState(if(selected && !reduced) 1.07f else 1f,
-        animationSpec=if(reduced) snap() else spring(dampingRatio=.68f,stiffness=Spring.StiffnessMedium),label="dock-icon")
-    Column(modifier.pressFeedback().heightIn(min=52.dp).clickable {
-        haptics.navigationTab()
-        if(!selected) onClick()
-    }.semantics {contentDescription=label;role=Role.Tab;this.selected=selected},
-        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
-        Icon(dockIcon(tab),contentDescription=null,modifier=Modifier.size(23.dp).graphicsLayer {
-            scaleX=bounce;scaleY=bounce
-        },tint=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
+private fun DockDestination(
+    tab: DockTab,
+    label: String,
+    active: Boolean,
+    showLabel: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val haptics = rememberAppHaptics()
+    val reduced = LocalReducedMotion.current
+    val colors = MaterialTheme.colorScheme
+    val bounce by animateFloatAsState(
+        if (active && !reduced) 1.08f else 1f,
+        animationSpec = if (reduced) snap()
+            else spring(dampingRatio = .69f, stiffness = Spring.StiffnessMedium),
+        label = "dock-icon-spring"
+    )
+    Column(
+        modifier.pressFeedback().heightIn(min = 52.dp).clickable {
+            haptics.navigationTab()
+            if (!active) onClick()
+        }.semantics {
+            contentDescription = label
+            role = Role.Tab
+            selected = active
+        },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon(tab), null, Modifier.size(23.dp).graphicsLayer {
+            scaleX = bounce; scaleY = bounce
+        }, tint = if (active) colors.primary else colors.onSurfaceVariant)
         if (showLabel) {
             Spacer(Modifier.height(3.dp))
-            Text(label,maxLines=1,overflow=TextOverflow.Ellipsis,
-                style=QuietTheme.typography.navigation.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
-                color=if(selected) colors.activePillContent else MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = QuietTheme.typography.navigation.copy(
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium),
+                color = if (active) colors.primary else colors.onSurfaceVariant)
         }
     }
 }

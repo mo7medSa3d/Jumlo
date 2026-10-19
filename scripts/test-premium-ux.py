@@ -31,11 +31,11 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
         expected = {
-            'LightBackground': 'F7F7FC', 'LightSurface': 'FFFFFF',
-            'LightOnSurface': '17152B', 'LightOnSurfaceVariant': '666178',
-            'LightPrimary': '5638D8', 'DarkBackground': '11111D',
-            'DarkSurface': '201F30', 'DarkOnSurface': 'F6F3FF',
-            'DarkPrimary': 'B6A5FF',
+            'LightBackground': 'F5F9F8', 'LightSurface': 'FFFFFF',
+            'LightOnSurface': '102521', 'LightOnSurfaceVariant': '50635F',
+            'LightPrimary': '006F63', 'DarkBackground': '080E12',
+            'DarkSurface': '151F25', 'DarkOnSurface': 'F4FBF9',
+            'DarkPrimary': '52E6D1',
         }
         for key, value in expected.items():
             with self.subTest(key=key):
@@ -67,28 +67,29 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_splash_uses_cohesive_palette_family(self):
         splash = source('components/JumloSplash.kt')
-        self.assertIn('Color(0xFF31206F)', splash)
-        self.assertIn('Color(0xFF5638D8)', splash)
-        self.assertIn('Color(0xFFF6F3FF)', splash)
+        self.assertIn('Color(0xFF081317)', splash)
+        self.assertIn('Color(0xFF0C4743)', splash)
+        self.assertIn('Color(0xFFD7FFF6)', splash)
         self.assertNotIn('Color(0xFF2221A1)', splash)
 
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):
         code = source('tools/ToolsScreen.kt')
         self.assertIn('BoxWithConstraints(', code)
         self.assertIn('group.chunked(columns)', code)
-        self.assertIn('widthIn(max=1000.dp)', code)
+        self.assertIn('widthIn(max = 1000.dp)', code)
         self.assertIn('maxWidth >= 600.dp', code)
 
     def test_home_and_tools_centered_width_caps_are_applied_before_filling(self):
         # An outer fillMaxSize prevents a later widthIn from constraining the child.
-        self.assertIn('Modifier.widthIn(max=960.dp).fillMaxSize()', source('home/HomeScreen.kt'))
-        self.assertIn('Modifier.widthIn(max=1000.dp).fillMaxSize()', source('tools/ToolsScreen.kt'))
+        self.assertIn('Modifier.widthIn(max = 980.dp).fillMaxSize()', source('home/HomeScreen.kt'))
+        self.assertIn('Modifier.widthIn(max = 1000.dp).fillMaxSize()', source('tools/ToolsScreen.kt'))
 
     def test_home_quick_actions_have_category_specific_icons(self):
         code = source('home/HomeScreen.kt')
-        self.assertIn('QuietIconTile(', code)
-        self.assertIn('when(tool.pillar)', code)
-        self.assertIn('Icons.AutoMirrored.Rounded.ArrowForward', code)
+        components = source('components/NeonUi.kt')
+        self.assertIn('NeonToolTile(tool', code)
+        self.assertIn('when (tool.pillar)', components)
+        self.assertIn('QuietIconTile(resolveStitchIcon(tool.iconName)', components)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):
         code = source('components/ProductionRows.kt')
@@ -107,7 +108,7 @@ class PremiumUxContracts(unittest.TestCase):
     def test_settings_shortcuts_do_not_duplicate_haptics_control(self):
         code = source('settings/SettingsScreen.kt')
         hero = code[code.index('item("settings-hero")'):code.index('item("appearance")')]
-        self.assertIn('onOpenFiles()', hero)
+        self.assertIn('onClick=onOpenFiles', hero)
         self.assertNotIn('panel="haptic-intensity"', hero)
         self.assertIn('panel="haptic-intensity"', code)
 
@@ -140,7 +141,8 @@ class PremiumUxContracts(unittest.TestCase):
         code = source('components/QuietNavigation.kt')
         self.assertIn('fontScale < 1.5f', code)
         self.assertIn('if (showLabel)', code)
-        self.assertIn('contentDescription=label', code)
+        self.assertIn('contentDescription = label', code)
+        self.assertIn('onScan: () -> Unit', code)
 
     def test_new_accessibility_strings_have_arabic_and_english(self):
         en = ET.parse(ROOT / 'app/src/main/res/values/premium_ui.xml').getroot()

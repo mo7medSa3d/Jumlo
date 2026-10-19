@@ -1,149 +1,200 @@
 package com.jumlo.app.ui.home
 
-import com.jumlo.app.ui.theme.pressFeedback
-
-import androidx.compose.foundation.layout.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import com.jumlo.app.ui.theme.StaggeredReveal
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
+import com.jumlo.app.data.jobs.CapabilityRegistry
+import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.theme.QuietTheme
-import com.jumlo.app.model.*
-import com.jumlo.app.data.jobs.CapabilityRegistry
+import com.jumlo.app.ui.theme.StaggeredReveal
+import com.jumlo.app.ui.theme.pressFeedback
 
-@Composable fun HomeScreen(vm:AppViewModel,onTool:(UtilityTool)->Unit,onTools:()->Unit,onJob:(String)->Unit,onOutput:(OutputRecord)->Unit,onDraft:()->Unit) {
+@Composable
+fun HomeScreen(
+    vm: AppViewModel,
+    onTool: (UtilityTool) -> Unit,
+    onTools: () -> Unit,
+    onJob: (String) -> Unit,
+    onOutput: (OutputRecord) -> Unit,
+    onDraft: () -> Unit,
+    onFiles: () -> Unit,
+    onScan: () -> Unit,
+    onDownloads: () -> Unit
+) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val form by vm.form.collectAsStateWithLifecycle()
-    val eligible=remember {CapabilityRegistry.tools.filter {CapabilityRegistry.visible(it.id) && CapabilityRegistry.canProcess(it.id)}}
-    val selected=remember(settings.quickActionIds,eligible) {HomeActionPolicy.resolve(settings.quickActionIds,eligible.map {it.id})}
-    val frequent=remember(selected,eligible) {val indexed=eligible.associateBy {it.id};selected.mapNotNull(indexed::get)}
-    var editing by rememberSaveable {mutableStateOf(false)}
-    var pending by rememberSaveable {mutableStateOf(ArrayList(selected))}
-    BackHandler(enabled=editing) {editing=false}
-    if(editing) {
-        HomeActionEditor(eligible,pending,settings.language,{pending=ArrayList(it)},{vm.setQuickActionIds(pending);editing=false},{editing=false})
+    val eligible = remember {
+        CapabilityRegistry.tools.filter {
+            CapabilityRegistry.visible(it.id) && CapabilityRegistry.canProcess(it.id)
+        }
+    }
+    val selected = remember(settings.quickActionIds, eligible) {
+        HomeActionPolicy.resolve(settings.quickActionIds, eligible.map { it.id })
+    }
+    val byId = remember(eligible) { eligible.associateBy { it.id } }
+    val frequent = selected.mapNotNull(byId::get)
+    val suggestions = remember(eligible, selected) {
+        listOf("pdf_07", "pdf_compress", "img_01", "img_03", "file_07", "dl_media")
+            .filterNot { it in selected }.mapNotNull(byId::get).take(4)
+    }
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var pending by rememberSaveable { mutableStateOf(ArrayList(selected)) }
+    BackHandler(enabled = editing) { editing = false }
+    if (editing) {
+        HomeActionEditor(eligible, pending, settings.language,
+            { pending = ArrayList(it) }, { vm.setQuickActionIds(pending); editing = false }, { editing = false })
         return
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val columns=if(maxWidth>=840.dp) 4 else 2
+        val columns = if (maxWidth >= 840.dp) 4 else 2
         LazyColumn(
-            modifier=Modifier.widthIn(max=960.dp).fillMaxSize().align(Alignment.TopCenter),
-            contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
-            verticalArrangement=Arrangement.spacedBy(16.dp)
+            modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp,
+                bottom = QuietTheme.spacing.listBottomBuffer),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item("hero") {
-                Column(modifier=Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.redesign_home_hero),style=QuietTheme.typography.screenTitle,
-                        color=MaterialTheme.colorScheme.onSurface)
-                    Text(stringResource(R.string.redesign_home_subtitle),style=QuietTheme.typography.bodyMedium,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
-                    TextButton(onClick=onTools,contentPadding=PaddingValues(horizontal=4.dp)) {
-                        Text(stringResource(R.string.redesign_explore_tools),style=QuietTheme.typography.metadataStrong)
-                        Spacer(Modifier.width(5.dp))
-                        Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,Modifier.size(18.dp))
+            item("intro") {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.neon_home_subtitle),
+                            style = QuietTheme.typography.metadata,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    OutlinedButton(onClick = onTools,
+                        modifier = Modifier.pressFeedback().heightIn(min = 48.dp)) {
+                        Icon(Icons.Rounded.Search, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.neon_tools_search))
                     }
                 }
             }
-            item {Row(verticalAlignment=Alignment.CenterVertically) {
-                Text(stringResource(R.string.redesign_featured_tools),style=QuietTheme.typography.sectionTitle,modifier=Modifier.weight(1f))
-                TextButton(onClick={pending=ArrayList(selected);editing=true}) {Text(stringResource(R.string.ui_customize_actions),style=QuietTheme.typography.metadataStrong)}
-            }}
-            itemsIndexed(frequent.chunked(columns),key={_,row->row.joinToString {t->t.id}}) {rowIndex,row->
-                Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
-                    row.forEach {tool->
-                        StaggeredReveal(rowIndex,Modifier.weight(1f)) {
-                            val pillars=QuietTheme.pillars
-                            val (accent,accentSurface)=when(tool.pillar) {
-                                PillarCategory.PDF -> pillars.pdfPrimary to pillars.pdfContainer
-                                PillarCategory.IMAGES -> pillars.imagesPrimary to pillars.imagesContainer
-                                PillarCategory.DOWNLOADS -> pillars.downloadsPrimary to pillars.downloadsContainer
-                                PillarCategory.FILES -> pillars.filesPrimary to pillars.filesContainer
-                                PillarCategory.VAULT -> pillars.vaultPrimary to pillars.vaultContainer
+            item("scan-hero") {
+                NeonHero(
+                    title = stringResource(R.string.neon_hero_title),
+                    description = stringResource(R.string.neon_hero_body),
+                    button = stringResource(R.string.neon_start_scan),
+                    onAction = onScan
+                )
+            }
+            item("quick-actions") {
+                NeonPanel {
+                    NeonSectionHeader(
+                        title = stringResource(R.string.neon_quick_actions),
+                        action = stringResource(R.string.ui_customize_actions),
+                        onAction = { pending = ArrayList(selected); editing = true }
+                    )
+                    frequent.chunked(columns).forEachIndexed { rowIndex, row ->
+                        Row(Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { tool ->
+                                StaggeredReveal(rowIndex, Modifier.weight(1f)) {
+                                    NeonToolTile(tool, settings.language, { onTool(tool) },
+                                        modifier = Modifier.fillMaxWidth(), compact = true)
+                                }
                             }
-                            Surface(
-                                onClick={onTool(tool)},
-                                modifier=Modifier.pressFeedback().fillMaxWidth().heightIn(min=128.dp),
-                                shape=QuietTheme.shapes.card,
-                                color=MaterialTheme.colorScheme.surface,
-                                border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
-                            ) {
-                                Column(
-                                    modifier=Modifier.fillMaxWidth().heightIn(min=128.dp).padding(16.dp),
-                                    verticalArrangement=Arrangement.SpaceBetween
+                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f)
+                            .pressFeedback().heightIn(min = 50.dp)) {
+                            Icon(Icons.Rounded.Download, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(7.dp))
+                            Text(stringResource(R.string.neon_shortcut_download),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        OutlinedButton(onClick = onTools, modifier = Modifier.weight(1f)
+                            .pressFeedback().heightIn(min = 50.dp)) {
+                            Icon(Icons.Rounded.GridView, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(7.dp))
+                            Text(stringResource(R.string.neon_show_all),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+            if (form.sourceIds.isNotEmpty()) {
+                item("draft") {
+                    NeonPanel {
+                        NeonSectionHeader(stringResource(R.string.ui_workspace_draft),
+                            action = stringResource(R.string.ui_resume), onAction = onDraft)
+                        Text(stringResource(R.string.ui_input_count, form.sourceIds.size),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = QuietTheme.typography.metadata)
+                    }
+                }
+            }
+            val active = jobs.filter { it.isActive() }.take(2)
+            if (active.isNotEmpty()) {
+                item("active-heading") {
+                    NeonSectionHeader(stringResource(R.string.ui_active_tasks))
+                }
+                items(active, key = { "active-" + it.request.id }) { job ->
+                    TransferRow(job, settings.language, { onJob(job.request.id) },
+                        { vm.pause(job.request.id) }, { vm.cancel(job.request.id) }, { vm.retry(job) })
+                }
+            }
+            item("recent-files") {
+                NeonPanel {
+                    NeonSectionHeader(
+                        title = stringResource(R.string.neon_recent),
+                        action = stringResource(R.string.neon_show_all),
+                        onAction = onFiles
+                    )
+                    if (outputs.isEmpty()) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 15.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Rounded.Description, null,
+                                Modifier.size(44.dp), tint = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.neon_recent_empty),
+                                style = QuietTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(outputs.take(8), key = { it.id }) { output ->
+                                Surface(
+                                    onClick = { onOutput(output) },
+                                    modifier = Modifier.pressFeedback().width(156.dp),
+                                    shape = RoundedCornerShape(19.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                 ) {
-                                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                                        QuietIconTile(resolveStitchIcon(tool.iconName),accent,accentSurface,size=46.dp)
-                                        Spacer(Modifier.weight(1f))
-                                        Icon(Icons.AutoMirrored.Rounded.ArrowForward,null,
-                                            tint=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(18.dp))
-                                    }
-                                    Text(
-                                        text=when(tool.id) {
-                                            "pdf_02"->stringResource(R.string.ui_images_pdf)
-                                            "pdf_03"->stringResource(R.string.ui_merge_pdf)
-                                            "img_02"->stringResource(R.string.ui_resize_image)
-                                            "dl_02","dl_media"->stringResource(R.string.ui_new_download)
-                                            else->if(settings.language.isRtl) tool.titleAr else tool.titleEn
-                                        },
-                                        style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),
-                                        maxLines=2,
-                                        overflow=TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    repeat(columns-row.size) {Spacer(Modifier.weight(1f))}
-                }
-            }
-            if(form.sourceIds.isNotEmpty()) item {ListItem(headlineContent={Text(stringResource(R.string.ui_workspace_draft),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold))},supportingContent={Text(stringResource(R.string.ui_input_count,form.sourceIds.size),style=QuietTheme.typography.metadata)},trailingContent={TextButton(onClick=onDraft) {Text(stringResource(R.string.ui_resume),style=QuietTheme.typography.metadataStrong)}})}
-            val active=jobs.filter {it.isActive()}.take(2)
-            if(active.isNotEmpty()) item {QuietSectionTitle(stringResource(R.string.ui_active_tasks))}
-            items(active,key={"job-${it.request.id}"}) {job->TransferRow(job,settings.language,{onJob(job.request.id)},{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)})}
-            val pinned=outputs.filter { it.id in settings.favoriteOutputIds }.take(6)
-            if(pinned.isNotEmpty()) {
-                item("home_favorite_results") {
-                    QuietSectionTitle(stringResource(R.string.home_favorite_results))
-                }
-                item("pinned-result-carousel") {
-                    LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                        items(pinned,key={it.id}) { output ->
-                            Surface(onClick={onOutput(output)},
-                                modifier=Modifier.pressFeedback().width(172.dp).height(88.dp),
-                                color=MaterialTheme.colorScheme.primaryContainer,
-                                shape=RoundedCornerShape(18.dp)) {
-                                Row(Modifier.fillMaxSize().padding(12.dp),
-                                    horizontalArrangement=Arrangement.spacedBy(8.dp),
-                                    verticalAlignment=Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.Star,null,tint=MaterialTheme.colorScheme.primary,
-                                        modifier=Modifier.size(20.dp))
-                                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                        Text(output.displayName,style=QuietTheme.typography.metadataStrong,maxLines=2,
-                                            overflow=TextOverflow.Ellipsis)
-                                        Text(formatBytes(output.sizeBytes),style=QuietTheme.typography.metadata,
-                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Column(Modifier.padding(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        NeonOutputPreview(output, Modifier.fillMaxWidth().height(125.dp))
+                                        Text(output.displayName,
+                                            style = QuietTheme.typography.metadataStrong,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(formatOutputSizeSummary(output),
+                                            style = QuietTheme.typography.metadata,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                             }
@@ -151,26 +202,48 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
                     }
                 }
             }
-            item {QuietSectionTitle(stringResource(R.string.recent_results_title))}
-            if(outputs.isEmpty()) item {Text(stringResource(R.string.ui_recent_empty),style=QuietTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-            if(outputs.isNotEmpty()) item("recent-carousel") {
-                LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(end=12.dp)) {
-                    items(outputs.take(7),key={it.id}) {output ->
-                        Surface(
-                            onClick={onOutput(output)},
-                            modifier=Modifier.pressFeedback().width(188.dp).height(124.dp),
-                            color=MaterialTheme.colorScheme.surfaceContainerLow,
-                            shape=RoundedCornerShape(22.dp)
-                        ) {
-                            Column(
-                                modifier=Modifier.fillMaxSize().padding(16.dp),
-                                verticalArrangement=Arrangement.SpaceBetween
-                            ) {
-                                Icon(when {output.mimeType.startsWith("image/")->Icons.Rounded.Image;output.mimeType=="application/pdf"->Icons.Rounded.PictureAsPdf;output.mimeType.startsWith("video/")->Icons.Rounded.Movie;else->Icons.Rounded.InsertDriveFile},null,tint=MaterialTheme.colorScheme.primary)
-                                Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                    Text(output.displayName,style=QuietTheme.typography.metadataStrong,maxLines=1,overflow=TextOverflow.Ellipsis)
-                                    Text(formatOutputSizeSummary(output),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+            val pinned = outputs.filter { it.id in settings.favoriteOutputIds }.take(4)
+            if (pinned.isNotEmpty()) {
+                item("favorites") {
+                    NeonPanel {
+                        NeonSectionHeader(stringResource(R.string.home_favorite_results))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(pinned, key = { it.id }) { output ->
+                                Surface(onClick = { onOutput(output) },
+                                    modifier = Modifier.pressFeedback().width(170.dp),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer) {
+                                    Row(Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Rounded.Star, null,
+                                            tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(output.displayName, maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = QuietTheme.typography.metadataStrong)
+                                    }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+            if (suggestions.isNotEmpty()) {
+                item("suggestions") {
+                    NeonPanel {
+                        NeonSectionHeader(
+                            title = stringResource(R.string.neon_smart_tools),
+                            action = stringResource(R.string.neon_show_all),
+                            onAction = onTools
+                        )
+                        suggestions.chunked(columns).forEach { row ->
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                row.forEach { tool ->
+                                    NeonToolTile(tool, settings.language, { onTool(tool) },
+                                        Modifier.weight(1f), compact = true)
+                                }
+                                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }

@@ -38,6 +38,7 @@ import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.ui.util.rememberAppHaptics
+import com.jumlo.app.ui.components.NeonPanel
 import com.jumlo.app.ui.AppViewModel
 
 @Composable fun SettingsScreen(viewModel: AppViewModel, onRequestNotifications: () -> Unit,
@@ -70,22 +71,54 @@ import com.jumlo.app.ui.AppViewModel
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         item("settings-hero") {
-            Column(Modifier.padding(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                Text(stringResource(R.string.settings_title),style=QuietTheme.typography.screenTitle,fontWeight=FontWeight.Bold)
-                Text(stringResource(R.string.brand_settings_shortcuts),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Surface(onClick={viewModel.refreshStorage();panel="storage"},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=108.dp),
-                        shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.primaryContainer) {
-                        Column(Modifier.fillMaxWidth().heightIn(min=108.dp).padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
-                            Icon(Icons.Rounded.Storage,null,tint=MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(stringResource(R.string.brand_settings_storage),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),color=MaterialTheme.colorScheme.onPrimaryContainer,maxLines=2)
+            NeonPanel(accent=MaterialTheme.colorScheme.primary,
+                modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                    Surface(shape=androidx.compose.foundation.shape.CircleShape,
+                        color=MaterialTheme.colorScheme.primaryContainer,
+                        modifier=Modifier.size(62.dp)) {
+                        Box(contentAlignment=Alignment.Center) {
+                            Icon(Icons.Rounded.Person,null,Modifier.size(30.dp),
+                                tint=MaterialTheme.colorScheme.primary)
                         }
                     }
-                    Surface(onClick={onOpenFiles()},modifier=Modifier.weight(1f).pressFeedback().heightIn(min=108.dp),
-                        shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.surface) {
-                        Column(Modifier.fillMaxWidth().heightIn(min=108.dp).padding(16.dp),verticalArrangement=Arrangement.SpaceBetween) {
-                            Icon(Icons.Rounded.FolderOpen,null,tint=MaterialTheme.colorScheme.primary)
-                            Text(stringResource(R.string.nav_files),style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=2)
+                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(R.string.neon_my_space),
+                            style=QuietTheme.typography.screenTitle)
+                        Text(stringResource(R.string.neon_my_space_subtitle),
+                            style=QuietTheme.typography.metadata,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Surface(onClick={viewModel.refreshStorage();panel="storage"},
+                        modifier=Modifier.weight(1f).pressFeedback().heightIn(min=112.dp),
+                        shape=RoundedCornerShape(20.dp),
+                        color=MaterialTheme.colorScheme.primaryContainer) {
+                        Column(Modifier.fillMaxSize().padding(14.dp),
+                            verticalArrangement=Arrangement.SpaceBetween) {
+                            Icon(Icons.Rounded.Storage,null,Modifier.size(26.dp),
+                                tint=MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.neon_storage_shortcut),
+                                style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold))
+                            Text(android.text.format.Formatter.formatFileSize(context,storage.outputs),
+                                style=QuietTheme.typography.metadata)
+                        }
+                    }
+                    Surface(onClick=onOpenFiles,
+                        modifier=Modifier.weight(1f).pressFeedback().heightIn(min=112.dp),
+                        shape=RoundedCornerShape(20.dp),
+                        color=MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        Column(Modifier.fillMaxSize().padding(14.dp),
+                            verticalArrangement=Arrangement.SpaceBetween) {
+                            Icon(Icons.Rounded.FolderOpen,null,Modifier.size(26.dp),
+                                tint=MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.neon_my_documents),
+                                style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),
+                                maxLines=1)
+                            Text(stringResource(R.string.account_result_count,savedOutputs.size),
+                                style=QuietTheme.typography.metadata)
                         }
                     }
                 }

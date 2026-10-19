@@ -93,7 +93,7 @@ private val QuietDarkColorScheme = darkColorScheme(
 fun JumloTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     language: AppLanguage = AppLanguage.ENGLISH,
-    accentColor: String = "VIOLET",
+    accentColor: String = "TEAL",
     fontScale: String = "NORMAL",
     content: @Composable () -> Unit
 ) {
@@ -119,12 +119,14 @@ fun JumloTheme(
             "BLUE" -> if (darkTheme) Color(0xFF92B7FF) else Color(0xFF174AA5)
             "TEAL" -> if (darkTheme) Color(0xFF72DACA) else Color(0xFF00695C)
             "CORAL" -> if (darkTheme) Color(0xFFFFAD9A) else Color(0xFF9E3724)
+            "VIOLET" -> if (darkTheme) Color(0xFFBEA6FF) else Color(0xFF6340B1)
             else -> if (darkTheme) DarkPrimary else LightPrimary
         }
         val selectedContainer = when (accentColor) {
             "BLUE" -> if (darkTheme) Color(0xFF203B67) else Color(0xFFD8E5FF)
             "TEAL" -> if (darkTheme) Color(0xFF194E47) else Color(0xFFD3F3EA)
             "CORAL" -> if (darkTheme) Color(0xFF663A33) else Color(0xFFFFE2DA)
+            "VIOLET" -> if (darkTheme) Color(0xFF3F3059) else Color(0xFFECE4FF)
             else -> if (darkTheme) DarkPrimaryContainer else LightPrimaryContainer
         }
         baseColors.copy(

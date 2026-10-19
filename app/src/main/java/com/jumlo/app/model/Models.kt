@@ -109,7 +109,7 @@ data class AppSettingsState(
     val downloadDestinationFolder: String = "Download/Jumlo",
     val maxConcurrentDownloads: Int = 2,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
-    val accentColor: String = "VIOLET",
+    val accentColor: String = "TEAL",
     val fontScale: String = "NORMAL",
     val wifiOnlyDefault: Boolean = false,
     val notificationsGranted: Boolean = false,

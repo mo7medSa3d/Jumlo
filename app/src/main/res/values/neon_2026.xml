@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="neon_home_subtitle">Scan · Convert · Edit · Organize</string>
+    <string name="neon_hero_title">Everything starts with a scan</string>
+    <string name="neon_hero_body">Capture pages, then turn them into a beautiful PDF.</string>
+    <string name="neon_start_scan">Start scanning</string>
+    <string name="neon_quick_actions">Quick actions</string>
+    <string name="neon_show_all">See all</string>
+    <string name="neon_recent">Recent files</string>
+    <string name="neon_recent_empty">Your finished files will appear here.</string>
+    <string name="neon_smart_tools">Explore tools</string>
+    <string name="neon_tools_import">Import</string>
+    <string name="neon_tools_convert">Convert</string>
+    <string name="neon_tools_edit">Edit &amp; organize</string>
+    <string name="neon_tools_download">Download</string>
+    <string name="neon_tools_manage">File utilities</string>
+    <string name="neon_tools_other">More tools</string>
+    <string name="neon_tools_search">Find a tool</string>
+    <string name="neon_files_subtitle">All your work, in one place</string>
+    <string name="neon_my_space">My space</string>
+    <string name="neon_my_space_subtitle">Private by design. Saved on your device.</string>
+    <string name="neon_storage_shortcut">Storage</string>
+    <string name="neon_my_documents">My documents</string>
+    <string name="neon_preference_title">Make Jumlo yours</string>
+    <string name="neon_download_headline">Save it for later</string>
+    <string name="neon_download_subtitle">Paste a direct link to keep a local copy.</string>
+    <string name="neon_selection_count">%1$d selected</string>
+    <string name="neon_selected_tools">Selected files</string>
+    <string name="neon_shortcut_download">New download</string>
+    <string name="neon_shortcut_pdf">PDF tools</string>
+    <string name="neon_shortcut_files">Your files</string>
+    <string name="neon_workspace_saved">Saved locally</string>
+    <string name="neon_sort_filter">Find, sort and select</string>
+    <string name="neon_dock_me">Me</string>
+    <string name="neon_dock_documents">Documents</string>
+    <string name="neon_no_premium">Your workspace</string>
+    <string name="neon_batch_actions">Batch actions</string>
+    <string name="neon_tool_description">Choose a tool to get started</string>
+    <string name="neon_scan_action">Scan document</string>
+</resources>
