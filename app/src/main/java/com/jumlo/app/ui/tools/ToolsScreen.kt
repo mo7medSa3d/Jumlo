@@ -128,7 +128,7 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
             groups.forEach { (pillar, titleId) ->
                 val group = visible.filter { it.pillar == pillar }
                 if (group.isNotEmpty()) {
-                    item("group-\${pillar.name}") {
+                    item("group-" + pillar.name) {
                         NeonPanel {
                             NeonSectionHeader(stringResource(titleId))
                             group.chunked(columns).forEachIndexed { rowIndex, row ->

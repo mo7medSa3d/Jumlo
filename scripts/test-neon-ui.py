@@ -62,6 +62,13 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('selectedOutputs.isNotEmpty()', files)
         self.assertIn('if(!selecting)', files)
 
+    def test_tool_group_keys_are_unique_and_selected_archive_is_named_correctly(self):
+        tools = read('ui/tools/ToolsScreen.kt')
+        files = read('ui/files/FilesScreen.kt')
+        self.assertIn('item("group-" + pillar.name)', tools)
+        self.assertNotIn('\\${pillar.name}', tools)
+        self.assertIn('R.string.files_bundle_selected,selectedOutputs.size', files)
+
     def test_settings_and_downloads_keep_real_data(self):
         settings = read('ui/settings/SettingsScreen.kt')
         downloads = read('ui/downloads/DownloadsScreen.kt')

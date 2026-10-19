@@ -299,7 +299,7 @@ import com.jumlo.app.model.*
                         context.startActivity(android.content.Intent.createChooser(intent,null))
                     } catch (_:Exception) { vm.notifyMessage("NO_COMPATIBLE_APP_OR_ACCESS_LOST") }
                 })
-                NeonBatchAction(Icons.Rounded.FolderZip,stringResource(R.string.action_save_as),{
+                NeonBatchAction(Icons.Rounded.FolderZip,stringResource(R.string.files_bundle_selected,selectedOutputs.size),{
                     haptics.actionClick()
                     onOutputWorkflow(selectedOutputs,"file_07")
                     selected=emptySet();selecting=false

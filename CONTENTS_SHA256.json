@@ -681,9 +681,9 @@
       "sha256": "4bc9ddc464c5f2914ea40d85947d43659827fce958d56b37cb97c6c8b3dbfd05"
     },
     "app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt": {
-      "bytes": 32807,
+      "bytes": 32835,
       "mode": 420,
-      "sha256": "ff1a53267d21a0c99cdc4b8b0f7c3440d23969a3bb7ff9ec0418f3cad2dab67f"
+      "sha256": "91c0cfe7851d7bfded8c1c4e522ab99314ef4dba3d457278cb423823a36d9a64"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeActionEditor.kt": {
       "bytes": 3310,
@@ -756,9 +756,9 @@
       "sha256": "ab267be514dd304fa93f086d438c34da34efcebd337e357852af06b2bfdc48f6"
     },
     "app/src/main/java/com/jumlo/app/ui/tools/ToolsScreen.kt": {
-      "bytes": 7647,
+      "bytes": 7646,
       "mode": 420,
-      "sha256": "031b7035038f955a23c27ce62dc059e318eeaaee09f0358a59387782b624cf78"
+      "sha256": "880eab437fd329ceb079491d009126521d5a4c4b4259170f6682922af201f93a"
     },
     "app/src/main/java/com/jumlo/app/ui/util/AppHaptics.kt": {
       "bytes": 4726,
@@ -1541,9 +1541,9 @@
       "sha256": "038fd95ac46d62a33c5703d42bb3018ba8131a5ef8c71f5f475ce9b3d6f97d6c"
     },
     "scripts/test-neon-ui.py": {
-      "bytes": 4633,
+      "bytes": 5014,
       "mode": 420,
-      "sha256": "d1af0caab975234f394947cbfd6d40a4e6278f0a1ef593b1e4860ee8be569d46"
+      "sha256": "c52e96ae6f772c65507a42b57a375bdd67914a12025bba8f6e5833bfdda3054f"
     },
     "scripts/test-output-workflow-wiring.py": {
       "bytes": 3585,
