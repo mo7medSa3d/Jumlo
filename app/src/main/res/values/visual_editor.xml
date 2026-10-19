@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="visual_edit_title">Edit visually</string>
+    <string name="visual_edit_reset">Reset</string>
+    <string name="visual_edit_drag_hint">Drag corners to resize, or drag inside to move</string>
+    <string name="visual_edit_free">Full</string>
+    <string name="visual_edit_square">Square</string>
+    <string name="visual_edit_document">A4</string>
+    <string name="visual_edit_resize">Resize</string>
+    <string name="visual_edit_preserve_ratio">Keeps the original aspect ratio</string>
+    <string name="visual_edit_quality_note">Lower quality usually makes smaller files</string>
+</resources>

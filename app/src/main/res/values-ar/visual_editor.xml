@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="visual_edit_title">تعديل مباشر</string>
+    <string name="visual_edit_reset">إعادة ضبط</string>
+    <string name="visual_edit_drag_hint">اسحب الزوايا لتغيير الحجم أو اسحب من الداخل للتحريك</string>
+    <string name="visual_edit_free">كامل</string>
+    <string name="visual_edit_square">مربع</string>
+    <string name="visual_edit_document">A4</string>
+    <string name="visual_edit_resize">تغيير الحجم</string>
+    <string name="visual_edit_preserve_ratio">مع الحفاظ على أبعاد الصورة</string>
+    <string name="visual_edit_quality_note">تقليل الجودة يساعد على تصغير الملف</string>
+</resources>

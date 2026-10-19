@@ -154,6 +154,16 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     item(key="preview-${preview.id}") { InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer) }
                 if(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1 && queue.single().mimeType=="application/pdf")
                     item(key="pdf-visual-editor-${queue.single().id}") { PdfPageEditor(vm,queue.single().id,form,vm::updateForm) }
+                if(queue.isNotEmpty() && tool in setOf("img_03","pdf_crop","pdf_signature","pdf_redact")) {
+                    item(key="visual-geometry-editor") {
+                        VisualDocumentEditor(vm,queue.first().id,form,vm::updateForm)
+                    }
+                }
+                if(tool in setOf("img_02","img_adjust","img_04","pdf_compress","pdf_07","pdf_02","img_watermark")) {
+                    item(key="visual-intuitive-controls") {
+                        VisualImageSettings(form,vm::updateForm)
+                    }
+                }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
                 itemsIndexed(queue,key={_,it->it.id},contentType={_,_->"input"}) {index,source->
                     val detail=proposedNames?.getOrNull(index)?.let {stringResource(R.string.ui_rename_preview_name,it)} ?: formatBytes(source.sizeBytes)
