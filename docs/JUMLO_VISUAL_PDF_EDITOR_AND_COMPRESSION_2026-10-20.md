@@ -46,3 +46,15 @@ Changes build **on top of** the newer interactive-crop main commit; they preserv
 1. `bash scripts/verify-host.sh` — source-contract checks and pure Kotlin host checks.
 2. `bash scripts/verify-native.sh gate` — Debug/Release APK, JUnit, lint and AAB checks (requires Android SDK and working runner).
 3. Device QA: gesture positioning, zoom, page switching, image transparency, Arabic RTL, correct saved exports, scanned multipage PDFs, corrupted/encrypted PDFs and low-memory stress.
+
+## Finishing pass: user-facing reliability and quality
+
+- Visual crop/image overlay/annotation editor gains bounded **Undo / Redo** history (25 edits), with genuine changes to the existing validated coordinates; reset and aspect-ratio presets are reversible.
+- Main resize presets say **Small / Medium / Original / Large** in both locales; percentage sliders continue to drive real processing values, but raw numbers are hidden from the primary UI. Advanced retains exact inputs.
+- The PDF compressor reports monotonic, overall progress across all profile attempts, rather than resetting its progress for each attempt.
+- Signature PDF/image source order is normalized by MIME type as already done by Add Image to PDF; one PDF and one image remain mandatory.
+- Subsampling decodes use rounded-up pixel estimates to remain within the memory budget.
+- Files lists display actual percentage saved only when the persisted `originalSizeBytes` is greater than the verified output size. Already-optimized files show no invented savings.
+- Two additional bilingual resource labels and regression contracts document and protect these behaviors.
+
+**Verification scope:** source-contract checks and Kotlin core unit tests cover logical invariants, but visual placement accuracy, actual 50% JPEG quality, PDF byte savings, 60fps motion, and packaging require Android execution. Do not claim those runtime qualities from source inspection alone.

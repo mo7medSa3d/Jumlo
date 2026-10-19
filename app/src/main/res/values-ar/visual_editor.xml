@@ -53,4 +53,11 @@
     <string name="visual_filter_contrast">تباين قوي</string>
     <string name="visual_show_original">عرض الأصل</string>
     <string name="visual_show_edited">عرض التعديل</string>
+    <string name="visual_edit_undo">تراجع</string>
+    <string name="visual_edit_redo">إعادة</string>
+    <string name="visual_edit_saved_percent">وفرت %1$d%%</string>
+    <string name="visual_scale_small">صغير</string>
+    <string name="visual_scale_medium">متوسط</string>
+    <string name="visual_scale_original">الأصلي</string>
+    <string name="visual_scale_large">كبير</string>
 </resources>

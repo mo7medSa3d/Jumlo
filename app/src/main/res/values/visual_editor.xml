@@ -53,4 +53,11 @@
     <string name="visual_filter_contrast">High contrast</string>
     <string name="visual_show_original">Show original</string>
     <string name="visual_show_edited">Show edited</string>
+    <string name="visual_edit_undo">Undo</string>
+    <string name="visual_edit_redo">Redo</string>
+    <string name="visual_edit_saved_percent">Saved %1$d%%</string>
+    <string name="visual_scale_small">Small</string>
+    <string name="visual_scale_medium">Medium</string>
+    <string name="visual_scale_original">Original</string>
+    <string name="visual_scale_large">Large</string>
 </resources>

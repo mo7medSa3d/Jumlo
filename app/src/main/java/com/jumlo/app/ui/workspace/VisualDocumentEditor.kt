@@ -117,6 +117,9 @@ internal fun VisualDocumentEditor(
     }
 
     var rect by remember(sourceId,tool) { mutableStateOf(draft.visualRect()) }
+    val undoHistory=remember(sourceId,tool) { mutableStateListOf<VisualRect>() }
+    val redoHistory=remember(sourceId,tool) { mutableStateListOf<VisualRect>() }
+    var beforeDrag by remember(sourceId,tool) { mutableStateOf<VisualRect?>(null) }
     var dragging by remember { mutableStateOf(false) }
     LaunchedEffect(draft.cropLeft,draft.cropTop,draft.cropRight,draft.cropBottom,
         draft.num2,draft.num3,sourceId,tool) {
@@ -129,6 +132,14 @@ internal fun VisualDocumentEditor(
     val colors=MaterialTheme.colorScheme
     val density=LocalDensity.current
     val handlePx=with(density) { 34.dp.toPx() }
+
+    fun recordEdit(previous:VisualRect,updated:VisualRect) {
+        if(previous!=updated) {
+            undoHistory.add(previous)
+            if(undoHistory.size>25) undoHistory.removeAt(0)
+            redoHistory.clear()
+        }
+    }
 
     fun saveRect(box:VisualRect) {
         val safe=box.valid()
@@ -154,6 +165,7 @@ internal fun VisualDocumentEditor(
                     "pdf_annotate" -> VisualRect(.1f,.1f,.34f,.24f)
                     else -> VisualRect.WHOLE
                 }
+                recordEdit(rect,reset)
                 rect=reset
                 saveRect(reset)
                 haptics.selectionToggle()
@@ -161,6 +173,24 @@ internal fun VisualDocumentEditor(
                 Icon(Icons.Rounded.RestartAlt,null)
                 Text(stringResource(R.string.visual_edit_reset))
             }
+            IconButton(enabled=undoHistory.isNotEmpty(),onClick={
+                if(undoHistory.isNotEmpty()) {
+                    redoHistory.add(rect)
+                    val previous=undoHistory.removeAt(undoHistory.lastIndex)
+                    rect=previous
+                    saveRect(previous)
+                    haptics.selectionToggle()
+                }
+            }) { Icon(Icons.Rounded.Undo,stringResource(R.string.visual_edit_undo)) }
+            IconButton(enabled=redoHistory.isNotEmpty(),onClick={
+                if(redoHistory.isNotEmpty()) {
+                    undoHistory.add(rect)
+                    val next=redoHistory.removeAt(redoHistory.lastIndex)
+                    rect=next
+                    saveRect(next)
+                    haptics.selectionToggle()
+                }
+            }) { Icon(Icons.Rounded.Redo,stringResource(R.string.visual_edit_redo)) }
         }
         val frame=preview
         if(frame!=null && !frame.bitmap.isRecycled) {
@@ -202,6 +232,7 @@ internal fun VisualDocumentEditor(
                     Canvas(Modifier.fillMaxSize().pointerInput(tool,sourceId,currentPage,handlePx) {
                         detectDragGestures(
                             onDragStart={ tap ->
+                                beforeDrag=active
                                 handle=active.hitHandle(tap.x/size.width,tap.y/size.height,
                                     size.width.toFloat(),size.height.toFloat(),handlePx)
                                 if(annotation && handle!=VisualHandle.NONE) handle=VisualHandle.BODY
@@ -216,16 +247,19 @@ internal fun VisualDocumentEditor(
                             },
                             onDragEnd={
                                 if(handle!=VisualHandle.NONE) {
+                                    beforeDrag?.let { recordEdit(it,active) }
                                     saveRect(active)
                                     haptics.selectionToggle()
                                 }
+                                beforeDrag=null
                                 handle=VisualHandle.NONE
                                 dragging=false
                             },
                             onDragCancel={
                                 dragging=false
                                 handle=VisualHandle.NONE
-                                rect=draft.visualRect()
+                                rect=beforeDrag ?: draft.visualRect()
+                                beforeDrag=null
                             }
                         )
                     }) {
@@ -311,6 +345,7 @@ internal fun VisualDocumentEditor(
                         FilterChip(false,onClick={
                             val box=if(ratio==0f) VisualRect.WHOLE
                                 else VisualRect.fitAspect(frame.width,frame.height,ratio)
+                            recordEdit(rect,box)
                             rect=box
                             saveRect(box)
                             haptics.selectionToggle()

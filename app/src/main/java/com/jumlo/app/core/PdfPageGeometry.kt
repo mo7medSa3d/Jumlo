@@ -99,9 +99,10 @@ object PdfCompressionPolicy {
             return 0
         val budget = min(32L * 1024 * 1024, heapBytes / 10L).coerceAtLeast(1L)
         var step = 1
-        while ((width.toLong() / step) * (height.toLong() / step) * 4L > budget) {
+        while (((width.toLong() + step - 1) / step) *
+                ((height.toLong() + step - 1) / step) * 4L > budget) {
+            if (step >= 128) return 0
             step *= 2
-            if (step > 128) return 0
         }
         return step
     }

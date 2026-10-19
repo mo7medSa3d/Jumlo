@@ -283,8 +283,14 @@ import kotlin.math.sqrt
             }
             "signature" -> {
                 require(request.sourceIds.size==2){"PDF_AND_SIGNATURE_IMAGE_REQUIRED"}
+                val pdfId = request.sourceIds.firstOrNull {
+                    context.sources.get(it).mimeType=="application/pdf"
+                } ?: throw OperationFailure("PDF_AND_SIGNATURE_IMAGE_REQUIRED")
+                val imageId = request.sourceIds.firstOrNull {
+                    context.sources.get(it).mimeType?.startsWith("image/")==true
+                } ?: throw OperationFailure("PDF_AND_SIGNATURE_IMAGE_REQUIRED")
                 publishOne("signed",name("Signed.pdf")){ out ->
-                    seekAll(context,request,request.sourceIds){ files ->
+                    seekAll(context,request,listOf(pdfId,imageId)){ files ->
                         openUnencrypted(files[0]).use{ doc ->
                             val targetPage = (s.optInt("page",1)-1).coerceIn(0, (doc.numberOfPages-1).coerceAtLeast(0))
                             PdfBoxBackend.stampImage(doc,targetPage,files[1],s.optDouble("left",0.6),s.optDouble("top",0.75),s.optDouble("right",0.95),s.optDouble("bottom",0.95))
@@ -401,13 +407,17 @@ import kotlin.math.sqrt
         val best = File(out.parentFile, "compress-${context.hashCode()}-best.pdf")
         try {
             var bestBytes = originalSize
-            for ((dpi, quality) in PdfCompressionPolicy.profiles(requestedDpi, requestedQuality)) {
+            val profiles = PdfCompressionPolicy.profiles(requestedDpi, requestedQuality)
+            for ((passIndex, profile) in profiles.withIndex()) {
+                val (dpi, quality) = profile
                 context.checkCancellation()
                 candidate.delete()
                 openUnencrypted(source).use { doc ->
                     PdfBoxBackend.compressImages(doc, dpi, quality) { done, total ->
                         context.checkCancellation()
-                        runBlocking { context.report(JobProgress(JobStage.RUNNING, done.toLong(), total.toLong())) }
+                        val completed = passIndex.toLong()*total.toLong()+done.toLong()
+                        val allWork = profiles.size.toLong()*total.toLong()
+                        runBlocking { context.report(JobProgress(JobStage.RUNNING, completed, allWork)) }
                     }
                     doc.save(candidate)
                 }

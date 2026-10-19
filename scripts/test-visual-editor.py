@@ -46,6 +46,24 @@ class VisualEditorContract(unittest.TestCase):
         self.assertIn('R.string.visual_compress_strong',controls)
         self.assertNotIn('Field(',controls)
 
+    def test_undo_and_redo_edit_history(self):
+        editor=code('ui/workspace/VisualDocumentEditor.kt')
+        for name in ('undoHistory','redoHistory','recordEdit(', 'beforeDrag', 'R.string.visual_edit_undo', 'R.string.visual_edit_redo'):
+            self.assertIn(name,editor)
+        self.assertIn('saveRect(previous)',editor)
+        self.assertIn('saveRect(next)',editor)
+
+    def test_compression_progress_and_signature_order_are_resilient(self):
+        engine=code('data/processing/PdfOperationHandler.kt')
+        self.assertIn('profiles.withIndex()',engine)
+        self.assertIn('passIndex.toLong()*total.toLong()+done.toLong()',engine)
+        self.assertIn('seekAll(context,request,listOf(pdfId,imageId))',engine)
+
+    def test_file_savings_display_uses_real_metadata(self):
+        fileScreen=code('ui/files/FilesScreen.kt')
+        self.assertIn('output.metadata.originalSizeBytes',fileScreen)
+        self.assertIn('R.string.visual_edit_saved_percent',fileScreen)
+
     def test_separate_native_geometry_regressions(self):
         test=ROOT/'app/src/test/java/com/jumlo/app/ui/workspace/VisualEditGeometryTest.kt'
         self.assertIn('cornersNeverCrossAndAlwaysStayOnDocument',test.read_text())

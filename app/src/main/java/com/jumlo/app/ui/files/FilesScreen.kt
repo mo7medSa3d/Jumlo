@@ -161,7 +161,18 @@ import com.jumlo.app.model.*
                                         }
                                         Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                                             Text(output.displayName,style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold,textDirection=TextDirection.Content),maxLines=2,overflow=TextOverflow.Ellipsis)
-                                            Text(formatOutputSizeSummary(output),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                            val originalBytes=output.metadata.originalSizeBytes
+                                            val savedPercent=if(originalBytes!=null && originalBytes>output.sizeBytes && originalBytes>0L)
+                                                (((originalBytes-output.sizeBytes).toDouble()*100.0)/originalBytes).toInt().coerceIn(0,99)
+                                                else null
+                                            Text(
+                                                if(savedPercent!=null)
+                                                    stringResource(R.string.visual_edit_saved_percent,savedPercent)+" · "+formatOutputSizeSummary(output)
+                                                else formatOutputSizeSummary(output),
+                                                style=QuietTheme.typography.metadata,
+                                                color=if(savedPercent!=null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines=1,overflow=TextOverflow.Ellipsis
+                                            )
                                         }
                                         if(!selecting) {
                                             var actionsExpanded by remember(output.id) { mutableStateOf(false) }

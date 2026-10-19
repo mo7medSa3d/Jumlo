@@ -39,11 +39,20 @@ internal fun VisualImageSettings(draft: WorkspaceDraft, edit: ((WorkspaceDraft) 
                 Text(stringResource(R.string.visual_resize_hint),
                     style=QuietTheme.typography.metadata,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    listOf(50,75,100,150).forEach { value ->
+                val sizes=listOf(
+                    50 to R.string.visual_scale_small,
+                    75 to R.string.visual_scale_medium,
+                    100 to R.string.visual_scale_original,
+                    150 to R.string.visual_scale_large
+                )
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(sizes,key={it.first}) { (value,label) ->
                         FilterChip(percent==value,
-                            onClick={edit {it.copy(percentage=value.toString(),longestEdge="")}},
-                            label={Text("$value%")})
+                            onClick={
+                                haptics.selectionToggle()
+                                edit { it.copy(percentage=value.toString(),longestEdge="") }
+                            },
+                            label={Text(stringResource(label))})
                     }
                 }
                 Text(stringResource(R.string.visual_edit_preserve_ratio),
@@ -147,7 +156,8 @@ private fun IntensitySlider(label:String,current:Int,minimum:Int,maximum:Int,res
         Text(label,modifier=Modifier.weight(1f),style=QuietTheme.typography.metadataStrong)
         TextButton(onClick={onChange(reset)}) { Text(stringResource(R.string.visual_edit_reset)) }
     }
+    val haptics=rememberAppHaptics()
     Slider(value=safe.toFloat(),valueRange=minimum.toFloat()..maximum.toFloat(),
-        onValueChange={onChange(it.roundToInt())})
-    Text("$safe",style=QuietTheme.typography.metadata)
+        onValueChange={onChange(it.roundToInt())},
+        onValueChangeFinished={haptics.selectionToggle()})
 }

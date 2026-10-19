@@ -301,9 +301,9 @@
       "sha256": "c06bd62f082513c2b59ea320d9ca8daf176dd570524929244735007f257f1568"
     },
     "app/src/main/java/com/jumlo/app/core/PdfPageGeometry.kt": {
-      "bytes": 5788,
+      "bytes": 5831,
       "mode": 420,
-      "sha256": "0738f35b60ef8097a52a6f631aa2e1792a6320c2b3efff68a6ea85b49cf737ea"
+      "sha256": "11a838e56e8a3f5068c430acc806a8506ed1289aaf45e1da0b611996522618f7"
     },
     "app/src/main/java/com/jumlo/app/core/PdfPageOrder.kt": {
       "bytes": 1162,
@@ -556,9 +556,9 @@
       "sha256": "b839a2a5d66c8a70130f714d6f9fccd29446068e3de00dabf372cef77b84d998"
     },
     "app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt": {
-      "bytes": 41603,
+      "bytes": 42294,
       "mode": 420,
-      "sha256": "c007a98f1d2233142b30007b0fe540f42cf2b3bf93e13c0379274ead8a67b9d1"
+      "sha256": "671c5169672e03ed106d3fe505af8ca50d5d47f926bdc50a5e870cd49fcb4647"
     },
     "app/src/main/java/com/jumlo/app/data/processing/Settings.kt": {
       "bytes": 5625,
@@ -681,9 +681,9 @@
       "sha256": "4bc9ddc464c5f2914ea40d85947d43659827fce958d56b37cb97c6c8b3dbfd05"
     },
     "app/src/main/java/com/jumlo/app/ui/files/FilesScreen.kt": {
-      "bytes": 32835,
+      "bytes": 33801,
       "mode": 420,
-      "sha256": "91c0cfe7851d7bfded8c1c4e522ab99314ef4dba3d457278cb423823a36d9a64"
+      "sha256": "1950590fe97ffb8308a3681e79e8e3550f5e760de31e9f3d77a0074800a67472"
     },
     "app/src/main/java/com/jumlo/app/ui/home/HomeActionEditor.kt": {
       "bytes": 3310,
@@ -776,9 +776,9 @@
       "sha256": "8cf4ea804b01d1bfcd9fa0b5409e9ea5c730bb9468dfb3fe94db28fd38d516d7"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/VisualDocumentEditor.kt": {
-      "bytes": 17883,
+      "bytes": 19593,
       "mode": 420,
-      "sha256": "2464b1275da424ad4c8ef41f5d24b44d4c216a73dc2903b9611fae973509abef"
+      "sha256": "7d6b5717ff52058097d19358bccc2934a43bc198811ca14e3fbeec043bac5652"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/VisualEditGeometry.kt": {
       "bytes": 3722,
@@ -786,9 +786,9 @@
       "sha256": "1b56a293440a69f261eeb83751dfaf4c4bc4a38947ffcc76c4185b6227dd8390"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/VisualImageSettings.kt": {
-      "bytes": 8270,
+      "bytes": 8732,
       "mode": 420,
-      "sha256": "f39e19457cf5df5da57261ff84e9d350080dd4dae584c231c0a759eb882042c8"
+      "sha256": "7da8ef50449f255d0d70e55157bb52a0a91972b9e68f32445044cbe95d0f4ce2"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/WorkspaceScreen.kt": {
       "bytes": 53661,
@@ -936,9 +936,9 @@
       "sha256": "50496d37e0d4355af7b8703958a6b7e7cd68dbb6d46bdeeee358c3d8813333a0"
     },
     "app/src/main/res/values-ar/visual_editor.xml": {
-      "bytes": 4337,
+      "bytes": 4753,
       "mode": 420,
-      "sha256": "40536ded76e69a19eeecf4f2cc4e7160edc0dd743edbbb024a4294d1cf332a52"
+      "sha256": "8cd7f7101312ec33a4b8843211b58b581880115f74f87264444b8a9f702ef844"
     },
     "app/src/main/res/values-ar/workspace_validation.xml": {
       "bytes": 1261,
@@ -1011,9 +1011,9 @@
       "sha256": "5e11fef7d49122fb3bb79d9f860b38f2b35e067637ffb20665d74668dffd031b"
     },
     "app/src/main/res/values/visual_editor.xml": {
-      "bytes": 3627,
+      "bytes": 4014,
       "mode": 420,
-      "sha256": "39a56d71519f66df50d2ff798113d37bb32939d2a250c78242c1033cfc69c688"
+      "sha256": "4264d11e64bb1d75e8f11bd9f287b3a22221628677b617d221814719322bae4d"
     },
     "app/src/main/res/values/workspace_validation.xml": {
       "bytes": 984,
@@ -1291,9 +1291,9 @@
       "sha256": "4dd9bef117448843042c10b20968e201f7c3c88126d1a2c35ba7f93cbd1d596f"
     },
     "docs/JUMLO_VISUAL_PDF_EDITOR_AND_COMPRESSION_2026-10-20.md": {
-      "bytes": 5174,
+      "bytes": 6607,
       "mode": 420,
-      "sha256": "b511596600fe6ee7dc4b3c9e631c410a40c77945c2d926ae20a6bfa0a9836e00"
+      "sha256": "b3f20117feb5bb4669dc49694050bd835cc92b7bfaca66509f5b6432ab568fcd"
     },
     "docs/MEDIA_CAPABILITY_MATRIX.md": {
       "bytes": 4932,
@@ -1631,9 +1631,9 @@
       "sha256": "e04a38ef6d07a9ee56151160ec11d00cfea864eaf2ff2f2f7c12ee43271742a5"
     },
     "scripts/test-visual-editor.py": {
-      "bytes": 3274,
+      "bytes": 4259,
       "mode": 420,
-      "sha256": "0c21e9e6b8a252e9a9e736c6059567d58607f889d2dc38108c4851b1d60df49f"
+      "sha256": "3b9c9868196dc6fc675da58f762f2c272dafd89cf94329ee7463561d290b7149"
     },
     "scripts/test-workspace.sh": {
       "bytes": 489,
