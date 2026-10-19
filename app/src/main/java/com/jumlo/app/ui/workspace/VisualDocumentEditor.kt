@@ -215,7 +215,7 @@ internal fun VisualDocumentEditor(
                                 .offset(x=canvasWidth*rect.left,y=canvasHeight*rect.top)
                                 .size(canvasWidth*(rect.right-rect.left),
                                     canvasHeight*(rect.bottom-rect.top)),
-                            contentScale=ContentScale.FillBounds)
+                            contentScale=ContentScale.Fit)
                     }
                     if(annotation && draft.text1.isNotBlank()) {
                         Text(draft.text1,

@@ -57,7 +57,20 @@ class VisualEditorContract(unittest.TestCase):
         engine=code('data/processing/PdfOperationHandler.kt')
         self.assertIn('profiles.withIndex()',engine)
         self.assertIn('passIndex.toLong()*total.toLong()+done.toLong()',engine)
-        self.assertIn('seekAll(context,request,listOf(pdfId,imageId))',engine)
+        self.assertIn('PdfOverlaySourcePolicy.ordered(',engine)
+        self.assertIn('seekAll(context,request,ordered)',engine)
+
+    def test_pdf_image_overlay_preview_matches_real_pdf_geometry(self):
+        geometry=code('core/PdfOverlaySourcePolicy.kt')
+        renderer=code('data/pdf/PdfBoxBackend.kt')
+        editor=code('ui/workspace/VisualDocumentEditor.kt')
+        backend=code('data/processing/PdfOperationHandler.kt')
+        self.assertIn('object PdfOverlaySourcePolicy',geometry)
+        self.assertIn('object PdfImagePlacementPolicy',geometry)
+        self.assertIn('PdfImagePlacementPolicy.fit(',renderer)
+        self.assertIn('placement.width, placement.height',renderer)
+        self.assertIn('contentScale=ContentScale.Fit)',editor)
+        self.assertEqual(2,backend.count('PdfOverlaySourcePolicy.ordered('))
 
     def test_file_savings_display_uses_real_metadata(self):
         fileScreen=code('ui/files/FilesScreen.kt')

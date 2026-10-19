@@ -2,6 +2,7 @@ package com.jumlo.app.data.pdf
 
 import com.jumlo.app.core.PageTextComparison
 import com.jumlo.app.core.PdfCompressionPolicy
+import com.jumlo.app.core.PdfImagePlacementPolicy
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSDictionary
@@ -536,11 +537,15 @@ object PdfBoxBackend {
         val page = doc.getPage(zeroBasedPage)
         val media = page.mediaBox
         val image = com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject.createFromFile(imageFile.path, doc)
+        val placement = PdfImagePlacementPolicy.fit(
+            (media.lowerLeftX + left * media.width).toFloat(),
+            (media.lowerLeftY + (1.0 - bottom) * media.height).toFloat(),
+            ((right - left) * media.width).toFloat(),
+            ((bottom - top) * media.height).toFloat(),
+            image.width, image.height
+        )
         PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-            cs.drawImage(image,
-                (media.lowerLeftX + left * media.width).toFloat(),
-                (media.lowerLeftY + (1.0 - bottom) * media.height).toFloat(),
-                ((right - left) * media.width).toFloat(), ((bottom - top) * media.height).toFloat())
+            cs.drawImage(image, placement.x, placement.y, placement.width, placement.height)
         }
     }
 

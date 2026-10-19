@@ -261,15 +261,12 @@ import kotlin.math.sqrt
             }
             "overlayImage" -> {
                 require(request.sourceIds.size==2) { "PDF_AND_IMAGE_REQUIRED" }
-                val pdfId = request.sourceIds.firstOrNull {
-                    context.sources.get(it).mimeType=="application/pdf"
-                } ?: throw OperationFailure("PDF_AND_IMAGE_REQUIRED")
-                val imageId = request.sourceIds.firstOrNull {
-                    context.sources.get(it).mimeType?.startsWith("image/")==true
-                } ?: throw OperationFailure("PDF_AND_IMAGE_REQUIRED")
+                val ordered = PdfOverlaySourcePolicy.ordered(
+                    request.sourceIds.map { it to context.sources.get(it).mimeType }
+                )
                 // Allow images and PDFs to be selected in either order.
                 publishOne("document",name("ImageOverlay.pdf")) { out ->
-                    seekAll(context,request,listOf(pdfId,imageId)) { files ->
+                    seekAll(context,request,ordered) { files ->
                         openUnencrypted(files[0]).use { doc ->
                             val target = (s.optInt("page",1)-1)
                                 .coerceIn(0,(doc.numberOfPages-1).coerceAtLeast(0))
@@ -283,14 +280,11 @@ import kotlin.math.sqrt
             }
             "signature" -> {
                 require(request.sourceIds.size==2){"PDF_AND_SIGNATURE_IMAGE_REQUIRED"}
-                val pdfId = request.sourceIds.firstOrNull {
-                    context.sources.get(it).mimeType=="application/pdf"
-                } ?: throw OperationFailure("PDF_AND_SIGNATURE_IMAGE_REQUIRED")
-                val imageId = request.sourceIds.firstOrNull {
-                    context.sources.get(it).mimeType?.startsWith("image/")==true
-                } ?: throw OperationFailure("PDF_AND_SIGNATURE_IMAGE_REQUIRED")
+                val ordered = PdfOverlaySourcePolicy.ordered(
+                    request.sourceIds.map { it to context.sources.get(it).mimeType }
+                )
                 publishOne("signed",name("Signed.pdf")){ out ->
-                    seekAll(context,request,listOf(pdfId,imageId)){ files ->
+                    seekAll(context,request,ordered){ files ->
                         openUnencrypted(files[0]).use{ doc ->
                             val targetPage = (s.optInt("page",1)-1).coerceIn(0, (doc.numberOfPages-1).coerceAtLeast(0))
                             PdfBoxBackend.stampImage(doc,targetPage,files[1],s.optDouble("left",0.6),s.optDouble("top",0.75),s.optDouble("right",0.95),s.optDouble("bottom",0.95))

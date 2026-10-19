@@ -41,12 +41,14 @@ fun formatBytes(value:Long?):String {
 fun formatOutputSizeSummary(output: OutputRecord): String {
     val before = output.metadata.originalSizeBytes
     val after = output.sizeBytes
-    val sizePart = if (before != null && before > after && before > 0L) {
-        val savedPct = (((before - after).toDouble() / before.toDouble()) * 100.0).roundToInt().coerceIn(1, 99)
-        stringResource(R.string.ui_size_before_after, formatBytes(before), formatBytes(after), savedPct)
-    } else {
-        formatBytes(after)
-    }
+    val sizePart = if (before != null && before > 0L) {
+        val exactSaved = if (before > after) (before - after).toDouble() * 100.0 / before else 0.0
+        val savedPct = exactSaved.roundToInt().coerceIn(0, 99)
+        if (savedPct > 0)
+            stringResource(R.string.ui_size_before_after, formatBytes(before), formatBytes(after), savedPct)
+        else
+            stringResource(R.string.visual_actual_output_size, formatBytes(before), formatBytes(after))
+    } else formatBytes(after)
     val folderPart = output.metadata.subfolder?.takeIf { it.isNotBlank() }?.let {
         " · " + stringResource(R.string.ui_saved_subfolder, it)
     }.orEmpty()

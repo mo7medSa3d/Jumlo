@@ -300,6 +300,11 @@
       "mode": 420,
       "sha256": "c06bd62f082513c2b59ea320d9ca8daf176dd570524929244735007f257f1568"
     },
+    "app/src/main/java/com/jumlo/app/core/PdfOverlaySourcePolicy.kt": {
+      "bytes": 1662,
+      "mode": 420,
+      "sha256": "6787c2388334fde3b53382b482d0b041f97b5ba32f3e1cc0cc4296e48ecea1f6"
+    },
     "app/src/main/java/com/jumlo/app/core/PdfPageGeometry.kt": {
       "bytes": 5831,
       "mode": 420,
@@ -516,9 +521,9 @@
       "sha256": "84d707ebb34ff48b3d83f25d18ee75b1fbda0eabea5683a35c711c3556d1769c"
     },
     "app/src/main/java/com/jumlo/app/data/pdf/PdfBoxBackend.kt": {
-      "bytes": 42905,
+      "bytes": 43117,
       "mode": 420,
-      "sha256": "a39a2c21bef4a0ee0500d8a8e78bd004b8dd83daeed3ff913757c8967e94952b"
+      "sha256": "38f4e85eb83e1694f50140c73df7b90033b590d614581281fbdc78ad6fba5c17"
     },
     "app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt": {
       "bytes": 8875,
@@ -556,9 +561,9 @@
       "sha256": "b839a2a5d66c8a70130f714d6f9fccd29446068e3de00dabf372cef77b84d998"
     },
     "app/src/main/java/com/jumlo/app/data/processing/PdfOperationHandler.kt": {
-      "bytes": 42294,
+      "bytes": 41746,
       "mode": 420,
-      "sha256": "671c5169672e03ed106d3fe505af8ca50d5d47f926bdc50a5e870cd49fcb4647"
+      "sha256": "dd3d36d0de5a1e13c5fa0030b1100406b46c7398fe5544b612f96146bdf412e2"
     },
     "app/src/main/java/com/jumlo/app/data/processing/Settings.kt": {
       "bytes": 5625,
@@ -626,9 +631,9 @@
       "sha256": "c8dd1716a1aa8c0ef8afb92c6d24f2da678236aac5a7afaa4bdf9792b42589c6"
     },
     "app/src/main/java/com/jumlo/app/ui/components/ProductionRows.kt": {
-      "bytes": 13335,
+      "bytes": 13498,
       "mode": 420,
-      "sha256": "69fe9a9fdf43a2cedd02c747ee83042f16e0fba31546ab3d10359cda5a33e4f2"
+      "sha256": "3b384e88686b4fbce8cee45a2888df9f577a7f8ae3f651b3f3f833871101b2e9"
     },
     "app/src/main/java/com/jumlo/app/ui/components/QuietButtons.kt": {
       "bytes": 10879,
@@ -776,9 +781,9 @@
       "sha256": "8cf4ea804b01d1bfcd9fa0b5409e9ea5c730bb9468dfb3fe94db28fd38d516d7"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/VisualDocumentEditor.kt": {
-      "bytes": 19593,
+      "bytes": 19586,
       "mode": 420,
-      "sha256": "7d6b5717ff52058097d19358bccc2934a43bc198811ca14e3fbeec043bac5652"
+      "sha256": "929963fe6f8cb020d6134a9e868e99c761f64187aff5d920075b7541716f2582"
     },
     "app/src/main/java/com/jumlo/app/ui/workspace/VisualEditGeometry.kt": {
       "bytes": 3722,
@@ -915,6 +920,11 @@
       "mode": 420,
       "sha256": "3618df93c34fd10c1d9f01e44ae5fead551fdca0d3b8c4405df4e20dcf462529"
     },
+    "app/src/main/res/values-ar/output_size_feedback.xml": {
+      "bytes": 139,
+      "mode": 420,
+      "sha256": "0b044556621f156b68ecc4e4139d91b81f726f4d7f8b01dcce2dacf6b3d79209"
+    },
     "app/src/main/res/values-ar/premium_ui.xml": {
       "bytes": 378,
       "mode": 420,
@@ -984,6 +994,11 @@
       "bytes": 2446,
       "mode": 420,
       "sha256": "12abb1a6bc5af4324e921093f93707a607fc48c2744cddaa7e957a3ab23ab394"
+    },
+    "app/src/main/res/values/output_size_feedback.xml": {
+      "bytes": 138,
+      "mode": 420,
+      "sha256": "b39ed2b00a2c2caaeefb448e741163f67423ec4d2cc17dfedbcd97b77d293365"
     },
     "app/src/main/res/values/premium_ui.xml": {
       "bytes": 321,
@@ -1079,6 +1094,11 @@
       "bytes": 1928,
       "mode": 420,
       "sha256": "e60bd6d807a2d66c5326116ee6d91814fcf8caa8338842855b4d4a286e86ebe8"
+    },
+    "app/src/test/java/com/jumlo/app/core/PdfOverlaySourcePolicyTest.kt": {
+      "bytes": 2243,
+      "mode": 420,
+      "sha256": "b400451d115e3993e9c65cb543932422b0fed52b9c418907dc19f004b5ac1e99"
     },
     "app/src/test/java/com/jumlo/app/core/PlatformHeaderPolicyTest.kt": {
       "bytes": 1717,
@@ -1631,9 +1651,9 @@
       "sha256": "e04a38ef6d07a9ee56151160ec11d00cfea864eaf2ff2f2f7c12ee43271742a5"
     },
     "scripts/test-visual-editor.py": {
-      "bytes": 4259,
+      "bytes": 5012,
       "mode": 420,
-      "sha256": "3b9c9868196dc6fc675da58f762f2c272dafd89cf94329ee7463561d290b7149"
+      "sha256": "c8cd76572b983fe15c8531b8c3e8873a228114ba7629abc4aab9c09996ff8126"
     },
     "scripts/test-workspace.sh": {
       "bytes": 489,
