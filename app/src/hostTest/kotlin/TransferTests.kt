@@ -37,7 +37,7 @@ fun transferTests(test:(String,()->Unit)->Unit) {
     }
     val transport=object:HttpTransport {
         override fun open(url:String,headers:Map<String,String>):TransportResponse {
-            val connection=URL(url).openConnection() as HttpURLConnection
+            val connection=URI.create(url).toURL().openConnection() as HttpURLConnection
             connection.instanceFollowRedirects=false; connection.connectTimeout=2000; connection.readTimeout=2000
             headers.forEach { (k,v)->connection.setRequestProperty(k,v) }
             val code=connection.responseCode

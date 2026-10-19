@@ -88,11 +88,14 @@ object Html5MediaDiscovery {
     }
 
     private fun safeEmbeddedHost(host: String): Boolean {
-        val value = host.lowercase(Locale.ROOT)
+        val value = host.lowercase(Locale.ROOT).trimEnd('.')
         if (value.isBlank() || value == "localhost" || value.endsWith(".localhost") ||
             value.endsWith(".local") || value.endsWith(".internal") || ':' in value) return false
         // Never let embedded metadata probe IP literals or a local admin service.
         if (value.matches(Regex("[0-9.]+"))) return false
+        val labels = value.split('.')
+        if (labels.size < 2 || labels.any { it.isEmpty() } || labels.last().all { it.isDigit() } ||
+            labels.all { it.all(Char::isDigit) || it.startsWith("0x") }) return false
         return '.' in value && value.length <= 253
     }
 

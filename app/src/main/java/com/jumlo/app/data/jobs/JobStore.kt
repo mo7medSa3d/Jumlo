@@ -95,8 +95,10 @@ import javax.inject.Singleton
     suspend fun retryFailed(jobId:String):String {
         val row=dao.job(jobId) ?: throw OperationFailure("JOB_NOT_FOUND")
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
-        // Same logical job/output keys: successfully published members are not reproduced.
-        val next=old.copy(progress=JobProgress(JobStage.QUEUED,0,null),updatedAtEpochMs=System.currentTimeMillis())
+        // Same logical job/output keys: successfully published members and partial byte progress are preserved.
+        val retainedUnits=old.progress.completedUnits.coerceAtLeast(0L)
+        val retainedTotal=old.progress.totalUnits?.takeIf { it>=retainedUnits }
+        val next=old.copy(progress=JobProgress(JobStage.QUEUED,retainedUnits,retainedTotal),updatedAtEpochMs=System.currentTimeMillis())
         // Wait briefly for the cancelled/interrupted worker to release its fenced lease.
         if(row.stage in setOf(JobStage.PAUSED.name,JobStage.INTERRUPTED.name,JobStage.WAITING_FOR_INPUT.name)) {
             for(attempt in 0 until 20) {
@@ -138,18 +140,20 @@ import javax.inject.Singleton
         }
         try {
             outputs.reconcile()
-            save(JobProgress(JobStage.VALIDATING,0,null))
+            val priorCompleted=snapshot.progress.completedUnits.coerceAtLeast(0L)
+            val priorTotal=snapshot.progress.totalUnits?.takeIf { it>=priorCompleted }
+            save(JobProgress(JobStage.VALIDATING,priorCompleted,priorTotal))
             val ctx=ExecutionContext(sources,outputs,budget,{ save(it) },{
                 runningContext.ensureActive()
                 if(!leased.get()) throw CancellationException("JOB_LEASE_LOST")
             })
             val outcomes=if(snapshot.request.toolId.startsWith("dl_")) {
-                admission.withSlot(preferences.settingsFlow.first().maxConcurrentDownloads) {
-                    save(JobProgress(JobStage.RUNNING,0,null))
+                admission.withSlot(preferences.settingsFlow.first().maxConcurrentDownloads,ctx.checkCancellation) {
+                    save(JobProgress(JobStage.RUNNING,snapshot.progress.completedUnits,snapshot.progress.totalUnits))
                     dispatcher.execute(snapshot.request,ctx).also {ctx.checkCancellation()}
                 }
             } else {
-                save(JobProgress(JobStage.RUNNING,0,null))
+                save(JobProgress(JobStage.RUNNING,snapshot.progress.completedUnits,snapshot.progress.totalUnits))
                 dispatcher.execute(snapshot.request,ctx).also {ctx.checkCancellation()}
             }
             val failures=outcomes.count { it.status==ItemStatus.FAILED }

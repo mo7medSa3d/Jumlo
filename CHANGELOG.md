@@ -1,3 +1,12 @@
+## 2026-10-19 — Project Debug & Enhance hardening pass (source candidate)
+
+- Fixed `DownloadOperationHandler` (`PDF_TO_IMAGES`) to honor `LargeResultStrategy.forPageOutputs` (streaming >512 pages into a single CRC-verified ZIP archive), reuse existing validated page outputs on retry, report per-page rendering progress, and retain `.part`/`.part.json` resume state until after output publication succeeds across all download-conversion modes.
+- Hardened SSRF / private-network host filtering in `MediaLinks.privateSharedHost` and `Html5MediaDiscovery.safeEmbeddedHost` against `.internal` domains, trailing-dot hostnames, IPv4-mapped IPv6 addresses (`::ffff:...`), expanded IPv6 loopback/unspecified addresses, and shorthand/octal/hex IPv4 literals.
+- Preserved `completedUnits` and `totalUnits` across `PAUSED`/`INTERRUPTED` -> `QUEUED` -> `VALIDATING` -> `RUNNING` state transitions in `JobStore` so paused downloads do not flash 0% progress upon resume, and added `ctx.checkCancellation()` to `DownloadAdmission.withSlot`.
+- Added `try/finally` `Bitmap.recycle()` safety, `fd.sync()`, and partial-file cleanup to `perspectiveQuad` and `SignaturePad` in `ScanScreen.kt`.
+- Wired `preferDesktop` in `BrowserProfilePolicy.forUrl` / `PlatformHeaderPolicy.headersFor` and replaced deprecated `URL(url)` call in `TransferTests.kt`.
+- Added regression tests in `MediaPolicyTests.kt`, `PlatformHeaderPolicyTest.kt`, `scripts/test-large-pdf-wiring.py`, and `scripts/test-phase1-to-4-regressions.py`.
+
 ## 2026-10-18 — Color Designer UI/UX source refresh (NO-GO)
 
 - Rebuilt light/dark Material 3 and category theme tokens around an indigo/lilac design system; preserved alternate accent preferences and Arabic/English.

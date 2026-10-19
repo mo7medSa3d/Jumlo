@@ -30,7 +30,7 @@ object PlatformHeaderPolicy {
 
         val agent = customUserAgent.trim().takeIf {
             compatibilityAttempt == 0 && it.isNotEmpty() && it.length <= 320 && it.none(Char::isISOControl)
-        } ?: BrowserProfilePolicy.forUrl(url).let { profiles ->
+        } ?: BrowserProfilePolicy.forUrl(url, preferDesktop).let { profiles ->
             // Attempt 0 is stable for an origin; attempt 1 is used only after
             // a 406/415 content-negotiation response, never after 401/403.
             profiles[compatibilityAttempt.coerceIn(0, profiles.lastIndex)].userAgent

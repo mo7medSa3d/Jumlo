@@ -2,6 +2,7 @@ package com.jumlo.app.data.processing
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
@@ -154,10 +155,10 @@ class DownloadOperationHandler @Inject constructor(
                             val quality = if (settings.directMode == "PDF_EXTREME") 50 else 75
                             val ticket = context.outputs.reserve(request.id, key, SafeNames.basename(name), "application/pdf")
                             compressDownloadedPdf(partial, ticket.stageFile, maxDpi, quality, context)
-                            partial.delete()
                             val output = context.outputs.publish(ticket) { file ->
                                 context.outputs.inspect(file, "application/pdf", originalSizeBytes = result.bytes)
                             }
+                            partial.delete()
                             journal.delete()
                             outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
                         }
@@ -166,11 +167,10 @@ class DownloadOperationHandler @Inject constructor(
                             ParcelFileDescriptor.open(partial, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
                                 val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
                                 renderer.use { renderer ->
-                                    require(renderer.pageCount > 0) { "EMPTY_PDF" }
-                                    for (pageIdx in 0 until renderer.pageCount) {
+                                    val totalPages = renderer.pageCount
+                                    require(totalPages > 0) { "EMPTY_PDF" }
+                                    fun renderPageTo(pageIdx: Int, target: File) {
                                         context.checkCancellation()
-                                        val pageNum = pageIdx + 1
-                                        val pageKey = "download:$index:page:$pageNum"
                                         renderer.openPage(pageIdx).use { page ->
                                             val nominalW = (page.width * 144 / 72.0).roundToInt().coerceAtLeast(1)
                                             val nominalH = (page.height * 144 / 72.0).roundToInt().coerceAtLeast(1)
@@ -183,12 +183,64 @@ class DownloadOperationHandler @Inject constructor(
                                             try {
                                                 bmp.eraseColor(Color.WHITE)
                                                 page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                                context.checkCancellation()
+                                                BitmapTransforms.encode(bmp, target, ImageConversionSettings(format = "PNG", quality = 90), context.budget.maxBitmapBytes)
+                                            } finally { bmp.recycle() }
+                                        }
+                                    }
+                                    if (LargeResultStrategy.forPageOutputs(totalPages, context.budget.maxOutputFiles) == LargeResultStrategy.ARCHIVE) {
+                                        val archiveKey = "download:$index:images-archive"
+                                        val existingArchive = context.outputs.find(request.id, archiveKey)
+                                        if (existingArchive != null) {
+                                            outcomes += ItemOutcome(archiveKey, ItemStatus.CREATED, existingArchive.id)
+                                        } else {
+                                            val display = SafeNames.fromDisplayName("$pdfFolder - images.zip", "PDF images.zip")
+                                            val ticket = context.outputs.reserve(request.id, archiveKey, display, "application/zip")
+                                            val inputs = (0 until totalPages).map { pageIdx ->
+                                                val pageNum = pageIdx + 1
+                                                ArchiveInput(AutoOutputName.pageImageName(pdfFolder, pageNum, "png")) {
+                                                    context.checkCancellation()
+                                                    val temp = File.createTempFile("dl-render-page-", ".png", ticket.stageFile.parentFile)
+                                                    try {
+                                                        renderPageTo(pageIdx, temp)
+                                                        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                                        BitmapFactory.decodeFile(temp.path, options)
+                                                        require(options.outWidth > 0 && options.outHeight > 0) { "IMAGE_VERIFY_FAILED" }
+                                                        object : FilterInputStream(FileInputStream(temp)) {
+                                                            override fun close() {
+                                                                try { super.close() } finally {
+                                                                    temp.delete()
+                                                                    runBlocking { context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong())) }
+                                                                }
+                                                            }
+                                                        }
+                                                    } catch (t: Throwable) { temp.delete(); throw t }
+                                                }
+                                            }
+                                            ArchiveCore.create(ticket.stageFile, inputs, 6, ArchiveLimits(Long.MAX_VALUE, inputs.size, 1)) {
+                                                context.checkCancellation()
+                                                if (ticket.stageFile.parentFile.usableSpace < context.budget.minFreeBytes)
+                                                    throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                                            }
+                                            val rec = context.outputs.publish(ticket) { context.outputs.inspect(it, "application/zip", subfolder = pdfFolder) }
+                                            outcomes += ItemOutcome(archiveKey, ItemStatus.CREATED, rec.id)
+                                        }
+                                    } else {
+                                        for (pageIdx in 0 until totalPages) {
+                                            context.checkCancellation()
+                                            val pageNum = pageIdx + 1
+                                            val pageKey = "download:$index:page:$pageNum"
+                                            val existingPage = context.outputs.find(request.id, pageKey)
+                                            if (existingPage != null) {
+                                                outcomes += ItemOutcome(pageKey, ItemStatus.CREATED, existingPage.id)
+                                            } else {
                                                 val imgName = AutoOutputName.pageImageName(pdfFolder, pageNum, "png")
                                                 val ticket = context.outputs.reserve(request.id, pageKey, imgName, "image/png")
-                                                BitmapTransforms.encode(bmp, ticket.stageFile, ImageConversionSettings(format = "PNG", quality = 90), context.budget.maxBitmapBytes)
+                                                renderPageTo(pageIdx, ticket.stageFile)
                                                 val rec = context.outputs.publish(ticket) { context.outputs.inspect(it, "image/png", subfolder = pdfFolder) }
                                                 outcomes += ItemOutcome(pageKey, ItemStatus.CREATED, rec.id)
-                                            } finally { bmp.recycle() }
+                                            }
+                                            context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong()))
                                         }
                                     }
                                 }
@@ -237,10 +289,10 @@ class DownloadOperationHandler @Inject constructor(
                                     doc.save(ticket.stageFile)
                                 }
                             }
-                            partial.delete()
                             val output = context.outputs.publish(ticket) { file ->
                                 context.outputs.inspect(file, "application/pdf", originalSizeBytes = result.bytes)
                             }
+                            partial.delete()
                             journal.delete()
                             outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
                         }

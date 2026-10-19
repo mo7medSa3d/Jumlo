@@ -10,9 +10,10 @@ import javax.inject.Singleton
 @Singleton class DownloadAdmission @Inject constructor() {
     private val mutex=Mutex()
     private var running=0
-    suspend fun <T> withSlot(maxParallel:Int, block:suspend ()->T):T {
+    suspend fun <T> withSlot(maxParallel:Int, checkCancel:()->Unit={}, block:suspend ()->T):T {
         require(maxParallel in 1..6)
         while(true) {
+            checkCancel()
             val acquired=mutex.withLock {
                 if(running<maxParallel) {running++;true} else false
             }

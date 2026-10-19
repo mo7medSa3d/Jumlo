@@ -236,27 +236,38 @@ internal fun decodeScanBitmapBounded(file: File, maxEdge: Int = 2048): Bitmap? {
 internal fun perspectiveQuad(file: File, quad: List<Offset>): File {
     require(quad.size == 4) { "SCAN_QUAD_INVALID" }
     val src = decodeScanBitmapBounded(file, 2400) ?: throw IllegalArgumentException("SCAN_DECODE_FAILED")
-    val w = src.width; val h = src.height
-    val srcPts = FloatArray(8)
-    quad.forEachIndexed { i, o ->
-        srcPts[i * 2] = (o.x.coerceIn(0f, 1f) * w)
-        srcPts[i * 2 + 1] = (o.y.coerceIn(0f, 1f) * h)
-    }
-    fun dist(a: Int, b: Int): Float {
-        val dx = srcPts[a * 2] - srcPts[b * 2]; val dy = srcPts[a * 2 + 1] - srcPts[b * 2 + 1]
-        return kotlin.math.sqrt(dx * dx + dy * dy)
-    }
-    val outW = maxOf(dist(0, 1), dist(3, 2)).toInt().coerceAtLeast(1)
-    val outH = maxOf(dist(0, 3), dist(1, 2)).toInt().coerceAtLeast(1)
-    val matrix = Matrix().apply {
-        setPolyToPoly(srcPts, 0, floatArrayOf(0f, 0f, outW.toFloat(), 0f, outW.toFloat(), outH.toFloat(), 0f, outH.toFloat()), 0, 4)
-    }
-    val out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
-    Canvas(out).drawBitmap(src, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+    var out: Bitmap? = null
     val dest = File(file.parentFile, file.nameWithoutExtension + "-scan.jpg")
-    FileOutputStream(dest).use { out.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-    src.recycle(); out.recycle()
-    return dest
+    try {
+        val w = src.width; val h = src.height
+        val srcPts = FloatArray(8)
+        quad.forEachIndexed { i, o ->
+            srcPts[i * 2] = (o.x.coerceIn(0f, 1f) * w)
+            srcPts[i * 2 + 1] = (o.y.coerceIn(0f, 1f) * h)
+        }
+        fun dist(a: Int, b: Int): Float {
+            val dx = srcPts[a * 2] - srcPts[b * 2]; val dy = srcPts[a * 2 + 1] - srcPts[b * 2 + 1]
+            return kotlin.math.sqrt(dx * dx + dy * dy)
+        }
+        val outW = maxOf(dist(0, 1), dist(3, 2)).toInt().coerceIn(1, 2400)
+        val outH = maxOf(dist(0, 3), dist(1, 2)).toInt().coerceIn(1, 2400)
+        val matrix = Matrix().apply {
+            setPolyToPoly(srcPts, 0, floatArrayOf(0f, 0f, outW.toFloat(), 0f, outW.toFloat(), outH.toFloat(), 0f, outH.toFloat()), 0, 4)
+        }
+        val rendered = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888).also { out = it }
+        Canvas(rendered).drawBitmap(src, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+        FileOutputStream(dest).use {
+            require(rendered.compress(Bitmap.CompressFormat.JPEG, 92, it)) { "SCAN_ENCODE_FAILED" }
+            it.fd.sync()
+        }
+        return dest
+    } catch (t: Throwable) {
+        dest.delete()
+        throw t
+    } finally {
+        if (!src.isRecycled) src.recycle()
+        out?.takeUnless { it.isRecycled }?.recycle()
+    }
 }
 
 /** Draggable four-corner quad over the captured photo (normalized coordinates). */
@@ -374,26 +385,35 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
                     val sx = outWidth.toFloat() / canvasSize.width.coerceAtLeast(1).toFloat()
                     val sy = outHeight.toFloat() / canvasSize.height.coerceAtLeast(1).toFloat()
                     val bitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
-                    val canvas = Canvas(bitmap)
-                    val androidPath = Path()
-                    val allStrokes = completedStrokes.toList() + if (activePoints.size >= 2) listOf(activePoints.toList()) else emptyList()
-                    for (stroke in allStrokes) {
-                        if (stroke.size < 2) continue
-                        androidPath.moveTo(stroke.first().x * sx, stroke.first().y * sy)
-                        for (i in 1 until stroke.size) androidPath.lineTo(stroke[i].x * sx, stroke[i].y * sy)
-                    }
-                    canvas.drawPath(androidPath, Paint().apply {
-                        color = android.graphics.Color.BLACK
-                        style = Paint.Style.STROKE
-                        strokeWidth = 7f
-                        strokeCap = Paint.Cap.ROUND
-                        strokeJoin = Paint.Join.ROUND
-                        isAntiAlias = true
-                    })
                     val file = File(context.cacheDir, "signature-${System.currentTimeMillis()}.png")
-                    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                    bitmap.recycle()
-                    onSaved(file)
+                    try {
+                        val canvas = Canvas(bitmap)
+                        val androidPath = Path()
+                        val allStrokes = completedStrokes.toList() + if (activePoints.size >= 2) listOf(activePoints.toList()) else emptyList()
+                        for (stroke in allStrokes) {
+                            if (stroke.size < 2) continue
+                            androidPath.moveTo(stroke.first().x * sx, stroke.first().y * sy)
+                            for (i in 1 until stroke.size) androidPath.lineTo(stroke[i].x * sx, stroke[i].y * sy)
+                        }
+                        canvas.drawPath(androidPath, Paint().apply {
+                            color = android.graphics.Color.BLACK
+                            style = Paint.Style.STROKE
+                            strokeWidth = 7f
+                            strokeCap = Paint.Cap.ROUND
+                            strokeJoin = Paint.Join.ROUND
+                            isAntiAlias = true
+                        })
+                        FileOutputStream(file).use {
+                            require(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) { "SIGNATURE_ENCODE_FAILED" }
+                            it.fd.sync()
+                        }
+                        onSaved(file)
+                    } catch (t: Throwable) {
+                        file.delete()
+                        throw t
+                    } finally {
+                        if (!bitmap.isRecycled) bitmap.recycle()
+                    }
                 }
             )
         }

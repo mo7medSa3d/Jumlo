@@ -18,6 +18,8 @@ class SourceRegressionContracts(unittest.TestCase):
         self.assertIn('JobLifecyclePolicy.shouldRecover(row.stage)', jobs)
         self.assertIn('row.leaseOwner==null || row.leaseUntil<now', jobs)
         self.assertIn('dao.updateOwned(jobId,owner', jobs)
+        self.assertIn('retainedUnits=old.progress.completedUnits.coerceAtLeast(0L)', jobs)
+        self.assertIn('admission.withSlot(preferences.settingsFlow.first().maxConcurrentDownloads,ctx.checkCancellation)', jobs)
 
     def test_imports_are_private_immutable_snapshots(self):
         source = read('data/source/SourceStore.kt')
@@ -67,6 +69,16 @@ class SourceRegressionContracts(unittest.TestCase):
         en, ar = keys('values'), keys('values-ar')
         self.assertGreater(len(en), 500)
         self.assertEqual(en, ar)
+
+    def test_ssrf_and_scan_resource_guards_are_present(self):
+        policies = read('core/media/MediaPolicies.kt')
+        html = read('core/media/Html5MediaDiscovery.kt')
+        scan = read('ui/scan/ScanScreen.kt')
+        self.assertIn('host.startsWith("::ffff:")', policies)
+        self.assertIn('host.endsWith(".internal")', policies)
+        self.assertIn('trimEnd(\'.\')', html)
+        self.assertIn('out?.takeUnless { it.isRecycled }?.recycle()', scan)
+        self.assertIn('it.fd.sync()', scan)
 
 
 if __name__ == '__main__':

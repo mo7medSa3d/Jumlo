@@ -118,7 +118,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
     }
     test("share URL parser rejects local networks, credentials and runaway batches") {
         check(MediaLinks.sharedUrls("Hello, no URLs here.").isEmpty())
-        check(MediaLinks.sharedUrls("Ignore https://127.0.0.1/private and https://user:pass@evil.test/file; keep https://example.test/allowed") == listOf("https://example.test/allowed"))
+        check(MediaLinks.sharedUrls("Ignore https://127.0.0.1/private https://[::ffff:127.0.0.1]/private https://127.1/private https://0x7f000001/private https://router.internal/admin and https://user:pass@evil.test/file; keep https://example.test/allowed") == listOf("https://example.test/allowed"))
         val big=(0..100).joinToString(" ") { "https://example.test/clip/$it" }
         fail("TOO_MANY_DOWNLOAD_URLS") { MediaLinks.sharedUrls(big) }
         fail("INVALID_DOWNLOAD_LIST") { MediaLinks.sharedUrls("x".repeat(100001)) }
@@ -192,7 +192,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         try {
             val f=File(root,"media.mp4");f.writeText("<html>Sign in</html>")
             fail("INVALID_MEDIA_CONTAINER") { MediaOutputPolicy.inspect(f) }
-            f.writeBytes(byteArrayOf(0,0,0,24,102,116,121,112,105,115,111,109))
+            f.writeBytes(byteArrayOf(0,0,0,24,102,116,112,112,105,115,111,109).also { it[6] = 121 })
             check(MediaOutputPolicy.inspect(f).mimeType=="video/mp4")
         } finally { root.deleteRecursively() }
     }

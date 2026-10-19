@@ -15,10 +15,10 @@ object BrowserProfilePolicy {
     private val desktop = BrowserProfile("desktop", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
     private val mobileFirst = setOf("tiktok.com", "instagram.com", "facebook.com", "fb.com", "threads.net")
 
-    fun forUrl(url: String): List<BrowserProfile> {
+    fun forUrl(url: String, preferDesktop: Boolean = true): List<BrowserProfile> {
         val uri = runCatching { URI(url) }.getOrNull()
         val host = uri?.host?.lowercase(Locale.ROOT).orEmpty()
-        return if (mobileFirst.any { host == it || host.endsWith(".$it") }) listOf(mobile, desktop)
+        return if (mobileFirst.any { host == it || host.endsWith(".$it") } || !preferDesktop) listOf(mobile, desktop)
             else listOf(desktop, mobile)
     }
 

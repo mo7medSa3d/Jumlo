@@ -139,15 +139,24 @@ object MediaLinks {
     private fun privateSharedHost(hostInput: String): Boolean {
         val host = hostInput.lowercase(Locale.ROOT).trimEnd('.').removePrefix("[").removeSuffix("]")
         if (host.isEmpty() || host == "localhost" || host.endsWith(".localhost") ||
-            host.endsWith(".local") || host == "::1" || host == "::" ||
-            host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd")) return true
-        val ipv4 = host.split('.').map { it.toIntOrNull() }
-        if (ipv4.size != 4 || ipv4.any { it == null || it !in 0..255 }) return false
-        val a = ipv4[0]!!; val b = ipv4[1]!!
-        return a == 0 || a == 10 || a == 127 || a >= 224 ||
-            (a == 169 && b == 254) || (a == 172 && b in 16..31) ||
-            (a == 192 && (b == 168 || b == 0)) || (a == 100 && b in 64..127) ||
-            (a == 198 && b in 18..19)
+            host.endsWith(".local") || host.endsWith(".internal") ||
+            host == "::1" || host == "::" || host == "0:0:0:0:0:0:0:1" || host == "0:0:0:0:0:0:0:0" ||
+            host.startsWith("::ffff:") || host.startsWith("fe80:") ||
+            host.startsWith("fc") || host.startsWith("fd")) return true
+        if (':' in host) return true
+        val parts = host.split('.')
+        val ipv4 = parts.map { it.toIntOrNull() }
+        if (ipv4.size == 4 && ipv4.all { it != null && it in 0..255 }) {
+            val a = ipv4[0]!!; val b = ipv4[1]!!
+            return a == 0 || a == 10 || a == 127 || a >= 224 ||
+                (a == 169 && b == 254) || (a == 172 && b in 16..31) ||
+                (a == 192 && (b == 168 || b == 0)) || (a == 100 && b in 64..127) ||
+                (a == 198 && b in 18..19)
+        }
+        // Reject shorthand/octal/hex IPv4 forms (e.g. 127.1, 0x7f000001) or single-label hosts.
+        if (parts.size < 2 || parts.last().all { it.isDigit() } ||
+            parts.all { it.all(Char::isDigit) || it.startsWith("0x") }) return true
+        return false
     }
     fun normalize(text: String, allowHttp: Boolean = false): String {
         require(text.length <= 32768) { "INVALID_URL" }
