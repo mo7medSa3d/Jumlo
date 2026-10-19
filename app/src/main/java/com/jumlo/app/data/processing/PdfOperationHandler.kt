@@ -40,6 +40,7 @@ import kotlin.math.sqrt
         "pdf_stamp" -> structural(request,context,"stamp")
         "pdf_annotate" -> structural(request,context,"annotate")
         "pdf_signature" -> structural(request,context,"signature")
+        "pdf_image" -> structural(request,context,"overlayImage")
         "pdf_metadata" -> structural(request,context,"metadata")
         "pdf_protect" -> structural(request,context,"protect")
         "pdf_forms" -> structural(request,context,"forms")
@@ -258,6 +259,28 @@ import kotlin.math.sqrt
                 runBlocking { context.report(JobProgress(JobStage.RUNNING,1L,1L)) }
                 doc.save(out)
             }
+            "overlayImage" -> {
+                require(request.sourceIds.size==2) { "PDF_AND_IMAGE_REQUIRED" }
+                val pdfId = request.sourceIds.firstOrNull {
+                    context.sources.get(it).mimeType=="application/pdf"
+                } ?: throw OperationFailure("PDF_AND_IMAGE_REQUIRED")
+                val imageId = request.sourceIds.firstOrNull {
+                    context.sources.get(it).mimeType?.startsWith("image/")==true
+                } ?: throw OperationFailure("PDF_AND_IMAGE_REQUIRED")
+                // Allow images and PDFs to be selected in either order.
+                publishOne("document",name("ImageOverlay.pdf")) { out ->
+                    seekAll(context,request,listOf(pdfId,imageId)) { files ->
+                        openUnencrypted(files[0]).use { doc ->
+                            val target = (s.optInt("page",1)-1)
+                                .coerceIn(0,(doc.numberOfPages-1).coerceAtLeast(0))
+                            PdfBoxBackend.stampImage(doc,target,files[1],
+                                s.optDouble("left",.15),s.optDouble("top",.2),
+                                s.optDouble("right",.75),s.optDouble("bottom",.7))
+                            doc.save(out)
+                        }
+                    }
+                }
+            }
             "signature" -> {
                 require(request.sourceIds.size==2){"PDF_AND_SIGNATURE_IMAGE_REQUIRED"}
                 publishOne("signed",name("Signed.pdf")){ out ->
@@ -375,9 +398,10 @@ import kotlin.math.sqrt
         val originalPages = openUnencrypted(source).use { it.numberOfPages }
         require(originalPages > 0) { "PDF_VERIFY_FAILED" }
         val candidate = File(out.parentFile, "compress-${context.hashCode()}-candidate.pdf")
+        val best = File(out.parentFile, "compress-${context.hashCode()}-best.pdf")
         try {
-            val passes = PdfCompressionPolicy.profiles(requestedDpi, requestedQuality)
-            for ((dpi, quality) in passes) {
+            var bestBytes = originalSize
+            for ((dpi, quality) in PdfCompressionPolicy.profiles(requestedDpi, requestedQuality)) {
                 context.checkCancellation()
                 candidate.delete()
                 openUnencrypted(source).use { doc ->
@@ -387,17 +411,23 @@ import kotlin.math.sqrt
                     }
                     doc.save(candidate)
                 }
-                val validPages = runCatching { openUnencrypted(candidate).use { it.numberOfPages } }.getOrNull()
-                if (validPages != null && PdfCompressionPolicy.accept(originalSize, candidate.length(), originalPages, validPages)) {
-                    candidate.copyTo(out, overwrite = true)
-                    return
+                context.checkCancellation()
+                val validPages = runCatching {
+                    openUnencrypted(candidate).use { it.numberOfPages }
+                }.getOrNull()
+                if (validPages != null && PdfCompressionPolicy.betterCandidate(
+                        originalSize, bestBytes, candidate.length(), originalPages, validPages)) {
+                    candidate.copyTo(best, overwrite = true)
+                    bestBytes = candidate.length()
                 }
             }
-            // A valid already-optimized document is still a valid result. Return its
-            // verified original bytes rather than fail or silently rasterize text.
-            source.copyTo(out, overwrite = true)
+            // Text/vector PDFs may already be near optimal. Never replace them with
+            // screenshots, and never publish an unreadable or larger candidate.
+            if (best.exists() && bestBytes < originalSize) best.copyTo(out, overwrite = true)
+            else source.copyTo(out, overwrite = true)
         } finally {
             candidate.delete()
+            best.delete()
         }
     }
 

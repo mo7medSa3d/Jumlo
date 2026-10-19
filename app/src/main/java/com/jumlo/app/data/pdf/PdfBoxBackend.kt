@@ -22,6 +22,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
+import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDAcroForm
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox
@@ -335,23 +336,37 @@ object PdfBoxBackend {
         require(jpegQuality in 0..100) { "INVALID_COMPRESS_SETTINGS" }
         var replaced = 0
         val pageCount = doc.numberOfPages
-        doc.pages.forEachIndexed { pageIndex, page ->
-            val resources = page.resources
-            if (resources != null) {
-                val media = page.mediaBox
-                val maxWidth = (media.width * maxDpi / 72.0).toInt().coerceAtLeast(16)
-                val maxHeight = (media.height * maxDpi / 72.0).toInt().coerceAtLeast(16)
-                resources.xObjectNames.forEach { name ->
-                    if (!resources.isImageXObject(name)) return@forEach
-                    val image = runCatching { resources.getXObject(name) as? PDImageXObject }.getOrNull() ?: return@forEach
-                    val replacement = downscaleAndCompressImage(doc, image, maxWidth, maxHeight, jpegQuality)
-                        ?: downscaleFlateImage(image, maxWidth, maxHeight, jpegQuality)
-                        ?: return@forEach
-                    val xobjectDict = resources.cosObject.getDictionaryObject(COSName.XOBJECT) as? COSDictionary
-                    xobjectDict?.setItem(name, replacement) ?: return@forEach
-                    replaced++
+        // Scanner apps often put the photo inside Form XObjects. The old loop
+        // only looked at page-level resources, silently missing those images.
+        val visited = java.util.IdentityHashMap<COSDictionary, Boolean>()
+        fun process(resources: com.tom_roush.pdfbox.pdmodel.PDResources?,
+                    maxWidth: Int, maxHeight: Int, depth: Int) {
+            if (resources == null || depth > 8) return
+            if (visited.put(resources.cosObject, true) != null) return
+            for (name in resources.xObjectNames.toList()) {
+                val objectRef = runCatching { resources.getXObject(name) }.getOrNull() ?: continue
+                when (objectRef) {
+                    is PDFormXObject -> process(objectRef.resources, maxWidth, maxHeight, depth + 1)
+                    is PDImageXObject -> {
+                        val newImage = downscaleAndCompressImage(
+                            doc, objectRef, maxWidth, maxHeight, jpegQuality
+                        ) ?: downscaleFlateImage(objectRef, maxWidth, maxHeight, jpegQuality)
+                        if (newImage != null) {
+                            val dict = resources.cosObject.getDictionaryObject(COSName.XOBJECT) as? COSDictionary
+                            if (dict != null) {
+                                dict.setItem(name, newImage)
+                                replaced++
+                            }
+                        }
+                    }
                 }
             }
+        }
+        doc.pages.forEachIndexed { pageIndex, page ->
+            val media = page.mediaBox
+            val maxWidth = (media.width * maxDpi / 72.0).toInt().coerceAtLeast(16)
+            val maxHeight = (media.height * maxDpi / 72.0).toInt().coerceAtLeast(16)
+            process(page.resources, maxWidth, maxHeight, 0)
             onPage?.invoke(pageIndex + 1, pageCount)
         }
         return replaced
@@ -365,14 +380,20 @@ object PdfBoxBackend {
         jpegQuality: Int
     ): PDImageXObject? = runCatching {
         val originalLength = (image.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
-        // Never decode an unbounded scan into an ARGB bitmap. Large assets remain
-        // untouched rather than risking process death or corrupting the output.
-        if (!PdfCompressionPolicy.canDecodeImage(image.width, image.height, Runtime.getRuntime().maxMemory())) return null
-        // JPEGFactory does not preserve transparency/masks: keep those XObjects intact.
+        // Decode high-resolution scans with PDFBox subsampling instead of
+        // dropping 300+ DPI scans because their full ARGB size exceeds 32 MiB.
+        val subsampling = PdfCompressionPolicy.decodeSubsampling(
+            image.width, image.height, Runtime.getRuntime().maxMemory()
+        )
+        if (subsampling < 1) return null
+        // Preserve masks, transparency and 1-bit scan/text rasters rather than
+        // replacing them with lossy JPEG artifacts.
         val dict = image.cosObject as? COSDictionary ?: return null
         if (dict.getDictionaryObject(COSName.SMASK) != null ||
-            dict.getDictionaryObject(COSName.MASK) != null) return null
-        val bitmap = image.image ?: return null
+            dict.getDictionaryObject(COSName.MASK) != null ||
+            dict.getInt(COSName.BITS_PER_COMPONENT) == 1) return null
+        val bitmap = (if (subsampling > 1) image.getImage(null, subsampling)
+            else image.image) ?: return null
         try {
             val scale = minOf(1.0, minOf(maxWidth.toDouble() / bitmap.width.coerceAtLeast(1), maxHeight.toDouble() / bitmap.height.coerceAtLeast(1)))
             val targetW = maxOf(1, (bitmap.width * scale).toInt())
@@ -384,7 +405,7 @@ object PdfBoxBackend {
                 val q = (jpegQuality.coerceIn(10, 95) / 100f)
                 val candidate = JPEGFactory.createFromImage(doc, workBitmap, q)
                 val newLength = (candidate.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
-                if (newLength < originalLength || scale < 1.0) candidate else null
+                if (newLength > 0L && newLength < originalLength) candidate else null
             } finally {
                 if (workBitmap !== bitmap && !workBitmap.isRecycled) workBitmap.recycle()
             }

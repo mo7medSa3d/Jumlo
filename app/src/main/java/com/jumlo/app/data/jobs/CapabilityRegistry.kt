@@ -18,6 +18,7 @@ object CapabilityRegistry {
         UtilityTool("pdf_annotate", "pdf_annotate", PillarCategory.PDF, "Annotate PDF", "تعليقات PDF", "Overlay text or note annotation", "نص أو ملاحظة", "edit"),
         UtilityTool("pdf_stamp", "pdf_stamp", PillarCategory.PDF, "Watermark & Page Numbers", "علامة مائية وترقيم", "Stamp text and page numbers", "ختم نص وترقيم الصفحات", "approval"),
         UtilityTool("pdf_signature", "pdf_signature", PillarCategory.PDF, "Sign PDF", "توقيع PDF", "Place drawn or imported signature", "وضع توقيع مرسوم أو مستورد", "draw"),
+        UtilityTool("pdf_image", "pdf_image", PillarCategory.PDF, "Add Image to PDF", "إضافة صورة إلى PDF", "Drag, place and resize a photo or logo", "اسحب الصورة أو الشعار وحدد مكانه وحجمه", "add_photo_alternate"),
         UtilityTool("pdf_protect", "pdf_protect", PillarCategory.PDF, "Password Protect PDF", "حماية PDF بكلمة مرور", "Add or remove standard password", "إضافة أو إزالة كلمة المرور", "lock"),
         UtilityTool("pdf_metadata", "pdf_metadata", PillarCategory.PDF, "PDF Metadata", "بيانات PDF", "Edit title, author, subject", "تحرير العنوان والمؤلف", "info"),
         UtilityTool("pdf_forms", "pdf_forms", PillarCategory.PDF, "Fill PDF Form", "تعبئة نموذج PDF", "Fill AcroForm fields, optional flatten", "تعبئة الحقول مع تسطيح اختياري", "assignment"),

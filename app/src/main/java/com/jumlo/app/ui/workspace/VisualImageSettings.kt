@@ -1,6 +1,8 @@
 package com.jumlo.app.ui.workspace
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.util.rememberAppHaptics
 import kotlin.math.roundToInt
 
 /** Preset/slider controls write directly to the existing validated execution draft. */
@@ -21,6 +24,7 @@ internal fun VisualImageSettings(draft: WorkspaceDraft, edit: ((WorkspaceDraft) 
     val pdfToImage=draft.toolId=="pdf_07"
     val toPdf=draft.toolId=="pdf_02"
     val watermark=draft.toolId=="img_watermark"
+    val haptics=rememberAppHaptics()
     if(!(imageResize||imageAdjust||compress||pdfToImage||toPdf||watermark)) return
     Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surfaceContainerLow,
         modifier=Modifier.fillMaxWidth()) {
@@ -32,7 +36,9 @@ internal fun VisualImageSettings(draft: WorkspaceDraft, edit: ((WorkspaceDraft) 
                 Slider(value=percent.toFloat(),onValueChange={value->
                     edit { it.copy(percentage=value.roundToInt().toString(),longestEdge="") }
                 },valueRange=10f..300f)
-                Text("$percent%",style=QuietTheme.typography.metadata)
+                Text(stringResource(R.string.visual_resize_hint),
+                    style=QuietTheme.typography.metadata,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     listOf(50,75,100,150).forEach { value ->
                         FilterChip(percent==value,
@@ -44,6 +50,29 @@ internal fun VisualImageSettings(draft: WorkspaceDraft, edit: ((WorkspaceDraft) 
                     style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if(imageAdjust) {
+                val filters=listOf(
+                    listOf(R.string.visual_filter_original,0,100,100),
+                    listOf(R.string.visual_filter_document,10,150,0),
+                    listOf(R.string.visual_filter_vivid,5,115,135),
+                    listOf(R.string.visual_filter_grayscale,0,110,0),
+                    listOf(R.string.visual_filter_contrast,12,185,0)
+                )
+                val brightness=draft.num1.toIntOrNull()?:0
+                val contrast=draft.num2.toIntOrNull()?:100
+                val saturation=draft.num3.toIntOrNull()?:100
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(filters,key={it[0]}) { preset ->
+                        FilterChip(
+                            brightness==preset[1] && contrast==preset[2] && saturation==preset[3],
+                            onClick={
+                                haptics.selectionToggle()
+                                edit { it.copy(num1=preset[1].toString(),
+                                    num2=preset[2].toString(),num3=preset[3].toString()) }
+                            },
+                            label={Text(stringResource(preset[0]))}
+                        )
+                    }
+                }
                 IntensitySlider(stringResource(R.string.field_brightness),draft.num1.toIntOrNull()?:0,-100,100,0) {
                     edit { f-> f.copy(num1=it.toString()) }
                 }
@@ -54,14 +83,35 @@ internal fun VisualImageSettings(draft: WorkspaceDraft, edit: ((WorkspaceDraft) 
                     edit { f-> f.copy(num3=it.toString()) }
                 }
             }
-            if(compress || pdfToImage) {
+            if(draft.toolId=="pdf_compress") {
+                Text(stringResource(R.string.visual_compression_note),
+                    style=QuietTheme.typography.metadata,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                val presets=listOf(
+                    Triple(R.string.visual_compress_best,240,90),
+                    Triple(R.string.visual_compress_balanced,180,75),
+                    Triple(R.string.visual_compress_small,135,58),
+                    Triple(R.string.visual_compress_strong,108,45)
+                )
+                val actualDpi=draft.num1.toIntOrNull()?:150
+                val actualQuality=draft.quality.toIntOrNull()?:85
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(presets,key={it.first}) { option ->
+                        FilterChip(actualDpi==option.second && actualQuality==option.third,
+                            onClick={
+                                haptics.selectionToggle()
+                                edit { it.copy(num1=option.second.toString(),
+                                    quality=option.third.toString()) }
+                            },label={Text(stringResource(option.first))})
+                    }
+                }
+                Text(stringResource(R.string.visual_edit_quality_note),
+                    style=QuietTheme.typography.metadata,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if(compress || pdfToImage) {
                 IntensitySlider(stringResource(R.string.field_quality),
                     draft.quality.toIntOrNull()?:85,10,100,85) {
                     edit { f-> f.copy(quality=it.toString()) }
-                }
-                if(draft.toolId=="pdf_compress") {
-                    Text(stringResource(R.string.visual_edit_quality_note),
-                        style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if(toPdf) {

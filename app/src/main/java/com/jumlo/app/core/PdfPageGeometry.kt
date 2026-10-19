@@ -77,11 +77,33 @@ data class PdfPageEdit(val order: List<Int>, val selected: Set<Int> = emptySet()
 
 /** Candidate structure verification is mandatory before publishing a smaller compressed PDF. */
 object PdfCompressionPolicy {
-    /** Fidelity-first: default profiles never silently fall back to visibly lower JPEG quality. */
+    /** Explore increasingly compact image resolution at the user's chosen JPEG quality.
+     * Unlike a quality percentage, output byte reduction cannot be guaranteed in advance.
+     * Digital text and vector graphics are never rasterized by these profiles. */
     fun profiles(dpi: Int, quality: Int): List<Pair<Int, Int>> {
-        val primary = dpi.coerceIn(36, 600) to quality.coerceIn(10, 95)
-        val smaller = min(dpi, 108).coerceIn(36, 600) to quality.coerceIn(10, 95)
-        return (listOf(primary) + if (primary.second <= 65) listOf(smaller) else emptyList()).distinct()
+        val cappedDpi = dpi.coerceIn(36, 600)
+        val selectedQuality = quality.coerceIn(10, 95)
+        val options = mutableListOf(cappedDpi to selectedQuality)
+        if (selectedQuality <= 85) options += min(cappedDpi, 170) to selectedQuality
+        if (selectedQuality <= 70) options += min(cappedDpi, 135) to selectedQuality
+        if (selectedQuality <= 60) options += min(cappedDpi, 108) to selectedQuality
+        return options.distinct()
+    }
+
+    /** Pick a safe decode subsampling factor before creating an Android ARGB Bitmap.
+     * Page-sized scans regularly exceed 32 MiB uncompressed at 300 DPI.
+     * Subsampled decode avoids rejecting them altogether.
+     */
+    fun decodeSubsampling(width: Int, height: Int, heapBytes: Long): Int {
+        if (width <= 0 || height <= 0 || width > 30000 || height > 30000 || heapBytes <= 0L)
+            return 0
+        val budget = min(32L * 1024 * 1024, heapBytes / 10L).coerceAtLeast(1L)
+        var step = 1
+        while ((width.toLong() / step) * (height.toLong() / step) * 4L > budget) {
+            step *= 2
+            if (step > 128) return 0
+        }
+        return step
     }
     /** Refuse a PDFBox full-bitmap decode if the worst-case resident ARGB copy is too large. */
     fun canDecodeImage(width: Int, height: Int, heapBytes: Long): Boolean {
@@ -92,4 +114,9 @@ object PdfCompressionPolicy {
     fun accept(originalBytes: Long, candidateBytes: Long, originalPages: Int, candidatePages: Int): Boolean =
         originalBytes > 0 && candidateBytes > 0 && candidateBytes < originalBytes &&
             originalPages > 0 && candidatePages == originalPages
+    /** Prefer the smallest candidate that still reopens with the original page count. */
+    fun betterCandidate(originalBytes: Long, bestBytes: Long, candidateBytes: Long,
+                        originalPages: Int, candidatePages: Int): Boolean =
+        accept(originalBytes, candidateBytes, originalPages, candidatePages) &&
+            candidateBytes < bestBytes
 }

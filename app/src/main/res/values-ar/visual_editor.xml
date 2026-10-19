@@ -1,5 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="visual_editor_title">تعديل تفاعلي</string>
+    <string name="visual_drag_hint">اسحب الزوايا لتعديل التحديد</string>
+    <string name="visual_resize_hint">استخدم شريط التحكم لتغيير الحجم</string>
+    <string name="visual_redact_hint">اسحب فوق المحتوى المطلوب إزالته نهائيًا</string>
+    <string name="visual_signature_hint">اسحب إطار التوقيع لتحديد موضعه وحجمه</string>
+    <string name="visual_annotate_hint">اسحب الملاحظة إلى موضعها</string>
+    <string name="visual_reset">إعادة تعيين</string>
+    <string name="visual_free">حر</string>
+    <string name="visual_square">مربع</string>
+    <string name="visual_a4">A4</string>
+    <string name="visual_landscape">عريض</string>
+    <string name="visual_rotate">تدوير</string>
+    <string name="visual_flip">عكس</string>
+    <string name="visual_draw_signature">ارسم توقيعًا</string>
+    <string name="visual_signature_required">أضف صورة التوقيع للمتابعة</string>
+    <string name="visual_redact_warning">الإزالة نهائية. راجع المنطقة المحددة قبل الحفظ.</string>
+    <string name="visual_resize">الحجم</string>
+    <string name="visual_quality">الجودة</string>
+    <string name="visual_padding">هوامش الصورة</string>
+    <string name="visual_opacity">الشفافية</string>
+    <string name="visual_output_dimensions">الناتج: %1$d × %2$d بكسل</string>
+    <string name="visual_adjust_preview_note">المعاينة تعرض الموضع، اضغط تطبيق لإنتاج الصورة.</string>
+    <string name="visual_compression_note">توفير المساحة يعتمد على محتوى الملف، والنصوص والرسومات المتجهة تظل واضحة.</string>
+    <string name="visual_auto">تلقائي</string>
+    <string name="visual_letter">Letter</string>
+    <string name="visual_compress_best">أعلى جودة</string>
+    <string name="visual_compress_balanced">متوازن</string>
+    <string name="visual_compress_small">حجم أقل</string>
+    <string name="visual_compress_strong">ضغط أقوى</string>
+    <string name="visual_compress_result">الأصل %1$s · التوفير %2$s</string>
+    <string name="visual_compress_no_gain">الملف مضغوط بالفعل: لم نجد توفيرًا آمنًا</string>
+    <string name="visual_advanced">خيارات دقيقة</string>
+    <string name="visual_apply_all">كل الصفحات</string>
+    <string name="visual_preview_note">حرّك الصور والتوقيعات ومقابض القص مباشرة على المعاينة.</string>
+    <string name="visual_two_sources">اختر ملف PDF وصورة واحدة للمتابعة</string>
+    <string name="visual_overlay_image">الصورة التي يتم وضعها على ملف PDF</string>
+    <string name="visual_apply_page">هذه الصفحة</string>
     <string name="visual_edit_title">تعديل مباشر</string>
     <string name="visual_edit_reset">إعادة ضبط</string>
     <string name="visual_edit_drag_hint">اسحب الزوايا لتغيير الحجم أو اسحب من الداخل للتحريك</string>
@@ -9,4 +46,11 @@
     <string name="visual_edit_resize">تغيير الحجم</string>
     <string name="visual_edit_preserve_ratio">مع الحفاظ على أبعاد الصورة</string>
     <string name="visual_edit_quality_note">تقليل الجودة يساعد على تصغير الملف</string>
+    <string name="visual_filter_original">أصلي</string>
+    <string name="visual_filter_document">مستند</string>
+    <string name="visual_filter_vivid">ألوان زاهية</string>
+    <string name="visual_filter_grayscale">تدرج رمادي</string>
+    <string name="visual_filter_contrast">تباين قوي</string>
+    <string name="visual_show_original">عرض الأصل</string>
+    <string name="visual_show_edited">عرض التعديل</string>
 </resources>

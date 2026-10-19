@@ -1,5 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="visual_editor_title">Edit visually</string>
+    <string name="visual_drag_hint">Drag corners to adjust the area</string>
+    <string name="visual_resize_hint">Use the slider to resize</string>
+    <string name="visual_redact_hint">Drag over content to permanently remove</string>
+    <string name="visual_signature_hint">Drag and resize the signature frame</string>
+    <string name="visual_annotate_hint">Drag the note to its position</string>
+    <string name="visual_reset">Reset</string>
+    <string name="visual_free">Free</string>
+    <string name="visual_square">Square</string>
+    <string name="visual_a4">A4</string>
+    <string name="visual_landscape">Wide</string>
+    <string name="visual_rotate">Rotate</string>
+    <string name="visual_flip">Flip</string>
+    <string name="visual_draw_signature">Draw a signature</string>
+    <string name="visual_signature_required">Add a signature image to continue</string>
+    <string name="visual_redact_warning">Redaction is permanent. Check carefully before saving.</string>
+    <string name="visual_resize">Size</string>
+    <string name="visual_quality">Quality</string>
+    <string name="visual_padding">Padding</string>
+    <string name="visual_opacity">Opacity</string>
+    <string name="visual_output_dimensions">Output: %1$d × %2$d px</string>
+    <string name="visual_adjust_preview_note">Preview shows placement; use Apply to render the final image.</string>
+    <string name="visual_compression_note">Size reduction depends on the PDF content. Text and vectors stay sharp.</string>
+    <string name="visual_auto">Auto</string>
+    <string name="visual_letter">Letter</string>
+    <string name="visual_compress_best">Best quality</string>
+    <string name="visual_compress_balanced">Balanced</string>
+    <string name="visual_compress_small">Small file</string>
+    <string name="visual_compress_strong">Strong</string>
+    <string name="visual_compress_result">Original %1$s · Saved %2$s</string>
+    <string name="visual_compress_no_gain">Already optimized: no safe reduction found</string>
+    <string name="visual_advanced">Precise options</string>
+    <string name="visual_apply_all">All pages</string>
+    <string name="visual_preview_note">Images, signatures, and crop handles can be moved directly on the preview.</string>
+    <string name="visual_two_sources">Choose one PDF and one image to continue</string>
+    <string name="visual_overlay_image">Image being placed on the PDF</string>
+    <string name="visual_apply_page">This page</string>
     <string name="visual_edit_title">Edit visually</string>
     <string name="visual_edit_reset">Reset</string>
     <string name="visual_edit_drag_hint">Drag corners to resize, or drag inside to move</string>
@@ -9,4 +46,11 @@
     <string name="visual_edit_resize">Resize</string>
     <string name="visual_edit_preserve_ratio">Keeps the original aspect ratio</string>
     <string name="visual_edit_quality_note">Lower quality usually makes smaller files</string>
+    <string name="visual_filter_original">Original</string>
+    <string name="visual_filter_document">Document</string>
+    <string name="visual_filter_vivid">Vivid</string>
+    <string name="visual_filter_grayscale">Grayscale</string>
+    <string name="visual_filter_contrast">High contrast</string>
+    <string name="visual_show_original">Show original</string>
+    <string name="visual_show_edited">Show edited</string>
 </resources>

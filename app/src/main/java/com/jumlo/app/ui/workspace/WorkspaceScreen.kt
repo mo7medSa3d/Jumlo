@@ -31,6 +31,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -89,13 +91,21 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
 
     val queue=remember(form.sourceIds,imported) {val indexed=imported.associateBy {it.id};form.sourceIds.mapNotNull(indexed::get)}
     val preview=queue.find {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
-    val minimum=if(tool in setOf("pdf_03","pdf_compare","img_compare") || (tool=="img_watermark" && form.flag1)) 2 else 1
+    val editorSource=if(tool in setOf("pdf_image","pdf_signature"))
+        queue.firstOrNull { it.mimeType=="application/pdf" } else preview
+    val overlayImage=if(tool in setOf("pdf_image","pdf_signature"))
+        queue.firstOrNull { it.mimeType?.startsWith("image/")==true } else null
+    val minimum=if(tool in setOf("pdf_03","pdf_compare","img_compare","pdf_signature","pdf_image") ||
+        (tool=="img_watermark" && form.flag1)) 2 else 1
     val inputMismatch=remember(tool,queue) { queue.any {source->
         val mime=source.mimeType
         when {
+            tool=="pdf_image" || tool=="pdf_signature" ->
+                queue.size!=2 || queue.count { it.mimeType=="application/pdf" }!=1 ||
+                    queue.count { it.mimeType?.startsWith("image/")==true }!=1
             mime==null || mime=="application/octet-stream" -> false
             tool=="pdf_02" || tool.startsWith("img_") -> !mime.startsWith("image/")
-            tool.startsWith("pdf_") && tool!="pdf_signature" -> mime!="application/pdf"
+            tool.startsWith("pdf_") -> mime!="application/pdf"
             tool=="file_08" -> mime !in setOf("application/zip","application/x-zip-compressed")
             else -> false
         }
@@ -118,7 +128,11 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             }
         }.exceptionOrNull()?.let(::stableError)
     }
-    val countValid=tool !in setOf("pdf_07","file_08") || queue.size==1
+    val countValid=when(tool) {
+        "pdf_07","file_08" -> queue.size==1
+        "pdf_image","pdf_signature" -> queue.size==2
+        else -> true
+    }
     val renameInput=remember(form,queue) {
         if(tool=="file_batch_rename") runCatching {
             RenamePreviewInput(queue.map {it.displayName},Json.decodeFromString<BatchRenameSettings>(form.executionSettings()))
@@ -146,17 +160,32 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 item(key="inputs") {
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
-                        if(tool=="pdf_02" || tool.startsWith("img_")) QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
+                        if(tool in setOf("pdf_02","pdf_image","pdf_signature") || tool.startsWith("img_"))
+                            QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
                     }
                 }
                 if(queue.isEmpty()) item {QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body))}
-                if(preview!=null && !(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1))
-                    item(key="preview-${preview.id}") { InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer) }
+                if(preview!=null && tool !in setOf(
+                    "img_03","pdf_crop","pdf_redact","pdf_signature","pdf_annotate","pdf_image"
+                ) && !(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1))
+                    item(key="preview-${preview.id}") {
+                        InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer,
+                            adjustment=if(tool=="img_adjust") form else null)
+                    }
                 if(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1 && queue.single().mimeType=="application/pdf")
                     item(key="pdf-visual-editor-${queue.single().id}") { PdfPageEditor(vm,queue.single().id,form,vm::updateForm) }
-                if(queue.isNotEmpty() && tool in setOf("img_03","pdf_crop","pdf_signature","pdf_redact")) {
+                if(editorSource!=null && tool in setOf(
+                    "img_03","pdf_crop","pdf_signature","pdf_redact","pdf_annotate","pdf_image"
+                )) {
                     item(key="visual-geometry-editor") {
-                        VisualDocumentEditor(vm,queue.first().id,form,vm::updateForm)
+                        VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id)
+                    }
+                }
+                if(tool in setOf("pdf_image","pdf_signature") && queue.size<2) {
+                    item(key="image-overlay-hint") {
+                        Text(stringResource(R.string.visual_two_sources),
+                            style=QuietTheme.typography.metadata,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if(tool in setOf("img_02","img_adjust","img_04","pdf_compress","pdf_07","pdf_02","img_watermark")) {
@@ -272,13 +301,17 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
  * - Modern floating page indicator pill & prev/next controls.
  */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun InputPreview(vm:AppViewModel,sourceId:String,reduceMotion:Boolean=false,isFullViewer:Boolean=false) {
+@Composable private fun InputPreview(
+    vm:AppViewModel,sourceId:String,reduceMotion:Boolean=false,
+    isFullViewer:Boolean=false,adjustment:WorkspaceDraft?=null
+) {
     var pageCount by rememberSaveable(sourceId) { mutableIntStateOf(1) }
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { pageCount.coerceAtLeast(1) })
     val scope = rememberCoroutineScope()
     var scale by remember(sourceId, pagerState.currentPage) { mutableFloatStateOf(1f) }
     var offset by remember(sourceId, pagerState.currentPage) { mutableStateOf(Offset.Zero) }
     var currentDims by remember(sourceId) { mutableStateOf<Pair<Int,Int>?>(null) }
+    var compareOriginal by rememberSaveable(sourceId) { mutableStateOf(false) }
 
     Surface(
         shape = QuietTheme.shapes.card,
@@ -380,6 +413,23 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             )
                         }
                         frame?.let { current ->
+                            val adjustmentFilter=remember(adjustment?.num1,adjustment?.num2,adjustment?.num3) {
+                                if(adjustment?.toolId!="img_adjust") null else {
+                                    val brightness=(adjustment.num1.toFloatOrNull()?:0f).coerceIn(-100f,100f)
+                                    val contrast=(adjustment.num2.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
+                                    val saturation=(adjustment.num3.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
+                                    val filterMatrix=ColorMatrix().apply {
+                                        setToSaturation(saturation)
+                                        val matrixValues=values
+                                        val shift=(1f-contrast)*128f+brightness*2.55f
+                                        for(row in 0..2) {
+                                            for(col in 0..2) matrixValues[row*5+col]*=contrast
+                                            matrixValues[row*5+4]=shift
+                                        }
+                                    }
+                                    ColorFilter.colorMatrix(filterMatrix)
+                                }
+                            }
                             Image(
                                 bitmap = current.bitmap.asImageBitmap(),
                                 contentDescription = stringResource(R.string.dialog_preview_title),
@@ -391,7 +441,8 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                                         translationX = if (pageIndex == pagerState.currentPage) offset.x else 0f
                                         translationY = if (pageIndex == pagerState.currentPage) offset.y else 0f
                                     },
-                                contentScale = ContentScale.Fit
+                                contentScale = ContentScale.Fit,
+                                colorFilter = if(compareOriginal) null else adjustmentFilter
                             )
                         }
                     }
@@ -452,6 +503,17 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             Icon(Icons.AutoMirrored.Rounded.NavigateNext, stringResource(R.string.action_next))
                         }
                     }
+                }
+            }
+            if(adjustment?.toolId=="img_adjust") {
+                OutlinedButton(onClick={compareOriginal=!compareOriginal},
+                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
+                    Icon(Icons.Rounded.Compare,null,Modifier.size(19.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(
+                        if(compareOriginal) R.string.visual_show_edited
+                        else R.string.visual_show_original
+                    ))
                 }
             }
             Text(

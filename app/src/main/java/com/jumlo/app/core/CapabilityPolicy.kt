@@ -22,7 +22,7 @@ object CapabilityPolicy {
     private val processing = hostCoreTested + setOf(
         "file_duplicates", "file_batch_rename", "dl_media",
         "pdf_02", "pdf_07", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
-        "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_metadata", "pdf_forms", "pdf_compare",
+        "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_image", "pdf_metadata", "pdf_forms", "pdf_compare",
         "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch"
     )
     private val blocked = mapOf(

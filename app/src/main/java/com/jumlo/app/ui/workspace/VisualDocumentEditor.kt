@@ -1,5 +1,6 @@
 package com.jumlo.app.ui.workspace
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -7,9 +8,13 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
+import androidx.compose.material.icons.automirrored.rounded.NavigateNext
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +26,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.WorkspaceDraft
@@ -28,148 +34,274 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.util.rememberAppHaptics
 import kotlinx.coroutines.CancellationException
+import java.util.Locale
 import kotlin.math.min
 
-private fun WorkspaceDraft.visualRect():VisualRect {
-    fun parse(s:String,f:Float) = s.toFloatOrNull()?.takeIf { it.isFinite() } ?: f
-    val default = when(toolId) {
+/**
+ * Unified direct-manipulation editor. Uses actual Android-rendered PDF/image frames.
+ * Coordinates are the validated normalized top-left fractions consumed by the existing
+ * image crop, PDF crop, signature/overlay-image and annotation engines.
+ *
+ * This is strictly UI/gesture logic. The underlying PDF remains unchanged until
+ * the user explicitly runs the processing job in WorkspaceScreen.
+ */
+private fun WorkspaceDraft.visualRect(): VisualRect {
+    fun read(raw:String,fallback:Float):Float =
+        raw.toFloatOrNull()?.takeIf { it.isFinite() } ?: fallback
+    if(toolId=="pdf_annotate") {
+        val x=read(num2,.1f).coerceIn(0f,.76f)
+        val y=read(num3,.1f).coerceIn(0f,.86f)
+        return VisualRect(x,y,x+.24f,y+.14f)
+    }
+    val fallback=when(toolId) {
         "pdf_signature" -> VisualRect.SIGNATURE_START
         "pdf_redact" -> VisualRect.REDACTION_START
+        "pdf_image" -> VisualRect(.18f,.22f,.82f,.78f)
         else -> VisualRect.WHOLE
     }
-    return VisualRect(parse(cropLeft,default.left),parse(cropTop,default.top),
-        parse(cropRight,default.right),parse(cropBottom,default.bottom)).valid()
+    return VisualRect(
+        read(cropLeft,fallback.left),read(cropTop,fallback.top),
+        read(cropRight,fallback.right),read(cropBottom,fallback.bottom)
+    ).valid()
 }
 
-private fun Float.serialized() = "%.5f".format(java.util.Locale.US,this)
+private fun Float.serialized():String = String.format(Locale.US,"%.5f",this)
 
 @Composable
 internal fun VisualDocumentEditor(
     vm:AppViewModel,
     sourceId:String,
     draft:WorkspaceDraft,
-    edit:((WorkspaceDraft)->WorkspaceDraft)->Unit
+    edit:((WorkspaceDraft)->WorkspaceDraft)->Unit,
+    overlayId:String?=null
 ) {
-    val cropMode=draft.toolId in setOf("img_03","pdf_crop","pdf_redact","pdf_signature")
-    val positionMode=false
-    val sourceIsPdf=draft.toolId.startsWith("pdf_")
-    val selectedPage=(draft.num1.toIntOrNull() ?: 1).coerceAtLeast(1)
-    var preview by remember(sourceId,selectedPage) { mutableStateOf<PreviewFrame?>(null) }
-    var failed by remember(sourceId,selectedPage) { mutableStateOf(false) }
-    var count by remember(sourceId) { mutableIntStateOf(1) }
-    LaunchedEffect(sourceId,selectedPage) {
-        failed=false
+    val tool=draft.toolId
+    val overlayTool=tool in setOf("pdf_image","pdf_signature")
+    val annotation=tool=="pdf_annotate"
+    val cropTool=tool in setOf("img_03","pdf_crop")
+    val sourceIsPdf=tool.startsWith("pdf_")
+    val haptics=rememberAppHaptics()
+    var pageCount by remember(sourceId) { mutableIntStateOf(1) }
+    var currentPage by rememberSaveable(sourceId,tool) {
+        mutableIntStateOf(if(sourceIsPdf) (draft.num1.toIntOrNull()?:1).coerceAtLeast(1) else 1)
+    }
+    var preview by remember(sourceId,currentPage) { mutableStateOf<PreviewFrame?>(null) }
+    var failed by remember(sourceId,currentPage) { mutableStateOf(false) }
+    LaunchedEffect(sourceId,currentPage,pageCount) {
         preview=null
+        failed=false
         try {
-            val frame=vm.preview(sourceId,if(sourceIsPdf) selectedPage.coerceIn(1,count) else 1)
+            val frame=vm.preview(sourceId,if(sourceIsPdf) currentPage.coerceIn(1,pageCount) else 1)
             preview=frame
-            count=frame.count.coerceAtLeast(1)
-        } catch(cancel:CancellationException) {throw cancel}
-          catch(_:Exception) {failed=true}
+            pageCount=frame.count.coerceAtLeast(1)
+        } catch(cancel:CancellationException) { throw cancel }
+          catch(_:Exception) { failed=true }
     }
     DisposableEffect(preview) {
-        val old=preview
-        onDispose { old?.bitmap?.takeUnless {it.isRecycled}?.recycle() }
+        val bitmap=preview?.bitmap
+        onDispose { bitmap?.takeUnless { it.isRecycled }?.recycle() }
+    }
+    val importedOverlay by produceState<PreviewFrame?>(null,overlayId) {
+        value=null
+        if(overlayId!=null) {
+            try { value=vm.preview(overlayId,1) }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(_:Exception) { value=null }
+        }
+    }
+    DisposableEffect(importedOverlay) {
+        val bitmap=importedOverlay?.bitmap
+        onDispose { bitmap?.takeUnless { it.isRecycled }?.recycle() }
     }
 
-    var rect by remember(sourceId,draft.toolId) { mutableStateOf(draft.visualRect()) }
-    LaunchedEffect(draft.cropLeft,draft.cropTop,draft.cropRight,draft.cropBottom) {
-        val incoming=draft.visualRect()
-        if(incoming!=rect) rect=incoming
+    var rect by remember(sourceId,tool) { mutableStateOf(draft.visualRect()) }
+    var dragging by remember { mutableStateOf(false) }
+    LaunchedEffect(draft.cropLeft,draft.cropTop,draft.cropRight,draft.cropBottom,
+        draft.num2,draft.num3,sourceId,tool) {
+        if(!dragging) {
+            val fromDraft=draft.visualRect()
+            if(fromDraft!=rect) rect=fromDraft
+        }
     }
+    val latestEdit by rememberUpdatedState(edit)
     val colors=MaterialTheme.colorScheme
     val density=LocalDensity.current
     val handlePx=with(density) { 34.dp.toPx() }
-    val edge=colors.primary
+
+    fun saveRect(box:VisualRect) {
+        val safe=box.valid()
+        latestEdit { current ->
+            if(annotation) current.copy(
+                num2=safe.left.serialized(),num3=safe.top.serialized()
+            ) else current.copy(
+                cropLeft=safe.left.serialized(),cropTop=safe.top.serialized(),
+                cropRight=safe.right.serialized(),cropBottom=safe.bottom.serialized()
+            )
+        }
+    }
+
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
             Text(stringResource(R.string.visual_edit_title),
                 style=QuietTheme.typography.sectionTitle,modifier=Modifier.weight(1f))
             TextButton(onClick={
-                val reset=when(draft.toolId) {
+                val reset=when(tool) {
                     "pdf_signature" -> VisualRect.SIGNATURE_START
                     "pdf_redact" -> VisualRect.REDACTION_START
+                    "pdf_image" -> VisualRect(.18f,.22f,.82f,.78f)
+                    "pdf_annotate" -> VisualRect(.1f,.1f,.34f,.24f)
                     else -> VisualRect.WHOLE
                 }
                 rect=reset
-                edit { it.copy(cropLeft=reset.left.serialized(),cropTop=reset.top.serialized(),
-                    cropRight=reset.right.serialized(),cropBottom=reset.bottom.serialized()) }
-            }) { Icon(Icons.Rounded.RestartAlt,null);Text(stringResource(R.string.visual_edit_reset)) }
+                saveRect(reset)
+                haptics.selectionToggle()
+            }) {
+                Icon(Icons.Rounded.RestartAlt,null)
+                Text(stringResource(R.string.visual_edit_reset))
+            }
         }
         val frame=preview
         if(frame!=null && !frame.bitmap.isRecycled) {
-            val w=frame.bitmap.width.coerceAtLeast(1)
-            val h=frame.bitmap.height.coerceAtLeast(1)
-            val aspect=w.toFloat()/h
+            val aspect=frame.bitmap.width.toFloat()/frame.bitmap.height.coerceAtLeast(1)
             BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
-                val canvasWidth=minOf(maxWidth,450.dp)
-                val canvasHeight=(canvasWidth/aspect).coerceIn(130.dp,440.dp)
-                Box(Modifier.width(canvasWidth).height(canvasHeight).clip(RoundedCornerShape(18.dp))
+                // Never distort a portrait document just to fit a fixed-height preview.
+                val canvasWidth=minOf(maxWidth,450.dp,(440.dp*aspect).coerceAtLeast(75.dp))
+                val canvasHeight=canvasWidth/aspect
+                Box(Modifier.width(canvasWidth).height(canvasHeight)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(colors.surfaceContainerLowest)) {
-                    Image(frame.bitmap.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
-                    if(cropMode || positionMode) {
-                        val activeRect by rememberUpdatedState(rect)
-                        var currentHandle by remember {mutableStateOf(VisualHandle.NONE)}
-                        Canvas(Modifier.fillMaxSize().pointerInput(cropMode,positionMode,handlePx) {
-                            detectDragGestures(
-                                onDragStart={ at ->
-                                    currentHandle=activeRect.hitHandle(
-                                        at.x/size.width,at.y/size.height,
-                                        size.width.toFloat(),size.height.toFloat(),handlePx)
-                                },
-                                onDragEnd={
-                                    if(currentHandle!=VisualHandle.NONE) {
-                                        if(positionMode) {
-                                            edit {it.copy(num2=rect.left.serialized(),num3=rect.top.serialized())}
-                                        } else {
-                                            edit { it.copy(cropLeft=rect.left.serialized(),cropTop=rect.top.serialized(),
-                                                cropRight=rect.right.serialized(),cropBottom=rect.bottom.serialized()) }
-                                        }
-                                    }
-                                    currentHandle=VisualHandle.NONE
-                                },
-                                onDragCancel={currentHandle=VisualHandle.NONE},
-                                onDrag={change,delta->
-                                    if(currentHandle!=VisualHandle.NONE) {
-                                        change.consume()
-                                        rect=rect.dragged(if(positionMode) VisualHandle.BODY else currentHandle,
-                                            delta.x/size.width,delta.y/size.height).valid()
-                                    }
+                    Image(frame.bitmap.asImageBitmap(),
+                        contentDescription=stringResource(R.string.visual_editor_title),
+                        modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+
+                    // Preview the ACTUAL user-imported image, not a placeholder rectangle.
+                    val overlay=importedOverlay?.bitmap
+                    if(overlayTool && overlay!=null && !overlay.isRecycled) {
+                        Image(overlay.asImageBitmap(),
+                            contentDescription=stringResource(R.string.visual_overlay_image),
+                            modifier=Modifier
+                                .offset(x=canvasWidth*rect.left,y=canvasHeight*rect.top)
+                                .size(canvasWidth*(rect.right-rect.left),
+                                    canvasHeight*(rect.bottom-rect.top)),
+                            contentScale=ContentScale.FillBounds)
+                    }
+                    if(annotation && draft.text1.isNotBlank()) {
+                        Text(draft.text1,
+                            modifier=Modifier.offset(x=canvasWidth*rect.left,
+                                y=canvasHeight*rect.top)
+                                .widthIn(max=180.dp).padding(5.dp),
+                            maxLines=2,overflow=TextOverflow.Ellipsis,
+                            style=QuietTheme.typography.metadataStrong,
+                            color=colors.primary)
+                    }
+
+                    val active by rememberUpdatedState(rect)
+                    var handle by remember { mutableStateOf(VisualHandle.NONE) }
+                    Canvas(Modifier.fillMaxSize().pointerInput(tool,sourceId,currentPage,handlePx) {
+                        detectDragGestures(
+                            onDragStart={ tap ->
+                                handle=active.hitHandle(tap.x/size.width,tap.y/size.height,
+                                    size.width.toFloat(),size.height.toFloat(),handlePx)
+                                if(annotation && handle!=VisualHandle.NONE) handle=VisualHandle.BODY
+                                dragging=handle!=VisualHandle.NONE
+                            },
+                            onDrag={ change,delta ->
+                                if(handle!=VisualHandle.NONE) {
+                                    change.consume()
+                                    rect=active.dragged(handle,delta.x/size.width,
+                                        delta.y/size.height).valid()
                                 }
-                            )
-                        }) {
-                            val drawn=if(positionMode) rect else rect
-                            val left=drawn.left*size.width
-                            val top=drawn.top*size.height
-                            val right=drawn.right*size.width
-                            val bottom=drawn.bottom*size.height
-                            val stroke=3.dp.toPx()
-                            drawRect(edge,topLeft=Offset(left,top),size=androidx.compose.ui.geometry.Size(right-left,bottom-top),
-                                style=Stroke(stroke))
-                            if(cropMode) listOf(
-                                Offset(left,top),Offset(right,top),Offset(left,bottom),Offset(right,bottom)
-                            ).forEach { point ->
-                                drawCircle(Color.White,11.dp.toPx(),point)
-                                drawCircle(edge,8.dp.toPx(),point)
+                            },
+                            onDragEnd={
+                                if(handle!=VisualHandle.NONE) {
+                                    saveRect(active)
+                                    haptics.selectionToggle()
+                                }
+                                handle=VisualHandle.NONE
+                                dragging=false
+                            },
+                            onDragCancel={
+                                dragging=false
+                                handle=VisualHandle.NONE
+                                rect=draft.visualRect()
                             }
-                            if(cropMode && draft.toolId !in setOf("pdf_signature","pdf_redact")) {
-                                val shade=Color.Black.copy(alpha=.45f)
-                                drawRect(shade,size=androidx.compose.ui.geometry.Size(size.width,top))
-                                drawRect(shade,topLeft=Offset(0f,bottom),
-                                    size=androidx.compose.ui.geometry.Size(size.width,size.height-bottom))
-                                drawRect(shade,topLeft=Offset(0f,top),
-                                    size=androidx.compose.ui.geometry.Size(left,bottom-top))
-                                drawRect(shade,topLeft=Offset(right,top),
-                                    size=androidx.compose.ui.geometry.Size(size.width-right,bottom-top))
+                        )
+                    }) {
+                        val x0=rect.left*size.width
+                        val y0=rect.top*size.height
+                        val x1=rect.right*size.width
+                        val y1=rect.bottom*size.height
+                        val rectSize=androidx.compose.ui.geometry.Size(x1-x0,y1-y0)
+                        if(cropTool) {
+                            val shade=Color.Black.copy(alpha=.48f)
+                            drawRect(shade,size=androidx.compose.ui.geometry.Size(size.width,y0))
+                            drawRect(shade,Offset(0f,y1),
+                                androidx.compose.ui.geometry.Size(size.width,size.height-y1))
+                            drawRect(shade,Offset(0f,y0),androidx.compose.ui.geometry.Size(x0,y1-y0))
+                            drawRect(shade,Offset(x1,y0),
+                                androidx.compose.ui.geometry.Size(size.width-x1,y1-y0))
+                            for(i in 1..2) {
+                                val position=i/3f
+                                drawLine(Color.White.copy(alpha=.5f),
+                                    Offset(x0+(x1-x0)*position,y0),
+                                    Offset(x0+(x1-x0)*position,y1),1.dp.toPx())
+                                drawLine(Color.White.copy(alpha=.5f),
+                                    Offset(x0,y0+(y1-y0)*position),
+                                    Offset(x1,y0+(y1-y0)*position),1.dp.toPx())
                             }
+                        } else if(tool=="pdf_redact") {
+                            drawRect(Color.Black.copy(alpha=.5f),Offset(x0,y0),rectSize)
+                        } else if(overlayTool) {
+                            drawRect(colors.primary.copy(alpha=.10f),Offset(x0,y0),rectSize)
+                        }
+                        drawRect(colors.primary,Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
+                        if(!annotation) listOf(
+                            Offset(x0,y0),Offset(x1,y0),Offset(x0,y1),Offset(x1,y1)
+                        ).forEach { corner ->
+                            drawCircle(Color.White,11.dp.toPx(),center=corner)
+                            drawCircle(colors.primary,8.dp.toPx(),center=corner)
                         }
                     }
                 }
             }
-            Text(stringResource(R.string.visual_edit_drag_hint),style=QuietTheme.typography.metadata,
-                color=colors.onSurfaceVariant)
-            if(draft.toolId in setOf("img_03","pdf_crop")) {
+            Text(stringResource(R.string.visual_edit_drag_hint),
+                style=QuietTheme.typography.metadata,color=colors.onSurfaceVariant)
+            if(sourceIsPdf && pageCount>1) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,
+                    verticalAlignment=Alignment.CenterVertically) {
+                    IconButton(enabled=currentPage>1,onClick={
+                        currentPage--
+                        if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact"))
+                            latestEdit { it.copy(num1=currentPage.toString()) }
+                    }) {
+                        Icon(Icons.AutoMirrored.Rounded.NavigateBefore,
+                            stringResource(R.string.action_previous))
+                    }
+                    Text(stringResource(R.string.ui_page_indicator,currentPage,pageCount),
+                        style=QuietTheme.typography.metadataStrong)
+                    IconButton(enabled=currentPage<pageCount,onClick={
+                        currentPage++
+                        if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact"))
+                            latestEdit { it.copy(num1=currentPage.toString()) }
+                    }) {
+                        Icon(Icons.AutoMirrored.Rounded.NavigateNext,
+                            stringResource(R.string.action_next))
+                    }
+                }
+                if(tool=="pdf_crop") {
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        FilterChip(draft.pages=="all",onClick={
+                            latestEdit { it.copy(pages="all") }
+                        },label={Text(stringResource(R.string.visual_apply_all))})
+                        FilterChip(draft.pages==currentPage.toString(),onClick={
+                            latestEdit { it.copy(pages=currentPage.toString()) }
+                        },label={Text(stringResource(R.string.visual_apply_page))})
+                    }
+                }
+            }
+            if(cropTool) {
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     listOf(
                         R.string.visual_edit_free to 0f,
@@ -177,16 +309,49 @@ internal fun VisualDocumentEditor(
                         R.string.visual_edit_document to (210f/297f)
                     ).forEach { (label,ratio) ->
                         FilterChip(false,onClick={
-                            val next=if(ratio==0f) VisualRect.WHOLE
+                            val box=if(ratio==0f) VisualRect.WHOLE
                                 else VisualRect.fitAspect(frame.width,frame.height,ratio)
-                            rect=next
-                            edit {it.copy(cropLeft=next.left.serialized(),cropTop=next.top.serialized(),
-                                cropRight=next.right.serialized(),cropBottom=next.bottom.serialized())}
+                            rect=box
+                            saveRect(box)
+                            haptics.selectionToggle()
                         },label={Text(stringResource(label))})
                     }
                 }
+                if(tool=="img_03") {
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick={
+                            latestEdit { it.copy(turns=(it.turns+1)%4) }
+                        },modifier=Modifier.weight(1f)) {
+                            Icon(Icons.AutoMirrored.Rounded.RotateRight,null,Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.visual_rotate))
+                        }
+                        OutlinedButton(onClick={
+                            latestEdit { it.copy(flipX=!it.flipX) }
+                        },modifier=Modifier.weight(1f)) {
+                            Icon(Icons.Rounded.Flip,null,Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.visual_flip))
+                        }
+                    }
+                }
             }
-        } else if(failed) Text(stringResource(R.string.msg_preview_unavailable),color=colors.error)
-        else QuietShimmerSkeleton()
+            if(tool=="pdf_redact") Text(stringResource(R.string.visual_redact_warning),
+                style=QuietTheme.typography.metadata,color=colors.error)
+        } else if(failed) {
+            Text(stringResource(R.string.msg_preview_unavailable),color=colors.error)
+        } else QuietShimmerSkeleton()
+
+        if(tool=="pdf_signature" && overlayId==null) {
+            Text(stringResource(R.string.visual_signature_required),
+                style=QuietTheme.typography.metadata,color=colors.onSurfaceVariant)
+            com.jumlo.app.ui.scan.SignaturePad { file ->
+                vm.intakeLocalFile(file,"signature.png","image/png")
+            }
+        }
+        if(tool=="pdf_image" && overlayId==null) {
+            Text(stringResource(R.string.visual_two_sources),
+                style=QuietTheme.typography.metadata,color=colors.onSurfaceVariant)
+        }
     }
 }
