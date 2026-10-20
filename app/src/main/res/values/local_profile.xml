@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_open">View local profile</string>
+    <string name="profile_local_title">My Jumlo</string>
+    <string name="profile_local_explanation">Your documents are stored on this device. Online accounts, subscriptions and cloud sync are not enabled.</string>
+    <string name="profile_documents_count">%1$d saved documents</string>
+    <string name="profile_storage_used">Files use %1$s</string>
+    <string name="profile_view_documents">Open documents</string>
+</resources>

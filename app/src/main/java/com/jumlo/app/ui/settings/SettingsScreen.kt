@@ -75,7 +75,9 @@ import com.jumlo.app.ui.AppViewModel
                 modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                     horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                    Surface(shape=androidx.compose.foundation.shape.CircleShape,
+                    Surface(
+                        onClick = { panel="profile" },
+                        shape=androidx.compose.foundation.shape.CircleShape,
                         color=MaterialTheme.colorScheme.primaryContainer,
                         modifier=Modifier.size(62.dp)) {
                         Box(contentAlignment=Alignment.Center) {
@@ -89,6 +91,9 @@ import com.jumlo.app.ui.AppViewModel
                         Text(stringResource(R.string.neon_my_space_subtitle),
                             style=QuietTheme.typography.metadata,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick={panel="profile"},modifier=Modifier.padding(start=0.dp)) {
+                            Text(stringResource(R.string.profile_open))
+                        }
                     }
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -199,6 +204,30 @@ import com.jumlo.app.ui.AppViewModel
     }
     val accentKeys = listOf("VIOLET","DYNAMIC","BLUE","TEAL","CORAL")
     when (panel) {
+        "profile" -> AlertDialog(
+            onDismissRequest = { panel = null },
+            title = { Text(stringResource(R.string.profile_local_title)) },
+            text = {
+                Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.profile_local_explanation))
+                    Text(stringResource(R.string.profile_documents_count,savedOutputs.size),
+                        style=QuietTheme.typography.metadataStrong)
+                    Text(stringResource(R.string.profile_storage_used,
+                        android.text.format.Formatter.formatFileSize(context,storage.outputs)),
+                        style=QuietTheme.typography.metadataStrong)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick={panel=null;onOpenFiles()}) {
+                    Text(stringResource(R.string.profile_view_documents))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick={panel=null}) {
+                    Text(stringResource(R.string.account_cancel))
+                }
+            }
+        )
         "haptic-intensity" -> ChoiceDialog(stringResource(R.string.brand_haptics_level),
             listOf(stringResource(R.string.brand_haptics_off),stringResource(R.string.brand_haptics_light),
                 stringResource(R.string.brand_haptics_medium),stringResource(R.string.brand_haptics_strong)),
