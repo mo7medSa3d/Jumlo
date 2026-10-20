@@ -130,8 +130,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         }.exceptionOrNull()?.let(::stableError)
     }
     val countValid=when(tool) {
-        "pdf_07","file_08" -> queue.size==1
-        "pdf_image","pdf_signature" -> queue.size==2
+        "pdf_07","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
+        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms" -> queue.size==1
+        "pdf_image","pdf_signature","pdf_compare","img_compare" -> queue.size==2
+        "pdf_metadata" -> queue.size in 1..2
         else -> true
     }
     val renameInput=remember(form,queue) {
@@ -200,6 +202,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
+                if(queue.isNotEmpty() && !countValid) item(key="source-count-help") {
+                    Text(stringResource(R.string.watermark_correct_source_count),
+                        style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error)
+                }
                 itemsIndexed(queue,key={_,it->it.id},contentType={_,_->"input"}) {index,source->
                     val detail=proposedNames?.getOrNull(index)?.let {stringResource(R.string.ui_rename_preview_name,it)} ?: formatBytes(source.sizeBytes)
                     com.jumlo.app.ui.components.FileMenuRow(source.displayName,detail,if(source.mimeType?.startsWith("image/")==true || source.mimeType=="application/pdf") ({previewId=source.id}) else null) {close->

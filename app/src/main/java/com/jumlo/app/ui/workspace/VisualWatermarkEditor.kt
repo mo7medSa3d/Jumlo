@@ -3,6 +3,8 @@ package com.jumlo.app.ui.workspace
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.jumlo.app.R
 import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.AppViewModel
@@ -172,14 +176,14 @@ internal fun VisualWatermarkEditor(
                         IconButton(onClick = { page = (page-1).coerceAtLeast(1) },
                             enabled = page > 1) {
                             Icon(Icons.AutoMirrored.Rounded.NavigateBefore,
-                                stringResource(R.string.visual_edit_undo))
+                                stringResource(R.string.watermark_previous_page))
                         }
                         Text(stringResource(R.string.watermark_page_counter,page,count),
                             style = QuietTheme.typography.metadataStrong)
                         IconButton(onClick = { page = (page+1).coerceAtMost(count) },
                             enabled = page < count) {
                             Icon(Icons.AutoMirrored.Rounded.NavigateNext,
-                                stringResource(R.string.visual_edit_redo))
+                                stringResource(R.string.watermark_next_page))
                         }
                     }
                 } else if(error) {
@@ -199,7 +203,10 @@ internal fun VisualWatermarkEditor(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 2
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             listOf(
                 R.string.watermark_preset_confidential,
                 R.string.watermark_preset_draft,
@@ -221,14 +228,24 @@ internal fun VisualWatermarkEditor(
         }
         Text(stringResource(R.string.watermark_colors),style = QuietTheme.typography.metadataStrong)
         Row(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("#64748B","#0F766E","#2563EB","#EA580C","#DC2626","#111827").forEach { hex ->
+            val swatches = listOf(
+                "#64748B" to R.string.watermark_color_slate,
+                "#0F766E" to R.string.watermark_color_teal,
+                "#2563EB" to R.string.watermark_color_blue,
+                "#EA580C" to R.string.watermark_color_orange,
+                "#DC2626" to R.string.watermark_color_red,
+                "#111827" to R.string.watermark_color_dark
+            )
+            swatches.forEach { (hex,labelId) ->
                 val selected = colorHex.equals(hex,ignoreCase=true)
+                val colorLabel = stringResource(labelId)
                 Surface(
                     onClick = {
                         edit { it.copy(text3=hex) }
                         haptics.selectionToggle()
                     },
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(42.dp)
+                        .semantics { contentDescription = colorLabel },
                     shape = CircleShape,
                     color = Color(android.graphics.Color.parseColor(hex)),
                     border = BorderStroke(if(selected) 3.dp else 1.dp,

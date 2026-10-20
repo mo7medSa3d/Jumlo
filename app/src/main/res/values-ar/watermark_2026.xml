@@ -19,4 +19,13 @@
     <string name="watermark_all_pages">كل الصفحات</string>
     <string name="watermark_this_page">هذه الصفحة</string>
     <string name="watermark_page_numbers">إضافة أرقام الصفحات</string>
+    <string name="watermark_previous_page">الصفحة السابقة</string>
+    <string name="watermark_next_page">الصفحة التالية</string>
+    <string name="watermark_color_slate">رمادي أردوازي</string>
+    <string name="watermark_color_teal">فيروزي</string>
+    <string name="watermark_color_blue">أزرق</string>
+    <string name="watermark_color_orange">برتقالي</string>
+    <string name="watermark_color_red">أحمر</string>
+    <string name="watermark_color_dark">رمادي داكن</string>
+    <string name="watermark_correct_source_count">تأكد من عدد الملفات المحددة لهذه الأداة.</string>
 </resources>

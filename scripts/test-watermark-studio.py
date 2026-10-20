@@ -37,7 +37,7 @@ class WatermarkStudioContracts(unittest.TestCase):
         ar=ET.parse(ROOT/'app/src/main/res/values-ar/watermark_2026.xml').getroot()
         keys=lambda root: {x.attrib.get('name') for x in root if x.tag=='string'}
         self.assertEqual(keys(en),keys(ar))
-        self.assertEqual(19,len(keys(en)))
+        self.assertEqual(28,len(keys(en)))
 
 if __name__=='__main__':
     unittest.main(verbosity=2)

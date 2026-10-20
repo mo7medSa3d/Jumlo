@@ -19,4 +19,13 @@
     <string name="watermark_all_pages">All pages</string>
     <string name="watermark_this_page">This page</string>
     <string name="watermark_page_numbers">Add page numbers</string>
+    <string name="watermark_previous_page">Previous page</string>
+    <string name="watermark_next_page">Next page</string>
+    <string name="watermark_color_slate">Slate gray</string>
+    <string name="watermark_color_teal">Teal</string>
+    <string name="watermark_color_blue">Blue</string>
+    <string name="watermark_color_orange">Orange</string>
+    <string name="watermark_color_red">Red</string>
+    <string name="watermark_color_dark">Dark gray</string>
+    <string name="watermark_correct_source_count">Check the number of selected files for this tool.</string>
 </resources>
