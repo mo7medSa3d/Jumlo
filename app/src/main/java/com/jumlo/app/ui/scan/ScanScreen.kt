@@ -58,7 +58,7 @@ import kotlin.math.abs
  * corners so the user can refine the quad before perspective correction + crop.
  */
 @Composable
-fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
+fun ScanScreen(onCaptured: (java.io.File) -> Unit, onCapturedBatch: (List<File>) -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -75,6 +75,7 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
             val resId = when (code) {
                 "scan_error_bind" -> R.string.scan_error_bind
                 "scan_error_process" -> R.string.scan_error_process
+                "scan_error_smart" -> R.string.scan_error_smart
                 else -> R.string.scan_error_capture
             }
             QuietStateCard(
@@ -89,6 +90,11 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onBack: () -> Unit) {
                 isError = true
             )
         }
+        SmartDocumentScanButton(
+            enabled = !processing && captured == null,
+            onCapturedBatch = onCapturedBatch,
+            onError = { error = "scan_error_smart" }
+        )
         if (!granted) {
             QuietStateCard(
                 title = stringResource(R.string.scan_title),

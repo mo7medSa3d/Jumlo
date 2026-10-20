@@ -293,6 +293,43 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         }
     }
     fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { val source=sources.importLocalFile(file,displayName,mimeType);addSource(source.id,source.displayName); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
+    /** Import a multi-page scanner result in capture order, with rollback and cache cleanup.
+     * Each page is copied to immutable SourceStore before deleting the scanner-owned temp.
+     */
+    fun intakeLocalFiles(files:List<java.io.File>) {
+        val selected=files.toList()
+        if(selected.isEmpty()) return
+        viewModelScope.launch {
+            initialized.await()
+            beginBusy()
+            val copied=mutableListOf<String>()
+            suspend fun rollback() {
+                copied.forEach { id ->
+                    removeSource(id)
+                    try { sources.discardNewImport(id) } catch (_: Exception) { }
+                }
+            }
+            try {
+                selected.forEachIndexed { index,file ->
+                    currentCoroutineContext().ensureActive()
+                    val source=sources.importLocalFile(file,"Scan ${index+1}.jpg","image/jpeg")
+                    copied.add(source.id)
+                    addSource(source.id,source.displayName)
+                }
+                refreshStorage()
+            } catch(cancel:CancellationException) {
+                rollback()
+                throw cancel
+            } catch(error:Exception) {
+                rollback()
+                _message.value=stableError(error)
+            } finally {
+                selected.forEach { it.delete() }
+                endBusy()
+            }
+        }
+    }
+
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
 
     fun toggleOutputFavorite(id:String) = savePreference { preferences.toggleFavoriteOutput(id) }
