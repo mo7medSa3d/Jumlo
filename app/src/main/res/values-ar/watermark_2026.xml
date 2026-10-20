@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watermark_title">محرر العلامة المائية</string>
+    <string name="watermark_help">حرّك العلامة على معاينة الصفحة مباشرة. لن يتغير الملف الأصلي إلا عند الحفظ.</string>
+    <string name="watermark_pdf_preview">معاينة PDF حقيقية بالعلامة المائية</string>
+    <string name="watermark_preview_error">تعذر عرض هذا المستند. جرّب ملف PDF آخر.</string>
+    <string name="watermark_page_counter">صفحة %1$d من %2$d</string>
+    <string name="watermark_text">نص العلامة المائية</string>
+    <string name="watermark_preset_confidential">سري</string>
+    <string name="watermark_preset_draft">مسودة</string>
+    <string name="watermark_preset_copy">نسخة</string>
+    <string name="watermark_single">علامة واحدة</string>
+    <string name="watermark_tile">متكرر</string>
+    <string name="watermark_colors">لون العلامة</string>
+    <string name="watermark_opacity">الشفافية</string>
+    <string name="watermark_size">الحجم</string>
+    <string name="watermark_rotation">الدوران</string>
+    <string name="watermark_page_scope">تطبيق على</string>
+    <string name="watermark_all_pages">كل الصفحات</string>
+    <string name="watermark_this_page">هذه الصفحة</string>
+    <string name="watermark_page_numbers">إضافة أرقام الصفحات</string>
+    <string name="watermark_previous_page">الصفحة السابقة</string>
+    <string name="watermark_next_page">الصفحة التالية</string>
+    <string name="watermark_color_slate">رمادي أردوازي</string>
+    <string name="watermark_color_teal">فيروزي</string>
+    <string name="watermark_color_blue">أزرق</string>
+    <string name="watermark_color_orange">برتقالي</string>
+    <string name="watermark_color_red">أحمر</string>
+    <string name="watermark_color_dark">رمادي داكن</string>
+    <string name="watermark_correct_source_count">تأكد من عدد الملفات المحددة لهذه الأداة.</string>
+</resources>

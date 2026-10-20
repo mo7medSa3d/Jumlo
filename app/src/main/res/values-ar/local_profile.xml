@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_open">الملف الشخصي المحلي</string>
+    <string name="profile_local_title">ملفي في Jumlo</string>
+    <string name="profile_local_explanation">ملفاتك محفوظة على هذا الجهاز. لم يتم تفعيل الحسابات والاشتراكات والمزامنة السحابية.</string>
+    <string name="profile_documents_count">%1$d مستندًا محفوظًا</string>
+    <string name="profile_storage_used">تستخدم الملفات مساحة %1$s</string>
+    <string name="profile_view_documents">فتح المستندات</string>
+</resources>

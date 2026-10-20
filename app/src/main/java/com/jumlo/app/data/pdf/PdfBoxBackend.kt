@@ -3,6 +3,7 @@ package com.jumlo.app.data.pdf
 import com.jumlo.app.core.PageTextComparison
 import com.jumlo.app.core.PdfCompressionPolicy
 import com.jumlo.app.core.PdfImagePlacementPolicy
+import com.jumlo.app.core.PdfWatermarkStyle
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSDictionary
@@ -22,6 +23,8 @@ import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
+import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
+import com.tom_roush.pdfbox.util.Matrix
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
@@ -489,9 +492,74 @@ object PdfBoxBackend {
         stampText(doc, zeroBasedPages, text, xNorm, yNormTop, fontSize, gray)
     }
 
-    fun stampWatermarkAndNumbers(doc: PDDocument, zeroBasedPages: List<Int>, watermarkText: String, addPageNumbers: Boolean) {
-        if (watermarkText.isNotBlank()) stampText(doc, zeroBasedPages, watermarkText, 0.08, 0.08, 28f, 0.75f)
-        if (addPageNumbers) zeroBasedPages.forEach { idx -> stampText(doc, listOf(idx), "${idx + 1}", 0.47, 0.96, 10f, 0.4f) }
+    /**
+     * Rasterize only the watermark overlay (never PDF pages). Android text shaping
+     * preserves Arabic/Unicode and a shared transparent image is reused for all
+     * selected pages. Text and vector data in the source document stay intact.
+     */
+    fun stampWatermarkAndNumbers(
+        doc: PDDocument, zeroBasedPages: List<Int>, watermarkText: String,
+        addPageNumbers: Boolean, style: PdfWatermarkStyle = PdfWatermarkStyle()
+    ) {
+        require(zeroBasedPages.all { it in 0 until doc.numberOfPages }) { "INVALID_PAGE_INDEX" }
+        val text = watermarkText.trim().replace(Regex("\\s+"), " ")
+        require(text.length <= 120) { "WATERMARK_TEXT_TOO_LONG" }
+        if (text.isNotEmpty() && zeroBasedPages.isNotEmpty()) {
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                isFilterBitmap = true
+                textSize = 84f
+                typeface = android.graphics.Typeface.create(
+                    android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                color = android.graphics.Color.parseColor(style.colorHex)
+                alpha = (style.opacityPercent * 255 / 100).coerceIn(0,255)
+            }
+            // Keep temporary ARGB and PDF image allocations bounded.
+            val rawWidth = paint.measureText(text)
+            if (rawWidth > 1650f) paint.textSize *= 1650f / rawWidth
+            val metrics = paint.fontMetrics
+            val rasterWidth = (paint.measureText(text) + 48f).toInt().coerceIn(64,1710)
+            val rasterHeight = (metrics.descent - metrics.ascent + 36f).toInt().coerceIn(80,220)
+            val bitmap = android.graphics.Bitmap.createBitmap(
+                rasterWidth,rasterHeight,android.graphics.Bitmap.Config.ARGB_8888)
+            val image = try {
+                android.graphics.Canvas(bitmap).drawText(text,24f,18f-metrics.ascent,paint)
+                LosslessFactory.createFromImage(doc,bitmap)
+            } finally {
+                bitmap.recycle()
+            }
+            val widthPt = rasterWidth * (style.fontSizePt / paint.textSize)
+            val heightPt = rasterHeight * (style.fontSizePt / paint.textSize)
+            val radians = Math.toRadians((-style.rotationDegrees).toDouble())
+            val spots = if (style.tiled) {
+                listOf(0.18,0.5,0.82).flatMap { y ->
+                    listOf(0.18,0.5,0.82).map { x -> x to y }
+                }
+            } else listOf(style.centerX to style.centerY)
+            zeroBasedPages.forEach { index ->
+                val page = doc.getPage(index)
+                val media = page.mediaBox
+                val cap = media.width * (if(style.tiled) 0.36f else 0.8f)
+                val scale = if(widthPt > cap) cap / widthPt else 1f
+                val drawW = widthPt * scale
+                val drawH = heightPt * scale
+                PDPageContentStream(doc,page,PDPageContentStream.AppendMode.APPEND,true,true).use { cs ->
+                    spots.forEach { (fx,fy) ->
+                        val x = (media.lowerLeftX + fx * media.width).toFloat()
+                        val y = (media.lowerLeftY + (1.0-fy) * media.height).toFloat()
+                        cs.saveGraphicsState()
+                        try {
+                            cs.transform(Matrix.getRotateInstance(radians,x,y))
+                            cs.drawImage(image,-drawW/2f,-drawH/2f,drawW,drawH)
+                        } finally {
+                            cs.restoreGraphicsState()
+                        }
+                    }
+                }
+            }
+        }
+        if (addPageNumbers) zeroBasedPages.forEach { idx ->
+            stampText(doc,listOf(idx),"${idx + 1}",0.47,0.96,10f,0.4f)
+        }
     }
 
     /** Overlay text (annotations/overlay, watermark, page numbers share this primitive). */

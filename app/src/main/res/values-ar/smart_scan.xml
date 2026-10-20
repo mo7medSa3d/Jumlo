@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_smart_action">مسح ذكي متعدد الصفحات</string>
+    <string name="scan_smart_hint">تحديد تلقائي لحواف المستند وتحسين الصور. الكاميرا اليدوية تظل متاحة بالأسفل.</string>
+    <string name="scan_error_smart">المسح الذكي غير متاح على هذا الجهاز حاليًا. استخدم الكاميرا اليدوية بالأسفل.</string>
+</resources>

@@ -328,7 +328,21 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
                                 onOpenFiles={navigateTab(DockTab.FILES)},onChooseFolder={pickFolder()},
                                 onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()})
-                            "scan" -> com.jumlo.app.ui.scan.ScanScreen(onCaptured={file->viewModel.chooseTool("pdf_02");viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg");navigateTo("workspace")},onBack=::goBack)
+                            "scan" -> com.jumlo.app.ui.scan.ScanScreen(
+                                onCaptured={file->
+                                    viewModel.chooseTool("pdf_02")
+                                    viewModel.intakeLocalFile(file,"scan.jpg","image/jpeg")
+                                    navigateTo("workspace")
+                                },
+                                onCapturedBatch={files->
+                                    if(files.isNotEmpty()) {
+                                        viewModel.chooseTool("pdf_02")
+                                        viewModel.intakeLocalFiles(files)
+                                        navigateTo("workspace")
+                                    }
+                                },
+                                onBack=::goBack
+                            )
                             "workspace" -> {
                                 val imported by viewModel.imported.collectAsStateWithLifecycle()
                                 val busy by viewModel.busy.collectAsStateWithLifecycle()

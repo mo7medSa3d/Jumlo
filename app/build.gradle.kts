@@ -188,6 +188,8 @@ dependencies {
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.camera2)
     implementation(libs.camera.view)
+    // On-device Google Play services scanner with CameraX manual fallback.
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0")
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
