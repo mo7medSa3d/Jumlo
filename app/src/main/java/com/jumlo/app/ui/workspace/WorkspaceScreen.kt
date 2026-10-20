@@ -77,9 +77,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     var renamePreviewOpen by rememberSaveable {mutableStateOf(false)}
 
     // Populate smart defaults on tool entry so no manual typing is required on the main workspace.
+    val defaultWatermark = stringResource(R.string.watermark_preset_confidential)
     LaunchedEffect(tool) {
         when(tool) {
-            "pdf_stamp" -> if(form.text1.isBlank() && !form.flag1) vm.updateForm { it.copy(flag1=true) }
+            "pdf_stamp" -> if(form.text1.isBlank() && !form.flag1) vm.updateForm { it.copy(text1=defaultWatermark) }
             "img_watermark" -> if(form.text1.isBlank() && !form.flag1) vm.updateForm { it.copy(text1="Jumlo") }
             "pdf_annotate" -> if(form.text1.isBlank()) vm.updateForm { it.copy(text1="Jumlo", num1=it.num1.ifBlank{"1"}) }
             "file_batch_rename" -> if(form.text1.isBlank()) vm.updateForm { it.copy(text1="{name}_{n}", num1=it.num1.ifBlank{"1"}) }
@@ -181,6 +182,11 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id)
                     }
                 }
+                if(tool=="pdf_stamp" && editorSource?.mimeType=="application/pdf") {
+                    item(key="visual-watermark-editor") {
+                        VisualWatermarkEditor(vm,editorSource.id,form,vm::updateForm)
+                    }
+                }
                 if(tool in setOf("pdf_image","pdf_signature") && queue.size<2) {
                     item(key="image-overlay-hint") {
                         Text(stringResource(R.string.visual_two_sources),
@@ -209,7 +215,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 Text(stringResource(R.string.workspace_direct_url_hint),style=QuietTheme.typography.metadata)
                 Text(stringResource(R.string.ui_sensitive_draft_note),style=QuietTheme.typography.metadata)
             }
-            if(tool in setOf("pdf_stamp","pdf_annotate","img_watermark")) {
+            if(tool in setOf("pdf_annotate","img_watermark")) {
                 item(key="inline-content-settings") {
                     QuietCard {
                         ContentToolSettings(form,vm::updateForm)
