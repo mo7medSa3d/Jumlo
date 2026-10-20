@@ -29,7 +29,8 @@ class WatermarkStudioContracts(unittest.TestCase):
         self.assertIn('vm.preview(sourceId,page)',ui)
         self.assertIn('detectDragGestures(',ui)
         self.assertIn('WatermarkSlider(',ui)
-        self.assertNotIn('Field(',ui)
+        self.assertNotIn('KeyboardType.Decimal',ui)
+        self.assertNotIn('field_page_number',ui)
         self.assertNotIn('mockPdf',ui)
         self.assertIn('draft.text2 == "TILE"',ui)
     def test_bilingual_resources(self):
