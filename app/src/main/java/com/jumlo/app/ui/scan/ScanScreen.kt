@@ -16,6 +16,8 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.LinearProgressIndicator
@@ -69,7 +71,7 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onCapturedBatch: (List<File>)
     var capturedPath by rememberSaveable { mutableStateOf<String?>(null) }
     var processing by remember { mutableStateOf(false) }
     val captured = remember(capturedPath) { capturedPath?.let(::File)?.takeIf(File::isFile) }
-    Column(Modifier.fillMaxSize().padding(QuietTheme.spacing.canvasGutterCompact), verticalArrangement = Arrangement.spacedBy(QuietTheme.spacing.interCardGap)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(QuietTheme.spacing.canvasGutterCompact), verticalArrangement = Arrangement.spacedBy(QuietTheme.spacing.interCardGap)) {
         Text(stringResource(R.string.scan_hint), style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
         error?.let { code ->
             val resId = when (code) {
