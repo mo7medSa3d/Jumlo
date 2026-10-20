@@ -55,7 +55,19 @@ import kotlinx.serialization.json.Json
             "pdf_compress" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompressSettings(SafeNames.basename(outputName),number(num1.ifBlank{"150"},36,600),number(quality,1,100)))
             "pdf_stamp" -> {
                 require(text1.isNotBlank() || flag1) { "STAMP_CONTENT_REQUIRED" }
-                Json.encodeToString(com.jumlo.app.data.processing.PdfStampSettings(SafeNames.basename(outputName),text1,flag1,pages.ifBlank{"all"}))
+                val style = com.jumlo.app.core.PdfWatermarkStyle(
+                    centerX = fraction(num2.ifBlank{"0.5"}),
+                    centerY = fraction(num3.ifBlank{"0.5"}),
+                    fontSizePt = number(num1.ifBlank{"42"},12,90),
+                    opacityPercent = number(num4.ifBlank{"28"},5,100),
+                    rotationDegrees = number(text4.ifBlank{"-35"},-180,180),
+                    tiled = text2 == "TILE",
+                    colorHex = text3.ifBlank{"#64748B"}
+                )
+                Json.encodeToString(com.jumlo.app.data.processing.PdfStampSettings(
+                    SafeNames.basename(outputName),text1,flag1,pages.ifBlank{"all"},
+                    style.centerX,style.centerY,style.fontSizePt,style.opacityPercent,
+                    style.rotationDegrees,style.tiled,style.colorHex))
             }
             "pdf_annotate" -> {
                 require(text1.isNotBlank()) { "INVALID_ANNOTATION" }

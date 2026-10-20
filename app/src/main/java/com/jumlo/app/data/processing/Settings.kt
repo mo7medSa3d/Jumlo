@@ -25,7 +25,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class PdfExtractSettings(val displayName:String="Extracted.pdf", val pages:String="1")
 @Serializable data class PdfCropSettings(val displayName:String="Cropped.pdf", val pages:String="all", val left:Double=0.0, val top:Double=0.0, val right:Double=1.0, val bottom:Double=1.0)
 @Serializable data class PdfCompressSettings(val displayName:String="Compressed.pdf", val maxDpi:Int=150, val jpegQuality:Int=80)
-@Serializable data class PdfStampSettings(val displayName:String="Stamped.pdf", val text:String="", val pageNumbers:Boolean=false, val pages:String="all")
+@Serializable data class PdfStampSettings(val displayName:String="Stamped.pdf", val text:String="", val pageNumbers:Boolean=false, val pages:String="all", val centerX:Double=0.5, val centerY:Double=0.5, val fontSizePt:Int=42, val opacityPercent:Int=28, val rotationDegrees:Int=-35, val tiled:Boolean=false, val colorHex:String="#64748B")
 @Serializable data class PdfAnnotateSettings(val displayName:String="Annotated.pdf", val text:String="", val page:Int=1, val x:Double=0.1, val y:Double=0.1, val asAnnotation:Boolean=false)
 @Serializable data class PdfSignatureSettings(val displayName:String="Signed.pdf", val page:Int=1, val left:Double=0.6, val top:Double=0.75, val right:Double=0.95, val bottom:Double=0.95)
 @Serializable data class PdfMetadataSettings(val displayName:String="Document.pdf", val title:String="", val author:String="", val subject:String="", val keywords:String="", val insertAtPage:Int=1)

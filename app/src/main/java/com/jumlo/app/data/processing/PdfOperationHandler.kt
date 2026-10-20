@@ -243,7 +243,16 @@ import kotlin.math.sqrt
                 val selected=pages(s.optString("pages","all"),doc.numberOfPages).map{ it-1 }
                 val text=s.optString("text","")
                 val addNumbers = s.optBoolean("pageNumbers",false) || text.isBlank()
-                PdfBoxBackend.stampWatermarkAndNumbers(doc,selected,text,addNumbers)
+                val style = PdfWatermarkStyle(
+                    centerX = s.optDouble("centerX",0.5),
+                    centerY = s.optDouble("centerY",0.5),
+                    fontSizePt = s.optInt("fontSizePt",42),
+                    opacityPercent = s.optInt("opacityPercent",28),
+                    rotationDegrees = s.optInt("rotationDegrees",-35),
+                    tiled = s.optBoolean("tiled",false),
+                    colorHex = s.optString("colorHex","#64748B")
+                )
+                PdfBoxBackend.stampWatermarkAndNumbers(doc,selected,text,addNumbers,style)
                 runBlocking { context.report(JobProgress(JobStage.RUNNING,selected.size.toLong(),selected.size.toLong())) }
                 doc.save(out)
             }
