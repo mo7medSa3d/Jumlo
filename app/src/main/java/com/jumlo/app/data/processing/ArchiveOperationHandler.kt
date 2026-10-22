@@ -32,6 +32,9 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
         val settings=Json.decodeFromString<ArchiveSettings>(job.settingsJson)
         val display = if(settings.displayName.endsWith(".zip",true)) settings.displayName else "${settings.displayName}.zip"
         val ticket=ctx.outputs.reserve(job.id,"archive",SafeNames.basename(display),"application/zip")
+        // An interrupted process may leave this job's private .part file. It is
+        // not a completed archive and must not prevent a safe restart.
+        if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
         val used=mutableSetOf<String>()
         var totalSourceBytes=0L
         val inputs=job.sourceIds.mapIndexed { index,id ->

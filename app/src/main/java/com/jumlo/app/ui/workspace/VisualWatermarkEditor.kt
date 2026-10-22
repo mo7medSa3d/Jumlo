@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import com.jumlo.app.R
 import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.AppViewModel
@@ -60,7 +61,8 @@ internal fun VisualWatermarkEditor(
     var count by remember(sourceId) { mutableIntStateOf(1) }
     var frame by remember(sourceId,page) { mutableStateOf<PreviewFrame?>(null) }
     var error by remember(sourceId,page) { mutableStateOf(false) }
-    LaunchedEffect(sourceId,page) {
+    var retry by remember(sourceId) {mutableIntStateOf(0)}
+    LaunchedEffect(sourceId,page,retry) {
         frame = null
         error = false
         try {
@@ -73,22 +75,17 @@ internal fun VisualWatermarkEditor(
             error = true
         }
     }
-    DisposableEffect(frame) {
-        val bitmap = frame?.bitmap
-        onDispose { bitmap?.takeUnless { it.isRecycled }?.recycle() }
-    }
 
     val tiled = draft.text2 == "TILE"
     val colorHex = draft.text3.takeIf { Regex("^#[0-9A-Fa-f]{6}$").matches(it) } ?: "#64748B"
-    val watermarkColor = Color(android.graphics.Color.parseColor(colorHex))
-    val opacity = (draft.num4.toIntOrNull() ?: 28).coerceIn(5,100)
-    val fontSize = (draft.num1.toIntOrNull() ?: 42).coerceIn(12,90)
-    val rotation = (draft.text4.toIntOrNull() ?: -35).coerceIn(-180,180)
-    var centerX by remember(sourceId) { mutableFloatStateOf((draft.num2.toFloatOrNull() ?: .5f).coerceIn(0f,1f)) }
-    var centerY by remember(sourceId) { mutableFloatStateOf((draft.num3.toFloatOrNull() ?: .5f).coerceIn(0f,1f)) }
+    val opacity = draftNumber(draft.num4,28).coerceIn(5,100)
+    val fontSize = draftNumber(draft.num1,42).coerceIn(12,90)
+    val rotation = draftNumber(draft.text4,-35).coerceIn(-180,180)
+    var centerX by remember(sourceId) { mutableFloatStateOf((WorkspaceDraft.normalizeDigits(draft.num2).toFloatOrNull() ?: .5f).coerceIn(0f,1f)) }
+    var centerY by remember(sourceId) { mutableFloatStateOf((WorkspaceDraft.normalizeDigits(draft.num3).toFloatOrNull() ?: .5f).coerceIn(0f,1f)) }
     LaunchedEffect(draft.num2,draft.num3) {
-        centerX = (draft.num2.toFloatOrNull() ?: .5f).coerceIn(0f,1f)
-        centerY = (draft.num3.toFloatOrNull() ?: .5f).coerceIn(0f,1f)
+        centerX = (WorkspaceDraft.normalizeDigits(draft.num2).toFloatOrNull() ?: .5f).coerceIn(0f,1f)
+        centerY = (WorkspaceDraft.normalizeDigits(draft.num3).toFloatOrNull() ?: .5f).coerceIn(0f,1f)
     }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(stringResource(R.string.watermark_title), style = QuietTheme.typography.sectionTitle)
@@ -102,74 +99,11 @@ internal fun VisualWatermarkEditor(
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val currentFrame = frame
                 if (currentFrame != null && !currentFrame.bitmap.isRecycled) {
-                    val aspect = currentFrame.bitmap.width.toFloat() /
-                        currentFrame.bitmap.height.coerceAtLeast(1)
-                    BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment = Alignment.Center) {
-                        val canvasWidth = minOf(maxWidth, 440.dp, (460.dp * aspect).coerceAtLeast(80.dp))
-                        val canvasHeight = canvasWidth / aspect
-                        val density = LocalDensity.current
-                        val canvasWidthPx = with(density) { canvasWidth.toPx() }
-                        val canvasHeightPx = with(density) { canvasHeight.toPx() }
-                        val labelWidth = canvasWidth * (if(tiled) .38f else .78f)
-                        val labelHeight = 55.dp
-                        val previewText = draft.text1.trim()
-                        Box(Modifier.width(canvasWidth).height(canvasHeight)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White)) {
-                            Image(currentFrame.bitmap.asImageBitmap(),
-                                contentDescription = stringResource(R.string.watermark_pdf_preview),
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.FillBounds)
-                            if (previewText.isNotEmpty()) {
-                                val positions = if(tiled) {
-                                    listOf(.18f,.5f,.82f).flatMap { y ->
-                                        listOf(.18f,.5f,.82f).map { x -> x to y }
-                                    }
-                                } else listOf(centerX to centerY)
-                                positions.forEachIndexed { index,(x,y) ->
-                                    Box(
-                                        modifier = Modifier
-                                            .absoluteOffset(
-                                                x = canvasWidth*x-labelWidth/2f,
-                                                y = canvasHeight*y-labelHeight/2f)
-                                            .size(labelWidth,labelHeight)
-                                            .graphicsLayer {
-                                                rotationZ = rotation.toFloat()
-                                                alpha = opacity / 100f
-                                            }
-                                            .then(
-                                                if(!tiled && index==0) {
-                                                    Modifier.pointerInput(
-                                                        sourceId,canvasWidthPx,canvasHeightPx
-                                                    ) {
-                                                        detectDragGestures(onDragEnd = {
-                                                            haptics.selectionToggle()
-                                                        }) { change, delta ->
-                                                            change.consume()
-                                                            val nx = (centerX + delta.x /
-                                                                canvasWidthPx).coerceIn(.08f,.92f)
-                                                            val ny = (centerY + delta.y /
-                                                                canvasHeightPx).coerceIn(.08f,.92f)
-                                                            centerX = nx
-                                                            centerY = ny
-                                                            edit { it.copy(num2=nx.toString(),
-                                                                num3=ny.toString()) }
-                                                        }
-                                                    }
-                                                } else Modifier
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(previewText,
-                                            color = watermarkColor,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = (fontSize * (if(tiled) .26f else .48f)).sp,
-                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    val applies=page in selectedPageNumbers(draft.pages,count)
+                    PdfWatermarkPreview(currentFrame,draft,page,applies,centerX,centerY,
+                        onPosition={x,y->centerX=x;centerY=y},
+                        onCommit={edit {it.copy(num2=centerX.toString(),num3=centerY.toString())};haptics.selectionToggle()})
+                    if(!applies) Text(stringResource(R.string.interactive_page_not_selected),style=QuietTheme.typography.metadata)
                     Row(Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically) {
@@ -190,6 +124,7 @@ internal fun VisualWatermarkEditor(
                     Text(stringResource(R.string.watermark_preview_error),
                         color = MaterialTheme.colorScheme.error,
                         style = QuietTheme.typography.metadata)
+                    TextButton(onClick={retry++}) {Text(stringResource(R.string.interactive_preview_retry))}
                 } else {
                     CircularProgressIndicator(Modifier.padding(24.dp))
                 }
@@ -244,8 +179,8 @@ internal fun VisualWatermarkEditor(
                         edit { it.copy(text3=hex) }
                         haptics.selectionToggle()
                     },
-                    modifier = Modifier.size(42.dp)
-                        .semantics { contentDescription = colorLabel },
+                    modifier = Modifier.size(48.dp)
+                        .semantics { contentDescription = colorLabel;this.selected=selected },
                     shape = CircleShape,
                     color = Color(android.graphics.Color.parseColor(hex)),
                     border = BorderStroke(if(selected) 3.dp else 1.dp,
@@ -261,22 +196,30 @@ internal fun VisualWatermarkEditor(
         }
         WatermarkSlider(
             stringResource(R.string.watermark_opacity),
-            opacity.toFloat(),5f,100f,
-            onChange = { value -> edit { it.copy(num4=value.roundToInt().toString()) } },
-            onFinished = { haptics.selectionToggle() }
+            opacity.toFloat(),5f,100f,28f,
+            onChange = { value -> edit { it.copy(num4=value.roundToInt().toString()) } }
         )
         WatermarkSlider(
             stringResource(R.string.watermark_size),
-            fontSize.toFloat(),12f,90f,
-            onChange = { value -> edit { it.copy(num1=value.roundToInt().toString()) } },
-            onFinished = { haptics.selectionToggle() }
+            fontSize.toFloat(),12f,90f,42f,
+            onChange = { value -> edit { it.copy(num1=value.roundToInt().toString()) } }
         )
         WatermarkSlider(
             stringResource(R.string.watermark_rotation),
-            rotation.toFloat(),-90f,90f,
-            onChange = { value -> edit { it.copy(text4=value.roundToInt().toString()) } },
-            onFinished = { haptics.selectionToggle() }
+            rotation.toFloat(),-180f,180f,-35f,
+            onChange = { value -> edit { it.copy(text4=value.roundToInt().toString()) } }
         )
+        if(!tiled) {
+            InteractiveIntSlider(stringResource(R.string.editor_horizontal_position),(centerX*100).roundToInt(),0,100,50) {value->
+                centerX=value/100f;edit {it.copy(num2=centerX.toString())}
+            }
+            InteractiveIntSlider(stringResource(R.string.editor_vertical_position),(centerY*100).roundToInt(),0,100,50) {value->
+                centerY=value/100f;edit {it.copy(num3=centerY.toString())}
+            }
+        }
+        TextButton(onClick={edit {it.copy(num1="42",num2="0.5",num3="0.5",num4="28",text4="-35",text2="SINGLE")}}) {
+            Text(stringResource(R.string.interactive_watermark_reset))
+        }
         Text(stringResource(R.string.watermark_page_scope),style=QuietTheme.typography.metadataStrong)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = draft.pages.equals("all",ignoreCase=true),
@@ -304,12 +247,10 @@ private fun WatermarkSlider(
     current: Float,
     minimum: Float,
     maximum: Float,
-    onChange: (Float) -> Unit,
-    onFinished: () -> Unit
+    reset: Float,
+    onChange: (Float) -> Unit
 ) {
-    Text(label,style=QuietTheme.typography.metadataStrong)
-    Slider(value = current.coerceIn(minimum,maximum),
-        valueRange = minimum..maximum,
-        onValueChange = onChange,
-        onValueChangeFinished = onFinished)
+    InteractiveIntSlider(label,current.roundToInt(),minimum.roundToInt(),maximum.roundToInt(),reset.roundToInt()) {
+        onChange(it.toFloat())
+    }
 }

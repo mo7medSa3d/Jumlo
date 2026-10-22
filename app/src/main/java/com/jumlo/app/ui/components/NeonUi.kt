@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -53,16 +53,17 @@ fun NeonPanel(
     accent: Color? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val palette = MaterialTheme.colorScheme
+    val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(26.dp),
-        color = palette.surfaceContainerLow,
-        border = BorderStroke(1.dp, accent?.copy(alpha = .55f) ?: palette.outlineVariant.copy(alpha = .7f))
+        shape = QuietTheme.shapes.card,
+        color = accent?.let { ToolPalette.mix(colors.surfaceContainerLow, it, .04f) }
+            ?: colors.surfaceContainerLow,
+        shadowElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(QuietTheme.spacing.cardInteriorPadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
             content = content
         )
     }
@@ -103,33 +104,44 @@ fun NeonHero(
     val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = colors.surfaceContainerLow
+        shape = RoundedCornerShape(30.dp),
+        color = colors.primary,
+        shadowElevation = 3.dp
     ) {
-        Box {
+        Box(Modifier.background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))) {
+            // Soft graphic accents remain decorative; only the real scan CTA is clickable.
+            Box(Modifier.align(Alignment.TopEnd).offset(x = 65.dp, y = (-66).dp)
+                .size(220.dp).background(colors.onPrimary.copy(alpha = 0.10f), CircleShape))
+            Box(Modifier.align(Alignment.BottomEnd).offset(x = 45.dp, y = 70.dp)
+                .size(138.dp).background(colors.onPrimary.copy(alpha = 0.08f), CircleShape))
             Column(
-                Modifier.fillMaxWidth().padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                Modifier.fillMaxWidth().padding(22.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(Icons.Rounded.AutoAwesome, null,
-                    tint = colors.primary, modifier = Modifier.size(25.dp))
-                Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = colors.onSurface, maxLines = 3)
+                Box(Modifier.size(52.dp)
+                    .background(colors.onPrimary.copy(alpha = 0.15f), RoundedCornerShape(18.dp)),
+                    contentAlignment = Alignment.Center) {
+                    ModernToolIcon("document_scanner", colors.onPrimary, Modifier.size(28.dp))
+                }
+                Text(title, style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold), color = colors.onPrimary,
+                    maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text(description, style = QuietTheme.typography.bodyMedium,
-                    color = colors.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    color = colors.onPrimary.copy(alpha = 0.93f),
+                    maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(2.dp))
                 Button(
                     onClick = onAction,
-                    modifier = Modifier.pressFeedback().fillMaxWidth().heightIn(min = 52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary,
-                        contentColor = colors.onPrimary),
-                    shape = RoundedCornerShape(28.dp)
+                    modifier = Modifier.pressFeedback().fillMaxWidth().heightIn(min = 54.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.onPrimary, contentColor = colors.primary),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-                    Icon(Icons.Rounded.DocumentScanner, null, Modifier.size(22.dp))
+                    ModernToolIcon("document_scanner", colors.primary, Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(button, style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 1)
+                    Text(button, style = QuietTheme.typography.button, maxLines = 2)
                     Spacer(Modifier.weight(1f))
-                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(19.dp))
+                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(20.dp))
                 }
             }
         }
@@ -145,40 +157,37 @@ fun NeonToolTile(
     compact: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
-    // Every tool carries its own hue and its own icon shape, so the grid can be
-    // scanned instead of read.
-    val tint = ToolPalette.accentFor(tool.id)
-    val surface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow)
+    val isDark = colors.background.luminance() < 0.5f
+    val tint = ToolPalette.accentFor(tool.id, isDark)
+    val iconSurface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark)
     val haptics = rememberAppHaptics()
-    Column(
-        modifier = modifier.pressFeedback().clickable(role = Role.Button) {
-            haptics.actionClick(); onClick()
-        },
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        onClick = { haptics.actionClick(); onClick() },
+        modifier = modifier.fillMaxWidth().pressFeedback()
+            .heightIn(min = if (compact) 116.dp else 126.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = colors.surfaceContainerLow,
+        shadowElevation = 2.dp
     ) {
-        Surface(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.size(if (compact) 52.dp else 60.dp),
-            shape = CircleShape,
-            color = surface,
-            contentColor = tint
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(resolveStitchIcon(tool.iconName), contentDescription = null,
-                    modifier = Modifier.size(if (compact) 24.dp else 28.dp))
+            Box(Modifier.size(if (compact) 52.dp else 58.dp)
+                .background(iconSurface, RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center) {
+                ModernToolIcon(tool.iconName, tint,
+                    Modifier.size(if (compact) 27.dp else 29.dp))
             }
+            Text(
+                if (language.isRtl) tool.titleAr else tool.titleEn,
+                color = colors.onSurface,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+            )
         }
-        Spacer(Modifier.height(7.dp))
-        Text(
-            if (language.isRtl) tool.titleAr else tool.titleEn,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 

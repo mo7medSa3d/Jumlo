@@ -17,7 +17,6 @@ import sys
 import tempfile
 import zipfile
 
-ORIGINAL_USER_ZIP_SHA256 = "44e15f1a54aa5cc721c92ad08d449d3a327e889d14255df8fdd6ed12d31e37f2"
 MANIFEST_NAME = "CONTENTS_SHA256.json"
 FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 EXCLUDED_PREFIXES = (
@@ -140,7 +139,7 @@ def verify(archive_path: Path, expected_manifest: dict) -> int:
         return len(names)
 
 
-def package(source: Path, output: Path) -> dict:
+def package(source: Path, output: Path, original_archive: Path | None = None) -> dict:
     if not output.is_absolute():
         raise ValueError("--output must be an absolute path")
     if source.is_symlink():
@@ -158,7 +157,10 @@ def package(source: Path, output: Path) -> dict:
     if output.exists() and not output.is_file():
         raise ValueError("--output must name a regular file")
     files = scan(source)
-    manifest = {"formatVersion": 1, "originalUserZipSha256": ORIGINAL_USER_ZIP_SHA256, "files": {}}
+    manifest = {"formatVersion": 1, "files": {}}
+    if original_archive is not None:
+        with original_archive.open("rb") as stream:
+            manifest["originalUserZipSha256"] = hashlib.file_digest(stream, "sha256").hexdigest()
     for name, (path, info) in files.items():
         digest, size = read_file(path, info, lambda _: None)
         manifest["files"][name] = {"sha256": digest, "bytes": size, "mode": stat.S_IMODE(info.st_mode) & 0o777}
@@ -194,9 +196,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[1], help="Source root; defaults to repository containing this script")
     parser.add_argument("--output", type=Path, required=True, help="Absolute output ZIP path outside the source tree")
+    parser.add_argument("--original-archive", type=Path, help="Optional original attachment; record its actual SHA-256 for provenance")
     args = parser.parse_args()
     try:
-        result = package(args.source, args.output)
+        result = package(args.source, args.output, args.original_archive)
     except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as error:
         print(json.dumps({"error": str(error)}), file=sys.stderr)
         return 1

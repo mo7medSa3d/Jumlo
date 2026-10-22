@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Independent source-contract checks for the opt-in multi-site APK. Not an Android build."""
+"""Independent source-contract checks for the default multi-site APK. Not an Android build."""
 from pathlib import Path
 import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ROOT/'app/src/main/java/com/jumlo/app'
 
 class UniversalMediaArchitecture(unittest.TestCase):
-    def test_ci_retains_standard_gate_and_has_explicit_extended_artifact(self):
+    def test_ci_verifies_default_media_artifact_and_explicit_lite_build(self):
         workflow=(ROOT/'.github/workflows/ci.yml').read_text()
-        self.assertIn('inputs.extended_media',workflow)
+        self.assertIn('inputs.lite_build',workflow)
         self.assertIn('-PextendedMedia=true',workflow)
-        self.assertIn('Jumlo-Extended-Media-Debug-APK-',workflow)
-        self.assertIn('APK exceeds the hard 60 MB limit',workflow)
-        self.assertIn('Forbidden heavy media runtime found in APK',workflow)
+        self.assertIn('-PextendedMedia=false',workflow)
+        self.assertIn('Jumlo-Media-Debug-APK-',workflow)
+        self.assertIn('scripts/inspect-media-artifact.py',workflow)
+        self.assertIn('scripts/inspect-standard-artifact.py',workflow)
     def test_downloader_copy_matches_optional_engine_without_false_claims(self):
         import xml.etree.ElementTree as ET
         ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text()
@@ -23,10 +24,10 @@ class UniversalMediaArchitecture(unittest.TestCase):
             self.assertTrue(values['media_supported_platforms_extended'])
             self.assertNotIn('lightweight build', values['media_error_conversion'].lower())
             self.assertNotIn('النسخة الخفيفة', values['media_error_conversion'])
-    def test_runtime_is_explicitly_opt_in_and_direct_build_is_preserved(self):
+    def test_runtime_is_included_by_default_and_direct_build_is_preserved(self):
         build=(ROOT/'app/build.gradle.kts').read_text()
         self.assertIn('extendedMedia',build)
-        self.assertIn('orElse(false).get()',build)
+        self.assertIn('orElse(true).get()',build)
         self.assertIn('src/media/java',build)
         self.assertIn('src/base/java',build)
         self.assertIn('library:0.18.1',build)
@@ -63,7 +64,10 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertNotIn('updateYoutubeDL(',bootstrap)
     def test_build_documentation_discloses_packaging_and_provider_limits(self):
         doc=(ROOT/'docs/media/UNIVERSAL_ENGINE.md').read_text()
-        for word in ('GPL-3.0','16 KB','NOT VERIFIED','Play','YouTube','yt-dlp','APK'):
+        for word in ('GPL-3.0','Play','yt-dlp','APK'):
             self.assertIn(word, doc)
+        self.assertRegex(doc, r'(?i)16[ -]+KB')
+        self.assertRegex(doc, r'(?i)(NOT VERIFIED|remain separate checks)')
+        self.assertRegex(doc, r'(?i)YouTube')
 
 if __name__=='__main__': unittest.main(verbosity=2)

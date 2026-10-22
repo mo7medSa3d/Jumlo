@@ -56,7 +56,9 @@ class ReconstructionContractTests(unittest.TestCase):
         home = text('app/src/main/java/com/jumlo/app/ui/home/HomeScreen.kt')
         state = text('app/src/main/java/com/jumlo/app/ui/components/NeonUi.kt')
         settings = text('app/src/main/java/com/jumlo/app/ui/settings/SettingsScreen.kt')
-        self.assertIn('heightIn(min = 48.dp)', home)
+        targets = [float(value) for value in re.findall(r'heightIn\(min\s*=\s*(\d+(?:\.\d+)?)\.dp\)', home)]
+        self.assertTrue(targets, 'Home actions must declare a minimum touch height')
+        self.assertTrue(all(value >= 48 for value in targets), targets)
         self.assertIn('maxLines = 3', state)
         self.assertNotIn('maxLines=1)', settings.split('R.string.neon_my_documents')[1].split(')', 1)[0])
 

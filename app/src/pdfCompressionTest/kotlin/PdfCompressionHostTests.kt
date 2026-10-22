@@ -4,6 +4,8 @@ import com.jumlo.app.data.pdf.PdfImageCodec
 import com.jumlo.app.data.pdf.PdfImageCompressor
 import com.jumlo.app.data.pdf.RecodedImage
 import com.tom_roush.pdfbox.cos.COSInteger
+import com.tom_roush.pdfbox.cos.COSArray
+import com.tom_roush.pdfbox.cos.COSFloat
 import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
@@ -139,6 +141,30 @@ private fun imageBytes(doc: PDDocument, page: Int): ByteArray {
     return (resources.getXObject(name) as PDImageXObject).createInputStream().use { it.readBytes() }
 }
 
+/** Real Flate raster, including PDF sample-to-color mapping when requested. */
+private fun flateImage(doc: PDDocument, width: Int, height: Int, inverted: Boolean = false): PDImageXObject {
+    val bytes = ByteArray(width * height)
+    java.util.Random(19).nextBytes(bytes)
+    val stream = PDStream(doc)
+    stream.createOutputStream(COSName.FLATE_DECODE).use { it.write(bytes) }
+    return PDImageXObject(stream, null).also { image ->
+        image.width = width
+        image.height = height
+        image.bitsPerComponent = 8
+        image.cosObject.setItem(COSName.COLORSPACE, COSName.DEVICEGRAY)
+        if (inverted) image.cosObject.setItem(COSName.DECODE, COSArray().apply {
+            add(COSFloat(1f)); add(COSFloat(0f))
+        })
+    }
+}
+
+private fun addImagePage(doc: PDDocument, image: PDImageXObject, box: PDRectangle = PDRectangle.LETTER): PDPage =
+    PDPage(box).also { page ->
+        doc.addPage(page)
+        page.resources = PDResources().apply { put(COSName.getPDFName("Im0"), image) }
+        PDPageContentStream(doc, page).use { it.drawImage(image, 0f, 0f, box.width, box.height) }
+    }
+
 private var failures = 0
 
 private fun check(name: String, condition: Boolean, detail: String = "") {
@@ -219,6 +245,82 @@ fun main() {
         check("an unreadable image is reported", report != null && report.skipped.isNotEmpty(),
             report?.skipped?.toString() ?: "no report")
         check("the document is still walked", report != null && report.pages == 1)
+    }
+
+    // 4. Flate images can have an inverted /Decode color mapping. Resampling
+    // must preserve it or a negative scan becomes a positive (and vice versa).
+    run {
+        PDDocument().use { doc ->
+            val original = flateImage(doc, 1200, 1200, inverted = true)
+            val page = addImagePage(doc, original)
+            val report = PdfImageCompressor.compress(doc, 72, 90, codec = HostImageCodec())
+            val result = page.resources.getXObject(COSName.getPDFName("Im0")) as PDImageXObject
+            check("a large Flate scan is downsampled", report.replaced == 1 && result.width < original.width)
+            val mapping = result.cosObject.getDictionaryObject(COSName.DECODE) as? COSArray
+            check("Flate sample colors keep their PDF Decode mapping",
+                mapping?.toFloatArray()?.contentEquals(floatArrayOf(1f, 0f)) == true)
+            val source = File(dir, "inverted-flate-compressed.pdf")
+            doc.save(source)
+            PDDocument.load(source).use { reopened ->
+                val persisted = reopened.getPage(0).resources.getXObject(COSName.getPDFName("Im0")) as PDImageXObject
+                check("the Decode mapping survives serialization", persisted.cosObject.getDictionaryObject(COSName.DECODE) != null)
+            }
+        }
+    }
+
+    // 5. A no-op Flate recompression must not be reported as an improvement.
+    run {
+        PDDocument().use { doc ->
+            val original = flateImage(doc, 8, 8)
+            val page = addImagePage(doc, original)
+            val report = PdfImageCompressor.compress(doc, 150, 90, codec = HostImageCodec())
+            check("an equal-or-larger Flate stream is preserved", report.replaced == 0 &&
+                page.resources.getXObject(COSName.getPDFName("Im0")).cosObject === original.cosObject)
+        }
+    }
+
+    // 6. The same image can be used on a thumbnail page and a full-size page.
+    // First-page traversal order must not dictate the resolution of both pages.
+    run {
+        val fixture = scanPdf(File(dir, "shared-source.pdf"), listOf(2550 to 3300))
+        PDDocument.load(fixture).use { doc ->
+            val fullPage = doc.getPage(0)
+            val thumbnail = PDPage(PDRectangle(100f, 100f))
+            thumbnail.resources = fullPage.resources
+            doc.pages.insertBefore(thumbnail, fullPage)
+            PdfImageCompressor.compress(doc, 96, 70, codec = HostImageCodec())
+            val decoded = ImageIO.read(imageBytes(doc, 1).inputStream())
+            check("a shared scan retains the largest page resolution", decoded?.width == 816 && decoded.height == 1056,
+                "${decoded?.width}x${decoded?.height}")
+        }
+    }
+
+    // 7. JPEG bytes alone do not contain a PDF's /Decode mapping. A byte codec
+    // cannot reproduce these colors, so this image must remain untouched.
+    run {
+        val fixture = scanPdf(File(dir, "jpeg-decode-source.pdf"), listOf(1275 to 1650))
+        PDDocument.load(fixture).use { doc ->
+            val image = doc.getPage(0).resources.getXObject(COSName.getPDFName("Im0")) as PDImageXObject
+            image.cosObject.setItem(COSName.DECODE, COSArray().apply {
+                repeat(3) { add(COSFloat(1f)); add(COSFloat(0f)) }
+            })
+            val bytes = imageBytes(doc, 0)
+            val report = PdfImageCompressor.compress(doc, 96, 55, codec = HostImageCodec())
+            check("a JPEG with an external Decode mapping is preserved", report.replaced == 0 && bytes.contentEquals(imageBytes(doc, 0)))
+        }
+    }
+
+    // 8. A cancellation thrown across the codec seam must stop the operation,
+    // not be reclassified as an unsupported image and followed by publication.
+    run {
+        val fixture = scanPdf(File(dir, "cancel-source.pdf"), listOf(1275 to 1650))
+        val cancellation = java.util.concurrent.CancellationException("cancel compression")
+        PDDocument.load(fixture).use { doc ->
+            val error = runCatching {
+                PdfImageCompressor.compress(doc, 96, 55, codec = PdfImageCodec { _, _, _, _ -> throw cancellation })
+            }.exceptionOrNull()
+            check("codec cancellation propagates unchanged", error === cancellation)
+        }
     }
 
     println(if (failures == 0) "ALL PASS" else "$failures FAILED")

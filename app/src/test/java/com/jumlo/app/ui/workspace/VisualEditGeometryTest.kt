@@ -34,4 +34,35 @@ class VisualEditGeometryTest {
     @Test fun invalidValuesResetToWholeImage() {
         assertEquals(VisualRect.WHOLE,VisualRect(Float.NaN,0f,1f,1f).valid())
     }
+
+    @Test fun lockedCornerStopsAtItsOppositeCornerInsteadOfGrowingBackwards() {
+        val start=VisualRect(.2f,.2f,.8f,.8f)
+        val next=start.draggedLocked(VisualHandle.TOP_LEFT,2f,2f,1f)
+        assertEquals(.8f,next.right,.0001f)
+        assertEquals(.8f,next.bottom,.0001f)
+        assertEquals(VisualRect.MIN_EDGE,next.right-next.left,.0001f)
+        assertEquals(VisualRect.MIN_EDGE,next.bottom-next.top,.0001f)
+    }
+
+    @Test fun lockedDragDoesNotSnapOneEdgeAndChangeTheAspectRatio() {
+        val next=VisualRect(.15f,.15f,.7f,.7f)
+            .draggedWithSnap(VisualHandle.BOTTOM_RIGHT,-.203f,-.203f,1f)
+        assertEquals(1f,(next.rect.right-next.rect.left)/(next.rect.bottom-next.rect.top),.0001f)
+        assertEquals(.15f,next.rect.left,.0001f)
+        assertEquals(.15f,next.rect.top,.0001f)
+    }
+
+    @Test fun freeRegionStillSnapsToThePageCentre() {
+        val next=VisualRect(.2f,.2f,.7f,.8f)
+            .draggedWithSnap(VisualHandle.BOTTOM_RIGHT,-.203f,0f,0f)
+        assertEquals(.5f,next.rect.right,.0001f)
+        assertTrue(next.snapped)
+    }
+
+    @Test fun portraitPresetStillMeansPortraitAfterQuarterTurn() {
+        val desired=210f/297f
+        val box=VisualRect.fitAspect(1600,900,sourceCropAspect(desired,1))
+        val outputAspect=(box.bottom-box.top)*900/((box.right-box.left)*1600)
+        assertEquals(desired,outputAspect,.001f)
+    }
 }

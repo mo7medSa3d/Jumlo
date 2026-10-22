@@ -26,9 +26,12 @@ import kotlinx.serialization.json.Json
     val flag1:Boolean=false,val flag2:Boolean=false,
     val secret1:String="",val secret2:String="",val paperMode:String="AUTO",
     val pageEdits:List<com.jumlo.app.data.processing.PdfPageEdit> = emptyList(),
-    // A freehand stroke as flat normalized x,y pairs. Empty means "no stroke yet".
-    val inkPoints:List<Float> = emptyList()
+    // Kept for older saved workspaces; new drawings keep each pen gesture separate.
+    val inkPoints:List<Float> = emptyList(),
+    val inkStrokes:List<List<Float>> = emptyList()
 ) {
+    fun effectiveInkStrokes():List<List<Float>> = com.jumlo.app.core.PdfInkDrawing.resolve(inkStrokes,inkPoints)
+
     fun executionSettings(downloadHandle:String?=null):String {
         require(version==1) { "UNSUPPORTED_DRAFT_VERSION" }
         fun number(text:String,min:Int,max:Int):Int=normalizeDigits(text).toIntOrNull()?.takeIf { it in min..max } ?: throw IllegalArgumentException("INVALID_NUMERIC_SETTING")
@@ -77,10 +80,11 @@ import kotlinx.serialization.json.Json
                 val kind=com.jumlo.app.core.PdfAnnotationKind.from(text2)
                 val body=if(kind.carriesText) text1 else text1
                 if(kind.carriesText) require(body.isNotBlank()) { "INVALID_ANNOTATION" }
+                if(kind.isFreehand) com.jumlo.app.core.PdfInkDrawing.requireValid(effectiveInkStrokes())
                 Json.encodeToString(com.jumlo.app.data.processing.PdfAnnotateSettings(
                     SafeNames.basename(outputName),body,number(num1.ifBlank{"1"},1,100000),kind.id,
                     fraction(cropLeft.ifBlank{"0.1"}),fraction(cropTop.ifBlank{"0.1"}),
-                    fraction(cropRight.ifBlank{"0.34"}),fraction(cropBottom.ifBlank{"0.24"}),flag1,inkPoints))
+                    fraction(cropRight.ifBlank{"0.34"}),fraction(cropBottom.ifBlank{"0.24"}),flag1,inkPoints,inkStrokes))
             }
             "pdf_signature","pdf_image" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSignatureSettings(SafeNames.basename(outputName),number(num1.ifBlank{"1"},1,100000),fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom)))
             "pdf_clean" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCleanSettings(SafeNames.basename(outputName),flag1))

@@ -233,7 +233,6 @@ import com.jumlo.app.ui.AppViewModel
         item("about") { PreferenceRow(stringResource(R.string.account_help_about), null, Icons.Rounded.Info, { panel = "about" }) }
         item("bottom") { Spacer(Modifier.height(24.dp)) }
     }
-    val accentKeys = listOf("VIOLET","DYNAMIC","BLUE","TEAL","CORAL")
     when (panel) {
         "profile" -> AlertDialog(
             onDismissRequest = { panel = null },
@@ -303,9 +302,9 @@ import com.jumlo.app.ui.AppViewModel
         }
         "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,
             {viewModel.setFileViewMode(FileViewMode.entries[it]);panel=null},{panel=null})
-        "accent" -> ChoiceDialog(stringResource(R.string.redesign_accent),
-            listOf(stringResource(R.string.redesign_accent_violet),stringResource(R.string.redesign_accent_dynamic),stringResource(R.string.redesign_accent_blue),stringResource(R.string.redesign_accent_teal),stringResource(R.string.redesign_accent_coral)),
-            accentKeys.indexOf(settings.accentColor).coerceAtLeast(0),{viewModel.setAccentColor(accentKeys[it]);panel=null},{panel=null})
+        "accent" -> AccentPickerDialog(settings.accentColor,
+            onSelect = { viewModel.setAccentColor(it); panel = null },
+            onDismiss = { panel = null })
         "scale" -> ChoiceDialog(stringResource(R.string.redesign_font_scale),listOf(stringResource(R.string.redesign_scale_small),stringResource(R.string.redesign_scale_normal),stringResource(R.string.redesign_scale_large)),
             listOf("SMALL","NORMAL","LARGE").indexOf(settings.fontScale).coerceAtLeast(0),{viewModel.setFontScale(listOf("SMALL","NORMAL","LARGE")[it]);panel=null},{panel=null})
         "storage" -> StorageOverviewDialog(storage,{panel = null},onClean={panel=null;viewModel.cleanTemporary()},outputFiles=savedOutputs)

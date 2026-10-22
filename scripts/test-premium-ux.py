@@ -30,14 +30,14 @@ class PremiumUxContracts(unittest.TestCase):
         return self.tokens[name]
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
-        # The 2026 palette: document grey surfaces, ink primary, scan blue accent.
+        # Jumlo Prism palette: cool porcelain, expressive indigo, ink-blue dark.
         expected = {
-            'LightBackground': 'F8FAFC', 'LightSurface': 'FFFFFF',
-            'LightOnSurface': '0F172A', 'LightOnSurfaceVariant': '475569',
-            'LightPrimary': '1E293B', 'LightTertiary': '1D4ED8',
-            'DarkBackground': '0B1120',
-            'DarkSurface': '0F172A', 'DarkOnSurface': 'F8FAFC',
-            'DarkPrimary': 'E2E8F0', 'DarkTertiary': '60A5FA',
+            'LightBackground': 'F6F7FD', 'LightSurface': 'FFFFFF',
+            'LightOnSurface': '17213E', 'LightOnSurfaceVariant': '505C77',
+            'LightPrimary': '2F46C6', 'LightTertiary': '7050AB',
+            'DarkBackground': '0C1226',
+            'DarkSurface': '141B33', 'DarkOnSurface': 'F1F3FF',
+            'DarkPrimary': 'A9B7FF', 'DarkTertiary': 'D3B7FC',
         }
         for key, value in expected.items():
             with self.subTest(key=key):
@@ -69,9 +69,9 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_splash_uses_cohesive_palette_family(self):
         splash = source('components/JumloSplash.kt')
-        self.assertIn('Color(0xFF0B1120)', splash)
-        self.assertIn('Color(0xFF1E3A8A)', splash)
-        self.assertIn('Color(0xFFDBEAFE)', splash)
+        self.assertIn('Color(0xFF0C1231)', splash)
+        self.assertIn('Color(0xFF4434A9)', splash)
+        self.assertIn('Color(0xFFE0E5FF)', splash)
         self.assertNotIn('Color(0xFF2221A1)', splash)
 
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):
@@ -91,12 +91,39 @@ class PremiumUxContracts(unittest.TestCase):
         code = source('home/HomeScreen.kt')
         components = source('components/NeonUi.kt')
         self.assertIn('NeonToolTile(tool', code)
-        # Every tool carries its own hue, not just its category, so the grid can be
-        # scanned instead of read.
-        self.assertIn('ToolPalette.accentFor(tool.id)', components)
-        # A circular icon button with the label underneath.
-        self.assertIn('shape = CircleShape', components)
-        self.assertIn('Icon(resolveStitchIcon(tool.iconName)', components)
+        # Curated family colors have separately tuned light and dark variants.
+        self.assertIn('ToolPalette.accentFor(tool.id, isDark)', components)
+        self.assertIn('ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark)', components)
+        # One 116dp+ button surface owns both icon and readable two-line label.
+        self.assertIn('heightIn(min = if (compact) 116.dp else 126.dp)', components)
+        self.assertIn('maxLines = 2', components)
+        self.assertIn('ModernToolIcon(tool.iconName', components)
+
+    def test_color_picker_is_tappable_and_persists_real_setting(self):
+        settings = source('settings/SettingsScreen.kt')
+        picker = source('settings/AccentPickerDialog.kt')
+        self.assertIn('AccentPickerDialog(settings.accentColor', settings)
+        self.assertIn('viewModel.setAccentColor(it)', settings)
+        for option in ('BLUE', 'VIOLET', 'TEAL', 'CORAL', 'DYNAMIC'):
+            self.assertIn(f'"{option}"', picker)
+        self.assertIn('onClick = { onSelect(id) }', picker)
+
+    def test_scan_viewfinder_guides_do_not_replace_capture_pipeline(self):
+        scanner = source('scan/ScanScreen.kt')
+        self.assertIn('ComposeCanvas(', scanner)
+        self.assertIn('PreviewView(ctx)', scanner)
+        self.assertIn('capture.takePicture(', scanner)
+        self.assertIn('onCaptured(warped)', scanner)
+
+    def test_dark_tool_palette_and_dock_reduce_motion(self):
+        palette = source('theme/ToolPalette.kt')
+        dock = source('components/QuietNavigation.kt')
+        self.assertIn('private val darkAccents', palette)
+        self.assertIn('colors.background.luminance()', source('tools/ToolsScreen.kt'))
+        self.assertIn('if (reduced) snap()', dock)
+        self.assertIn('animateDpAsState(', dock)
+        self.assertNotIn('BorderStroke(1.dp, palette.outlineVariant)', dock)
+        self.assertIn('shadowElevation = 12.dp',dock)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):
         code = source('components/ProductionRows.kt')

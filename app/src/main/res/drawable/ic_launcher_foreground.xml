@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Jumlo adaptive mark: manually translated from brand/svg/jumlo-adaptive-foreground.svg -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-<path android:fillColor="#FFFFFF" android:pathData="M40,27 L62,27 L73,38 L73,72 Q73,77 68,77 L40,77 Q35,77 35,72 L35,32 Q35,27 40,27 Z"/>
-<path android:fillColor="#8AF0D3" android:pathData="M62,27 L62,35 Q62,38 65,38 L73,38 Z"/>
-<path android:strokeColor="#3025AC" android:strokeWidth="4.5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M54,43 L54,63 M47,56 L54,63 L61,56 M47,69 L61,69"/>
+ <path android:fillColor="#FFFFFFFF" android:pathData="M43 24H63L77 38V72C77 77 73 81 68 81H42C36 81 33 77 33 71V34C33 28 36 24 43 24Z"/>
+ <path android:fillColor="#FF83F5D2" android:pathData="M63 24V34C63 37 65 39 69 39H77L63 24Z"/>
+ <path android:fillColor="@android:color/transparent" android:strokeColor="#FF3734B6" android:strokeWidth="6.5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M59 46V60C59 68 55 72 48 72C43 72 39 69 38 66"/>
+ <path android:fillColor="@android:color/transparent" android:strokeColor="#FF3734B6" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M49 46H69"/>
 </vector>

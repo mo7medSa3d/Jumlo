@@ -62,19 +62,24 @@ object MediaCatalog {
     fun preferred(choices:List<MediaChoice>,mode:MediaMode,maxHeight:Int=1080):MediaChoice? {
         if(mode==MediaMode.AUDIO) return choices.firstOrNull()
         val withAudio=choices.filter { it.expectsAudio }.ifEmpty { choices }
-        return withAudio.firstOrNull { maxHeight==0 || (it.expectedHeight ?: Int.MAX_VALUE)<=maxHeight }
+        return withAudio.firstOrNull { maxHeight==0 || (qualityHeight(it) ?: Int.MAX_VALUE)<=maxHeight }
             ?: withAudio.lastOrNull()
+    }
+    private fun qualityHeight(choice: MediaChoice): Int? {
+        val video = choice.formats.firstOrNull { it.hasVideo }
+        val height = choice.expectedHeight ?: video?.height ?: return null
+        return video?.width?.let { minOf(it, height) } ?: height
     }
     /** Human-readable quality badge for UI cards (e.g. "1080p Full HD · 60fps" or "160 kbps M4A"). */
     fun qualityTitle(choice: MediaChoice): String {
         if (choice.mode == MediaMode.AUDIO) {
             val f = choice.formats.firstOrNull()
-            val kbps = (f?.audioBitrateKbps ?: f?.bitrateKbps)?.roundToInt()?.takeIf { it > 0 }
+            val kbps = (f?.audioBitrateKbps ?: f?.bitrateKbps?.takeUnless { f.hasVideo })?.roundToInt()?.takeIf { it > 0 }
             val ext = (f?.extension ?: choice.container).uppercase(Locale.ROOT)
             return if (kbps != null) "$kbps kbps · $ext" else ext
         }
         val v = choice.formats.firstOrNull { it.hasVideo }
-        val h = choice.expectedHeight ?: v?.height
+        val h = qualityHeight(choice)
         val tier = when {
             h == null -> choice.container.uppercase(Locale.ROOT)
             h >= 2160 -> "${h}p 4K"
@@ -115,7 +120,10 @@ object MediaCatalog {
         require(choice.formats.size in 1..2 && choice.formatIds.distinct().size == choice.formats.size && choice.formatIds.all(idPattern::matches)) { "INVALID_MEDIA_FORMAT" }
         require(choice.formats.none { it.drm || it.protocol !in protocols }) { "INVALID_MEDIA_FORMAT" }
         require(choice.mode != MediaMode.AUDIO || choice.expectsAudio) { "AUDIO_TRACK_UNAVAILABLE" }
-        return choice.formatIds.joinToString("+") { "best*[format_id=$it]" }
+        // yt-dlp treats an unquoted numeric value as a number, while format_id is
+        // always text. Quoting is required for YouTube IDs such as 137 and 140;
+        // the strict ID grammar above also prevents quotes or selector injection.
+        return choice.formatIds.joinToString("+") { "best*[format_id='$it']" }
     }
 }
 
@@ -141,8 +149,7 @@ object MediaLinks {
         if (host.isEmpty() || host == "localhost" || host.endsWith(".localhost") ||
             host.endsWith(".local") || host.endsWith(".internal") ||
             host == "::1" || host == "::" || host == "0:0:0:0:0:0:0:1" || host == "0:0:0:0:0:0:0:0" ||
-            host.startsWith("::ffff:") || host.startsWith("fe80:") ||
-            host.startsWith("fc") || host.startsWith("fd")) return true
+            host.startsWith("::ffff:") || host.startsWith("fe80:")) return true
         if (':' in host) return true
         val parts = host.split('.')
         val ipv4 = parts.map { it.toIntOrNull() }

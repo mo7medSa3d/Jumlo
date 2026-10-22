@@ -114,26 +114,37 @@ fun JumloTheme(
     val colorScheme: ColorScheme = if (useDynamicColor) {
         baseColors
     } else {
-        // Deliberate curated accent pairs preserve contrast for light and dark surfaces.
+        // Coherent primary/on-primary/container pairs for every user accent.
+        // Keep the entire tonal surface ladder stable while the action color changes.
         val selectedAccent = when (accentColor) {
-            "BLUE" -> if (darkTheme) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-            "TEAL" -> if (darkTheme) Color(0xFF5EEAD4) else Color(0xFF0F766E)
-            "CORAL" -> if (darkTheme) Color(0xFFFDBA74) else Color(0xFFC2410C)
-            "VIOLET" -> if (darkTheme) Color(0xFFC4B5FD) else Color(0xFF6D28D9)
+            "TEAL" -> if (darkTheme) Color(0xFF92DCD8) else Color(0xFF086F6B)
+            "CORAL" -> if (darkTheme) Color(0xFFFFB5C1) else Color(0xFFB63E54)
+            "VIOLET" -> if (darkTheme) Color(0xFFD3B7FC) else Color(0xFF6942B0)
             else -> if (darkTheme) DarkPrimary else LightPrimary
         }
         val selectedContainer = when (accentColor) {
-            "BLUE" -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
-            "TEAL" -> if (darkTheme) Color(0xFF042F2E) else Color(0xFFCCFBF1)
-            "CORAL" -> if (darkTheme) Color(0xFF431407) else Color(0xFFFFEDD5)
-            "VIOLET" -> if (darkTheme) Color(0xFF2E1065) else Color(0xFFEDE9FE)
+            "TEAL" -> if (darkTheme) Color(0xFF164D50) else Color(0xFFDBF5F2)
+            "CORAL" -> if (darkTheme) Color(0xFF72273C) else Color(0xFFFFE5E8)
+            "VIOLET" -> if (darkTheme) Color(0xFF4C336D) else Color(0xFFF0E8FC)
             else -> if (darkTheme) DarkPrimaryContainer else LightPrimaryContainer
+        }
+        val selectedOnContainer = when (accentColor) {
+            "TEAL" -> if (darkTheme) Color(0xFFDCF9F5) else Color(0xFF124F52)
+            "CORAL" -> if (darkTheme) Color(0xFFFFE1E7) else Color(0xFF781D32)
+            "VIOLET" -> if (darkTheme) Color(0xFFF0E4FF) else Color(0xFF38216B)
+            else -> if (darkTheme) DarkOnPrimaryContainer else LightOnPrimaryContainer
         }
         baseColors.copy(
             primary = selectedAccent,
-            onPrimary = if (darkTheme) Color(0xFF111318) else Color.White,
+            onPrimary = if (darkTheme) when (accentColor) {
+                "TEAL" -> Color(0xFF083C41)
+                "CORAL" -> Color(0xFF690D26)
+                "VIOLET" -> Color(0xFF361D65)
+                else -> DarkOnPrimary
+            } else Color.White,
             primaryContainer = selectedContainer,
-            onPrimaryContainer = if (darkTheme) Color(0xFFF8F8FD) else Color(0xFF182027)
+            onPrimaryContainer = selectedOnContainer,
+            surfaceTint = selectedAccent
         )
     }
 

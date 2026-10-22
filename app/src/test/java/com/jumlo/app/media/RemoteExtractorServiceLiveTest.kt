@@ -1,12 +1,10 @@
 package com.jumlo.app.media
 
-import com.jumlo.app.core.StreamTransfer
 import com.jumlo.app.core.media.AudioOutput
 import com.jumlo.app.core.media.MediaChoice
 import com.jumlo.app.core.media.MediaFormat
 import com.jumlo.app.core.media.MediaMode
 import com.jumlo.app.data.media.RemoteExtractorRuntime
-import com.jumlo.app.data.processing.OkHttpTransport
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,8 +28,7 @@ class RemoteExtractorServiceLiveTest {
 
     private fun runtime() = RemoteExtractorRuntime(
         baseUrlProvider = { serviceUrl.orEmpty() },
-        client = OkHttpClient(),
-        transfer = StreamTransfer(OkHttpTransport(OkHttpClient()))
+        client = OkHttpClient()
     )
 
     @Test fun aDirectMediaLinkIsDownloadedToTheDevice() {

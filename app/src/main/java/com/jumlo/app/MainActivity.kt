@@ -9,8 +9,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.CircularProgressIndicator
 import com.jumlo.app.ui.components.JumloSplash
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +16,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
+import android.os.SystemClock
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -41,9 +46,14 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint class MainActivity:AppCompatActivity() {
     private val appViewModel:AppViewModel by viewModels()
     override fun onCreate(savedInstanceState:Bundle?) {
-        super.onCreate(savedInstanceState);enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
+        // Capture the earliest Activity timestamp so the reveal never adds a full
+        // delay after initialization work has already consumed the animation budget.
+        val launchStartedAt = SystemClock.elapsedRealtime()
+        enableEdgeToEdge()
         if(savedInstanceState==null && intent?.action in setOf(Intent.ACTION_SEND,Intent.ACTION_SEND_MULTIPLE)) appViewModel.intake(IntakeController.collect(intent),externalShare=true)
         if(savedInstanceState==null) appViewModel.openNotificationJob(intent?.getStringExtra("job_id"))
+        val coldLauncher = savedInstanceState == null && intent?.action == Intent.ACTION_MAIN
         setContent {
             val settings by appViewModel.settings.collectAsStateWithLifecycle()
             val workspaceReady by appViewModel.workspaceReady.collectAsStateWithLifecycle()
@@ -62,17 +72,33 @@ import dagger.hilt.android.AndroidEntryPoint
                     LocalUiSoundPlayer provides sound,
                     LocalReducedMotion provides (settings.respectReducedMotion || systemReduced)) {
                     var showLaunch by rememberSaveable { mutableStateOf(true) }
-                    val ready=settings.isLoaded && workspaceReady
-                    LaunchedEffect(ready) {
-                        if(ready) showLaunch=false
+                    val ready = settings.isLoaded && workspaceReady
+                    val reduceMotion = LocalReducedMotion.current
+                    LaunchedEffect(ready, reduceMotion) {
+                        if (ready) {
+                            // Only a normal cold launcher gets a brief brand reveal.
+                            // Never hold share, VIEW, warm restore, or accessibility starts.
+                            if (coldLauncher && !reduceMotion) {
+                                val elapsed = SystemClock.elapsedRealtime() - launchStartedAt
+                                val remaining = (650L - elapsed).coerceAtLeast(0L)
+                                if (remaining > 0L) delay(remaining)
+                            }
+                            showLaunch = false
+                        }
                     }
                     Box(Modifier.fillMaxSize()) {
-                        if(ready) {
-                            Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+                        if (ready) {
+                            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                                 JumloNavHost(appViewModel)
                             }
                         }
-                        if(!ready || showLaunch) JumloSplash()
+                        AnimatedVisibility(
+                            visible = !ready || showLaunch,
+                            enter = EnterTransition.None,
+                            exit = if (reduceMotion) ExitTransition.None else fadeOut(tween(180))
+                        ) {
+                            JumloSplash()
+                        }
                     }
                 }
             }

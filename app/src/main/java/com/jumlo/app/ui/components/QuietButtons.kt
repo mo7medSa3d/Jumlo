@@ -193,13 +193,17 @@ fun QuietSearchBar(
             .then(if (onClickBar != null) Modifier.clickable(role = Role.Button, onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.button,
         color = colors.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.95f))
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Rounded.Search, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(22.dp))
+            Box(Modifier.size(38.dp).clip(RoundedCornerShape(13.dp))
+                .background(colors.primaryContainer), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Search, contentDescription = null,
+                    tint = colors.onPrimaryContainer, modifier = Modifier.size(20.dp))
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (onClickBar != null) {

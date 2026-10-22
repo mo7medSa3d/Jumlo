@@ -6,12 +6,12 @@ cd "$ROOT"
 MODE=${1:-gate}
 LOG_DIR=${JUMLO_BUILD_LOG_DIR:-verification/native}
 mkdir -p "$LOG_DIR"
-printf 'source_sha=%s\nmode=%s\nextendedMedia=${JUMLO_NATIVE_EXTENDED_MEDIA:-false}\n' "${GITHUB_SHA:-local-uncommitted}" "$MODE" > "$LOG_DIR/context.txt"
+printf 'source_sha=%s\nmode=%s\nextendedMedia=%s\n' "${GITHUB_SHA:-local-uncommitted}" "$MODE" "${JUMLO_NATIVE_EXTENDED_MEDIA:-true}" > "$LOG_DIR/context.txt"
 run_task() {
   local label=$1
   shift
   set +e
-  bash ./gradlew --no-daemon --console=plain --stacktrace -PextendedMedia="${JUMLO_NATIVE_EXTENDED_MEDIA:-false}" "$@" 2>&1 | tee "$LOG_DIR/$label.log"
+  bash ./gradlew --no-daemon --console=plain --stacktrace -PextendedMedia="${JUMLO_NATIVE_EXTENDED_MEDIA:-true}" "$@" 2>&1 | tee "$LOG_DIR/$label.log"
   local code=${PIPESTATUS[0]}
   set -e
   printf '%s\t%s\n' "$label" "$code" >> "$LOG_DIR/exit-codes.tsv"
@@ -26,7 +26,11 @@ case "$MODE" in
     run_task lint :app:lintDebug
     run_task release :app:assembleRelease
     run_task release-bundle :app:bundleRelease
-    if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-false}" != "true" ]]; then
+    if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-true}" == "true" ]]; then
+      python3 scripts/inspect-media-artifact.py \
+        app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk \
+        > "$LOG_DIR/media-content.jsonl"
+    else
       python3 scripts/inspect-standard-artifact.py \
         app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk \
         app/build/outputs/bundle/release/*.aab --output "$LOG_DIR/standard-content.json"
@@ -39,13 +43,13 @@ case "$MODE" in
     done
     run_task benchmark-compile :app:assembleBenchmark :benchmark:assembleBenchmark
     run_task media-dependencies :app:dependencies --configuration releaseRuntimeClasspath
-    if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-false}" == "true" ]]; then
+    if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-true}" == "true" ]]; then
       if ! rg -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
-        echo 'ERROR: optional extended release is missing its media runtime' >&2
+        echo 'ERROR: full-media release is missing its media runtime' >&2
         exit 1
       fi
     elif rg -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
-      echo 'ERROR: standard release unexpectedly includes the optional media runtime' >&2
+      echo 'ERROR: explicitly requested lite release includes the media runtime' >&2
       exit 1
     fi
     ;;

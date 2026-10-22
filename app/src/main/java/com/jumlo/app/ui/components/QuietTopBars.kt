@@ -3,6 +3,7 @@ package com.jumlo.app.ui.components
 import com.jumlo.app.ui.theme.pressFeedback
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.MoreVert
@@ -32,10 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
 import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.ui.theme.QuietTheme
@@ -60,19 +65,27 @@ fun QuietRootTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = statusTop + 8.dp, bottom = 8.dp)
+                .padding(top = statusTop + 8.dp, bottom = 10.dp)
                 .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
             ) {
+                Box(
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(15.dp))
+                        .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(painterResource(R.drawable.ic_prism_brand_mark),
+                        contentDescription = null, modifier = Modifier.size(37.dp))
+                }
                 Text(
                     text = title,
-                    style = QuietTheme.typography.screenTitle,
+                    style = QuietTheme.typography.screenTitle.copy(letterSpacing = (-0.8).sp),
                     color = colors.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

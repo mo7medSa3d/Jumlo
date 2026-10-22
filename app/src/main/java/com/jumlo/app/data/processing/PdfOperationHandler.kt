@@ -142,6 +142,7 @@ import kotlin.math.sqrt
                                 val base=AutoOutputName.cleanBaseName(firstSourceName ?: "PDF", "PDF")
                                 val display=SafeNames.fromDisplayName("$base - pages.zip", "Split pages.zip")
                                 val ticket=context.outputs.reserve(request.id,key,display,"application/zip")
+                                if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
                                 val entries=groups.mapIndexed { gi,group -> ArchiveInput(
                                     "Part ${(gi+1).toString().padStart(6,'0')}.pdf"
                                 ) {
@@ -287,15 +288,26 @@ import kotlin.math.sqrt
                 val kind=com.jumlo.app.core.PdfAnnotationKind.from(s.optString("kind","text"))
                 val text=s.optString("text","").ifBlank { if(kind==com.jumlo.app.core.PdfAnnotationKind.NOTE) "Note" else "" }
                 if(kind==com.jumlo.app.core.PdfAnnotationKind.INK) {
-                    val flat=s.optJSONArray("inkPoints")
-                    val points=buildList {
-                        var i=0
-                        while(flat!=null && i+1<flat.length()) {
-                            add(com.jumlo.app.core.PdfInkPoint(flat.getDouble(i),flat.getDouble(i+1)))
-                            i+=2
+                    val multiple=s.optJSONArray("inkStrokes")
+                    require(!s.has("inkStrokes") || multiple!=null) {"INVALID_ANNOTATION"}
+                    val arrays=if(multiple!=null && multiple.length()>0) {
+                        require(multiple.length()<=com.jumlo.app.core.PdfInkDrawing.MAX_STROKES) {"INVALID_ANNOTATION"}
+                        (0 until multiple.length()).map {multiple.getJSONArray(it)}
+                    } else {
+                        val legacy=s.optJSONArray("inkPoints")
+                        require(legacy!=null) {"INVALID_ANNOTATION"}
+                        listOf(legacy)
+                    }
+                    var total=0L
+                    val strokes=arrays.map {flat ->
+                        require(flat.length() in 4..com.jumlo.app.core.PdfInkDrawing.MAX_POINTS_PER_STROKE*2 && flat.length()%2==0) {"INVALID_ANNOTATION"}
+                        total+=flat.length()/2
+                        require(total<=com.jumlo.app.core.PdfInkDrawing.MAX_TOTAL_POINTS) {"INVALID_ANNOTATION"}
+                        (0 until flat.length() step 2).map {i ->
+                            com.jumlo.app.core.PdfInkPoint(flat.getDouble(i),flat.getDouble(i+1))
                         }
                     }
-                    if(points.size>=2) PdfBoxBackend.addInkAnnotation(doc,page-1,points,text)
+                    PdfBoxBackend.addInkStrokes(doc,page-1,strokes,text)
                     runBlocking { context.report(JobProgress(JobStage.RUNNING,1L,1L)) }
                     doc.save(out)
                     return@singleDoc
@@ -309,7 +321,8 @@ import kotlin.math.sqrt
                     doc.save(out)
                     return@singleDoc
                 }
-                val x=s.optDouble("x",0.1); val y=s.optDouble("y",0.1)
+                val x=s.optDouble("left",s.optDouble("x",0.1))
+                val y=s.optDouble("top",s.optDouble("y",0.1))
                 // Standard-14 Helvetica cannot encode Arabic/non-ASCII glyphs in content streams;
                 // store non-ASCII text in a Unicode PDF text annotation so user text is never lost.
                 val requiresUnicodeAnnotation = text.any { it !in ' '..'~' }
@@ -491,7 +504,7 @@ import kotlin.math.sqrt
                         val completed = passIndex.toLong()*total.toLong()+done.toLong()
                         val allWork = profiles.size.toLong()*total.toLong()
                         runBlocking { context.report(JobProgress(JobStage.RUNNING, completed, allWork)) }
-                    }, maxBitmapBytes = context.budget.maxBitmapBytes)
+                    }, maxBitmapBytes = context.budget.maxBitmapBytes, checkCancel = context.checkCancellation)
                     skipped = report.skipped.size
                     doc.save(candidate)
                 }
@@ -630,6 +643,10 @@ import kotlin.math.sqrt
                             try {
                                 bitmap.eraseColor(Color.WHITE)
                                 page.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                // The rendered page already has an opaque white
+                                // background. JPEG encoding can use this bitmap
+                                // directly instead of allocating a second matte.
+                                bitmap.setHasAlpha(false)
                                 if(settings.grayscale) {
                                     val rowPixels=IntArray(width)
                                     for(y in 0 until height) {
@@ -655,6 +672,7 @@ import kotlin.math.sqrt
                         else {
                             val display=SafeNames.fromDisplayName("$effectiveBaseName - images.zip", "PDF images.zip")
                             val ticket=context.outputs.reserve(request.id,key,display,"application/zip")
+                            if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
                             val inputs=pages.mapIndexed { index,number ->
                                 ArchiveInput(AutoOutputName.pageImageName(effectiveBaseName,number,ext)) {
                                     context.checkCancellation()

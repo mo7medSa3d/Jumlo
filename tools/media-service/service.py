@@ -17,6 +17,7 @@ yt-dlp and ffmpeg installed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -24,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 import threading
 import time
 import urllib.parse
@@ -76,7 +78,8 @@ def classify(message: str) -> str:
 
 def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["yt-dlp", "--no-warnings", "--no-playlist", *args],
+        ["yt-dlp", "--ignore-config", "--no-plugin-dirs", "--no-playlist",
+         "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "2", *args],
         capture_output=True, text=True, timeout=timeout, check=False,
     )
 
@@ -98,31 +101,35 @@ def to_format(entry: dict) -> dict:
     tbr = entry.get("tbr")
     if vbr is None and tbr is not None:
         vbr = tbr
-    if abr is None and tbr is not None:
-        abr = tbr
     extension = (entry.get("ext") or "mp4").lower()
     video_codec = (entry.get("vcodec") or "").split(".")[0]
     audio_codec = (entry.get("acodec") or "").split(".")[0]
     # Some sites (Facebook, X) publish a progressive file and report no codec at
     # all. A progressive container carries both tracks, so say so - otherwise the
     # app would look for a separate audio stream and try to mux one in.
-    progressive = extension in ("mp4", "m4v", "mov", "webm", "mkv")
+    progressive = extension in ("mp4", "m4v", "mov", "webm", "mkv") and entry.get('protocol', 'https') in ('http', 'https')
     audio_only = extension in ("m4a", "mp3", "ogg", "opus", "flac", "wav", "aac")
     if not video_codec and not audio_codec:
         if progressive:
             video_codec = audio_codec = "unknown"
         elif audio_only:
             audio_codec = "unknown"
+    if not audio_codec and progressive and video_codec not in ('', 'none'):
+        audio_codec = 'unknown'
+    if abr is None and tbr is not None and (video_codec == 'none' or audio_only):
+        abr = tbr
     return {
         "id": str(entry.get("format_id") or ""),
         "ext": extension,
         "vcodec": video_codec or "none",
         "acodec": audio_codec or "none",
         "height": height,
+        "width": entry.get('width'),
         "fps": fps,
         "vbr": vbr,
         "abr": abr,
-        "filesize": entry.get("filesize") or entry.get("filesize_approx"),
+        "filesize": entry.get("filesize"),
+        "filesize_approx": entry.get("filesize_approx"),
         "protocol": entry.get("protocol") or "https",
         "language": entry.get("language"),
         "drm": bool(entry.get("has_drm")),
@@ -159,41 +166,68 @@ def extract(url: str) -> dict:
     }
 
 
-def resolve_stream(url: str, mode: str, fmt: str, bitrate: int) -> tuple[str, str, str | None]:
-    """Resolve a chosen format to a direct URL, a file name and a content type.
+MEDIA_MIME = {
+    'mp4': 'video/mp4', 'm4v': 'video/mp4', 'mov': 'video/quicktime',
+    'webm': 'video/webm', 'mkv': 'video/x-matroska', 'ts': 'video/mp2t',
+    'mp3': 'audio/mpeg', 'm4a': 'audio/mp4', 'opus': 'audio/ogg',
+    'ogg': 'audio/ogg', 'flac': 'audio/flac', 'wav': 'audio/wav', 'aac': 'audio/aac',
+}
 
-    The audio path converts the file: the extractor is asked for the chosen
-    container and writes it to a temporary file, because asking it for a URL
-    would hand back the original track under a name that lies about it.
+
+def exact_selector(ids: str) -> str:
+    parts = ids.split('+')
+    if not 1 <= len(parts) <= 2 or len(set(parts)) != len(parts) or any(
+            not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,95}', value) for value in parts):
+        raise RuntimeError('INVALID_MEDIA_FORMAT')
+    return '+'.join(f"best*[format_id='{value}']" for value in parts)
+
+
+def resolve_stream(url: str, mode: str, fmt: str, bitrate: int,
+                   selector: str = '', container: str = '') -> tuple[str, str, str]:
+    """Materialize the selected tracks with yt-dlp before sending any response bytes.
+
+    Printing URLs cannot merge adaptive tracks and also drops extractor-required
+    headers. Let yt-dlp download, merge or extract audio using its own metadata.
     """
-    if mode == "audio":
-        audio_format = (fmt or "mp3").lower()
-        work = tempfile.mkdtemp(prefix="jumlo-audio-")
-        target = os.path.join(work, f"media.{audio_format}")
-        args = ["-f", "bestaudio/best", "-x", "--audio-format", audio_format]
-        if audio_format in ("mp3", "m4a") and bitrate > 0:
-            args += ["--audio-quality", f"{bitrate}K"]
-        args += ["-o", target, url]
-        result = run_ytdlp(args, timeout=600)
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password:
+        raise RuntimeError('MEDIA_SITE_UNSUPPORTED')
+    if mode not in ('audio', 'video') or bitrate not in (0, 64, 96, 128, 160, 192, 256, 320):
+        raise RuntimeError('INVALID_MEDIA_FORMAT')
+    args = ['--no-check-formats', '--abort-on-error', '--abort-on-unavailable-fragments',
+            '--hls-prefer-native', '--downloader', 'native']
+    if mode == 'audio':
+        audio_format = (fmt or 'mp3').lower()
+        if audio_format not in ('mp3', 'm4a', 'opus', 'best', 'original'):
+            raise RuntimeError('INVALID_MEDIA_FORMAT')
+        audio_format = 'best' if audio_format == 'original' else audio_format
+        args += ['-f', exact_selector(selector) if selector else 'bestaudio/best',
+                 '-x', '--audio-format', audio_format]
+        if audio_format != 'best' and bitrate > 0:
+            args += ['--audio-quality', f'{bitrate}K']
+    else:
+        args += ['-f', exact_selector(selector or fmt)]
+        if container:
+            if container not in ('mp4', 'webm', 'mkv'):
+                raise RuntimeError('INVALID_MEDIA_CONTAINER')
+            args += ['--merge-output-format', container]
+    work = tempfile.mkdtemp(prefix='jumlo-media-')
+    try:
+        args += ['-o', os.path.join(work, 'media.%(ext)s'), '--', url]
+        result = run_ytdlp(args, timeout=3600)
         if result.returncode != 0:
-            shutil.rmtree(work, ignore_errors=True)
             raise RuntimeError(classify(result.stderr or result.stdout))
-        if not os.path.exists(target):
-            shutil.rmtree(work, ignore_errors=True)
-            raise RuntimeError("MEDIA_CONVERSION_UNAVAILABLE")
-        return target, f"media.{audio_format}", {
-            "mp3": "audio/mpeg", "m4a": "audio/mp4", "opus": "audio/ogg"
-        }.get(audio_format, "application/octet-stream")
-    args = ["-f", fmt, "--get-url", url]
-    name = f"media.mp4"
-    content_type = "video/mp4"
-    result = run_ytdlp(args, timeout=300)
-    if result.returncode != 0:
-        raise RuntimeError(classify(result.stderr or result.stdout))
-    direct = (result.stdout or "").strip().splitlines()
-    if not direct:
-        raise RuntimeError("MEDIA_EXTRACTION_FAILED")
-    return direct[0].strip(), name, content_type
+        files = [path for path in Path(work).glob('media.*')
+                 if path.suffix[1:] in MEDIA_MIME and path.is_file() and not path.is_symlink()]
+        if len(files) != 1 or files[0].stat().st_size <= 0:
+            raise RuntimeError('MEDIA_OUTPUT_MISSING')
+        target = files[0]
+        extension = target.suffix[1:]
+        mime = 'audio/webm' if mode == 'audio' and extension == 'webm' else MEDIA_MIME[extension]
+        return str(target), target.name, mime
+    except BaseException:
+        shutil.rmtree(work, ignore_errors=True)
+        raise
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -229,6 +263,8 @@ class Handler(BaseHTTPRequestHandler):
         url = (query.get("url") or [""])[0]
         mode = (query.get("mode") or ["video"])[0]
         fmt = (query.get("format") or [""])[0]
+        selector = (query.get("selector") or [""])[0]
+        container = (query.get("container") or [""])[0]
         try:
             bitrate = int((query.get("bitrate") or ["0"])[0])
         except ValueError:
@@ -237,7 +273,7 @@ class Handler(BaseHTTPRequestHandler):
             self._error("MEDIA_SITE_UNSUPPORTED", 400)
             return
         try:
-            direct, name, content_type = resolve_stream(url, mode, fmt, bitrate)
+            direct, name, content_type = resolve_stream(url, mode, fmt, bitrate, selector, container)
         except RuntimeError as error:
             self._error(str(error))
             return
@@ -267,6 +303,8 @@ class Handler(BaseHTTPRequestHandler):
             # Forward the range verbatim, including a zero offset, so a resumed
             # download continues instead of starting over.
             request.add_header("Range", f"bytes={start}-" + (str(end) if end is not None else ""))
+            if self.headers.get('If-Range'):
+                request.add_header('If-Range', self.headers['If-Range'])
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
                 total = response.headers.get("Content-Length")
@@ -295,32 +333,47 @@ class Handler(BaseHTTPRequestHandler):
     def _proxy_file(self, path: str, name: str, content_type: str) -> None:
         """Stream a file the service produced itself, such as a converted track."""
         size = os.path.getsize(path)
-        etag = '"%x-%x"' % (int(os.path.getmtime(path)), size)
+        digest = hashlib.sha256()
+        with open(path, 'rb') as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b''):
+                digest.update(chunk)
+        etag = '"' + digest.hexdigest() + '"'
         start = 0
+        end = size - 1
         status = 200
         range_header = self.headers.get("Range")
-        if range_header:
-            match = re.match(r"bytes=(\d+)-(\d*)", range_header.strip())
-            if match:
-                status = 206
-                start = min(int(match.group(1)), max(size - 1, 0))
         try:
+            if range_header and self.headers.get('If-Range', etag) == etag:
+                match = re.fullmatch(r'bytes=(\d+)-(\d*)', range_header.strip())
+                if match:
+                    start = int(match.group(1))
+                    end = min(int(match.group(2)), size - 1) if match.group(2) else size - 1
+                if not match or start >= size or end < start:
+                    self.send_response(416)
+                    self.send_header('Content-Range', f'bytes */{size}')
+                    self.send_header('Content-Length', '0')
+                    self.send_header('ETag', etag)
+                    self.end_headers()
+                    return
+                status = 206
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Disposition", f'attachment; filename="{name}"')
-            self.send_header("Content-Length", str(size - start))
+            self.send_header("Content-Length", str(end - start + 1))
             self.send_header("Accept-Ranges", "bytes")
             self.send_header("ETag", etag)
             if status == 206:
-                self.send_header("Content-Range", f"bytes {start}-{size - 1}/{size}")
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
             self.end_headers()
             with open(path, "rb") as handle:
                 handle.seek(start)
-                while True:
-                    chunk = handle.read(256 * 1024)
+                remaining = end - start + 1
+                while remaining > 0:
+                    chunk = handle.read(min(256 * 1024, remaining))
                     if not chunk:
                         break
                     self.wfile.write(chunk)
+                    remaining -= len(chunk)
         finally:
             # The converted file only exists for this one download.
             shutil.rmtree(os.path.dirname(path), ignore_errors=True)

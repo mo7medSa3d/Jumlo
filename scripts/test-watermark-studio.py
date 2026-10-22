@@ -26,8 +26,11 @@ class WatermarkStudioContracts(unittest.TestCase):
         self.assertIn('zeroBasedPages.forEach',backend)
     def test_no_raw_numeric_fields_or_fake_document_preview(self):
         ui=(SRC/'ui/workspace/VisualWatermarkEditor.kt').read_text()
+        preview=(SRC/'ui/workspace/PdfWatermarkPreview.kt').read_text()
         self.assertIn('vm.preview(sourceId,page)',ui)
-        self.assertIn('detectDragGestures(',ui)
+        self.assertIn('PdfWatermarkPreview(',ui)
+        self.assertIn('detectDragGestures(',preview)
+        self.assertIn('frame.bitmap',preview)
         self.assertIn('WatermarkSlider(',ui)
         self.assertNotIn('KeyboardType.Decimal',ui)
         self.assertNotIn('field_page_number',ui)

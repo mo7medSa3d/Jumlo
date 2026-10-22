@@ -10,17 +10,23 @@ class FlagshipReliabilityWiringTests(unittest.TestCase):
     def test_split_every_page_chip_selects_every_mode(self):
         editor=source('ui/workspace/PdfPageEditor.kt')
         chunk=editor.split('item("each-page")',1)[1].split('item(',1)[0]
-        self.assertIn('FilterChip(draft.flag1',chunk)
+        # Group mode uses the same flag, so "every page" is selected only for
+        # a one-page group. Merely checking flag1 would mislabel larger groups.
+        self.assertIn('FilterChip((draft.flag1 && every==1)',chunk)
         self.assertRegex(chunk,r'flag1\s*=\s*true')
         self.assertRegex(chunk,r'flag2\s*=\s*false')
         self.assertRegex(chunk,r'num1\s*=\s*"1"')
-        self.assertIn('selectionEnabled = !draft.flag1',editor)
+        self.assertIn('selectionEnabled = !(split && draft.flag1)',editor)
 
-    def test_splash_does_not_force_animation_delay_after_ready(self):
+    def test_intro_caps_its_duration_from_cold_start_and_skips_external_intents(self):
         activity=source('MainActivity.kt')
-        self.assertNotIn('kotlinx.coroutines.delay',activity)
-        self.assertNotIn('delay(',activity)
-        self.assertIn('if(ready) showLaunch=false',activity)
+        # The brand reveal is bounded from process start, never an extra delay
+        # after the app has already been initializing for longer than 650ms.
+        self.assertIn('SystemClock.elapsedRealtime() - launchStartedAt',activity)
+        self.assertIn('(650L - elapsed).coerceAtLeast(0L)',activity)
+        self.assertIn('coldLauncher && !reduceMotion',activity)
+        self.assertIn('showLaunch = false',activity)
+        self.assertIn('settings.isLoaded && workspaceReady',activity)
 
     def test_zip_extraction_is_capped_before_extraction(self):
         archive=source('data/processing/ArchiveOperationHandler.kt')

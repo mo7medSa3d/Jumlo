@@ -50,7 +50,7 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Direct media by default; optionally uses the APK-packaged multi-site extractor. */
+/** Inspect a link, select actual source qualities and queue a durable download. */
 @Composable fun MediaWorkspace(
     initialUrl:String,
     sessionEpoch:Long,
@@ -63,14 +63,18 @@ import kotlin.math.roundToInt
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var advanced by rememberSaveable { mutableStateOf(false) }
-    val clipboardSuggestion=remember { clipboard.getText()?.text?.toString()?.takeIf { it.trim().startsWith("https://",true) } }
+    val clipboardSuggestion=remember {
+        clipboard.getText()?.text?.toString()?.let { text ->
+            runCatching { MediaLinks.normalize(text) }.getOrNull()
+        }
+    }
     LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl, defaultWifiOnly) }
     LaunchedEffect(defaultWifiOnly) { viewModel.wifi(defaultWifiOnly) }
     // Also re-inspect on a fresh entry with the exact same shared URL.
-    LaunchedEffect(sessionEpoch, state.url) {
-        if(state.url.startsWith("https://",true) || (state.allowHttp && state.url.startsWith("http://",true))) {
+    LaunchedEffect(sessionEpoch, state.url, state.allowHttp) {
+        if(runCatching { MediaLinks.normalize(state.url,state.allowHttp) }.isSuccess) {
             delay(400)
-            viewModel.analyze()
+            viewModel.analyze(automatic=true)
         }
     }
     LaunchedEffect(state.error) { if(state.error!=null) haptics.error() }
@@ -94,7 +98,7 @@ import kotlin.math.roundToInt
             item("input") {
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
-                        value=state.url,onValueChange=viewModel::editUrl,singleLine=true,
+                        value=state.url,onValueChange=viewModel::editUrl,singleLine=true,enabled=!state.submitting,
                         placeholder={Text(stringResource(R.string.redesign_link_hint))},
                         label={Text(stringResource(R.string.media_link))},
                         modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp),
@@ -156,6 +160,9 @@ import kotlin.math.roundToInt
                     QuietShimmerSkeleton(Modifier.fillMaxWidth())
                     Text(stringResource(R.string.media_analyzing),style=QuietTheme.typography.metadata,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick=viewModel::cancelAnalysis) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
                 }
             }
             state.error?.let { code -> item("error") {
@@ -281,7 +288,7 @@ import kotlin.math.roundToInt
             }
 
             // =========================================================================
-            // CASE 2: DIRECT VIDEO / AUDIO SOURCE (ORIGINAL FORMAT ONLY)
+            // CASE 2: EXTRACTED MEDIA WITH THE SOURCE'S AVAILABLE FORMATS
             // =========================================================================
             state.asset?.let { asset ->
                 item("media-preview") {

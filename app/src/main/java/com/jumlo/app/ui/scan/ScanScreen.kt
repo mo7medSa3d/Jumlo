@@ -16,6 +16,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas as ComposeCanvas
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -116,26 +118,44 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onCapturedBatch: (List<File>)
             )
         } else if (captured == null) {
             QuietCard(Modifier.fillMaxWidth()) {
-                AndroidView(
-                    factory = { ctx ->
-                        PreviewView(ctx).also { previewView ->
-                            val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                            providerFuture.addListener({
-                                val provider = providerFuture.get()
-                                val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
-                                val capture = ImageCapture.Builder().build()
-                                imageCapture = capture
-                                try {
-                                    provider.unbindAll()
-                                    provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)
-                                } catch (_: Exception) {
-                                    error = "scan_error_bind"
-                                }
-                            }, ContextCompat.getMainExecutor(ctx))
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(380.dp).clip(QuietTheme.shapes.thumbnail)
-                )
+                Box(Modifier.fillMaxWidth().height(380.dp)) {
+                    AndroidView(
+                        factory = { ctx ->
+                            PreviewView(ctx).also { previewView ->
+                                val providerFuture = ProcessCameraProvider.getInstance(ctx)
+                                providerFuture.addListener({
+                                    val provider = providerFuture.get()
+                                    val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                                    val capture = ImageCapture.Builder().build()
+                                    imageCapture = capture
+                                    try {
+                                        provider.unbindAll()
+                                        provider.bindToLifecycle(lifecycleOwner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)
+                                    } catch (_: Exception) {
+                                        error = "scan_error_bind"
+                                    }
+                                }, ContextCompat.getMainExecutor(ctx))
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize().clip(QuietTheme.shapes.thumbnail)
+                    )
+                    // High-contrast viewfinder guides: visual only, never intercept touches.
+                    ComposeCanvas(Modifier.fillMaxSize().padding(32.dp)) {
+                        val length = size.minDimension * 0.15f
+                        val endX = size.width
+                        val endY = size.height
+                        val thick = 3.5.dp.toPx()
+                        val guide = Color.White
+                        drawLine(guide, Offset(0f, length), Offset(0f, 0f), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(0f, 0f), Offset(length, 0f), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(endX - length, 0f), Offset(endX, 0f), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(endX, 0f), Offset(endX, length), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(0f, endY - length), Offset(0f, endY), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(0f, endY), Offset(length, endY), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(endX - length, endY), Offset(endX, endY), thick, StrokeCap.Round)
+                        drawLine(guide, Offset(endX, endY - length), Offset(endX, endY), thick, StrokeCap.Round)
+                    }
+                }
             }
             QuietPrimaryButton(
                 text = stringResource(R.string.scan_capture),
@@ -347,7 +367,9 @@ private fun QuadAdjust(file: File, busy: Boolean = false, onApply: (List<Offset>
                 androidx.compose.foundation.Canvas(Modifier.fillMaxSize().pointerInput(busy,image,touchRadius) {
                     if(busy) return@pointerInput
                     fun fit()=ScanGeometry.fit(image.width.toFloat(),image.height.toFloat(),size.width.toFloat(),size.height.toFloat())
+                    var beforeDrag=corners
                     detectDragGestures(onDragStart={ start ->
+                        beforeDrag=corners
                         val rect=fit()
                         dragging=points().indices.minByOrNull { i ->
                             val p=points()[i]; (Offset(rect.left+p.x*rect.width,rect.top+p.y*rect.height)-start).getDistanceSquared()
@@ -357,7 +379,7 @@ private fun QuadAdjust(file: File, busy: Boolean = false, onApply: (List<Offset>
                         if(dragging>=0) {selectedCorner=dragging;haptics.longPress()}
                     },onDrag={change,_->
                         if(dragging>=0) {change.consume();val p=fit().normalized(change.position.x,change.position.y);move(dragging,p.x,p.y)}
-                    },onDragEnd={if(dragging>=0) haptics.sliderTick();dragging=-1},onDragCancel={dragging=-1})
+                    },onDragEnd={if(dragging>=0) haptics.sliderTick();dragging=-1},onDragCancel={corners=beforeDrag;dragging=-1})
                 }) {
                     val rect=ScanGeometry.fit(image.width.toFloat(),image.height.toFloat(),size.width,size.height)
                     val pts=points().map {Offset(rect.left+it.x*rect.width,rect.top+it.y*rect.height)}
@@ -369,7 +391,10 @@ private fun QuadAdjust(file: File, busy: Boolean = false, onApply: (List<Offset>
                 }
             }
         }
-        TextButton(onClick={precise=!precise},enabled=!busy) {Text(stringResource(R.string.upgrade_scan_precision))}
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick={precise=!precise},enabled=!busy) {Text(stringResource(R.string.upgrade_scan_precision))}
+            TextButton(onClick={corners=listOf(0f,0f,1f,0f,1f,1f,0f,1f)},enabled=!busy) {Text(stringResource(R.string.visual_edit_reset))}
+        }
         if(precise) {
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 items(4) {index->FilterChip(selectedCorner==index,{selectedCorner=index},label={Text(stringResource(R.string.upgrade_scan_corner,index+1))})}
@@ -403,6 +428,7 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
     val activePoints = remember { mutableStateListOf<Offset>() }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val hasInk = completedStrokes.isNotEmpty() || activePoints.size >= 2
+    var saveFailed by remember {mutableStateOf(false)}
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.signature_title), style = QuietTheme.typography.metadataStrong)
         androidx.compose.foundation.Canvas(
@@ -445,12 +471,14 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
             QuietTonalButton(text = stringResource(R.string.signature_clear), onClick = { completedStrokes.clear(); activePoints.clear() })
             QuietPrimaryButton(
                 text = stringResource(R.string.signature_save),
-                enabled = hasInk,
+                enabled = hasInk && canvasSize.width>0 && canvasSize.height>0,
                 onClick = {
-                    val outWidth = 600
-                    val outHeight = 252
-                    val sx = outWidth.toFloat() / canvasSize.width.coerceAtLeast(1).toFloat()
-                    val sy = outHeight.toFloat() / canvasSize.height.coerceAtLeast(1).toFloat()
+                    saveFailed=false
+                    val geometry=signatureExportGeometry(canvasSize.width,canvasSize.height)
+                    val outWidth=geometry.width
+                    val outHeight=geometry.height
+                    val sx=geometry.scale
+                    val sy=geometry.scale
                     val bitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
                     val file = File(context.cacheDir, "signature-${System.currentTimeMillis()}.png")
                     try {
@@ -465,7 +493,7 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
                         canvas.drawPath(androidPath, Paint().apply {
                             color = android.graphics.Color.BLACK
                             style = Paint.Style.STROKE
-                            strokeWidth = 7f
+                            strokeWidth = 4f*geometry.scale
                             strokeCap = Paint.Cap.ROUND
                             strokeJoin = Paint.Join.ROUND
                             isAntiAlias = true
@@ -475,15 +503,16 @@ fun SignaturePad(onSaved: (java.io.File) -> Unit) {
                             it.fd.sync()
                         }
                         onSaved(file)
-                    } catch (t: Throwable) {
+                    } catch (error: Exception) {
                         file.delete()
-                        throw t
+                        saveFailed=true
                     } finally {
                         if (!bitmap.isRecycled) bitmap.recycle()
                     }
                 }
             )
         }
+        if(saveFailed) Text(stringResource(R.string.interactive_signature_failed),color=MaterialTheme.colorScheme.error)
         Text(stringResource(R.string.signature_hint), style = QuietTheme.typography.metadata)
     }
 }

@@ -1,11 +1,10 @@
 package com.jumlo.app.media
 
-import com.jumlo.app.core.StreamTransfer
 import com.jumlo.app.core.media.MediaMode
 import com.jumlo.app.core.media.MediaChoice
 import com.jumlo.app.core.media.MediaFormat
 import com.jumlo.app.data.media.RemoteExtractorRuntime
-import com.jumlo.app.data.processing.OkHttpTransport
+import com.jumlo.app.data.media.executeCancellable
 import com.jumlo.app.data.jobs.OperationFailure
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -19,6 +18,9 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The app half of the extraction architecture: post the URL, read the formats, pull
@@ -30,7 +32,14 @@ class RemoteExtractorRuntimeTest {
     private lateinit var thread: Thread
     private lateinit var baseUrl: String
     @Volatile private var extractBody = "{}"
-    private val streamBytes = ByteArray(4096) { (it % 251).toByte() }
+    private val streamBytes = ByteArray(4096) { (it % 251).toByte() }.apply {
+        byteArrayOf(0,0,0,24,102,116,121,112).copyInto(this)
+    }
+    @Volatile private var lastAuthorization: String? = null
+    @Volatile private var streamName = "media.mp4"
+    @Volatile private var streamDelayMillis = 0L
+    @Volatile private var streamBodyDelayMillis = 0L
+    private val streamStarted = CountDownLatch(1)
 
     @Before fun setup() {
         server = ServerSocket(0, 8, java.net.InetAddress.getByName("127.0.0.1"))
@@ -79,10 +88,15 @@ class RemoteExtractorRuntimeTest {
             }
             path.startsWith("/stream") -> {
                 lastStreamRequest = path
+                streamStarted.countDown()
+                if (streamDelayMillis > 0) Thread.sleep(streamDelayMillis)
+                lastAuthorization = Regex("authorization:\\s*([^\\n]+)").find(headers)?.groupValues?.get(1)?.trim()
                 val start = Regex("range:\\s*bytes=(\\d+)-").find(headers)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                 val slice = streamBytes.copyOfRange(start, streamBytes.size)
                 val status = if (start > 0) "206 Partial Content" else "200 OK"
-                output.write("HTTP/1.1 $status\r\nContent-Type: video/mp4\r\nAccept-Ranges: bytes\r\nContent-Length: ${slice.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                output.write("HTTP/1.1 $status\r\nContent-Type: video/mp4\r\nContent-Disposition: attachment; filename=\"$streamName\"\r\nAccept-Ranges: bytes\r\nContent-Length: ${slice.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                output.flush()
+                if (streamBodyDelayMillis > 0) Thread.sleep(streamBodyDelayMillis)
                 output.write(slice)
             }
             else -> {
@@ -108,8 +122,7 @@ class RemoteExtractorRuntimeTest {
 
     private fun runtime(url: () -> String = { baseUrl }) = RemoteExtractorRuntime(
         baseUrlProvider = url,
-        client = OkHttpClient(),
-        transfer = StreamTransfer(OkHttpTransport(OkHttpClient()))
+        client = OkHttpClient()
     )
 
     @Test fun theFormatsTheServiceOffersBecomeTheAppsFormats() {
@@ -195,4 +208,102 @@ class RemoteExtractorRuntimeTest {
         val failure = runCatching { runtime { "http://127.0.0.1:1" }.refreshExtractor() }.getOrNull()
         assertEquals("MEDIA_RUNTIME_UNAVAILABLE", failure)
     }
+
+    @Test fun serviceTokenIsSentForTheDownloadToo() {
+        val dir = java.nio.file.Files.createTempDirectory("media-auth-").toFile()
+        try {
+            val choice = com.jumlo.app.core.media.MediaCatalog.choices(
+                com.jumlo.app.core.media.MediaAsset("id","fixture","Fixture",1.0,
+                    listOf(MediaFormat("18","mp4","h264","aac"))),MediaMode.VIDEO).single()
+            RemoteExtractorRuntime({baseUrl},OkHttpClient(),{"test-token"})
+                .download("https://example.com/video",choice,com.jumlo.app.core.media.AudioOutput.ORIGINAL,192,true,dir,{},{})
+            assertEquals("bearer test-token",lastAuthorization)
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test fun originalAudioKeepsTheSelectedSourceAndReturnedExtension() {
+        val dir = java.nio.file.Files.createTempDirectory("media-original-").toFile()
+        try {
+            streamName="media.m4a"
+            val choice = com.jumlo.app.core.media.MediaCatalog.choices(
+                com.jumlo.app.core.media.MediaAsset("id","fixture","Fixture",1.0,
+                    listOf(MediaFormat("140","m4a","none","aac"))),MediaMode.AUDIO).single()
+            runtime().download("https://example.com/video",choice,com.jumlo.app.core.media.AudioOutput.ORIGINAL,192,true,dir,{},{})
+            val query=lastStreamRequest.orEmpty()
+            assertTrue(query,query.contains("selector=140"))
+            assertTrue(query,query.contains("format=best"))
+            assertTrue(File(dir,"media.m4a").isFile)
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test fun preparationCanOutlastTheOrdinaryReadTimeout() {
+        val dir = java.nio.file.Files.createTempDirectory("media-preparation-").toFile()
+        streamDelayMillis = 200
+        try {
+            val client = OkHttpClient.Builder().readTimeout(25, TimeUnit.MILLISECONDS).build()
+            RemoteExtractorRuntime({ baseUrl }, client).download("https://example.com/video",
+                fixtureChoice(), com.jumlo.app.core.media.AudioOutput.ORIGINAL, 192, true, dir, {}, {})
+            assertEquals(streamBytes.size.toLong(), File(dir, "media.mp4").length())
+        } finally { dir.deleteRecursively() }
+    }
+
+    @Test fun cancellationClosesTheCallWhileTheServiceIsPreparingHeaders() {
+        val dir = java.nio.file.Files.createTempDirectory("media-cancel-").toFile()
+        val cancelled = AtomicBoolean(false)
+        val callClosed = CountDownLatch(1)
+        streamDelayMillis = 3000
+        val client = OkHttpClient.Builder().eventListener(object : okhttp3.EventListener() {
+            override fun callFailed(call: okhttp3.Call, ioe: java.io.IOException) {
+                if (call.isCanceled()) callClosed.countDown()
+            }
+        }).build()
+        val work = java.util.concurrent.FutureTask {
+            RemoteExtractorRuntime({ baseUrl }, client).download("https://example.com/video",
+                fixtureChoice(), com.jumlo.app.core.media.AudioOutput.ORIGINAL, 192, true, dir,
+                { if (cancelled.get()) throw java.util.concurrent.CancellationException("fixture cancelled") }, {})
+        }
+        val worker = Thread(work, "remote-cancellation-fixture").apply { isDaemon = true; start() }
+        try {
+            assertTrue("request did not reach fixture", streamStarted.await(2, TimeUnit.SECONDS))
+            cancelled.set(true)
+            val error = runCatching { work.get(1, TimeUnit.SECONDS) }.exceptionOrNull()
+            assertTrue("cancellation must interrupt header preparation: $error",
+                error is java.util.concurrent.ExecutionException && error.cause is java.util.concurrent.CancellationException)
+            assertTrue("the outstanding HTTP call must be cancelled", callClosed.await(1, TimeUnit.SECONDS))
+            assertTrue("cancelled preparation must not publish a file", !File(dir, "media.mp4").exists())
+        } finally {
+            work.cancel(true)
+            worker.join(100)
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test fun headerPreparationHasABoundedDeadline() {
+        streamDelayMillis = 1000
+        val client = OkHttpClient.Builder().readTimeout(0, TimeUnit.MILLISECONDS).build()
+        val error = runCatching {
+            client.executeCancellable(okhttp3.Request.Builder().url("$baseUrl/stream").build(), {}, 80)
+                .use { }
+        }.exceptionOrNull()
+        assertTrue("an idle service must not wait indefinitely: $error", error is java.net.SocketTimeoutException)
+        assertEquals("MEDIA_SERVICE_PREPARATION_TIMEOUT", error?.message)
+    }
+
+    @Test fun aStalledBodyStillUsesTheOrdinaryIdleTimeout() {
+        val dir = java.nio.file.Files.createTempDirectory("media-body-timeout-").toFile()
+        streamBodyDelayMillis = 200
+        try {
+            val client = OkHttpClient.Builder().readTimeout(25, TimeUnit.MILLISECONDS).build()
+            val error = runCatching {
+                RemoteExtractorRuntime({ baseUrl }, client).download("https://example.com/video",
+                    fixtureChoice(), com.jumlo.app.core.media.AudioOutput.ORIGINAL, 192, true, dir, {}, {})
+            }.exceptionOrNull()
+            assertTrue("stalled response bytes must retain an idle timeout: $error", error is java.net.SocketTimeoutException)
+            assertTrue(!File(dir, "media.mp4").exists())
+        } finally { dir.deleteRecursively() }
+    }
+
+    private fun fixtureChoice() = com.jumlo.app.core.media.MediaCatalog.choices(
+        com.jumlo.app.core.media.MediaAsset("id", "fixture", "Fixture", 1.0,
+            listOf(MediaFormat("18", "mp4", "h264", "aac"))), MediaMode.VIDEO).single()
 }

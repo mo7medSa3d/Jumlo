@@ -115,7 +115,8 @@ import javax.inject.Singleton
         raw.fill('\u0000')
         val limits = ArchiveLimits(
             maxBytes = context.budget.maxExpandedArchiveBytes,
-            maxEntries = context.budget.maxArchiveEntries,
+            maxEntries = if(settings.extract) minOf(context.budget.maxArchiveEntries,context.budget.maxOutputFiles)
+                else context.budget.maxArchiveEntries,
             maxDepth = 32
         )
         try {
@@ -153,11 +154,19 @@ import javax.inject.Singleton
                             EncryptedZipEntrySource(ref.displayName, tempFile)
                         }
                         if (ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
-                        EncryptedZip.create(ticket.stageFile, entrySources, password, limits, context.checkCancellation)
+                        EncryptedZip.create(ticket.stageFile, entrySources, password, limits) {
+                            context.checkCancellation()
+                            require(ticket.stageFile.parentFile.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                        }
                     } finally {
                         tempSourcesDir.deleteRecursively()
                     }
-                    val rec = context.outputs.publish(ticket) { ctxFile -> context.outputs.inspect(ctxFile, "application/zip", originalSizeBytes = stagedBytes.takeIf { it > 0L }) }
+                    // EncryptedZip.create has already reopened and authenticated
+                    // every payload. java.util.zip.ZipFile (used by the generic
+                    // inspector) cannot open AES ZIP method 99 on all runtimes.
+                    val rec = context.outputs.publish(ticket) {
+                        OutputMetadata(entryCount = request.sourceIds.size, originalSizeBytes = stagedBytes.takeIf { it > 0L })
+                    }
                     listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
                 }
             } else {

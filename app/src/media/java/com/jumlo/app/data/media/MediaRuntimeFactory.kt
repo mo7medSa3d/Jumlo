@@ -4,7 +4,6 @@ import android.content.Context
 import android.system.Os
 import android.system.OsConstants
 import android.util.AtomicFile
-import com.jumlo.app.core.StreamTransfer
 import com.jumlo.app.core.media.AudioOutput
 import com.jumlo.app.core.media.MediaArguments
 import com.jumlo.app.core.media.MediaAsset
@@ -15,20 +14,19 @@ import com.jumlo.app.core.media.MediaLinks
 import com.jumlo.app.core.media.MediaProgress
 import com.jumlo.app.core.media.MediaProgressParser
 import com.jumlo.app.data.jobs.OperationFailure
-import com.jumlo.app.data.processing.OkHttpTransport
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import okhttp3.OkHttpClient
 import java.io.File
 import java.security.MessageDigest
+import java.util.Properties
 import java.util.UUID
 
 /**
- * The opt-in APK-bundled multi-site engine.
+ * The APK-bundled multi-site engine.
  *
- * A configured extraction service is preferred, because it can be updated without
- * shipping a new app; this bundled engine is the offline fallback, and the on-device
- * direct fetcher is the last resort for plain media links.
+ * Public pages use the bundled local extractor. A user-configured service remains
+ * available as an alternate; plain media links can also use the direct fetcher.
  */
 object MediaRuntimeFactory {
     fun create(
@@ -39,8 +37,8 @@ object MediaRuntimeFactory {
         serviceToken: () -> String = { "" }
     ): MediaRuntime {
         val engines = buildList {
-            add(RemoteExtractorRuntime(serviceUrl, client, StreamTransfer(OkHttpTransport(client)), serviceToken))
             add(PackagedMediaRuntime(context.applicationContext))
+            add(RemoteExtractorRuntime(serviceUrl, client, serviceToken))
             add(NativeDirectMediaRuntime(client, sessions))
         }
         return RoutingMediaRuntime(engines)
@@ -66,6 +64,9 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         try {
             YoutubeDL.getInstance().init(context)
             FFmpeg.getInstance().init(context)
+            // FFmpeg.init only extracts its dependency ZIP. Repair the known 64-bit
+            // WebP alignment defect before Python can launch FFmpeg or ffprobe.
+            BundledFfmpegLibraries.install(context)
             require(launcher.isDirectory || launcher.mkdirs()) { "MEDIA_RUNTIME_INITIALIZATION_FAILED" }
             // Never fetch a remote executable. Restore the vetted resource from the installed APK.
             refreshBundledPayload()
@@ -78,7 +79,7 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
                     catch (error: Exception) { sink.failWrite(output); throw error }
                 }
             }
-            for (name in listOf("libpython.so", "libffmpeg.so", "libqjs.so"))
+            for (name in listOf("libpython.so", "libffmpeg.so", "libffprobe.so", "libqjs.so"))
                 if (!File(nativeDir, name).canExecute()) throw OperationFailure("MEDIA_NATIVE_ABI_UNAVAILABLE")
             initialized = true
         } catch (error: OperationFailure) { throw error }
@@ -101,14 +102,23 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         require(installed.parentFile?.isDirectory == true || installed.parentFile?.mkdirs() == true) {
             "MEDIA_RUNTIME_INITIALIZATION_FAILED"
         }
+        // Native dependencies and the extractor have separate release cadences. Do not
+        // restore the older extractor carried by the native runtime's Maven artifact.
+        val properties = Properties().apply {
+            context.assets.open("media/extractor.properties").use(::load)
+        }
+        val expected = properties.getProperty("sha256").orEmpty()
+        require(expected.matches(Regex("[a-f0-9]{64}"))) { "MEDIA_RUNTIME_INITIALIZATION_FAILED" }
+        val bundledHash = context.assets.open("media/yt-dlp").use(::sha256)
+        val hash = bundledHash.joinToString("") { "%02x".format(it.toInt() and 255) }
+        require(hash == expected) { "MEDIA_RUNTIME_INITIALIZATION_FAILED" }
         // Avoid repeated multi-megabyte rewrites when the installed payload matches the APK.
-        val bundledHash = context.resources.openRawResource(com.yausername.youtubedl_android.R.raw.ytdlp).use(::sha256)
         val same = installed.isFile && runCatching { installed.inputStream().use(::sha256).contentEquals(bundledHash) }.getOrDefault(false)
         if (same) return
         val sink = AtomicFile(installed)
         val output = sink.startWrite()
         try {
-            context.resources.openRawResource(com.yausername.youtubedl_android.R.raw.ytdlp).use { it.copyTo(output) }
+            context.assets.open("media/yt-dlp").use { it.copyTo(output) }
             sink.finishWrite(output)
         } catch (error: Exception) { sink.failWrite(output); throw error }
     }

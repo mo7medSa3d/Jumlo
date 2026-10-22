@@ -41,7 +41,7 @@ object CapabilityRegistry {
         UtilityTool("img_stitch", "img_stitch", PillarCategory.IMAGES, "Stitch Screenshots", "خياطة لقطات", "Vertical screenshot stitching", "دمج عمودي للقطات", "view_agenda"),
 
         // Download Tools
-        UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Direct Video, Audio & File Downloads", "تنزيل الفيديو والصوت والملفات المباشرة", "Direct media files, original quality, PDF, images & Google Drive", "روابط وسائط مباشرة بالجودة الأصلية وملفات PDF والصور وDrive", "download"),
+        UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Video, Audio & File Downloads", "تنزيل الفيديو والصوت والملفات", "Inspect links, choose available quality and save video or audio", "حلل الرابط واختر الجودة المتاحة واحفظ فيديو أو صوت", "download"),
         UtilityTool("dl_02", "add_single_url", PillarCategory.DOWNLOADS, "New Direct Download", "تنزيل مباشر وGoogle Drive", "Download files from direct URLs & Google Drive", "لصق رابط ملف مباشر أو Google Drive", "add_link"),
         UtilityTool("dl_03", "batch_url_intake", PillarCategory.DOWNLOADS, "Batch URL Intake", "إدخال دفعة روابط", "Parse & validate multi-line HTTP/HTTPS links", "تحليل وفحص الروابط المتعددة", "download"),
         UtilityTool("dl_settings", "settings_overview", PillarCategory.DOWNLOADS, "Download Settings", "إعدادات التنزيل", "Network preferences & storage destination", "تفضيلات الشبكة ومجلد الحفظ", "tune"),

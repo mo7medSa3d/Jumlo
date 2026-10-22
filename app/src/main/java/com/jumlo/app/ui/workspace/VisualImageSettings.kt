@@ -1,181 +1,178 @@
 package com.jumlo.app.ui.workspace
 
-import com.jumlo.app.core.PdfCompressionPolicy
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
+import com.jumlo.app.core.PdfCompressionPolicy
+import com.jumlo.app.data.engine.PureDomainAlgorithms
 import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.theme.QuietTheme
-import com.jumlo.app.ui.util.rememberAppHaptics
+import kotlin.math.log10
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
-/** The name shown for a compression preset. */
-internal fun PdfCompressionPolicy.Preset.labelRes(): Int = when (this) {
+internal fun PdfCompressionPolicy.Preset.labelRes(): Int = when(this) {
     PdfCompressionPolicy.Preset.STRONG -> R.string.visual_compress_strong
     PdfCompressionPolicy.Preset.SMALL_FILE -> R.string.visual_compress_small
     PdfCompressionPolicy.Preset.BALANCED -> R.string.visual_compress_balanced
     PdfCompressionPolicy.Preset.BEST_QUALITY -> R.string.visual_compress_best
 }
 
-/** Preset/slider controls write directly to the existing validated execution draft. */
+/** Primary controls write the same validated draft consumed by the worker. */
 @Composable
-internal fun VisualImageSettings(draft: WorkspaceDraft, edit: ((WorkspaceDraft) -> WorkspaceDraft) -> Unit) {
-    val imageResize=draft.toolId=="img_02"
-    val imageAdjust=draft.toolId=="img_adjust"
-    val compress=draft.toolId in setOf("img_04","pdf_compress")
-    val pdfToImage=draft.toolId=="pdf_07"
-    val toPdf=draft.toolId=="pdf_02"
-    val watermark=draft.toolId=="img_watermark"
-    val haptics=rememberAppHaptics()
-    if(!(imageResize||imageAdjust||compress||pdfToImage||toPdf||watermark)) return
+internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->WorkspaceDraft)->Unit) {
+    val tool=draft.toolId
+    if(!tool.startsWith("img_") && tool !in setOf("pdf_02","pdf_07","pdf_compress")) return
     Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surfaceContainerLow,
         modifier=Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.visual_edit_title),style=QuietTheme.typography.sectionTitle)
-            if(imageResize) {
-                val percent=(draft.percentage.toIntOrNull() ?: 100).coerceIn(10,300)
-                Text(stringResource(R.string.visual_edit_resize),style=QuietTheme.typography.metadataStrong)
-                Slider(value=percent.toFloat(),onValueChange={value->
-                    edit { it.copy(percentage=value.roundToInt().toString(),longestEdge="") }
-                },valueRange=10f..300f)
-                Text(stringResource(R.string.visual_resize_hint),
-                    style=QuietTheme.typography.metadata,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                val sizes=listOf(
-                    50 to R.string.visual_scale_small,
-                    75 to R.string.visual_scale_medium,
-                    100 to R.string.visual_scale_original,
-                    150 to R.string.visual_scale_large
-                )
+            if(tool=="img_02") {
+                val percentMode=draft.percentage.isNotBlank()
+                val edgeMode=draft.longestEdge.isNotBlank()
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    items(sizes,key={it.first}) { (value,label) ->
-                        FilterChip(percent==value,
-                            onClick={
-                                haptics.selectionToggle()
-                                edit { it.copy(percentage=value.toString(),longestEdge="") }
-                            },
-                            label={Text(stringResource(label))})
+                    item {FilterChip(percentMode,onClick={edit {it.copy(percentage="75",longestEdge="")}},
+                        label={Text(stringResource(R.string.interactive_resize_scale))})}
+                    item {FilterChip(edgeMode,onClick={edit {it.copy(percentage="",longestEdge="1920")}},
+                        label={Text(stringResource(R.string.interactive_resize_edge))})}
+                    item {FilterChip(!percentMode && !edgeMode,onClick={edit {it.copy(percentage="",longestEdge="")}},
+                        label={Text(stringResource(R.string.interactive_resize_dimensions))})}
+                }
+                when {
+                    percentMode -> {
+                        InteractiveIntSlider(stringResource(R.string.interactive_scale_percent),draftNumber(draft.percentage,75),1,400,100) {
+                            value -> edit {it.copy(percentage=value.toString(),longestEdge="")}
+                        }
+                        ChoiceValues(listOf(25,50,75,100,150,200),draftNumber(draft.percentage,75),{"$it%"}) {
+                            value -> edit {it.copy(percentage=value.toString(),longestEdge="")}
+                        }
+                        Text(stringResource(R.string.visual_edit_preserve_ratio),style=QuietTheme.typography.metadata)
+                    }
+                    edgeMode -> {
+                        InteractiveIntSlider(stringResource(R.string.field_longest_edge_opt),draftNumber(draft.longestEdge,1920),64,8192,1920) {
+                            value -> edit {it.copy(longestEdge=value.toString(),percentage="")}
+                        }
+                        ChoiceValues(listOf(640,1280,1920,2560,4096),draftNumber(draft.longestEdge,1920),{"$it px"}) {
+                            value -> edit {it.copy(longestEdge=value.toString(),percentage="")}
+                        }
+                    }
+                    else -> {
+                        InteractiveIntSlider(stringResource(R.string.field_target_width),draftNumber(draft.width,1600),1,8192,1600) {v->edit {it.copy(width=v.toString())}}
+                        InteractiveIntSlider(stringResource(R.string.field_target_height),draftNumber(draft.height,1600),1,8192,1600) {v->edit {it.copy(height=v.toString())}}
+                        PresetChoices(stringResource(R.string.field_fit_strategy),listOf(
+                            "FIT" to R.string.ui_fit_contain,"FILL" to R.string.ui_fit_cover,
+                            "PAD" to R.string.ui_fit_pad,"STRETCH" to R.string.ui_fit_stretch),draft.fit) {v->edit {it.copy(fit=v)}}
                     }
                 }
-                Text(stringResource(R.string.visual_edit_preserve_ratio),
-                    style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(!percentMode) InteractiveToggle(stringResource(R.string.field_allow_upscaling),draft.allowUpscaling) {v->edit {it.copy(allowUpscaling=v)}}
             }
-            if(imageAdjust) {
+            if(tool=="img_adjust") {
                 val filters=listOf(
                     listOf(R.string.visual_filter_original,0,100,100),
                     listOf(R.string.visual_filter_document,10,150,0),
                     listOf(R.string.visual_filter_vivid,5,115,135),
                     listOf(R.string.visual_filter_grayscale,0,110,0),
-                    listOf(R.string.visual_filter_contrast,12,185,0)
-                )
-                val brightness=draft.num1.toIntOrNull()?:0
-                val contrast=draft.num2.toIntOrNull()?:100
-                val saturation=draft.num3.toIntOrNull()?:100
+                    listOf(R.string.visual_filter_contrast,12,185,0))
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     items(filters,key={it[0]}) { preset ->
-                        FilterChip(
-                            brightness==preset[1] && contrast==preset[2] && saturation==preset[3],
-                            onClick={
-                                haptics.selectionToggle()
-                                edit { it.copy(num1=preset[1].toString(),
-                                    num2=preset[2].toString(),num3=preset[3].toString()) }
-                            },
-                            label={Text(stringResource(preset[0]))}
-                        )
+                        FilterChip(draftNumber(draft.num1,0)==preset[1] && draftNumber(draft.num2,100)==preset[2] && draftNumber(draft.num3,100)==preset[3],
+                            onClick={edit {it.copy(num1=preset[1].toString(),num2=preset[2].toString(),num3=preset[3].toString())}},
+                            label={Text(stringResource(preset[0]))})
                     }
                 }
-                IntensitySlider(stringResource(R.string.field_brightness),draft.num1.toIntOrNull()?:0,-100,100,0) {
-                    edit { f-> f.copy(num1=it.toString()) }
-                }
-                IntensitySlider(stringResource(R.string.field_contrast),draft.num2.toIntOrNull()?:100,0,300,100) {
-                    edit { f-> f.copy(num2=it.toString()) }
-                }
-                IntensitySlider(stringResource(R.string.field_saturation),draft.num3.toIntOrNull()?:100,0,300,100) {
-                    edit { f-> f.copy(num3=it.toString()) }
-                }
+                InteractiveIntSlider(stringResource(R.string.field_brightness),draftNumber(draft.num1,0),-100,100,0) {v->edit {it.copy(num1=v.toString())}}
+                InteractiveIntSlider(stringResource(R.string.field_contrast),draftNumber(draft.num2,100),0,300,100) {v->edit {it.copy(num2=v.toString())}}
+                InteractiveIntSlider(stringResource(R.string.field_saturation),draftNumber(draft.num3,100),0,300,100) {v->edit {it.copy(num3=v.toString())}}
+                InteractiveIntSlider(stringResource(R.string.field_padding_px),draftNumber(draft.num4,0),0,2000,0) {v->edit {it.copy(num4=v.toString())}}
             }
-            if(draft.toolId=="pdf_compress") {
-                Text(stringResource(R.string.visual_compression_note),
-                    style=QuietTheme.typography.metadata,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                // The presets come from the policy, so the panel and the policy
-                // cannot drift apart. Each chip shows the reduction it reached on
-                // the measured corpus.
-                val presets=PdfCompressionPolicy.Preset.entries.toList()
-                val actualDpi=draft.num1.toIntOrNull()?:150
-                val actualQuality=draft.quality.toIntOrNull()?:85
+            if(tool in setOf("img_join","img_stitch")) {
+                if(tool=="img_join") PresetChoices(stringResource(R.string.field_layout),listOf(
+                    "GRID2" to R.string.ui_layout_grid2,"HSTRIP" to R.string.ui_layout_hstrip,"VSTRIP" to R.string.ui_layout_vstrip),
+                    draft.text1.ifBlank {"GRID2"}) {v->edit {it.copy(text1=v)}}
+                InteractiveIntSlider(stringResource(R.string.field_gap_px),draftNumber(draft.num1,8),0,500,8) {v->edit {it.copy(num1=v.toString())}}
+                if(tool=="img_stitch") InteractiveIntSlider(stringResource(R.string.field_overlap_px),draftNumber(draft.num2,0),0,400,0) {v->edit {it.copy(num2=v.toString())}}
+            }
+            if(tool=="img_watermark") InteractiveIntSlider(stringResource(R.string.field_opacity_percent),draftNumber(draft.num1,40),1,100,40) {v->edit {it.copy(num1=v.toString())}}
+            if(tool=="img_target") ImageTargetControls(draft,edit)
+            if(tool=="pdf_compress") {
+                Text(stringResource(R.string.visual_compression_note),style=QuietTheme.typography.metadata)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    items(presets,key={it.name}) { option ->
-                        val range=option.measuredSavingPercent
-                        FilterChip(actualDpi==option.dpi && actualQuality==option.quality,
-                            onClick={
-                                haptics.selectionToggle()
-                                // A leftover target size would put the tool on the
-                                // other ladder and ignore the preset, so it is
-                                // cleared with the preset.
-                                edit { it.copy(num1=option.dpi.toString(),
-                                    quality=option.quality.toString(),num2="") }
-                            },label={Text("${stringResource(option.labelRes())} · $range%")})
+                    items(PdfCompressionPolicy.Preset.entries.toList(),key={it.name}) { preset ->
+                        FilterChip(draft.num2.isBlank() && draftNumber(draft.num1,150)==preset.dpi && draftNumber(draft.quality,85)==preset.quality,
+                            onClick={edit {it.copy(num1=preset.dpi.toString(),quality=preset.quality.toString(),num2="")}},
+                            label={Text(stringResource(preset.labelRes()))})
                     }
                 }
-                Text(stringResource(R.string.visual_edit_quality_note),
-                    style=QuietTheme.typography.metadata,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-            } else if(compress || pdfToImage) {
-                IntensitySlider(stringResource(R.string.field_quality),
-                    draft.quality.toIntOrNull()?:85,10,100,85) {
-                    edit { f-> f.copy(quality=it.toString()) }
+                InteractiveToggle(stringResource(R.string.interactive_compression_target),draft.num2.isNotBlank()) {enabled->
+                    edit {it.copy(num2=if(enabled) "5" else "")}
                 }
-                // Compression may store the result as WebP; say so instead of renaming silently.
-                if(draft.toolId=="img_04") {
-                    Text(stringResource(R.string.visual_compress_webp_note),
-                        style=QuietTheme.typography.metadata,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(draft.num2.isNotBlank()) {
+                    InteractiveIntSlider(stringResource(R.string.field_target_size_mb),draftNumber(draft.num2,5),1,100,5) {v->edit {it.copy(num2=v.toString())}}
+                    Text(stringResource(R.string.field_target_size_note),style=QuietTheme.typography.metadata)
                 }
             }
-            if(toPdf) {
-                Text(stringResource(R.string.jumlo_paper_mode),style=QuietTheme.typography.metadataStrong)
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    listOf("AUTO","A4","LETTER").forEach { option ->
-                        FilterChip(draft.paperMode==option,onClick={
-                            edit { it.copy(paperMode=option) }
-                        },label={Text(option)})
+            if(tool=="pdf_07") {
+                PresetChoices(stringResource(R.string.field_output_format),listOf("PNG" to R.string.interactive_png,"JPEG" to R.string.interactive_jpeg),draft.format) {v->edit {it.copy(format=v)}}
+                InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(draft.dpi,144),36,600,144) {v->edit {it.copy(dpi=v.toString())}}
+                ChoiceValues(listOf(72,144,300,600),draftNumber(draft.dpi,144),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
+                InteractiveToggle(stringResource(R.string.field_grayscale),draft.grayscale) {v->edit {it.copy(grayscale=v)}}
+            }
+            if(tool=="pdf_02") PresetChoices(stringResource(R.string.jumlo_paper_mode),listOf(
+                "AUTO" to R.string.visual_auto,"A4" to R.string.visual_a4,"LETTER" to R.string.visual_letter,
+                "CUSTOM" to R.string.jumlo_custom_paper),draft.paperMode) {v->edit {it.copy(paperMode=v)}}
+            if(tool=="pdf_02" && draft.paperMode=="CUSTOM") {
+                InteractiveIntSlider(stringResource(R.string.field_paper_width),draftNumber(draft.paperWidth,595),72,1440,595) {v->edit {it.copy(paperWidth=v.toString())}}
+                InteractiveIntSlider(stringResource(R.string.field_paper_height),draftNumber(draft.paperHeight,842),72,1440,842) {v->edit {it.copy(paperHeight=v.toString())}}
+            }
+            val imageOutput=tool.startsWith("img_") && tool !in setOf("img_target","img_compare")
+            if(imageOutput && !(tool=="img_exif" && !draft.flag1)) {
+                Text(stringResource(R.string.field_output_format),style=QuietTheme.typography.metadataStrong)
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(listOf("JPEG","PNG","WEBP")) {format ->
+                        FilterChip(draft.format==format,onClick={edit {it.copy(format=format)}},label={Text(format)})
                     }
                 }
-                Text(stringResource(R.string.field_fill_page),style=QuietTheme.typography.metadataStrong)
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    FilterChip(!draft.fill,onClick={edit {it.copy(fill=false)}},
-                        label={Text(stringResource(R.string.ui_fit_contain))})
-                    FilterChip(draft.fill,onClick={edit {it.copy(fill=true)}},
-                        label={Text(stringResource(R.string.ui_fit_cover))})
-                }
             }
-            if(watermark) {
-                IntensitySlider(stringResource(R.string.field_opacity_percent),
-                    draft.num1.toIntOrNull()?:40,1,100,40) {
-                    edit {f->f.copy(num1=it.toString())}
-                }
-            }
+            if((imageOutput || tool=="pdf_07") && (draft.format!="PNG" || tool=="img_exif" && !draft.flag1))
+                InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(draft.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
+            if(tool=="img_04") Text(stringResource(R.string.interactive_compression_format_note),style=QuietTheme.typography.metadata)
         }
     }
 }
+
 @Composable
-private fun IntensitySlider(label:String,current:Int,minimum:Int,maximum:Int,reset:Int,onChange:(Int)->Unit) {
-    val safe=current.coerceIn(minimum,maximum)
-    Row {
-        Text(label,modifier=Modifier.weight(1f),style=QuietTheme.typography.metadataStrong)
-        TextButton(onClick={onChange(reset)}) { Text(stringResource(R.string.visual_edit_reset)) }
+internal fun ImageTargetControls(draft:WorkspaceDraft,edit:((WorkspaceDraft)->WorkspaceDraft)->Unit) {
+    val target=draftNumber(draft.num1,200000).coerceIn(1000,100000000)
+    val label=stringResource(R.string.interactive_target_size,PureDomainAlgorithms.formatBytes(target.toLong()))
+    Text(stringResource(R.string.ui_target_jpeg_policy),style=QuietTheme.typography.metadata)
+    Text(label,style=QuietTheme.typography.metadataStrong)
+    Slider(value=log10(target.toFloat()),valueRange=3f..8f,
+        onValueChange={v->edit {it.copy(num1=10.0.pow(v.toDouble()).roundToInt().coerceIn(1000,100000000).toString())}},
+        modifier=Modifier.semantics {contentDescription=label;stateDescription=label})
+    ChoiceValues(listOf(100000,200000,500000,1000000,2000000,5000000),target,{PureDomainAlgorithms.formatBytes(it.toLong())}) {v->edit {it.copy(num1=v.toString())}}
+}
+
+@Composable
+private fun ChoiceValues(values:List<Int>,selected:Int,label:(Int)->String,onSelect:(Int)->Unit) {
+    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        items(values) {value->FilterChip(selected==value,onClick={onSelect(value)},label={Text(label(value))})}
     }
-    val haptics=rememberAppHaptics()
-    Slider(value=safe.toFloat(),valueRange=minimum.toFloat()..maximum.toFloat(),
-        onValueChange={onChange(it.roundToInt())},
-        onValueChangeFinished={haptics.selectionToggle()})
+}
+
+@Composable
+internal fun PresetChoices(label:String,values:List<Pair<String,Int>>,selected:String,onSelect:(String)->Unit) {
+    Text(label,style=QuietTheme.typography.metadataStrong)
+    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        items(values,key={it.first}) {(value,labelId)->FilterChip(selected==value,onClick={onSelect(value)},label={Text(stringResource(labelId))})}
+    }
 }

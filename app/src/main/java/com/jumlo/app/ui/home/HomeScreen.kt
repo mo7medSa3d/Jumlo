@@ -1,7 +1,6 @@
 package com.jumlo.app.ui.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -82,25 +81,14 @@ fun HomeScreen(
         val columns = if (maxWidth >= 840.dp) 4 else 2
         LazyColumn(
             modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp,
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp,
                 bottom = QuietTheme.spacing.listBottomBuffer),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item("intro") {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.neon_home_subtitle),
-                            style = QuietTheme.typography.metadata,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    OutlinedButton(onClick = onTools,
-                        modifier = Modifier.pressFeedback().heightIn(min = 48.dp)) {
-                        Icon(Icons.Rounded.Search, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.neon_tools_search))
-                    }
-                }
+                Text(stringResource(R.string.neon_home_subtitle),
+                    style = QuietTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item("home-search") {
                 QuietSearchBar(search, stringResource(R.string.home_search_hint),
@@ -115,7 +103,7 @@ fun HomeScreen(
                 )
             }
             item("quick-actions") {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     NeonSectionHeader(
                         title = stringResource(R.string.neon_quick_actions),
                         action = stringResource(R.string.ui_customize_actions),
@@ -201,8 +189,8 @@ fun HomeScreen(
                                     onClick = { onOutput(output) },
                                     modifier = Modifier.pressFeedback().width(156.dp),
                                     shape = RoundedCornerShape(19.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                    shadowElevation = 2.dp
                                 ) {
                                     Column(Modifier.padding(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(7.dp)) {
