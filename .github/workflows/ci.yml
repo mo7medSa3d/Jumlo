@@ -5,13 +5,11 @@ on:
     branches: [main, 'arena/**']
     tags: ['v*']
     paths-ignore:
-      - '**.md'
       - 'docs/**'
       - 'verification/**'
   pull_request:
     branches: [main]
     paths-ignore:
-      - '**.md'
       - 'docs/**'
       - 'verification/**'
   workflow_dispatch:
@@ -21,13 +19,8 @@ on:
         type: boolean
         default: false
         required: false
-      full_release_check:
-        description: Also run release build and R8 shrinker (slow)
-        type: boolean
-        default: true
-        required: false
-      extended_media:
-        description: Build the opt-in experimental extended-media APK (yt-dlp/FFmpeg, may exceed 60 MB)
+      lite_build:
+        description: Also build the lite APK (extendedMedia=false, no yt-dlp/FFmpeg payload) and gate it
         type: boolean
         default: false
         required: false
@@ -42,9 +35,11 @@ concurrency:
 
 jobs:
   build:
-    name: APK, unit tests and lint
+    # Media runtime is the DEFAULT artifact: bundled yt-dlp/FFmpeg payload,
+    # 60,000,000-byte compact gate enforced on the real signed APK.
+    name: Media APK, unit tests, lint and package gates
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -57,7 +52,6 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # SDK 36 and Build Tools 36 ship on ubuntu-24.04 runners; only install if absent.
       - name: Ensure Android SDK 36
         shell: bash
         run: |
@@ -71,48 +65,38 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
 
-      - name: Debug APK, unit tests and lint
+      - name: Media build (full downloader), unit tests, lint, compact size gate
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug \
+          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
+            :app:testDebugUnitTest :app:lintDebug \
             --no-daemon --console=plain 2>&1 | tee gradle.log
-          apk=app/build/outputs/apk/debug/app-debug.apk
-          test -s "$apk"
-          bytes=$(stat -c '%s' "$apk")
-          echo "APK size: $bytes bytes (hard limit: 60000000)"
-          echo "### APK: $bytes / 60000000 bytes" >> "$GITHUB_STEP_SUMMARY"
-          if (( bytes > 60000000 )); then
-            echo "::error::APK exceeds the hard 60 MB limit: $bytes bytes"
-            exit 1
-          fi
-          if unzip -Z1 "$apk" | grep -E '^lib/.*/lib(ffmpeg|python|qjs)\.so$|^res/raw/ytdlp(\.|$)'; then
-            echo "::error::Forbidden heavy media runtime found in APK"
-            exit 1
-          fi
-          (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
 
-      - name: Upload installable debug APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: Jumlo-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
-          path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/debug/app-debug.apk.sha256
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 14
-
-      # R8 recompiles all release sources and can add 8+ minutes on code changes.
-      # Keep automatic fast feedback on pushes; still verify release on v* tags
-      # and on explicit full_release_check workflow dispatches.
-      - name: Release R8 (tag or manual full check)
-        if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_release_check) }}
+      - name: Inspect the packaged media runtime
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew :app:assembleRelease --no-daemon --console=plain 2>&1 | tee -a gradle.log
+          python3 scripts/inspect-media-artifact.py \
+            app/build/outputs/apk/compact/app-compact.apk \
+            app/build/outputs/apk/debug/app-debug.apk
+          python3 scripts/tests/test-media-artifact.py 2>&1
+          (cd app/build/outputs/apk/compact && sha256sum app-compact.apk > app-compact.apk.sha256)
+          (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
+
+      - name: Upload installable media debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Media-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/app-debug.apk.sha256
+            app/build/outputs/apk/compact/app-compact.apk
+            app/build/outputs/apk/compact/app-compact.apk.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
 
       - name: Upload logs on failure
         if: failure()
@@ -126,14 +110,13 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  extended_media:
-    # Experimental, opt-in only. Bundles the yt-dlp/FFmpeg/Python/QuickJS runtime
-    # (GPL-3.0 obligations, native ABIs and live providers are NOT qualified here),
-    # so it stays a separate artifact and never changes the standard APK gate.
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended_media }}
-    name: Extended-media debug APK (experimental)
+  lite:
+    # Explicit opt-in: the lite (extendedMedia=false) APK must stay free of any
+    # yt-dlp/FFmpeg/Python payload and stay under the same hard size limit.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.lite_build }}
+    name: Lite APK and standard package gate
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -157,27 +140,39 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
 
-      - name: Extended-media debug APK, unit tests and lint
+      - name: Lite build under the hard 60 MB limit
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:testDebugUnitTest :app:lintDebug \
-            --no-daemon --console=plain 2>&1 | tee gradle-extended.log
+          ./gradlew -PextendedMedia=false :app:assembleDebug \
+            --no-daemon --console=plain 2>&1 | tee gradle-lite.log
           apk=app/build/outputs/apk/debug/app-debug.apk
           test -s "$apk"
           bytes=$(stat -c '%s' "$apk")
-          echo "Extended APK size: $bytes bytes (the 60 MB standard limit does not apply here)"
-          echo "### Extended-media APK: $bytes bytes (experimental)" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Lite APK: $bytes / 60000000 bytes" >> "$GITHUB_STEP_SUMMARY"
+          if (( bytes > 60000000 )); then
+            echo "::error::Lite APK exceeds the hard 60 MB limit: $bytes bytes"
+            exit 1
+          fi
+
+      - name: Inspect the lite artifact (media payload must be absent)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/inspect-standard-artifact.py \
+            app/build/outputs/apk/debug/app-debug.apk \
+            --output standard-artifact-report.json
           (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
 
-      - name: Upload experimental extended-media APK
+      - name: Upload lite debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: Jumlo-Extended-Media-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
+          name: Jumlo-Lite-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/app-debug.apk.sha256
+            standard-artifact-report.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -186,9 +181,10 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: Jumlo-Extended-Media-Failure-Logs-${{ github.run_number }}-${{ github.run_attempt }}
+          name: Jumlo-Lite-Failure-Logs-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
-            gradle-extended.log
+            gradle-lite.log
+            standard-artifact-report.json
             app/build/reports/
             app/build/test-results/
           if-no-files-found: ignore
