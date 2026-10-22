@@ -109,3 +109,4 @@ tests/ocr_benchmark/
 CONTENTS_SHA256.json
 .agent/
 .claude/
+dist/
