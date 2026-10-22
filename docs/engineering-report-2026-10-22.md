@@ -55,15 +55,22 @@ init (same scope as before this change).
 
 ### Passed (measured this session, offline local host)
 - `:app:verifyCompactApkSize` — 57,292,693 ≤ 60,000,000 on the real signed APK.
+- `scripts/verify-host.sh` — full chain (34 stages end-to-end, `set -e` would
+  abort otherwise): core, pdf-compression, media bootstrap/network-guard/
+  packaged-runtime, universal-architecture, release-isolation, media-artifact,
+  downloads-density, storage-sql, source-static, redesign, premium-ux,
+  neon-ui, visual-editor, watermark-studio, smart-scan, local-profile,
+  output-workflow, flagship-wiring, large-pdf, brand-motion,
+  phase1-4-regressions, verify-local, launcher — ALL PASS.
 - `inspect-media-artifact.py` on compact + debug media artifacts.
 - Static contract suites: `test-universal-media-architecture.py`,
   `test-source-static.py` (after `app/schemas/schema-provenance.md` was
   authored as an honest provenance note — no fabricated `1.json`),
   `test-jumlo-brand-motion.py` (brand assets restored from HEAD — they were
-  accidentally dropped by a prior doc-purge commit), `test-media-artifact.py`,
+  accidentally dropped in git history and restored by this effort),
+  `test-media-artifact.py`,
   `test-media-packaged-runtime.py`, `test-release-media-isolation.py`,
-  `test-downloads-density.py`, `test-storage-sql.py`, `test-redesign-static.py`
-  and the rest of the previously passing set.
+  `test-downloads-density.py`, `test-storage-sql.py`, `test-redesign-static.py`.
 - `scripts/test-workspace.sh` — 6 workspace-safety tests run with the new shared
   embedded-Kotlin fallback (`scripts/host-tests/embedded-kotlin.sh`) when no
   Kotlin CLI is installed.
@@ -111,9 +118,31 @@ uses the debug key on purpose). The lite artifact (no media payload) builds with
 
 ## 5. Delivered files
 
-- `app/build/outputs/apk/compact/app-compact.apk` — 57,292,693 bytes, sha256 in §1.
+Source tree final state: `main` at merge `81ffcf8` ("production completion work
+onto main") — the prior session's detached-HEAD uncommitted state and the
+purged main-line ex-History converged; working tree clean; history:
+
+```
+81ffcf8 merge: production completion work onto main
+a042ba2 build: 1.5-reliability version bump; KSP2 engine enabled
+b4951c6 docs: track the required Room fixture set
+c24cb7f ci: media artifact is the default gate; explicit lite_build input
+c8743f1 test(host): shared embedded-Kotlin fallback
+f625a3e feat(media): runtime shipped by default; compact arm64 artifact
+f8ff470 perf(media): 60MB compact cap via closure-verified repack
+```
+
+`dist/` (kept out of the source tree by `.gitignore`):
+
+- `Jumlo-1.5-reliability-compact.apk` — 57,292,693 bytes (+ `.sha256`).
+- `Jumlo-source-2026-10-22.zip` — deterministic clean source
+  (516 entries, sha256 `b3fe05604963f7a344a39c70a8560291df27d9ea9f606239c945f842528a9d2d`).
+- `engineering-report-2026-10-22.md` — this report.
+
+In-tree key artifacts:
+
 - `tools/repack-native-media.py` — deterministic payload repack + pin validation.
-- `app/src/media/a…/native-overrides/manifest.properties` — repacked pins (4 ABIs).
+- `app/src/media/assets/media/native-overrides/manifest.properties` — repacked pins (4 ABIs).
 - `app/src/main/res/raw/ytdlp` — 394-byte valid stub overriding the AAR duplicate.
 - `.github/workflows/ci.yml` — CI verification of the whole ladder.
 - `docs/media/UNIVERSAL_ENGINE.md` — engine/license/packaging disclosure.
