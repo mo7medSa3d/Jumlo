@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import com.jumlo.app.ui.icons.*
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier

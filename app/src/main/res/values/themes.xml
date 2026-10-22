@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Jumlo" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Match the branded Compose reveal and SplashScreen API background. -->
-        <item name="android:windowBackground">#000000</item>
+        <!-- Match the branded Compose reveal on Android versions before 12. -->
+        <item name="android:windowBackground">#0C1231</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="windowSplashScreenBackground">#0C1231</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="windowSplashScreenAnimationDuration">650</item>
-        <item name="postSplashScreenTheme">@style/Theme.Jumlo</item>
     </style>
 </resources>

@@ -399,10 +399,8 @@ fun main() {
         check(CapabilityPolicy.canProcess("dl_media"))
     }
     test("release security-sensitive candidates remain unavailable") {
-        for (id in listOf("file_drive", "webpage_pdf", "xf_05"))
+        for (id in listOf("file_drive", "pdf_ocr", "webpage_pdf"))
             check(!Capabilities.isEnabled(id)) { "$id must be gated" }
-        for (id in listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr"))
-            check(CapabilityPolicy.canProcess(id)) { "$id must be enabled" }
     }
     test("tested PDF and encrypted archive capabilities are available in the catalog") {
         // Real PDF and authenticated AES fixture suites cover these backends.

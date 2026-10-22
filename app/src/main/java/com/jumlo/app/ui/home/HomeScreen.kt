@@ -24,7 +24,6 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
-import com.jumlo.app.ui.icons.*
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.StaggeredReveal
@@ -127,14 +126,14 @@ fun HomeScreen(
                     }
                     Row(Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilledTonalButton(onClick = onDownloads, modifier = Modifier.weight(1f)
+                        OutlinedButton(onClick = onDownloads, modifier = Modifier.weight(1f)
                             .pressFeedback().heightIn(min = 50.dp)) {
                             Icon(Icons.Rounded.Download, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(7.dp))
                             Text(stringResource(R.string.neon_shortcut_download),
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        FilledTonalButton(onClick = onTools, modifier = Modifier.weight(1f)
+                        OutlinedButton(onClick = onTools, modifier = Modifier.weight(1f)
                             .pressFeedback().heightIn(min = 50.dp)) {
                             Icon(Icons.Rounded.GridView, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(7.dp))

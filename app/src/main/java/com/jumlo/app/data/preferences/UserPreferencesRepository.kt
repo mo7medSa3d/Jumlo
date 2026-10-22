@@ -59,8 +59,6 @@ class UserPreferencesRepository @Inject constructor(
         val MEDIA_SERVICE_URL = stringPreferencesKey("media_service_url_v1")
         val MEDIA_SERVICE_TOKEN = stringPreferencesKey("media_service_token_v1")
         val MEDIA_RIGHTS_ACCEPTED = booleanPreferencesKey("media_rights_accepted")
-        val DEFAULT_VIDEO_QUALITY = stringPreferencesKey("default_video_quality")
-        val DEFAULT_AUDIO_QUALITY = stringPreferencesKey("default_audio_quality")
     }
 
     /**
@@ -139,7 +137,7 @@ class UserPreferencesRepository @Inject constructor(
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
             wifiOnlyDefault = prefs[Keys.WIFI_ONLY_DEFAULT] ?: false,
-            fileViewMode = runCatching { FileViewMode.valueOf(prefs[Keys.FILE_VIEW_MODE] ?: "GRID") }.getOrDefault(FileViewMode.GRID).let { if (it == FileViewMode.GALLERY) FileViewMode.GRID else it },
+            fileViewMode = runCatching { FileViewMode.valueOf(prefs[Keys.FILE_VIEW_MODE] ?: "GRID") }.getOrDefault(FileViewMode.GRID),
             accentColor = (prefs[Keys.ACCENT_COLOR] ?: "BLUE").takeIf { it in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC") } ?: "BLUE",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
@@ -159,8 +157,6 @@ class UserPreferencesRepository @Inject constructor(
                     com.jumlo.app.core.OutputWorkflowPolicy.isId(id) && name.isNotBlank() && name.length<=200 && name.none { it<' ' || it=='/' || it=='\\' }
                 }
             }.getOrDefault(emptyMap()),
-            defaultVideoQuality = (prefs[Keys.DEFAULT_VIDEO_QUALITY] ?: "1080p").takeIf { it in setOf("BEST", "1080p", "720p", "480p") } ?: "1080p",
-            defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: "MP3_320").takeIf { it in setOf("MP3_320", "MP3_192", "M4A", "ORIGINAL") } ?: "MP3_320",
             isLoaded = true
         )
     }
@@ -284,15 +280,5 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setNotificationsGranted(granted: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATIONS_GRANTED] = granted }
-    }
-
-    suspend fun setDefaultVideoQuality(quality: String) {
-        require(quality in setOf("BEST", "1080p", "720p", "480p"))
-        context.dataStore.edit { it[Keys.DEFAULT_VIDEO_QUALITY] = quality }
-    }
-
-    suspend fun setDefaultAudioQuality(quality: String) {
-        require(quality in setOf("MP3_320", "MP3_192", "M4A", "ORIGINAL"))
-        context.dataStore.edit { it[Keys.DEFAULT_AUDIO_QUALITY] = quality }
     }
 }

@@ -107,20 +107,16 @@ fun ScanScreen(onCaptured: (java.io.File) -> Unit, onCapturedBatch: (List<File>)
         SmartDocumentScanButton(
             enabled = !processing && captured == null,
             onCapturedBatch = onCapturedBatch,
-            onError = { error = "scan_error_smart" },
-            autoLaunch = true,
-            onCancelled = onBack
+            onError = { error = "scan_error_smart" }
         )
-        // Only show the manual CameraX fallback when Play Services ML Kit Document Scanner is unavailable.
-        val useManualFallback = error == "scan_error_smart"
-        if (useManualFallback && !granted) {
+        if (!granted) {
             QuietStateCard(
                 title = stringResource(R.string.scan_title),
                 subtitle = stringResource(R.string.scan_hint),
                 actionLabel = stringResource(R.string.scan_allow_camera),
                 onAction = { permission.launch(Manifest.permission.CAMERA) }
             )
-        } else if (useManualFallback && captured == null) {
+        } else if (captured == null) {
             QuietCard(Modifier.fillMaxWidth()) {
                 Box(Modifier.fillMaxWidth().height(380.dp)) {
                     AndroidView(

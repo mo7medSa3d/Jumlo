@@ -32,7 +32,7 @@ internal fun PdfCompressionPolicy.Preset.labelRes(): Int = when(this) {
 @Composable
 internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->WorkspaceDraft)->Unit) {
     val tool=draft.toolId
-    if(!tool.startsWith("img_") && tool !in setOf("pdf_02","pdf_07","pdf_compress","pdf_to_docx","pdf_to_pptx")) return
+    if(!tool.startsWith("img_") && tool !in setOf("pdf_02","pdf_07","pdf_compress")) return
     Surface(shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surfaceContainerLow,
         modifier=Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -120,13 +120,6 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                     InteractiveIntSlider(stringResource(R.string.field_target_size_mb),draftNumber(draft.num2,5),1,100,5) {v->edit {it.copy(num2=v.toString())}}
                     Text(stringResource(R.string.field_target_size_note),style=QuietTheme.typography.metadata)
                 }
-            }
-            if(tool=="pdf_to_docx") {
-                InteractiveToggle(stringResource(R.string.field_ocr_note),draft.flag1) {v->edit {it.copy(flag1=v)}}
-                ChoiceValues(listOf(150,200,300),draftNumber(draft.dpi,180),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
-            }
-            if(tool=="pdf_to_pptx") {
-                ChoiceValues(listOf(120,150,200,300),draftNumber(draft.dpi,150),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
             }
             if(tool=="pdf_07") {
                 PresetChoices(stringResource(R.string.field_output_format),listOf("PNG" to R.string.interactive_png,"JPEG" to R.string.interactive_jpeg),draft.format) {v->edit {it.copy(format=v)}}

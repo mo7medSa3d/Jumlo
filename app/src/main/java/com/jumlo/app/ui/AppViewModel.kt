@@ -762,8 +762,6 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun setMaxConcurrentDownloads(value:Int) = savePreference { preferences.setMaxConcurrentDownloads(value) }
     fun setMediaServiceUrl(url:String) = savePreference { preferences.setMediaServiceUrl(url) }
     fun setMediaServiceToken(token:String) = savePreference { preferences.setMediaServiceToken(token) }
-    fun setDefaultVideoQuality(value:String) = savePreference { preferences.setDefaultVideoQuality(value) }
-    fun setDefaultAudioQuality(value:String) = savePreference { preferences.setDefaultAudioQuality(value) }
     fun setDownloadDestinationFolder(treeUri:String,flags:Int) { viewModelScope.launch {
         try {
             val uri=Uri.parse(treeUri)
@@ -850,7 +848,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
         beginBusy()
         try {
-            val cutoff=System.currentTimeMillis()+1000L
+            val cutoff=System.currentTimeMillis()-7L*24*3600*1000
             val context=currentCoroutineContext()
             com.jumlo.app.core.TemporaryCleanup.removeExpired(app.cacheDir,cutoff) { context.ensureActive() }
             _message.value="CLEANUP_DONE";refreshStorage()

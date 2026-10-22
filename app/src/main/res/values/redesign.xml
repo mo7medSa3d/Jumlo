@@ -56,7 +56,4 @@
     <string name="redesign_save_fallback">Some files are kept safely inside Jumlo because saving to the selected folder failed. Use Export on those files to save a visible copy.</string>
     <string name="redesign_storage_by_type">Results by file type</string>
     <string name="redesign_pdf_type">PDF</string>
-    <string name="pref_default_video_quality">Default video quality</string>
-    <string name="pref_default_audio_quality">Default audio quality</string>
-    <string name="quality_video_best">Best available quality</string>
 </resources>

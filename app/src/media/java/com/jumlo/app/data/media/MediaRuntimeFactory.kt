@@ -56,12 +56,7 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
     private val launcher = File(context.noBackupFilesDir, "media-launcher")
     private val nativeDir get() = File(context.applicationInfo.nativeLibraryDir)
     private val runner = MediaProcessRunner { pid, force ->
-        val selfPid = android.os.Process.myPid()
-        val selfPgid = runCatching { Os.getpgid(0) }.getOrDefault(selfPid)
-        val targetPgid = runCatching { Os.getpgid(pid) }.getOrDefault(-1)
-        if (pid > 1 && pid != selfPid && targetPgid != selfPgid) {
-            runCatching { Os.kill(-pid, if (force) OsConstants.SIGKILL else OsConstants.SIGTERM) }
-        }
+        Os.kill(-pid, if (force) OsConstants.SIGKILL else OsConstants.SIGTERM)
     }
 
     @Synchronized private fun initialize() {

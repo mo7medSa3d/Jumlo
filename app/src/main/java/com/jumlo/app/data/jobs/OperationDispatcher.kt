@@ -32,7 +32,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private suspend fun dispatch(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         if(request.schemaVersion!=1) throw OperationFailure("UNSUPPORTED_SETTINGS_VERSION")
         return when(request.toolId) {
-            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_protect","pdf_forms","pdf_compare","pdf_redact","pdf_clean","pdf_to_docx","pdf_to_pptx" -> pdf.execute(request,context)
+            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_protect","pdf_forms","pdf_compare","pdf_redact","pdf_clean" -> pdf.execute(request,context)
             "pdf_ocr","webpage_pdf" -> ocrWeb.execute(request,context)
             "file_encrypted_zip","file_batch_rename","file_duplicates","file_trash","file_drive" -> fileExtras.execute(request,context)
             "img_01","img_02","img_03","img_04","img_exif","img_watermark","img_join","img_adjust","img_target","img_compare","img_stitch" -> images.execute(request,context)

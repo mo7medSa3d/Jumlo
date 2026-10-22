@@ -19,16 +19,17 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import com.jumlo.app.ui.icons.*
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +57,7 @@ fun QuietRootTopBar(
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
+    val searchCd = stringResource(R.string.search_title)
     val settingsCd = stringResource(R.string.settings_title)
     val accountAction = onAccountClick ?: onVaultClick
     val haptics = rememberAppHaptics()
@@ -96,11 +99,13 @@ fun QuietRootTopBar(
                 }
             }
 
-            // Search icon removed from top bars per 2026 navigation guidelines; search lives inside pages.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (onSearchClick != null) {
+                    QuietTonalIconButton(Icons.Rounded.Search, searchCd, onSearchClick)
+                }
                 if(accountAction == null) QuietTonalIconButton(Icons.Rounded.Settings, settingsCd, onSettingsClick)
                 Surface(
                     onClick = {

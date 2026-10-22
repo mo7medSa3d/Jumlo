@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import com.jumlo.app.ui.icons.*
 import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material3.*
 import androidx.compose.runtime.*

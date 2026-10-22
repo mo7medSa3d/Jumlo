@@ -31,8 +31,8 @@ android {
         targetSdk = 36
         // Release versioning: pass -PversionCode / -PversionName at build time
         // (or set them in gradle.properties); defaults keep local builds working.
-        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10843).get()
-        versionName = providers.gradleProperty("versionName").orElse("2.0.0-2026").get()
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
+        versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
         buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -40,19 +40,6 @@ android {
             useSupportLibrary = true
         }
         resourceConfigurations += listOf("en", "ar")
-    }
-
-    // Android App Bundle splits: ship only Arabic + English resources and per-ABI native libs.
-    bundle {
-        language {
-            enableSplit = true
-        }
-        abi {
-            enableSplit = true
-        }
-        density {
-            enableSplit = true
-        }
     }
 
     // pdfbox-android keeps standard-14 font metrics in AAR assets (loaded via
@@ -76,11 +63,6 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
-            // Debug includes arm64-v8a for physical devices plus x86_64 for emulators.
-            ndk {
-                abiFilters.add("arm64-v8a")
-                abiFilters.add("x86_64")
-            }
         }
         release {
             isMinifyEnabled = true
@@ -89,8 +71,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Release targets modern 64-bit ARM devices to stay well below the 60 MB budget.
-            ndk { abiFilters.add("arm64-v8a") }
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -140,6 +120,7 @@ android {
         jvmTarget = "17"
         freeCompilerArgs += listOf(
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
             "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
             "-opt-in=androidx.compose.animation.ExperimentalSharedTransitionApi"
         )
@@ -152,7 +133,7 @@ android {
 
     lint {
         abortOnError = true
-        // Every user-visible string must exist in values/ and values-ar/.
+        // Phase 6: every user-visible string must exist in values/ and values-ar/.
         error += setOf("MissingTranslation")
     }
 
@@ -185,7 +166,6 @@ dependencies {
         implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     }
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -198,6 +178,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.window.size)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.hilt.android)
@@ -227,13 +208,10 @@ dependencies {
     implementation(libs.camera.view)
     // On-device Google Play services scanner with CameraX manual fallback.
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0")
-    // Unbundled Play services ML Kit Text Recognition for OCR (zero bundled model bloat).
-    implementation(libs.play.services.mlkit.text.recognition)
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.room.testing)

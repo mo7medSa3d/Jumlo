@@ -7,7 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import com.jumlo.app.ui.icons.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -238,8 +238,7 @@ fun QuietCard(
         modifier = modifier.then(clickModifier),
         shape = shape,
         color = containerColor,
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),

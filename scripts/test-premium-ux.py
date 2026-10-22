@@ -35,8 +35,8 @@ class PremiumUxContracts(unittest.TestCase):
             'LightBackground': 'F6F7FD', 'LightSurface': 'FFFFFF',
             'LightOnSurface': '17213E', 'LightOnSurfaceVariant': '505C77',
             'LightPrimary': '2F46C6', 'LightTertiary': '7050AB',
-            'DarkBackground': '000000',
-            'DarkSurface': '121212', 'DarkOnSurface': 'F5F5F5',
+            'DarkBackground': '0C1226',
+            'DarkSurface': '141B33', 'DarkOnSurface': 'F1F3FF',
             'DarkPrimary': 'A9B7FF', 'DarkTertiary': 'D3B7FC',
         }
         for key, value in expected.items():
@@ -143,8 +143,8 @@ class PremiumUxContracts(unittest.TestCase):
         code = source('settings/SettingsScreen.kt')
         hero = code[code.index('item("settings-hero")'):code.index('item("appearance")')]
         self.assertIn('onClick=onOpenFiles', hero)
-        self.assertNotIn('panel="haptic-intensity"', code)
-        self.assertIn('panel = "videoQuality"', code)
+        self.assertNotIn('panel="haptic-intensity"', hero)
+        self.assertIn('panel="haptic-intensity"', code)
 
     def test_file_import_is_distinct_primary_action(self):
         code = source('files/FilesScreen.kt')

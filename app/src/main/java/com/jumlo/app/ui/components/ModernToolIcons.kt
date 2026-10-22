@@ -8,12 +8,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.jumlo.app.R
 
-/** 2026 bold duotone vector icon set, optically centered at 24dp. */
+/** Original 2026 rounded outline set, consistent stroke and optically centered at 24dp. */
 @DrawableRes
 internal fun modernToolIconRes(name: String): Int = when (name) {
     "picture_as_pdf", "pdf", "description", "assignment" -> R.drawable.ic_prism_document
-    "docx", "word", "pdf_to_docx" -> R.drawable.ic_prism_docx
-    "pptx", "slides", "presentation", "pdf_to_pptx" -> R.drawable.ic_prism_pptx
     "photo_library", "image", "collections", "photo", "add_photo_alternate" -> R.drawable.ic_prism_image
     "download", "file_download", "cloud_download" -> R.drawable.ic_prism_download
     "add_link", "link", "url" -> R.drawable.ic_prism_link
@@ -37,9 +35,9 @@ internal fun modernToolIconRes(name: String): Int = when (name) {
     "bolt", "auto_fix", "flash_on", "magic", "build_circle" -> R.drawable.ic_prism_sparkles
     "language", "translate", "webpage" -> R.drawable.ic_prism_globe
     "info" -> R.drawable.ic_prism_info
-    "edit", "rename", "draw", "drive_file_rename_outline" -> R.drawable.ic_prism_edit
+    "edit", "rename", "draw", "drive_file_rename_outline", "text_fields" -> R.drawable.ic_prism_edit
     "checklist" -> R.drawable.ic_prism_checklist
-    "ocr", "text_scan", "text_fields" -> R.drawable.ic_prism_ocr
+    "ocr", "text_scan" -> R.drawable.ic_prism_ocr
     "watermark" -> R.drawable.ic_prism_watermark
     "delete", "trash" -> R.drawable.ic_prism_trash
     "cloud", "cloud_sync", "sync" -> R.drawable.ic_prism_cloud

@@ -135,50 +135,20 @@ data class MediaUiState(
         throw IllegalArgumentException("TOO_MANY_REDIRECTS")
     }
 
-    private var preferredVideoQuality: String = "1080p"
-
-    private fun resolvePreferredVideoKey(choices: List<MediaChoice>, mode: MediaMode): String? {
-        if (choices.isEmpty()) return null
-        if (mode == MediaMode.VIDEO && preferredVideoQuality != "BEST") {
-            val targetHeight = preferredVideoQuality.removeSuffix("p").toIntOrNull()
-            if (targetHeight != null) {
-                choices.firstOrNull { it.height == targetHeight }?.let { return it.key }
-                choices.filter { (it.height ?: Int.MAX_VALUE) <= targetHeight }
-                    .maxByOrNull { it.height ?: 0 }?.let { return it.key }
-            }
-        }
-        return MediaCatalog.preferred(choices, mode)?.key
-    }
-
     /** Reset ViewModel-scoped media state on every workspace entry, including same-route reentry. */
     fun beginSession(initialUrl:String) = beginSession(initialUrl, false)
-    fun beginSession(
-        initialUrl:String,
-        defaultWifiOnly:Boolean,
-        defaultVideoQuality:String = "1080p",
-        defaultAudioQuality:String = "MP3_320"
-    ) {
+    fun beginSession(initialUrl:String, defaultWifiOnly:Boolean) {
         generation++
         analysis?.cancel()
         analyzedUrl=null
         lastAnalysisInput=null
         newCopy()
-        preferredVideoQuality = defaultVideoQuality
-        val (defaultAudio, defaultBitrate) = when (defaultAudioQuality) {
-            "MP3_320" -> AudioOutput.MP3 to 320
-            "MP3_192" -> AudioOutput.MP3 to 192
-            "M4A" -> AudioOutput.M4A to 192
-            else -> AudioOutput.ORIGINAL to 192
-        }
-        val rawTrimmed = initialUrl.trim().take(32768)
-        val extracted = runCatching { MediaLinks.sharedUrls(rawTrimmed).firstOrNull() }.getOrNull() ?: rawTrimmed
+        val trimmed = initialUrl.trim().take(32768)
         _state.value=MediaUiState(
-            url=extracted,
+            url=trimmed,
             mode=MediaMode.VIDEO,
-            audio=defaultAudio,
-            bitrate=defaultBitrate,
             wifiOnly=defaultWifiOnly,
-            platformBadge=DownloadLinkPolicy.detectPlatformName(extracted)
+            platformBadge=DownloadLinkPolicy.detectPlatformName(trimmed)
         )
     }
 
@@ -187,11 +157,7 @@ data class MediaUiState(
     fun editUrl(value:String) {
         if(_state.value.submitting) return
         generation++;analysis?.cancel();analyzedUrl=null;lastAnalysisInput=null
-        val rawTrimmed = value.take(32768)
-        val trimmed = if (' ' in rawTrimmed || '
-' in rawTrimmed) {
-            runCatching { MediaLinks.sharedUrls(rawTrimmed).firstOrNull() }.getOrNull() ?: rawTrimmed.trim()
-        } else rawTrimmed
+        val trimmed = value.take(32768)
         _state.update {
             it.copy(
                 url=trimmed,
@@ -225,7 +191,7 @@ data class MediaUiState(
         newCopy()
         val asset = _state.value.asset
         val choices = asset?.let { MediaCatalog.choices(it, value) }.orEmpty()
-        _state.update { it.copy(mode = value, choices = choices, selectedKey = resolvePreferredVideoKey(choices,value),
+        _state.update { it.copy(mode = value, choices = choices, selectedKey = MediaCatalog.preferred(choices,value)?.key,
             error = if (asset != null && choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null) }
     }
 
@@ -282,7 +248,7 @@ data class MediaUiState(
                                     mode=effectiveMode,
                                     platformBadge=detectedPlatform ?: asset.extractor.takeIf { e -> !e.equals("generic", true) },
                                     choices=choices,
-                                    selectedKey=resolvePreferredVideoKey(choices,effectiveMode),
+                                    selectedKey=MediaCatalog.preferred(choices,effectiveMode)?.key,
                                     name=asset.title.ifBlank { "media" },
                                     error=if(choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null
                                 )
