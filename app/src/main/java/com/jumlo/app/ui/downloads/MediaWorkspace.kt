@@ -1,9 +1,7 @@
 package com.jumlo.app.ui.downloads
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -43,6 +41,7 @@ import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.components.QuietStateCard
 import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.components.userMessageResource
+import com.jumlo.app.ui.icons.*
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
@@ -50,30 +49,36 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Inspect a link, select actual source qualities and queue a durable download. */
+/** Inspect a link, select actual source qualities (shown only after fetch), and queue a durable download. */
 @Composable fun MediaWorkspace(
     initialUrl:String,
     sessionEpoch:Long,
     onQueued:(String)->Unit,
     onDirect:(String)->Unit,
     defaultWifiOnly:Boolean=false,
+    defaultVideoQuality:String="1080p",
+    defaultAudioQuality:String="MP3_320",
     viewModel:MediaViewModel=hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var advanced by rememberSaveable { mutableStateOf(false) }
-    val clipboardSuggestion=remember {
-        clipboard.getText()?.text?.toString()?.let { text ->
-            runCatching { MediaLinks.normalize(text) }.getOrNull()
-        }
+    var clipboardSuggestion by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(sessionEpoch) {
+        advanced=false
+        viewModel.beginSession(initialUrl, defaultWifiOnly, defaultVideoQuality, defaultAudioQuality)
+        clipboardSuggestion = runCatching {
+            clipboard.getText()?.text?.toString()?.take(4096)?.let { text ->
+                MediaLinks.sharedUrls(text).firstOrNull() ?: MediaLinks.normalize(text)
+            }
+        }.getOrNull()
     }
-    LaunchedEffect(sessionEpoch) { advanced=false; viewModel.beginSession(initialUrl, defaultWifiOnly) }
     LaunchedEffect(defaultWifiOnly) { viewModel.wifi(defaultWifiOnly) }
-    // Also re-inspect on a fresh entry with the exact same shared URL.
+    // Automatically inspect once a valid link is pasted or shared.
     LaunchedEffect(sessionEpoch, state.url, state.allowHttp) {
         if(runCatching { MediaLinks.normalize(state.url,state.allowHttp) }.isSuccess) {
-            delay(400)
+            delay(350)
             viewModel.analyze(automatic=true)
         }
     }
@@ -114,7 +119,8 @@ import kotlin.math.roundToInt
                                     }
                                 }
                                 IconButton(onClick={
-                                    clipboard.getText()?.text?.toString()?.let { clip ->
+                                    val clip = runCatching { clipboard.getText()?.text?.toString() }.getOrNull()
+                                    if (!clip.isNullOrBlank()) {
                                         haptics.actionClick()
                                         viewModel.editUrl(clip)
                                         viewModel.analyze()
@@ -151,7 +157,7 @@ import kotlin.math.roundToInt
                 }
             }
             if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
-                SuggestionChip(onClick={haptics.actionClick();viewModel.editUrl(clipboardSuggestion);viewModel.analyze()},
+                SuggestionChip(onClick={haptics.actionClick();viewModel.editUrl(clipboardSuggestion!!);viewModel.analyze()},
                     label={Text(stringResource(R.string.redesign_paste_suggestion))},icon={Icon(Icons.Rounded.ContentPaste,null)})
             }
             if(state.analyzing) item("loading") {
@@ -182,14 +188,14 @@ import kotlin.math.roundToInt
             }}
 
             // =========================================================================
-            // CASE 1: DIRECT FILE / PDF / IMAGE / GOOGLE DRIVE LINK
+            // CASE 1: DIRECT FILE / PDF / IMAGE / GOOGLE DRIVE LINK (Shown ONLY after probe)
             // =========================================================================
             state.direct?.let { preview ->
                 item("direct-preview") {
                     Surface(
                         shape=RoundedCornerShape(24.dp),
                         color=MaterialTheme.colorScheme.surfaceContainerLow,
-                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                        tonalElevation=2.dp
                     ) {
                         Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -219,7 +225,6 @@ import kotlin.math.roundToInt
                                 style=QuietTheme.typography.metadata,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
                         }
                     }
                 }
@@ -238,7 +243,7 @@ import kotlin.math.roundToInt
                                 Surface(
                                     shape=RoundedCornerShape(18.dp),
                                     color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                                    border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                    tonalElevation=if(selected) 4.dp else 1.dp,
                                     modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick={haptics.selectionToggle();viewModel.directMode(modeKey)}).pressFeedback()
                                 ) {
                                     Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -264,7 +269,7 @@ import kotlin.math.roundToInt
                                 Surface(
                                     shape=RoundedCornerShape(18.dp),
                                     color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                                    border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                    tonalElevation=if(selected) 4.dp else 1.dp,
                                     modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick={haptics.selectionToggle();viewModel.directMode(modeKey)}).pressFeedback()
                                 ) {
                                     Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -288,14 +293,14 @@ import kotlin.math.roundToInt
             }
 
             // =========================================================================
-            // CASE 2: EXTRACTED MEDIA WITH THE SOURCE'S AVAILABLE FORMATS
+            // CASE 2: EXTRACTED MEDIA WITH REAL AVAILABLE FORMATS (Shown ONLY after fetch)
             // =========================================================================
             state.asset?.let { asset ->
                 item("media-preview") {
                     Surface(
                         shape=RoundedCornerShape(24.dp),
                         color=MaterialTheme.colorScheme.surfaceContainerLow,
-                        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                        tonalElevation=2.dp
                     ) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                             asset.thumbnailUrl?.let { thumb ->
@@ -319,12 +324,11 @@ import kotlin.math.roundToInt
                                 }
                             }
                             Text(state.name.ifBlank { asset.title },style=QuietTheme.typography.sectionTitle,fontWeight=FontWeight.Bold,maxLines=3,overflow=TextOverflow.Ellipsis)
-
                         }
                     }
                 }
 
-                // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
+                // 1. Download Type Selector (Video vs Audio Only) — Shown ONLY after info fetch!
                 item("media-type-selector") {
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
@@ -359,7 +363,7 @@ import kotlin.math.roundToInt
                         Surface(
                             shape=RoundedCornerShape(22.dp),
                             color=MaterialTheme.colorScheme.surfaceContainerLow,
-                            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                            tonalElevation=2.dp
                         ) {
                             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                                 Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
@@ -401,7 +405,7 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 3. Quality & Resolution Grid — Visible directly!
+                // 3. Quality & Resolution Grid — Real available qualities only!
                 item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -434,7 +438,7 @@ import kotlin.math.roundToInt
                                 onClick={haptics.selectionToggle();viewModel.select(choice.key)},
                                 shape=RoundedCornerShape(20.dp),
                                 color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                                border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                                tonalElevation=if(selected) 4.dp else 1.dp,
                                 modifier=Modifier.weight(1f).heightIn(min=96.dp).pressFeedback()
                                     .semantics {this.selected=selected;role=Role.RadioButton}
                             ) {
@@ -491,41 +495,23 @@ import kotlin.math.roundToInt
                 }
             }
 
-            item("advanced") {
-                TextButton(onClick={advanced=!advanced}) {
-                    Icon(Icons.Rounded.Tune,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.ui_advanced),style=QuietTheme.typography.metadataStrong)
+            if (state.asset != null || state.direct != null) {
+                item("advanced") {
+                    TextButton(onClick={advanced=!advanced}) {
+                        Icon(Icons.Rounded.Tune,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.ui_advanced),style=QuietTheme.typography.metadataStrong)
+                    }
                 }
-            }
-            if(advanced) {
-                if (state.asset != null || state.direct != null) item("rename") {
-                    OutlinedTextField(value=state.name,onValueChange=viewModel::name,
-                        singleLine=true,label={Text(stringResource(R.string.media_filename))},
-                        modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp))
-                }
-                item("network-toggles") {
-                    Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=state.wifiOnly,role=Role.Switch,onValueChange=viewModel::wifi),verticalAlignment=Alignment.CenterVertically) {
-                                Text(stringResource(R.string.media_wifi),Modifier.weight(1f))
-                                Switch(checked=state.wifiOnly,onCheckedChange=null)
-                            }
-                            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=state.unmetered,role=Role.Switch,onValueChange=viewModel::unmetered),verticalAlignment=Alignment.CenterVertically) {
-                                Text(stringResource(R.string.media_unmetered),Modifier.weight(1f))
-                                Switch(checked=state.unmetered,onCheckedChange=null)
-                            }
-                            Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=state.allowHttp,role=Role.Switch,onValueChange=viewModel::allowHttp),verticalAlignment=Alignment.CenterVertically) {
-                                Text(stringResource(R.string.media_http),Modifier.weight(1f))
-                                Switch(checked=state.allowHttp,onCheckedChange=null)
-                            }
-                        }
+                if(advanced) {
+                    item("rename") {
+                        OutlinedTextField(value=state.name,onValueChange=viewModel::name,
+                            singleLine=true,label={Text(stringResource(R.string.media_filename))},
+                            modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp))
                     }
                 }
             }
         }
         if(state.rightsRequired) {
-            // The terms are shown before anything is queued, and the download waits
-            // for the answer.
             AlertDialog(
                 onDismissRequest={viewModel.dismissRights()},
                 title={Text(stringResource(R.string.media_rights_title))},
@@ -557,8 +543,6 @@ import kotlin.math.roundToInt
             }
         }
     }
-
-
 }
 
 @Composable
@@ -573,7 +557,7 @@ private fun ModeSelectionCard(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        tonalElevation = if (selected) 4.dp else 1.dp,
         modifier = modifier.heightIn(min = 64.dp).pressFeedback()
             .semantics {this.selected=selected;role=Role.RadioButton}
     ) {

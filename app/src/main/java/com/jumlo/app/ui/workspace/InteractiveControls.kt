@@ -3,6 +3,7 @@ package com.jumlo.app.ui.workspace
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
+import com.jumlo.app.ui.icons.*
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.*

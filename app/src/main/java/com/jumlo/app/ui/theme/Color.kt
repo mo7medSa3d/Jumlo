@@ -47,20 +47,20 @@ val LightErrorContainer = Color(0xFFFFE5E8)
 val LightOnErrorContainer = Color(0xFF781D32)
 val LightCardBorder = Color(0xFFDCE3F2)
 
-// Dark: ink-blue, not black; containers form a legible elevation ladder.
-val DarkBackground = Color(0xFF0C1226)
-val DarkSurface = Color(0xFF141B33)
-val DarkSurfaceDim = Color(0xFF0C1226)
-val DarkSurfaceBright = Color(0xFF2B3551)
-val DarkSurfaceContainerLowest = Color(0xFF090F21)
-val DarkSurfaceContainerLow = Color(0xFF171F39)
-val DarkSurfaceContainer = Color(0xFF202A45)
-val DarkSurfaceContainerHigh = Color(0xFF2A3653)
-val DarkSurfaceContainerHighest = Color(0xFF354361)
-val DarkOnSurface = Color(0xFFF1F3FF)
-val DarkOnSurfaceVariant = Color(0xFFBBC5DE)
-val DarkOutline = Color(0xFF9CA9C9)
-val DarkOutlineVariant = Color(0xFF394561)
+// Dark: pure black (#000000) for OLED battery savings + neutral gray tonal surfaces with zero blue tint.
+val DarkBackground = Color(0xFF000000)
+val DarkSurface = Color(0xFF121212)
+val DarkSurfaceDim = Color(0xFF000000)
+val DarkSurfaceBright = Color(0xFF2C2C2C)
+val DarkSurfaceContainerLowest = Color(0xFF000000)
+val DarkSurfaceContainerLow = Color(0xFF161616)
+val DarkSurfaceContainer = Color(0xFF1E1E1E)
+val DarkSurfaceContainerHigh = Color(0xFF262626)
+val DarkSurfaceContainerHighest = Color(0xFF303030)
+val DarkOnSurface = Color(0xFFF5F5F5)
+val DarkOnSurfaceVariant = Color(0xFFC4C4C4)
+val DarkOutline = Color(0xFF8E8E8E)
+val DarkOutlineVariant = Color(0xFF2E2E2E)
 val DarkPrimary = Color(0xFFA9B7FF)
 val DarkPrimaryButton = Color(0xFFA9B7FF)
 val DarkOnPrimary = Color(0xFF13205A)
@@ -82,7 +82,7 @@ val DarkError = Color(0xFFFFB5C1)
 val DarkOnError = Color(0xFF690D26)
 val DarkErrorContainer = Color(0xFF72273C)
 val DarkOnErrorContainer = Color(0xFFFFE1E7)
-val DarkCardBorder = Color(0xFF394561)
+val DarkCardBorder = Color(0xFF262626)
 
 @Immutable
 data class PillarColors(
@@ -178,13 +178,13 @@ val DarkPillarColors = PillarColors(
     successContainer = Color(0xFF052E16),
     warningPrimary = Color(0xFFFCD34D),
     warningContainer = Color(0xFF451A03),
-    cardSurface = Color(0xFF17213E),
-    cardBorder = Color(0xFF17213E),
+    cardSurface = Color(0xFF161616),
+    cardBorder = Color(0xFF262626),
     primaryActionBackground = Color(0xFFDCE3F2),
     primaryActionText = Color(0xFF17213E),
-    dockSurface = Color(0xF00F172A),
+    dockSurface = Color(0xF0161616),
     dockBorder = Color(0x26FFFFFF),
-    activePillContainer = Color(0xFF17213E),
+    activePillContainer = Color(0xFF262626),
     activePillContent = Color(0xFFF8FAFC)
 )
 

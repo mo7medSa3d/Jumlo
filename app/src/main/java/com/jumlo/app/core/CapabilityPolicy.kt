@@ -21,13 +21,11 @@ object CapabilityPolicy {
     // Tools whose correctness is proven by an executed test suite against the real backend.
     private val hostCoreTested = setOf(
         "file_07", "file_08", "sha256", "dl_02", "dl_03",
-        // PdfSecurityQualificationTest proves the AES-128 protect/unlock round trip:
-        // a wrong password is rejected and the owner password is honoured.
         "pdf_protect",
-        // PdfMetadataCleanerTest proves the authoring trail is really gone.
         "pdf_clean",
-        // EncryptedZipSafetyTest and ArchiveCoreReliabilityTest exercise real
-        // AES payload authentication, collisions, tampering and cancellation.
+        "pdf_to_docx",
+        "pdf_to_pptx",
+        "pdf_ocr",
         "file_encrypted_zip"
     )
     private val processing = hostCoreTested + setOf(
@@ -37,7 +35,6 @@ object CapabilityPolicy {
         "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch"
     )
     private val blocked = mapOf(
-        "pdf_ocr" to "SEARCHABLE_OCR_INTEGRITY_QUALIFICATION_PENDING",
         "webpage_pdf" to "WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING",
         "file_drive" to "DRIVE_PRIVACY_QUALIFICATION_PENDING",
         "xf_05" to "VAULT_BACKEND_UNQUALIFIED"

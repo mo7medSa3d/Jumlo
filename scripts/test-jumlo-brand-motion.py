@@ -110,9 +110,9 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_haptics_sounds_settings_persist_and_controls_render(self):
         repo=code('data/preferences/UserPreferencesRepository.kt')
         settings=code('ui/settings/SettingsScreen.kt')
-        for part in ('HAPTIC_INTENSITY','UI_SOUNDS','setHapticIntensity','setSoundsEnabled'):
+        for part in ('DEFAULT_VIDEO_QUALITY','DEFAULT_AUDIO_QUALITY','setDefaultVideoQuality','setDefaultAudioQuality'):
             self.assertIn(part,repo)
-        for part in ('settings.hapticIntensity','settings.soundsEnabled','viewModel::setSoundsEnabled','viewModel.setHapticIntensity('):
+        for part in ('settings.defaultVideoQuality','settings.defaultAudioQuality','viewModel.setDefaultVideoQuality(','viewModel.setDefaultAudioQuality('):
             self.assertIn(part,settings)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')

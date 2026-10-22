@@ -8,6 +8,7 @@ object AutoOutputName {
         "pdf_compress" to "Compressed", "pdf_stamp" to "Stamped", "pdf_annotate" to "Annotated",
         "pdf_signature" to "Signed", "pdf_metadata" to "Updated", "pdf_forms" to "Filled",
         "pdf_protect" to "Protected", "pdf_clean" to "Cleaned",
+        "pdf_to_docx" to "Document", "pdf_to_pptx" to "Presentation", "pdf_ocr" to "OCR",
         "file_07" to "Archive", "file_encrypted_zip" to "Archive"
     )
     fun cleanBaseName(displayName:String, fallback:String="File"):String {
@@ -19,7 +20,13 @@ object AutoOutputName {
         val operation=operations[toolId] ?: return null
         val base=cleanBaseName(displayName)
         if(toolId=="pdf_07") return SafeNames.basename(base)
-        val extension=if(toolId.startsWith("file_")) "zip" else "pdf"
+        val extension=when {
+            toolId.startsWith("file_") -> "zip"
+            toolId == "pdf_to_docx" -> "docx"
+            toolId == "pdf_to_pptx" -> "pptx"
+            toolId == "pdf_ocr" -> "txt"
+            else -> "pdf"
+        }
         return SafeNames.basename("$base - $operation.$extension")
     }
     fun pageImageName(baseName:String, pageNumber:Int, extension:String):String {

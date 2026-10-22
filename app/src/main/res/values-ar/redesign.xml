@@ -56,4 +56,7 @@
     <string name="redesign_save_fallback">بعض الملفات محفوظة بأمان داخل Jumlo لأن الحفظ في المجلد المختار لم ينجح. استخدم تصدير لحفظ نسخة ظاهرة منها.</string>
     <string name="redesign_storage_by_type">النتائج حسب نوع الملف</string>
     <string name="redesign_pdf_type">PDF</string>
+    <string name="pref_default_video_quality">جودة الفيديو الافتراضية</string>
+    <string name="pref_default_audio_quality">جودة الصوت الافتراضية</string>
+    <string name="quality_video_best">أعلى جودة متاحة</string>
 </resources>

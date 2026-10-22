@@ -1,6 +1,6 @@
 package com.jumlo.app.ui.workspace
 
-import androidx.compose.foundation.BorderStroke
+import com.jumlo.app.ui.icons.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -154,7 +154,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     }
     val countValid=when(tool) {
         "pdf_07","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
-        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms","pdf_clean","pdf_protect","pdf_ocr" -> queue.size==1
+        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms","pdf_clean","pdf_protect","pdf_ocr","pdf_to_docx","pdf_to_pptx" -> queue.size==1
         "pdf_image","pdf_signature","pdf_compare","img_compare" -> queue.size==2
         "pdf_metadata" -> queue.size in 1..2
         "file_encrypted_zip" -> !form.flag1 || queue.size==1
@@ -246,9 +246,54 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                     ImageResultPreview(vm,ids,form)
                 }
-                if(tool.startsWith("img_") || tool in setOf("pdf_compress","pdf_07","pdf_02")) {
+                if(tool.startsWith("img_") || tool in setOf("pdf_compress","pdf_07","pdf_02","pdf_to_docx","pdf_to_pptx")) {
                     item(key="visual-intuitive-controls") {
                         VisualImageSettings(form,vm::updateForm)
+                    }
+                }
+                if(tool=="pdf_compress" && queue.size==1) {
+                    item(key="compress-live-size-preview") {
+                        val sourceId=queue.single().id
+                        var profile by remember(sourceId) { mutableStateOf<CompressionProfile?>(null) }
+                        LaunchedEffect(sourceId) { profile=vm.compressionProfile(sourceId) }
+                        profile?.let { prof ->
+                            val dpi=form.num1.toIntOrNull()?:180
+                            val quality=form.quality.toIntOrNull()?:75
+                            val est=PdfCompressionPolicy.estimateBytes(prof.originalBytes,prof.imageBytes,dpi,quality)
+                            val saving=PdfCompressionPolicy.estimatedSavingPercent(prof.originalBytes,est)
+                            Surface(
+                                shape=RoundedCornerShape(20.dp),
+                                color=MaterialTheme.colorScheme.primaryContainer,
+                                tonalElevation=2.dp,
+                                modifier=Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier=Modifier.fillMaxWidth().padding(16.dp),
+                                    verticalAlignment=Alignment.CenterVertically,
+                                    horizontalArrangement=Arrangement.SpaceBetween
+                                ) {
+                                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            text=stringResource(R.string.ui_size_before_after,formatBytes(prof.originalBytes),formatBytes(est),saving),
+                                            style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.Bold),
+                                            color=MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text=stringResource(R.string.field_compress_estimate_note),
+                                            style=QuietTheme.typography.metadata,
+                                            color=MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha=0.85f)
+                                        )
+                                    }
+                                    if(saving>0) {
+                                        QuietBadge(
+                                            text="-$saving%",
+                                            containerColor=MaterialTheme.colorScheme.primary,
+                                            contentColor=MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 if(tool=="pdf_02" && preview!=null) item("paper-preview") {
@@ -306,7 +351,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         Surface(
                             color=MaterialTheme.colorScheme.surfaceContainerLow,
                             shape=RoundedCornerShape(20.dp),
-                            border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)
+                            tonalElevation=2.dp
                         ) {
                             Row(
                                 modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),
@@ -379,10 +424,11 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
 }
 
 /**
- * 2026 PDF & Image Previewer:
+ * Rebuilt 2026 PDF & Image Viewer:
  * - Smooth horizontal page swiping via HorizontalPager (automatically reverses in RTL).
- * - Pinch-to-zoom & pan gestures + double-tap quick zoom (1x <-> 2.5x).
- * - Modern floating page indicator pill & prev/next controls.
+ * - Pinch-to-zoom & pan gestures (1x..4x) + double-tap quick zoom (1x <-> 2.5x).
+ * - Interactive horizontal page thumbnail strip for multi-page PDFs.
+ * - Dark mode page rendering toggle (inverts white paper for comfortable OLED reading).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable private fun InputPreview(
@@ -396,18 +442,19 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     var offset by remember(sourceId, pagerState.currentPage) { mutableStateOf(Offset.Zero) }
     var currentDims by remember(sourceId) { mutableStateOf<Pair<Int,Int>?>(null) }
     var compareOriginal by rememberSaveable(sourceId) { mutableStateOf(false) }
+    var darkPageReading by rememberSaveable(sourceId) { mutableStateOf(false) }
 
     Surface(
         shape = QuietTheme.shapes.card,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(if (isFullViewer) 440.dp else 300.dp)
+                    .height(if (isFullViewer) 460.dp else 320.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerLowest)
                     .clipToBounds()
@@ -444,8 +491,6 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     LaunchedEffect(frame,pagerState.currentPage) {
                         if(pageIndex==pagerState.currentPage) currentDims=frame?.let {it.width to it.height}
                     }
-                    // RenderThread can retain a displayed bitmap after composition disposal.
-                    // Release through normal ownership instead of recycling a live frame.
 
                     Box(
                         modifier = Modifier
@@ -498,22 +543,35 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             )
                         }
                         frame?.let { current ->
-                            val adjustmentFilter=remember(adjustment?.num1,adjustment?.num2,adjustment?.num3,raster?.grayscale) {
-                                if(raster?.grayscale==true) ColorFilter.colorMatrix(ColorMatrix().apply {setToSaturation(0f)})
-                                else if(adjustment?.toolId!="img_adjust") null else {
-                                    val brightness=(adjustment.num1.toFloatOrNull()?:0f).coerceIn(-100f,100f)
-                                    val contrast=(adjustment.num2.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
-                                    val saturation=(adjustment.num3.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
-                                    val filterMatrix=ColorMatrix().apply {
-                                        setToSaturation(saturation)
-                                        val matrixValues=values
-                                        val shift=brightness*1.27f
-                                        for(row in 0..2) {
-                                            for(col in 0..2) matrixValues[row*5+col]*=contrast
-                                            matrixValues[row*5+4]=shift
+                            val adjustmentFilter=remember(adjustment?.num1,adjustment?.num2,adjustment?.num3,raster?.grayscale,darkPageReading) {
+                                when {
+                                    darkPageReading -> ColorFilter.colorMatrix(
+                                        ColorMatrix(
+                                            floatArrayOf(
+                                                -0.88f, 0f, 0f, 0f, 240f,
+                                                0f, -0.88f, 0f, 0f, 240f,
+                                                0f, 0f, -0.88f, 0f, 240f,
+                                                0f, 0f, 0f, 1f, 0f
+                                            )
+                                        )
+                                    )
+                                    raster?.grayscale==true -> ColorFilter.colorMatrix(ColorMatrix().apply {setToSaturation(0f)})
+                                    adjustment?.toolId!="img_adjust" -> null
+                                    else -> {
+                                        val brightness=(adjustment.num1.toFloatOrNull()?:0f).coerceIn(-100f,100f)
+                                        val contrast=(adjustment.num2.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
+                                        val saturation=(adjustment.num3.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
+                                        val filterMatrix=ColorMatrix().apply {
+                                            setToSaturation(saturation)
+                                            val matrixValues=values
+                                            val shift=brightness*1.27f
+                                            for(row in 0..2) {
+                                                for(col in 0..2) matrixValues[row*5+col]*=contrast
+                                                matrixValues[row*5+4]=shift
+                                            }
                                         }
+                                        ColorFilter.colorMatrix(filterMatrix)
                                     }
-                                    ColorFilter.colorMatrix(filterMatrix)
                                 }
                             }
                             Image(
@@ -576,8 +634,18 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         Text(dimensions,style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (pageCount > 1) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(
+                        onClick = { darkPageReading = !darkPageReading },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.DarkMode,
+                            contentDescription = stringResource(R.string.pref_theme_dark),
+                            tint = if (darkPageReading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (pageCount > 1) {
                         IconButton(
                             enabled = pagerState.currentPage > 0,
                             onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
@@ -595,8 +663,56 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
             }
+
+            // Interactive Page Thumbnail Strip for multi-page PDFs
+            if (pageCount > 1) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items((1..pageCount.coerceAtMost(120)).toList(), key = { it }) { thumbPage ->
+                        val isCurrent = pagerState.currentPage == thumbPage - 1
+                        var thumbFrame by remember(sourceId, thumbPage) { mutableStateOf<PreviewFrame?>(null) }
+                        LaunchedEffect(sourceId, thumbPage) {
+                            thumbFrame = runCatching { vm.thumbnail(sourceId, thumbPage) }.getOrNull()
+                        }
+                        Surface(
+                            onClick = { scope.launch { pagerState.animateScrollToPage(thumbPage - 1) } },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = if (isCurrent) 4.dp else 1.dp,
+                            modifier = Modifier.size(width = 56.dp, height = 74.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(3.dp)) {
+                                thumbFrame?.let { tf ->
+                                    Image(
+                                        bitmap = tf.bitmap.asImageBitmap(),
+                                        contentDescription = thumbPage.toString(),
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.78f),
+                                    modifier = Modifier.align(Alignment.BottomCenter).padding(2.dp)
+                                ) {
+                                    Text(
+                                        text = thumbPage.toString(),
+                                        style = QuietTheme.typography.badge,
+                                        color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if(adjustment?.toolId=="img_adjust") {
-                OutlinedButton(onClick={compareOriginal=!compareOriginal},
+                FilledTonalButton(onClick={compareOriginal=!compareOriginal},
                     modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                     Icon(Icons.Rounded.Compare,null,Modifier.size(19.dp))
                     Spacer(Modifier.width(8.dp))
@@ -883,7 +999,7 @@ private fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int =
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
                         shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                        tonalElevation = 1.dp
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(14.dp),

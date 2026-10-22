@@ -45,6 +45,8 @@ import kotlin.math.sqrt
         "pdf_clean" -> structural(request,context,"clean")
         "pdf_protect" -> structural(request,context,"protect")
         "pdf_forms" -> structural(request,context,"forms")
+        "pdf_to_docx" -> pdfToDocx(request,context)
+        "pdf_to_pptx" -> pdfToPptx(request,context)
         else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
     }
 
@@ -723,5 +725,129 @@ import kotlin.math.sqrt
                 }
             }
         }
+    }
+
+    private suspend fun pdfToDocx(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
+        require(request.sourceIds.size == 1) { "ONE_PDF_REQUIRED" }
+        val key = "docx"
+        context.outputs.find(request.id, key)?.let { return listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
+        val s = JSONObject(request.settingsJson)
+        val firstSourceName = runCatching { context.sources.get(request.sourceIds.single()).displayName }.getOrNull()
+        val rawName = s.optString("displayName", "").trim()
+        val baseChosen = if (rawName.isNotEmpty() && !rawName.equals("Document.pdf", true) && !rawName.equals("download.bin", true)) {
+            rawName.substringBeforeLast('.', rawName) + ".docx"
+        } else {
+            firstSourceName?.let { AutoOutputName.fromSource("pdf_to_docx", it) } ?: "Document.docx"
+        }
+        val displayName = SafeNames.basename(if (baseChosen.endsWith(".docx", true)) baseChosen else "$baseChosen.docx")
+        val docxMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        val ticket = context.outputs.reserve(request.id, key, displayName, docxMime)
+        var originalSize = 0L
+        var pageCount = 0
+        context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
+            originalSize = src.length()
+            openUnencrypted(src).close()
+            val pagesSpec = s.optString("pages", "all")
+            val forceOcr = s.optBoolean("forceOcr", false)
+            val pages = OcrEngine.extractPagesWithOcrFallback(
+                pdfFile = src,
+                pagesSpec = pagesSpec,
+                dpi = s.optInt("dpi", 180).coerceIn(120, 300),
+                forceOcr = forceOcr,
+                maxBitmapBytes = context.budget.maxBitmapBytes,
+                onPageProgress = { done, total ->
+                    context.report(JobProgress(JobStage.RUNNING, done.toLong(), total.toLong()))
+                },
+                checkCancel = context.checkCancellation
+            )
+            pageCount = pages.size
+            context.report(JobProgress(JobStage.FINALIZING, pageCount.toLong(), pageCount.toLong()))
+            OoxmlDocxBuilder.build(
+                outputFile = ticket.stageFile,
+                pages = pages,
+                title = displayName.substringBeforeLast('.'),
+                checkCancel = context.checkCancellation
+            )
+        }
+        val record = context.outputs.publish(ticket) { file ->
+            OoxmlDocxBuilder.verifyDocx(file)
+            OutputMetadata(pageCount = pageCount, originalSizeBytes = originalSize)
+        }
+        return listOf(ItemOutcome(key, ItemStatus.CREATED, record.id))
+    }
+
+    private suspend fun pdfToPptx(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
+        require(request.sourceIds.size == 1) { "ONE_PDF_REQUIRED" }
+        val key = "pptx"
+        context.outputs.find(request.id, key)?.let { return listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
+        val s = JSONObject(request.settingsJson)
+        val firstSourceName = runCatching { context.sources.get(request.sourceIds.single()).displayName }.getOrNull()
+        val rawName = s.optString("displayName", "").trim()
+        val baseChosen = if (rawName.isNotEmpty() && !rawName.equals("Document.pdf", true) && !rawName.equals("download.bin", true)) {
+            rawName.substringBeforeLast('.', rawName) + ".pptx"
+        } else {
+            firstSourceName?.let { AutoOutputName.fromSource("pdf_to_pptx", it) } ?: "Presentation.pptx"
+        }
+        val displayName = SafeNames.basename(if (baseChosen.endsWith(".pptx", true)) baseChosen else "$baseChosen.pptx")
+        val pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        val ticket = context.outputs.reserve(request.id, key, displayName, pptxMime)
+        var originalSize = 0L
+        var slideCount = 0
+        context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
+            originalSize = src.length()
+            val slides = mutableListOf<PptxSlideContent>()
+            openUnencrypted(src).use { doc ->
+                val totalPages = doc.numberOfPages
+                require(totalPages > 0) { "EMPTY_PDF" }
+                val selectedPages = pages(s.optString("pages", "all"), totalPages)
+                val renderDpi = s.optInt("dpi", 150).coerceIn(96, 300)
+                ParcelFileDescriptor.open(src, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                    val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                    renderer.use { pdfRenderer ->
+                        selectedPages.forEachIndexed { idx, pageNumber ->
+                            context.checkCancellation()
+                            val zeroBased = pageNumber - 1
+                            val extractedText = runCatching { PdfBoxBackend.pageText(doc, zeroBased).trim() }.getOrDefault("")
+                            pdfRenderer.openPage(zeroBased).use { page ->
+                                val widthPx = (page.width.toDouble() * renderDpi / 72.0).roundToInt().coerceAtLeast(1)
+                                val heightPx = (page.height.toDouble() * renderDpi / 72.0).roundToInt().coerceAtLeast(1)
+                                ImageWorkPolicy.requireFits(widthPx, heightPx, 0L, context.budget.maxBitmapBytes)
+                                val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+                                val pngBytes = try {
+                                    bitmap.eraseColor(Color.WHITE)
+                                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                    val baos = java.io.ByteArrayOutputStream()
+                                    require(bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)) { "IMAGE_ENCODE_FAILED" }
+                                    baos.toByteArray()
+                                } finally {
+                                    bitmap.recycle()
+                                }
+                                slides += PptxSlideContent(
+                                    pageNumber = pageNumber,
+                                    imagePngBytes = pngBytes,
+                                    widthPt = page.width.toFloat().coerceAtLeast(144f),
+                                    heightPt = page.height.toFloat().coerceAtLeast(144f),
+                                    extractedText = extractedText
+                                )
+                            }
+                            context.report(JobProgress(JobStage.RUNNING, (idx + 1).toLong(), selectedPages.size.toLong()))
+                        }
+                    }
+                }
+            }
+            slideCount = slides.size
+            context.report(JobProgress(JobStage.FINALIZING, slideCount.toLong(), slideCount.toLong()))
+            OoxmlPptxBuilder.build(
+                outputFile = ticket.stageFile,
+                slides = slides,
+                title = displayName.substringBeforeLast('.'),
+                checkCancel = context.checkCancellation
+            )
+        }
+        val record = context.outputs.publish(ticket) { file ->
+            OoxmlPptxBuilder.verifyPptx(file, slideCount)
+            OutputMetadata(pageCount = slideCount, originalSizeBytes = originalSize)
+        }
+        return listOf(ItemOutcome(key, ItemStatus.CREATED, record.id))
     }
 }

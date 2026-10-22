@@ -1,6 +1,7 @@
 package com.jumlo.app.ui.components
 
 import androidx.compose.material.icons.Icons
+import com.jumlo.app.ui.icons.*
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Build

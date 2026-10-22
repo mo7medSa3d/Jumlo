@@ -101,8 +101,10 @@ object PdfCompressionPolicy {
 
         companion object {
             /** The old names stay readable so an existing preset keeps working. */
-            private val legacy = mapOf("EMAIL_1MB" to STRONG, "BALANCED" to BALANCED,
-                "HIGH_QUALITY" to BEST_QUALITY)
+            private val legacy = mapOf(
+                "EMAIL_1MB" to STRONG, "BALANCED" to BALANCED, "HIGH_QUALITY" to BEST_QUALITY,
+                "LOW" to BEST_QUALITY, "MEDIUM" to BALANCED, "HIGH" to STRONG
+            )
             fun fromId(id: String?): Preset? = entries.firstOrNull { it.name == id } ?: legacy[id]
         }
     }

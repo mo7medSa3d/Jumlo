@@ -4,7 +4,7 @@ import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.BorderStroke
+import com.jumlo.app.ui.icons.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
@@ -78,8 +78,8 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
     Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
         onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
         onLongClick=onLongClick
-    ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface,
-        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+    ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation=1.dp) {
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             if(selection!=null) Checkbox(selection,{onSelect?.invoke()}) else Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
@@ -95,7 +95,10 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 }
 
 @Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null,isFavorite:Boolean=false,onFavorite:(()->Unit)?=null,onPrint:(()->Unit)?=null,onRename:(()->Unit)?=null,onLongClick:(()->Unit)?=null) {
-    val summary = "${formatOutputSizeSummary(output)} · ${outputTypeLabel(output.mimeType)}"
+    val dateLabel = remember(output.createdAtEpochMs) {
+        java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT).format(java.util.Date(output.createdAtEpochMs))
+    }
+    val summary = "${formatOutputSizeSummary(output)} · $dateLabel · ${outputTypeLabel(output.mimeType)}"
     val outputIcon=when {
         output.mimeType=="application/pdf" -> Icons.Rounded.PictureAsPdf
         output.mimeType.startsWith("image/") -> Icons.Rounded.Image

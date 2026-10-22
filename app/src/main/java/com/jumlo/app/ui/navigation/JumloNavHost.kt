@@ -59,14 +59,17 @@ import kotlinx.serialization.Serializable
 
 private fun title(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) tool.titleAr else tool.titleEn
 
-/** Type-safe Navigation Compose routes (Phase 4). */
+/** Type-safe Navigation Compose routes (2026 Navigation & Routing). */
 @Serializable object HomeRoute
 @Serializable object ToolsRoute
+@Serializable data class ToolWorkspaceRoute(val toolId: String = "pdf_02")
+@Serializable object PdfCompressRoute
+@Serializable object ScanRoute
 @Serializable object DownloadsRoute
-@Serializable object PrintRoute
 @Serializable object FilesRoute
 @Serializable object SettingsRoute
-@Serializable object ScanRoute
+@Serializable object SettingsStorageRoute
+@Serializable object PrintRoute
 @Serializable object WorkspaceRoute
 @Serializable object ActivityRoute
 
@@ -107,10 +110,12 @@ fun JumloNavHost(viewModel:AppViewModel) {
         FilesRoute::class.qualifiedName -> "files_overview"
         PrintRoute::class.qualifiedName -> "print"
         SettingsRoute::class.qualifiedName -> "settings"
+        SettingsStorageRoute::class.qualifiedName -> "settings_storage"
+        PdfCompressRoute::class.qualifiedName -> "workspace"
         ScanRoute::class.qualifiedName -> "scan"
         WorkspaceRoute::class.qualifiedName -> "workspace"
         ActivityRoute::class.qualifiedName -> "activity"
-        else -> "home"
+        else -> if (currentEntry?.destination?.route?.startsWith(ToolWorkspaceRoute::class.qualifiedName ?: "ToolWorkspaceRoute") == true) "workspace" else "home"
     }
     var lastTab by rememberSaveable { mutableStateOf(DockTab.HOME) }
     val tab = DockTab.entries.firstOrNull { it.route==route } ?: lastTab
@@ -125,12 +130,14 @@ fun JumloNavHost(viewModel:AppViewModel) {
         }
     }
     fun destinationFor(name: String): Any = when (name) {
-        "tools_catalog" -> ToolsRoute
+        "tools_catalog", "tools" -> ToolsRoute
+        "tools/pdf/compress" -> PdfCompressRoute
+        "tools/scan", "scan" -> ScanRoute
         "downloads" -> DownloadsRoute
-        "files_overview" -> FilesRoute
+        "files_overview", "files" -> FilesRoute
         "print" -> PrintRoute
         "settings" -> SettingsRoute
-        "scan" -> ScanRoute
+        "settings/storage", "settings_storage" -> SettingsStorageRoute
         "workspace" -> WorkspaceRoute
         "activity" -> ActivityRoute
         else -> HomeRoute
@@ -160,7 +167,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
     fun goBack() { if(route=="workspace" && dirty) confirmLeave=true else leaveWorkspace() }
     var backSwipe by remember { mutableFloatStateOf(0f) }
-    PredictiveBackHandler(enabled = route in setOf("workspace","print","scan","activity")) { progress ->
+    PredictiveBackHandler(enabled = route in setOf("workspace","print","scan","activity","settings_storage")) { progress ->
         try {
             progress.collect { backSwipe=it.progress.coerceIn(0f,1f) }
             if(route=="workspace" && dirty) confirmLeave=true else leaveWorkspace()
@@ -332,9 +339,9 @@ fun JumloNavHost(viewModel:AppViewModel) {
             }) {
                 Column(Modifier.fillMaxSize()) {
                     if(root) QuietRootTopBar(
-                        title=stringResource(if(shellRoute=="settings") R.string.neon_dock_me else R.string.app_name),
-                        onSearchClick=if(shellRoute=="home") ({navigateTab(DockTab.TOOLS)}) else null,
-                        onSettingsClick={navigateTo("settings")},onAccountClick={showAccountHub=true}
+                        title=stringResource(if(shellRoute=="settings") R.string.settings_title else R.string.app_name),
+                        onSearchClick=null,
+                        onSettingsClick={navigateTab(DockTab.SETTINGS)},onAccountClick={showAccountHub=true}
                     ) else QuietWorkspaceTopBar(
                         title=when(shellRoute) {"workspace"->CapabilityRegistry.tools.find {it.id==form.toolId}?.let {title(it,settings.language)} ?: stringResource(R.string.workspace_title);"activity"->stringResource(R.string.activity_title);"scan"->stringResource(R.string.scan_title);else->stringResource(R.string.settings_title)},
                         onBack=::goBack
@@ -363,11 +370,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 {renameEntry=it;renameText=it.name}, {deleteEntry=it}, {newFolder=true;folderName=""},
                                 {chosen,toolId->viewModel.prepareOutputWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 {chosen,toolId->viewModel.prepareSourceBatchWorkflow(toolId,chosen) {navigateTo("workspace")} },
-                                onPrint=viewModel::printOutput,onPrintSource={viewModel.printSource(it)})
+                                onPrint=viewModel::printOutput,onPrintSource={viewModel.printSource(it)},onChangeSaveFolder={pickDownloadDestination()})
                             "print" -> com.jumlo.app.printing.PrintScreen(
                                 source=printSource,onBack=::goBack,onPickDocument=::importPrintDocument,
                                 modifier=Modifier.padding(bottom=QuietTheme.spacing.listBottomBuffer))
-                            "settings" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
+                            "settings", "settings_storage" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
                                 onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
                                 onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
                                 onOpenFiles={navigateTab(DockTab.FILES)},onChooseFolder={pickFolder()},
@@ -397,7 +404,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     subtitle=stringResource(R.string.ui_unavailable_body),
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
-                                ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultWifiOnly=settings.wifiOnlyDefault)
+                                ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultWifiOnly=settings.wifiOnlyDefault,defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality)
                                 else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn,onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)}) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,selectedJob,{launchExternal(it.uri,it.mimeType,false)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(selectedJob!=null) ({selectedJob=null}) else null,onPrint=viewModel::printOutput)
@@ -482,6 +489,16 @@ fun JumloNavHost(viewModel:AppViewModel) {
             composable<FilesRoute> { Shell("files_overview") }
             composable<PrintRoute> { Shell("print") }
             composable<SettingsRoute> { Shell("settings") }
+            composable<SettingsStorageRoute> { Shell("settings_storage") }
+            composable<PdfCompressRoute> {
+                LaunchedEffect(Unit) { viewModel.chooseTool("pdf_compress") }
+                Shell("workspace")
+            }
+            composable<ToolWorkspaceRoute> { entry ->
+                val toolId = entry.arguments?.getString("toolId") ?: "pdf_02"
+                LaunchedEffect(toolId) { viewModel.chooseTool(toolId) }
+                Shell("workspace")
+            }
             composable<ScanRoute> { Shell("scan") }
             composable<WorkspaceRoute>(deepLinks = listOf(navDeepLink<WorkspaceRoute>(basePath = "jumlo://workspace"))) { Shell("workspace") }
             composable<ActivityRoute> { Shell("activity") }

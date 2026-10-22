@@ -1,15 +1,5 @@
 package com.jumlo.app.core
 
-/**
- * The visible catalogue.
- *
- * The app carries forty-five capabilities, but a grid of forty-five tiles is noise:
- * somebody opening a scanner app wants "make a PDF", "scan" and "fix a photo", not
- * "extract pages". The registry still holds every capability, the search still finds
- * all of them, and every capability still runs. What changed is the *surface*: the
- * screens present a handful of workspaces, and the operations that belong together
- * sit inside one of them instead of competing for the same row.
- */
 enum class ToolWorkspace(val id: String) {
     PDF("pdf"),
     SCANNER("scanner"),
@@ -18,12 +8,9 @@ enum class ToolWorkspace(val id: String) {
     DOWNLOADS("downloads")
 }
 
-/** One workspace: the tool that opens it, and the capabilities merged into it. */
 data class WorkspaceEntry(
     val workspace: ToolWorkspace,
-    /** The tools that get a tile. */
     val primary: List<String>,
-    /** The tools that are reachable, but folded into the workspace. */
     val merged: List<String>
 )
 
@@ -33,69 +20,68 @@ object ToolCatalogue {
         WorkspaceEntry(
             ToolWorkspace.PDF,
             primary = listOf(
-                "pdf_03",       // merge
-                "pdf_05",       // split
-                "pdf_04",       // organise pages
-                "pdf_compress", // compress
-                "pdf_07",       // pdf to images
-                "pdf_signature",// sign
-                "pdf_clean"     // clean the authoring trail
+                "pdf_03",       // Merge PDF
+                "pdf_05",       // Split PDF
+                "pdf_compress", // Compress PDF
+                "pdf_to_docx",  // PDF to Word (.docx)
+                "pdf_to_pptx",  // PDF to PowerPoint (.pptx)
+                "pdf_02",       // Image to PDF
+                "pdf_04",       // Organize Pages
+                "pdf_07",       // PDF to Images
+                "pdf_signature" // Sign PDF
             ),
             merged = listOf(
-                "pdf_02",       // images to pdf
-                "pdf_06",       // extract pages
-                "pdf_crop",     // crop pages
-                "pdf_image",    // add an image
-                "pdf_forms",    // fill a form
-                "pdf_annotate", // annotate
-                "pdf_stamp",    // watermark and page numbers
-                "pdf_metadata", // document properties
-                "pdf_protect",  // password
-                "pdf_01",       // view
-                "pdf_ocr",      // searchable pdf
-                "webpage_pdf"   // webpage to pdf
+                "pdf_01",       // PDF Viewer
+                "pdf_06",       // Extract Pages
+                "pdf_crop",     // Crop Pages
+                "pdf_image",    // Add Image to PDF
+                "pdf_forms",    // Fill PDF Form
+                "pdf_annotate", // Annotate PDF
+                "pdf_stamp",    // Watermark & Page Numbers
+                "pdf_metadata", // PDF Metadata
+                "pdf_protect",  // Password Protect
+                "pdf_clean"     // Clean Metadata
             )
         ),
         WorkspaceEntry(
             ToolWorkspace.SCANNER,
-            primary = listOf("scan_doc"),
-            merged = listOf("pdf_ocr")
+            primary = listOf("scan_doc", "pdf_ocr"),
+            merged = emptyList()
         ),
         WorkspaceEntry(
             ToolWorkspace.IMAGES,
             primary = listOf(
-                "img_03",       // crop, rotate, flip
-                "img_02",       // resize
-                "img_04",       // compress
-                "img_01",       // convert
-                "img_join",     // join and collage
-                "img_watermark" // watermark
+                "img_03",       // Crop & Rotate
+                "img_02",       // Resize Images
+                "img_04",       // Compress Images
+                "img_01",       // Convert Images
+                "img_join"      // Collage
             ),
             merged = listOf(
-                "img_adjust", // adjust and pad
-                "img_target", // target size
-                "img_stitch", // stitch screenshots
-                "img_exif"    // exif inspector
+                "img_watermark",// Watermark Image
+                "img_adjust",   // Adjust & Pad
+                "img_target",   // Target Size
+                "img_stitch",   // Stitch Screenshots
+                "img_exif"      // EXIF Inspector
             )
         ),
         WorkspaceEntry(
             ToolWorkspace.FILES,
             primary = listOf(
-                "file_07",            // create an archive
-                "file_duplicates",    // duplicate finder
-                "file_batch_rename"   // batch rename
+                "file_07",            // Create ZIP
+                "file_duplicates",    // Duplicate Finder
+                "file_batch_rename"   // Batch Rename
             ),
             merged = listOf(
-                "file_08",            // extract an archive
-                "file_encrypted_zip", // encrypted archive
-                "sha256"              // verify a digest
+                "file_08",            // Extract ZIP
+                "file_encrypted_zip", // Encrypted ZIP
+                "sha256"              // SHA-256 Verify
             )
         ),
         WorkspaceEntry(
             ToolWorkspace.DOWNLOADS,
-            // One download manager covers a direct link, a batch of links and media.
-            primary = listOf("dl_02"),
-            merged = listOf("dl_03", "dl_media", "dl_settings")
+            primary = listOf("dl_media"),
+            merged = listOf("dl_02", "dl_03", "dl_settings")
         )
     )
 
@@ -107,28 +93,28 @@ object ToolCatalogue {
 
     fun entry(workspace: ToolWorkspace): WorkspaceEntry? = byWorkspace[workspace]
 
-    /** The tools that get a tile in the catalogue. */
     fun primaryTools(): List<String> = primaryIds.toList()
 
-    /** The tools that are folded into a workspace but stay reachable. */
     fun mergedTools(): List<String> = mergedIds.toList()
 
-    /** True when the tool appears as a tile rather than as a folded action. */
     fun isPrimary(toolId: String): Boolean = toolId in primaryIds
 
     fun workspaceOf(toolId: String): ToolWorkspace? =
         entries.firstOrNull { toolId in it.primary || toolId in it.merged }?.workspace
 
     /**
-     * The tools that are deliberately kept out of the catalogue: specialists that
-     * belong inside a bigger tool, and comparisons that most people never want.
+     * Removed/hidden low-value or redundant tools:
+     * - img_compare: pixel/dimension diff report nobody needs in a mobile PDF/downloader utility
+     * - file_trash: redundant with the Files tab Trash filter
+     * - file_02: redundant with the Files tab SAF folder browser
+     * - webpage_pdf: unrendered HTML dump superseded by native Android browser Print-to-PDF
+     * - file_drive: OAuth Drive relay superseded by Android SAF DocumentProvider + direct Drive links
+     * - xf_05: placeholder Vault concept (Encrypted ZIP provides real AES-256 protection)
      */
-    private val hidden = setOf("img_compare", "file_trash", "file_02", "file_drive", "xf_05")
+    private val hidden = setOf("img_compare", "file_trash", "file_02", "file_drive", "xf_05", "webpage_pdf")
 
-    /** True when the tool should be offered in the catalogue at all. */
     fun isListed(toolId: String): Boolean =
         toolId !in hidden && (toolId in primaryIds || toolId in mergedIds)
 
-    /** The capabilities that are deliberately kept out of the catalogue. */
     fun hiddenTools(): Set<String> = hidden
 }

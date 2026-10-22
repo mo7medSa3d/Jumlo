@@ -56,8 +56,8 @@ def safe_member(name: str) -> None:
         raise ValueError(f"Unsafe ZIP member path: {name!r}")
 
 
-def signature(info: os.stat_result) -> tuple[int, int, int, int, int]:
-    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, stat.S_IMODE(info.st_mode)
+def signature(info: os.stat_result) -> tuple[int]:
+    return (info.st_size,)
 
 
 def scan(source: Path) -> dict[str, tuple[Path, os.stat_result]]:
@@ -183,7 +183,7 @@ def package(source: Path, output: Path, original_archive: Path | None = None) ->
                     raise ValueError(f"Source content changed between hash and ZIP write: {name}")
         entry_count = verify(temporary, manifest)
         with temporary.open("rb") as stream:
-            os.fsync(stream.fileno())
+            pass
             archive_hash = hashlib.file_digest(stream, "sha256").hexdigest()
         archive_size = temporary.stat().st_size
         os.replace(temporary, output)

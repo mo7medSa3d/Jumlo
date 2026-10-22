@@ -109,35 +109,7 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
                     }
                 }
             }
-            if (recent.isNotEmpty() && category == "all" && search.isBlank()) {
-                item("recent-tools") {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NeonSectionHeader(stringResource(R.string.redesign_recent_tools))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(recent, key = { it.id }) { tool ->
-                                CompactCatalogTool(tool, settings.language, { onTool(tool) },
-                                    Modifier.width(120.dp))
-                            }
-                        }
-                    }
-                }
-            }
-            if (frequent.isNotEmpty() && category == "all" && search.isBlank()) {
-                item("popular") {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        NeonSectionHeader(stringResource(R.string.redesign_most_used))
-                        frequent.chunked(columns).forEach { row ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                row.forEach { tool ->
-                                    CompactCatalogTool(tool, settings.language,
-                                        { onTool(tool) }, Modifier.weight(1f))
-                                }
-                                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
-                            }
-                        }
-                    }
-                }
-            }
+
             if (visible.isEmpty()) {
                 item("empty") {
                     QuietStateCard(stringResource(R.string.tools_no_matching),

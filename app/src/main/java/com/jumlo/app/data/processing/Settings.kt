@@ -45,3 +45,5 @@ import kotlinx.serialization.Serializable
     val assetIdentity:String, val choiceKey:String, val fingerprint:String,
     val mode:String="VIDEO",val audioOutput:String="ORIGINAL",val audioBitrate:Int=192
 )
+
+@Serializable data class PdfOoxmlSettings(val displayName:String="Document.docx", val pages:String="all", val dpi:Int=180, val forceOcr:Boolean=false)

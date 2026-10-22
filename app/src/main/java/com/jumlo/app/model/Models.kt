@@ -11,7 +11,7 @@ enum class PillarCategory(val labelEn: String, val labelAr: String) {
 enum class ThemeMode(val labelEn: String, val labelAr: String, val subtitleEn: String, val subtitleAr: String) {
     SYSTEM("System Default", "افتراضي النظام", "Follows Android OS setting", "يتبع إعدادات نظام أندرويد"),
     LIGHT("Light Theme", "المظهر الفاتح", "Warm neutrals & crisp contrast", "ألوان دافئة وتباين واضح"),
-    DARK("Dark Theme", "المظهر الداكن", "Near-black #0B0B0D & deep containers", "أسود عميق #0B0B0D وحاويات مريحة للعين")
+    DARK("Dark Theme", "المظهر الداكن", "Near-black #000000 & deep containers", "أسود عميق #000000 وحاويات مريحة للعين")
 }
 
 enum class AppLanguage(val code: String, val displayName: String, val nativeSubtitle: String, val isRtl: Boolean) {
@@ -126,5 +126,9 @@ data class AppSettingsState(
     /** The extraction service the downloader may use; empty means direct links only. */
     val mediaServiceUrl: String = "",
     /** The shared secret of the downloader service, when it asks for one. */
-    val mediaServiceToken: String = ""
+    val mediaServiceToken: String = "",
+    /** Default video quality preference (BEST, 1080p, 720p, 480p). */
+    val defaultVideoQuality: String = "1080p",
+    /** Default audio quality preference (MP3_320, MP3_192, M4A, ORIGINAL). */
+    val defaultAudioQuality: String = "MP3_320"
 )

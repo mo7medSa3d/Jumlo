@@ -22,7 +22,7 @@ class ReconstructionContractTests(unittest.TestCase):
         self.assertIn('hasCompletedOnboarding', nav)
         self.assertIn('onShowGuide', nav)
         self.assertIn('onShowGuide', settings)
-        self.assertIn('settings.quickStartReplay', settings)
+        self.assertIn('settings.defaultVideoQuality', settings)
 
     def test_interactive_guide_is_accessible(self):
         guide = text('app/src/main/java/com/jumlo/app/ui/components/OnboardingGuide.kt')
