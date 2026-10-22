@@ -1,0 +1,5 @@
+-- Structural fixture reconstructed from the two retained legacy entities in
+-- AppDatabase.kt and their unmodified definitions in the exported v2 schema.
+-- This is not an authentic historical Room schema or a claimed v1 identity hash.
+CREATE TABLE IF NOT EXISTS `managed_files` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `path` TEXT NOT NULL, `folder` TEXT NOT NULL, `extension` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `sizeBytes` INTEGER NOT NULL, `formattedSize` TEXT NOT NULL, `pageCount` INTEGER, `dimensions` TEXT, `itemCount` INTEGER, `modifiedLabelEn` TEXT NOT NULL, `modifiedLabelAr` TEXT NOT NULL, `isDraft` INTEGER NOT NULL, `isArchive` INTEGER NOT NULL, PRIMARY KEY(`id`));
+CREATE TABLE IF NOT EXISTS `download_tasks` (`id` TEXT NOT NULL, `fileName` TEXT NOT NULL, `extension` TEXT NOT NULL, `domain` TEXT NOT NULL, `fullUrl` TEXT NOT NULL, `mimeType` TEXT NOT NULL, `downloadedBytes` INTEGER NOT NULL, `totalBytes` INTEGER NOT NULL, `speedMbps` REAL NOT NULL, `etaLabel` TEXT NOT NULL, `statusName` TEXT NOT NULL, `destinationPath` TEXT NOT NULL, PRIMARY KEY(`id`));
