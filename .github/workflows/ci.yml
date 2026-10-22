@@ -113,6 +113,20 @@ jobs:
         run: |
           set -euo pipefail
           ./gradlew :app:assembleRelease --no-daemon --console=plain 2>&1 | tee -a gradle.log
+          cd app/build/outputs/apk/release
+          for a in *.apk; do sha256sum "$a" > "$a.sha256"; done
+
+      - name: Upload release APK artifact
+        if: ${{ success() && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.full_release_check)) }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Release-APK-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
 
       - name: Upload logs on failure
         if: failure()
