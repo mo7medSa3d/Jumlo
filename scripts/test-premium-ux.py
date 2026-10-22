@@ -30,12 +30,14 @@ class PremiumUxContracts(unittest.TestCase):
         return self.tokens[name]
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
+        # The 2026 palette: document grey surfaces, ink primary, scan blue accent.
         expected = {
-            'LightBackground': 'F5F9F8', 'LightSurface': 'FFFFFF',
-            'LightOnSurface': '102521', 'LightOnSurfaceVariant': '50635F',
-            'LightPrimary': '006F63', 'DarkBackground': '080E12',
-            'DarkSurface': '151F25', 'DarkOnSurface': 'F4FBF9',
-            'DarkPrimary': '52E6D1',
+            'LightBackground': 'F8FAFC', 'LightSurface': 'FFFFFF',
+            'LightOnSurface': '0F172A', 'LightOnSurfaceVariant': '475569',
+            'LightPrimary': '1E293B', 'LightTertiary': '1D4ED8',
+            'DarkBackground': '0B1120',
+            'DarkSurface': '0F172A', 'DarkOnSurface': 'F8FAFC',
+            'DarkPrimary': 'E2E8F0', 'DarkTertiary': '60A5FA',
         }
         for key, value in expected.items():
             with self.subTest(key=key):
@@ -67,15 +69,16 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_splash_uses_cohesive_palette_family(self):
         splash = source('components/JumloSplash.kt')
-        self.assertIn('Color(0xFF081317)', splash)
-        self.assertIn('Color(0xFF0C4743)', splash)
-        self.assertIn('Color(0xFFD7FFF6)', splash)
+        self.assertIn('Color(0xFF0B1120)', splash)
+        self.assertIn('Color(0xFF1E3A8A)', splash)
+        self.assertIn('Color(0xFFDBEAFE)', splash)
         self.assertNotIn('Color(0xFF2221A1)', splash)
 
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):
         code = source('tools/ToolsScreen.kt')
         self.assertIn('BoxWithConstraints(', code)
-        self.assertIn('group.chunked(columns)', code)
+        # The catalogue lays its workspace tiles out on the adaptive column count.
+        self.assertIn('primary.chunked(columns)', code)
         self.assertIn('widthIn(max = 1000.dp)', code)
         self.assertIn('maxWidth >= 600.dp', code)
 
@@ -88,8 +91,12 @@ class PremiumUxContracts(unittest.TestCase):
         code = source('home/HomeScreen.kt')
         components = source('components/NeonUi.kt')
         self.assertIn('NeonToolTile(tool', code)
-        self.assertIn('when (tool.pillar)', components)
-        self.assertIn('QuietIconTile(resolveStitchIcon(tool.iconName)', components)
+        # Every tool carries its own hue, not just its category, so the grid can be
+        # scanned instead of read.
+        self.assertIn('ToolPalette.accentFor(tool.id)', components)
+        # A circular icon button with the label underneath.
+        self.assertIn('shape = CircleShape', components)
+        self.assertIn('Icon(resolveStitchIcon(tool.iconName)', components)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):
         code = source('components/ProductionRows.kt')

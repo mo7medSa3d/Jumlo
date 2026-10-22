@@ -4,8 +4,16 @@ on:
   push:
     branches: [main, 'arena/**']
     tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'verification/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'verification/**'
   workflow_dispatch:
     inputs:
       device_tests:
@@ -17,6 +25,11 @@ on:
         description: Also run release build and R8 shrinker (slow)
         type: boolean
         default: true
+        required: false
+      extended_media:
+        description: Build the opt-in experimental extended-media APK (yt-dlp/FFmpeg, may exceed 60 MB)
+        type: boolean
+        default: false
         required: false
 
 permissions:
@@ -108,6 +121,74 @@ jobs:
           name: Jumlo-Failure-Logs-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             gradle.log
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  extended_media:
+    # Experimental, opt-in only. Bundles the yt-dlp/FFmpeg/Python/QuickJS runtime
+    # (GPL-3.0 obligations, native ABIs and live providers are NOT qualified here),
+    # so it stays a separate artifact and never changes the standard APK gate.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended_media }}
+    name: Extended-media debug APK (experimental)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      - name: Ensure Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$sdk" ]]; then
+            echo 'Android SDK environment not found' >&2
+            exit 1
+          fi
+          if [[ ! -f "$sdk/platforms/android-36/android.jar" || ! -x "$sdk/build-tools/36.0.0/aapt2" ]]; then
+            sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          fi
+
+      - name: Extended-media debug APK, unit tests and lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew -PextendedMedia=true :app:assembleDebug :app:testDebugUnitTest :app:lintDebug \
+            --no-daemon --console=plain 2>&1 | tee gradle-extended.log
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$apk"
+          bytes=$(stat -c '%s' "$apk")
+          echo "Extended APK size: $bytes bytes (the 60 MB standard limit does not apply here)"
+          echo "### Extended-media APK: $bytes bytes (experimental)" >> "$GITHUB_STEP_SUMMARY"
+          (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
+
+      - name: Upload experimental extended-media APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Extended-Media-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Extended-Media-Failure-Logs-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            gradle-extended.log
             app/build/reports/
             app/build/test-results/
           if-no-files-found: ignore

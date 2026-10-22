@@ -1,9 +1,0 @@
-date_utc=2026-10-17T12:56:05+00:00
-kernel=Linux 6.18.55 x86_64 GNU/Linux
-java=openjdk version "21.0.12.1" 2026-08-18
-kotlinc=info: kotlinc-jvm 1.9.0 (JRE 21.0.12.1+1-1-deb13u1-Debian)
-ANDROID_HOME=UNSET
-ANDROID_SDK_ROOT=UNSET
-gradle=UNAVAILABLE
-sdkmanager=UNAVAILABLE
-android-jar=

@@ -3,6 +3,8 @@ package com.jumlo.app.data.pdf
 import com.jumlo.app.core.PageTextComparison
 import com.jumlo.app.core.PdfCompressionPolicy
 import com.jumlo.app.core.PdfImagePlacementPolicy
+import com.jumlo.app.core.PdfDisplayCoordinates
+import com.jumlo.app.core.PdfDisplayFrame
 import com.jumlo.app.core.PdfWatermarkStyle
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
@@ -49,6 +51,12 @@ class PdfInput(val file: File, val password: CharArray? = null) {
     override fun hashCode(): Int = file.hashCode()
 }
 
+/**
+ * The bitmap budget the compressor works to when the caller does not give one.
+ * It mirrors the job budget: half the heap, capped.
+ */
+val DEFAULT_MAX_BITMAP_BYTES: Long = minOf(Runtime.getRuntime().maxMemory() / 2, 192L * 1024 * 1024)
+
 data class OrganizeOp(val sourceIndex: Int, val rotationDegrees: Int = 0)
 data class PageGroup(val first: Int, val count: Int)
 
@@ -58,6 +66,7 @@ class RedactRegion(val left: Double, val top: Double, val right: Double, val bot
 }
 
 sealed interface FormEntry {
+    data class Input(val value: String) : FormEntry
     data class Text(val value: String) : FormEntry
     data class Check(val on: Boolean) : FormEntry
     data class Radio(val index: Int) : FormEntry
@@ -140,24 +149,36 @@ object PdfBoxBackend {
     }
 
     fun split(doc: PDDocument, groups: List<PageGroup>, destinations: List<File>): List<File> {
-        val pageCount = doc.numberOfPages
         require(groups.isNotEmpty() && groups.size == destinations.size) { "INVALID_SPLIT_GROUPS" }
-        return groups.mapIndexed { index, group ->
-            require(group.first >= 0 && group.count > 0 && group.first.toLong() + group.count <= pageCount) { "INVALID_SPLIT_GROUP" }
-            val pages = (group.first until group.first + group.count).map { doc.getPage(it) to 0 }
-            writeAssembled(pages, destinations[index])
-        }
+        val temp = File.createTempFile("split-src-", ".pdf")
+        try {
+            doc.save(temp)
+            val pageCount = doc.numberOfPages
+            return groups.mapIndexed { index, group ->
+                require(group.first >= 0 && group.count > 0 && group.first.toLong() + group.count <= pageCount) { "INVALID_SPLIT_GROUP" }
+                assemble(temp, destinations[index], (group.first until group.first + group.count).map { it to 0 })
+                destinations[index]
+            }
+        } finally { temp.delete() }
     }
 
     fun extract(doc: PDDocument, zeroBasedPages: List<Int>, out: File): File {
-        organize(doc, zeroBasedPages.map { OrganizeOp(it) }, out)
+        val temp = File.createTempFile("extract-src-", ".pdf")
+        try {
+            doc.save(temp)
+            assemble(temp, out, zeroBasedPages.map { it to 0 })
+        } finally { temp.delete() }
         return out
     }
 
     fun organize(doc: PDDocument, ops: List<OrganizeOp>, out: File) {
         val pageCount = doc.numberOfPages
         require(ops.isNotEmpty() && ops.all { it.sourceIndex in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
-        writeAssembled(ops.map { op -> doc.getPage(op.sourceIndex) to op.rotationDegrees }, out)
+        val temp = File.createTempFile("organize-src-", ".pdf")
+        try {
+            doc.save(temp)
+            assemble(temp, out, ops.map { it.sourceIndex to it.rotationDegrees })
+        } finally { temp.delete() }
     }
 
     fun insert(doc: PDDocument, other: PdfInput, atZeroIndex: Int, out: File) {
@@ -177,8 +198,18 @@ object PdfBoxBackend {
 
     private fun writeAssembled(ordered: List<Pair<PDPage, Int>>, out: File): File {
         PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { target ->
-            ordered.forEach { (page, _) -> target.importPage(page) }
-            ordered.forEachIndexed { index, (_, degrees) -> rotateInside(target.getPage(index), degrees) }
+            val cloner = com.tom_roush.pdfbox.multipdf.PDFCloneUtility(target)
+            ordered.forEach { (page, degrees) ->
+                // importPage creates a distinct root dictionary on every invocation,
+                // including repeated source pages. Materialize inherited resources;
+                // the PDFBox port otherwise drops resources inherited from /Pages.
+                val imported = target.importPage(page)
+                require(imported.cosObject !== page.cosObject) { "PDF_PAGE_IMPORT_FAILED" }
+                page.resources?.let { resources ->
+                    imported.resources = com.tom_roush.pdfbox.pdmodel.PDResources(cloner.cloneForNewDocument(resources) as COSDictionary)
+                }
+                imported.rotation = ((page.rotation + degrees) % 360 + 360) % 360
+            }
             target.save(out)
         }
         return out
@@ -198,11 +229,7 @@ object PdfBoxBackend {
     fun setCrop(doc: PDDocument, zeroBasedPage: Int, left: Double, top: Double, right: Double, bottom: Double) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
         val page = doc.getPage(zeroBasedPage)
-        val media = page.mediaBox
-        val box = com.jumlo.app.core.PdfCropCoordinates.fromTopLeft(
-            media.lowerLeftX, media.lowerLeftY, media.width, media.height,
-            left, top, right, bottom
-        )
+        val box=PdfDisplayCoordinates.normalizedRectangle(displayFrame(page),left,top,right,bottom)
         page.cropBox = PDRectangle(box.x, box.y, box.width, box.height)
     }
 
@@ -267,6 +294,20 @@ object PdfBoxBackend {
         values.forEach { (name, entry) ->
             val field = acro.getField(name) ?: throw IllegalArgumentException("FORM_FIELD_NOT_FOUND")
             when (entry) {
+                is FormEntry.Input -> when (field) {
+                    is PDTextField -> field.setValue(entry.value)
+                    is PDCheckBox -> {
+                        require(entry.value.equals("true",true) || entry.value.equals("false",true)) { "FORM_FIELD_TYPE_MISMATCH" }
+                        if(entry.value.equals("true",true)) field.check() else field.unCheck()
+                    }
+                    is PDRadioButton -> {
+                        val index=entry.value.toIntOrNull() ?: throw IllegalArgumentException("FORM_FIELD_TYPE_MISMATCH")
+                        val options=field.exportValues
+                        require(index in options.indices) { "FORM_FIELD_TYPE_MISMATCH" }
+                        field.setValue(options[index])
+                    }
+                    else -> throw IllegalArgumentException("FORM_FIELD_TYPE_MISMATCH")
+                }
                 is FormEntry.Text -> {
                     require(field is PDTextField) { "FORM_FIELD_TYPE_MISMATCH" }
                     field.setValue(entry.value)
@@ -285,208 +326,101 @@ object PdfBoxBackend {
         }
     }
 
-    /**
-     * Flattening: this port's PDAcroForm.flatten() strips fields without embedding widget
-     * appearance streams, so paint each appearance onto its page and drop the AcroForm.
-     */
+    /** Preflight every appearance and page before any widget or form is removed. */
     fun flattenForm(doc: PDDocument, out: File) {
         val acro = doc.documentCatalog.acroForm ?: throw IllegalArgumentException("NO_ACROFORM")
-        val widgetsByPage = mutableMapOf<PDPage, MutableList<PDAnnotation>>()
-        acro.fieldTree.forEach { field ->
-            field.widgets.forEach { widget ->
-                if (widget == null || widget.page == null) return@forEach
-                widgetsByPage.getOrPut(widget.page) { mutableListOf() }.add(widget)
+        require(!acro.hasXFA()) { "FORM_FLATTEN_UNSUPPORTED" }
+        val fields=acro.fieldTree.toList()
+        val values=fields.associate { it.fullyQualifiedName to it.valueAsString }
+        try { acro.refreshAppearances() } catch (e: Exception) {
+            throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE",e)
+        }
+        require(fields.all { values[it.fullyQualifiedName] == it.valueAsString }) { "FORM_VALUE_CHANGED" }
+        data class PaintWidget(val page: PDPage,val widget: PDAnnotation,val appearance: PDFormXObject,val sx: Double,val sy: Double,val tx: Double,val ty: Double)
+        val pages=doc.pages.toList()
+        val plans=mutableListOf<PaintWidget>()
+        fields.forEach { field -> field.widgets.forEach { widget ->
+            val declaredPage=widget.page
+            val page=pages.firstOrNull { candidate -> candidate.annotations.any { it.cosObject === widget.cosObject } }
+                ?: pages.firstOrNull { it.cosObject === declaredPage?.cosObject }
+                ?: throw IllegalArgumentException("FORM_WIDGET_PAGE_MISSING")
+            val appearance=widget.getNormalAppearanceStream() ?: throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE")
+            val rect=widget.rectangle ?: throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE")
+            val bbox=appearance.bBox ?: throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE")
+            val matrix=appearance.matrix
+            // Compute the appearance's transformed bounds without Android PointF,
+            // so the same code and fixtures also execute on the JVM backend.
+            val corners=listOf(bbox.lowerLeftX to bbox.lowerLeftY,bbox.lowerLeftX to bbox.upperRightY,bbox.upperRightX to bbox.lowerLeftY,bbox.upperRightX to bbox.upperRightY)
+            val xs=corners.map { (x,y) -> x*matrix.scaleX+y*matrix.shearX+matrix.translateX }
+            val ys=corners.map { (x,y) -> x*matrix.shearY+y*matrix.scaleY+matrix.translateY }
+            val minX=xs.minOrNull()!!; val minY=ys.minOrNull()!!
+            val width=xs.maxOrNull()!!-minX; val height=ys.maxOrNull()!!-minY
+            require(rect.width>0f && rect.height>0f && width>0f && height>0f &&
+                xs.all { it.isFinite() } && ys.all { it.isFinite() } &&
+                listOf(rect.lowerLeftX,rect.lowerLeftY,rect.upperRightX,rect.upperRightY).all { it.isFinite() }) { "FORM_APPEARANCE_UNAVAILABLE" }
+            if(field.valueAsString.isNotBlank() && field.valueAsString != "Off") {
+                require(appearance.contents.use { it.read() } >= 0) { "FORM_APPEARANCE_UNAVAILABLE" }
+            }
+            val sx=rect.width.toDouble()/width; val sy=rect.height.toDouble()/height
+            plans+=PaintWidget(page,widget,appearance,sx,sy,rect.lowerLeftX-sx*minX,rect.lowerLeftY-sy*minY)
+        } }
+        // Paint all appearances first. A missing/invalid widget above fails with
+        // the original AcroForm and page annotations still attached.
+        plans.forEach { plan ->
+            PDPageContentStream(doc,plan.page,PDPageContentStream.AppendMode.APPEND,true,true).use { cs ->
+                cs.concatenate2CTM(plan.sx,0.0,0.0,plan.sy,plan.tx,plan.ty)
+                cs.drawForm(plan.appearance)
             }
         }
-        widgetsByPage.forEach { (page, widgets) ->
-            val survivors = mutableListOf<PDAnnotation>()
-            try {
-                page.annotations.forEach { ann -> if (widgets.none { it === ann }) survivors.add(ann) }
-                page.setAnnotations(survivors)
-            } catch (_: Exception) { /* keep original annotations */ }
-            widgets.forEach { widget ->
-                val appearance = widget.getNormalAppearanceStream() ?: return@forEach
-                val rect = widget.rectangle ?: return@forEach
-                val bbox = appearance.bBox
-                val scaleX = if (bbox.width > 0.01f) rect.width / bbox.width else 1f
-                val scaleY = if (bbox.height > 0.01f) rect.height / bbox.height else 1f
-                PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-                    cs.concatenate2CTM(
-                        scaleX.toDouble(), 0.0, 0.0, scaleY.toDouble(),
-                        (rect.lowerLeftX - scaleX * bbox.lowerLeftX).toDouble(),
-                        (rect.lowerLeftY - scaleY * bbox.lowerLeftY).toDouble()
-                    )
-                    cs.drawForm(appearance)
-                }
-            }
+        pages.forEach { page ->
+            val widgets=plans.filter { it.page.cosObject === page.cosObject }.map { it.widget.cosObject }
+            page.annotations=page.annotations.filter { ann -> widgets.none { it === ann.cosObject } }
         }
-        doc.documentCatalog.acroForm = null
+        doc.documentCatalog.acroForm=null
         doc.save(out)
+        open(out,null).use { verified ->
+            require(verified.numberOfPages==doc.numberOfPages && verified.documentCatalog.acroForm==null) { "PDF_VERIFY_FAILED" }
+        }
     }
-
-    fun compressImages(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85, onPage: ((Int, Int) -> Unit)? = null): Int =
-        compress(doc, maxDpi, jpegQuality, onPage)
 
     /**
-     * Multi-codec PDF image compressor:
-     * 1. On Android, decodes any embedded PDImageXObject (JPEG/DCTDecode, PNG/Flate, etc.),
-     *    downscales toward [maxDpi] if larger, and re-encodes via [JPEGFactory] at [jpegQuality]
-     *    whenever the resulting stream is strictly smaller than the original stream.
-     * 2. On pure JVM (or when Bitmap is unavailable), box-downscales 8-bit Flate DeviceRGB/Gray
-     *    streams and quantizes toward [jpegQuality] for better deflate compression.
+     * Compress the images of [doc] and return how many were re-encoded.
+     *
+     * The work lives in [PdfImageCompressor], which has no Android types in it,
+     * so the same code can be run on the host as on the device.
      */
-    fun compress(doc: PDDocument, maxDpi: Int, jpegQuality: Int = 85, onPage: ((Int, Int) -> Unit)? = null): Int {
-        require(maxDpi in 36..600) { "INVALID_COMPRESS_SETTINGS" }
-        require(jpegQuality in 0..100) { "INVALID_COMPRESS_SETTINGS" }
-        var replaced = 0
-        val pageCount = doc.numberOfPages
-        // Scanner apps often put the photo inside Form XObjects. The old loop
-        // only looked at page-level resources, silently missing those images.
-        val visited = java.util.IdentityHashMap<COSDictionary, Boolean>()
-        fun process(resources: com.tom_roush.pdfbox.pdmodel.PDResources?,
-                    maxWidth: Int, maxHeight: Int, depth: Int) {
-            if (resources == null || depth > 8) return
-            if (visited.put(resources.cosObject, true) != null) return
-            for (name in resources.xObjectNames.toList()) {
-                val objectRef = runCatching { resources.getXObject(name) }.getOrNull() ?: continue
-                when (objectRef) {
-                    is PDFormXObject -> process(objectRef.resources, maxWidth, maxHeight, depth + 1)
-                    is PDImageXObject -> {
-                        val newImage = downscaleAndCompressImage(
-                            doc, objectRef, maxWidth, maxHeight, jpegQuality
-                        ) ?: downscaleFlateImage(objectRef, maxWidth, maxHeight, jpegQuality)
-                        if (newImage != null) {
-                            val dict = resources.cosObject.getDictionaryObject(COSName.XOBJECT) as? COSDictionary
-                            if (dict != null) {
-                                dict.setItem(name, newImage)
-                                replaced++
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        doc.pages.forEachIndexed { pageIndex, page ->
-            val media = page.mediaBox
-            val maxWidth = (media.width * maxDpi / 72.0).toInt().coerceAtLeast(16)
-            val maxHeight = (media.height * maxDpi / 72.0).toInt().coerceAtLeast(16)
-            process(page.resources, maxWidth, maxHeight, 0)
-            onPage?.invoke(pageIndex + 1, pageCount)
-        }
-        return replaced
-    }
-
-    private fun downscaleAndCompressImage(
+    fun compress(
         doc: PDDocument,
-        image: PDImageXObject,
-        maxWidth: Int,
-        maxHeight: Int,
-        jpegQuality: Int
-    ): PDImageXObject? = runCatching {
-        val originalLength = (image.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
-        // Decode high-resolution scans with PDFBox subsampling instead of
-        // dropping 300+ DPI scans because their full ARGB size exceeds 32 MiB.
-        val subsampling = PdfCompressionPolicy.decodeSubsampling(
-            image.width, image.height, Runtime.getRuntime().maxMemory()
-        )
-        if (subsampling < 1) return null
-        // Preserve masks, transparency and 1-bit scan/text rasters rather than
-        // replacing them with lossy JPEG artifacts.
-        val dict = image.cosObject as? COSDictionary ?: return null
-        if (dict.getDictionaryObject(COSName.SMASK) != null ||
-            dict.getDictionaryObject(COSName.MASK) != null ||
-            dict.getInt(COSName.BITS_PER_COMPONENT) == 1) return null
-        val bitmap = (if (subsampling > 1) image.getImage(null, subsampling)
-            else image.image) ?: return null
-        try {
-            val scale = minOf(1.0, minOf(maxWidth.toDouble() / bitmap.width.coerceAtLeast(1), maxHeight.toDouble() / bitmap.height.coerceAtLeast(1)))
-            val targetW = maxOf(1, (bitmap.width * scale).toInt())
-            val targetH = maxOf(1, (bitmap.height * scale).toInt())
-            val workBitmap = if (targetW < bitmap.width || targetH < bitmap.height) {
-                android.graphics.Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
-            } else bitmap
-            try {
-                val q = (jpegQuality.coerceIn(10, 95) / 100f)
-                val candidate = JPEGFactory.createFromImage(doc, workBitmap, q)
-                val newLength = (candidate.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
-                if (newLength > 0L && newLength < originalLength) candidate else null
-            } finally {
-                if (workBitmap !== bitmap && !workBitmap.isRecycled) workBitmap.recycle()
-            }
-        } finally {
-            if (!bitmap.isRecycled) bitmap.recycle()
-        }
-    }.getOrNull()
+        maxDpi: Int,
+        jpegQuality: Int = 85,
+        onPage: ((Int, Int) -> Unit)? = null
+    ): Int = compressImages(doc, maxDpi, jpegQuality, onPage)
 
-    private fun downscaleFlateImage(image: PDImageXObject, maxWidth: Int, maxHeight: Int, jpegQuality: Int = 85): PDImageXObject? {
-        if (image.width <= maxWidth && image.height <= maxHeight && jpegQuality >= 95) return null
-        val cosStream = image.cosObject as? COSStream ?: return null
-        val dict = cosStream as COSDictionary
-        val filter = dict.getDictionaryObject(COSName.FILTER)
-        val isFlate = when (filter) {
-            is COSName -> filter == COSName.FLATE_DECODE
-            is COSArray -> filter.size() == 1 && (filter.get(0) as? COSName) == COSName.FLATE_DECODE
-            else -> false
-        }
-        if (!isFlate) return null
-        if (dict.getDictionaryObject(COSName.DECODE_PARMS) != null) return null
-        val bits = (dict.getDictionaryObject(COSName.BITS_PER_COMPONENT) as? COSNumber)?.intValue() ?: return null
-        if (bits != 8) return null
-        val colorSpace = (dict.getDictionaryObject(COSName.COLORSPACE) as? COSName) ?: return null
-        if (colorSpace != COSName.DEVICERGB && colorSpace != COSName.DEVICEGRAY) return null
-        if (dict.getDictionaryObject(COSName.SMASK) != null) return null
-        val bytesPerPixel = if (colorSpace == COSName.DEVICERGB) 3 else 1
-        val decodedBytes = image.width.toLong() * image.height * bytesPerPixel
-        if (image.width <= 0 || image.height <= 0 || decodedBytes > minOf(Runtime.getRuntime().maxMemory() / 4, 96L * 1024 * 1024)) return null
-        val raw = ByteArray(decodedBytes.toInt())
-        image.createInputStream().use { input ->
-            var read = 0
-            while (read < raw.size) {
-                val n = input.read(raw, read, raw.size - read)
-                if (n < 0) return null
-                read += n
-            }
-        }
-        val scale = minOf(1.0, minOf(maxWidth.toDouble() / image.width, maxHeight.toDouble() / image.height))
-        val targetW = maxOf(1, (image.width * scale).toInt())
-        val targetH = maxOf(1, (image.height * scale).toInt())
-        val data = boxDownscale(raw, image.width, image.height, targetW, targetH, bytesPerPixel, jpegQuality)
-        val stream = COSStream()
-        stream.setItem(COSName.SUBTYPE, COSName.IMAGE)
-        stream.setInt(COSName.WIDTH, targetW)
-        stream.setInt(COSName.HEIGHT, targetH)
-        stream.setItem(COSName.COLORSPACE, colorSpace)
-        stream.setInt(COSName.BITS_PER_COMPONENT, 8)
-        stream.setItem(COSName.FILTER, COSName.FLATE_DECODE)
-        stream.createOutputStream().use { it.write(data) }
-        return PDImageXObject(PDStream(stream), null)
-    }
+    fun compressImages(
+        doc: PDDocument,
+        maxDpi: Int,
+        jpegQuality: Int = 85,
+        onPage: ((Int, Int) -> Unit)? = null,
+        maxBitmapBytes: Long = DEFAULT_MAX_BITMAP_BYTES,
+        codec: PdfImageCodec? = null
+    ): Int = compressImagesWithReport(doc, maxDpi, jpegQuality, onPage, maxBitmapBytes, codec).replaced
 
-    private fun boxDownscale(src: ByteArray, sw: Int, sh: Int, tw: Int, th: Int, cpp: Int, quality: Int = 85): ByteArray {
-        val out = ByteArray(tw * th * cpp)
-        val step = if (quality in 1..79) ((100 - quality) / 12).coerceAtLeast(1) else 1
-        for (y in 0 until th) {
-            val y0 = y * sh / th
-            val y1 = ((y + 1) * sh / th).coerceAtLeast(y0 + 1).coerceAtMost(sh)
-            for (x in 0 until tw) {
-                val x0 = x * sw / tw
-                val x1 = ((x + 1) * sw / tw).coerceAtLeast(x0 + 1).coerceAtMost(sw)
-                val sums = IntArray(cpp)
-                for (yy in y0 until y1) for (xx in x0 until x1) {
-                    val base = (yy * sw + xx) * cpp
-                    for (c in 0 until cpp) sums[c] += src[base + c].toInt() and 255
-                }
-                val count = (y1 - y0) * (x1 - x0)
-                val base = (y * tw + x) * cpp
-                for (c in 0 until cpp) {
-                    val avg = sums[c] / count
-                    val quantized = if (step > 1) (avg / step) * step else avg
-                    out[base + c] = quantized.toByte()
-                }
-            }
-        }
-        return out
-    }
+    /**
+     * The image compressor, with the report of what it did.
+     *
+     * The work itself lives in [PdfImageCompressor], which has no Android types
+     * in it, so the same code can be run on the host. The codec is the byte-level
+     * seam: the Android one uses `BitmapFactory`, the host one uses ImageIO.
+     */
+    fun compressImagesWithReport(
+        doc: PDDocument,
+        maxDpi: Int,
+        jpegQuality: Int = 85,
+        onPage: ((Int, Int) -> Unit)? = null,
+        maxBitmapBytes: Long = DEFAULT_MAX_BITMAP_BYTES,
+        codec: PdfImageCodec? = null
+    ): PdfImageCompressor.Report =
+        PdfImageCompressor.compress(doc, maxDpi, jpegQuality, onPage, codec ?: AndroidImageCodec(maxBitmapBytes))
 
     fun overlayText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float = 12f, gray: Float = 0.1f) {
         stampText(doc, zeroBasedPages, text, xNorm, yNormTop, fontSize, gray)
@@ -529,52 +463,67 @@ object PdfBoxBackend {
             }
             val widthPt = rasterWidth * (style.fontSizePt / paint.textSize)
             val heightPt = rasterHeight * (style.fontSizePt / paint.textSize)
-            val radians = Math.toRadians((-style.rotationDegrees).toDouble())
-            val spots = if (style.tiled) {
-                listOf(0.18,0.5,0.82).flatMap { y ->
-                    listOf(0.18,0.5,0.82).map { x -> x to y }
-                }
-            } else listOf(style.centerX to style.centerY)
-            zeroBasedPages.forEach { index ->
-                val page = doc.getPage(index)
-                val media = page.mediaBox
-                val cap = media.width * (if(style.tiled) 0.36f else 0.8f)
-                val scale = if(widthPt > cap) cap / widthPt else 1f
-                val drawW = widthPt * scale
-                val drawH = heightPt * scale
-                PDPageContentStream(doc,page,PDPageContentStream.AppendMode.APPEND,true,true).use { cs ->
-                    spots.forEach { (fx,fy) ->
-                        val x = (media.lowerLeftX + fx * media.width).toFloat()
-                        val y = (media.lowerLeftY + (1.0-fy) * media.height).toFloat()
-                        cs.saveGraphicsState()
-                        try {
-                            cs.transform(Matrix.getRotateInstance(radians,x,y))
-                            cs.drawImage(image,-drawW/2f,-drawH/2f,drawW,drawH)
-                        } finally {
-                            cs.restoreGraphicsState()
-                        }
-                    }
-                }
-            }
+            stampWatermarkImage(doc,zeroBasedPages,image,widthPt,heightPt,style)
         }
         if (addPageNumbers) zeroBasedPages.forEach { idx ->
             stampText(doc,listOf(idx),"${idx + 1}",0.47,0.96,10f,0.4f)
         }
     }
 
+    private fun displayFrame(page:PDPage):PdfDisplayFrame {
+        val crop=page.cropBox ?: page.mediaBox
+        return PdfDisplayCoordinates.frame(crop.lowerLeftX.toDouble(),crop.lowerLeftY.toDouble(),
+            crop.width.toDouble(),crop.height.toDouble(),page.rotation,page.userUnit.toDouble())
+    }
+
+    private fun displayMatrix(frame:PdfDisplayFrame):Matrix = frame.displayToPage.let { m ->
+        val values=listOf(m.a,m.b,m.c,m.d,m.e,m.f)
+        require(values.all { it.toFloat().isFinite() } && m.a*m.d-m.b*m.c!=0.0) { "INVALID_PDF_PAGE_GEOMETRY" }
+        Matrix(m.a.toFloat(),m.b.toFloat(),m.c.toFloat(),m.d.toFloat(),m.e.toFloat(),m.f.toFloat())
+    }
+
+    /** Shared image placement, separate from Android text rasterization for real-PDF JVM fixtures. */
+    internal fun stampWatermarkImage(doc:PDDocument,zeroBasedPages:List<Int>,image:PDImageXObject,widthPt:Float,heightPt:Float,style:PdfWatermarkStyle) {
+        require(widthPt.isFinite() && heightPt.isFinite() && widthPt>0 && heightPt>0) { "INVALID_STAMP" }
+        require(zeroBasedPages.all { it in 0 until doc.numberOfPages }) { "INVALID_PAGE_INDEX" }
+        val radians=Math.toRadians((-style.rotationDegrees).toDouble())
+        val spots=if(style.tiled) listOf(0.18,0.5,0.82).flatMap { y -> listOf(0.18,0.5,0.82).map { x -> x to y } }
+            else listOf(style.centerX to style.centerY)
+        zeroBasedPages.forEach { index ->
+            val page=doc.getPage(index)
+            val frame=displayFrame(page)
+            val cap=(frame.widthPt*(if(style.tiled) 0.36 else 0.8)).toFloat()
+            val scale=if(widthPt>cap) cap/widthPt else 1f
+            val drawW=widthPt*scale; val drawH=heightPt*scale
+            PDPageContentStream(doc,page,PDPageContentStream.AppendMode.APPEND,true,true).use { cs ->
+                cs.transform(displayMatrix(frame))
+                spots.forEach { (fx,fy) ->
+                    val x=(fx*frame.widthPt).toFloat(); val y=((1.0-fy)*frame.heightPt).toFloat()
+                    require(x.isFinite() && y.isFinite()) { "INVALID_PDF_PAGE_GEOMETRY" }
+                    cs.saveGraphicsState()
+                    try {
+                        cs.transform(Matrix.getRotateInstance(radians,x,y))
+                        cs.drawImage(image,-drawW/2f,-drawH/2f,drawW,drawH)
+                    } finally { cs.restoreGraphicsState() }
+                }
+            }
+        }
+    }
+
     /** Overlay text (annotations/overlay, watermark, page numbers share this primitive). */
     fun stampText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, gray: Float) {
-        require(text.isNotBlank() && fontSize in 4f..200f && gray in 0f..1f) { "INVALID_STAMP" }
+        require(text.isNotBlank() && xNorm.isFinite() && yNormTop.isFinite() && xNorm in 0.0..1.0 && yNormTop in 0.0..1.0 && fontSize in 4f..200f && gray in 0f..1f) { "INVALID_STAMP" }
         require(zeroBasedPages.all { it in 0 until doc.pages.count }) { "INVALID_PAGE_INDEX" }
         val safeText = text.map { if (it in ' '..'~') it else ' ' }.joinToString("").ifBlank { "Note" }
         zeroBasedPages.forEach { index ->
             val page = doc.getPage(index)
-            val media = page.mediaBox
+            val frame=displayFrame(page)
             PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
+                cs.transform(displayMatrix(frame))
                 cs.beginText()
                 cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
                 cs.setNonStrokingColor(gray, gray, gray)
-                cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
+                cs.newLineAtOffset((xNorm*frame.widthPt).toFloat(), ((1.0-yNormTop)*frame.heightPt).toFloat())
                 cs.showText(safeText)
                 cs.endText()
             }
@@ -597,37 +546,45 @@ object PdfBoxBackend {
         }
     }
 
-    /** Places an image (signature/logo) at a normalized top-left-origin rect on one page. */
+    /** Places an upright image in a normalized visible top-left rectangle. */
     fun stampImage(doc: PDDocument, zeroBasedPage: Int, imageFile: File, left: Double, top: Double, right: Double, bottom: Double) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
-        listOf(left, top, right, bottom).forEach { require(it in 0.0..1.0) { "INVALID_CROP" } }
-        require(left < right && top < bottom) { "INVALID_CROP" }
-        val page = doc.getPage(zeroBasedPage)
-        val media = page.mediaBox
-        val image = com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject.createFromFile(imageFile.path, doc)
-        val placement = PdfImagePlacementPolicy.fit(
-            (media.lowerLeftX + left * media.width).toFloat(),
-            (media.lowerLeftY + (1.0 - bottom) * media.height).toFloat(),
-            ((right - left) * media.width).toFloat(),
-            ((bottom - top) * media.height).toFloat(),
-            image.width, image.height
-        )
-        PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-            cs.drawImage(image, placement.x, placement.y, placement.width, placement.height)
+        val image=PDImageXObject.createFromFile(imageFile.path,doc)
+        stampImageObject(doc,zeroBasedPage,image,left,top,right,bottom)
+    }
+
+    /** Placement is codec-independent, so the actual PDF operators can be tested on the JVM. */
+    internal fun stampImageObject(doc:PDDocument,zeroBasedPage:Int,image:PDImageXObject,left:Double,top:Double,right:Double,bottom:Double) {
+        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
+        com.jumlo.app.core.Box(left,top,right,bottom).normalized()
+        val page=doc.getPage(zeroBasedPage)
+        val frame=displayFrame(page)
+        val placement=PdfImagePlacementPolicy.fit((left*frame.widthPt).toFloat(),((1.0-bottom)*frame.heightPt).toFloat(),
+            ((right-left)*frame.widthPt).toFloat(),((bottom-top)*frame.heightPt).toFloat(),image.width,image.height)
+        PDPageContentStream(doc,page,PDPageContentStream.AppendMode.APPEND,true,true).use { cs ->
+            cs.saveGraphicsState()
+            try {
+                cs.transform(displayMatrix(frame))
+                cs.drawImage(image,placement.x,placement.y,placement.width,placement.height)
+            } finally { cs.restoreGraphicsState() }
         }
     }
 
-    /** Adds a free-text annotation anchored at a normalized point. */
+    /** Adds a Unicode note anchored in the visible physical page frame. */
     fun addTextAnnotation(doc: PDDocument, zeroBasedPage: Int, contents: String, xNorm: Double, yNormTop: Double) {
-        require(contents.isNotBlank() && zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
-        val page = doc.getPage(zeroBasedPage)
-        val media = page.mediaBox
-        val annotation = com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText()
-        val x = (media.lowerLeftX + xNorm * media.width).toFloat(); val y = (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat()
-        annotation.rectangle = PDRectangle(x, y, 20f, 20f)
-        annotation.contents = contents
+        require(contents.isNotBlank() && zeroBasedPage in 0 until doc.pages.count && xNorm.isFinite() && yNormTop.isFinite()
+            && xNorm in 0.0..1.0 && yNormTop in 0.0..1.0) { "INVALID_ANNOTATION" }
+        val page=doc.getPage(zeroBasedPage)
+        val frame=displayFrame(page)
+        // Preserve the ordinary-page lower-left note anchor and 20pt size while
+        // mapping that physical icon rectangle through crop, rotation and UserUnit.
+        val rect=PdfDisplayCoordinates.pageRectangle(frame,xNorm*frame.widthPt,(1.0-yNormTop)*frame.heightPt,20.0,20.0)
+        val annotation=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText()
+        annotation.rectangle=PDRectangle(rect.x,rect.y,rect.width,rect.height)
+        annotation.contents=contents
+        annotation.setPage(page)
         annotation.setOpen(true)
-        val annotations = page.annotations.toMutableList(); annotations.add(annotation); page.setAnnotations(annotations)
+        page.annotations=page.annotations.toMutableList().also { it.add(annotation) }
     }
 
     fun compareText(a: PDDocument, b: PDDocument): CompareResult = compare(a, b)
@@ -883,5 +840,215 @@ object PdfBoxBackend {
         stream.setItem(COSName.FILTER, COSName.FLATE_DECODE)
         stream.createOutputStream().use { output -> ContentStreamWriter(output).writeTokens(tokens) }
         page.setContents(PDStream(stream))
+    }
+
+
+    fun embeddedImageSummary(doc: PDDocument): Pair<Long, Long> {
+        var bytes = 0L
+        var pixels = 0L
+        val seen = java.util.IdentityHashMap<com.tom_roush.pdfbox.cos.COSBase, Boolean>()
+        fun visit(resources: com.tom_roush.pdfbox.pdmodel.PDResources?) {
+            resources ?: return
+            resources.xObjectNames?.forEach { name ->
+                val stream = runCatching { resources.getXObject(name) }.getOrNull() ?: return@forEach
+                if (seen.put(stream.cosObject, true) != null) return@forEach
+                if (stream is PDImageXObject) {
+                    val length = stream.cosObject.getInt(com.tom_roush.pdfbox.cos.COSName.LENGTH)
+                    if (length > 0) bytes += length.toLong()
+                    pixels += stream.width.toLong() * stream.height.toLong()
+                }
+            }
+        }
+        doc.pages.forEach { page -> visit(page.resources) }
+        return bytes to pixels
+    }
+
+    fun scrubMetadata(doc: PDDocument, keepTitle: Boolean = true): List<String> {
+        val removed = mutableListOf<String>()
+        val cos = doc.documentInformation.cosObject
+        val contentKeys = setOf("title", "subject", "keywords")
+        val keys = cos.keySet().toList()
+        keys.forEach { key ->
+            val name = key.name
+            if (name.equals("Trapped", ignoreCase = true)) return@forEach
+            if (keepTitle && name.lowercase() in contentKeys) return@forEach
+            removed += if (name.lowercase() in contentKeys) "content:$name" else name
+        }
+        keys.forEach { key ->
+            if (!(keepTitle && key.name.lowercase() in contentKeys)) cos.removeItem(key)
+        }
+        val catalog = doc.documentCatalog
+        val metadataStream = catalog.getCOSObject().getDictionaryObject(com.tom_roush.pdfbox.cos.COSName.METADATA)
+        if (metadataStream != null) {
+            catalog.getCOSObject().removeItem(com.tom_roush.pdfbox.cos.COSName.METADATA)
+            removed += "xmp"
+        }
+        return removed.distinct().sorted()
+    }
+
+    fun addAnnotation(
+        doc: PDDocument, zeroBasedPage: Int, kind: com.jumlo.app.core.PdfAnnotationKind,
+        left: Double, top: Double, right: Double, bottom: Double, contents: String = ""
+    ) {
+        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
+        require(left.isFinite() && top.isFinite() && right.isFinite() && bottom.isFinite()
+            && left in 0.0..1.0 && right in 0.0..1.0 && top in 0.0..1.0 && bottom in 0.0..1.0
+            && left < right && top < bottom) { "INVALID_ANNOTATION" }
+        val page = doc.getPage(zeroBasedPage)
+        val frame = displayFrame(page)
+        val rect = PdfDisplayCoordinates.normalizedRectangle(frame, left, top, right, bottom)
+        val annotation: com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation = when (kind) {
+            com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT ->
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
+                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup.SUB_TYPE_HIGHLIGHT)
+            com.jumlo.app.core.PdfAnnotationKind.UNDERLINE ->
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
+                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup.SUB_TYPE_UNDERLINE)
+            com.jumlo.app.core.PdfAnnotationKind.STRIKETHROUGH ->
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
+                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup.SUB_TYPE_STRIKEOUT)
+            com.jumlo.app.core.PdfAnnotationKind.SQUARE ->
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle(
+                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle.SUB_TYPE_SQUARE)
+            com.jumlo.app.core.PdfAnnotationKind.CIRCLE ->
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle(
+                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle.SUB_TYPE_CIRCLE)
+            com.jumlo.app.core.PdfAnnotationKind.TEXTBOX ->
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
+                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup.SUB_TYPE_FREETEXT)
+            else -> com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText()
+        }
+        annotation.rectangle = PDRectangle(rect.x, rect.y, rect.width, rect.height)
+        if (annotation is com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup) {
+            val corners = PdfDisplayCoordinates.normalizedCorners(frame, left, top, right, bottom)
+            annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.QUADPOINTS,
+                com.tom_roush.pdfbox.cos.COSArray().apply { corners.forEach { add(com.tom_roush.pdfbox.cos.COSFloat(it)) } })
+        }
+        if (kind == com.jumlo.app.core.PdfAnnotationKind.SQUARE || kind == com.jumlo.app.core.PdfAnnotationKind.CIRCLE) {
+            annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.C,
+                rgbColor(0.10f, 0.30f, 0.70f))
+        } else if (kind.isMarkup) {
+            val tint = when (kind) {
+                com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT -> Triple(1f, .92f, .23f)
+                com.jumlo.app.core.PdfAnnotationKind.UNDERLINE -> Triple(.10f, .60f, .30f)
+                else -> Triple(.85f, .20f, .20f)
+            }
+            annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.C, rgbColor(tint.first, tint.second, tint.third))
+        }
+        if (contents.isNotBlank()) annotation.contents = contents
+        annotation.setPage(page)
+        page.annotations = page.annotations.toMutableList().also { it.add(annotation) }
+    }
+
+    fun addInkAnnotation(doc: PDDocument, zeroBasedPage: Int, points: List<com.jumlo.app.core.PdfInkPoint>, contents: String = "") {
+        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
+        require(points.size >= 2) { "INVALID_ANNOTATION" }
+        val page = doc.getPage(zeroBasedPage)
+        val frame = displayFrame(page)
+        val mapped = points.map { point ->
+            val x = point.x * frame.widthPt
+            val y = (1.0 - point.y) * frame.heightPt
+            frame.displayToPage.map(x, y)
+        }
+        val stroke = com.tom_roush.pdfbox.cos.COSArray()
+        mapped.forEach { (x, y) ->
+            stroke.add(com.tom_roush.pdfbox.cos.COSFloat(x.toFloat()))
+            stroke.add(com.tom_roush.pdfbox.cos.COSFloat(y.toFloat()))
+        }
+        val annotation = com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
+            com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup.SUB_TYPE_INK)
+        annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.INKLIST,
+            com.tom_roush.pdfbox.cos.COSArray().apply { add(stroke) })
+        val xs = mapped.map { it.first }
+        val ys = mapped.map { it.second }
+        val minX = xs.min()
+        val minY = ys.min()
+        annotation.rectangle = PDRectangle(minX.toFloat(), minY.toFloat(),
+            (xs.max() - minX).toFloat(), (ys.max() - minY).toFloat())
+        if (contents.isNotBlank()) annotation.contents = contents
+        annotation.setPage(page)
+        page.annotations = page.annotations.toMutableList().also { it.add(annotation) }
+    }
+
+
+    fun split(source: File, groups: List<PageGroup>, destinations: List<File>): List<File> {
+        val pageCount = PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly()).use { it.numberOfPages }
+        require(groups.isNotEmpty() && groups.size == destinations.size) { "INVALID_SPLIT_GROUPS" }
+        return groups.mapIndexed { index, group ->
+            require(group.first >= 0 && group.count > 0 && group.first.toLong() + group.count <= pageCount) { "INVALID_SPLIT_GROUP" }
+            assemble(source, destinations[index], (group.first until group.first + group.count).map { it to 0 })
+            destinations[index]
+        }
+    }
+
+    fun extract(source: File, zeroBasedPages: List<Int>, out: File): File {
+        assemble(source, out, zeroBasedPages.map { it to 0 })
+        return out
+    }
+
+    fun organize(source: File, ops: List<OrganizeOp>, out: File) {
+        val pageCount = PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly()).use { it.numberOfPages }
+        require(ops.isNotEmpty() && ops.all { it.sourceIndex in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
+        assemble(source, out, ops.map { it.sourceIndex to it.rotationDegrees })
+    }
+
+
+    fun insert(base: File, other: PdfInput, atZeroIndex: Int, out: File) =
+        open(base, null).use { insert(it, other, atZeroIndex, out) }
+
+
+    private fun rgbColor(r: Float, g: Float, b: Float): com.tom_roush.pdfbox.cos.COSArray =
+        com.tom_roush.pdfbox.cos.COSArray().apply {
+            add(com.tom_roush.pdfbox.cos.COSFloat(r))
+            add(com.tom_roush.pdfbox.cos.COSFloat(g))
+            add(com.tom_roush.pdfbox.cos.COSFloat(b))
+        }
+
+    private fun assemble(source: File, out: File, pages: List<Pair<Int, Int>>) {
+        require(pages.isNotEmpty()) { "NO_PAGES" }
+        source.copyTo(out, overwrite = true)
+        PDDocument.load(out, "", MemoryUsageSetting.setupTempFileOnly()).use { doc ->
+            val pageCount = doc.numberOfPages
+            require(pages.all { it.first in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
+            val repeated = pages.groupBy { it.first }.filterValues { it.size > 1 }.keys
+            val donor = if (repeated.isEmpty()) null else
+                PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly())
+            try {
+                val used = mutableSetOf<Int>()
+                val assembled = pages.map { (index, degrees) ->
+                    require(degrees % 90 == 0) { "INVALID_ROTATION" }
+                    val page = if (used.add(index)) doc.getPage(index) else {
+                        val copy = requireNotNull(donor).let { doc.importPage(it.getPage(index)) }
+                        detachAnnotations(copy)
+                        copy
+                    }
+                    if (degrees != 0) page.rotation = ((page.rotation + degrees) % 360 + 360) % 360
+                    page
+                }
+                val tree = doc.pages
+                (0 until tree.getCount()).map { tree.get(it) }.forEach { tree.remove(it) }
+                assembled.forEach { tree.add(it) }
+                pruneDeadFormFields(doc)
+                doc.save(out)
+            } finally { donor?.close() }
+        }
+    }
+
+
+    private fun detachAnnotations(page: PDPage) {
+        val annotations = page.annotations.toList()
+        page.annotations.clear()
+        for (annotation in annotations) {
+            annotation.cosObject.removeItem(COSName.PARENT)
+            annotation.cosObject.setItem(COSName.P, page.cosObject)
+            page.annotations.add(annotation)
+        }
+    }
+
+    private fun pruneDeadFormFields(doc: PDDocument) {
+        val acroForm = doc.documentCatalog.acroForm ?: return
+        val live = doc.pages.flatMap { it.annotations }.toSet()
+        val kept = acroForm.fields.filter { field -> field.widgets.isEmpty() || field.widgets.any { it in live } }
+        if (kept.size != acroForm.fields.size) acroForm.fields = kept
     }
 }

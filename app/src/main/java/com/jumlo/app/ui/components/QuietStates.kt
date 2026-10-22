@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -146,7 +148,7 @@ fun QuietShimmerSkeleton(
     val alpha by transition.animateFloat(
         initialValue = 0.35f,
         targetValue = 0.85f,
-        animationSpec = infiniteRepeatable(tween(800, easing = androidx.compose.animation.core.FastOutSlowInEasing), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(com.jumlo.app.ui.theme.JumloMotion.loadingPulseMs, easing = androidx.compose.animation.core.FastOutSlowInEasing), RepeatMode.Reverse),
         label = "shimmerAlpha"
     )
     Box(
@@ -173,19 +175,38 @@ fun QuietStateCard(
         containerColor = if (isError) colors.errorContainer else QuietTheme.pillars.cardSurface,
         borderColor = if (isError) colors.error.copy(alpha = 0.65f) else QuietTheme.pillars.cardBorder
     ) {
-        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuietIconTile(
-                icon = if (isError) Icons.Rounded.Warning else Icons.Rounded.Info,
-                tint = if (isError) colors.onErrorContainer else colors.primary,
-                container = if (isError) colors.errorContainer else colors.primaryContainer,
-                size = 44.dp
-            )
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = title, modifier = Modifier.semantics { heading() },
-                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isError) colors.onErrorContainer else colors.onSurface)
-                Text(text = subtitle, style = QuietTheme.typography.metadata,
-                    color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val compact = maxWidth < 310.dp || LocalDensity.current.fontScale >= 1.75f
+            if (compact) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    QuietIconTile(
+                        icon = if (isError) Icons.Rounded.Warning else Icons.Rounded.Info,
+                        tint = if (isError) colors.onErrorContainer else colors.primary,
+                        container = if (isError) colors.errorContainer else colors.primaryContainer,
+                        size = 44.dp
+                    )
+                    Text(text = title, modifier = Modifier.semantics { heading() },
+                        style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (isError) colors.onErrorContainer else colors.onSurface)
+                    Text(text = subtitle, style = QuietTheme.typography.metadata,
+                        color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+                }
+            } else {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    QuietIconTile(
+                        icon = if (isError) Icons.Rounded.Warning else Icons.Rounded.Info,
+                        tint = if (isError) colors.onErrorContainer else colors.primary,
+                        container = if (isError) colors.errorContainer else colors.primaryContainer,
+                        size = 44.dp
+                    )
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(text = title, modifier = Modifier.semantics { heading() },
+                            style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (isError) colors.onErrorContainer else colors.onSurface)
+                        Text(text = subtitle, style = QuietTheme.typography.metadata,
+                            color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+                    }
+                }
             }
         }
         if (actionLabel != null && onAction != null) {

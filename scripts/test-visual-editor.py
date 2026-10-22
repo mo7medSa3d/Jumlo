@@ -14,7 +14,7 @@ class VisualEditorContract(unittest.TestCase):
         self.assertIn('VisualImageSettings(form,vm::updateForm)',workspace)
     def test_engine_preserves_editing_contract(self):
         model=code('model/WorkspaceDraft.kt')
-        for tool in ('img_02','img_03','pdf_crop','pdf_signature','pdf_redact','img_adjust'):
+        for tool in ('img_02','img_03','pdf_crop','pdf_signature','pdf_annotate','img_adjust'):
             self.assertIn('"'+tool+'"',model)
         editor=code('ui/workspace/VisualDocumentEditor.kt')
         self.assertIn('cropLeft=safe.left.serialized()',editor)
@@ -29,14 +29,29 @@ class VisualEditorContract(unittest.TestCase):
         backend=code('data/pdf/PdfBoxBackend.kt')
         policy=code('core/PdfPageGeometry.kt')
         catalog=code('data/jobs/CapabilityRegistry.kt')
+        image_codec=code('data/pdf/PdfImageCodec.kt')
+        image_compressor=code('data/pdf/PdfImageCompressor.kt')
+        android_codec=code('data/pdf/AndroidImageCodec.kt')
         self.assertIn('PdfCompressionPolicy.betterCandidate(',compressor)
         self.assertIn('bestBytes = candidate.length()',compressor)
         self.assertIn('best.delete()',compressor)
-        self.assertIn('getImage(null, subsampling)',backend)
         self.assertIn('PDFormXObject',backend)
         self.assertIn('decodeSubsampling(',policy)
         self.assertIn('pdf_image',catalog)
         self.assertIn('"overlayImage" ->',compressor)
+        # The image work goes through a byte-level codec seam, so the same code
+        # runs on the host and the scan case has CI coverage.
+        self.assertIn('fun interface PdfImageCodec',image_codec)
+        self.assertIn('fun recode(',image_codec)
+        self.assertNotIn('import android',image_codec)
+        self.assertIn('PdfImageCompressor',backend)
+        self.assertIn('codec.recode(',image_compressor)
+        # The decode is budgeted and an out-of-memory is caught per image.
+        self.assertIn('ImageWorkPolicy.requireFits(',android_codec)
+        self.assertIn('OutOfMemoryError',image_compressor)
+        # The ladder reaches below the chosen resolution, and keeps the quality.
+        self.assertIn('fun ladderFloor(',policy)
+        self.assertIn('rungs += step to selectedQuality',policy)
 
     def test_visual_settings_do_not_ask_for_file_size_or_dpi(self):
         controls=code('ui/workspace/VisualImageSettings.kt')
@@ -50,7 +65,10 @@ class VisualEditorContract(unittest.TestCase):
         editor=code('ui/workspace/VisualDocumentEditor.kt')
         for name in ('undoHistory','redoHistory','recordEdit(', 'beforeDrag', 'R.string.visual_edit_undo', 'R.string.visual_edit_redo'):
             self.assertIn(name,editor)
-        self.assertIn('saveRect(previous)',editor)
+        # A drag commits as recordEdit(beforeDrag, active) then saves the active box;
+        # move/size buttons record recordEdit(rect, next) before saveRect(next).
+        self.assertIn('recordEdit(it,active)',editor)
+        self.assertIn('saveRect(active)',editor)
         self.assertIn('saveRect(next)',editor)
 
     def test_compression_progress_and_signature_order_are_resilient(self):
@@ -68,7 +86,7 @@ class VisualEditorContract(unittest.TestCase):
         self.assertIn('object PdfOverlaySourcePolicy',geometry)
         self.assertIn('object PdfImagePlacementPolicy',geometry)
         self.assertIn('PdfImagePlacementPolicy.fit(',renderer)
-        self.assertIn('placement.width, placement.height',renderer)
+        self.assertIn('placement.width,placement.height',renderer)
         self.assertIn('contentScale=ContentScale.Fit)',editor)
         self.assertEqual(2,backend.count('PdfOverlaySourcePolicy.ordered('))
 

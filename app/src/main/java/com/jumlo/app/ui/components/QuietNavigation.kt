@@ -10,15 +10,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Print
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -57,50 +62,45 @@ fun QuietFloatingDock(
     language: AppLanguage,
     onSelectTab: (DockTab) -> Unit,
     onScan: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPrint: (() -> Unit)? = null
 ) {
     val palette = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     val reduced = LocalReducedMotion.current
     val haptics = rememberAppHaptics()
     val showLabels = LocalDensity.current.fontScale < 1.5f
-    val scanLabel = stringResource(R.string.neon_scan_action)
+    val scanLabel = if(onPrint!=null) stringResource(R.string.upgrade_print) else stringResource(R.string.neon_scan_action)
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    // Four destinations and one primary action. Home and Tools were the same screen
+    // to the user, so only one of them is in the bar.
     val slot = when (selectedTab) {
         DockTab.HOME -> 0
-        DockTab.FILES -> 1
-        DockTab.TOOLS -> 3
-        DockTab.SETTINGS -> 4
-        DockTab.DOWNLOADS -> -1
+        DockTab.TOOLS -> 1
+        DockTab.PRINT -> 2
+        DockTab.FILES -> 3
+        DockTab.DOWNLOADS -> 4
+        DockTab.SETTINGS -> 0
     }
     Box(
         modifier.fillMaxWidth().padding(bottom = bottom + 12.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Surface(
-            modifier = Modifier.widthIn(max = 460.dp).fillMaxWidth(.96f).height(78.dp)
-                .shadow(14.dp, QuietTheme.shapes.dockPill,
-                    ambientColor = Color.Black.copy(alpha = .22f)),
-            shape = QuietTheme.shapes.dockPill,
-            color = pillars.dockSurface,
-            tonalElevation = 8.dp,
-            border = BorderStroke(1.dp, pillars.dockBorder)
+            modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(.96f),
+            shape = RoundedCornerShape(28.dp),
+            color = palette.surfaceContainerHigh,
+            tonalElevation = 0.dp
         ) {
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                val segment = (maxWidth - 12.dp) / 5
-                val position by animateDpAsState(
-                    targetValue = 6.dp + segment * slot.coerceAtLeast(0),
-                    animationSpec = if (reduced) snap()
-                        else spring(dampingRatio = JumloMotion.indicatorDamping,
-                            stiffness = Spring.StiffnessMedium),
-                    label = "neon-dock-position"
-                )
+            Column {
+                BoxWithConstraints(Modifier.fillMaxWidth().height(74.dp)) {
+                val segment = maxWidth / 5
                 if (slot >= 0) {
                     Box(Modifier.align(Alignment.CenterStart)
-                        .offset(x = position).width(segment).height(62.dp)
-                        .padding(horizontal = 2.dp)
-                        .background(pillars.activePillContainer.copy(alpha = .67f),
-                            QuietTheme.shapes.activeIndicatorPill))
+                        .offset(x = 6.dp + segment * slot)
+                        .width(segment).height(52.dp)
+                        .padding(horizontal = 6.dp)
+                        .background(pillars.activePillContainer, CircleShape))
                 }
                 Row(
                     Modifier.fillMaxSize().padding(horizontal = 6.dp),
@@ -109,34 +109,36 @@ fun QuietFloatingDock(
                     DockDestination(DockTab.HOME, if (language.isRtl) DockTab.HOME.labelAr
                         else DockTab.HOME.labelEn, slot == 0, showLabels,
                         Modifier.weight(1f)) { onSelectTab(DockTab.HOME) }
-                    DockDestination(DockTab.FILES, stringResource(R.string.neon_dock_documents),
-                        slot == 1, showLabels, Modifier.weight(1f)) {
-                        onSelectTab(DockTab.FILES)
-                    }
+                    DockDestination(DockTab.TOOLS, if (language.isRtl) DockTab.TOOLS.labelAr
+                        else DockTab.TOOLS.labelEn, slot == 1, showLabels,
+                        Modifier.weight(1f)) { onSelectTab(DockTab.TOOLS) }
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         Surface(
-                            onClick = { haptics.actionClick(); onScan() },
+                            onClick = { haptics.actionClick(); (onPrint ?: onScan)() },
                             shape = CircleShape,
                             color = palette.primary,
                             contentColor = palette.onPrimary,
-                            shadowElevation = 8.dp,
+                            shadowElevation = QuietTheme.elevation.floating,
                             modifier = Modifier.pressFeedback().offset(y = (-9).dp)
                                 .size(66.dp).semantics {
                                     contentDescription = scanLabel
+                                    selected = selectedTab == DockTab.PRINT
+                                    role = Role.Tab
                                 }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.DocumentScanner, null, Modifier.size(28.dp))
+                                Icon(if(onPrint!=null) Icons.Rounded.Print else Icons.Rounded.DocumentScanner, null, Modifier.size(28.dp))
                             }
                         }
                     }
-                    DockDestination(DockTab.TOOLS, if (language.isRtl) DockTab.TOOLS.labelAr
-                        else DockTab.TOOLS.labelEn, slot == 3, showLabels,
-                        Modifier.weight(1f)) { onSelectTab(DockTab.TOOLS) }
-                    DockDestination(DockTab.SETTINGS, stringResource(R.string.neon_dock_me),
-                        slot == 4, showLabels, Modifier.weight(1f)) {
-                        onSelectTab(DockTab.SETTINGS)
+                    DockDestination(DockTab.FILES, stringResource(R.string.neon_dock_documents),
+                        slot == 3, showLabels, Modifier.weight(1f)) {
+                        onSelectTab(DockTab.FILES)
                     }
+                    DockDestination(DockTab.DOWNLOADS, if (language.isRtl) DockTab.DOWNLOADS.labelAr
+                        else DockTab.DOWNLOADS.labelEn, slot == 4, showLabels,
+                        Modifier.weight(1f)) { onSelectTab(DockTab.DOWNLOADS) }
+                }
                 }
             }
         }
@@ -148,7 +150,8 @@ private fun icon(tab: DockTab): ImageVector = when (tab) {
     DockTab.FILES -> Icons.Rounded.Folder
     DockTab.TOOLS -> Icons.Rounded.GridView
     DockTab.SETTINGS -> Icons.Rounded.Person
-    DockTab.DOWNLOADS -> Icons.Rounded.Folder
+    DockTab.DOWNLOADS -> Icons.Rounded.Download
+    DockTab.PRINT -> Icons.Rounded.Print
 }
 
 @Composable
@@ -189,7 +192,9 @@ private fun DockDestination(
             Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 style = QuietTheme.typography.navigation.copy(
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Medium),
-                color = if (active) colors.primary else colors.onSurfaceVariant)
+                color = if (active) colors.primary else colors.onSurfaceVariant,
+                // The column already carries the label; announcing the Text too reads it twice.
+                modifier = Modifier.clearAndSetSemantics {})
         }
     }
 }

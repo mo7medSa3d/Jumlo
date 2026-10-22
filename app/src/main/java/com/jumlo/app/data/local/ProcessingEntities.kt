@@ -31,6 +31,9 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     // Atomically reject stale UI actions after a worker has advanced to final publication or a terminal stage.
     @Query("UPDATE jobs SET stage='PAUSED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','VALIDATING','RUNNING')") suspend fun pauseIfActive(id:String,snapshot:String):Int
     @Query("UPDATE jobs SET stage='CANCELLED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','VALIDATING','RUNNING','FINALIZING','INTERRUPTED','PAUSED')") suspend fun cancelIfOpen(id:String,snapshot:String):Int
+    // Separate user-authorized abandonment of terminal/retryable jobs. A stale generic
+    // cancel action must never overwrite a completed/failed worker result.
+    @Query("UPDATE jobs SET stage='CANCELLED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('FAILED','PARTIAL','WAITING_FOR_INPUT') AND leaseOwner IS NULL") suspend fun stopRetryingIfUnleased(id:String,snapshot:String):Int
     @Query("UPDATE jobs SET stage='QUEUED',snapshotJson=:snapshot,leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND stage IN ('FAILED','PARTIAL','INTERRUPTED','PAUSED','WAITING_FOR_INPUT') AND leaseOwner IS NULL") suspend fun retry(id:String,snapshot:String):Int
     @Query("UPDATE jobs SET stage='FAILED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','INTERRUPTED') AND leaseOwner IS NULL")
     suspend fun failBeforeClaim(id:String,snapshot:String):Int

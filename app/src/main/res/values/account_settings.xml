@@ -29,6 +29,11 @@
     <string name="pref_reduce_motion">Reduce motion</string>
     <string name="pref_reduce_motion_summary">System motion preferences are always respected.</string>
     <string name="pref_haptics">Touch feedback</string>
+    <string name="pref_media_service_hint">Service address</string>
+    <string name="pref_media_service_help">The service resolves the formats; Jumlo downloads the chosen stream to your device. Leave empty to offer direct media links only.</string>
+    <string name="pref_media_service">Downloader service</string>
+    <string name="pref_media_service_off">Not set - direct links only</string>
+    <string name="pref_media_service_token">Access token (optional)</string>
     <string name="pref_downloads">Downloads</string>
     <string name="pref_wifi_only">Wi-Fi only by default</string>
     <string name="pref_wifi_summary">Applied when starting a new download workspace.</string>

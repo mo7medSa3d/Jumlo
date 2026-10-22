@@ -1,2 +1,0 @@
-Error: Could not find or load main class "-Xmx64m"
-Caused by: java.lang.ClassNotFoundException: "-Xmx64m"

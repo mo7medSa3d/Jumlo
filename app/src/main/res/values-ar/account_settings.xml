@@ -29,6 +29,11 @@
     <string name="pref_reduce_motion">تقليل الحركة</string>
     <string name="pref_reduce_motion_summary">تُحترم إعدادات الحركة في النظام دائمًا.</string>
     <string name="pref_haptics">استجابة اللمس</string>
+    <string name="pref_media_service_hint">عنوان الخدمة</string>
+    <string name="pref_media_service_help">تحدد الخدمة الصيغ المتاحة، ويحمّل Jumlo البث المختار إلى جهازك. اتركه فارغًا لعرض الروابط المباشرة فقط.</string>
+    <string name="pref_media_service">خدمة التنزيل</string>
+    <string name="pref_media_service_off">غير مضبوطة - الروابط المباشرة فقط</string>
+    <string name="pref_media_service_token">رمز الوصول (اختياري)</string>
     <string name="pref_downloads">التنزيلات</string>
     <string name="pref_wifi_only">Wi-Fi فقط افتراضيًا</string>
     <string name="pref_wifi_summary">يُطبق عند فتح مساحة تنزيل جديدة.</string>

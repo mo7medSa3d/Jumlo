@@ -1,12 +1,10 @@
 package com.jumlo.app.pdf
 
-import com.jumlo.app.data.pdf.CompareVerdict
 import com.jumlo.app.data.pdf.FormEntry
 import com.jumlo.app.data.pdf.OrganizeOp
 import com.jumlo.app.data.pdf.PageGroup
 import com.jumlo.app.data.pdf.PdfBoxBackend
 import com.jumlo.app.data.pdf.PdfInput
-import com.jumlo.app.data.pdf.RedactRegion
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,19 +36,15 @@ class PdfStructureCoreTest {
     @Test fun split_produces_one_file_per_group() {
         val source = docFile("alpha", 4)
         val first = File(dir, "p1.pdf"); val second = File(dir, "p2.pdf")
-        PdfBoxBackend.open(source, null).use { doc ->
-            val files = PdfBoxBackend.split(doc, listOf(PageGroup(0, 2), PageGroup(2, 1)), listOf(first, second))
-            assertEquals(2, files.size)
-            assertEquals("alpha page 1", PdfBoxBackend.open(files[0], null).use { PdfBoxBackend.pageTexts(it)[0] })
-            assertEquals(1, PdfBoxBackend.open(files[1], null).use { it.numberOfPages })
-        }
+        val files = PdfBoxBackend.split(source, listOf(PageGroup(0, 2), PageGroup(2, 1)), listOf(first, second))
+        assertEquals(2, files.size)
+        assertEquals("alpha page 1", PdfBoxBackend.open(files[0], null).use { PdfBoxBackend.pageTexts(it)[0] })
+        assertEquals(1, PdfBoxBackend.open(files[1], null).use { it.numberOfPages })
     }
 
     @Test fun extract_preserves_selected_order() {
         val out = File(dir, "extracted.pdf")
-        PdfBoxBackend.open(docFile("alpha", 5), null).use { doc ->
-            PdfBoxBackend.organize(doc, listOf(OrganizeOp(3), OrganizeOp(1)), out)
-        }
+        PdfBoxBackend.organize(docFile("alpha", 5), listOf(OrganizeOp(3), OrganizeOp(1)), out)
         PdfBoxBackend.open(out, null).use {
             val texts = PdfBoxBackend.pageTexts(it)
             assertEquals(2, it.numberOfPages)
@@ -61,13 +55,83 @@ class PdfStructureCoreTest {
 
     @Test fun organize_applies_rotation_and_delete() {
         val out = File(dir, "organized.pdf")
-        PdfBoxBackend.open(docFile("alpha", 3), null).use { doc ->
-            PdfBoxBackend.organize(doc, listOf(OrganizeOp(0, 90), OrganizeOp(2, 180)), out)
-        }
+        PdfBoxBackend.organize(docFile("alpha", 3), listOf(OrganizeOp(0, 90), OrganizeOp(2, 180)), out)
         PdfBoxBackend.open(out, null).use {
             assertEquals(2, it.numberOfPages)
             assertEquals(90, it.getPage(0).rotation)
             assertEquals(180, it.getPage(1).rotation)
+        }
+    }
+
+    @Test fun repeatedPageInstancesKeepNaturalRotationAndIndependentRelativeRotations() {
+        val out=File(dir,"duplicate-rotations.pdf")
+        val rotated=File(dir,"duplicate-rotated.pdf")
+        PdfBoxBackend.open(docFile("duplicate",1),null).use { doc ->
+            doc.getPage(0).rotation=90
+            doc.save(rotated)
+        }
+        PdfBoxBackend.organize(rotated,listOf(OrganizeOp(0,90),OrganizeOp(0,180),OrganizeOp(0,0)),out)
+        PdfBoxBackend.open(out,null).use { result ->
+            assertEquals(listOf(180,270,90),result.pages.map { it.rotation })
+            val texts=PdfBoxBackend.pageTexts(result)
+            assertEquals(texts.toString(),3,texts.count { it.filterNot(Char::isWhitespace).contains("duplicate") })
+        }
+    }
+
+    @Test fun assemblePreservesInheritedPageResources() {
+        val out=File(dir,"inherited.pdf")
+        val inherited=File(dir,"inherited-source.pdf")
+        PdfBoxBackend.open(docFile("inherited marker",1),null).use { doc ->
+            val page=doc.getPage(0)
+            val parent=page.cosObject.getDictionaryObject(com.tom_roush.pdfbox.cos.COSName.PARENT) as com.tom_roush.pdfbox.cos.COSDictionary
+            parent.setItem(com.tom_roush.pdfbox.cos.COSName.RESOURCES,page.resources)
+            page.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.RESOURCES)
+            doc.save(inherited)
+        }
+        PdfBoxBackend.organize(inherited,listOf(OrganizeOp(0),OrganizeOp(0,90)),out)
+        PdfBoxBackend.open(out,null).use { result ->
+            val texts=PdfBoxBackend.pageTexts(result)
+            assertTrue(texts.toString(),texts.all { it.filterNot(Char::isWhitespace).contains("inheritedmarker") })
+        }
+    }
+
+    @Test fun split_preserves_form_bookmarks_and_document_information() {
+        val source = PdfFixtures.catalogDoc(File(dir, "catalog.pdf"), 3)
+        val part = File(dir, "catalog-part.pdf")
+        PdfBoxBackend.split(source, listOf(PageGroup(0, 2)), listOf(part))
+        PdfBoxBackend.open(part, null).use { doc ->
+            assertEquals(2, doc.numberOfPages)
+            assertEquals("Catalog Title", doc.documentInformation.title)
+            assertEquals("Jumlo", doc.documentInformation.author)
+            val acro = doc.documentCatalog.acroForm
+            assertTrue("AcroForm survived the split", acro != null)
+            assertEquals(listOf("name"), acro!!.fields.map { it.partialName })
+            val outline = doc.documentCatalog.documentOutline
+            assertTrue("Bookmark survived the split", outline != null)
+            assertEquals("Chapter 1", outline!!.firstChild?.title)
+        }
+    }
+
+    @Test fun extract_keeps_the_form_widget_on_the_retained_page() {
+        val source = PdfFixtures.catalogDoc(File(dir, "catalog-extract.pdf"), 2)
+        val out = File(dir, "catalog-extracted.pdf")
+        PdfBoxBackend.extract(source, listOf(0), out)
+        PdfBoxBackend.open(out, null).use { doc ->
+            assertEquals(1, doc.numberOfPages)
+            val acro = doc.documentCatalog.acroForm
+            assertEquals(listOf("name"), acro!!.fields.map { it.partialName })
+            assertEquals(1, doc.getPage(0).annotations.size)
+        }
+    }
+
+    @Test fun organize_with_a_duplicated_page_keeps_a_valid_document() {
+        val source = PdfFixtures.catalogDoc(File(dir, "catalog-duplicate.pdf"), 2)
+        val out = File(dir, "catalog-duplicated.pdf")
+        PdfBoxBackend.organize(source, listOf(OrganizeOp(0), OrganizeOp(0, 90)), out)
+        PdfBoxBackend.open(out, null).use { doc ->
+            assertEquals(2, doc.numberOfPages)
+            assertEquals(listOf(0, 90), doc.pages.map { it.rotation })
+            assertEquals(2, PdfBoxBackend.pageTexts(doc).size)
         }
     }
 
@@ -83,7 +147,7 @@ class PdfStructureCoreTest {
     @Test fun insert_pages_from_another_document() {
         val out = File(dir, "inserted.pdf")
         PdfBoxBackend.open(docFile("alpha", 2), null).use { doc ->
-            PdfBoxBackend.insert(doc, PdfInput(docFile("beta", 2)), 1, out)
+            PdfBoxBackend.insert(docFile("alpha", 2), PdfInput(docFile("beta", 2)), 1, out)
         }
         PdfBoxBackend.open(out, null).use {
             val texts = PdfBoxBackend.pageTexts(it)
@@ -179,28 +243,49 @@ class PdfStructureCoreTest {
         }
     }
 
-    @Test fun redaction_removes_text_glyphs_in_region() {
-        val out = File(dir, "redacted.pdf")
-        PdfBoxBackend.open(docFile("alpha", 1), null).use { doc ->
-            val result = PdfBoxBackend.redact(doc, mapOf(0 to listOf(RedactRegion(0.05, 0.12, 0.95, 0.25))))
-            assertEquals(0, result.leftoverText.size)
-            assertEquals(0, result.pageFallbacks.size)
-            doc.save(out)
+    @Test fun parserPreservesPrimitiveLookingTextAndUsesActualCheckboxType() {
+        for(raw in listOf("name=42\nagree=true", "{\"name\":\"42\",\"agree\":true}", "{\"name\":42,\"agree\":\"true\"}")) {
+            PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"input-${raw.hashCode()}.pdf")),null).use { doc ->
+                PdfBoxBackend.fillForm(doc,com.jumlo.app.data.pdf.FormInputParser.parse(raw))
+                assertEquals("42",doc.documentCatalog.acroForm.getField("name").valueAsString)
+                assertTrue((doc.documentCatalog.acroForm.getField("agree") as com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox).isChecked)
+            }
         }
-        PdfBoxBackend.open(out, null).use {
-            val left = PdfBoxBackend.pageTexts(it)[0]
-            assertFalse(left.contains("alpha"))
-            assertTrue("redact must not leave stray text", left.isBlank())
+        for(raw in listOf("name=true", "{\"name\":\"true\"}", "{\"name\":true}")) {
+            PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"bool-${raw.hashCode()}.pdf")),null).use { doc ->
+                PdfBoxBackend.fillForm(doc,com.jumlo.app.data.pdf.FormInputParser.parse(raw))
+                assertEquals("true",doc.documentCatalog.acroForm.getField("name").valueAsString)
+            }
         }
     }
 
-    @Test fun redaction_outside_region_keeps_text() {
-        val out = File(dir, "kept.pdf")
-        PdfBoxBackend.open(docFile("alpha", 1), null).use { doc ->
-            PdfBoxBackend.redact(doc, mapOf(0 to listOf(RedactRegion(0.0, 0.90, 0.05, 1.0))))
-            doc.save(out)
+    @Test fun flattenRegeneratesExistingTextAndFindsWidgetWithoutPagePointer() {
+        val flat=File(dir,"missing-page-flat.pdf")
+        PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"existing.pdf")),null).use { doc ->
+            PdfBoxBackend.fillForm(doc,mapOf("name" to FormEntry.Text("Existing 42")))
+            val widget=doc.documentCatalog.acroForm.getField("name").widgets.single()
+            widget.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.P)
+            widget.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.AP)
+            PdfBoxBackend.flattenForm(doc,flat)
         }
-        PdfBoxBackend.open(out, null).use { assertTrue(PdfBoxBackend.pageTexts(it)[0].contains("alpha")) }
+        PdfBoxBackend.open(flat,null).use { assertTrue(PdfBoxBackend.pageTexts(it).single().contains("Existing 42")) }
+    }
+
+    @Test fun unresolvedWidgetFailsBeforeRemovingFieldsOrAnnotations() {
+        val flat=File(dir,"must-not-flatten.pdf")
+        PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"unresolved.pdf")),null).use { doc ->
+            val acro=doc.documentCatalog.acroForm
+            val widget=acro.getField("name").widgets.single()
+            widget.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.P)
+            doc.getPage(0).annotations=doc.getPage(0).annotations.filter { it.cosObject !== widget.cosObject }
+            val before=doc.getPage(0).annotations.size
+            try { PdfBoxBackend.flattenForm(doc,flat); throw AssertionError("missing page must fail") }
+            catch(expected:IllegalArgumentException) { assertEquals("FORM_WIDGET_PAGE_MISSING",expected.message) }
+            assertTrue(doc.documentCatalog.acroForm.cosObject === acro.cosObject)
+            assertEquals(2,acro.fields.size)
+            assertEquals(before,doc.getPage(0).annotations.size)
+            assertFalse(flat.exists())
+        }
     }
 
     @Test fun compress_keeps_text_and_shrinks_images() {
@@ -216,18 +301,6 @@ class PdfStructureCoreTest {
         assertTrue("output must be smaller than raw-image baseline", out.length() < baseline)
     }
 
-    @Test fun compare_flags_text_differences() {
-        val a = docFile("alpha", 2)
-        val other = docFile("beta", 3)
-        PdfBoxBackend.open(a, null).use { aDoc ->
-            PdfBoxBackend.open(a, null).use { bDoc ->
-                assertEquals(CompareVerdict.SAME, PdfBoxBackend.compare(aDoc, bDoc).verdict)
-            }
-            PdfBoxBackend.open(other, null).use { cDoc ->
-                assertEquals(CompareVerdict.DIFFERENT, PdfBoxBackend.compare(aDoc, cDoc).verdict)
-            }
-        }
-    }
 
     @Test fun page_info_exposes_boxes_and_text_flag() {
         PdfBoxBackend.open(docFile("alpha", 2), null).use {

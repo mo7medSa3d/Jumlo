@@ -11,10 +11,14 @@
     <string name="neon_smart_tools">استكشف الأدوات</string>
     <string name="neon_tools_import">استيراد</string>
     <string name="neon_tools_convert">تحويل</string>
+    <string name="workspace_scanner">مسح</string>
+
     <string name="neon_tools_edit">تعديل وتنظيم</string>
     <string name="neon_tools_download">تنزيل</string>
     <string name="neon_tools_manage">إدارة الملفات</string>
     <string name="neon_tools_other">أدوات أخرى</string>
+    <string name="home_search_hint">ابحث عن أداة، مثل "دمج"</string>
+
     <string name="neon_tools_search">ابحث عن أداة</string>
     <string name="neon_files_subtitle">كل ملفاتك في مكان واحد</string>
     <string name="neon_my_space">مساحتي</string>

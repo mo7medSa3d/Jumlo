@@ -7,13 +7,13 @@ import kotlin.math.min
  * The geometry model has no Compose or Android dependencies so hit testing and
  * edge constraints can be verified on the host JVM.
  */
+@kotlinx.serialization.Serializable
 internal data class VisualRect(
     val left: Float, val top: Float, val right: Float, val bottom: Float
 ) {
     companion object {
         const val MIN_EDGE = .04f
         val WHOLE = VisualRect(0f, 0f, 1f, 1f)
-        val REDACTION_START = VisualRect(.1f, .1f, .9f, .25f)
         val SIGNATURE_START = VisualRect(.6f, .75f, .95f, .95f)
 
         fun fitAspect(sourceWidth: Int, sourceHeight: Int, desiredAspect: Float): VisualRect {
@@ -85,3 +85,109 @@ internal data class VisualRect(
 internal enum class VisualHandle {
     NONE, BODY, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
 }
+
+/**
+ * The result of a snapped drag: the rectangle, and the guide line that was hit.
+ * The UI draws the guide and fires a haptic tick, so the user feels the snap
+ * instead of guessing whether it happened.
+ */
+internal data class SnapResult(
+    val rect: VisualRect,
+    val guideX: Float? = null,
+    val guideY: Float? = null
+) {
+    val snapped: Boolean get() = guideX != null || guideY != null
+}
+
+/**
+ * Snapping for direct manipulation.
+ *
+ * Edges snap to the page centre, the thirds and the page borders. A dragged body
+ * snaps as a whole, so the rectangle never jumps under the finger.
+ */
+internal object SnapGuides {
+    /** How close, in normalized page units, an edge must be to snap. */
+    const val TOLERANCE = 0.012f
+
+    /** The lines an edge can snap to, in normalized page units. */
+    fun targets(): List<Float> = listOf(0f, 1f / 3f, .5f, 2f / 3f, 1f)
+
+    fun snap(rect: VisualRect, handle: VisualHandle, tolerance: Float = TOLERANCE): SnapResult {
+        val lines = targets()
+        if (handle == VisualHandle.NONE) return SnapResult(rect)
+        if (handle == VisualHandle.BODY) {
+            val (dx, gx) = nearestDelta(listOf(rect.left, rect.right, (rect.left + rect.right) / 2f), lines, tolerance)
+            val (dy, gy) = nearestDelta(listOf(rect.top, rect.bottom, (rect.top + rect.bottom) / 2f), lines, tolerance)
+            val moved = rect.copy(
+                left = rect.left + dx, top = rect.top + dy,
+                right = rect.right + dx, bottom = rect.bottom + dy
+            ).valid()
+            return SnapResult(moved, gx, gy)
+        }
+        val movesLeft = handle == VisualHandle.TOP_LEFT || handle == VisualHandle.BOTTOM_LEFT
+        val movesRight = handle == VisualHandle.TOP_RIGHT || handle == VisualHandle.BOTTOM_RIGHT
+        val movesTop = handle == VisualHandle.TOP_LEFT || handle == VisualHandle.TOP_RIGHT
+        val movesBottom = handle == VisualHandle.BOTTOM_LEFT || handle == VisualHandle.BOTTOM_RIGHT
+        val (dl, gl) = if (movesLeft) nearestDelta(listOf(rect.left), lines, tolerance) else 0f to null
+        val (dr, gr) = if (movesRight) nearestDelta(listOf(rect.right), lines, tolerance) else 0f to null
+        val (dt, gt) = if (movesTop) nearestDelta(listOf(rect.top), lines, tolerance) else 0f to null
+        val (db, gb) = if (movesBottom) nearestDelta(listOf(rect.bottom), lines, tolerance) else 0f to null
+        val moved = rect.copy(
+            left = rect.left + dl, right = rect.right + dr,
+            top = rect.top + dt, bottom = rect.bottom + db
+        ).valid()
+        return SnapResult(moved, gl ?: gr, gt ?: gb)
+    }
+
+    /** The smallest correction that brings one of the edges onto a guide line. */
+    private fun nearestDelta(edges: List<Float>, targets: List<Float>, tolerance: Float): Pair<Float, Float?> {
+        var bestDelta = 0f
+        var bestTarget: Float? = null
+        var bestDistance = Float.MAX_VALUE
+        edges.forEach { edge ->
+            targets.forEach { target ->
+                val delta = target - edge
+                val distance = kotlin.math.abs(delta)
+                if (distance <= tolerance && distance < bestDistance) {
+                    bestDistance = distance
+                    bestDelta = delta
+                    bestTarget = target
+                }
+            }
+        }
+        return bestDelta to bestTarget
+    }
+}
+
+/** Backend order: crop source, flip horizontally/vertically, then rotate clockwise. */
+internal data class VisualTransform(val turns:Int=0,val flipX:Boolean=false,val flipY:Boolean=false) {
+    fun toDisplay(x:Float,y:Float):Pair<Float,Float> {
+        val a=if(flipX) 1f-x else x;val b=if(flipY) 1f-y else y
+        return when((turns%4+4)%4) { 1 -> 1f-b to a;2 -> 1f-a to 1f-b;3 -> b to 1f-a;else -> a to b }
+    }
+    fun toSource(x:Float,y:Float):Pair<Float,Float> {
+        val (a,b)=when((turns%4+4)%4) { 1 -> y to 1f-x;2 -> 1f-x to 1f-y;3 -> 1f-y to x;else -> x to y }
+        return (if(flipX) 1f-a else a) to (if(flipY) 1f-b else b)
+    }
+}
+
+/** Fixed opposite corner; aspect is normalized width/height. BODY stays translation-only. */
+internal fun VisualRect.draggedLocked(handle:VisualHandle,dx:Float,dy:Float,aspect:Float):VisualRect {
+    if(handle==VisualHandle.BODY || handle==VisualHandle.NONE || aspect<=0f) return dragged(handle,dx,dy)
+    val leftHandle=handle==VisualHandle.TOP_LEFT || handle==VisualHandle.BOTTOM_LEFT
+    val topHandle=handle==VisualHandle.TOP_LEFT || handle==VisualHandle.TOP_RIGHT
+    val anchorX=if(leftHandle) right else left;val anchorY=if(topHandle) bottom else top
+    val movingX=(if(leftHandle) left else right)+dx
+    val movingY=(if(topHandle) top else bottom)+dy
+    val requestedW=kotlin.math.max(kotlin.math.abs(movingX-anchorX),kotlin.math.abs(movingY-anchorY)*aspect)
+    val maxW=if(leftHandle) anchorX else 1f-anchorX
+    val maxH=if(topHandle) anchorY else 1f-anchorY
+    val w=requestedW.coerceIn(minOf(kotlin.math.max(VisualRect.MIN_EDGE,VisualRect.MIN_EDGE*aspect),maxW,maxH*aspect),minOf(maxW,maxH*aspect))
+    val h=w/aspect
+    return VisualRect(if(leftHandle) anchorX-w else anchorX,if(topHandle) anchorY-h else anchorY,if(leftHandle) anchorX else anchorX+w,if(topHandle) anchorY else anchorY+h)
+}
+
+
+/** Only editor values enter the saved-state bundle; source metadata and secrets are excluded. */
+@kotlinx.serialization.Serializable
+internal data class VisualEditSnapshot(val rect:VisualRect,val turns:Int,val flipX:Boolean,val flipY:Boolean,val aspect:Float)

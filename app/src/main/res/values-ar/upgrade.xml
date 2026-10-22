@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upgrade_print">طباعة</string>
+    <string name="upgrade_print_selected">طباعة المستند المحدد</string>
+    <string name="upgrade_loading_documents">جارٍ تحميل مستنداتك…</string>
+    <string name="upgrade_loading_activity">جارٍ تحميل النشاط…</string>
+    <string name="upgrade_loading_failed">تعذّر تحميل البيانات المحفوظة. حاول مرة أخرى.</string>
+    <string name="upgrade_rename_copy">إعادة تسمية</string>
+    <string name="upgrade_swipe_hint">اسحب لعرض إجراءات الملف</string>
+    <string name="upgrade_scan_corner">الزاوية %1$d</string>
+    <string name="upgrade_scan_horizontal">الموضع الأفقي</string>
+    <string name="upgrade_scan_vertical">الموضع العمودي</string>
+    <string name="upgrade_scan_precision">ضبط الزوايا بدقة</string>
+    <string name="upgrade_preview_loading">جارٍ تحميل المعاينة</string>
+    <string name="upgrade_no_results">لا توجد مستندات مطابقة</string>
+    <string name="upgrade_no_results_hint">جرّب بحثًا أو مرشحًا آخر.</string>
+    <string name="upgrade_new_name">الاسم الجديد</string>
+    <string name="upgrade_renamed">تمت إعادة تسمية المستند</string>
+    <string name="upgrade_rename_failed">تعذّرت إعادة تسمية هذا المستند</string>
+    <string name="upgrade_image_to_pdf_preview">معاينة الورق</string>
+    <string name="upgrade_margin_drag">اسحب الدليل لضبط الهامش</string>
+    <string name="upgrade_margin_mm">الهامش: %1$d مم</string>
+    <string name="upgrade_orientation_portrait">عمودي</string>
+    <string name="upgrade_orientation_landscape">أفقي</string>
+    <string name="upgrade_orientation_auto">مطابقة الصورة</string>
+    <string name="upgrade_scale_fit">إظهار الصورة كاملة</string>
+    <string name="upgrade_scale_fill">ملء الصفحة والقص</string>
+    <string name="upgrade_preview_unavailable">المعاينة غير متاحة. تأكد من أن المستند ما زال موجودًا.</string>
+    <string name="upgrade_invalid_paper">الهامش أو أبعاد الورق غير صالحة. عدّل إعدادات الورق.</string>
+    <string name="upgrade_image_memory">يحتاج هذا التعديل إلى ذاكرة صور أكبر من المتاحة. جرّب أبعاد إخراج أصغر أو أغلق العمليات الأخرى. لم يتغير المصدر.</string>
+    <string name="upgrade_image_target_unmet">تعذّر الوصول إلى حجم الملف المطلوب مع الحفاظ على صورة صالحة. اختر حجمًا مستهدفًا أكبر. لم يتغير المصدر.</string>
+    <string name="upgrade_image_unchanged">لم يتم إنتاج صورة صالحة بحجم أصغر. لم يتغير الملف الأصلي.</string>
+    <string name="upgrade_download_restart_failed">تعذّرت إعادة بدء التنزيل. حاول مجددًا بعد توقف العملية السابقة.</string>
+    <string name="upgrade_form_values">تحقق من أسماء حقول النموذج وقيمها. يجب أن تتوافق كل قيمة مع نوع الحقل.</string>
+    <string name="upgrade_form_flatten">لا يمكن تثبيت حقول هذا النموذج بأمان. احفظه بحقول قابلة للتحرير أو استخدم ملف PDF آخر.</string>
+    <string name="upgrade_page_edit_failed">تعذّر تطبيق تعديلات الصفحات. أعد تحميل المستند وحاول مجددًا.</string>
+</resources>

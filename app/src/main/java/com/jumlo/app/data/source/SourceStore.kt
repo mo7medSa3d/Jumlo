@@ -71,7 +71,8 @@ import javax.inject.Singleton
         catch(e:Exception) { cleanupUnregistered(id,File(inbound,"$id.bin")); throw OperationFailure(stableError(e)) }
     }
     /** Imports an app-private local file (camera scan / drawn signature) as an immutable snapshot. */
-    suspend fun importLocalFile(file:java.io.File,displayName:String,mimeType:String?):SourceRef=withContext(Dispatchers.IO) {
+    suspend fun importLocalFile(file:java.io.File,displayName:String,mimeType:String?,
+        onCommitted: (SourceRef) -> Unit = {}):SourceRef=withContext(Dispatchers.IO) {
         require(file.isFile && file.length()>0) { "LOCAL_IMPORT_EMPTY" }
         val id=UUID.randomUUID().toString()
         val dest=File(inbound,"$id.bin"); val partial=File(inbound,"$id.part")
@@ -84,7 +85,13 @@ import javax.inject.Singleton
             }
             val inferred=SourceMediaType.resolve(mimeType,displayName,header)
             val entity=SourceEntity(id,"local://$id",displayName,inferred,dest.length(),true,false,false,System.currentTimeMillis(),dest.absolutePath)
-            db.processingDao().putSource(entity); entity.ref()
+            // A DAO commit can succeed even if the caller is cancelled while resuming.
+            // Report the immutable ID before re-entering its cancellation boundary.
+            withContext(NonCancellable) {
+                db.processingDao().putSource(entity)
+                onCommitted(entity.ref())
+            }
+            entity.ref()
         } catch(t:Throwable) { cleanupUnregistered(id,dest);throw t }
         finally { partial.delete() }
     }

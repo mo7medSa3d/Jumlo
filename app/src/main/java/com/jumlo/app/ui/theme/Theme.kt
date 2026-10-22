@@ -93,7 +93,7 @@ private val QuietDarkColorScheme = darkColorScheme(
 fun JumloTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     language: AppLanguage = AppLanguage.ENGLISH,
-    accentColor: String = "TEAL",
+    accentColor: String = "BLUE",
     fontScale: String = "NORMAL",
     content: @Composable () -> Unit
 ) {
@@ -116,17 +116,17 @@ fun JumloTheme(
     } else {
         // Deliberate curated accent pairs preserve contrast for light and dark surfaces.
         val selectedAccent = when (accentColor) {
-            "BLUE" -> if (darkTheme) Color(0xFF92B7FF) else Color(0xFF174AA5)
-            "TEAL" -> if (darkTheme) Color(0xFF72DACA) else Color(0xFF00695C)
-            "CORAL" -> if (darkTheme) Color(0xFFFFAD9A) else Color(0xFF9E3724)
-            "VIOLET" -> if (darkTheme) Color(0xFFBEA6FF) else Color(0xFF6340B1)
+            "BLUE" -> if (darkTheme) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
+            "TEAL" -> if (darkTheme) Color(0xFF5EEAD4) else Color(0xFF0F766E)
+            "CORAL" -> if (darkTheme) Color(0xFFFDBA74) else Color(0xFFC2410C)
+            "VIOLET" -> if (darkTheme) Color(0xFFC4B5FD) else Color(0xFF6D28D9)
             else -> if (darkTheme) DarkPrimary else LightPrimary
         }
         val selectedContainer = when (accentColor) {
-            "BLUE" -> if (darkTheme) Color(0xFF203B67) else Color(0xFFD8E5FF)
-            "TEAL" -> if (darkTheme) Color(0xFF194E47) else Color(0xFFD3F3EA)
-            "CORAL" -> if (darkTheme) Color(0xFF663A33) else Color(0xFFFFE2DA)
-            "VIOLET" -> if (darkTheme) Color(0xFF3F3059) else Color(0xFFECE4FF)
+            "BLUE" -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
+            "TEAL" -> if (darkTheme) Color(0xFF042F2E) else Color(0xFFCCFBF1)
+            "CORAL" -> if (darkTheme) Color(0xFF431407) else Color(0xFFFFEDD5)
+            "VIOLET" -> if (darkTheme) Color(0xFF2E1065) else Color(0xFFEDE9FE)
             else -> if (darkTheme) DarkPrimaryContainer else LightPrimaryContainer
         }
         baseColors.copy(
@@ -171,6 +171,7 @@ fun JumloTheme(
         LocalQuietTypography provides DefaultQuietTypography.withFont(fontFamily, isArabic = language.isRtl),
         LocalQuietShapes provides QuietPrecisionShapes(),
         LocalQuietSpacing provides QuietPrecisionSpacing(),
+        LocalQuietElevation provides QuietPrecisionElevation(),
         LocalLayoutDirection provides layoutDirection,
         LocalDensity provides adaptedDensity
     ) {
@@ -184,6 +185,11 @@ fun JumloTheme(
 }
 
 object QuietTheme {
+    val elevation: QuietPrecisionElevation
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalQuietElevation.current
+
     val pillars: PillarColors
         @Composable
         @ReadOnlyComposable

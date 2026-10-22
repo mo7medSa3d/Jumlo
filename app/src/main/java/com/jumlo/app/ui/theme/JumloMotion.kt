@@ -23,12 +23,20 @@ import kotlinx.coroutines.delay
 
 /** Transform/opacity-only interaction motion. No new animation framework or bitmap allocations. */
 object JumloMotion {
+    const val fastMs = 120
+    const val standardMs = 220
+    const val exitMs = 160
+    const val stateChangeMs = 180
+    const val loadingPulseMs = 900
     const val pressScale = 0.965f
     const val staggerMs = 44L
     const val maxStaggered = 12
     const val pressDamping = 0.72f
     const val enterDamping = 0.87f
     const val indicatorDamping = 0.76f
+    const val navDamping = 0.88f
+    const val navStiffness = 440f
+    const val printScaleDamping = 0.9f
 }
 
 /** An observer, not a gesture consumer: existing clickable/combinedClickable semantics remain intact. */

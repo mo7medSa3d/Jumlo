@@ -5,9 +5,19 @@ import com.jumlo.app.R
 
 /** Stable engine codes are diagnostics; presentation always uses localized copy. */
 @StringRes fun userMessageResource(code:String):Int=when {
+    code in setOf("IMAGE_MEMORY_BUDGET_EXCEEDED","IMAGE_DIMENSIONS_UNREPRESENTABLE") -> R.string.upgrade_image_memory
+    code=="IMAGE_SIZE_BOUND_UNMET" -> R.string.upgrade_image_target_unmet
+    code=="IMAGE_NOT_SMALLER" -> R.string.upgrade_image_unchanged
+    code=="DOWNLOAD_RESTART_FAILED" -> R.string.upgrade_download_restart_failed
+    code in setOf("INVALID_FORM_INPUT","FORM_FIELD_MISSING","FORM_FIELD_TYPE_MISMATCH") -> R.string.upgrade_form_values
+    code in setOf("FORM_APPEARANCE_UNAVAILABLE","FORM_WIDGET_PAGE_MISSING","FORM_VALUE_CHANGED","FORM_FLATTEN_UNSUPPORTED") -> R.string.upgrade_form_flatten
+    code in setOf("INVALID_PAGE_INSTANCE","PDF_PAGE_IMPORT_FAILED") -> R.string.upgrade_page_edit_failed
     code=="DRAFT_SAVED" -> R.string.msg_draft_saved
     code in setOf("DRAFT_SAVE_FAILED","DRAFT_RESTORE_FAILED") -> R.string.msg_draft_failed
     code in setOf("SETTINGS_READ_FAILED","SETTINGS_SAVE_FAILED") -> R.string.msg_settings_failed
+    code=="OUTPUT_RENAMED" -> R.string.upgrade_renamed
+    code=="OUTPUT_RENAME_FAILED" -> R.string.upgrade_rename_failed
+    code=="PRINT_UNSUPPORTED_FORMAT" -> R.string.upgrade_preview_unavailable
     code=="MOVED_TO_TRASH" -> R.string.msg_trashed
     code=="RESTORED_FROM_TRASH" -> R.string.msg_restored
     code=="TRASH_PURGED" -> R.string.msg_purged
@@ -20,6 +30,7 @@ import com.jumlo.app.R
     code=="COLLISION_SKIPPED" -> R.string.msg_collision_skipped
     code.startsWith("EXPORT_") -> R.string.msg_export_failed
     code=="UNSUPPORTED_SOCIAL_PLATFORM" -> R.string.msg_unsupported_social_platform
+    code=="MEDIA_SERVICE_NOT_CONFIGURED" -> R.string.media_error_service
     code=="MEDIA_SITE_UNSUPPORTED" -> R.string.media_error_site
     code=="MEDIA_CONVERSION_UNAVAILABLE" -> R.string.media_error_conversion
     code=="MEDIA_SESSION_REQUIRED" -> R.string.media_error_session
@@ -59,15 +70,17 @@ import com.jumlo.app.R
     code=="MEDIA_BATCH_ANALYSIS_REQUIRED" -> R.string.msg_media_batch_single
     code=="BUNDLE_DUPLICATE_ITEM" -> R.string.files_workflow_duplicates
     code=="PDF_NOT_COMPRESSIBLE" -> R.string.msg_pdf_not_compressible
+    code=="PDF_IMAGE_COMPRESSION_PARTIAL" -> R.string.msg_pdf_compression_partial
+    code=="PDF_IMAGE_COMPRESSION_FAILED" -> R.string.msg_pdf_compression_failed
     code=="PDF_ENCRYPTED" -> R.string.msg_pdf_encrypted
+code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="OWNER_PASSWORD_REQUIRED" -> R.string.msg_owner_password_required
     code=="ZIP_PASSWORD_REQUIRED" -> R.string.msg_zip_password_required
     code=="SHA256_MISMATCH" -> R.string.msg_sha256_mismatch
     code in setOf("NO_ACROFORM","FORM_FIELD_NOT_FOUND","FORM_FIELD_TYPE_MISMATCH") -> R.string.msg_no_acroform
-    code=="REDACTION_VERIFICATION_FAILED" -> R.string.msg_redaction_failed
     code=="ANIMATED_IMAGE_UNSUPPORTED" -> R.string.msg_animated_image_unsupported
     code in setOf("MALFORMED_IMAGE","IMAGE_DECODE_FAILED","IMAGE_ENCODE_FAILED","IMAGE_VERIFY_FAILED") -> R.string.msg_image_corrupt
-    code in setOf("EMPTY_PDF","PDF_VERIFY_FAILED") -> R.string.msg_pdf_corrupt
+    code in setOf("EMPTY_PDF","PDF_VERIFY_FAILED","INVALID_PDF_PAGE_GEOMETRY") -> R.string.msg_pdf_corrupt
     code=="ONE_PDF_REQUIRED" || code=="ONE_ZIP_REQUIRED" || code=="ONE_SOURCE_REQUIRED" -> R.string.msg_one_file
     code in setOf("NO_SOURCES","ONE_OR_TWO_PDFS_REQUIRED","TWO_SOURCES_REQUIRED","TWO_PDFS_REQUIRED","TWO_IMAGES_REQUIRED","PDF_MERGE_NEEDS_TWO_FILES","PDF_AND_SIGNATURE_IMAGE_REQUIRED","AT_LEAST_ONE_PAGE_REQUIRED") -> R.string.msg_choose_files
     code=="NO_FOLDER_SELECTED" -> R.string.msg_choose_folder

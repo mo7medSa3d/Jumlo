@@ -26,6 +26,7 @@ enum class DockTab(val route: String, val labelEn: String, val labelAr: String) 
     HOME("home", "Home", "الرئيسية"),
     TOOLS("tools_catalog", "Tools", "الأدوات"),
     DOWNLOADS("downloads", "Downloads", "التنزيلات"),
+    PRINT("print", "Print", "طباعة"),
     FILES("files_overview", "Files", "الملفات"),
     SETTINGS("settings", "Settings", "الإعدادات")
 }
@@ -109,7 +110,7 @@ data class AppSettingsState(
     val downloadDestinationFolder: String = "Download/Jumlo",
     val maxConcurrentDownloads: Int = 2,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
-    val accentColor: String = "TEAL",
+    val accentColor: String = "BLUE",
     val fontScale: String = "NORMAL",
     val wifiOnlyDefault: Boolean = false,
     val notificationsGranted: Boolean = false,
@@ -119,5 +120,11 @@ data class AppSettingsState(
     /** Local only; UUIDs of outputs pinned by the user, not cloud identities. */
     val favoriteOutputIds: Set<String> = emptySet(),
     /** The initial ViewModel placeholder is never presented as a saved preference. */
-    val isLoaded: Boolean = false
+    val isLoaded: Boolean = false,
+    /** User-facing document names; verified output payloads remain immutable. */
+    val outputNames: Map<String,String> = emptyMap(),
+    /** The extraction service the downloader may use; empty means direct links only. */
+    val mediaServiceUrl: String = "",
+    /** The shared secret of the downloader service, when it asks for one. */
+    val mediaServiceToken: String = ""
 )

@@ -38,17 +38,25 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
+import com.jumlo.app.core.PdfCompressionPolicy
 import com.jumlo.app.data.engine.PureDomainAlgorithms
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.processing.BatchRenameSettings
 import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
+import com.jumlo.app.ui.CompressionProfile
 import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.theme.QuietTheme
@@ -62,12 +70,21 @@ import kotlinx.serialization.json.Json
 private data class RenamePreviewInput(val names:List<String>,val settings:BatchRenameSettings)
 private data class RenamePreviewState(val input:RenamePreviewInput,val result:Result<List<String>>)
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Retains the original public call shape, including positional and trailing-lambda callers. */
 @Composable fun WorkspaceScreen(
     vm:AppViewModel,form:WorkspaceDraft,imported:List<SourceRef>,busy:Boolean,urls:String,reduceMotion:Boolean,
     onImport:()->Unit,onPhotos:()->Unit,onGoogleSignIn:()->Unit,onExecute:()->Unit
+) = WorkspaceScreen(vm,form,imported,busy,urls,reduceMotion,onImport,onPhotos,onGoogleSignIn,
+    onPrintPages=null,onExecute=onExecute)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable fun WorkspaceScreen(
+    vm:AppViewModel,form:WorkspaceDraft,imported:List<SourceRef>,busy:Boolean,urls:String,reduceMotion:Boolean,
+    onImport:()->Unit,onPhotos:()->Unit,onGoogleSignIn:()->Unit,
+    onPrintPages:((String,List<Pair<Int,Int>>)->Unit)?,onExecute:()->Unit
 ) {
     val tool=form.toolId
+    val processingPresets by vm.processingPresets.collectAsStateWithLifecycle()
     val download=tool.startsWith("dl_")
     val driveImport=tool=="file_drive" && !form.flag1
     val viewer=tool=="pdf_01"
@@ -82,7 +99,9 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         when(tool) {
             "pdf_stamp" -> if(form.text1.isBlank() && !form.flag1) vm.updateForm { it.copy(text1=defaultWatermark) }
             "img_watermark" -> if(form.text1.isBlank() && !form.flag1) vm.updateForm { it.copy(text1="Jumlo") }
-            "pdf_annotate" -> if(form.text1.isBlank()) vm.updateForm { it.copy(text1="Jumlo", num1=it.num1.ifBlank{"1"}) }
+            // Only the text-carrying kinds get a body; a highlight is just a region.
+            "pdf_annotate" -> if(com.jumlo.app.core.PdfAnnotationKind.from(form.text2).carriesText && form.text1.isBlank())
+                vm.updateForm { it.copy(text1="Jumlo", num1=it.num1.ifBlank{"1"}) }
             "file_batch_rename" -> if(form.text1.isBlank()) vm.updateForm { it.copy(text1="{name}_{n}", num1=it.num1.ifBlank{"1"}) }
             "img_02" -> if(form.percentage.isBlank() && form.longestEdge.isBlank() && form.width=="1600" && form.height=="1600") {
                 vm.updateForm { it.copy(percentage="75") }
@@ -131,7 +150,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     }
     val countValid=when(tool) {
         "pdf_07","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
-        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms" -> queue.size==1
+        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms","pdf_clean" -> queue.size==1
         "pdf_image","pdf_signature","pdf_compare","img_compare" -> queue.size==2
         "pdf_metadata" -> queue.size in 1..2
         else -> true
@@ -160,6 +179,12 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max=840.dp).align(Alignment.CenterHorizontally),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error)}
             if(!download) {
+                if(!viewer && !driveImport) item("processing-presets") {
+                    ProcessingPresetsPanel(form,processingPresets,
+                        onSave=vm::saveProcessingPreset,
+                        onApply=vm::applyProcessingPreset,
+                        onDelete=vm::deleteProcessingPreset)
+                }
                 item(key="inputs") {
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
@@ -176,7 +201,8 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             adjustment=if(tool=="img_adjust") form else null)
                     }
                 if(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1 && queue.single().mimeType=="application/pdf")
-                    item(key="pdf-visual-editor-${queue.single().id}") { PdfPageEditor(vm,queue.single().id,form,vm::updateForm) }
+                    item(key="pdf-visual-editor-${queue.single().id}") { PdfPageEditor(vm,queue.single().id,form,vm::updateForm,
+                        onPrint={pages->onPrintPages?.invoke(queue.single().id,pages)},printEnabled=onPrintPages!=null) }
                 if(editorSource!=null && tool in setOf(
                     "img_03","pdf_crop","pdf_signature","pdf_redact","pdf_annotate","pdf_image"
                 )) {
@@ -201,6 +227,9 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         VisualImageSettings(form,vm::updateForm)
                     }
                 }
+                if(tool=="pdf_02" && queue.isNotEmpty()) item("paper-preview") {
+                    ImagePdfPreview(vm,queue.first().id,form,vm::updateForm)
+                }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
                 if(queue.isNotEmpty() && !countValid) item(key="source-count-help") {
                     Text(stringResource(R.string.watermark_correct_source_count),
@@ -219,6 +248,19 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 val clipboard=LocalClipboardManager.current
                 OutlinedTextField(urls,vm::setUrls,label={Text(stringResource(if(tool=="dl_03") R.string.workspace_direct_urls_batch else R.string.workspace_direct_url_single))},modifier=Modifier.fillMaxWidth(),minLines=if(tool=="dl_03") 4 else 2,textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),trailingIcon={IconButton(onClick={clipboard.getText()?.text?.takeIf {it.isNotBlank()}?.let(vm::setUrls)}) {Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))}})
                 Text(stringResource(R.string.workspace_direct_url_hint),style=QuietTheme.typography.metadata)
+                // Live per-line validation: the batch tool parses the list before anything is sent.
+                val batchStatus=remember(urls,tool) {
+                    if(tool=="dl_03" && urls.isNotBlank()) runCatching { com.jumlo.app.data.engine.PureDomainAlgorithms.parseBatchUrls(urls) }.getOrNull() else null
+                }
+                batchStatus?.let { candidates ->
+                    val valid=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.VALID }
+                    val duplicates=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.DUPLICATE }
+                    val unsupported=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.UNSUPPORTED_PROTOCOL }
+                    val malformed=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.MALFORMED }
+                    Text(stringResource(R.string.workspace_batch_valid_links,valid,candidates.size),style=QuietTheme.typography.metadataStrong)
+                    if(duplicates>0) Text(stringResource(R.string.workspace_batch_duplicates,duplicates),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.tertiary)
+                    if(unsupported+malformed>0) Text(stringResource(R.string.workspace_batch_invalid_links,unsupported+malformed),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error)
+                }
                 Text(stringResource(R.string.ui_sensitive_draft_note),style=QuietTheme.typography.metadata)
             }
             if(tool in setOf("pdf_annotate","img_watermark")) {
@@ -560,15 +602,24 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 Toggle(stringResource(R.string.field_add_page_numbers),form.flag1) {v->edit {it.copy(flag1=v)}}
             }
             "pdf_annotate" -> {
-                Field(stringResource(R.string.field_text),form.text1,{v->edit {it.copy(text1=v)}})
+                val kind=com.jumlo.app.core.PdfAnnotationKind.from(form.text2)
+                Text(stringResource(R.string.field_annotation_kind),style=QuietTheme.typography.metadataStrong)
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(com.jumlo.app.core.PdfAnnotationKind.entries.toList(),key={it.id}) { choice ->
+                        QuietChip(selected=kind==choice,{edit {it.copy(text2=choice.id)}},label=stringResource(annotationKindLabel(choice)))
+                    }
+                }
+                if(kind.carriesText) Field(stringResource(R.string.field_text),form.text1,{v->edit {it.copy(text1=v)}})
                 Field(stringResource(R.string.field_page_number),form.num1,{v->edit {it.copy(num1=v)}},true)
             }
         }
     }
 }
 
-@Composable private fun Field(label:String,value:String,onValue:(String)->Unit,numeric:Boolean=false) {
-    OutlinedTextField(value,{onValue(it.take(512))},label={Text(label)},modifier=Modifier.fillMaxWidth(),singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=if(numeric) KeyboardType.Decimal else KeyboardType.Text))
+@Composable private fun Field(label:String,value:String,onValue:(String)->Unit,numeric:Boolean=false,secret:Boolean=false) {
+    OutlinedTextField(value,{onValue(it.take(512))},label={Text(label)},modifier=Modifier.fillMaxWidth(),singleLine=true,
+        keyboardOptions=KeyboardOptions(keyboardType=when{numeric->KeyboardType.Decimal;secret->KeyboardType.Password;else->KeyboardType.Text}),
+        visualTransformation=if(secret) PasswordVisualTransformation() else VisualTransformation.None)
 }
 @Composable private fun Options(label:String,options:List<String>,selected:String,onSelect:(String)->Unit) {
     Text(label,style=QuietTheme.typography.metadataStrong)
@@ -581,6 +632,17 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             FilterChip(selected==value,{onSelect(value)},label={Text(display)})
         }
     }
+}
+private fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int = when(kind) {
+    com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT -> R.string.annotation_highlight
+    com.jumlo.app.core.PdfAnnotationKind.UNDERLINE -> R.string.annotation_underline
+    com.jumlo.app.core.PdfAnnotationKind.STRIKETHROUGH -> R.string.annotation_strikethrough
+    com.jumlo.app.core.PdfAnnotationKind.NOTE -> R.string.annotation_note
+    com.jumlo.app.core.PdfAnnotationKind.SQUARE -> R.string.annotation_square
+    com.jumlo.app.core.PdfAnnotationKind.CIRCLE -> R.string.annotation_circle
+    com.jumlo.app.core.PdfAnnotationKind.TEXTBOX -> R.string.annotation_textbox
+    com.jumlo.app.core.PdfAnnotationKind.INK -> R.string.annotation_ink
+    com.jumlo.app.core.PdfAnnotationKind.TEXT -> R.string.annotation_text
 }
 @Composable private fun Toggle(label:String,checked:Boolean,onChange:(Boolean)->Unit) { Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=checked,role=Role.Switch,onValueChange=onChange),verticalAlignment=Alignment.CenterVertically) {Text(label,Modifier.weight(1f));Switch(checked,null)} }
 
@@ -664,23 +726,79 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 "pdf_03" -> { Text(stringResource(R.string.field_merge_note),style=QuietTheme.typography.metadata) }
                 "pdf_05" -> { Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) Field(stringResource(R.string.field_pages_per_part),f.num1,{v->edit {it.copy(num1=v)}},true) else Field(stringResource(if(f.flag2) R.string.jumlo_split_markers else R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
                 "pdf_06" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
-                "pdf_04" -> { Field(stringResource(R.string.field_organize_order),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_rotate_pages),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_rotate_degrees),f.num1,{v->edit {it.copy(num1=v)}},true) }
+                "pdf_04" -> { Field(stringResource(R.string.field_organize_order),f.text1,{v->edit {it.copy(text1=v,pageEdits=emptyList())}}); Field(stringResource(R.string.field_rotate_pages),f.text2,{v->edit {it.copy(text2=v,pageEdits=emptyList())}}); Field(stringResource(R.string.field_rotate_degrees),f.num1,{v->edit {it.copy(num1=v,pageEdits=emptyList())}},true) }
                 "pdf_crop" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }
-                "pdf_compress" -> { Field(stringResource(R.string.field_max_image_dpi),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_quality),f.quality,{v->edit {it.copy(quality=v)}},true); Text(stringResource(R.string.field_compress_note),style=QuietTheme.typography.metadata) }
+                "pdf_compress" -> {
+                    // Presets are the primary control; DPI and quality stay as the
+                    // advanced inputs underneath them.
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        items(PdfCompressionPolicy.Preset.entries.toList(),key={it.name}) { preset ->
+                            QuietChip(
+                                selected = f.num2.isBlank() && f.num1==preset.dpi.toString() && f.quality==preset.quality.toString(),
+                                onClick = { edit { it.copy(num1=preset.dpi.toString(),quality=preset.quality.toString(),num2="") } },
+                                label = stringResource(
+                                    when(preset) {
+                                        PdfCompressionPolicy.Preset.STRONG -> R.string.visual_compress_strong
+                                        PdfCompressionPolicy.Preset.SMALL_FILE -> R.string.visual_compress_small
+                                        PdfCompressionPolicy.Preset.BALANCED -> R.string.visual_compress_balanced
+                                        PdfCompressionPolicy.Preset.BEST_QUALITY -> R.string.visual_compress_best
+                                    })
+                            )
+                        }
+                    }
+                    Field(stringResource(R.string.field_target_size_mb),f.num2,{v->edit {it.copy(num2=v)}},true)
+                    if(f.num2.isNotBlank()) Text(stringResource(R.string.field_target_size_note),style=QuietTheme.typography.metadata)
+                    // The slider replaces the typed DPI and quality: the user chooses a
+                    // trade-off and sees the estimated result before committing.
+                    val sourceId=f.sourceIds.firstOrNull()
+                    var profile by remember(sourceId) { mutableStateOf<CompressionProfile?>(null) }
+                    LaunchedEffect(sourceId) {
+                        profile=sourceId?.let { vm.compressionProfile(it) }
+                    }
+                    val dpi=f.num1.toIntOrNull()?:150
+                    val quality=f.quality.toIntOrNull()?:70
+                    val position=PdfCompressionPolicy.sliderPosition(dpi,quality)
+                    val estimate=profile?.let { PdfCompressionPolicy.estimateBytes(it.originalBytes,it.imageBytes,dpi,quality) }
+                    val sliderLabel=stringResource(R.string.field_compress_slider,position.times(100).toInt())
+                    Slider(
+                        value=position,
+                        onValueChange={ p ->
+                            val step=PdfCompressionPolicy.sliderStep(p)
+                            edit { it.copy(num1=step.first.toString(),quality=step.second.toString()) }
+                        },
+                        valueRange=0f..1f,
+                        modifier=Modifier.semantics { contentDescription=sliderLabel;stateDescription=sliderLabel }
+                    )
+                    Text(sliderLabel,style=QuietTheme.typography.metadataStrong)
+                    if(estimate!=null) {
+                        Text(stringResource(R.string.field_compress_estimate,com.jumlo.app.data.engine.PureDomainAlgorithms.formatBytes(estimate)),
+                            style=QuietTheme.typography.metadata)
+                        val saving=PdfCompressionPolicy.estimatedSavingPercent(profile!!.originalBytes,estimate)
+                        if(saving>0) Text(stringResource(R.string.field_compress_saving,saving),style=QuietTheme.typography.metadataStrong)
+                        Text(stringResource(R.string.field_compress_estimate_note),style=QuietTheme.typography.metadata)
+                    }
+                    Text(stringResource(R.string.field_compress_note),style=QuietTheme.typography.metadata)
+                }
                 "pdf_stamp" -> {
                     ContentToolSettings(f,edit)
                     Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}})
                 }
                 "pdf_annotate" -> {
                     ContentToolSettings(f,edit)
-                    Field(stringResource(R.string.field_x_norm),f.num2,{v->edit {it.copy(num2=v)}},true); Field(stringResource(R.string.field_y_norm),f.num3,{v->edit {it.copy(num3=v)}},true); Toggle(stringResource(R.string.field_as_note_annotation),f.flag1) {v->edit {it.copy(flag1=v)}}
+                    // The region is dragged and resized on the page preview, so the
+                    // position fields are no longer needed.
+                    Text(stringResource(R.string.field_annotation_region_hint),style=QuietTheme.typography.metadata)
+                    if(com.jumlo.app.core.PdfAnnotationKind.from(f.text2)==com.jumlo.app.core.PdfAnnotationKind.TEXT)
+                        Toggle(stringResource(R.string.field_as_note_annotation),f.flag1) {v->edit {it.copy(flag1=v)}}
                 }
                 "pdf_signature" -> { Text(stringResource(R.string.field_signature_note),style=QuietTheme.typography.metadata); com.jumlo.app.ui.scan.SignaturePad { file -> vm.intakeLocalFile(file,"signature.png","image/png") }; Field(stringResource(R.string.field_page_number),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true) }
+                "pdf_clean" -> {
+                    Toggle(stringResource(R.string.field_remove_title),f.flag1){v->edit {it.copy(flag1=v)}}
+                    Text(stringResource(R.string.field_clean_note),style=QuietTheme.typography.metadata)
+                }
                 "pdf_metadata" -> { Field(stringResource(R.string.field_title),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_author),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_subject),f.text3,{v->edit {it.copy(text3=v)}}); Field(stringResource(R.string.field_keywords),f.text4,{v->edit {it.copy(text4=v)}}); Field(stringResource(R.string.field_insert_at_page),f.num1,{v->edit {it.copy(num1=v)}},true) }
-                "pdf_protect" -> { Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}}); if(!f.flag1) Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}}); Text(stringResource(R.string.field_protect_note),style=QuietTheme.typography.metadata) }
+                "pdf_protect" -> { Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true); if(!f.flag1) Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}},secret=true); Text(stringResource(R.string.field_protect_note),style=QuietTheme.typography.metadata) }
                 "pdf_forms" -> { Field(stringResource(R.string.field_forms_json),f.text1,{v->edit {it.copy(text1=v)}}); Toggle(stringResource(R.string.field_flatten_form),f.flag1) {v->edit {it.copy(flag1=v)}} }
-                "pdf_compare" -> Text(stringResource(R.string.field_compare_pdf_note),style=QuietTheme.typography.metadata)
-                "pdf_redact" -> { Field(stringResource(R.string.field_page_number),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_left),f.cropLeft,{v->edit {it.copy(cropLeft=v)}},true); Field(stringResource(R.string.field_top),f.cropTop,{v->edit {it.copy(cropTop=v)}},true); Field(stringResource(R.string.field_right),f.cropRight,{v->edit {it.copy(cropRight=v)}},true); Field(stringResource(R.string.field_bottom),f.cropBottom,{v->edit {it.copy(cropBottom=v)}},true); Field(stringResource(R.string.field_verify_redacted_text),f.text1,{v->edit {it.copy(text1=v)}}); Text(stringResource(R.string.field_redact_note),style=QuietTheme.typography.metadata) }
                 "pdf_ocr" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Text(stringResource(R.string.field_ocr_note),style=QuietTheme.typography.metadata) }
                 "webpage_pdf" -> { Field(stringResource(R.string.field_webpage_url),f.text1,{v->edit {it.copy(text1=v)}}); Text(stringResource(R.string.field_webpage_note),style=QuietTheme.typography.metadata) }
                 "img_exif" -> { Toggle(stringResource(R.string.field_exif_remove_all),f.flag1) {v->edit {it.copy(flag1=v)}}; Toggle(stringResource(R.string.field_exif_remove_location),f.flag2) {v->edit {it.copy(flag2=v)}}; Text(stringResource(R.string.field_exif_note),style=QuietTheme.typography.metadata) }
@@ -707,7 +825,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 "file_batch_rename" -> { Field(stringResource(R.string.field_rename_pattern),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_start_number),f.num1,{v->edit {it.copy(num1=v)}},true); Text(stringResource(R.string.field_rename_note),style=QuietTheme.typography.metadata); Text(stringResource(R.string.ui_rename_copy_note),style=QuietTheme.typography.metadata) }
                 "file_duplicates" -> Text(stringResource(R.string.field_duplicates_note),style=QuietTheme.typography.metadata)
                 "file_trash" -> Text(stringResource(R.string.field_trash_note),style=QuietTheme.typography.metadata)
-                "file_encrypted_zip" -> { Toggle(stringResource(R.string.field_extract_instead),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}}); Text(stringResource(R.string.field_encrypted_zip_note),style=QuietTheme.typography.metadata) }
+                "file_encrypted_zip" -> { Toggle(stringResource(R.string.field_extract_instead),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true); Text(stringResource(R.string.field_encrypted_zip_note),style=QuietTheme.typography.metadata) }
                 "file_drive" -> {
                     Toggle(stringResource(R.string.field_drive_export_mode),f.flag1) {v->edit {it.copy(flag1=v)}}
                     if(!f.flag1) Field(stringResource(R.string.field_drive_file_id),f.text1,{v->edit {it.copy(text1=v)}})

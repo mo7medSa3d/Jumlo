@@ -6,12 +6,12 @@ cd "$ROOT"
 MODE=${1:-gate}
 LOG_DIR=${JUMLO_BUILD_LOG_DIR:-verification/native}
 mkdir -p "$LOG_DIR"
-printf 'source_sha=%s\nmode=%s\nextendedMedia=${JUMLO_NATIVE_EXTENDED_MEDIA:-true}\n' "${GITHUB_SHA:-local-uncommitted}" "$MODE" > "$LOG_DIR/context.txt"
+printf 'source_sha=%s\nmode=%s\nextendedMedia=${JUMLO_NATIVE_EXTENDED_MEDIA:-false}\n' "${GITHUB_SHA:-local-uncommitted}" "$MODE" > "$LOG_DIR/context.txt"
 run_task() {
   local label=$1
   shift
   set +e
-  bash ./gradlew --no-daemon --console=plain --stacktrace -PextendedMedia="${JUMLO_NATIVE_EXTENDED_MEDIA:-true}" "$@" 2>&1 | tee "$LOG_DIR/$label.log"
+  bash ./gradlew --no-daemon --console=plain --stacktrace -PextendedMedia="${JUMLO_NATIVE_EXTENDED_MEDIA:-false}" "$@" 2>&1 | tee "$LOG_DIR/$label.log"
   local code=${PIPESTATUS[0]}
   set -e
   printf '%s\t%s\n' "$label" "$code" >> "$LOG_DIR/exit-codes.tsv"
@@ -26,9 +26,11 @@ case "$MODE" in
     run_task lint :app:lintDebug
     run_task release :app:assembleRelease
     run_task release-bundle :app:bundleRelease
-    python3 scripts/inspect-standard-artifact.py \
-      app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk \
-      app/build/outputs/bundle/release/*.aab --output "$LOG_DIR/standard-content.json"
+    if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-false}" != "true" ]]; then
+      python3 scripts/inspect-standard-artifact.py \
+        app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk \
+        app/build/outputs/bundle/release/*.aab --output "$LOG_DIR/standard-content.json"
+    fi
     : > "$LOG_DIR/apk-zip-alignment.log"
     for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
       printf 'Checking %s\n' "$apk" | tee -a "$LOG_DIR/apk-zip-alignment.log"
@@ -37,11 +39,15 @@ case "$MODE" in
     done
     run_task benchmark-compile :app:assembleBenchmark :benchmark:assembleBenchmark
     run_task media-dependencies :app:dependencies --configuration releaseRuntimeClasspath
-    if ! grep -Eq 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
-      echo 'ERROR: standard release has no bundled media extraction runtime' >&2
+    if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-false}" == "true" ]]; then
+      if ! rg -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
+        echo 'ERROR: optional extended release is missing its media runtime' >&2
+        exit 1
+      fi
+    elif rg -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
+      echo 'ERROR: standard release unexpectedly includes the optional media runtime' >&2
       exit 1
     fi
-    # Media native libraries are deliberate. Device ABI and playback remain separate gates.
     ;;
   instrumentation) run_task instrumentation :app:connectedDebugAndroidTest ;;
   baseline)

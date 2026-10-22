@@ -38,8 +38,9 @@ class AppHaptics(
             Event.START,Event.SUCCESS -> if(Build.VERSION.SDK_INT>=30) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.VIRTUAL_KEY
             Event.ERROR,Event.DELETE -> if(Build.VERSION.SDK_INT>=30) HapticFeedbackConstants.REJECT else HapticFeedbackConstants.LONG_PRESS
             Event.HOLD -> HapticFeedbackConstants.LONG_PRESS
+            Event.DRAG -> HapticFeedbackConstants.LONG_PRESS
         }
-        if(intensity==HapticIntensity.LIGHT || Build.VERSION.SDK_INT<26) {
+        if(intensity==HapticIntensity.LIGHT) {
             view.performHapticFeedback(fallback)
             return
         }
@@ -51,13 +52,14 @@ class AppHaptics(
             Event.ERROR -> longArrayOf(0,35,55,48) to intArrayOf(0,(160*multiplier).toInt(),0,(175*multiplier).toInt())
             Event.DELETE -> longArrayOf(0,22) to intArrayOf(0,(140*multiplier).toInt())
             Event.HOLD -> longArrayOf(0,30) to intArrayOf(0,(130*multiplier).toInt())
+            Event.DRAG -> longArrayOf(0,12,40,18) to intArrayOf(0,(70*multiplier).toInt(),0,(110*multiplier).toInt())
             Event.START -> longArrayOf(0,20) to intArrayOf(0,(125*multiplier).toInt())
             Event.TICK -> longArrayOf(0,10) to intArrayOf(0,(65*multiplier).toInt())
         }
         runCatching {vibrator.vibrate(VibrationEffect.createWaveform(timings,amplitudes,-1))}
             .onFailure {view.performHapticFeedback(fallback)}
     }
-    private enum class Event { TICK, START, SUCCESS, ERROR, DELETE, HOLD }
+    private enum class Event { TICK, START, SUCCESS, ERROR, DELETE, HOLD, DRAG }
     private fun trigger(event:Event,cue:UiSoundPlayer.Cue?) {
         effect(event)
         if(cue!=null) sound?.play(cue,soundEnabled)
@@ -70,6 +72,12 @@ class AppHaptics(
     fun actionClick()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
     fun longPress()=trigger(Event.HOLD,null)
     fun sliderTick()=trigger(Event.TICK,null)
+    /** A drag was picked up. Distinct from the click tick so lifts feel different from taps. */
+    fun dragStart()=trigger(Event.DRAG,null)
+    /** A drag was released. */
+    fun dragEnd()=trigger(Event.TICK,null)
+    /** A value snapped to a step, grid line or neighbour. */
+    fun snap()=trigger(Event.TICK,null)
     fun downloadComplete()=trigger(Event.SUCCESS,UiSoundPlayer.Cue.SUCCESS)
     fun error()=trigger(Event.ERROR,UiSoundPlayer.Cue.ERROR)
 }

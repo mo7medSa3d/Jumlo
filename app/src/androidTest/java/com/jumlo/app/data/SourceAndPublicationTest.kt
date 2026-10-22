@@ -9,6 +9,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.jumlo.app.data.jobs.WorkBudget
 import com.jumlo.app.data.local.AppDatabase
 import com.jumlo.app.data.output.OutputStore
+import com.jumlo.app.data.output.PublicOutputStore
+import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.model.OutputMetadata
 import kotlinx.coroutines.runBlocking
@@ -88,7 +90,7 @@ class SourceAndPublicationTest {
     @Test fun reservedTrashMetadataFilenameRoundTripsWithoutChangingBytes()=runBlocking {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {
-            val store=OutputStore(context,db)
+            val store=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
             val ticket=store.reserve(UUID.randomUUID().toString(),"reserved-name","record.json","application/octet-stream")
             val bytes="original payload, never trash metadata".toByteArray()
             ticket.stageFile.writeBytes(bytes)
@@ -104,7 +106,7 @@ class SourceAndPublicationTest {
     @Test fun repeatedPublicationRevalidatesMissingPublishedBytes()=runBlocking {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {
-            val store=OutputStore(context,db)
+            val store=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
             val ticket=store.reserve(UUID.randomUUID().toString(),"missing","missing.bin","application/octet-stream")
             ticket.stageFile.writeText("real")
             val record=store.publish(ticket) { OutputMetadata() }
@@ -117,7 +119,7 @@ class SourceAndPublicationTest {
     @Test fun repeatedPublicationHasOneIdentityAndRealDigest() = runBlocking {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {
-            val store=OutputStore(context,db)
+            val store=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
             val ticket=store.reserve(UUID.randomUUID().toString(),"fixture","result.bin","application/octet-stream")
             ticket.stageFile.writeText("real bytes")
             val first=store.publish(ticket) { OutputMetadata() }

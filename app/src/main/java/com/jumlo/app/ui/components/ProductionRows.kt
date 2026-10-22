@@ -11,6 +11,9 @@ import androidx.compose.animation.core.snap
 import androidx.compose.ui.graphics.graphicsLayer
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.semantics.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -68,13 +71,14 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
     else -> R.string.redesign_filter_documents
 })
 
-@Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,menu:@Composable ColumnScope.(()->Unit)->Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+@Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,onLongClick:(()->Unit)?=null,menu:@Composable ColumnScope.(()->Unit)->Unit) {
     var expanded by remember {mutableStateOf(false)}
     val haptics=rememberAppHaptics()
-    Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().clickable {
-        haptics.actionClick()
-        if(selection!=null) onSelect?.invoke() else onOpen?.invoke()
-    } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface,
+    Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
+        onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
+        onLongClick=onLongClick
+    ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface,
         border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             if(selection!=null) Checkbox(selection,{onSelect?.invoke()}) else Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
@@ -90,7 +94,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
     }
 }
 
-@Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null,isFavorite:Boolean=false,onFavorite:(()->Unit)?=null) {
+@Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null,isFavorite:Boolean=false,onFavorite:(()->Unit)?=null,onPrint:(()->Unit)?=null,onRename:(()->Unit)?=null,onLongClick:(()->Unit)?=null) {
     val summary = "${formatOutputSizeSummary(output)} · ${outputTypeLabel(output.mimeType)}"
     val outputIcon=when {
         output.mimeType=="application/pdf" -> Icons.Rounded.PictureAsPdf
@@ -101,12 +105,14 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
         else -> Icons.Rounded.InsertDriveFile
     }
     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-    FileMenuRow(output.displayName,summary,onOpen,icon=outputIcon,selection=selection,onSelect=onSelect) {close->
+    FileMenuRow(output.displayName,summary,onOpen,icon=outputIcon,selection=selection,onSelect=onSelect,onLongClick=onLongClick) {close->
         DropdownMenuItem(text={Text(stringResource(R.string.action_open))},onClick={close();onOpen()})
         if(onFavorite!=null) DropdownMenuItem(
             text={Text(stringResource(if(isFavorite) R.string.files_unmark_favorite else R.string.files_mark_favorite))},
             leadingIcon={Icon(if(isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,null)},
             onClick={close();onFavorite()})
+        if(onPrint!=null) DropdownMenuItem(text={Text(stringResource(R.string.upgrade_print))},leadingIcon={Icon(Icons.Rounded.Print,null)},onClick={close();onPrint()})
+        if(onRename!=null) DropdownMenuItem(text={Text(stringResource(R.string.action_rename))},onClick={close();onRename()})
         if(onDetails!=null) DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={close();onDetails()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={close();onShare()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={close();onExport()})
@@ -127,6 +133,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 })
 fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALIDATING,JobStage.RUNNING,JobStage.FINALIZING)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun TransferRow(job:JobSnapshot,language:AppLanguage,onOpen:(()->Unit)?,onPause:()->Unit,onCancel:()->Unit,onRetry:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null) {
     val haptics=rememberAppHaptics()
     val tool=CapabilityRegistry.tools.find {it.id==job.request.toolId}
@@ -140,6 +147,8 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
             }
             if(job.progress.stage==JobStage.PAUSED) DropdownMenuItem(text={Text(stringResource(R.string.action_resume))},onClick={close();onRetry()})
             else if(job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.INTERRUPTED,JobStage.WAITING_FOR_INPUT)) DropdownMenuItem(text={Text(stringResource(R.string.action_retry_failed))},onClick={close();onRetry()})
+            if(job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.WAITING_FOR_INPUT))
+                DropdownMenuItem(text={Text(stringResource(R.string.job_stop_retrying))},onClick={close();onCancel()})
         }
         if(job.isActive()) {
             val total=job.progress.totalUnits
@@ -156,7 +165,7 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
             }
         }
         // Visible one-tap controls for active, paused, failed, or interrupted operations.
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             if(job.request.toolId.startsWith("dl_") && job.isActive() && job.progress.stage!=JobStage.FINALIZING) {
                 TextButton(onClick={haptics.actionClick();onPause()},modifier=Modifier.sizeIn(minHeight=48.dp)) {
                     Icon(Icons.Rounded.Pause,null,Modifier.size(18.dp))
@@ -169,18 +178,20 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.action_resume))
                 }
-            } else if(job.progress.stage in setOf(JobStage.FAILED,JobStage.INTERRUPTED)) {
+            } else if(job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.INTERRUPTED,JobStage.WAITING_FOR_INPUT)) {
                 TextButton(onClick={haptics.actionClick();onRetry()},modifier=Modifier.sizeIn(minHeight=48.dp)) {
                     Icon(Icons.Rounded.Refresh,null,Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.action_retry_failed))
                 }
             }
-            if(job.isActive() && job.progress.stage!=JobStage.FINALIZING) {
+            if((job.isActive() && job.progress.stage!=JobStage.FINALIZING) ||
+                job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.WAITING_FOR_INPUT)) {
                 TextButton(onClick={haptics.secondaryAction();onCancel()},modifier=Modifier.sizeIn(minHeight=48.dp)) {
                     Icon(Icons.Rounded.Close,null,Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_cancel))
+                    Text(stringResource(if(job.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.WAITING_FOR_INPUT))
+                        R.string.job_stop_retrying else R.string.action_cancel))
                 }
             }
         }
@@ -198,6 +209,14 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
                     color=MaterialTheme.colorScheme.tertiary)
             }
         }
-        if(job.outcomes.isNotEmpty()) Text(stringResource(R.string.job_outcomes_summary,job.outcomes.count {it.outputId!=null},job.outcomes.count {it.status==ItemStatus.FAILED}),style=QuietTheme.typography.metadata)
+        if(job.outcomes.isNotEmpty()) {
+            val published=job.outcomes.count { it.outputId!=null }
+            val notPublished=job.outcomes.count { it.status!=ItemStatus.CREATED && it.status!=ItemStatus.SKIPPED }
+            Text(stringResource(R.string.job_outcomes_summary,published,notPublished),style=QuietTheme.typography.metadata)
+            // Say why an item produced no file instead of leaving the user guessing.
+            job.outcomes.firstOrNull { it.status!=ItemStatus.CREATED && it.errorCode!=null }?.errorCode?.let { code ->
+                Text(stringResource(userMessageResource(code)),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error)
+            }
+        }
     }
 }

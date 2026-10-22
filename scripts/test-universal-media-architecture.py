@@ -35,8 +35,12 @@ class UniversalMediaArchitecture(unittest.TestCase):
     def test_provider_runtime_falls_back_to_original_direct_engine(self):
         media=(ROOT/'app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text()
         shared=(MAIN/'data/media/NativeDirectMediaRuntime.kt').read_text()
+        router=(MAIN/'data/media/RemoteExtractorRuntime.kt').read_text()
         self.assertIn('NativeDirectMediaRuntime(client, sessions)',media)
-        self.assertIn('MediaEngineRouter(',media)
+        self.assertIn('PackagedMediaRuntime(',media)
+        # The engines are tried in order and only an unsupported site falls through.
+        self.assertIn('RoutingMediaRuntime(',media)
+        self.assertIn('MEDIA_SITE_UNSUPPORTED',router)
         self.assertIn('MediaProcessRunner {',media)
         self.assertIn('MediaMetadata.parse(',media)
         self.assertIn('StreamTransfer(',shared)

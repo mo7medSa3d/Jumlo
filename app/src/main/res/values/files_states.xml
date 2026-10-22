@@ -1,0 +1,7 @@
+<resources>
+    <string name="files_state_clear_search">Clear search</string>
+    <string name="files_state_reset_filters">Reset filters</string>
+    <string name="files_state_folder_empty_title">This folder is empty</string>
+    <string name="files_state_folder_empty_body">Files and folders in this location will appear here.</string>
+    <string name="files_state_refresh_folder">Refresh folder</string>
+</resources>

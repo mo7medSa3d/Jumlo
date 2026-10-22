@@ -26,6 +26,7 @@ import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.StaggeredReveal
 import com.jumlo.app.ui.theme.pressFeedback
 
@@ -43,6 +44,7 @@ fun HomeScreen(
 ) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
+    val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val form by vm.form.collectAsStateWithLifecycle()
     val eligible = remember {
@@ -50,10 +52,19 @@ fun HomeScreen(
             CapabilityRegistry.visible(it.id) && CapabilityRegistry.canProcess(it.id)
         }
     }
+    var search by rememberSaveable { mutableStateOf("") }
     val selected = remember(settings.quickActionIds, eligible) {
         HomeActionPolicy.resolve(settings.quickActionIds, eligible.map { it.id })
     }
     val byId = remember(eligible) { eligible.associateBy { it.id } }
+    // A search narrows the tiles; it never hides the way into the whole catalogue.
+    val matches = remember(search, eligible) {
+        if (search.isBlank()) eligible
+        else eligible.filter {
+            it.titleEn.contains(search, true) || it.titleAr.contains(search, true) ||
+                it.subtitleEn.contains(search, true) || it.subtitleAr.contains(search, true)
+        }
+    }
     val frequent = selected.mapNotNull(byId::get)
     val suggestions = remember(eligible, selected) {
         listOf("pdf_07", "pdf_compress", "img_01", "img_03", "file_07", "dl_media")
@@ -91,6 +102,10 @@ fun HomeScreen(
                     }
                 }
             }
+            item("home-search") {
+                QuietSearchBar(search, stringResource(R.string.home_search_hint),
+                    { search = it }, { search = "" })
+            }
             item("scan-hero") {
                 NeonHero(
                     title = stringResource(R.string.neon_hero_title),
@@ -100,13 +115,16 @@ fun HomeScreen(
                 )
             }
             item("quick-actions") {
-                NeonPanel {
+                Column {
                     NeonSectionHeader(
                         title = stringResource(R.string.neon_quick_actions),
                         action = stringResource(R.string.ui_customize_actions),
                         onAction = { pending = ArrayList(selected); editing = true }
                     )
-                    frequent.chunked(columns).forEachIndexed { rowIndex, row ->
+                    // Four quick actions on a phone, six on a wide screen: the rest of
+                    // the catalogue lives in the Tools sections.
+                    val quick = frequent.filter { it in matches }.take(if (columns >= 3) 6 else 4)
+                    quick.chunked(columns).forEachIndexed { rowIndex, row ->
                         Row(Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             row.forEach { tool ->
@@ -165,7 +183,8 @@ fun HomeScreen(
                         action = stringResource(R.string.neon_show_all),
                         onAction = onFiles
                     )
-                    if (outputs.isEmpty()) {
+                    if(outputLoad!=com.jumlo.app.ui.DataLoadStatus.READY) DocumentLoadState(outputLoad,vm::reloadSavedData)
+                    else if (outputs.isEmpty()) {
                         Row(Modifier.fillMaxWidth().padding(vertical = 15.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -229,6 +248,7 @@ fun HomeScreen(
                 }
             }
             if (suggestions.isNotEmpty()) {
+                // A short row of the most relevant tools, and a way into the rest.
                 item("suggestions") {
                     NeonPanel {
                         NeonSectionHeader(
@@ -236,15 +256,15 @@ fun HomeScreen(
                             action = stringResource(R.string.neon_show_all),
                             onAction = onTools
                         )
-                        suggestions.chunked(columns).forEach { row ->
-                            Row(Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                row.forEach { tool ->
-                                    NeonToolTile(tool, settings.language, { onTool(tool) },
-                                        Modifier.weight(1f), compact = true)
-                                }
-                                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
-                            }
+                        suggestions.take(3).forEach { tool ->
+                            FileMenuRow(
+                                name = if (settings.language.isRtl) tool.titleAr else tool.titleEn,
+                                metadata = if (settings.language.isRtl) tool.subtitleAr else tool.subtitleEn,
+                                onOpen = { onTool(tool) },
+                                icon = resolveStitchIcon(tool.iconName),
+                                showOverflow = false,
+                                menu = {}
+                            )
                         }
                     }
                 }

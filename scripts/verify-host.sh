@@ -3,7 +3,9 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "${1:-}" in
-  "") bash "$ROOT/scripts/test-core.sh" ;;
+  "") bash "$ROOT/scripts/test-core.sh"
+     # The PDF compression path, on a real JPEG, without a device.
+     bash "$ROOT/scripts/test-pdf-compression.sh" ;;
   --with-media) bash "$ROOT/scripts/test-media-files.sh" ;;
   *) echo "Usage: bash scripts/verify-host.sh [--with-media]" >&2; exit 2 ;;
 esac

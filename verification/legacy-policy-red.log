@@ -1,6 +1,0 @@
-app/src/main/java/com/universalutilities/app/model/Models.kt:198:36: error: expecting comma or ')'
-    val tlsInfo: String = "Unknown"
-                                   ^
-app/src/main/java/com/universalutilities/app/model/Models.kt:199:26: error: expecting comma or ')'
-    val eTag: String = ""
-                         ^

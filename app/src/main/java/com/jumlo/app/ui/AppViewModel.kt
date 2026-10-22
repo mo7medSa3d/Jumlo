@@ -10,6 +10,9 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.jumlo.app.core.ExternalIntakePolicy
+import com.jumlo.app.printing.PrintSource
+import com.jumlo.app.printing.PrintPage
 import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.core.DownloadLinkPolicy
 import com.jumlo.app.core.Hashing
@@ -42,10 +45,15 @@ import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
+enum class DataLoadStatus { LOADING, READY, ERROR }
+data class RenameUndo(val id:String,val previousName:String?,val newName:String)
+
 data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:Int,val height:Int)
 data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0,val trash:Long=0)
+/** What the compression slider needs to estimate the output size. */
+data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
 
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class,ExperimentalCoroutinesApi::class)
 @HiltViewModel class AppViewModel @Inject constructor(
     private val app:Application,
     private val preferences:UserPreferencesRepository,
@@ -58,14 +66,54 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     private val budget:WorkBudget,
     private val savedState:SavedStateHandle
 ):AndroidViewModel(app) {
+    private val reloadRecords=MutableStateFlow(0)
+    private val _sourceLoad=MutableStateFlow(DataLoadStatus.LOADING)
+    private val _outputLoad=MutableStateFlow(DataLoadStatus.LOADING)
+    private val _jobLoad=MutableStateFlow(DataLoadStatus.LOADING)
+    private val _trashLoad=MutableStateFlow(DataLoadStatus.LOADING)
+    val sourceLoad=_sourceLoad.asStateFlow()
+    val outputLoad=_outputLoad.asStateFlow()
+    val jobLoad=_jobLoad.asStateFlow()
+    val trashLoad=_trashLoad.asStateFlow()
+    fun reloadTrash() { viewModelScope.launch {
+        _trashLoad.value=DataLoadStatus.LOADING
+        try { outputStore.refreshTrash(); _trashLoad.value=DataLoadStatus.READY }
+        catch(cancel:CancellationException) { throw cancel }
+        catch(error:Exception) { _trashLoad.value=DataLoadStatus.ERROR; _message.value=stableError(error) }
+    } }
+    fun reloadSavedData() {
+        _sourceLoad.value=DataLoadStatus.LOADING; _outputLoad.value=DataLoadStatus.LOADING; _jobLoad.value=DataLoadStatus.LOADING
+        reloadRecords.value++
+    }
     val settings=preferences.settingsFlow.catch { error ->
         if (error is java.io.IOException) { _message.value="SETTINGS_READ_FAILED"; emit(AppSettingsState(isLoaded=true)) }
         else throw error
     }.stateIn(viewModelScope,SharingStarted.Eagerly,AppSettingsState())
-    val imported=sources.records.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
-    val outputs=outputStore.records.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+    val processingPresets=preferences.processingPresetsFlow.catch { error ->
+        if(error is CancellationException) throw error
+        _message.value="SETTINGS_READ_FAILED"
+        emit(emptyList())
+    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+
+    val imported=reloadRecords.flatMapLatest { sources.records.onEach { _sourceLoad.value=DataLoadStatus.READY }
+        .catch { error -> if(error is CancellationException) throw error; _sourceLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
+    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+    val outputs=reloadRecords.flatMapLatest {
+        combine(outputStore.records,settings) { records,prefs ->
+            records.map { record ->
+                val label=prefs.outputNames[record.id]
+                if(label==null) record else {
+                    val payload=File(File(File(app.filesDir,"processing/results"),record.id),com.jumlo.app.core.SafeNames.basename(record.displayName))
+                    record.copy(displayName=label,uri=androidx.core.content.FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",payload,label).toString())
+                }
+            }
+        }.onEach { _outputLoad.value=DataLoadStatus.READY }
+            .catch { error -> if(error is CancellationException) throw error; _outputLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
+    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val trashed=outputStore.trashed
-    val jobs=jobStore.snapshots.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+    val jobs=reloadRecords.flatMapLatest { jobStore.snapshots.onEach { _jobLoad.value=DataLoadStatus.READY }
+        .catch { error -> if(error is CancellationException) throw error; _jobLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
+    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
     private val _form=MutableStateFlow(WorkspaceDraft())
     val form=_form.asStateFlow()
     private val _workspaceReady=MutableStateFlow(false)
@@ -85,6 +133,72 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     // One-shot request survives intake before Navigation Compose starts collecting.
     private val sharedLinkChannel = Channel<Unit>(Channel.CONFLATED)
     val sharedLinkOpenRequests: Flow<Unit> = sharedLinkChannel.receiveAsFlow()
+    private val printChannel = Channel<Unit>(Channel.CONFLATED)
+    val openPrintRequests = printChannel.receiveAsFlow()
+    private val _printSource = MutableStateFlow(
+        savedState.get<String>("print_source")?.let { raw ->
+            runCatching { Json.decodeFromString<PrintSource>(raw) }.getOrNull()
+        })
+    val printSource = _printSource.asStateFlow()
+    private val jobOpenChannel = Channel<String>(Channel.CONFLATED)
+    val jobOpenRequests = jobOpenChannel.receiveAsFlow()
+    fun openNotificationJob(rawId:String?) {
+        ExternalIntakePolicy.jobId(rawId)?.let { jobOpenChannel.trySend(it) }
+    }
+    fun clearPrintSource() { _printSource.value=null; savedState["print_source"]=null }
+    private fun openPrint(source:PrintSource) {
+        _printSource.value=source
+        savedState["print_source"]=Json.encodeToString(source)
+        printChannel.trySend(Unit)
+    }
+    private suspend fun printableSource(source:SourceRef,pages:List<Pair<Int,Int>> = emptyList()):PrintSource {
+        require(source.mimeType.equals("application/pdf",true) || source.mimeType?.startsWith("image/",true)==true) { "PRINT_UNSUPPORTED_FORMAT" }
+        require(pages.size<=com.jumlo.app.printing.PrintRanges.MAX_PAGES) { "PRINT_PAGE_COUNT" }
+        return sources.withSeekable(source.id,UUID.randomUUID().toString()) { file ->
+            // Legacy SAF-only sources may have a temporary seek file. Adopt a durable
+            // snapshot before returning so the print UI never points at deleted bytes.
+            val inbound=File(app.filesDir,"inbound").canonicalFile
+            val stable=if(file.canonicalFile.parentFile==inbound) file else {
+                val copy=sources.importLocalFile(file,source.displayName,source.mimeType)
+                File(inbound,"${copy.id}.bin")
+            }
+            PrintSource(stable.absolutePath,source.displayName,source.mimeType.orEmpty(),pages.map { PrintPage(it.first,it.second) })
+        }
+    }
+    fun printSource(sourceId:String,pages:List<Pair<Int,Int>> = emptyList()) {
+        viewModelScope.launch {
+            initialized.await(); beginBusy()
+            try { openPrint(printableSource(sources.get(sourceId),pages.toList())) }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally { endBusy() }
+        }
+    }
+    fun printOutput(record:OutputRecord) {
+        viewModelScope.launch {
+            initialized.await(); beginBusy()
+            try {
+                val verified=outputStore.find(record.jobId,record.itemKey)
+                require(verified?.id==record.id && verified.sha256==record.sha256) { "OUTPUT_NOT_AVAILABLE" }
+                // Reuse private canonical bytes. The print repository takes its own
+                // bounded lifetime snapshot when it starts a spooler job.
+                val file=File(File(File(app.filesDir,"processing/results"),verified.id),com.jumlo.app.core.SafeNames.basename(verified.displayName))
+                openPrint(PrintSource(file.absolutePath,record.displayName,verified.mimeType))
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally { endBusy() }
+        }
+    }
+    fun importForPrint(intake:Intake) {
+        val uri=intake.uris.singleOrNull() ?: return
+        viewModelScope.launch {
+            initialized.await(); beginBusy()
+            try { openPrint(printableSource(sources.inspect(uri,intake.offeredFlags))) }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally { endBusy() }
+        }
+    }
     private val savedWorkspace=MutableStateFlow(WorkspaceDraft())
     private val savedUrls=MutableStateFlow("")
     private val draftMutex=Mutex()
@@ -95,6 +209,9 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     }.stateIn(viewModelScope,SharingStarted.Eagerly,false)
     private val _tree=MutableStateFlow<DocumentListing?>(null)
     val tree=_tree.asStateFlow()
+    private val _treeLoad=MutableStateFlow(DataLoadStatus.LOADING)
+    val treeLoad=_treeLoad.asStateFlow()
+    private val treeOperations=Mutex()
     private val _storage=MutableStateFlow(StorageUsage())
     val storage=_storage.asStateFlow()
     private val initialized=CompletableDeferred<Unit>()
@@ -134,14 +251,21 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             }
         }
         viewModelScope.launch(Dispatchers.IO) {
-            try { outputStore.reconcile(); jobStore.recoverPending() }
+            try {
+                outputStore.reconcile()
+                _trashLoad.value=DataLoadStatus.READY
+                jobStore.recoverPending()
+            }
             catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { _message.value=stableError(error) }
+            catch(error:Exception) {
+                if(_trashLoad.value!=DataLoadStatus.READY) _trashLoad.value=DataLoadStatus.ERROR
+                _message.value=stableError(error)
+            }
         }
-        viewModelScope.launch { try { _tree.value=treeStore.restore() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } }
+        reloadTree()
         refreshStorage()
     }
-    fun dismissMessage() { _message.value=null; _undoTrashId.value=null; _undoTrashIds.value=emptyList() }
+    fun dismissMessage() { _message.value=null; _undoRename.value=null; _undoTrashId.value=null; _undoTrashIds.value=emptyList() }
     fun notifyMessage(code:String) {
         _message.value=code
         val tool=form.value.toolId
@@ -236,7 +360,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         if(index in list.indices && to in list.indices) list.add(to,list.removeAt(index))
         old.copy(sourceIds=list)
     } }
-    fun intake(intake:Intake, attachToWorkspace:Boolean=true) {
+    fun intake(intake:Intake, attachToWorkspace:Boolean=true, externalShare:Boolean=false) {
         viewModelScope.launch {
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
@@ -264,13 +388,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             if(intake.uris.isEmpty()) return@launch
             beginBusy()
             try {
+                val received=mutableListOf<SourceRef>()
                 for(uri in intake.uris) {
                     try {
                         val source=sources.inspect(uri,intake.offeredFlags)
-                        if(attachToWorkspace) addSource(source.id,source.displayName)
+                        received.add(source)
+                        if(attachToWorkspace && !externalShare) addSource(source.id,source.displayName)
                     }
                     catch(cancel:CancellationException) { throw cancel }
                     catch(error:Exception) { _message.value=stableError(error) }
+                }
+                if(externalShare && received.isNotEmpty()) {
+                    val tool=ExternalIntakePolicy.toolFor(received.map { it.mimeType })
+                    if(tool!=null && chooseToolWithSources(tool,received.map { it.id })) sharedLinkChannel.trySend(Unit)
                 }
                 refreshStorage()
             } finally { endBusy() }
@@ -303,7 +433,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             initialized.await()
             beginBusy()
             val copied=mutableListOf<String>()
-            suspend fun rollback() {
+            suspend fun rollback() = withContext(NonCancellable) {
                 copied.forEach { id ->
                     removeSource(id)
                     try { sources.discardNewImport(id) } catch (_: Exception) { }
@@ -312,8 +442,8 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             try {
                 selected.forEachIndexed { index,file ->
                     currentCoroutineContext().ensureActive()
-                    val source=sources.importLocalFile(file,"Scan ${index+1}.jpg","image/jpeg")
-                    copied.add(source.id)
+                    val source=sources.importLocalFile(file,"Scan ${index+1}.jpg","image/jpeg",
+                        onCommitted = { committed -> copied.add(committed.id) })
                     addSource(source.id,source.displayName)
                 }
                 refreshStorage()
@@ -331,6 +461,33 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     }
 
     fun importOutput(record:OutputRecord) { intake(Intake(listOf(record.uri),Intent.FLAG_GRANT_READ_URI_PERMISSION,null)) }
+
+    private val _undoRename=MutableStateFlow<RenameUndo?>(null)
+    val undoRename=_undoRename.asStateFlow()
+    fun renameOutput(record:OutputRecord,newName:String) {
+        viewModelScope.launch {
+            try {
+                val verified=outputStore.find(record.jobId,record.itemKey) ?: error("OUTPUT_NOT_AVAILABLE")
+                require(verified.id==record.id) { "OUTPUT_NOT_AVAILABLE" }
+                val name=com.jumlo.app.core.DocumentNamePolicy.rename(verified.displayName,newName)
+                val before=settings.value.outputNames[record.id]
+                preferences.setOutputName(record.id,name)
+                _undoTrashIds.value=emptyList(); _undoTrashId.value=null
+                _undoRename.value=RenameUndo(record.id,before,name)
+                _message.value="OUTPUT_RENAMED"
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(_:Exception) { notifyMessage("OUTPUT_RENAME_FAILED") }
+        }
+    }
+    fun undoOutputRename(action:RenameUndo) {
+        viewModelScope.launch {
+            try {
+                if(settings.value.outputNames[action.id]==action.newName) preferences.setOutputName(action.id,action.previousName)
+                dismissMessage()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(_:Exception) { notifyMessage("OUTPUT_RENAME_FAILED") }
+        }
+    }
 
     fun toggleOutputFavorite(id:String) = savePreference { preferences.toggleFavoriteOutput(id) }
 
@@ -433,7 +590,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                 if(moved.isNotEmpty()) {
                     _undoTrashIds.value=moved
                     _undoTrashId.value=moved.last()
-                    _message.value="MOVED_TO_TRASH"
+                    _undoRename.value=null; _message.value="MOVED_TO_TRASH"
                     refreshStorage()
                 }
             } catch(cancel:CancellationException) {throw cancel}
@@ -459,7 +616,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         viewModelScope.launch {
             try {
                 val moved=outputStore.moveToTrash(record.id)
-                if(moved!=null) { _undoTrashIds.value=listOf(moved.id);_undoTrashId.value=moved.id; _message.value="MOVED_TO_TRASH"; refreshStorage() }
+                if(moved!=null) { _undoTrashIds.value=listOf(moved.id);_undoTrashId.value=moved.id; _undoRename.value=null; _message.value="MOVED_TO_TRASH"; refreshStorage() }
             } catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { _message.value=stableError(error) }
         }
@@ -517,10 +674,16 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                         HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line),state.cleartextConsent)
                     }
                 }
+                // A batch must not fetch the same link twice.
+                val effectiveUrlText=if(download){
+                    val seen=mutableSetOf<String>()
+                    val lines=urlSnapshot.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+                    lines.filter { seen.add(it.lowercase()) }.joinToString("\n")
+                } else urlSnapshot
                 val fingerprint=Hashing.sha256(ByteArrayInputStream((Json.encodeToString(state)+"\n"+if(download) urlSnapshot else "").toByteArray()))
                 if(lastFingerprint==fingerprint && lastJobId!=null) { onQueued(lastJobId!!); return@launch }
                 newHandle=when {
-                    download -> secrets.put(urlSnapshot.toCharArray())
+                    download -> secrets.put(effectiveUrlText.toCharArray())
                     state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
                     state.toolId in setOf("file_encrypted_zip","file_drive") -> secrets.put(state.secret1.toCharArray())
                     else -> null
@@ -551,7 +714,11 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         submissionReset=viewModelScope.async { previous?.await();draftMutex.withLock { drafts.clearSubmission() } }
     }
     fun pause(job:String) { viewModelScope.launch { jobStore.pause(job) } }
-    fun cancel(job:String) { viewModelScope.launch { jobStore.cancel(job) } }
+    fun cancel(job:String) { viewModelScope.launch {
+        try { jobStore.cancel(job) }
+        catch(cancel:CancellationException) { throw cancel }
+        catch(error:Exception) { notifyMessage(stableError(error)) }
+    } }
     fun retry(job:JobSnapshot,replacementUrls:String?=null) { viewModelScope.launch {
         try {
             if(job.request.toolId.startsWith("dl_") && replacementUrls!=null) {
@@ -562,7 +729,19 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         } catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { _message.value=stableError(error) }
     } }
-    fun finishOnboarding() { viewModelScope.launch { preferences.setOnboardingCompleted(true) } }
+    fun saveProcessingPreset(name: String) = savePreference {
+        val snapshot=form.value
+        preferences.setProcessingPreset(ProcessingPreset.capture(name,snapshot))
+    }
+    fun applyProcessingPreset(preset: ProcessingPreset) {
+        if(preset.toolId != form.value.toolId) {notifyMessage("CAPABILITY_UNAVAILABLE");return}
+        updateForm { preset.apply(it) }
+    }
+    fun deleteProcessingPreset(preset: ProcessingPreset) = savePreference {
+        preferences.removeProcessingPreset(preset.toolId,preset.name)
+    }
+
+    fun finishOnboarding() = savePreference { preferences.setOnboardingCompleted(true) }
     private fun savePreference(block:suspend ()->Unit) { viewModelScope.launch {
         try { block() } catch(cancel:CancellationException) { throw cancel }
         catch(_:Exception) { _message.value="SETTINGS_SAVE_FAILED" }
@@ -581,6 +760,8 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
     fun setAccentColor(value:String) = savePreference { preferences.setAccentColor(value) }
     fun setFontScale(value:String) = savePreference { preferences.setFontScale(value) }
     fun setMaxConcurrentDownloads(value:Int) = savePreference { preferences.setMaxConcurrentDownloads(value) }
+    fun setMediaServiceUrl(url:String) = savePreference { preferences.setMediaServiceUrl(url) }
+    fun setMediaServiceToken(token:String) = savePreference { preferences.setMediaServiceToken(token) }
     fun setDownloadDestinationFolder(treeUri:String,flags:Int) { viewModelScope.launch {
         try {
             val uri=Uri.parse(treeUri)
@@ -639,7 +820,8 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             finally { endBusy() }
         }
     }
-    fun acceptTree(uri:String,flags:Int) { viewModelScope.launch { try { _tree.value=treeStore.accept(uri,flags) } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } } }
+    fun reloadTree() { treeRequest { tree.value?.let { treeStore.list(it.treeUri) } ?: treeStore.restore() } }
+    fun acceptTree(uri:String,flags:Int) { treeRequest { treeStore.accept(uri,flags) } }
     fun createFolder(name:String) { treeOperation { treeStore.createFolder(it.treeUri,name) } }
     fun renameFile(entry:DocumentEntry,name:String) { treeOperation { treeStore.rename(entry.uri,name) } }
     fun deleteFile(entry:DocumentEntry) { treeOperation { treeStore.deleteFile(entry.uri) } }
@@ -649,10 +831,18 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
             _message.value=if(created==null) "COLLISION_SKIPPED" else if(move) "FILE_MOVED_VERIFIED" else "FILE_COPIED_VERIFIED"
         }
     }
-    private fun treeOperation(block:suspend (DocumentListing)->Unit) { viewModelScope.launch {
-        try { val current=tree.value ?: throw OperationFailure("NO_FOLDER_SELECTED");block(current);_tree.value=treeStore.list(current.treeUri) }
-        catch(cancel:CancellationException) { throw cancel }
-        catch(error:Exception) { _message.value=stableError(error) }
+    private fun treeOperation(block:suspend (DocumentListing)->Unit) { treeRequest {
+        val current=tree.value ?: throw OperationFailure("NO_FOLDER_SELECTED")
+        block(current)
+        treeStore.list(current.treeUri)
+    } }
+    private fun treeRequest(load:suspend ()->DocumentListing?) { viewModelScope.launch {
+        treeOperations.withLock {
+            _treeLoad.value=DataLoadStatus.LOADING
+            try { _tree.value=load(); _treeLoad.value=DataLoadStatus.READY }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { _treeLoad.value=DataLoadStatus.ERROR; _message.value=stableError(error) }
+        }
     } }
     /** Only old reproducible previews/extraction cache. Drafts, trash and resumable jobs stay intact. */
     fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
@@ -678,6 +868,25 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
         )
     } }
     suspend fun preview(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 1600)
+
+    /**
+     * The original size of a source and how much of it is embedded images, so the
+     * compression slider can show a live estimate before the job runs.
+     */
+    suspend fun compressionProfile(sourceId:String):CompressionProfile? = withContext(Dispatchers.IO) {
+        runCatching {
+            sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
+                val size=file.length()
+                if(size<=0L) return@withSeekable null
+                val images=runCatching {
+                    com.jumlo.app.data.pdf.PdfBoxBackend.open(file,null).use { doc ->
+                        com.jumlo.app.data.pdf.PdfBoxBackend.embeddedImageSummary(doc).first
+                    }
+                }.getOrDefault(0L)
+                CompressionProfile(size,images)
+            }
+        }.getOrNull()
+    }
     suspend fun thumbnail(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 240)
     private suspend fun previewSized(sourceId:String,page:Int,maxEdge:Int):PreviewFrame {
         var pending:PreviewFrame?=null
@@ -724,7 +933,7 @@ data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=
                     val matrix=Matrix().apply { when(orientation) { 2->setScale(-1f,1f);3->setRotate(180f);4->setScale(1f,-1f);5->{setRotate(90f);postScale(-1f,1f)};6->setRotate(90f);7->{setRotate(-90f);postScale(-1f,1f)};8->setRotate(-90f) } }
                     val normalized=if(orientation in 2..8) Bitmap.createBitmap(original,0,0,original.width,original.height,matrix,true) else original
                     if(normalized!==original) original.recycle()
-                    PreviewFrame(normalized,1,1,width,height)
+                    PreviewFrame(normalized,1,1,if(orientation in 5..8) height else width,if(orientation in 5..8) width else height)
                 } catch(t:Throwable) { original.recycle();throw t }
             }
         }

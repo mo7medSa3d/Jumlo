@@ -49,11 +49,11 @@
     <string name="msg_insufficient_storage">Not enough free storage space on the device to complete this operation.</string>
     <string name="msg_low_memory">Device memory is full. Close background apps and try again.</string>
     <string name="msg_pdf_encrypted">This PDF is password-protected. Unlock it first or provide the password.</string>
+    <string name="msg_pdf_password_incorrect">The password is incorrect. Check it and try again.</string>
     <string name="msg_owner_password_required">Enter the PDF password in Advanced settings to continue.</string>
     <string name="msg_zip_password_required">Enter the ZIP archive password in Advanced settings to continue.</string>
     <string name="msg_sha256_mismatch">File SHA-256 digest does not match the expected checksum.</string>
     <string name="msg_no_acroform">This PDF does not contain interactive form fields.</string>
-    <string name="msg_redaction_failed">Could not verify complete text removal in the selected region.</string>
     <string name="msg_animated_image_unsupported">Animated images are not supported by this tool. Choose a static JPG, PNG, or WebP image.</string>
     <string name="msg_image_corrupt">This image could not be decoded or verified. Try another image file.</string>
     <string name="msg_pdf_corrupt">This PDF file is empty or damaged and could not be processed. Choose another PDF.</string>
@@ -61,6 +61,8 @@
     <string name="jumlo_paper_mode">PDF page size</string>
     <string name="jumlo_custom_paper">Custom dimensions</string>
     <string name="msg_pdf_not_compressible">This PDF cannot be made smaller without lowering content quality. Your original file is unchanged.</string>
+    <string name="msg_pdf_compression_partial">Some pages could not be re-compressed. The rest of the document was compressed and saved.</string>
+    <string name="msg_pdf_compression_failed">The images in this PDF could not be re-compressed. Your original file is unchanged.</string>
     <string name="jumlo_page_editor_title">Edit pages</string>
     <string name="jumlo_page_editor_hint">Tap to select, hold and drag to reorder</string>
     <string name="jumlo_page_count">%1$d pages</string>

@@ -42,7 +42,8 @@ import dagger.hilt.android.AndroidEntryPoint
     private val appViewModel:AppViewModel by viewModels()
     override fun onCreate(savedInstanceState:Bundle?) {
         super.onCreate(savedInstanceState);enableEdgeToEdge()
-        if(savedInstanceState==null && intent?.action in setOf(Intent.ACTION_SEND,Intent.ACTION_SEND_MULTIPLE)) appViewModel.intake(IntakeController.collect(intent))
+        if(savedInstanceState==null && intent?.action in setOf(Intent.ACTION_SEND,Intent.ACTION_SEND_MULTIPLE)) appViewModel.intake(IntakeController.collect(intent),externalShare=true)
+        if(savedInstanceState==null) appViewModel.openNotificationJob(intent?.getStringExtra("job_id"))
         setContent {
             val settings by appViewModel.settings.collectAsStateWithLifecycle()
             val workspaceReady by appViewModel.workspaceReady.collectAsStateWithLifecycle()
@@ -79,6 +80,7 @@ import dagger.hilt.android.AndroidEntryPoint
     }
     override fun onNewIntent(intent:Intent) {
         super.onNewIntent(intent);setIntent(intent)
-        if(intent.action in setOf(Intent.ACTION_SEND,Intent.ACTION_SEND_MULTIPLE)) appViewModel.intake(IntakeController.collect(intent))
+        appViewModel.openNotificationJob(intent.getStringExtra("job_id"))
+        if(intent.action in setOf(Intent.ACTION_SEND,Intent.ACTION_SEND_MULTIPLE)) appViewModel.intake(IntakeController.collect(intent),externalShare=true)
     }
 }

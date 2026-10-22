@@ -82,7 +82,11 @@ import javax.inject.Singleton
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
         if(old.progress.stage in setOf(JobStage.COMPLETED,JobStage.CANCELLED)) return
         val cancelled=old.copy(progress=old.progress.copy(stage=JobStage.CANCELLED),updatedAtEpochMs=System.currentTimeMillis())
-        if(dao.cancelIfOpen(jobId,Json.encodeToString(cancelled))==1) {
+        val stoppingFailed = old.progress.stage in setOf(JobStage.FAILED,JobStage.PARTIAL,JobStage.WAITING_FOR_INPUT)
+        val changed = if(stoppingFailed) dao.stopRetryingIfUnleased(jobId,Json.encodeToString(cancelled))
+            else dao.cancelIfOpen(jobId,Json.encodeToString(cancelled))
+        if(stoppingFailed && changed==0) throw OperationFailure("JOB_BUSY")
+        if(changed==1) {
             work.cancelUniqueWork("job:$jobId")
             withContext(Dispatchers.IO) {
                 val current=dao.job(jobId)
@@ -95,10 +99,12 @@ import javax.inject.Singleton
     suspend fun retryFailed(jobId:String):String {
         val row=dao.job(jobId) ?: throw OperationFailure("JOB_NOT_FOUND")
         val old=Json.decodeFromString<JobSnapshot>(row.snapshotJson)
-        // Same logical job/output keys: successfully published members and partial byte progress are preserved.
+        // Committed output keys survive retries. Failed direct transfers restart under
+        // the next worker's fenced lease; pause/resume preserves its generation.
         val retainedUnits=old.progress.completedUnits.coerceAtLeast(0L)
         val retainedTotal=old.progress.totalUnits?.takeIf { it>=retainedUnits }
-        val next=old.copy(progress=JobProgress(JobStage.QUEUED,retainedUnits,retainedTotal),updatedAtEpochMs=System.currentTimeMillis())
+        val next=old.copy(progress=JobProgress(JobStage.QUEUED,retainedUnits,retainedTotal),updatedAtEpochMs=System.currentTimeMillis(),
+            downloadRestartGeneration=com.jumlo.app.core.DownloadRestartPolicy.retryGeneration(old.request.toolId,row.stage,old.downloadRestartGeneration,old.outcomes.lastOrNull { it.status==ItemStatus.FAILED }?.errorCode))
         // Wait briefly for the cancelled/interrupted worker to release its fenced lease.
         if(row.stage in setOf(JobStage.PAUSED.name,JobStage.INTERRUPTED.name,JobStage.WAITING_FOR_INPUT.name)) {
             for(attempt in 0 until 20) {
@@ -146,7 +152,7 @@ import javax.inject.Singleton
             val ctx=ExecutionContext(sources,outputs,budget,{ save(it) },{
                 runningContext.ensureActive()
                 if(!leased.get()) throw CancellationException("JOB_LEASE_LOST")
-            })
+            },downloadRestartGeneration=snapshot.downloadRestartGeneration)
             val outcomes=if(snapshot.request.toolId.startsWith("dl_")) {
                 admission.withSlot(preferences.settingsFlow.first().maxConcurrentDownloads,ctx.checkCancellation) {
                     save(JobProgress(JobStage.RUNNING,snapshot.progress.completedUnits,snapshot.progress.totalUnits))
@@ -156,7 +162,7 @@ import javax.inject.Singleton
                 save(JobProgress(JobStage.RUNNING,snapshot.progress.completedUnits,snapshot.progress.totalUnits))
                 dispatcher.execute(snapshot.request,ctx).also {ctx.checkCancellation()}
             }
-            val failures=outcomes.count { it.status==ItemStatus.FAILED }
+            val failures=outcomes.count { it.status!=ItemStatus.CREATED && it.status!=ItemStatus.SKIPPED }
             val successes=outcomes.count { it.outputId!=null }
             val state=when { outcomes.isEmpty() -> JobStage.FAILED; failures==0 -> JobStage.COMPLETED; successes>0 -> JobStage.PARTIAL; else -> JobStage.FAILED }
             save(snapshot.progress.copy(stage=state),outcomes)

@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="quick_start_title">مرحباً بك في Jumlo</string>
+    <string name="quick_start_subtitle">ابدأ باستيراد مستند أو مسح صفحة بالكاميرا أو استكشاف أدوات PDF والصور والتحميل.</string>
+    <string name="quick_start_import">استيراد الملفات</string>
+    <string name="quick_start_import_desc">اختر مستند PDF أو صورة من ذاكرة الهاتف.</string>
+    <string name="quick_start_scan">ابدأ المسح</string>
+    <string name="quick_start_scan_desc">التقط الصفحات، واضبط الحواف، واحفظ الصور على جهازك.</string>
+    <string name="quick_start_explore">استكشف الأدوات</string>
+    <string name="quick_start_explore_desc">حرّر ملفاتك وصورك على جهازك.</string>
+    <string name="quick_start_privacy">تتم معالجة المستندات محليًا على جهازك دون الحاجة إلى حساب.</string>
+    <string name="quick_start_skip">إغلاق</string>
+    <string name="quick_start_replay">إعادة عرض دليل البداية</string>
+    <string name="quick_start_replay_detail">عرض خيارات الاستيراد والمسح والأدوات مرة أخرى.</string>
+    <string name="quick_start_done">ابدأ الآن</string>
+    <string name="quick_start_section">المساعدة والبدء</string>
+    <string name="quick_start_print">الطباعة</string>
+    <string name="quick_start_print_desc">يكتشف Android وخدمات الطباعة المثبتة الطابعات. إذا لم تظهر طابعة، فعّل خدمتها أو ثبّتها في إعدادات النظام، وتحقق من اتصالها ثم أعد المحاولة.</string>
+    <string name="print_invalid_numeric">صحح القيم الرقمية غير الصالحة قبل الطباعة أو حفظ الإعداد.</string>
+    <string name="print_reset_invalid">إعادة ضبط القيم غير الصالحة</string>
+    <string name="preset_panel_title">إعدادات الأدوات المحفوظة</string>
+    <string name="preset_panel_save">حفظ إعداد مسبق</string>
+    <string name="preset_panel_empty">لا توجد إعدادات محفوظة. احفظ خيارات الأداة لتستخدمها لاحقًا.</string>
+    <string name="preset_panel_name">اسم الإعداد المسبق</string>
+    <string name="preset_panel_privacy">لا تحفظ الإعدادات المسبقة المستندات أو كلمات المرور أو الصفحات المحددة أو النصوص الخاصة.</string>
+    <string name="preset_panel_delete">حذف</string>
+    <string name="preset_panel_delete_body">هل تريد حذف هذا الإعداد المسبق؟ لن تتغير ملفاتك أو تعديلاتك الحالية.</string>
+    <string name="preset_panel_replace_title">استبدال الإعداد المسبق</string>
+    <string name="preset_panel_replace_body">يوجد إعداد مسبق بهذا الاسم. هل تريد استبدال خياراته المحفوظة؟</string>
+    <string name="job_stop_retrying">إيقاف إعادة المحاولة</string>
+</resources>

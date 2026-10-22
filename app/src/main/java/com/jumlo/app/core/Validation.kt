@@ -8,14 +8,34 @@ import kotlin.math.*
 
 /** UI page numbers are physical, one-based, and preserve the user's order. */
 object PageSelection {
+    /** Contiguous ranges stay together: "1-3,5" yields [[1,2,3],[5]]. */
+    fun groups(value: String, count: Int): List<List<Int>> {
+        require(count > 0) { "INVALID_PAGE_COUNT" }
+        val normalized = normalize(value)
+        require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
+        val result = mutableListOf<List<Int>>()
+        normalized.split(',').forEach { part ->
+            val match = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$").matchEntire(part)
+            require(match != null) { "INVALID_PAGE_RANGE" }
+            val first = match.groupValues[1].toIntOrNull()
+            val endpoint = match.groupValues[2]
+            val last = if (endpoint.isEmpty()) first else endpoint.toIntOrNull()
+            require(first != null && last != null && first in 1..count && last >= first) { "INVALID_PAGE_RANGE" }
+            result += (first..minOf(last, count)).toList()
+        }
+        return result
+    }
+
+    private fun normalize(value: String): String = value.map { c -> when (c) {
+        in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
+        in '\u06f0'..'\u06f9' -> '0' + (c - '\u06f0')
+        '\u060c' -> ','
+        else -> c
+    } }.joinToString("")
+
     fun parse(value: String, count: Int): List<Int> {
         require(count > 0) { "INVALID_PAGE_COUNT" }
-        val normalized = value.map { c -> when (c) {
-            in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
-            in '\u06f0'..'\u06f9' -> '0' + (c - '\u06f0')
-            '\u060c' -> ','
-            else -> c
-        } }.joinToString("")
+        val normalized = normalize(value)
         require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
         val result = linkedSetOf<Int>()
         normalized.split(',').forEach { part ->
@@ -24,8 +44,9 @@ object PageSelection {
             val first = match.groupValues[1].toIntOrNull()
             val endpoint=match.groupValues[2]
             val last=if(endpoint.isEmpty()) first else endpoint.toIntOrNull()
-            require(first != null && last != null && first in 1..count && last in first..count) { "INVALID_PAGE_RANGE" }
-            for (page in first..last) result.add(page)
+            require(first != null && last != null && first in 1..count && last >= first) { "INVALID_PAGE_RANGE" }
+            // A range that reaches past the last page is clamped to the pages that exist.
+            for (page in first..minOf(last,count)) result.add(page)
         }
         return result.toList()
     }

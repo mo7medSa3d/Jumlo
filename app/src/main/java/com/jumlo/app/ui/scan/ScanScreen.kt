@@ -20,6 +20,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.platform.LocalDensity
+import androidx.exifinterface.media.ExifInterface
+import com.jumlo.app.core.ScanGeometry
+import com.jumlo.app.core.ScanPoint
+import com.jumlo.app.ui.util.rememberAppHaptics
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -238,11 +248,27 @@ internal fun decodeScanBitmapBounded(file: File, maxEdge: Int = 2048): Bitmap? {
         inSampleSize = sample
         inPreferredConfig = Bitmap.Config.ARGB_8888
     }
-    return android.graphics.BitmapFactory.decodeFile(file.path, opts)
+    val bitmap=android.graphics.BitmapFactory.decodeFile(file.path, opts) ?: return null
+    val orientation=runCatching { ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL) }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+    val matrix=Matrix().apply {
+        when(orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> setScale(-1f,1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> setScale(1f,-1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { setRotate(90f);postScale(-1f,1f) }
+            ExifInterface.ORIENTATION_ROTATE_90 -> setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> { setRotate(-90f);postScale(-1f,1f) }
+            ExifInterface.ORIENTATION_ROTATE_270 -> setRotate(-90f)
+        }
+    }
+    if(matrix.isIdentity) return bitmap
+    return try {
+        Bitmap.createBitmap(bitmap,0,0,bitmap.width,bitmap.height,matrix,true).also { if(it!==bitmap) bitmap.recycle() }
+    } catch(error:Throwable) { bitmap.recycle();throw error }
 }
 
 internal fun perspectiveQuad(file: File, quad: List<Offset>): File {
-    require(quad.size == 4) { "SCAN_QUAD_INVALID" }
+    require(ScanGeometry.valid(quad.map { ScanPoint(it.x,it.y) })) { "SCAN_QUAD_INVALID" }
     val src = decodeScanBitmapBounded(file, 2400) ?: throw IllegalArgumentException("SCAN_DECODE_FAILED")
     var out: Bitmap? = null
     val dest = File(file.parentFile, file.nameWithoutExtension + "-scan.jpg")
@@ -260,7 +286,7 @@ internal fun perspectiveQuad(file: File, quad: List<Offset>): File {
         val outW = maxOf(dist(0, 1), dist(3, 2)).toInt().coerceIn(1, 2400)
         val outH = maxOf(dist(0, 3), dist(1, 2)).toInt().coerceIn(1, 2400)
         val matrix = Matrix().apply {
-            setPolyToPoly(srcPts, 0, floatArrayOf(0f, 0f, outW.toFloat(), 0f, outW.toFloat(), outH.toFloat(), 0f, outH.toFloat()), 0, 4)
+            require(setPolyToPoly(srcPts, 0, floatArrayOf(0f, 0f, outW.toFloat(), 0f, outW.toFloat(), outH.toFloat(), 0f, outH.toFloat()), 0, 4)) { "SCAN_QUAD_INVALID" }
         }
         val rendered = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888).also { out = it }
         Canvas(rendered).drawBitmap(src, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
@@ -281,55 +307,88 @@ internal fun perspectiveQuad(file: File, quad: List<Offset>): File {
 /** Draggable four-corner quad over the captured photo (normalized coordinates). */
 @Composable
 private fun QuadAdjust(file: File, busy: Boolean = false, onApply: (List<Offset>) -> Unit, onRetake: () -> Unit) {
-    val guideColor = MaterialTheme.colorScheme.tertiary
-    val canvasBg = MaterialTheme.colorScheme.surfaceContainerLowest
-    val bitmap = remember(file) { decodeScanBitmapBounded(file, 1600) }
-    var corners by remember(file, bitmap) {
-        mutableStateOf(bitmap?.let(::detectDocumentQuad) ?: listOf(Offset(0.08f, 0.08f), Offset(0.92f, 0.08f), Offset(0.92f, 0.92f), Offset(0.08f, 0.92f)))
+    val guideColor=MaterialTheme.colorScheme.tertiary
+    val canvasBg=MaterialTheme.colorScheme.surfaceContainerLowest
+    val haptics=rememberAppHaptics()
+    val touchRadius=with(LocalDensity.current) { 26.dp.toPx() }
+    var loadFailed by remember(file) { mutableStateOf(false) }
+    val bitmap by produceState<Bitmap?>(null,file) {
+        value=withContext(Dispatchers.IO) { runCatching { decodeScanBitmapBounded(file,1600) }.getOrNull() }
+        loadFailed=value==null
     }
-    var dragging by remember { mutableStateOf(-1) }
-    DisposableEffect(bitmap) {
-        onDispose { bitmap?.takeUnless { it.isRecycled }?.recycle() }
+    var corners by rememberSaveable(file.path) { mutableStateOf(listOf(.08f,.08f,.92f,.08f,.92f,.92f,.08f,.92f)) }
+    var initialized by rememberSaveable(file.path) { mutableStateOf(false) }
+    LaunchedEffect(bitmap) {
+        if(bitmap!=null && !initialized) {
+            val detected=detectDocumentQuad(bitmap!!)
+            if(ScanGeometry.valid(detected.map {ScanPoint(it.x,it.y)})) corners=detected.flatMap {listOf(it.x,it.y)}
+            initialized=true
+        }
     }
+    fun points()=corners.chunked(2).map { Offset(it[0],it[1]) }
+    fun move(index:Int,x:Float,y:Float) {
+        val next=points().toMutableList().apply { this[index]=Offset(x.coerceIn(0f,1f),y.coerceIn(0f,1f)) }
+        if(ScanGeometry.valid(next.map {ScanPoint(it.x,it.y)})) corners=next.flatMap {listOf(it.x,it.y)}
+    }
+    var dragging by remember { mutableIntStateOf(-1) }
+    var selectedCorner by rememberSaveable(file.path) { mutableIntStateOf(0) }
+    var precise by rememberSaveable { mutableStateOf(false) }
+    // Compose/RenderThread may retain a frame after disposal. Let the bitmap be
+    // collected once both renderer and composition release it instead of recycling a displayed image.
     QuietCard(Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.scan_adjust_hint), style = QuietTheme.typography.metadata)
-        Box(Modifier.fillMaxWidth().height(340.dp).clip(QuietTheme.shapes.thumbnail).background(canvasBg)) {
-            bitmap?.let {
-                androidx.compose.foundation.Image(
-                    it.asImageBitmap(), contentDescription = stringResource(R.string.scan_title),
-                    modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                )
-            }
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize().pointerInput(busy) {
-                if (busy) return@pointerInput
-                detectDragGestures(
-                    onDragStart = { start ->
-                        val nx = start.x / size.width; val ny = start.y / size.height
-                        dragging = corners.indices.minByOrNull { i ->
-                            val dx = corners[i].x - nx; val dy = corners[i].y - ny; dx * dx + dy * dy
+        Text(stringResource(R.string.scan_adjust_hint),style=QuietTheme.typography.metadata)
+        if(loadFailed) Text(stringResource(R.string.upgrade_preview_unavailable),color=MaterialTheme.colorScheme.error)
+        else if(bitmap==null) LinearProgressIndicator(Modifier.fillMaxWidth())
+        Box(Modifier.fillMaxWidth().heightIn(min=220.dp,max=420.dp).aspectRatio(1f)
+            .clip(QuietTheme.shapes.thumbnail).background(canvasBg)) {
+            bitmap?.let { image ->
+                androidx.compose.foundation.Image(image.asImageBitmap(),contentDescription=stringResource(R.string.scan_title),
+                    modifier=Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Fit)
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize().pointerInput(busy,image,touchRadius) {
+                    if(busy) return@pointerInput
+                    fun fit()=ScanGeometry.fit(image.width.toFloat(),image.height.toFloat(),size.width.toFloat(),size.height.toFloat())
+                    detectDragGestures(onDragStart={ start ->
+                        val rect=fit()
+                        dragging=points().indices.minByOrNull { i ->
+                            val p=points()[i]; (Offset(rect.left+p.x*rect.width,rect.top+p.y*rect.height)-start).getDistanceSquared()
+                        }?.takeIf { i ->
+                            val p=points()[i]; (Offset(rect.left+p.x*rect.width,rect.top+p.y*rect.height)-start).getDistance()<=touchRadius
                         } ?: -1
-                    },
-                    onDrag = { change, _ ->
-                        if (dragging in corners.indices) {
-                            val nx = (change.position.x / size.width).coerceIn(0f, 1f)
-                            val ny = (change.position.y / size.height).coerceIn(0f, 1f)
-                            corners = corners.toMutableList().also { list -> list[dragging] = Offset(nx, ny) }
-                        }
-                    },
-                    onDragEnd = { dragging = -1 }
-                )
-            }) {
-                val pts = corners.map { Offset(it.x * size.width, it.y * size.height) }
-                for (i in pts.indices) {
-                    val a = pts[i]; val b = pts[(i + 1) % pts.size]
-                    drawLine(guideColor, a, b, strokeWidth = 4f)
+                        if(dragging>=0) {selectedCorner=dragging;haptics.longPress()}
+                    },onDrag={change,_->
+                        if(dragging>=0) {change.consume();val p=fit().normalized(change.position.x,change.position.y);move(dragging,p.x,p.y)}
+                    },onDragEnd={if(dragging>=0) haptics.sliderTick();dragging=-1},onDragCancel={dragging=-1})
+                }) {
+                    val rect=ScanGeometry.fit(image.width.toFloat(),image.height.toFloat(),size.width,size.height)
+                    val pts=points().map {Offset(rect.left+it.x*rect.width,rect.top+it.y*rect.height)}
+                    pts.indices.forEach {i->drawLine(guideColor,pts[i],pts[(i+1)%4],strokeWidth=3.dp.toPx())}
+                    pts.forEachIndexed { i,p->
+                        drawCircle(guideColor.copy(alpha=.16f),touchRadius,p)
+                        drawCircle(guideColor,if(i==dragging) 10.dp.toPx() else 7.dp.toPx(),p)
+                    }
                 }
-                pts.forEach { drawCircle(guideColor, radius = 16f, center = it) }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            QuietTonalButton(text = stringResource(R.string.scan_retake), onClick = onRetake)
-            QuietPrimaryButton(text = stringResource(R.string.scan_apply), enabled = !busy, onClick = { onApply(corners) })
+        TextButton(onClick={precise=!precise},enabled=!busy) {Text(stringResource(R.string.upgrade_scan_precision))}
+        if(precise) {
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                items(4) {index->FilterChip(selectedCorner==index,{selectedCorner=index},label={Text(stringResource(R.string.upgrade_scan_corner,index+1))})}
+            }
+            val xLabel=stringResource(R.string.upgrade_scan_horizontal)
+            val yLabel=stringResource(R.string.upgrade_scan_vertical)
+            Text(xLabel,style=QuietTheme.typography.metadataStrong)
+            Slider(corners[selectedCorner*2],{move(selectedCorner,it,corners[selectedCorner*2+1])},enabled=!busy,
+                modifier=Modifier.semantics {contentDescription=xLabel;stateDescription="${(corners[selectedCorner*2]*100).toInt()}%"},
+                onValueChangeFinished={haptics.sliderTick()})
+            Text(yLabel,style=QuietTheme.typography.metadataStrong)
+            Slider(corners[selectedCorner*2+1],{move(selectedCorner,corners[selectedCorner*2],it)},enabled=!busy,
+                modifier=Modifier.semantics {contentDescription=yLabel;stateDescription="${(corners[selectedCorner*2+1]*100).toInt()}%"},
+                onValueChangeFinished={haptics.sliderTick()})
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            QuietTonalButton(text=stringResource(R.string.scan_retake),onClick=onRetake,enabled=!busy,modifier=Modifier.weight(1f))
+            QuietPrimaryButton(text=stringResource(R.string.scan_apply),enabled=!busy && bitmap!=null,
+                onClick={onApply(points())},modifier=Modifier.weight(1f))
         }
     }
 }

@@ -1,0 +1,42 @@
+{
+  "file": "scan_01pages.pdf",
+  "path": "/tmp/opencode/scratchpad/bigscans/scan_01pages.pdf",
+  "page_count": 1,
+  "image_xobject_count": 1,
+  "total_image_stream_bytes": 1325508,
+  "pages": [
+    {
+      "page": 1,
+      "mediabox_pt": [
+        0.0,
+        0.0,
+        612.0,
+        792.0
+      ],
+      "image_count": 1,
+      "images": [
+        {
+          "name": "/Im0",
+          "width_px": 2550,
+          "height_px": 3300,
+          "colorspace": "/DeviceRGB",
+          "bits_per_component": 8,
+          "filter": [
+            "/DCTDecode"
+          ],
+          "stream_bytes": 1325508,
+          "ctm": [
+            612.0,
+            0.0,
+            0.0,
+            792.0,
+            0.0,
+            0.0
+          ],
+          "effective_dpi_x": 300.0,
+          "effective_dpi_y": 300.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,0 @@
-source_sha=local-uncommitted
-mode=gate
-extendedMedia=${JUMLO_NATIVE_EXTENDED_MEDIA:-true}

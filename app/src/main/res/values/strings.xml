@@ -49,6 +49,7 @@
     <string name="action_view">View</string>
     <string name="action_open">Open</string>
     <string name="action_share">Share</string>
+    <string name="action_apply">Apply</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_pause">Pause</string>
     <string name="action_resume">Resume</string>
@@ -219,6 +220,9 @@
     <string name="workspace_clear_selection">Clear selection</string>
     <string name="workspace_direct_urls_batch">Direct file URLs (one per line)</string>
     <string name="workspace_direct_url_single">Direct file URL</string>
+    <string name="workspace_batch_valid_links">%1$d of %2$d links are ready to download</string>
+    <string name="workspace_batch_duplicates">%1$d duplicate link(s) will be skipped</string>
+    <string name="workspace_batch_invalid_links">%1$d link(s) are not direct HTTP/HTTPS file links</string>
     <string name="workspace_direct_url_hint">Direct HTTP/HTTPS file links and Google Drive shared links.</string>
     <string name="field_expected_sha256">Expected SHA-256 (optional)</string>
     <string name="field_unmetered_only">Unmetered network only</string>
@@ -243,6 +247,17 @@
     <string name="field_clockwise_rotation">Clockwise rotation</string>
     <string name="field_max_image_dpi">Max embedded image DPI (72..300)</string>
     <string name="field_quality">JPEG recompression quality (30..95)</string>
+    <string name="field_target_size_mb">Target size (MB)</string>
+    <string name="field_target_size_note">With a target set, Jumlo lowers resolution and quality until the file reaches it, and reports the size it actually achieved.</string>
+    <string name="field_remove_title">Also remove the title, subject and keywords</string>
+    <string name="field_clean_note">Removes the author, the producing application, the creation and modification dates and the embedded XMP trail. The cleaned file and a report listing every removed key are saved together.</string>
+    <string name="field_compress_slider">Size and quality: %1$d%% toward the best quality</string>
+    <string name="field_compress_estimate">Estimated output: %1$s</string>
+    <string name="field_compress_saving">Estimated saving: %1$d%%</string>
+    <string name="field_compress_estimate_note">An estimate from the embedded images. The saved file reports the real size.</string>
+    <string name="field_compress_preset_high">High compression</string>
+    <string name="field_compress_preset_balanced">Medium compression</string>
+    <string name="field_compress_preset_low">Low compression</string>
     <string name="field_compress_note">Text and vector streams stay untouched; embedded images above the target DPI are downsampled.</string>
     <string name="field_left">Left (0..1)</string>
     <string name="field_top">Top (0..1)</string>
@@ -253,6 +268,17 @@
     <string name="field_page_number">Page (1-based)</string>
     <string name="field_x_norm">Horizontal position (0..1)</string>
     <string name="field_y_norm">Vertical position (0..1)</string>
+    <string name="field_annotation_kind">Annotation</string>
+    <string name="field_annotation_region_hint">Drag the area on the page preview, and drag its corners to resize it.</string>
+    <string name="annotation_highlight">Highlight</string>
+    <string name="annotation_underline">Underline</string>
+    <string name="annotation_strikethrough">Strikethrough</string>
+    <string name="annotation_note">Sticky note</string>
+    <string name="annotation_square">Rectangle</string>
+    <string name="annotation_circle">Ellipse</string>
+    <string name="annotation_textbox">Text box</string>
+    <string name="annotation_ink">Freehand</string>
+    <string name="annotation_text">Plain text</string>
     <string name="field_as_note_annotation">Add as collapsible PDF note annotation</string>
     <string name="field_watermark_text">Watermark text (optional)</string>
     <string name="field_opacity_percent">Opacity % (10..100)</string>
@@ -270,9 +296,6 @@
     <string name="field_insert_at_page">Insert second PDF before page (1-based, when 2 PDFs selected)</string>
     <string name="field_forms_json">Field values (key=value per line)</string>
     <string name="field_flatten_form">Flatten form fields into static page content</string>
-    <string name="field_compare_pdf_note">Select two PDFs to generate a page-by-page text difference report.</string>
-    <string name="field_verify_redacted_text">Text expected to be removed (verification check)</string>
-    <string name="field_redact_note">Rewrites content stream operators to permanently remove text inside the box and verifies removal.</string>
     <string name="field_ocr_note">Runs on-device ML Kit text recognition to export .txt and a searchable PDF copy.</string>
     <string name="field_webpage_url">HTTPS Webpage URL</string>
     <string name="field_webpage_note">Captures public web pages via local WebView print adapter.</string>

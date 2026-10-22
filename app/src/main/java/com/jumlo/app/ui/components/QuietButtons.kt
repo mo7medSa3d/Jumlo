@@ -73,8 +73,9 @@ fun QuietTonalIconButton(
             onClick()
         },
         modifier = modifier.pressFeedback()
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .size(size)
+            // sizeIn after size: the minimum wins, so the target is never below 48dp.
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .semantics { this.contentDescription = contentDescription },
         shape = CircleShape,
         color = containerColor
@@ -147,7 +148,8 @@ fun QuietTonalButton(
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    contentColor: Color = MaterialTheme.colorScheme.onSurface
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    enabled: Boolean = true
 ) {
     val haptics = rememberAppHaptics()
     Button(
@@ -156,6 +158,7 @@ fun QuietTonalButton(
             onClick()
         },
         modifier = modifier.pressFeedback().heightIn(min = QuietTheme.spacing.tonalButtonHeight),
+        enabled = enabled,
         shape = QuietTheme.shapes.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
@@ -187,7 +190,7 @@ fun QuietSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .then(if (onClickBar != null) Modifier.clickable(onClick = onClickBar) else Modifier),
+            .then(if (onClickBar != null) Modifier.clickable(role = Role.Button, onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.button,
         color = colors.surfaceContainerLow,
         border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant)

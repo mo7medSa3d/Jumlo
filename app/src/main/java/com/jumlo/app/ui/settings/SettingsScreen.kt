@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.theme.QuietTheme
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
@@ -24,7 +25,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -43,18 +48,21 @@ import com.jumlo.app.ui.AppViewModel
 
 @Composable fun SettingsScreen(viewModel: AppViewModel, onRequestNotifications: () -> Unit,
     onExportLogs: () -> Unit, onOpenFiles: () -> Unit, onChooseFolder: () -> Unit,
-    onChooseDownloadFolder: () -> Unit, onOpenSavedFolder: () -> Unit) {
+    onChooseDownloadFolder: () -> Unit, onOpenSavedFolder: () -> Unit,
+    onShowGuide: () -> Unit = {}) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val trash by viewModel.trashed.collectAsStateWithLifecycle()
     val savedOutputs by viewModel.outputs.collectAsStateWithLifecycle()
     val tree by viewModel.tree.collectAsStateWithLifecycle()
+    val treeLoad by viewModel.treeLoad.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     // Only this captured set is authorized. Later trash arrivals are excluded.
     var purgeIds by rememberSaveable { mutableStateOf<List<String>?>(null) }
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val profileLabel = stringResource(R.string.profile_open)
     var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
     DisposableEffect(lifecycle, context) {
         val observer = LifecycleEventObserver { _, event ->
@@ -70,6 +78,7 @@ import com.jumlo.app.ui.AppViewModel
         contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        if (busy) item("settings-busy") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         item("settings-hero") {
             NeonPanel(accent=MaterialTheme.colorScheme.primary,
                 modifier=Modifier.fillMaxWidth().padding(vertical=8.dp)) {
@@ -79,7 +88,10 @@ import com.jumlo.app.ui.AppViewModel
                         onClick = { panel="profile" },
                         shape=androidx.compose.foundation.shape.CircleShape,
                         color=MaterialTheme.colorScheme.primaryContainer,
-                        modifier=Modifier.size(62.dp)) {
+                        modifier=Modifier.size(62.dp).semantics {
+                            contentDescription=profileLabel
+                            role=Role.Button
+                        }) {
                         Box(contentAlignment=Alignment.Center) {
                             Icon(Icons.Rounded.Person,null,Modifier.size(30.dp),
                                 tint=MaterialTheme.colorScheme.primary)
@@ -121,7 +133,7 @@ import com.jumlo.app.ui.AppViewModel
                                 tint=MaterialTheme.colorScheme.primary)
                             Text(stringResource(R.string.neon_my_documents),
                                 style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold),
-                                maxLines=1)
+                                maxLines=3)
                             Text(stringResource(R.string.account_result_count,savedOutputs.size),
                                 style=QuietTheme.typography.metadata)
                         }
@@ -163,6 +175,12 @@ import com.jumlo.app.ui.AppViewModel
         item("wifiOnly") { TogglePreference(stringResource(R.string.pref_wifi_only), stringResource(R.string.pref_wifi_summary),
             settings.wifiOnlyDefault, viewModel::setWifiOnlyDefault, "settings.wifiOnly") }
         item("concurrent") { PreferenceRow(stringResource(R.string.redesign_concurrent),settings.maxConcurrentDownloads.toString(),Icons.Rounded.Download,{panel="concurrent"}) }
+        item("mediaService") {
+            PreferenceRow(stringResource(R.string.pref_media_service),
+                if(settings.mediaServiceUrl.isBlank()) stringResource(R.string.pref_media_service_off)
+                else settings.mediaServiceUrl,
+                Icons.Rounded.Cloud,{panel="mediaService"},Modifier.testTag("settings.mediaService"))
+        }
         item("location") {
             Column {
                 PreferenceRow(stringResource(R.string.pref_save_location),
@@ -188,13 +206,26 @@ import com.jumlo.app.ui.AppViewModel
             Icons.Rounded.GridView,{panel="fileView"}) }
         item("storage") { PreferenceRow(stringResource(R.string.account_storage), null, Icons.Rounded.Storage,
             { viewModel.refreshStorage(); panel = "storage" }, Modifier.testTag("settings.storage")) }
-        item("folder") { PreferenceRow(stringResource(R.string.pref_folder_access), tree?.name ?: stringResource(R.string.pref_folder_access_summary),
+        item("folder") { PreferenceRow(stringResource(R.string.pref_folder_access),
+            when(treeLoad) {
+                com.jumlo.app.ui.DataLoadStatus.LOADING -> stringResource(R.string.upgrade_loading_documents)
+                com.jumlo.app.ui.DataLoadStatus.ERROR -> stringResource(R.string.upgrade_loading_failed)
+                else -> tree?.name ?: stringResource(R.string.pref_folder_access_summary)
+            },
             Icons.Rounded.FolderShared, onChooseFolder, Modifier.testTag("settings.permissions")) }
         item("cache") { PreferenceRow(stringResource(R.string.pref_clear_temporary), stringResource(R.string.pref_clear_temporary_summary),
             Icons.Rounded.CleaningServices, { panel = "cache" }, Modifier.testTag("settings.cache"), enabled = !busy) }
         item("trash") { PreferenceRow(stringResource(R.string.pref_empty_trash), stringResource(R.string.pref_trash_count, trash.size),
             Icons.Rounded.DeleteOutline, { purgeIds = trash.map { it.id } }, Modifier.testTag("settings.trash"),
             enabled = trash.isNotEmpty() && !busy, destructive = true) }
+        item("guide-section") { PreferenceHeading(stringResource(R.string.quick_start_section)) }
+        item("guide-replay") { PreferenceRow(
+            stringResource(R.string.quick_start_replay),
+            stringResource(R.string.quick_start_replay_detail),
+            Icons.Rounded.MenuBook,
+            onShowGuide,
+            Modifier.testTag("settings.quickStartReplay")
+        ) }
         item("privacy_about") { PreferenceHeading(stringResource(R.string.pref_privacy_about)) }
         item("privacy") { PreferenceRow(stringResource(R.string.account_privacy), null, Icons.Rounded.PrivacyTip, { panel = "privacy" }) }
         item("diagnostics") { PreferenceRow(stringResource(R.string.pref_export_diagnostics), stringResource(R.string.pref_export_diagnostics_summary),
@@ -239,6 +270,37 @@ import com.jumlo.app.ui.AppViewModel
             { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
         "concurrent" -> ChoiceDialog(stringResource(R.string.redesign_concurrent),(1..6).map(Int::toString),settings.maxConcurrentDownloads.coerceIn(1,6)-1,
             {viewModel.setMaxConcurrentDownloads(it+1);panel=null},{panel=null})
+        "mediaService" -> {
+            var address by remember { mutableStateOf(settings.mediaServiceUrl) }
+            var token by remember { mutableStateOf(settings.mediaServiceToken) }
+            AlertDialog(
+                onDismissRequest = { panel = null },
+                title = { Text(stringResource(R.string.pref_media_service)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = address, onValueChange = { address = it.trim() },
+                            label = { Text(stringResource(R.string.pref_media_service_hint)) },
+                            singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                            modifier = Modifier.testTag("settings.mediaServiceUrl"))
+                        // A service that asks for a shared secret could not be
+                        // reached at all: the token had no field to be typed into.
+                        OutlinedTextField(value = token, onValueChange = { token = it.trim() },
+                            label = { Text(stringResource(R.string.pref_media_service_token)) },
+                            singleLine = true,
+                            modifier = Modifier.testTag("settings.mediaServiceToken"))
+                        Text(stringResource(R.string.pref_media_service_help), style = QuietTheme.typography.metadata)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.setMediaServiceUrl(address)
+                        viewModel.setMediaServiceToken(token)
+                        panel = null
+                    }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.action_apply)) }
+                },
+                dismissButton = { TextButton(onClick = { panel = null }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.action_cancel)) } }
+            )
+        }
         "fileView" -> ChoiceDialog(stringResource(R.string.redesign_file_view),listOf(stringResource(R.string.redesign_view_list),stringResource(R.string.redesign_view_grid),stringResource(R.string.redesign_view_gallery)),settings.fileViewMode.ordinal,
             {viewModel.setFileViewMode(FileViewMode.entries[it]);panel=null},{panel=null})
         "accent" -> ChoiceDialog(stringResource(R.string.redesign_accent),

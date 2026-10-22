@@ -6,6 +6,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -289,12 +292,7 @@ import kotlin.math.roundToInt
                     ) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                             asset.thumbnailUrl?.let { thumb ->
-                                AsyncImage(
-                                    model=thumb,
-                                    contentDescription=asset.title,
-                                    modifier=Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)),
-                                    contentScale=ContentScale.Crop
-                                )
+                                MediaArtwork(thumb,asset.title)
                             }
                             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                 QuietBadge(
@@ -431,6 +429,7 @@ import kotlin.math.roundToInt
                                 color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                                 border=BorderStroke(if(selected) 2.dp else 1.dp, if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
                                 modifier=Modifier.weight(1f).heightIn(min=96.dp).pressFeedback()
+                                    .semantics {this.selected=selected;role=Role.RadioButton}
                             ) {
                                 Column(
                                     modifier=Modifier.fillMaxWidth().heightIn(min=96.dp).padding(14.dp),
@@ -517,6 +516,19 @@ import kotlin.math.roundToInt
                 }
             }
         }
+        if(state.rightsRequired) {
+            // The terms are shown before anything is queued, and the download waits
+            // for the answer.
+            AlertDialog(
+                onDismissRequest={viewModel.dismissRights()},
+                title={Text(stringResource(R.string.media_rights_title))},
+                text={Text(stringResource(R.string.media_rights_body),style=QuietTheme.typography.bodyMedium)},
+                confirmButton={TextButton(onClick={haptics.toolExecute();viewModel.acceptRightsAndSubmit(onQueued)},
+                    modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.media_rights_confirm))}},
+                dismissButton={TextButton(onClick={viewModel.dismissRights()},
+                    modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.action_cancel))}}
+            )
+        }
         Surface(tonalElevation=2.dp) {
             Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
             Button(
@@ -556,6 +568,7 @@ private fun ModeSelectionCard(
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier.heightIn(min = 64.dp).pressFeedback()
+            .semantics {this.selected=selected;role=Role.RadioButton}
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 14.dp, vertical = 8.dp),
@@ -574,6 +587,26 @@ private fun ModeSelectionCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Composable
+private fun MediaArtwork(url:String,title:String) {
+    var loading by remember(url) {mutableStateOf(true)}
+    var failed by remember(url) {mutableStateOf(false)}
+    Box(Modifier.fillMaxWidth().height(190.dp).clip(QuietTheme.shapes.thumbnail),
+        contentAlignment=Alignment.Center) {
+        AsyncImage(model=url,contentDescription=title,modifier=Modifier.fillMaxSize(),
+            contentScale=ContentScale.Crop,
+            onLoading={loading=true;failed=false},onSuccess={loading=false;failed=false},
+            onError={loading=false;failed=true})
+        if(loading) QuietShimmerSkeleton(Modifier.fillMaxSize())
+        if(failed) Column(horizontalAlignment=Alignment.CenterHorizontally,
+            verticalArrangement=Arrangement.spacedBy(QuietTheme.spacing.sm)) {
+            Icon(Icons.Rounded.BrokenImage,null,Modifier.size(32.dp),MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.msg_preview_unavailable),style=QuietTheme.typography.metadata,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

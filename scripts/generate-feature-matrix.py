@@ -34,9 +34,14 @@ def main():
         "media": ("Media URL", "MediaPolicyTests; MediaProcessTests; MediaFileTests", "Hidden; optional external-media/licensing/device gate"),
     }
     matrix = []
+    # Tools with a dedicated qualification suite name it explicitly; the handler
+    # mapping alone would over-claim coverage for the rest of the family.
+    extra_tests = {"pdf_protect": "PdfSecurityQualificationTest"}
     for tool_id, title, category, visible, enabled, kind, evidence, reason in rows:
         handler = "navigation" if kind == "NAVIGATION" else handlers.get(tool_id, "none")
         inputs, tests, limits = kinds.get(handler, ("Navigation", "JumloUiTest; AccountHubInteractionTest", "No processing command"))
+        if tool_id in extra_tests:
+            tests = f'{extra_tests[tool_id]}; {tests}'
         matrix.append(dict(id=tool_id,title=title,category=category,visible=visible=="true",enabled=enabled=="true",kind=kind,
                            policyEvidence=evidence,reason=reason or None,handler=handler,inputs=inputs,limits=limits,
                            testSources=tests,deviceProof="NOT EXECUTED",eligibleBuild="standard debug/release" if enabled=="true" else "unavailable in public catalog"))

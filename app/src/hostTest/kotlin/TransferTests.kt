@@ -139,10 +139,13 @@ fun transferTests(test:(String,()->Unit)->Unit) {
         try { StreamTransfer(transport).execute(TransferRequest("$base/changed",out,5,"\"v1\"",knownTotalBytes=10,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,finalUrlSha256=fingerprint("$base/changed"))) } catch(_:RestartRequired) { rejected=true }
         check(rejected && out.readText()=="01234")
     } }
-    test("real 200 response to Range does not append") { fixture { base,dir ->
-        val out=File(dir,"a.part"); out.writeText("01234"); var rejected=false
-        try { StreamTransfer(transport).execute(TransferRequest("$base/file",out,5,"\"v1\"",knownTotalBytes=10,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,finalUrlSha256=fingerprint("$base/file"))) } catch(_:RestartRequired) { rejected=true }
-        check(rejected && out.readText()=="01234")
+    test("real 200 response to Range restarts from zero instead of appending") { fixture { base,dir ->
+        // The server ignores the Range header and sends the whole representation.
+        // The transfer must restart from byte 0; the partial bytes are never appended to.
+        val out=File(dir,"a.part"); out.writeText("01234")
+        val result=StreamTransfer(transport).execute(TransferRequest("$base/file",out,5,"\"v1\"",knownTotalBytes=10,cleartextConsent=true,maxBytes=1000,minFreeBytes=0,finalUrlSha256=fingerprint("$base/file")))
+        check(result.bytes==10L) { "expected the full representation, got ${result.bytes}" }
+        check(out.readText()=="0123456789") { "the file must not contain the old partial twice" }
     } }
     test("HTTP redirects resolve relative locations") { fixture { base,dir -> val out=File(dir,"a.part"); StreamTransfer(transport).execute(TransferRequest("$base/redirect",out,cleartextConsent=true,maxBytes=1000,minFreeBytes=0)); check(out.readText()=="0123456789") } }
     test("HTTP error cannot create successful output") { fixture { base,dir ->

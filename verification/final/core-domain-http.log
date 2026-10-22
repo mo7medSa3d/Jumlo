@@ -1,8 +1,0 @@
-command: ["bash", "scripts/test-core.sh"]
-started_at_utc: 2026-10-18T05:25:14.470946+00:00
-scope: Production dependency-free Kotlin/domain sources and real loopback HTTP
-
-BLOCKED: Kotlin CLI not available
-
-exit_code: 2
-status: BLOCKED

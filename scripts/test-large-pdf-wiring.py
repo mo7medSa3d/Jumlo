@@ -24,10 +24,12 @@ assert_in(handler, 'BitmapFactory.decodeFile(temp.path,options)', 'image archive
 dl_handler = src('app/src/main/java/com/jumlo/app/data/processing/DownloadOperationHandler.kt')
 assert_in(dl_handler, 'LargeResultStrategy.forPageOutputs(totalPages, context.budget.maxOutputFiles)', 'downloaded PDF-to-images archive fanout guard')
 assert_in(dl_handler, 'context.outputs.find(request.id, pageKey)', 'downloaded PDF-to-images per-page retry idempotency')
-assert_in(pdf, 'PageTextComparison.firstMismatch', 'lazy page text comparison')
-assert_in(pdf, 'pageText(doc,page)', 'redaction only probes affected pages')
-assert_in(pdf, 'PageTextComparison.anyPageContains', 'redaction verification without all-page strings')
-assert_in(handler, 'PdfBoxBackend.containsText(check,verify)', 'bounded redaction verification')
+assert_in(pdf, 'PageTextComparison.anyPageContains', 'lazy page text comparison')
+# The per-page reader and the bounded search are what kept the old verification
+# from copying the whole document; they are still the only way text is read.
+assert_in(pdf, 'fun pageText(doc: PDDocument, zeroBasedIndex: Int)', 'per-page text reader')
+assert_in(pdf, 'PageTextComparison.anyPageContains', 'bounded page text search')
+assert_in(pdf, 'fun containsText(doc: PDDocument, needle: String)', 'bounded text lookup')
 assert 'val aTexts = pageTexts(a)' not in pdf, 'PDF text comparison still creates full-document copies'
 assert 'val pages = doc.pages.toList()' not in pdf, 'PDF info still creates redundant full-page list'
 print('PASS large document Android wiring checks')

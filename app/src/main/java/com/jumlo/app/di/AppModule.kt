@@ -20,9 +20,13 @@ object AppModule {
     @Provides @Singleton fun provideMediaRuntime(
         @ApplicationContext context: Context,
         client: OkHttpClient,
-        sessions: com.jumlo.app.data.media.MediaSessionStore
+        sessions: com.jumlo.app.data.media.MediaSessionStore,
+        preferences: com.jumlo.app.data.preferences.UserPreferencesRepository
     ): com.jumlo.app.data.media.MediaRuntime =
-        com.jumlo.app.data.media.MediaRuntimeFactory.create(context, client, sessions)
+        com.jumlo.app.data.media.MediaRuntimeFactory.create(
+            context, client, sessions,
+            { preferences.mediaServiceUrlSnapshot },
+            { preferences.mediaServiceTokenSnapshot })
 
     @Provides @Singleton fun provideWorkBudget() = com.jumlo.app.data.jobs.WorkBudget()
 

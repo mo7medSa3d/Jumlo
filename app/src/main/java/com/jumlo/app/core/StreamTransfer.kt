@@ -7,7 +7,7 @@ import java.util.zip.GZIPInputStream
 data class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,val close:()->Unit={})
 fun interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
 data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=8L*1024*1024*1024,val minFreeBytes:Long=64L*1024*1024,val finalUrlSha256:String?=null,val maxRetries:Int=3,val retryBackoffMs:Long=300L)
-data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?)
+data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?,val mimeType:String?=null,val contentDisposition:String?=null)
 data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val finalUrlSha256:String,val mimeType:String?=null,val contentDisposition:String?=null)
 
 class StreamTransfer(private val transport:HttpTransport) {
@@ -79,6 +79,14 @@ class StreamTransfer(private val transport:HttpTransport) {
                     current=next; return@repeat
                 }
                 val finalDigest=Hashing.sha256(ByteArrayInputStream(current.toString().toByteArray(Charsets.UTF_8)))
+                if(request.offset>0 && response.code==200) {
+                    // The server ignored the Range header and is sending the whole
+                    // representation. Restart the transfer from byte 0 instead of
+                    // failing the whole download.
+                    response.close()
+                    request.partialFile.delete()
+                    return executeSingleAttempt(request.copy(offset=0),checkCancel,progress,onMetadata)
+                }
                 if(request.offset>0 && (request.finalUrlSha256==null || request.finalUrlSha256!=finalDigest)) throw RestartRequired("FINAL_URL_CHANGED")
                 val etag=response.headers["etag"]?.takeUnless { it.startsWith("W/") }
                 val modified=response.headers["last-modified"]
@@ -100,7 +108,9 @@ class StreamTransfer(private val transport:HttpTransport) {
                 }
                 if(total!=null) require(total<=request.maxBytes) { "DISK_BUDGET_EXCEEDED" }
                 request.partialFile.parentFile?.mkdirs()
-                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total))
+                val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
+                val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }
+                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total,mime,disposition))
                 var written=request.offset
                 val streamToRead: InputStream = if(isGzipped && request.offset==0L) GZIPInputStream(response.body) else response.body
                 FileOutputStream(request.partialFile,request.offset>0).use { out ->
@@ -117,8 +127,6 @@ class StreamTransfer(private val transport:HttpTransport) {
                 }
                 if(written==0L) throw IOException("EMPTY_HTTP_BODY")
                 if(total!=null && written!=total) throw IOException(if(written<total) "TRUNCATED_HTTP_BODY" else "OVERFLOW_HTTP_BODY")
-                val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
-                val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }
                 return TransferResult(written,total,etag ?: request.strongEtag,modified ?: request.lastModified,finalDigest,mime,disposition)
             } finally { response.close() }
         }

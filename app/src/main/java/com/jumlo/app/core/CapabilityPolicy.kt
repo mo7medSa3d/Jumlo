@@ -17,8 +17,16 @@ data class CapabilityAvailability(
  * before distribution. Security/privacy-sensitive candidates remain blocked in every build.
  */
 object CapabilityPolicy {
-    private val navigation = setOf("pdf_01", "file_02", "dl_settings", "file_trash")
-    private val hostCoreTested = setOf("file_07", "file_08", "sha256", "dl_02", "dl_03")
+    private val navigation = setOf("pdf_01", "file_02", "dl_settings", "file_trash", "scan_doc")
+    // Tools whose correctness is proven by an executed test suite against the real backend.
+    private val hostCoreTested = setOf(
+        "file_07", "file_08", "sha256", "dl_02", "dl_03",
+        // PdfSecurityQualificationTest proves the AES-128 protect/unlock round trip:
+        // a wrong password is rejected and the owner password is honoured.
+        "pdf_protect",
+        // PdfMetadataCleanerTest proves the authoring trail is really gone.
+        "pdf_clean"
+    )
     private val processing = hostCoreTested + setOf(
         "file_duplicates", "file_batch_rename", "dl_media",
         "pdf_02", "pdf_07", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
@@ -28,8 +36,6 @@ object CapabilityPolicy {
     private val blocked = mapOf(
         "pdf_ocr" to "SEARCHABLE_OCR_INTEGRITY_QUALIFICATION_PENDING",
         "webpage_pdf" to "WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING",
-        "pdf_protect" to "PDF_PROTECTION_QUALIFICATION_PENDING",
-        "pdf_redact" to "PDF_REDACTION_QUALIFICATION_PENDING",
         "file_encrypted_zip" to "ENCRYPTED_ZIP_QUALIFICATION_PENDING",
         "file_drive" to "DRIVE_PRIVACY_QUALIFICATION_PENDING",
         "xf_05" to "VAULT_BACKEND_UNQUALIFIED"

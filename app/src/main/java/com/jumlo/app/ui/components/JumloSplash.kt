@@ -38,7 +38,7 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
         animationSpec=if(reduced) snap() else spring(dampingRatio=.68f,stiffness=Spring.StiffnessMediumLow),label="splash-logo")
     val alpha by animateFloatAsState(if(visible) 1f else 0f,
         animationSpec=if(reduced) snap() else spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMedium),label="splash-opacity")
-    Box(modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF081317),Color(0xFF0C4743)))),
+    Box(modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF0B1120),Color(0xFF1E3A8A)))),
         contentAlignment=Alignment.Center) {
         Column(Modifier.graphicsLayer {scaleX=scale;scaleY=scale;this.alpha=alpha},horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -49,7 +49,7 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
                     modifier=Modifier.fillMaxSize())
             }
             Text(stringResource(R.string.app_name),fontSize=34.sp,fontWeight=FontWeight.Bold,color=Color.White)
-            Text(stringResource(R.string.brand_splash_tagline),fontSize=14.sp,color=Color(0xFFD7FFF6))
+            Text(stringResource(R.string.brand_splash_tagline),fontSize=14.sp,color=Color(0xFFDBEAFE))
         }
     }
 }

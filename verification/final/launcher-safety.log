@@ -1,9 +1,0 @@
-command: ["bash", "scripts/tests/test-launcher.sh"]
-started_at_utc: 2026-10-18T05:25:37.059745+00:00
-scope: Missing/unverified JAR cannot execute JVM
-
-PASS missing wrapper fails before JVM or downloads
-PASS invalid wrapper fails before JVM execution from a spaced path
-
-exit_code: 0
-status: PASS

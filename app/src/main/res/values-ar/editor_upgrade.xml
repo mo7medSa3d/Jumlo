@@ -1,0 +1,17 @@
+<resources>
+    <string name="editor_clear_selection">إلغاء التحديد</string>
+    <string name="editor_duplicate">تكرار</string>
+    <string name="editor_print_selected">طباعة المحدد</string>
+    <string name="editor_fit_preview">ملاءمة المعاينة</string>
+    <string name="editor_flip_vertical">قلب رأسي</string>
+    <string name="editor_adjust_region">ضبط المنطقة وفق إحداثيات المستند</string>
+    <string name="editor_move_left">تحريك إلى اليسار</string>
+    <string name="editor_move_right">تحريك إلى اليمين</string>
+    <string name="editor_move_up">تحريك إلى الأعلى</string>
+    <string name="editor_move_down">تحريك إلى الأسفل</string>
+    <string name="editor_smaller">تصغير المنطقة</string>
+    <string name="editor_larger">تكبير المنطقة</string>
+    <string name="editor_horizontal_position">الموضع الأفقي (%)</string>
+    <string name="editor_vertical_position">الموضع الرأسي (%)</string>
+    <string name="editor_page_instance">الصفحة الأصلية %1$d، الموضع %2$d من %3$d، دوران %4$d درجة</string>
+</resources>

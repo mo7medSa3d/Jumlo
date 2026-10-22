@@ -49,6 +49,7 @@
     <string name="action_view">عرض</string>
     <string name="action_open">فتح</string>
     <string name="action_share">مشاركة</string>
+    <string name="action_apply">تطبيق</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_pause">إيقاف مؤقت</string>
     <string name="action_resume">استئناف</string>
@@ -219,6 +220,9 @@
     <string name="workspace_clear_selection">مسح التحديد</string>
     <string name="workspace_direct_urls_batch">روابط الملفات المباشرة (رابط في كل سطر)</string>
     <string name="workspace_direct_url_single">رابط الملف المباشر</string>
+    <string name="workspace_batch_valid_links">%1$d من %2$d رابط جاهزة للتنزيل</string>
+    <string name="workspace_batch_duplicates">%1$d رابط مكرر سيتم تخطيه</string>
+    <string name="workspace_batch_invalid_links">%1$d رابط ليس رابط ملف HTTP/HTTPS مباشر</string>
     <string name="workspace_direct_url_hint">روابط ملفات HTTP/HTTPS المباشرة وروابط Google Drive.</string>
     <string name="field_expected_sha256">بصمة SHA-256 المتوقعة (اختياري)</string>
     <string name="field_unmetered_only">شبكة غير محدودة البيانات فقط</string>
@@ -243,6 +247,17 @@
     <string name="field_clockwise_rotation">التدوير باتجاه عقارب الساعة</string>
     <string name="field_max_image_dpi">أقصى دقة للصور المضمنة DPI (72..300)</string>
     <string name="field_quality">جودة ضغط JPEG (30..95)</string>
+    <string name="field_target_size_mb">الحجم المستهدف (ميغابايت)</string>
+    <string name="field_target_size_note">عند تحديد حجم مستهدف، يخفض Jumlo الدقة والجودة حتى يصل الملف إليه، ويعرض الحجم الذي تحقق فعليًا.</string>
+    <string name="field_remove_title">إزالة العنوان والموضوع والكلمات المفتاحية أيضًا</string>
+    <string name="field_clean_note">يزيل اسم المؤلف وبرنامج الإنتاج وتاريخي الإنشاء والتعديل ومسار XMP المضمّن. يُحفظ الملف المنظَّف مع تقرير يسرد كل مفتاح تمت إزالته.</string>
+    <string name="field_compress_slider">الحجم والجودة: %1$d%% نحو أفضل جودة</string>
+    <string name="field_compress_estimate">الحجم التقديري للناتج: %1$s</string>
+    <string name="field_compress_saving">التوفير التقديري: %1$d%%</string>
+    <string name="field_compress_estimate_note">تقدير مبني على الصور المضمنة. يعرض الملف المحفوظ الحجم الحقيقي.</string>
+    <string name="field_compress_preset_high">ضغط عالٍ</string>
+    <string name="field_compress_preset_balanced">ضغط متوسط</string>
+    <string name="field_compress_preset_low">ضغط منخفض</string>
     <string name="field_compress_note">تبقى النصوص والرسومات المتجهة دون تغيير؛ يتم تقليص الصور المضمنة التي تتجاوز الدقة المحددة.</string>
     <string name="field_left">يسار (0..1)</string>
     <string name="field_top">أعلى (0..1)</string>
@@ -253,6 +268,17 @@
     <string name="field_page_number">رقم الصفحة (يبدأ من 1)</string>
     <string name="field_x_norm">الموضع الأفقي (0..1)</string>
     <string name="field_y_norm">الموضع الرأسي (0..1)</string>
+    <string name="field_annotation_kind">التعليق</string>
+    <string name="field_annotation_region_hint">اسحب المنطقة على معاينة الصفحة، واسحب زواياها لتغيير الحجم.</string>
+    <string name="annotation_highlight">تظليل</string>
+    <string name="annotation_underline">تسطير</string>
+    <string name="annotation_strikethrough">شطب</string>
+    <string name="annotation_note">ملاحظة لاصقة</string>
+    <string name="annotation_square">مستطيل</string>
+    <string name="annotation_circle">دائرة</string>
+    <string name="annotation_textbox">مربع نص</string>
+    <string name="annotation_ink">رسم حر</string>
+    <string name="annotation_text">نص عادي</string>
     <string name="field_as_note_annotation">إضافة كملاحظة PDF قابلة للطي</string>
     <string name="field_watermark_text">نص العلامة المائية (اختياري)</string>
     <string name="field_opacity_percent">الشفافية % (10..100)</string>
@@ -270,9 +296,6 @@
     <string name="field_insert_at_page">إدراج ملف PDF الثاني قبل الصفحة (تبدأ من 1، عند اختيار ملفين)</string>
     <string name="field_forms_json">قيم الحقول (مفتاح=قيمة في كل سطر)</string>
     <string name="field_flatten_form">دمج حقول النموذج في محتوى الصفحة الثابت</string>
-    <string name="field_compare_pdf_note">اختر ملفَي PDF لإنشاء تقرير مقارنة النصوص صفحة بصفحة.</string>
-    <string name="field_verify_redacted_text">النص المتوقع إزالته (للتحقق من الحجب)</string>
-    <string name="field_redact_note">يعيد كتابة محتوى الصفحة لإزالة النص داخل المربع نهائياً ويتحقق من عدم بقائه.</string>
     <string name="field_ocr_note">يشغل التعرف الضوئي على الحروف محلياً لتصدير نص .txt ونسخة PDF قابلة للبحث.</string>
     <string name="field_webpage_url">رابط صفحة الويب (HTTPS)</string>
     <string name="field_webpage_note">يحفظ صفحات الويب العامة كملف PDF عبر محرك الطباعة المحلي.</string>

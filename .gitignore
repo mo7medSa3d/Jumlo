@@ -63,6 +63,19 @@ fastlane/screenshots/
 .env.local
 .env.*.local
 
+# Python
+__pycache__/
+*.py[cod]
+
+# Python virtualenvs
+.venv/
+venv/
+
+# Caches
+.cache/
+.parcel_cache/
+.dart_tool/
+
 # Verification / local artifacts
 verification/final/
 *.log
@@ -73,3 +86,23 @@ signing/
 
 # Captures
 captures/
+graphify-out
+desing_ex
+
+# IDE / local tooling
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node / misc
+node_modules/
+
+# Graphify output
+graphify-out/
+
+# OCR bench corpus stays local (media fixture pages are not published)
+tests/ocr_benchmark/

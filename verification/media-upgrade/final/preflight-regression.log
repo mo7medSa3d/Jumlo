@@ -1,6 +1,0 @@
-command: ["bash", "scripts/tests/test-verify-local.sh"]
-started_at_utc: 2026-10-16T14:29:42.858856+00:00
-PASS uncachedDistributionDoesNotAccessNetwork
-PASS missingPrerequisitesAreBlockedNotPassed
-
-exit_code: 0

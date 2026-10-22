@@ -50,6 +50,31 @@ class JumloBrandMotionChecks(unittest.TestCase):
             import struct
             w,h=struct.unpack('>II',data[16:24])
             self.assertEqual((w,h),(1024,1024))
+    def test_ios_icon_exports_are_opaque_because_apple_rejects_alpha(self):
+        """Apple rejects an App Store icon that carries an alpha channel.
+
+        The iOS export must therefore be a full-bleed RGB image with no transparent
+        pixels; iOS applies its own corner mask, so the artwork keeps no rounded
+        corners of its own.
+        """
+        import struct
+        folder=BRAND/'ios/JumloAppIcon.appiconset'
+        manifest=json.loads((folder/'Contents.json').read_text())
+        for record in manifest['images']:
+            with self.subTest(filename=record['filename']):
+                data=(folder/record['filename']).read_bytes()
+                # PNG colour type 2 is truecolour RGB, 6 is truecolour + alpha.
+                self.assertEqual(2,data[25],'iOS app icons must not carry an alpha channel')
+                self.assertNotIn(b'tRNS',data,'iOS app icons must not carry transparency')
+                width,height=struct.unpack('>II',data[16:24])
+                self.assertEqual((width,height),(1024,1024))
+    def test_ios_icon_sources_are_full_bleed_with_no_own_corner_mask(self):
+        for variant in ('light','dark','tinted'):
+            with self.subTest(variant=variant):
+                text=(BRAND/'svg'/f'jumlo-ios-icon-{variant}.svg').read_text()
+                self.assertNotIn('rx="106"',text,'the iOS tile must not round its own corners')
+                root=ET.parse(BRAND/'svg'/f'jumlo-ios-icon-{variant}.svg').getroot()
+                self.assertEqual('0 0 512 512',root.attrib['viewBox'])
     def test_android_adaptive_and_themed_icon_exist(self):
         for name in ['ic_launcher.xml','ic_launcher_round.xml']:
             xml=ET.parse(RES/'mipmap-anydpi-v26'/name).getroot()
@@ -103,12 +128,13 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_predictive_back_follows_gesture_and_respects_dirty_state(self):
         nav=code('ui/navigation/JumloNavHost.kt')
         self.assertIn('progress.collect { backSwipe=it.progress.coerceIn',nav)
-        self.assertIn('if(dirty) confirmLeave=true else leaveWorkspace()',nav)
+        self.assertIn('if(route=="workspace" && dirty) confirmLeave=true else leaveWorkspace()',nav)
         self.assertIn('translationX=(if(rtl) -1f else 1f)*backSwipe',nav)
     def test_files_default_grid_preserves_explicit_user_choice(self):
         self.assertIn('fileViewMode: FileViewMode = FileViewMode.GRID',code('model/Models.kt'))
         self.assertIn('prefs[Keys.FILE_VIEW_MODE] ?: "GRID"',code('data/preferences/UserPreferencesRepository.kt'))
-        self.assertIn('val columns=when { screenWidth>=840->4;screenWidth>=600->3;else->2 }',code('ui/files/FilesScreen.kt'))
+        for token in ('BoxWithConstraints','maxWidth.value','density.fontScale','coerceIn(1,4)'):
+            self.assertIn(token,code('ui/files/FilesScreen.kt'))
         self.assertIn('FileViewMode.LIST',code('ui/files/FilesScreen.kt'))
     def test_semantic_color_pairs_meet_aa_text_contrast(self):
         colors=code('ui/theme/Color.kt')

@@ -104,7 +104,9 @@ object DownloadLinkPolicy {
             val decoded = encoded?.let { runCatching { URLDecoder.decode(it.replace("+", "%2B"), "UTF-8") }.getOrNull() }
             decoded ?: Regex("filename\\s*=\\s*\"?([^\";]+)", RegexOption.IGNORE_CASE).find(header)?.groupValues?.get(1)
         }
-        val path = runCatching { URI(url).path.orEmpty().substringAfterLast('/') }.getOrDefault("")
+        // A name the user typed ("My Report.pdf") is not a URI: URI parsing rejects it and the
+        // file would be published as a generic "download". Fall back to the literal text.
+        val path = runCatching { URI(url).path.orEmpty().substringAfterLast('/') }.getOrElse { url }
         val base = (fromHeader ?: path).takeUnless { it in setOf("download", "uc", "open", "view", "edit", "export") }.orEmpty().ifBlank { "download" }
         val clean = base.replace(Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]"), " ").replace(Regex("\\s+"), " ").trim(' ', '.')
             .ifBlank { "download" }

@@ -1,6 +1,8 @@
 package com.jumlo.app.data.processing
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import androidx.exifinterface.media.ExifInterface
 import com.jumlo.app.core.*
 import com.jumlo.app.data.jobs.*
@@ -39,6 +41,8 @@ import kotlin.math.roundToInt
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
         require(output.stripMetadata) { "METADATA_PRESERVATION_UNQUALIFIED" }
+        // One published file per source; the published-output budget is a hard product limit.
+        ResourceBudgetPolicy.requireOutputCount(request.sourceIds.size)
         val outcomes=mutableListOf<ItemOutcome>()
         for ((index, id) in request.sourceIds.withIndex()) {
             context.checkCancellation(); val key="image:$index"
@@ -52,17 +56,18 @@ import kotlin.math.roundToInt
                 val ticket=context.outputs.reserve(request.id,key,name,BitmapTransforms.mime(effectiveFormat))
                 val record=context.sources.withSeekable(id,request.id) { file ->
                     val originalSize = file.length()
+                    val originalInfo = BitmapTransforms.inspect(file)
                     BitmapTransforms.decode(file,context.budget.maxBitmapBytes).use { decoded ->
                         val src=decoded.bitmap; var transformed:Bitmap?=null
                         try {
                             val bmp=when {
                                 resize!=null -> {
-                                    val dimensions=when {
-                                        resize.percentage!=null -> { require(resize.percentage in 1..400) { "INVALID_PERCENTAGE" }; maxOf(1,(src.width*resize.percentage/100.0).roundToInt()) to maxOf(1,(src.height*resize.percentage/100.0).roundToInt()) }
-                                        resize.longestEdge!=null -> { require(resize.longestEdge>0) { "INVALID_DIMENSIONS" }; val scale=resize.longestEdge.toDouble()/maxOf(src.width,src.height); maxOf(1,(src.width*scale).roundToInt()) to maxOf(1,(src.height*scale).roundToInt()) }
-                                        else -> resize.width to resize.height
-                                    }
-                                    BitmapTransforms.resize(src,dimensions.first,dimensions.second,FitMode.valueOf(resize.fit),resize.allowUpscaling,output.matteArgb,context.budget.maxBitmapBytes).also { transformed=it }
+                                    val dimensions=ImageResizePolicy.targetDimensions(
+                                        originalInfo.normalizedWidth,originalInfo.normalizedHeight,
+                                        resize.percentage,resize.longestEdge,resize.width,resize.height)
+                                    BitmapTransforms.resize(src,dimensions.first,dimensions.second,FitMode.valueOf(resize.fit),
+                                        ImageResizePolicy.allowsUpscaling(resize.percentage,resize.longestEdge,resize.allowUpscaling),
+                                        output.matteArgb,context.budget.maxBitmapBytes).also { transformed=it }
                                 }
                                 crop!=null -> BitmapTransforms.crop(src,Box(crop.left,crop.top,crop.right,crop.bottom),crop.rotationQuarterTurns,crop.flipX,crop.flipY,context.budget.maxBitmapBytes).also { transformed=it }
                                 else -> src
@@ -85,6 +90,10 @@ import kotlin.math.roundToInt
                 }
                 outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
             } catch(cancel:CancellationException) { throw cancel }
+            catch(e:ImageSizeBoundException) {
+                if (request.toolId == "img_04") outcomes+=ItemOutcome(key,ItemStatus.UNCHANGED,errorCode="IMAGE_NOT_SMALLER")
+                else outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e))
+            }
             catch(e:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
             context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),request.sourceIds.size.toLong()))
         }
@@ -92,6 +101,10 @@ import kotlin.math.roundToInt
     }
 
     private suspend fun extras(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
+        // EXIF writes a report plus a re-encoded copy per source; the rest publish one file per source.
+        val perSource=if(request.toolId=="img_exif") 2 else 1
+        val planned=if(request.toolId in setOf("img_join","img_stitch")) 2 else request.sourceIds.size*perSource
+        ResourceBudgetPolicy.requireOutputCount(maxOf(1,planned))
         val outcomes=mutableListOf<ItemOutcome>()
         suspend fun publishBytes(key:String,name:String,mime:String,originalBytes:Long?=null,write:suspend (java.io.File)->Unit):ItemOutcome {
             context.outputs.find(request.id,key)?.let{ return ItemOutcome(key,ItemStatus.CREATED,it.id) }
@@ -168,12 +181,16 @@ import kotlin.math.roundToInt
                 require(settings.opacityPercent in 1..100) { "INVALID_OPACITY" }
                 require(if(settings.useLogo) request.sourceIds.size>=2 else settings.text.isNotBlank()) { "WATERMARK_CONTENT_REQUIRED" }
                 val logoId=request.sourceIds.getOrNull(1)?.takeIf{ settings.useLogo }
+                val logoSkipped=if(settings.useLogo && logoId!=null) 1 else 0
+                val producedCount=request.sourceIds.size-logoSkipped
+                var produced=0
                 request.sourceIds.forEachIndexed{ index,id ->
                     if(settings.useLogo && index==1) return@forEachIndexed
                     val key="image:$index"
                     try {
                         val source=context.sources.get(id)
-                        val name=resolveOutputFileName(settings.output,source.displayName,index,request.sourceIds.size)
+                        val name=resolveOutputFileName(settings.output,source.displayName,produced,producedCount)
+                        produced++
                         outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format),source.sizeBytes){ stage ->
                             context.sources.withSeekable(id,request.id){ f -> BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d ->
                                 val marked=if(logoId!=null){
@@ -201,22 +218,33 @@ import kotlin.math.roundToInt
                     val name=resolveOutputFileName(settings.output,firstSource,0,1)
                     var totalInputBytes=0L
                     outcomes+=publishBytes(key,name,BitmapTransforms.mime(settings.output.format)){ stage ->
-                        val bitmaps=mutableListOf<Bitmap>()
+                        // Inspect first, then keep only one decoded input beside the output.
+                        // A strip of many pages no longer retains a copy of every source.
+                        val infos = request.sourceIds.map { id -> context.sources.withSeekable(id,request.id) { f ->
+                            totalInputBytes += f.length()
+                            BitmapTransforms.inspect(f)
+                        } }
+                        val plan = ImageJoinPolicy.plan(infos.map { it.normalizedWidth to it.normalizedHeight },settings.layout,settings.gapPx,settings.overlapPx)
+                        val outputBytes = ImageWorkPolicy.bytes(plan.width,plan.height)
+                        val decodePeak = infos.maxOf { it.decodePeakBytes }
+                        require(outputBytes <= context.budget.maxBitmapBytes && decodePeak <= context.budget.maxBitmapBytes-outputBytes) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
+                        // JPEG matting can require one additional output-sized bitmap.
+                        if(settings.output.format=="JPEG") ImageWorkPolicy.requireFits(plan.width,plan.height,outputBytes,context.budget.maxBitmapBytes)
+                        val joined = Bitmap.createBitmap(plan.width,plan.height,Bitmap.Config.ARGB_8888)
                         try {
-                            for((idx, id) in request.sourceIds.withIndex()){
+                            val canvas = Canvas(joined).apply { drawColor(Color.WHITE) }
+                            joined.setHasAlpha(false)
+                            for((idx,id) in request.sourceIds.withIndex()) {
                                 context.checkCancellation()
-                                val resident=bitmaps.sumOf { it.allocationByteCount.toLong() }
-                                context.sources.withSeekable(id,request.id){ f ->
-                                    totalInputBytes+=f.length()
-                                    BitmapTransforms.decode(f,context.budget.maxBitmapBytes-resident).use{ d ->
-                                        bitmaps.add(requireNotNull(d.bitmap.copy(Bitmap.Config.ARGB_8888,false)) { "IMAGE_COPY_FAILED" })
+                                context.sources.withSeekable(id,request.id) { f ->
+                                    BitmapTransforms.decode(f,context.budget.maxBitmapBytes-joined.allocationByteCount.toLong()).use { decoded ->
+                                        BitmapExtras.drawJoinPart(canvas,decoded.bitmap,plan.placements[idx])
                                     }
                                 }
                                 context.report(JobProgress(JobStage.RUNNING,(idx+1).toLong(),request.sourceIds.size.toLong()))
                             }
-                            val joined=BitmapExtras.join(bitmaps,settings.layout,settings.gapPx,context.budget.maxBitmapBytes,settings.overlapPx)
-                            try{ BitmapTransforms.encode(joined,stage,settings.output,context.budget.maxBitmapBytes-bitmaps.sumOf { it.allocationByteCount.toLong() }) } finally { joined.recycle() }
-                        } finally { bitmaps.forEach{ if(!it.isRecycled) it.recycle() } }
+                            BitmapTransforms.encode(joined,stage,settings.output,context.budget.maxBitmapBytes)
+                        } finally { joined.recycle() }
                     }
                     if(request.toolId=="img_stitch") {
                         val capKey="codec-capabilities"
@@ -264,32 +292,17 @@ import kotlin.math.roundToInt
                         outcomes+=publishBytes(key,name,"image/jpeg",origSize){ stage ->
                             context.sources.withSeekable(id,request.id){ f ->
                                 origSize=f.length()
-                                val effectiveTarget=minOf(settings.targetBytes, (f.length()-1).coerceAtLeast(1024L))
-                                BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use{ d ->
-                                    var lo=1; var hi=100; var best:java.io.File?=null
-                                    val tmp=java.io.File(stage.parentFile,"qtmp.jpg")
-                                    while(lo<=hi){
-                                        context.checkCancellation()
-                                        val mid=(lo+hi)/2
-                                        BitmapTransforms.encode(d.bitmap,tmp,ImageConversionSettings(format="JPEG",quality=mid),context.budget.maxBitmapBytes)
-                                        if(tmp.length()<=effectiveTarget){
-                                            best=java.io.File(stage.parentFile,"qbest.jpg")
-                                            tmp.copyTo(best!!,true)
-                                            lo=mid+1
-                                        } else hi=mid-1
-                                    }
-                                    if(best!=null) {
-                                        try { best!!.copyTo(stage,overwrite=true) } finally { tmp.delete(); best!!.delete() }
-                                    } else {
-                                        tmp.delete()
-                                        BitmapTransforms.encodeGuaranteedSmaller(
-                                            d.bitmap, stage, effectiveTarget + 1,
-                                            ImageConversionSettings(format="JPEG",quality=35),
-                                            context.budget.maxBitmapBytes,
-                                            context.checkCancellation
-                                        )
-                                    }
+                                require(settings.targetBytes > 0L && settings.targetBytes < Long.MAX_VALUE) { "INVALID_IMAGE_SIZE_BOUND" }
+                                // Target Size is an inclusive requested cap; it need not be
+                                // smaller than an already tiny source.
+                                BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use { d ->
+                                    BitmapTransforms.encodeGuaranteedSmaller(
+                                        d.bitmap,stage,settings.targetBytes+1L,
+                                        settings.output.copy(format="JPEG"),context.budget.maxBitmapBytes,
+                                        context.checkCancellation
+                                    )
                                 }
+                                require(stage.length() in 1..settings.targetBytes) { "IMAGE_SIZE_BOUND_UNMET" }
                             }
                         }
                     } catch(cancel:CancellationException) { throw cancel }
@@ -308,7 +321,21 @@ import kotlin.math.roundToInt
                     val ticket=context.outputs.reserve(request.id,key,reportName,"text/plain")
                     var dims=""; var diff=-1.0
                     context.sources.withSeekable(request.sourceIds[0],request.id){ a -> context.sources.withSeekable(request.sourceIds[1],request.id){ b ->
-                        BitmapTransforms.decode(a,context.budget.maxBitmapBytes).use{ da -> BitmapTransforms.decode(b,context.budget.maxBitmapBytes-da.bitmap.allocationByteCount.toLong()).use{ db -> dims="${da.bitmap.width}x${da.bitmap.height} vs ${db.bitmap.width}x${db.bitmap.height}"; diff=BitmapExtras.meanDifference(da.bitmap,db.bitmap) } }
+                        BitmapTransforms.decode(a,context.budget.maxBitmapBytes).use{ da -> BitmapTransforms.decode(b,context.budget.maxBitmapBytes-da.bitmap.allocationByteCount.toLong()).use{ db ->
+                            dims="${da.bitmap.width}x${da.bitmap.height} vs ${db.bitmap.width}x${db.bitmap.height}"
+                            diff=BitmapExtras.meanDifference(da.bitmap,db.bitmap,context.budget.maxBitmapBytes)
+                            // The advertised visual difference map is a real second output.
+                            val mapKey="compare-diff"
+                            val map=BitmapExtras.diffMap(da.bitmap,db.bitmap,context.budget.maxBitmapBytes)
+                            if(map!=null) {
+                                val mapTicket=context.outputs.reserve(request.id,mapKey,"image-compare-diff.png","image/png")
+                                try {
+                                    BitmapTransforms.encode(map,mapTicket.stageFile,ImageConversionSettings(format="PNG",namePrefix="compare_diff_"),context.budget.maxBitmapBytes)
+                                    val mapRecord=context.outputs.publish(mapTicket){ context.outputs.inspect(it,"image/png") }
+                                    outcomes+=ItemOutcome(mapKey,ItemStatus.CREATED,mapRecord.id)
+                                } finally { map.recycle() }
+                            }
+                        } }
                     } }
                     ticket.stageFile.writeText("dimensions=$dims\nmeanAbsDifference=${if(diff<0) "SIZE_MISMATCH" else diff.toString()}\nidentical=${diff==0.0}\n")
                     val rec=context.outputs.publish(ticket){ OutputMetadata() }; outcomes+=ItemOutcome(key,ItemStatus.CREATED,rec.id)

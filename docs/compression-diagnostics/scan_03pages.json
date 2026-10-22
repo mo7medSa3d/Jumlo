@@ -1,0 +1,108 @@
+{
+  "file": "scan_03pages.pdf",
+  "path": "/tmp/opencode/scratchpad/bigscans/scan_03pages.pdf",
+  "page_count": 3,
+  "image_xobject_count": 3,
+  "total_image_stream_bytes": 3999148,
+  "pages": [
+    {
+      "page": 1,
+      "mediabox_pt": [
+        0.0,
+        0.0,
+        612.0,
+        792.0
+      ],
+      "image_count": 1,
+      "images": [
+        {
+          "name": "/Im0",
+          "width_px": 2550,
+          "height_px": 3300,
+          "colorspace": "/DeviceRGB",
+          "bits_per_component": 8,
+          "filter": [
+            "/DCTDecode"
+          ],
+          "stream_bytes": 1341067,
+          "ctm": [
+            612.0,
+            0.0,
+            0.0,
+            792.0,
+            0.0,
+            0.0
+          ],
+          "effective_dpi_x": 300.0,
+          "effective_dpi_y": 300.0
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "mediabox_pt": [
+        0.0,
+        0.0,
+        612.0,
+        792.0
+      ],
+      "image_count": 1,
+      "images": [
+        {
+          "name": "/Im1",
+          "width_px": 2550,
+          "height_px": 3300,
+          "colorspace": "/DeviceRGB",
+          "bits_per_component": 8,
+          "filter": [
+            "/DCTDecode"
+          ],
+          "stream_bytes": 1341075,
+          "ctm": [
+            612.0,
+            0.0,
+            0.0,
+            792.0,
+            0.0,
+            0.0
+          ],
+          "effective_dpi_x": 300.0,
+          "effective_dpi_y": 300.0
+        }
+      ]
+    },
+    {
+      "page": 3,
+      "mediabox_pt": [
+        0.0,
+        0.0,
+        612.0,
+        792.0
+      ],
+      "image_count": 1,
+      "images": [
+        {
+          "name": "/Im2",
+          "width_px": 2550,
+          "height_px": 3300,
+          "colorspace": "/DeviceRGB",
+          "bits_per_component": 8,
+          "filter": [
+            "/DCTDecode"
+          ],
+          "stream_bytes": 1317006,
+          "ctm": [
+            612.0,
+            0.0,
+            0.0,
+            792.0,
+            0.0,
+            0.0
+          ],
+          "effective_dpi_x": 300.0,
+          "effective_dpi_y": 300.0
+        }
+      ]
+    }
+  ]
+}

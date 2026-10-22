@@ -5,84 +5,90 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
-// Jumlo 2026 semantic palette, mapped from the Color Designer edit-ready palette.
-// Teal drives actions on charcoal; restrained gold and category hues clarify tools.
-// Keep Material and pillar tokens aligned so every route supports light/dark mode.
+// Jumlo 2026 semantic palette: document grey and scan blue.
+//
+// The app is a tool for paper, so the surfaces are the greys of a page and the
+// one saturated colour is the blue of a scanner's light. Everything else is
+// ink, and the category hues stay quiet enough to sit next to it.
+//
+// The tokens are named for their role, not their colour, so a screen never
+// hard-codes a value: Material and pillar tokens stay aligned, and every route
+// supports light and dark mode.
 // ============================================================================
 
-// ---- Light palette: clear violet-on-white hierarchy ----
-val LightBackground = Color(0xFFF5F9F8)
+// ---- Light palette: document grey, ink primary, scan blue accent ----
+val LightBackground = Color(0xFFF8FAFC)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceDim = Color(0xFFEDF4F2)
+val LightSurfaceDim = Color(0xFFF1F5F9)
 val LightSurfaceBright = Color(0xFFFFFFFF)
 val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
-val LightSurfaceContainerLow = Color(0xFFEDF5F3)
-val LightSurfaceContainer = Color(0xFFE2ECEA)
-val LightSurfaceContainerHigh = Color(0xFFD7E7E3)
-val LightSurfaceContainerHighest = Color(0xFFC9DDD8)
-val LightOnSurface = Color(0xFF102521)
-val LightOnSurfaceVariant = Color(0xFF50635F)
-val LightOutline = Color(0xFF677E79)
-val LightOutlineVariant = Color(0xFFD3E3DE)
-val LightPrimary = Color(0xFF006F63)
-val LightPrimaryButton = Color(0xFF006F63)
+val LightSurfaceContainerLow = Color(0xFFF8FAFC)
+val LightSurfaceContainer = Color(0xFFF1F5F9)
+val LightSurfaceContainerHigh = Color(0xFFE9EEF4)
+val LightSurfaceContainerHighest = Color(0xFFE2E8F0)
+val LightOnSurface = Color(0xFF0F172A)
+val LightOnSurfaceVariant = Color(0xFF475569)
+val LightOutline = Color(0xFF94A3B8)
+val LightOutlineVariant = Color(0xFFE2E8F0)
+val LightPrimary = Color(0xFF1E293B)
+val LightPrimaryButton = Color(0xFF1E293B)
 val LightOnPrimary = Color(0xFFFFFFFF)
-val LightPrimaryContainer = Color(0xFFD0F4EA)
-val LightOnPrimaryContainer = Color(0xFF064E44)
-val LightPrimaryFixed = Color(0xFFF0ECFF)
-val LightPrimaryFixedDim = Color(0xFFDCD4FF)
-val LightOnPrimaryFixed = Color(0xFF21114F)
-val LightOnPrimaryFixedVariant = Color(0xFF4A2DA2)
-val LightSecondary = Color(0xFF2B5C97)
+val LightPrimaryContainer = Color(0xFFE2E8F0)
+val LightOnPrimaryContainer = Color(0xFF0F172A)
+val LightPrimaryFixed = Color(0xFFE2E8F0)
+val LightPrimaryFixedDim = Color(0xFFCBD5E1)
+val LightOnPrimaryFixed = Color(0xFF0F172A)
+val LightOnPrimaryFixedVariant = Color(0xFF1D4ED8)
+val LightSecondary = Color(0xFF334155)
 val LightOnSecondary = Color(0xFFFFFFFF)
-val LightSecondaryContainer = Color(0xFFE6F0FF)
-val LightOnSecondaryContainer = Color(0xFF173E71)
-val LightTertiary = Color(0xFF8A5A12)
+val LightSecondaryContainer = Color(0xFFE2E8F0)
+val LightOnSecondaryContainer = Color(0xFF1E293B)
+val LightTertiary = Color(0xFF1D4ED8)
 val LightOnTertiary = Color(0xFFFFFFFF)
-val LightTertiaryContainer = Color(0xFFDFF7EF)
-val LightOnTertiaryContainer = Color(0xFF075648)
-val LightError = Color(0xFFB72E47)
+val LightTertiaryContainer = Color(0xFFDBEAFE)
+val LightOnTertiaryContainer = Color(0xFF1E3A8A)
+val LightError = Color(0xFFDC2626)
 val LightOnError = Color(0xFFFFFFFF)
-val LightErrorContainer = Color(0xFFFFE8EC)
-val LightOnErrorContainer = Color(0xFF7B1630)
-val LightCardBorder = Color(0xFFDDD9E9)
+val LightErrorContainer = Color(0xFFFEE2E2)
+val LightOnErrorContainer = Color(0xFF7F1D1D)
+val LightCardBorder = Color(0xFFE2E8F0)
 
-// ---- Dark palette: violet on charcoal rather than pure black ----
-val DarkBackground = Color(0xFF080E12)
-val DarkSurface = Color(0xFF151F25)
-val DarkSurfaceDim = Color(0xFF080E12)
-val DarkSurfaceBright = Color(0xFF273840)
-val DarkSurfaceContainerLowest = Color(0xFF060B0E)
-val DarkSurfaceContainerLow = Color(0xFF111B20)
-val DarkSurfaceContainer = Color(0xFF19262C)
-val DarkSurfaceContainerHigh = Color(0xFF24343B)
-val DarkSurfaceContainerHighest = Color(0xFF32474D)
-val DarkOnSurface = Color(0xFFF4FBF9)
-val DarkOnSurfaceVariant = Color(0xFFB9CFC9)
-val DarkOutline = Color(0xFF96ADA6)
-val DarkOutlineVariant = Color(0xFF354B4D)
-val DarkPrimary = Color(0xFF52E6D1)
-val DarkPrimaryButton = Color(0xFF52E6D1)
-val DarkOnPrimary = Color(0xFF002E2A)
-val DarkPrimaryContainer = Color(0xFF134F48)
-val DarkOnPrimaryContainer = Color(0xFFD7FFF6)
-val DarkPrimaryFixed = Color(0xFFF0ECFF)
-val DarkPrimaryFixedDim = Color(0xFFDCD4FF)
-val DarkOnPrimaryFixed = Color(0xFF21114F)
-val DarkOnPrimaryFixedVariant = Color(0xFF4A2DA2)
-val DarkSecondary = Color(0xFF93BFFF)
-val DarkOnSecondary = Color(0xFF062B55)
-val DarkSecondaryContainer = Color(0xFF1D3862)
-val DarkOnSecondaryContainer = Color(0xFFDEEBFF)
-val DarkTertiary = Color(0xFFFFD68B)
-val DarkOnTertiary = Color(0xFF003E2C)
-val DarkTertiaryContainer = Color(0xFF514027)
-val DarkOnTertiaryContainer = Color(0xFFC5FFEE)
-val DarkError = Color(0xFFFF9DAA)
-val DarkOnError = Color(0xFF611327)
-val DarkErrorContainer = Color(0xFF6A2338)
-val DarkOnErrorContainer = Color(0xFFFFE4EA)
-val DarkCardBorder = Color(0xFF354B4D)
+// ---- Dark palette: deep slate rather than pure black ----
+val DarkBackground = Color(0xFF0B1120)
+val DarkSurface = Color(0xFF0F172A)
+val DarkSurfaceDim = Color(0xFF0B1120)
+val DarkSurfaceBright = Color(0xFF1E293B)
+val DarkSurfaceContainerLowest = Color(0xFF020617)
+val DarkSurfaceContainerLow = Color(0xFF0F172A)
+val DarkSurfaceContainer = Color(0xFF1E293B)
+val DarkSurfaceContainerHigh = Color(0xFF334155)
+val DarkSurfaceContainerHighest = Color(0xFF475569)
+val DarkOnSurface = Color(0xFFF8FAFC)
+val DarkOnSurfaceVariant = Color(0xFF94A3B8)
+val DarkOutline = Color(0xFF64748B)
+val DarkOutlineVariant = Color(0xFF1E293B)
+val DarkPrimary = Color(0xFFE2E8F0)
+val DarkPrimaryButton = Color(0xFFE2E8F0)
+val DarkOnPrimary = Color(0xFF0F172A)
+val DarkPrimaryContainer = Color(0xFF1E293B)
+val DarkOnPrimaryContainer = Color(0xFFF8FAFC)
+val DarkPrimaryFixed = Color(0xFF1E293B)
+val DarkPrimaryFixedDim = Color(0xFF334155)
+val DarkOnPrimaryFixed = Color(0xFFF8FAFC)
+val DarkOnPrimaryFixedVariant = Color(0xFF60A5FA)
+val DarkSecondary = Color(0xFF94A3B8)
+val DarkOnSecondary = Color(0xFF0F172A)
+val DarkSecondaryContainer = Color(0xFF1E293B)
+val DarkOnSecondaryContainer = Color(0xFFE2E8F0)
+val DarkTertiary = Color(0xFF60A5FA)
+val DarkOnTertiary = Color(0xFF0B1120)
+val DarkTertiaryContainer = Color(0xFF1E3A8A)
+val DarkOnTertiaryContainer = Color(0xFFDBEAFE)
+val DarkError = Color(0xFFF87171)
+val DarkOnError = Color(0xFF450A0A)
+val DarkErrorContainer = Color(0xFF7F1D1D)
+val DarkOnErrorContainer = Color(0xFFFEE2E2)
+val DarkCardBorder = Color(0xFF1E293B)
 
 @Immutable
 data class PillarColors(
@@ -118,70 +124,74 @@ data class PillarColors(
     val activePillContent: Color
 )
 
+/**
+ * The category hues. They are deliberately desaturated next to the scan blue:
+ * a category is told apart by its tint, not by its brightness.
+ */
 val LightPillarColors = PillarColors(
-    pdfPrimary = Color(0xFFC43C52),
-    pdfContainer = Color(0xFFFFF0F2),
-    pdfOnContainer = Color(0xFF872638),
-    pdfSubtitle = Color(0xFF8A394A),
-    imagesPrimary = Color(0xFFA15A13),
-    imagesContainer = Color(0xFFFFF4E7),
-    imagesOnContainer = Color(0xFF784010),
-    imagesSubtitle = Color(0xFF855019),
-    downloadsPrimary = Color(0xFF107664),
-    downloadsContainer = Color(0xFFE3F6EF),
-    downloadsOnContainer = Color(0xFF075849),
-    downloadsSubtitle = Color(0xFF116B58),
-    filesPrimary = Color(0xFF2557AA),
-    filesContainer = Color(0xFFEAF1FF),
-    filesOnContainer = Color(0xFF173C7A),
-    filesSubtitle = Color(0xFF285194),
-    vaultPrimary = Color(0xFF6C45C0),
-    vaultContainer = Color(0xFFF3EDFF),
-    successPrimary = Color(0xFF14755F),
-    successContainer = Color(0xFFDAF6EA),
-    warningPrimary = Color(0xFF98610D),
-    warningContainer = Color(0xFFFFF2D9),
+    pdfPrimary = Color(0xFFE11D48),
+    pdfContainer = Color(0xFFFFE4E6),
+    pdfOnContainer = Color(0xFF881337),
+    pdfSubtitle = Color(0xFF9F1239),
+    imagesPrimary = Color(0xFFB45309),
+    imagesContainer = Color(0xFFFEF3C7),
+    imagesOnContainer = Color(0xFF78350F),
+    imagesSubtitle = Color(0xFF92400E),
+    downloadsPrimary = Color(0xFF0F766E),
+    downloadsContainer = Color(0xFFCCFBF1),
+    downloadsOnContainer = Color(0xFF115E59),
+    downloadsSubtitle = Color(0xFF0F766E),
+    filesPrimary = Color(0xFF1D4ED8),
+    filesContainer = Color(0xFFDBEAFE),
+    filesOnContainer = Color(0xFF1E3A8A),
+    filesSubtitle = Color(0xFF1D4ED8),
+    vaultPrimary = Color(0xFF6D28D9),
+    vaultContainer = Color(0xFFEDE9FE),
+    successPrimary = Color(0xFF15803D),
+    successContainer = Color(0xFFDCFCE7),
+    warningPrimary = Color(0xFFB45309),
+    warningContainer = Color(0xFFFEF3C7),
     cardSurface = Color(0xFFFFFFFF),
-    cardBorder = Color(0xFFDDD9E9),
-    primaryActionBackground = Color(0xFF006F63),
+    cardBorder = Color(0xFFE2E8F0),
+    primaryActionBackground = Color(0xFF1E293B),
     primaryActionText = Color(0xFFFFFFFF),
-    dockSurface = Color(0xF4FFFFFF),
-    dockBorder = Color(0x1E0F172A),
-    activePillContainer = Color(0xFFD0F4EA),
-    activePillContent = Color(0xFF064E44)
+    dockSurface = Color(0xF7FFFFFF),
+    dockBorder = Color(0x1A0F172A),
+    activePillContainer = Color(0xFFE2E8F0),
+    activePillContent = Color(0xFF0F172A)
 )
 
 val DarkPillarColors = PillarColors(
-    pdfPrimary = Color(0xFFFFA1AE),
-    pdfContainer = Color(0xFF43202F),
-    pdfOnContainer = Color(0xFFFFE6EB),
-    pdfSubtitle = Color(0xFFFFC5CE),
-    imagesPrimary = Color(0xFFFFCD8A),
-    imagesContainer = Color(0xFF402C1C),
-    imagesOnContainer = Color(0xFFFFF1DE),
-    imagesSubtitle = Color(0xFFFFDBA4),
-    downloadsPrimary = Color(0xFF75DEC0),
-    downloadsContainer = Color(0xFF174B3D),
-    downloadsOnContainer = Color(0xFFC5FFEE),
-    downloadsSubtitle = Color(0xFF9CECD6),
-    filesPrimary = Color(0xFF93BFFF),
-    filesContainer = Color(0xFF1D3862),
-    filesOnContainer = Color(0xFFDEEBFF),
-    filesSubtitle = Color(0xFFBBD6FF),
-    vaultPrimary = Color(0xFFC1AAFF),
-    vaultContainer = Color(0xFF30234F),
-    successPrimary = Color(0xFF75DEC0),
-    successContainer = Color(0xFF174B3D),
-    warningPrimary = Color(0xFFFFCD8A),
-    warningContainer = Color(0xFF402C1C),
-    cardSurface = Color(0xFF151F25),
-    cardBorder = Color(0xFF354B4D),
-    primaryActionBackground = Color(0xFF52E6D1),
-    primaryActionText = Color(0xFF002E2A),
-    dockSurface = Color(0xF108171D),
-    dockBorder = Color(0x28FFFFFF),
-    activePillContainer = Color(0xFF134F48),
-    activePillContent = Color(0xFFD7FFF6)
+    pdfPrimary = Color(0xFFFDA4AF),
+    pdfContainer = Color(0xFF4C0519),
+    pdfOnContainer = Color(0xFFFFE4E6),
+    pdfSubtitle = Color(0xFFFECDD3),
+    imagesPrimary = Color(0xFFFCD34D),
+    imagesContainer = Color(0xFF451A03),
+    imagesOnContainer = Color(0xFFFEF3C7),
+    imagesSubtitle = Color(0xFFFDE68A),
+    downloadsPrimary = Color(0xFF5EEAD4),
+    downloadsContainer = Color(0xFF042F2E),
+    downloadsOnContainer = Color(0xFFCCFBF1),
+    downloadsSubtitle = Color(0xFF99F6E4),
+    filesPrimary = Color(0xFF93C5FD),
+    filesContainer = Color(0xFF172554),
+    filesOnContainer = Color(0xFFDBEAFE),
+    filesSubtitle = Color(0xFFBFDBFE),
+    vaultPrimary = Color(0xFFC4B5FD),
+    vaultContainer = Color(0xFF2E1065),
+    successPrimary = Color(0xFF4ADE80),
+    successContainer = Color(0xFF052E16),
+    warningPrimary = Color(0xFFFCD34D),
+    warningContainer = Color(0xFF451A03),
+    cardSurface = Color(0xFF0F172A),
+    cardBorder = Color(0xFF1E293B),
+    primaryActionBackground = Color(0xFFE2E8F0),
+    primaryActionText = Color(0xFF0F172A),
+    dockSurface = Color(0xF00F172A),
+    dockBorder = Color(0x26FFFFFF),
+    activePillContainer = Color(0xFF1E293B),
+    activePillContent = Color(0xFFF8FAFC)
 )
 
 val LocalPillarColors = staticCompositionLocalOf { LightPillarColors }

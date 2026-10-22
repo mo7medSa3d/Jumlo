@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upgrade_print">Print</string>
+    <string name="upgrade_print_selected">Print selected document</string>
+    <string name="upgrade_loading_documents">Loading your documents…</string>
+    <string name="upgrade_loading_activity">Loading activity…</string>
+    <string name="upgrade_loading_failed">Could not load saved data. Try again.</string>
+    <string name="upgrade_rename_copy">Rename</string>
+    <string name="upgrade_swipe_hint">Swipe for file actions</string>
+    <string name="upgrade_scan_corner">Corner %1$d</string>
+    <string name="upgrade_scan_horizontal">Horizontal position</string>
+    <string name="upgrade_scan_vertical">Vertical position</string>
+    <string name="upgrade_scan_precision">Adjust corners precisely</string>
+    <string name="upgrade_preview_loading">Loading preview</string>
+    <string name="upgrade_no_results">No matching documents</string>
+    <string name="upgrade_no_results_hint">Try a different search or filter.</string>
+    <string name="upgrade_new_name">New name</string>
+    <string name="upgrade_renamed">Document renamed</string>
+    <string name="upgrade_rename_failed">Could not rename this document</string>
+    <string name="upgrade_image_to_pdf_preview">Paper preview</string>
+    <string name="upgrade_margin_drag">Drag the guide to adjust the margin</string>
+    <string name="upgrade_margin_mm">Margin: %1$d mm</string>
+    <string name="upgrade_orientation_portrait">Portrait</string>
+    <string name="upgrade_orientation_landscape">Landscape</string>
+    <string name="upgrade_orientation_auto">Match image</string>
+    <string name="upgrade_scale_fit">Fit whole image</string>
+    <string name="upgrade_scale_fill">Fill and crop</string>
+    <string name="upgrade_preview_unavailable">Preview unavailable. Check that the document still exists.</string>
+    <string name="upgrade_invalid_paper">The margin or paper dimensions are invalid. Adjust the paper settings.</string>
+    <string name="upgrade_image_memory">This edit needs more image memory than is available. Try a smaller output size or close other work. Your source is unchanged.</string>
+    <string name="upgrade_image_target_unmet">The requested file size could not be reached with a valid image. Choose a larger target. Your source is unchanged.</string>
+    <string name="upgrade_image_unchanged">No smaller valid image was produced. The original is unchanged.</string>
+    <string name="upgrade_download_restart_failed">Could not restart this download. Retry after the previous operation has stopped.</string>
+    <string name="upgrade_form_values">Check the form field names and values. Each value must match its field type.</string>
+    <string name="upgrade_form_flatten">This form cannot be flattened safely. Save it with editable fields or use another PDF.</string>
+    <string name="upgrade_page_edit_failed">Could not apply the page edits. Reload the document and try again.</string>
+</resources>

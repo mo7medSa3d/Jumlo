@@ -3,6 +3,7 @@ package com.jumlo.app.ui
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.runtime.CompositionLocalProvider
@@ -13,6 +14,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -21,7 +24,7 @@ import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
 import com.jumlo.app.model.ManagedFileItem
 import com.jumlo.app.model.ThemeMode
-import com.jumlo.app.ui.components.QuietBeforeAfterPreview
+import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.components.QuietFileRow
 import com.jumlo.app.ui.components.QuietFloatingDock
 import com.jumlo.app.ui.components.QuietHero
@@ -118,12 +121,7 @@ class ScreenConfigSemanticsTest {
                             language = language,
                             onClick = {}
                         )
-                        QuietBeforeAfterPreview(
-                            fileName = "photo.jpg",
-                            resolution = "80%",
-                            originalLabel = "1.2 MiB",
-                            compressedLabel = "340 KiB"
-                        )
+                        QuietShimmerSkeleton(Modifier.fillMaxWidth().height(48.dp))
                         QuietStateCard(
                             title = expectedTitle,
                             subtitle = "100% on-device processing",
@@ -137,14 +135,16 @@ class ScreenConfigSemanticsTest {
                         QuietFloatingDock(
                             selectedTab = DockTab.HOME,
                             language = language,
-                            onSelectTab = {}
+                            onSelectTab = {},
+                            onScan = {},
+                            onPrint = {}
                         )
                     }
                 }
             }
         }
         composeRule.onNodeWithText(appTitle).assertIsDisplayed()
-        composeRule.onNodeWithText(expectedAction).assertIsDisplayed()
+        composeRule.onAllNodesWithText(expectedAction).onFirst().assertIsDisplayed()
         val image = composeRule.onRoot().captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
     }

@@ -7,7 +7,6 @@ import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.data.processing.ImageResizeSettings
 import com.jumlo.app.data.processing.ImageTargetSettings
 import com.jumlo.app.data.processing.ImageConversionSettings
-import com.jumlo.app.data.processing.PdfCompareSettings
 import com.jumlo.app.data.processing.PdfImagesSettings
 import com.jumlo.app.data.processing.PdfSplitSettings
 import com.jumlo.app.data.processing.ImageExifSettings
@@ -42,9 +41,16 @@ class WorkspaceSettingsTest {
         assertEquals(65,settings.opacityPercent)
     }
 
-    @Test(expected=IllegalArgumentException::class)
+    @Test
     fun annotationRequiresVisibleTextBeforeEnqueue() {
-        WorkspaceDraft.forTool("pdf_annotate",listOf("pdf")).copy(text1="  ").executionSettings()
+        // A highlight is a region, so it needs no body; a note or a text box does.
+        WorkspaceDraft.forTool("pdf_annotate",listOf("pdf"))
+            .copy(text1="  ",text2="highlight").executionSettings()
+        for (kind in listOf("note","textbox","text")) {
+            runCatching {
+                WorkspaceDraft.forTool("pdf_annotate",listOf("pdf")).copy(text1="  ",text2=kind).executionSettings()
+            }.also { assertTrue("a $kind must require text", it.isFailure) }
+        }
     }
 
     @Test fun annotationPreservesUserTextAndPage() {
@@ -120,9 +126,9 @@ class WorkspaceSettingsTest {
         WorkspaceDraft(toolId="img_02",percentage="50",longestEdge="1000").executionSettings()
     }
 
-    @Test fun pdfToImagesFormatsFixedWidthThreeDigitArabicPageNameAndSubfolder() {
-        assertEquals("تقرير المبيعات - صفحة 003.png", AutoOutputName.pageImageName("تقرير المبيعات.pdf", 3, "png"))
-        assertEquals("Contract - صفحة 012.jpg", AutoOutputName.pageImageName("Contract.pdf", 12, "jpg"))
+    @Test fun pdfToImagesFormatsFixedWidthThreeDigitPageNameAndSubfolder() {
+        assertEquals("تقرير المبيعات - 003.png", AutoOutputName.pageImageName("تقرير المبيعات.pdf", 3, "png"))
+        assertEquals("Contract - 012.jpg", AutoOutputName.pageImageName("Contract.pdf", 12, "jpg"))
         assertEquals("Download/Jumlo/Images/تقرير المبيعات/", StoragePaths.relativePath("image/png", "تقرير المبيعات"))
     }
 
@@ -133,10 +139,6 @@ class WorkspaceSettingsTest {
             WorkspaceDraft.forTool("pdf_05", listOf("src")).copy(outputName = "MyCustomSplit.pdf").executionSettings()
         )
         assertEquals("MyCustomSplit.pdf", splitSettings.displayName)
-        val compareSettings = Json.decodeFromString<PdfCompareSettings>(
-            WorkspaceDraft.forTool("pdf_compare", listOf("a", "b")).copy(outputName = "diff.txt").executionSettings()
-        )
-        assertEquals("diff.txt", compareSettings.displayName)
     }
 
     @Test fun googleDriveSharedLinksAndAllSocialPlatformsRouteAndClassifyCorrectly() {

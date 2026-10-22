@@ -49,6 +49,8 @@ data class MediaUiState(
     val unmetered: Boolean = false,
     val analyzing: Boolean = false,
     val submitting: Boolean = false,
+    /** The download is held until the user confirms they have the rights to it. */
+    val rightsRequired: Boolean = false,
     val error: String? = null
 )
 
@@ -61,6 +63,20 @@ data class MediaUiState(
 ): ViewModel() {
     private val _state=MutableStateFlow(MediaUiState())
     val state=_state.asStateFlow()
+    /** Set from the screen once the user has confirmed the terms. */
+    var rightsAccepted: Boolean = false
+
+    /** The user declined; the download stays unqueued. */
+    fun dismissRights() {
+        _state.update { it.copy(rightsRequired=false) }
+    }
+
+    /** The user confirmed the terms; queue the download. */
+    fun acceptRightsAndSubmit(onQueued:(String)->Unit) {
+        rightsAccepted=true
+        _state.update { it.copy(rightsRequired=false) }
+        submit(onQueued)
+    }
     private var analysis: Job?=null
     private var generation=0
     private var analyzedUrl: String?=null
@@ -242,6 +258,12 @@ data class MediaUiState(
         val s=_state.value
         if(s.submitting || s.analyzing) return
         val url=analyzedUrl ?: return
+        // Media downloads wait for the rights confirmation. A direct file download
+        // of the user's own link does not.
+        if(!s.rightsRequired && !rightsAccepted) {
+            _state.update { it.copy(rightsRequired=true) }
+            return
+        }
         val direct=s.direct
         val asset=s.asset
         val choice=s.choices.firstOrNull { it.key==s.selectedKey }

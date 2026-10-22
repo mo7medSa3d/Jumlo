@@ -9,7 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface OperationHandler { suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> }
-data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val budget:WorkBudget,val report:suspend (JobProgress)->Unit,val checkCancellation:()->Unit)
+data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val budget:WorkBudget,val report:suspend (JobProgress)->Unit,val checkCancellation:()->Unit,val downloadRestartGeneration:Long=0)
 
 @Singleton class OperationDispatcher @Inject constructor(
     private val images:com.jumlo.app.data.processing.ImageOperationHandler,
@@ -20,12 +20,11 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private val fileExtras:com.jumlo.app.data.processing.FileExtrasHandler,
     private val ocrWeb:com.jumlo.app.data.processing.OcrWebHandler
 ) : OperationHandler {
-    private val bitmapSlot=Semaphore(1)
     private val driveSlots=Semaphore(2)
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         if(!CapabilityRegistry.canProcess(request.toolId)) throw OperationFailure("CAPABILITY_UNAVAILABLE")
         return if(request.toolId.startsWith("img_") || request.toolId.startsWith("pdf_")) {
-            bitmapSlot.withPermit { dispatch(request,context) }
+            BitmapWorkGate.run { dispatch(request,context) }
         } else if(request.toolId=="file_drive") {
             driveSlots.withPermit { dispatch(request,context) }
         } else dispatch(request,context)
@@ -33,7 +32,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private suspend fun dispatch(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         if(request.schemaVersion!=1) throw OperationFailure("UNSUPPORTED_SETTINGS_VERSION")
         return when(request.toolId) {
-            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_protect","pdf_forms","pdf_compare","pdf_redact" -> pdf.execute(request,context)
+            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_protect","pdf_forms","pdf_compare","pdf_redact","pdf_clean" -> pdf.execute(request,context)
             "pdf_ocr","webpage_pdf" -> ocrWeb.execute(request,context)
             "file_encrypted_zip","file_batch_rename","file_duplicates","file_trash","file_drive" -> fileExtras.execute(request,context)
             "img_01","img_02","img_03","img_04","img_exif","img_watermark","img_join","img_adjust","img_target","img_compare","img_stitch" -> images.execute(request,context)

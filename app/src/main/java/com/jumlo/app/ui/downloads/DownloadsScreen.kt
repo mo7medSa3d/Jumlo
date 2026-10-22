@@ -27,6 +27,7 @@ import com.jumlo.app.core.StoragePaths
 @Composable fun DownloadsScreen(vm:AppViewModel,onTool:(UtilityTool)->Unit,onJob:(String)->Unit) {
     val haptics=rememberAppHaptics()
     val jobs by vm.jobs.collectAsStateWithLifecycle()
+    val jobLoad by vm.jobLoad.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     var selecting by remember {mutableStateOf(false)}
     var selected by remember {mutableStateOf(setOf<String>())}
@@ -141,15 +142,17 @@ import com.jumlo.app.core.StoragePaths
                     {vm.cancel(job.request.id)},{vm.retry(job)})
             }
         }
-        if(downloads.isEmpty()) item("empty") {
+        if(jobLoad!=com.jumlo.app.ui.DataLoadStatus.READY) item("load-state") {DocumentLoadState(jobLoad,vm::reloadSavedData)}
+        if(jobLoad==com.jumlo.app.ui.DataLoadStatus.READY && downloads.isEmpty()) item("empty") {
             QuietStateCard(stringResource(R.string.downloads_empty_title),stringResource(R.string.premium_download_empty))
         }
     }
 }
 
 /** Priority-first operation history: ongoing work, durable results, then past operations. */
-@Composable fun ActivityScreen(vm:AppViewModel,selectedJob:String?,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onNewRun:()->Unit,onShowAll:(()->Unit)?=null) {
+@Composable fun ActivityScreen(vm:AppViewModel,selectedJob:String?,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onNewRun:()->Unit,onShowAll:(()->Unit)?=null,onPrint:((OutputRecord)->Unit)?=null) {
     val jobs by vm.jobs.collectAsStateWithLifecycle()
+    val jobLoad by vm.jobLoad.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     var details by remember { mutableStateOf<OutputRecord?>(null) }
@@ -172,7 +175,8 @@ import com.jumlo.app.core.StoragePaths
                 }
             }
         }
-        if(activeJobs.isEmpty() && recentJobs.isEmpty() && availableOutputs.isEmpty()) {
+        if(jobLoad!=com.jumlo.app.ui.DataLoadStatus.READY) item("load-state") {DocumentLoadState(jobLoad,vm::reloadSavedData)}
+        if(jobLoad==com.jumlo.app.ui.DataLoadStatus.READY && activeJobs.isEmpty() && recentJobs.isEmpty() && availableOutputs.isEmpty()) {
             item("activity-empty") {
                 QuietStateCard(stringResource(R.string.jumlo_activity_empty_title),
                     stringResource(R.string.jumlo_activity_empty_body))
@@ -194,7 +198,8 @@ import com.jumlo.app.core.StoragePaths
             items(availableOutputs,key={"output-${it.id}"},contentType={"result"}) { output ->
                 OutputRow(output,{onOpen(output)},{onShare(output)},{onExport(output)},{onReuse(output)},{vm.trashOutput(output)},
                     onDetails={details=output},isFavorite=output.id in settings.favoriteOutputIds,
-                    onFavorite={vm.toggleOutputFavorite(output.id)})
+                    onFavorite={vm.toggleOutputFavorite(output.id)},
+                    onPrint=if(onPrint!=null && (output.mimeType=="application/pdf" || output.mimeType.startsWith("image/"))) ({onPrint(output)}) else null)
             }
         }
         if(recentJobs.isNotEmpty()) {

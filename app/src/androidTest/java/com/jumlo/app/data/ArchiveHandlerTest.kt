@@ -9,6 +9,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.local.AppDatabase
 import com.jumlo.app.data.output.OutputStore
+import com.jumlo.app.data.output.PublicOutputStore
+import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.*
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.model.*
@@ -29,7 +31,7 @@ class ArchiveHandlerTest {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {
             val sourceStore=SourceStore(context,db,WorkBudget())
-            val outputs=OutputStore(context,db)
+            val outputs=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
             val source=File(context.filesDir,"processing/results/fixture/archive-input.bin").apply { parentFile.mkdirs(); writeBytes(byteArrayOf(0,1,2,127,-1)) }
             val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",source)
             val ref=sourceStore.inspect(uri.toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)

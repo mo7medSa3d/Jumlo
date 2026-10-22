@@ -11,10 +11,14 @@
     <string name="neon_smart_tools">Explore tools</string>
     <string name="neon_tools_import">Import</string>
     <string name="neon_tools_convert">Convert</string>
+    <string name="workspace_scanner">Scan</string>
+
     <string name="neon_tools_edit">Edit &amp; organize</string>
     <string name="neon_tools_download">Download</string>
     <string name="neon_tools_manage">File utilities</string>
     <string name="neon_tools_other">More tools</string>
+    <string name="home_search_hint">Search for a tool, like "Merge"</string>
+
     <string name="neon_tools_search">Find a tool</string>
     <string name="neon_files_subtitle">All your work, in one place</string>
     <string name="neon_my_space">My space</string>

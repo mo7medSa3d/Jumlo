@@ -6,7 +6,9 @@ import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -22,6 +24,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import com.jumlo.app.ui.util.rememberAppHaptics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -31,6 +35,9 @@ import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.theme.QuietTheme
+import androidx.compose.ui.semantics.Role
+
+import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -96,18 +103,10 @@ fun NeonHero(
     val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, colors.primary.copy(alpha = .65f)),
-        color = colors.surfaceContainer
+        shape = RoundedCornerShape(20.dp),
+        color = colors.surfaceContainerLow
     ) {
-        Box(
-            Modifier.background(
-                Brush.linearGradient(
-                    listOf(colors.primaryContainer.copy(alpha = .72f),
-                        colors.surfaceContainer, colors.surfaceContainerLow)
-                )
-            )
-        ) {
+        Box {
             Column(
                 Modifier.fillMaxWidth().padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -146,49 +145,40 @@ fun NeonToolTile(
     compact: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
-    val p = QuietTheme.pillars
-    val (tint, surface) = when (tool.pillar) {
-        PillarCategory.PDF -> p.pdfPrimary to p.pdfContainer
-        PillarCategory.IMAGES -> p.imagesPrimary to p.imagesContainer
-        PillarCategory.DOWNLOADS -> p.downloadsPrimary to p.downloadsContainer
-        PillarCategory.FILES -> p.filesPrimary to p.filesContainer
-        PillarCategory.VAULT -> p.vaultPrimary to p.vaultContainer
-    }
-    Surface(
-        onClick = onClick,
-        modifier = modifier.pressFeedback().heightIn(min = if (compact) 122.dp else 156.dp),
-        shape = RoundedCornerShape(22.dp),
-        color = colors.surfaceContainerLow,
-        border = BorderStroke(1.dp, tint.copy(alpha = .32f))
+    // Every tool carries its own hue and its own icon shape, so the grid can be
+    // scanned instead of read.
+    val tint = ToolPalette.accentFor(tool.id)
+    val surface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow)
+    val haptics = rememberAppHaptics()
+    Column(
+        modifier = modifier.pressFeedback().clickable(role = Role.Button) {
+            haptics.actionClick(); onClick()
+        },
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(surface.copy(alpha = .42f),
-                    colors.surfaceContainerLow)))
-                .padding(14.dp),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.SpaceBetween
+        Surface(
+            onClick = {},
+            enabled = false,
+            modifier = Modifier.size(if (compact) 52.dp else 60.dp),
+            shape = CircleShape,
+            color = surface,
+            contentColor = tint
         ) {
-            QuietIconTile(resolveStitchIcon(tool.iconName), tint, surface,
-                size = if (compact) 43.dp else 48.dp)
-            Spacer(Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    if (language.isRtl) tool.titleAr else tool.titleEn,
-                    color = colors.onSurface,
-                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    maxLines = 2, overflow = TextOverflow.Ellipsis
-                )
-                if (!compact) {
-                    Text(
-                        if (language.isRtl) tool.subtitleAr else tool.subtitleEn,
-                        color = colors.onSurfaceVariant,
-                        style = QuietTheme.typography.metadata,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                }
+            Box(contentAlignment = Alignment.Center) {
+                Icon(resolveStitchIcon(tool.iconName), contentDescription = null,
+                    modifier = Modifier.size(if (compact) 24.dp else 28.dp))
             }
         }
+        Spacer(Modifier.height(7.dp))
+        Text(
+            if (language.isRtl) tool.titleAr else tool.titleEn,
+            color = colors.onSurface,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

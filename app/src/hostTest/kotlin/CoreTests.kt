@@ -112,16 +112,6 @@ fun main() {
         check(SourceSnapshotPolicy.cachedFile(directory,id,link.absolutePath) == null)
         check(SourceSnapshotPolicy.cachedFile(directory,id,null) == null)
     } }
-    test("very long document text comparison is lazy and stops at first mismatch") {
-        var left = 0
-        var right = 0
-        val mismatch = PageTextComparison.firstMismatch(15000,
-            left = { index -> left++; if (index == 14500) "revised invoice" else "page $index" },
-            right = { index -> right++; if (index == 14500) "original invoice" else "page $index" })
-        check(mismatch == 14501)
-        check(left == 14501 && right == 14501)
-        check(PageTextComparison.firstMismatch(2, { "  Hello\n World   " }, { "Hello World" }) == null)
-    }
     test("document text search stops without accumulating all page text") {
         var scanned = 0
         check(PageTextComparison.anyPageContains(100000, "invoice") { index ->
@@ -409,8 +399,15 @@ fun main() {
         check(CapabilityPolicy.canProcess("dl_media"))
     }
     test("release security-sensitive candidates remain unavailable") {
-        for (id in listOf("pdf_protect", "pdf_redact", "file_encrypted_zip", "file_drive", "pdf_ocr", "webpage_pdf"))
+        for (id in listOf("file_encrypted_zip", "file_drive", "pdf_ocr", "webpage_pdf"))
             check(!Capabilities.isEnabled(id)) { "$id must be gated" }
+    }
+    test("qualified pdf capabilities are released to the public catalog") {
+        // PdfSecurityQualificationTest is the executed evidence for these two.
+        for (id in listOf("pdf_protect", "pdf_clean")) {
+            check(Capabilities.isEnabled(id)) { "$id must be available" }
+            check(CapabilityPolicy.canProcess(id)) { "$id must be processable" }
+        }
     }
     test("direct link parser distinguishes media landing pages from real files") {
         check(!DownloadLinkPolicy.isDirect("https://www.youtube.com/watch?v=abc123"))
@@ -481,7 +478,7 @@ fun main() {
         check(AutoOutputName.fromSource("file_07","backup.zip")=="backup - Archive.zip")
         check(AutoOutputName.fromSource("pdf_02","../../unsafe.jpg")?.contains('/')==false)
         check(AutoOutputName.fromSource("img_03","image.png")==null)
-        check(AutoOutputName.pageImageName("Report.pdf", 3, "png")=="Report - صفحة 003.png")
+        check(AutoOutputName.pageImageName("Report.pdf", 3, "png")=="Report - 003.png")
         check(AutoOutputName.splitPartName("MySplit.pdf", "doc.pdf", 2)=="MySplit - 002.pdf")
         check(StoragePaths.relativePath("image/png", "Report")=="Download/Jumlo/Images/Report/")
         check(DownloadLinkPolicy.isGoogleDriveDownload("https://drive.google.com/file/d/1abcDE_fgHiJ23KLmno/view?usp=sharing"))
@@ -719,10 +716,14 @@ fun main() {
         rejects<IllegalArgumentException> { start.selectRange(1, 5).deleteSelected() }
     }
     test("compression profiles preserve requested quality unless smaller-file preset is chosen") {
-        check(PdfCompressionPolicy.profiles(150, 80) == listOf(150 to 80))
-        check(PdfCompressionPolicy.profiles(300, 95) == listOf(300 to 95))
-        check(PdfCompressionPolicy.profiles(90, 50) == listOf(90 to 50))
-        check(PdfCompressionPolicy.profiles(150, 50) == listOf(150 to 50, 108 to 50))
+        // The ladder only lowers the resolution; the quality the user asked for
+        // is kept on every rung. The floor follows the quality: a high quality
+        // preset stops at 170 dpi, a small-file preset reaches 60 dpi.
+        check(PdfCompressionPolicy.profiles(150, 80) == listOf(150 to 80, 135 to 80, 108 to 80, 96 to 80))
+        check(PdfCompressionPolicy.profiles(300, 95) == listOf(300 to 95, 220 to 95, 170 to 95))
+        check(PdfCompressionPolicy.profiles(90, 50) == listOf(90 to 50, 72 to 50, 60 to 50))
+        check(PdfCompressionPolicy.profiles(150, 50) == listOf(150 to 50, 135 to 50, 108 to 50, 96 to 50, 72 to 50, 60 to 50))
+        check(PdfCompressionPolicy.profiles(150, 80).map { it.second }.distinct() == listOf(80))
     }
     test("compression refuses unbounded bitmap decoding before allocation") {
         check(PdfCompressionPolicy.canDecodeImage(1024, 1024, 256L * 1024 * 1024))

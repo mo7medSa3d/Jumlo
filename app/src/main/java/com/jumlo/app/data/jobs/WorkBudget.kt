@@ -7,7 +7,10 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
 data class WorkBudget(
-    val maxBitmapBytes:Long=minOf(Runtime.getRuntime().maxMemory()/3,128L*1024*1024),
+    // Bitmap pixels live outside the Java heap on modern Android, so the heap size is only
+    // a proxy. Half the heap (capped) keeps camera photos of 24 MP workable instead of
+    // rejecting a document the device can actually process.
+    val maxBitmapBytes:Long=minOf(Runtime.getRuntime().maxMemory()/2,192L*1024*1024),
     val maxTemporaryBytes:Long=ResourceBudgetPolicy.maxImportBytes,
     val maxMediaWorkspaceBytes:Long=ResourceBudgetPolicy.maxMediaWorkspaceBytes,
     val maxExpandedArchiveBytes:Long=ResourceBudgetPolicy.maxExpandedArchiveBytes,

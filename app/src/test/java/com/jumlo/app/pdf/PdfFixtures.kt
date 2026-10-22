@@ -90,6 +90,19 @@ object PdfFixtures {
             val checkWidget = PDAnnotationWidget()
             checkWidget.rectangle = PDRectangle(150f, 650f, 20f, 20f)
             checkWidget.setPage(page)
+            // Real checkbox appearances are required for a meaningful flatten test.
+            val states=com.tom_roush.pdfbox.cos.COSDictionary()
+            for(on in listOf(false,true)) {
+                val appearance=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream(doc)
+                appearance.bBox=PDRectangle(20f,20f)
+                appearance.cosObject.createOutputStream().use { stream ->
+                    stream.write((if(on) "0 0 20 20 re S 2 2 m 18 18 l S" else "0 0 20 20 re S").toByteArray(Charsets.US_ASCII))
+                }
+                states.setItem(COSName.getPDFName(if(on) "Yes" else "Off"),appearance)
+            }
+            checkWidget.appearance=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary().also { it.cosObject.setItem(COSName.N,states) }
+            checkWidget.setAppearanceState("Off")
+            page.annotations=listOf(textWidget,checkWidget)
             text.widgets = listOf(textWidget)
             check.widgets = listOf(checkWidget)
             acro.setFields(listOf(text, check))
@@ -101,6 +114,50 @@ object PdfFixtures {
                 cs.endText()
             }
             acro.refreshAppearances()
+            save(doc, target)
+        }
+        return target
+    }
+
+    /**
+     * Multi-page document with the catalog structures a document utility must not
+     * drop: a form field, a bookmark and document information.
+     */
+    fun catalogDoc(target: File, pages: Int, title: String = "Catalog Title"): File {
+        PDDocument().use { doc ->
+            doc.documentInformation.title = title
+            doc.documentInformation.author = "Jumlo"
+            val acro = PDAcroForm(doc)
+            doc.documentCatalog.acroForm = acro
+            acro.defaultResources = PDResources().also { it.put(COSName.getPDFName("Helv"), font) }
+            val text = PDTextField(acro)
+            text.partialName = "name"
+            text.defaultAppearance = "/Helv 12 Tf 0 g"
+            val widget = PDAnnotationWidget()
+            widget.rectangle = PDRectangle(150f, 700f, 160f, 20f)
+            repeat(pages) { index ->
+                val page = PDPage(PDRectangle.A4)
+                doc.addPage(page)
+                PDPageContentStream(doc, page, PDPageContentStream.AppendMode.OVERWRITE, true, true).use { cs ->
+                    cs.beginText()
+                    cs.setFont(font, 12.0f)
+                    cs.newLineAtOffset(72.0f, 700.0f)
+                    cs.showText("catalog page ${index + 1}")
+                    cs.endText()
+                }
+                if (index == 0) {
+                    widget.setPage(page)
+                    page.annotations = listOf(widget)
+                    text.widgets = listOf(widget)
+                    val outline = com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline()
+                    val item = com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem()
+                    item.title = "Chapter 1"
+                    item.setDestination(page)
+                    outline.addLast(item)
+                    doc.documentCatalog.documentOutline = outline
+                }
+            }
+            acro.setFields(listOf(text))
             save(doc, target)
         }
         return target

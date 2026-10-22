@@ -29,6 +29,10 @@
     <string name="media_direct_instead">Download as a direct file</string>
     <string name="media_queueing">Starting download...</string>
     <string name="media_download_selected">Download selected quality</string>
+    <string name="media_rights_title">Before you download</string>
+    <string name="media_rights_body">Only download content you own or have permission to download, and follow the terms of the site you are downloading from. Jumlo does not bypass DRM, paywalls or access controls; a site that requires an account will say so and the download will stop.</string>
+    <string name="media_rights_confirm">I have the rights</string>
+    <string name="media_error_service">No extraction service is configured, so only direct media links can be downloaded. Set the service address in Settings.</string>
     <string name="media_error_site">No downloadable video or audio resource was found. Jumlo supports direct media links and pages exposing HTML5 media files; dynamic or protected streams may not be available.</string>
     <string name="media_error_private">This resource requires sign-in or private access. Use an authorized direct download provided by the source.</string>
     <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>

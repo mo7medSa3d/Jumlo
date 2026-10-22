@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="quick_start_title">Get started with Jumlo</string>
+    <string name="quick_start_subtitle">Scan, import, print and edit documents on your device. Start with one action below.</string>
+    <string name="quick_start_import">Import a document</string>
+    <string name="quick_start_import_desc">Choose a PDF or image from your device.</string>
+    <string name="quick_start_scan">Scan a page</string>
+    <string name="quick_start_scan_desc">Capture pages, straighten edges and save locally.</string>
+    <string name="quick_start_explore">Explore tools</string>
+    <string name="quick_start_explore_desc">Browse PDF, image and download utilities.</string>
+    <string name="quick_start_privacy">Your files are processed on your device; no account is required.</string>
+    <string name="quick_start_skip">Not now</string>
+    <string name="quick_start_replay">Quick-start guide</string>
+    <string name="quick_start_replay_detail">See the Import, Scan and Tools walkthrough again.</string>
+    <string name="quick_start_done">Start using Jumlo</string>
+    <string name="quick_start_section">First steps</string>
+    <string name="quick_start_print">Print from your files</string>
+    <string name="quick_start_print_desc">Use Android print services to select an installed printer.</string>
+    <string name="print_invalid_numeric">Correct the highlighted numeric settings before printing or saving a preset.</string>
+    <string name="print_reset_invalid">Reset invalid values</string>
+    <string name="preset_panel_title">Saved tool presets</string>
+    <string name="preset_panel_save">Save preset</string>
+    <string name="preset_panel_empty">No presets yet. Save the current settings to reuse them.</string>
+    <string name="preset_panel_name">Preset name</string>
+    <string name="preset_panel_privacy">Presets never save documents, passwords, source pages or private text.</string>
+    <string name="preset_panel_delete">Delete</string>
+    <string name="preset_panel_delete_body">Delete this preset? Your documents and current edits will remain unchanged.</string>
+    <string name="preset_panel_replace_title">Replace preset</string>
+    <string name="preset_panel_replace_body">A preset with this name already exists. Replace its saved settings?</string>
+    <string name="job_stop_retrying">Stop retrying</string>
+</resources>

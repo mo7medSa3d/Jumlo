@@ -1,0 +1,7 @@
+<resources>
+    <string name="files_state_clear_search">مسح البحث</string>
+    <string name="files_state_reset_filters">إعادة ضبط عوامل التصفية</string>
+    <string name="files_state_folder_empty_title">هذا المجلد فارغ</string>
+    <string name="files_state_folder_empty_body">ستظهر هنا الملفات والمجلدات الموجودة في هذا الموقع.</string>
+    <string name="files_state_refresh_folder">تحديث المجلد</string>
+</resources>

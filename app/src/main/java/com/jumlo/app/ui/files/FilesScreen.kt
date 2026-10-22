@@ -5,6 +5,11 @@ import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.platform.LocalDensity
+import com.jumlo.app.ui.DataLoadStatus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -38,8 +43,9 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.model.*
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
-    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit) {
+    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null) {
     val haptics=rememberAppHaptics()
     val context=LocalContext.current
     val imported by vm.imported.collectAsStateWithLifecycle()
@@ -47,6 +53,15 @@ import com.jumlo.app.model.*
     val trashed by vm.trashed.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val tree by vm.tree.collectAsStateWithLifecycle()
+    val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
+    val sourceLoad by vm.sourceLoad.collectAsStateWithLifecycle()
+    val trashLoad by vm.trashLoad.collectAsStateWithLifecycle()
+    val treeLoad by vm.treeLoad.collectAsStateWithLifecycle()
+    var renameOutput by remember { mutableStateOf<OutputRecord?>(null) }
+    var renameText by rememberSaveable { mutableStateOf("") }
+    fun rename(record:OutputRecord) { renameOutput=record;renameText=record.displayName }
+    fun printAction(record:OutputRecord): (() -> Unit)? = if(onPrint!=null &&
+        (record.mimeType=="application/pdf" || record.mimeType.startsWith("image/"))) ({onPrint(record)}) else null
     var section by rememberSaveable {mutableStateOf("outputs")}
     var search by rememberSaveable {mutableStateOf("")}
     var sort by rememberSaveable {mutableStateOf("date")}
@@ -61,8 +76,7 @@ import com.jumlo.app.model.*
     var details by remember {mutableStateOf<OutputRecord?>(null)}
     LaunchedEffect(outputs) {selected=selected.intersect(outputs.map {it.id}.toSet())}
     LaunchedEffect(imported) {selectedSources=selectedSources.intersect(imported.map {it.id}.toSet())}
-    val screenWidth=LocalConfiguration.current.screenWidthDp
-    val columns=when { screenWidth>=840->4;screenWidth>=600->3;else->2 }
+    val density=LocalDensity.current
     val visible=remember(outputs,search,sort,type,settings.favoriteOutputIds) {
         outputs.filter {it.displayName.contains(search,true) && (type=="all" || (type=="favorites" && it.id in settings.favoriteOutputIds) || StoragePaths.category(it.mimeType)==type)}.let {list->
             when(sort) {"name"->list.sortedBy {it.displayName.lowercase()};"size"->list.sortedByDescending {it.sizeBytes};"type"->list.sortedWith(compareBy({StoragePaths.category(it.mimeType)},{it.displayName}));else->list.sortedByDescending {it.createdAtEpochMs}}
@@ -80,7 +94,8 @@ import com.jumlo.app.model.*
         tree?.entries?.filter {it.name.contains(search,true)}.orEmpty()
     }
     val selectedOutputs = visible.filter { it.id in selected }
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val columns=((maxWidth.value-40f)/(if(density.fontScale>=1.5f) 240f else 160f)).toInt().coerceIn(1,4)
     LazyColumn(
         modifier=Modifier.fillMaxSize(),
         contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
@@ -130,25 +145,43 @@ import com.jumlo.app.model.*
                         haptics.secondaryAction();deleteIds=outputs.map { it.id }.toSet()
                     }) { Text(stringResource(R.string.redesign_delete_all),color=MaterialTheme.colorScheme.error) }
                 } }
-                if(visible.isEmpty()) item("empty") {QuietStateCard(stringResource(R.string.ui_recent_empty),stringResource(R.string.redesign_storage_folder))}
+                if(outputLoad!=DataLoadStatus.READY) item("outputs-state") { DocumentLoadState(outputLoad,vm::reloadSavedData) }
+                if(outputLoad==DataLoadStatus.READY && visible.isEmpty()) item("empty") {
+                    val filtered=search.isNotEmpty() || type!="all"
+                    QuietStateCard(stringResource(if(filtered) R.string.upgrade_no_results else R.string.ui_recent_empty),
+                        stringResource(if(filtered) R.string.upgrade_no_results_hint else R.string.redesign_storage_folder),
+                        stringResource(if(filtered) R.string.files_state_reset_filters else R.string.import_device_files),
+                        { if(filtered) { search=""; type="all"; selected=emptySet() } else onImport() })
+                }
                 if(settings.fileViewMode==FileViewMode.LIST) {
-                    items(visible,key={it.id},contentType={"output"}) {output -> OutputRow(output,{if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},{onShare(output)},{onExport(output)},{onReuse(output)},{deleteIds=setOf(output.id)},if(selecting) output.id in selected else null,{selected=selected.symmetric(output.id)},onDetails={details=output},isFavorite=output.id in settings.favoriteOutputIds,
-                        onFavorite={vm.toggleOutputFavorite(output.id)})}
+                    items(visible,key={it.id},contentType={"output"}) { output ->
+                        SwipeFileActions(output.displayName,enabled=!selecting,onShare={onShare(output)},
+                            onRename={rename(output)},onTrash={vm.trashOutputs(listOf(output))},onPrint=printAction(output)) {
+                            OutputRow(output,{if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
+                                {onShare(output)},{onExport(output)},{onReuse(output)},{deleteIds=setOf(output.id)},
+                                if(selecting) output.id in selected else null,{selected=selected.symmetric(output.id)},
+                                onDetails={details=output},isFavorite=output.id in settings.favoriteOutputIds,
+                                onFavorite={vm.toggleOutputFavorite(output.id)},onPrint=printAction(output),onRename={rename(output)},
+                                onLongClick={haptics.selectionToggle();selecting=true;selected=selected+output.id})
+                        }
+                    }
                 } else {
                     items(visible.chunked(columns),key={it.joinToString("-") {f->f.id}},contentType={"tileRow"}) {row->
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
                             row.forEach {output->
                                 val cardHeight=if(settings.fileViewMode==FileViewMode.GALLERY) 340.dp else 288.dp
                                 Surface(
-                                    onClick={haptics.actionClick();if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
-                                    modifier=Modifier.pressFeedback().weight(1f).height(cardHeight),
+                                    modifier=Modifier.pressFeedback().weight(1f).heightIn(min=cardHeight)
+                                        .combinedClickable(onClick={haptics.actionClick();if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
+                                            onLongClick={haptics.selectionToggle();selecting=true;selected=selected+output.id})
+                                        .semantics { if(selecting) { this.selected=output.id in selected; role=Role.Checkbox } },
                                     shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
                                     border=androidx.compose.foundation.BorderStroke(1.dp,
                                         if(selecting && output.id in selected) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.outlineVariant),
                                     color=MaterialTheme.colorScheme.surfaceContainerLow
                                 ) {
-                                    Column(Modifier.fillMaxSize().padding(12.dp),verticalArrangement=Arrangement.SpaceBetween) {
+                                    Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                         Box(Modifier.fillMaxWidth()
                                             .height(if(settings.fileViewMode==FileViewMode.GALLERY) 194.dp else 150.dp)) {
                                             NeonOutputPreview(output, Modifier.fillMaxSize())
@@ -186,6 +219,8 @@ import com.jumlo.app.model.*
                                                         Icon(Icons.Rounded.MoreVert,stringResource(R.string.ui_more_actions),Modifier.size(22.dp))
                                                     }
                                                     DropdownMenu(expanded=actionsExpanded,onDismissRequest={actionsExpanded=false}) {
+                                                        printAction(output)?.let { print -> DropdownMenuItem(text={Text(stringResource(R.string.upgrade_print))},onClick={actionsExpanded=false;print()}) }
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_rename))},onClick={actionsExpanded=false;rename(output)})
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={actionsExpanded=false;onShare(output)})
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={actionsExpanded=false;details=output})
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={actionsExpanded=false;onExport(output)})
@@ -204,6 +239,7 @@ import com.jumlo.app.model.*
                 }
             }
             "sources" -> {
+                if(sourceLoad!=DataLoadStatus.READY) item("sources-state") { DocumentLoadState(sourceLoad,vm::reloadSavedData) }
                 item("source-controls") {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         Text(stringResource(R.string.files_snapshots_sub),style=QuietTheme.typography.metadata,modifier=Modifier.weight(1f))
@@ -241,38 +277,61 @@ import com.jumlo.app.model.*
                         } else Text(stringResource(R.string.files_batch_tool_hint),style=QuietTheme.typography.metadata)
                     }
                 }
-                if(imported.isEmpty()) item("sources-empty") {QuietStateCard(stringResource(R.string.files_empty_snapshots),stringResource(R.string.files_snapshots_sub),stringResource(R.string.import_device_files),onImport)}
+                if(sourceLoad==DataLoadStatus.READY && imported.isEmpty()) item("sources-empty") {QuietStateCard(stringResource(R.string.files_empty_snapshots),stringResource(R.string.files_snapshots_sub),stringResource(R.string.import_device_files),onImport)}
+                if(sourceLoad==DataLoadStatus.READY && imported.isNotEmpty() && visibleSources.isEmpty()) item("sources-filtered-empty") {
+                    QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
+                        stringResource(R.string.files_state_clear_search),{search="";selectedSources=emptySet()})
+                }
                 items(visibleSources,key={it.id}) {source->
                     FileMenuRow(source.displayName,formatBytes(source.sizeBytes),
                         {if(selectingSources) selectedSources=selectedSources.symmetric(source.id) else onSource(source.id)},
                         selection=if(selectingSources) source.id in selectedSources else null,
-                        onSelect={selectedSources=selectedSources.symmetric(source.id)}) {close->
+                        onSelect={selectedSources=selectedSources.symmetric(source.id)},
+                        onLongClick={haptics.longPress();selectingSources=true;selectedSources=selectedSources+source.id}) {close->
+                        if(onPrintSource!=null && (source.mimeType=="application/pdf" || source.mimeType?.startsWith("image/")==true))
+                            DropdownMenuItem(text={Text(stringResource(R.string.upgrade_print))},onClick={close();onPrintSource(source.id)})
                         DropdownMenuItem(text={Text(stringResource(R.string.files_add_to_workspace))},onClick={close();onSource(source.id)})
                     }
                 }
             }
             "trash" -> {
                 item {Text(stringResource(R.string.ui_trash_notice),style=QuietTheme.typography.metadata)}
-                if(trashed.isEmpty()) item("trash-empty") {QuietStateCard(stringResource(R.string.files_trash_title),stringResource(R.string.files_trash_empty))}
-                else item {TextButton(onClick={purgeIds=trashed.map {it.id}.toSet()}) {Text(stringResource(R.string.files_purge_trash))}}
-                items(visibleTrashed,key={it.id}) {entry->FileMenuRow(entry.displayName,formatBytes(entry.sizeBytes),{vm.restoreOutput(entry.id)},Icons.Rounded.DeleteOutline) {close->
-                    DropdownMenuItem(text={Text(stringResource(R.string.action_restore))},onClick={close();vm.restoreOutput(entry.id)})
-                    DropdownMenuItem(text={Text(stringResource(R.string.action_delete))},onClick={close();purgeIds=setOf(entry.id)})
-                }}
+                if(trashLoad!=DataLoadStatus.READY) item("trash-state") {DocumentLoadState(trashLoad,vm::reloadTrash)}
+                else {
+                    if(trashed.isEmpty()) item("trash-empty") {QuietStateCard(stringResource(R.string.files_trash_title),stringResource(R.string.files_trash_empty))}
+                    else item {TextButton(onClick={purgeIds=trashed.map {it.id}.toSet()}) {Text(stringResource(R.string.files_purge_trash))}}
+                    if(trashed.isNotEmpty() && visibleTrashed.isEmpty()) item("trash-filtered-empty") {
+                        QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
+                            stringResource(R.string.files_state_clear_search),{search=""})
+                    }
+                    items(visibleTrashed,key={it.id}) {entry->FileMenuRow(entry.displayName,formatBytes(entry.sizeBytes),{vm.restoreOutput(entry.id)},Icons.Rounded.DeleteOutline) {close->
+                        DropdownMenuItem(text={Text(stringResource(R.string.action_restore))},onClick={close();vm.restoreOutput(entry.id)})
+                        DropdownMenuItem(text={Text(stringResource(R.string.action_delete))},onClick={close();purgeIds=setOf(entry.id)})
+                    }}
+                }
             }
             "folder" -> {
                 item {OutlinedButton(onClick=onFolder) {Text(stringResource(R.string.tool_browse_storage))}}
                 val listing=tree
-                if(listing==null) item("folder-empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder)}
+                if(treeLoad!=DataLoadStatus.READY) item("folder-state") {DocumentLoadState(treeLoad,vm::reloadTree)}
+                else if(listing==null) item("folder-empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder)}
                 else {
                     item {Text(listing.name,style=QuietTheme.typography.sectionTitle);Text(stringResource(R.string.ui_provider_notice),style=QuietTheme.typography.metadata)}
                     if(listing.writable) item {TextButton(onClick=onNewFolder) {Text(stringResource(R.string.files_new_folder))}}
+                    if(listing.entries.isEmpty()) item("folder-no-files") {
+                        QuietStateCard(stringResource(R.string.files_state_folder_empty_title),stringResource(R.string.files_state_folder_empty_body),
+                            stringResource(R.string.files_state_refresh_folder),vm::reloadTree)
+                    } else if(visibleProviderEntries.isEmpty()) item("folder-filtered-empty") {
+                        QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
+                            stringResource(R.string.files_state_clear_search),{search=""})
+                    }
                     items(visibleProviderEntries,key={it.uri}) {entry->ProviderFileRow(entry,listing.writable,{onBrowse(entry)},{onProviderOpen(entry)},{onProviderImport(entry)},{onCopy(entry)},{onRename(entry)},{onDelete(entry)})}
                 }
             }
         }
     }
     if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) {
+
         val onlyPdfs = selectedOutputs.size >= 2 &&
             selectedOutputs.all { it.mimeType=="application/pdf" }
         val onlyImages = selectedOutputs.isNotEmpty() &&
@@ -310,6 +369,9 @@ import com.jumlo.app.model.*
                         context.startActivity(android.content.Intent.createChooser(intent,null))
                     } catch (_:Exception) { vm.notifyMessage("NO_COMPATIBLE_APP_OR_ACCESS_LOST") }
                 })
+                if(selectedOutputs.size==1) printAction(selectedOutputs.single())?.let { print ->
+                    NeonBatchAction(Icons.Rounded.Print,stringResource(R.string.upgrade_print),{print()})
+                }
                 NeonBatchAction(Icons.Rounded.FolderZip,stringResource(R.string.files_bundle_selected,selectedOutputs.size),{
                     haptics.actionClick()
                     onOutputWorkflow(selectedOutputs,"file_07")
@@ -343,6 +405,15 @@ import com.jumlo.app.model.*
     deleteIds?.let { ids -> AlertDialog(onDismissRequest={deleteIds=null},title={Text(stringResource(R.string.dialog_delete_title))},text={Text(stringResource(R.string.redesign_delete_confirm))},confirmButton={
         TextButton(onClick={haptics.secondaryAction();vm.trashOutputs(outputs.filter {it.id in ids});selected=emptySet();selecting=false;deleteIds=null}) {Text(stringResource(R.string.action_delete))}
     },dismissButton={TextButton(onClick={deleteIds=null}) {Text(stringResource(R.string.account_cancel))}})}
+    renameOutput?.let { output ->
+        val nameValid=remember(renameText,output.displayName) {
+            runCatching { com.jumlo.app.core.DocumentNamePolicy.rename(output.displayName,renameText) }.isSuccess
+        }
+        AlertDialog(onDismissRequest={renameOutput=null},title={Text(stringResource(R.string.action_rename))},
+            text={OutlinedTextField(renameText,{renameText=it},singleLine=true,label={Text(stringResource(R.string.upgrade_new_name))},isError=!nameValid)},
+            confirmButton={TextButton(onClick={vm.renameOutput(output,renameText);renameOutput=null},enabled=nameValid) {Text(stringResource(R.string.account_done))}},
+            dismissButton={TextButton(onClick={renameOutput=null}) {Text(stringResource(R.string.action_cancel))}})
+    }
     details?.let {output->AlertDialog(onDismissRequest={details=null},title={Text(output.displayName)},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text(output.mimeType,style=QuietTheme.typography.metadata)
         Text(formatOutputSizeSummary(output),style=QuietTheme.typography.bodyMedium)

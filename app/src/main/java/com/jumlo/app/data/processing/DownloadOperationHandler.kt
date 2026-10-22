@@ -111,11 +111,23 @@ class DownloadOperationHandler @Inject constructor(
                 val partial=File(folder,"$index.part")
                 val journal=File(folder,"$index.properties")
                 val old=Properties().apply { if(journal.isFile) journal.inputStream().use(::load) }
+                val journalGeneration=old.getProperty("restartGeneration")?.toLongOrNull()?.takeIf { it>=0 } ?: 0L
+                // Only the executing worker mutates these files, after checking its
+                // claimed lease. Committed output keys were checked above.
+                if(DownloadRestartPolicy.resetUncommittedFiles(context.downloadRestartGeneration,journalGeneration,
+                        partial,journal,File(folder,"$index.pending"),context.checkCancellation)) old.clear()
                 val urlDigest=Hashing.sha256(ByteArrayInputStream(url.toByteArray(Charsets.UTF_8)))
                 if(partial.length()>0L && old.getProperty("urlDigest")!=urlDigest) throw OperationFailure("DOWNLOAD_RESTART_REQUIRED")
                 try {
                     var lastReport=0L
-                    val result=StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl)).execute(
+                    // A fully transferred file whose publication was interrupted must be
+                    // published, not downloaded again.
+                    val knownTotal=old.getProperty("total")?.toLongOrNull()
+                    val alreadyComplete=DownloadRestartPolicy.isTransferComplete(partial.length(),knownTotal)
+                    val result=if(alreadyComplete){
+                        TransferResult(partial.length(),knownTotal,old.getProperty("etag"),old.getProperty("modified"),
+                            old.getProperty("finalUrlSha256")?:urlDigest,old.getProperty("mime"),old.getProperty("disposition"))
+                    } else StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl)).execute(
                         TransferRequest(url,partial,partial.length(),old.getProperty("etag"),old.getProperty("modified"),old.getProperty("total")?.toLongOrNull(),settings.cleartextConsent,context.budget.maxMediaWorkspaceBytes,context.budget.minFreeBytes,finalUrlSha256=old.getProperty("finalUrlSha256")),
                         checkCancel={ context.checkCancellation(); networkPolicy(settings) },
                         progress={ bytes,total ->
@@ -127,10 +139,14 @@ class DownloadOperationHandler @Inject constructor(
                         onMetadata={ metadata ->
                             val p=Properties().apply {
                                 setProperty("urlDigest",urlDigest)
+                                setProperty("restartGeneration",context.downloadRestartGeneration.toString())
                                 metadata.finalUrlSha256?.let { setProperty("finalUrlSha256",it) }
                                 metadata.strongEtag?.let { setProperty("etag",it) }
                                 metadata.lastModified?.let { setProperty("modified",it) }
                                 metadata.totalBytes?.let { setProperty("total",it.toString()) }
+                                // The type of a finished transfer is needed to publish it again.
+                                metadata.mimeType?.let { setProperty("mime",it) }
+                                metadata.contentDisposition?.let { setProperty("disposition",it) }
                             }
                             val pending=File(folder,"$index.pending")
                             FileOutputStream(pending).use { p.store(it,null); it.fd.sync() }
@@ -149,6 +165,7 @@ class DownloadOperationHandler @Inject constructor(
                     val resolvedMime=result.mimeType?.takeIf { Regex("[a-zA-Z0-9!#$&^_.+-]+/[a-zA-Z0-9!#$&^_.+-]+").matches(it) } ?: "application/octet-stream"
                     val fileKind=DownloadLinkPolicy.classifyDirectFile(name, resolvedMime)
 
+                    val processDownloaded: suspend () -> Unit = {
                     when {
                         fileKind == DirectFileKind.PDF && settings.directMode in setOf("PDF_RECOMMENDED", "PDF_EXTREME") -> {
                             val maxDpi = if (settings.directMode == "PDF_EXTREME") 96 else 150
@@ -174,11 +191,9 @@ class DownloadOperationHandler @Inject constructor(
                                         renderer.openPage(pageIdx).use { page ->
                                             val nominalW = (page.width * 144 / 72.0).roundToInt().coerceAtLeast(1)
                                             val nominalH = (page.height * 144 / 72.0).roundToInt().coerceAtLeast(1)
-                                            val maxPixels = (context.budget.maxBitmapBytes / 4L).coerceAtLeast(256L * 256L)
-                                            val shrink = minOf(1.0, kotlin.math.sqrt(maxPixels.toDouble() /
-                                                (nominalW.toDouble() * nominalH.toDouble())))
-                                            val w = (nominalW * shrink).roundToInt().coerceAtLeast(1)
-                                            val h = (nominalH * shrink).roundToInt().coerceAtLeast(1)
+                                            val w = nominalW
+                                            val h = nominalH
+                                            ImageWorkPolicy.requireFits(w,h,0L,context.budget.maxBitmapBytes)
                                             val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
                                             try {
                                                 bmp.eraseColor(Color.WHITE)
@@ -253,15 +268,23 @@ class DownloadOperationHandler @Inject constructor(
                             // Compression is optional: if the encoded file is not smaller, preserve the original.
                             val candidate=File(folder,"$index-compressed.jpg")
                             try {
-                                BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
-                                    BitmapTransforms.encodeGuaranteedSmaller(
-                                        decoded.bitmap, candidate, result.bytes,
-                                        ImageConversionSettings(format = "JPEG", quality = 78),
-                                        context.budget.maxBitmapBytes, context.checkCancellation
-                                    )
+                                try {
+                                    BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
+                                        BitmapTransforms.encodeGuaranteedSmaller(
+                                            decoded.bitmap, candidate, result.bytes,
+                                            ImageConversionSettings(format = "JPEG", quality = 78),
+                                            context.budget.maxBitmapBytes, context.checkCancellation
+                                        )
+                                    }
+                                } catch (_: ImageSizeBoundException) { candidate.delete() }
+                                catch (resource: IllegalArgumentException) {
+                                    if(resource.message !in setOf("IMAGE_MEMORY_BUDGET_EXCEEDED","IMAGE_DIMENSIONS_UNREPRESENTABLE")) throw resource
+                                    // Compression is optional; a valid completed download
+                                    // remains publishable when exact image work cannot fit.
+                                    candidate.delete()
                                 }
                                 context.checkCancellation()
-                                val choice=DownloadCompressionPolicy.choose(name,resolvedMime,result.bytes,candidate.length())
+                                val choice=DownloadCompressionPolicy.choose(name,resolvedMime,result.bytes,if(candidate.isFile) candidate.length() else result.bytes)
                                 val ticket=context.outputs.reserve(request.id,key,choice.filename,choice.mimeType)
                                 val source=if(choice.useCompressed) candidate else partial
                                 Files.move(source.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
@@ -308,9 +331,11 @@ class DownloadOperationHandler @Inject constructor(
                             outcomes+=ItemOutcome(key,ItemStatus.CREATED,output.id)
                         }
                     }
+                    }
+                    if(settings.directMode=="ORIGINAL") processDownloaded() else BitmapWorkGate.run { processDownloaded() }
                 } catch(cancel:CancellationException) { throw cancel }
                 catch(error:Exception) {
-                    val code=stableError(error)
+                    val code=if(stableError(error)=="MISSING_RESUME_VALIDATOR") "DOWNLOAD_RESTART_REQUIRED" else stableError(error)
                     if(code in setOf("WIFI_REQUIRED","UNMETERED_NETWORK_REQUIRED","DOWNLOAD_RESTART_REQUIRED")) throw OperationFailure(code)
                     outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=code)
                 }
@@ -332,7 +357,8 @@ class DownloadOperationHandler @Inject constructor(
             }
             candidate.delete()
             PdfBoxBackend.open(source,null).use { doc ->
-                PdfBoxBackend.compressImages(doc, maxDpi, quality) { _, _ -> context.checkCancellation() }
+                PdfBoxBackend.compressImages(doc, maxDpi, quality, onPage = { _, _ -> context.checkCancellation() },
+                    maxBitmapBytes = context.budget.maxBitmapBytes)
                 doc.save(candidate)
             }
             val validPages = runCatching { PdfBoxBackend.open(candidate,null).use { it.numberOfPages } }.getOrNull()

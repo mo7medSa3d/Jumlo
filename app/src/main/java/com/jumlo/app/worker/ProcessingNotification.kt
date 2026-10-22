@@ -27,7 +27,11 @@ object ProcessingNotification {
             Intent(context,CancelJobReceiver::class.java).setAction("${context.packageName}.CANCEL_JOB")
                 .setData(Uri.parse("utilities-job:$jobId")).putExtra("job_id",jobId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java),
+        val open=PendingIntent.getActivity(context,0,
+            Intent(context,MainActivity::class.java)
+                .setAction("${context.packageName}.OPEN_JOB")
+                .setData(Uri.parse("jumlo-job:$jobId"))
+                .putExtra("job_id",jobId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification=NotificationCompat.Builder(context,channel)
             .setContentTitle(context.getString(R.string.processing_title))

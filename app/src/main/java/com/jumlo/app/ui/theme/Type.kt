@@ -112,10 +112,9 @@ val Material3Typography = Typography(
 val LocalQuietTypography = staticCompositionLocalOf { DefaultQuietTypography }
 
 val IbmPlexSansArabicFont = FontFamily(
-    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Normal),
-    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Medium),
-    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.SemiBold),
-    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Bold)
+    // This bundled face is regular, not a variable font. Registering it as bold
+    // prevents Android from synthesizing the requested weight and erases hierarchy.
+    Font(R.font.ibm_plex_sans_arabic_regular, FontWeight.Normal)
 )
 
 private fun TextStyle.adaptForLocale(family: FontFamily, isArabic: Boolean): TextStyle =

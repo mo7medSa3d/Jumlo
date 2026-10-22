@@ -7,7 +7,7 @@ object AutoOutputName {
         "pdf_05" to "Split", "pdf_06" to "Extracted", "pdf_07" to "Images", "pdf_crop" to "Cropped",
         "pdf_compress" to "Compressed", "pdf_stamp" to "Stamped", "pdf_annotate" to "Annotated",
         "pdf_signature" to "Signed", "pdf_metadata" to "Updated", "pdf_forms" to "Filled",
-        "pdf_protect" to "Protected", "pdf_redact" to "Redacted",
+        "pdf_protect" to "Protected", "pdf_clean" to "Cleaned",
         "file_07" to "Archive", "file_encrypted_zip" to "Archive"
     )
     fun cleanBaseName(displayName:String, fallback:String="File"):String {
@@ -26,7 +26,8 @@ object AutoOutputName {
         val cleanBase=cleanBaseName(baseName,"Document")
         val padded=pageNumber.coerceAtLeast(1).toString().padStart(3,'0')
         val cleanExt=extension.trimStart('.').lowercase().ifBlank { "png" }
-        return SafeNames.basename("$cleanBase - صفحة $padded.$cleanExt")
+        // Language-neutral: the same file name is used in English and Arabic.
+        return SafeNames.basename("$cleanBase - $padded.$cleanExt")
     }
     fun splitPartName(displayName:String, sourceDisplayName:String?, partNumber:Int):String {
         val raw=displayName.substringBeforeLast('.',displayName).trim()

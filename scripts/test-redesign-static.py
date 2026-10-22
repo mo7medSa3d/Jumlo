@@ -29,7 +29,8 @@ class RedesignWiringTests(unittest.TestCase):
     def test_thumbnail_error_is_actionable_and_media_audio_is_not_fabricated(self):
         editor=code('ui/workspace/PdfPageEditor.kt')
         self.assertIn('msg_preview_unavailable',editor)
-        self.assertIn('rememberUpdatedState(onMove)',editor)
+        self.assertIn('rememberUpdatedState(onDragStep)',editor)
+        self.assertIn('detectDragGesturesAfterLongPress',editor)
         self.assertIn('asset.extractor in setOf("DirectMedia", "Html5")',code('ui/downloads/MediaWorkspace.kt'))
         errors=(ROOT/'app/src/main/res/values/error_messages.xml').read_text()
         self.assertNotIn('Optimizing large files automatically to fit device memory.',errors)

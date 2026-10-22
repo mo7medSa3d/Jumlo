@@ -4,17 +4,18 @@ import android.content.Context
 import android.system.Os
 import android.system.OsConstants
 import android.util.AtomicFile
+import com.jumlo.app.core.StreamTransfer
 import com.jumlo.app.core.media.AudioOutput
 import com.jumlo.app.core.media.MediaArguments
 import com.jumlo.app.core.media.MediaAsset
 import com.jumlo.app.core.media.MediaChoice
-import com.jumlo.app.core.media.MediaEngineRouting
-import com.jumlo.app.core.media.MediaLinks
 import com.jumlo.app.core.media.MediaProcessRunner
 import com.jumlo.app.core.media.MediaProcessSpec
+import com.jumlo.app.core.media.MediaLinks
 import com.jumlo.app.core.media.MediaProgress
 import com.jumlo.app.core.media.MediaProgressParser
 import com.jumlo.app.data.jobs.OperationFailure
+import com.jumlo.app.data.processing.OkHttpTransport
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import okhttp3.OkHttpClient
@@ -22,37 +23,28 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.UUID
 
-/** Opt-in, APK-bundled multi-site engine. Offline-first documents remain unchanged. */
+/**
+ * The opt-in APK-bundled multi-site engine.
+ *
+ * A configured extraction service is preferred, because it can be updated without
+ * shipping a new app; this bundled engine is the offline fallback, and the on-device
+ * direct fetcher is the last resort for plain media links.
+ */
 object MediaRuntimeFactory {
-    fun create(context: Context, client: OkHttpClient, sessions: MediaSessionStore): MediaRuntime =
-        MediaEngineRouter(NativeDirectMediaRuntime(client, sessions), PackagedMediaRuntime(context.applicationContext))
-}
-
-/** A failed access check stays failed: do not route 401/403/rate-limit/DRM through another engine. */
-private class MediaEngineRouter(
-    private val native: MediaRuntime,
-    private val extractor: MediaRuntime
-) : MediaRuntime {
-    override fun inspect(url: String, allowHttp: Boolean, check: () -> Unit): MediaAsset {
-        val normalized = MediaLinks.normalize(url, allowHttp)
-        val primary = if (MediaEngineRouting.preferExtractor(normalized)) extractor else native
-        val secondary = if (primary === native) extractor else native
-        return try {
-            primary.inspect(normalized, allowHttp, check)
-        } catch (e: OperationFailure) {
-            if (!MediaEngineRouting.canUseAlternate(e.message)) throw e
-            check()
-            secondary.inspect(normalized, allowHttp, check)
+    fun create(
+        context: Context,
+        client: OkHttpClient,
+        sessions: MediaSessionStore,
+        serviceUrl: () -> String = { "" },
+        serviceToken: () -> String = { "" }
+    ): MediaRuntime {
+        val engines = buildList {
+            add(RemoteExtractorRuntime(serviceUrl, client, StreamTransfer(OkHttpTransport(client)), serviceToken))
+            add(PackagedMediaRuntime(context.applicationContext))
+            add(NativeDirectMediaRuntime(client, sessions))
         }
+        return RoutingMediaRuntime(engines)
     }
-
-    override fun download(url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,
-        allowHttp: Boolean, directory: File, check: () -> Unit, progress: (MediaProgress) -> Unit) {
-        val backend = if (MediaEngineRouting.isNativeChoice(choice)) native else extractor
-        backend.download(MediaLinks.normalize(url, allowHttp), choice, audio, bitrate, allowHttp, directory, check, progress)
-    }
-
-    override fun refreshExtractor(): String = extractor.refreshExtractor()
 }
 
 /**

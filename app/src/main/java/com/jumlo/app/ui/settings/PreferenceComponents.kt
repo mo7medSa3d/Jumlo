@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
@@ -37,7 +38,7 @@ import com.jumlo.app.ui.components.QuietIconTile
     modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false) {
     val color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
     val haptics=rememberAppHaptics()
-    Row(modifier.pressFeedback().fillMaxWidth().heightIn(min = 72.dp).clickable(enabled = enabled, onClick = {
+    Row(modifier.pressFeedback().fillMaxWidth().heightIn(min = 72.dp).clickable(enabled = enabled, role = Role.Button, onClick = {
             if(destructive) haptics.secondaryAction() else haptics.actionClick()
             onClick()
         })
@@ -47,7 +48,8 @@ import com.jumlo.app.ui.components.QuietIconTile
             container=if(destructive) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
             size=44.dp)
         Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        // The chevron follows the text instead of being pushed to the far edge.
+        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
             summary?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
