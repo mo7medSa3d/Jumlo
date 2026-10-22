@@ -1,8 +1,0 @@
-{
-  "name": "Jumlo",
-  "description": "On-device file processing app for PDFs, images, archives, and downloads.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
