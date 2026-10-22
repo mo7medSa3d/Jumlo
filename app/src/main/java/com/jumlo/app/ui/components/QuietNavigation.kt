@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,7 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -88,19 +87,27 @@ fun QuietFloatingDock(
     ) {
         Surface(
             modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(.96f),
-            shape = RoundedCornerShape(28.dp),
-            color = palette.surfaceContainerHigh,
-            tonalElevation = 0.dp
+            shape = RoundedCornerShape(30.dp),
+            color = palette.surfaceContainerLow,
+            tonalElevation = 0.dp,
+            shadowElevation = 12.dp
         ) {
             Column {
                 BoxWithConstraints(Modifier.fillMaxWidth().height(74.dp)) {
                 val segment = maxWidth / 5
-                if (slot >= 0) {
+                val indicatorX by animateDpAsState(
+                    targetValue = 6.dp + segment * slot,
+                    animationSpec = if (reduced) snap()
+                        else spring(dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium),
+                    label = "dock-active-position"
+                )
+                if (slot >= 0 && slot != 2) {
                     Box(Modifier.align(Alignment.CenterStart)
-                        .offset(x = 6.dp + segment * slot)
+                        .offset(x = indicatorX)
                         .width(segment).height(52.dp)
                         .padding(horizontal = 6.dp)
-                        .background(pillars.activePillContainer, CircleShape))
+                        .background(pillars.activePillContainer, RoundedCornerShape(18.dp)))
                 }
                 Row(
                     Modifier.fillMaxSize().padding(horizontal = 6.dp),
@@ -115,7 +122,7 @@ fun QuietFloatingDock(
                     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         Surface(
                             onClick = { haptics.actionClick(); (onPrint ?: onScan)() },
-                            shape = CircleShape,
+                            shape = RoundedCornerShape(23.dp),
                             color = palette.primary,
                             contentColor = palette.onPrimary,
                             shadowElevation = QuietTheme.elevation.floating,
@@ -127,7 +134,7 @@ fun QuietFloatingDock(
                                 }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(if(onPrint!=null) Icons.Rounded.Print else Icons.Rounded.DocumentScanner, null, Modifier.size(28.dp))
+                                Icon(painterResource(if(onPrint!=null) R.drawable.ic_prism_printer else R.drawable.ic_prism_scan), null, Modifier.size(29.dp))
                             }
                         }
                     }
@@ -145,13 +152,13 @@ fun QuietFloatingDock(
     }
 }
 
-private fun icon(tab: DockTab): ImageVector = when (tab) {
-    DockTab.HOME -> Icons.Rounded.Home
-    DockTab.FILES -> Icons.Rounded.Folder
-    DockTab.TOOLS -> Icons.Rounded.GridView
-    DockTab.SETTINGS -> Icons.Rounded.Person
-    DockTab.DOWNLOADS -> Icons.Rounded.Download
-    DockTab.PRINT -> Icons.Rounded.Print
+private fun icon(tab: DockTab): Int = when (tab) {
+    DockTab.HOME -> R.drawable.ic_prism_home
+    DockTab.FILES -> R.drawable.ic_prism_folder
+    DockTab.TOOLS -> R.drawable.ic_prism_grid
+    DockTab.SETTINGS -> R.drawable.ic_prism_user
+    DockTab.DOWNLOADS -> R.drawable.ic_prism_download
+    DockTab.PRINT -> R.drawable.ic_prism_printer
 }
 
 @Composable
@@ -184,7 +191,7 @@ private fun DockDestination(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(icon(tab), null, Modifier.size(23.dp).graphicsLayer {
+        Icon(painterResource(icon(tab)), null, Modifier.size(24.dp).graphicsLayer {
             scaleX = bounce; scaleY = bounce
         }, tint = if (active) colors.primary else colors.onSurfaceVariant)
         if (showLabel) {

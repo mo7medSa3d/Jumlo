@@ -2,15 +2,17 @@ package com.jumlo.app.ui.tools
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -64,17 +66,17 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val frequent = settings.mostUsedToolIds.mapNotNull(byId::get).filter { it in visible }.take(4)
     val largeText = LocalDensity.current.fontScale >= 1.4f
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // Four circular buttons across, the way the reference does it.
+        // Readable, spacious task tiles: text scaling determines the phone grid.
         val columns = when {
-            maxWidth >= 900.dp -> if (largeText) 5 else 6
-            maxWidth >= 600.dp -> if (largeText) 3 else 4
-            else -> if (largeText) 3 else 4
+            maxWidth >= 900.dp -> if (largeText) 3 else 5
+            maxWidth >= 600.dp -> if (largeText) 2 else 3
+            else -> 2
         }
         LazyColumn(
             modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter),
-            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp,
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp,
                 bottom = QuietTheme.spacing.listBottomBuffer),
-            verticalArrangement = Arrangement.spacedBy(22.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             item("catalog-search") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -86,12 +88,22 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item("all") {
                             FilterChip(category == "all", { category = "all" },
+                                modifier = Modifier.heightIn(min = 44.dp),
+                                shape = RoundedCornerShape(16.dp), border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer),
                                 label = { Text(stringResource(R.string.ui_all)) })
                         }
                         items(PillarCategory.entries.filter { pillar ->
                             eligible.any { it.pillar == pillar }
                         }, key = { it.name }) { pillar ->
                             FilterChip(category == pillar.name, { category = pillar.name },
+                                modifier = Modifier.heightIn(min = 44.dp),
+                                shape = RoundedCornerShape(16.dp), border = null,
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer),
                                 label = { Text(if (settings.language.isRtl) pillar.labelAr else pillar.labelEn) })
                         }
                     }
@@ -104,7 +116,7 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(recent, key = { it.id }) { tool ->
                                 CompactCatalogTool(tool, settings.language, { onTool(tool) },
-                                    Modifier.width(94.dp))
+                                    Modifier.width(120.dp))
                             }
                         }
                     }
@@ -169,7 +181,7 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     }
 }
 
-/** 48dp+ tap target, high-contrast label, and no fixed-width English-only graphics. */
+/** Task-first tool tile. A single Surface owns hit testing and TalkBack semantics. */
 @Composable
 private fun CompactCatalogTool(
     tool: UtilityTool,
@@ -177,39 +189,34 @@ private fun CompactCatalogTool(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // The same circular icon button the home screen uses, so the two read as one app.
     val colors = MaterialTheme.colorScheme
-    val tint = ToolPalette.accentFor(tool.id)
-    val surface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow)
+    val isDark = colors.background.luminance() < 0.5f
+    val tint = ToolPalette.accentFor(tool.id, isDark)
+    val iconSurface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark)
     val title = if (language.isRtl) tool.titleAr else tool.titleEn
     val haptics = rememberAppHaptics()
-    Column(
-        modifier = modifier.pressFeedback().clickable(role = Role.Button) {
-            haptics.actionClick(); onClick()
-        },
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        onClick = { haptics.actionClick(); onClick() },
+        modifier = modifier.fillMaxWidth().pressFeedback().heightIn(min = 122.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = colors.surfaceContainerLow,
+        shadowElevation = 2.dp
     ) {
-        Surface(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.size(56.dp),
-            shape = CircleShape,
-            color = surface,
-            contentColor = tint
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(resolveStitchIcon(tool.iconName), contentDescription = null, Modifier.size(26.dp))
+            Box(Modifier.size(56.dp).background(iconSurface, RoundedCornerShape(20.dp)),
+                contentAlignment = Alignment.Center) {
+                ModernToolIcon(tool.iconName, tint, Modifier.size(28.dp))
             }
+            Text(title, color = colors.onSurface,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
-        Spacer(Modifier.height(7.dp))
-        Text(title,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 

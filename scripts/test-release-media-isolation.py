@@ -9,7 +9,7 @@ policy=(root/'app/src/main/java/com/jumlo/app/core/CapabilityPolicy.kt').read_te
 
 class MediaBuildConfiguration(unittest.TestCase):
     def test_default_includes_real_media_in_all_variants(self):
-        self.assertIn('orElse(false).get()',build)
+        self.assertIn('orElse(true).get()',build)
         for variant in ('debug','release','benchmark'):
             self.assertIn(f'sourceSets["{variant}"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")',build)
         for coordinate in ('library:0.18.1','ffmpeg:0.18.1'):

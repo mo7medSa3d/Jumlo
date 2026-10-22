@@ -869,6 +869,22 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     } }
     suspend fun preview(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 1600)
 
+    /** Read real AcroForm controls from the immutable source without modifying it. */
+    suspend fun pdfFormFields(sourceId:String):List<com.jumlo.app.data.pdf.PdfFormFieldInfo> =
+        withContext(Dispatchers.IO) {
+            val active = currentCoroutineContext()
+            sources.withSeekable(sourceId, UUID.randomUUID().toString()) { file ->
+                active.ensureActive()
+                com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(app)
+                com.jumlo.app.data.pdf.PdfBoxBackend.open(file, null).use { doc ->
+                    active.ensureActive()
+                    com.jumlo.app.data.pdf.PdfBoxBackend.formFields(doc).also {
+                        active.ensureActive()
+                    }
+                }
+            }
+        }
+
     /**
      * The original size of a source and how much of it is embedded images, so the
      * compression slider can show a live estimate before the job runs.

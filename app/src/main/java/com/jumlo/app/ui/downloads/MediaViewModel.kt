@@ -12,6 +12,7 @@ import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.media.MediaRuntime
 import com.jumlo.app.data.media.MediaSessionStore
+import com.jumlo.app.data.media.executeCancellable
 import com.jumlo.app.data.processing.*
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.model.JobRequest
@@ -80,6 +81,9 @@ data class MediaUiState(
     private var analysis: Job?=null
     private var generation=0
     private var analyzedUrl: String?=null
+    // Debounced URL changes must not restart a probe already requested by Paste,
+    // the keyboard Go action, or Retry. Keep this marker after cancel/failure too.
+    private var lastAnalysisInput: String?=null
     private var lastSignature: String?=null
     private var lastJob: String?=null
     private val submissions=MediaSubmissionSlot<JobRequest>()
@@ -104,7 +108,7 @@ data class MediaUiState(
                 compatibilityAttempt = profileIndex
             ).forEach { (k, v) -> reqBuilder.header(k, v) }
             val req = if (useRangeGet) reqBuilder.get().header("Range", "bytes=0-0").build() else reqBuilder.head().build()
-            probeClient.newCall(req).execute().use { response ->
+            probeClient.executeCancellable(req,check).use { response ->
                 if(response.code in setOf(301,302,303,307,308)) {
                     require(hops<10) { "TOO_MANY_REDIRECTS" }
                     val location=response.header("Location") ?: throw IllegalArgumentException("INVALID_REDIRECT")
@@ -137,6 +141,7 @@ data class MediaUiState(
         generation++
         analysis?.cancel()
         analyzedUrl=null
+        lastAnalysisInput=null
         newCopy()
         val trimmed = initialUrl.trim().take(32768)
         _state.value=MediaUiState(
@@ -151,7 +156,7 @@ data class MediaUiState(
 
     fun editUrl(value:String) {
         if(_state.value.submitting) return
-        generation++;analysis?.cancel();analyzedUrl=null
+        generation++;analysis?.cancel();analyzedUrl=null;lastAnalysisInput=null
         val trimmed = value.take(32768)
         _state.update {
             it.copy(
@@ -190,15 +195,17 @@ data class MediaUiState(
             error = if (asset != null && choices.isEmpty()) "MEDIA_NO_USABLE_FORMAT" else null) }
     }
 
-    /** Inspect a direct media URL; the small engine reports source format only. */
+    /** Inspect a media URL using the available runtime and its actual formats. */
     fun analyzeAsMediaStream() {
         analyze(forceExtractor = true)
     }
 
-    fun analyze(forceExtractor: Boolean = false) {
+    fun analyze(forceExtractor: Boolean = false, automatic: Boolean = false) {
         if(_state.value.submitting) return
         if(!CapabilityRegistry.enabled("dl_media")) { _state.update { it.copy(error=CapabilityRegistry.reason("dl_media")) };return }
         val snapshot=_state.value
+        if(automatic && lastAnalysisInput==snapshot.url) return
+        lastAnalysisInput=snapshot.url
         val token=++generation
         val previous=analysis
         previous?.cancel()

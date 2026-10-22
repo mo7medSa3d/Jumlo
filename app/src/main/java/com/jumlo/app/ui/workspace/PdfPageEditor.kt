@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.jumlo.app.R
 import com.jumlo.app.core.PageSelection
 import com.jumlo.app.core.PdfPageEdit
@@ -62,23 +63,29 @@ internal fun PdfPageEditor(
     printEnabled: Boolean = false
 ) {
     // -1 means loading, zero means failed. Never show an endless spinner for a corrupt PDF.
-    val count by produceState(-1, sourceId) {
+    var retry by remember(sourceId) { mutableIntStateOf(0) }
+    val count by produceState(-1, sourceId,retry) {
         value = -1
-        value = runCatching {
+        value = try {
             val first = vm.thumbnail(sourceId, 1)
             try { first.count } finally { first.bitmap.takeUnless { it.isRecycled }?.recycle() }
-        }.getOrDefault(0)
+        } catch(cancel:CancellationException) { throw cancel }
+          catch(_:Exception) { 0 }
     }
     if (count < 0) {
         LinearProgressIndicator(Modifier.fillMaxWidth())
         return
     }
     if (count == 0) {
-        Text(stringResource(R.string.msg_preview_unavailable), color=MaterialTheme.colorScheme.error)
+        Column {
+            Text(stringResource(R.string.msg_preview_unavailable), color=MaterialTheme.colorScheme.error)
+            TextButton(onClick={retry++}) {Text(stringResource(R.string.print_preview_retry))}
+        }
         return
     }
     val total = count
-    val boundaryMode = draft.toolId == "pdf_05" && draft.flag2 && !draft.flag1
+    val split=draft.toolId=="pdf_05"
+    val boundaryMode = split && draft.flag2 && !draft.flag1
     val organize = draft.toolId == "pdf_04"
     val initialOrder = remember(total) { (1..total).toList() }
     val seeds = remember(sourceId,total) {
@@ -107,9 +114,10 @@ internal fun PdfPageEditor(
     val selected: Set<Int> = if (organize) pages.filter { it.instanceId in selectedIds }.map { it.sourcePage }.toSet()
         else if (draft.toolId == "pdf_05" && draft.flag1) emptySet()
         else if (boundaryMode) runCatching { if(draft.pages.isBlank()) emptySet() else PageSelection.parse(draft.pages,total).toSet() }.getOrDefault(emptySet())
-        else runCatching { if(draft.pages.isBlank() || draft.pages=="all") initialOrder.toSet() else PageSelection.parse(draft.pages,total).toSet() }.getOrDefault(emptySet())
+        else selectedPageNumbers(draft.pages,total)
     val haptics = rememberAppHaptics()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope=rememberCoroutineScope()
     var edgeScroll by remember { mutableFloatStateOf(0f) }
     var draggedId by remember { mutableStateOf<String?>(null) }
     var viewport by remember { mutableStateOf(Rect.Zero) }
@@ -140,10 +148,9 @@ internal fun PdfPageEditor(
     }
     fun updateSelection(next:Set<Int>) {
         if(organize) selectedIds=pages.filter { it.sourcePage in next }.map { it.instanceId }
-        else if(draft.toolId=="pdf_05") edit { it.copy(flag1=false,flag2=boundaryMode,pages=next.sorted().joinToString(",").ifBlank { if(boundaryMode) "" else "all" }) }
-        else if(next.isNotEmpty()) edit { it.copy(pages=next.sorted().joinToString(",")) }
+        else if(boundaryMode) edit { it.copy(flag1=false,flag2=true,pages=next.filter { p -> p<total }.sorted().joinToString(",")) }
+        else if(next.isNotEmpty()) edit { it.copy(pages=pageSelectionSpec(next)) }
     }
-    val ordered=PdfPageEdit(order,selected)
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
@@ -193,10 +200,12 @@ internal fun PdfPageEditor(
                     onSelect={
                         focusedId=entry.instanceId
                         if(organize) selectedIds=if(entry.instanceId in selectedIds) selectedIds-entry.instanceId else selectedIds+entry.instanceId
-                        else updateSelection(ordered.toggle(entry.sourcePage).selected)
+                        else updateSelection(if(boundaryMode) {
+                            if(entry.sourcePage in selected) selected-entry.sourcePage else selected+entry.sourcePage
+                        } else toggleSelectedPage(selected,entry.sourcePage))
                         haptics.selectionToggle()
                     },
-                    selectionEnabled = !draft.flag1 && (!boundaryMode || entry.sourcePage < total),
+                    selectionEnabled = !(split && draft.flag1) && (!boundaryMode || entry.sourcePage < total),
                     onMove={delta -> persist(history.move(entry.instanceId,index+delta));haptics.sliderTick() },
                     onDragStart={ focusedId=entry.instanceId;draggedId=entry.instanceId;livePages=history.current;if(entry.instanceId !in selectedIds) selectedIds=selectedIds+entry.instanceId;haptics.longPress() },
                     onDragStep={ delta ->
@@ -221,30 +230,63 @@ internal fun PdfPageEditor(
                 item { TextButton(onClick={selectedIds=pages.map { it.instanceId }}) { Text(stringResource(R.string.jumlo_select_all)) } }
                 item { TextButton(onClick={selectedIds=emptyList()},enabled=selectedIds.isNotEmpty()) { Text(stringResource(R.string.editor_clear_selection)) } }
             }
-        } else if (draft.toolId == "pdf_05") {
+        } else if (split) {
+            val every=(WorkspaceDraft.normalizeDigits(draft.num1).toIntOrNull() ?: 1).coerceIn(1,minOf(total,1000))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                item("boundary-mode") {
-                    FilterChip(boundaryMode, onClick={
-                        edit { it.copy(flag1=false,flag2=true,pages="") }
-                    }, label={Text(stringResource(R.string.jumlo_split_markers))})
-                }
                 item("each-page") {
-                    FilterChip(draft.flag1 && draft.num1.ifBlank { "1" } == "1", onClick={
+                    FilterChip((draft.flag1 && every==1) || (!draft.flag1 && !draft.flag2 && draft.pages.trim().equals("all",true)),onClick={
                         edit { it.copy(flag1=true,flag2=false,num1="1",pages="all") }
-                    }, label={Text(stringResource(R.string.jumlo_split_each))})
+                    },label={Text(stringResource(R.string.jumlo_split_each))})
+                }
+                item("boundary-mode") {
+                    FilterChip(boundaryMode,onClick={
+                        edit { it.copy(flag1=false,flag2=true,pages="") }
+                    },enabled=total>1,label={Text(stringResource(R.string.jumlo_split_markers))})
+                }
+                item("groups") {
+                    FilterChip(draft.flag1 && every>1,onClick={
+                        edit { it.copy(flag1=true,flag2=false,num1=minOf(2,total).toString(),pages="all") }
+                    },enabled=total>1,label={Text(stringResource(R.string.interactive_split_groups))})
+                }
+                item("selected-pages") {
+                    FilterChip(!draft.flag1 && !draft.flag2 && !draft.pages.trim().equals("all",true),onClick={
+                        edit { it.copy(flag1=false,flag2=false,pages="1") }
+                    },label={Text(stringResource(R.string.interactive_selected_ranges))})
                 }
             }
-            if (boundaryMode) {
-                if (selected.isNotEmpty()) Text(stringResource(R.string.jumlo_split_parts_preview, selected.size+1),
-                    style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.primary)
+            if(draft.flag1 && total>1) {
+                InteractiveIntSlider(stringResource(R.string.field_pages_per_part),every,1,minOf(total,1000),1) { amount ->
+                    edit { it.copy(num1=amount.toString()) }
+                }
+            }
+            if(boundaryMode) {
                 TextButton(onClick={updateSelection(emptySet())},enabled=selected.isNotEmpty()) {
                     Text(stringResource(R.string.jumlo_clear_markers))
                 }
-            } else if (!draft.flag1) {
-                TextButton(onClick={updateSelection(initialOrder.toSet())}) {Text(stringResource(R.string.jumlo_select_all))}
+                if(selected.isEmpty()) Text(stringResource(R.string.interactive_split_choose_boundary),
+                    style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val groups=runCatching { previewSplitGroups(total,draft.flag1,boundaryMode,draft.pages,every) }.getOrNull()
+            if(groups!=null) {
+                Text(stringResource(R.string.jumlo_split_parts_preview,groups.size),style=QuietTheme.typography.metadataStrong)
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(groups.take(60)) { group ->
+                        SuggestionChip(onClick={scope.launch {listState.animateScrollToItem(group.first-1)}},
+                            label={Text(stringResource(R.string.interactive_part_pages,
+                                if(group.first==group.last) group.first.toString() else "${group.first}–${group.last}"))})
+                    }
+                }
             }
         } else {
-            TextButton(onClick={updateSelection(initialOrder.toSet())}) {Text(stringResource(R.string.jumlo_select_all))}
+            Text(stringResource(R.string.interactive_pages_selected,selected.size,total),style=QuietTheme.typography.metadataStrong)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                item { TextButton(onClick={updateSelection(initialOrder.toSet())}) {Text(stringResource(R.string.jumlo_select_all))} }
+                item { TextButton(onClick={updateSelection(initialOrder.filter { it%2==1 }.toSet())}) {Text(stringResource(R.string.interactive_odd_pages))} }
+                if(total>1) item { TextButton(onClick={updateSelection(initialOrder.filter { it%2==0 }.toSet())}) {Text(stringResource(R.string.interactive_even_pages))} }
+                item { TextButton(onClick={updateSelection(initialOrder.toSet()-selected)},enabled=selected.size<total) {Text(stringResource(R.string.interactive_invert_pages))} }
+            }
+            Text(stringResource(R.string.interactive_keep_one_page),style=QuietTheme.typography.metadata,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -258,7 +300,9 @@ private fun PdfPageTile(
     position:Int=page,totalPages:Int=page,canMoveEarlier:Boolean=true,canMoveLater:Boolean=true
 ) {
     val frameState by produceState<Result<PreviewFrame>?>(null,sourceId,page) {
-        value = runCatching { vm.thumbnail(sourceId,page) }
+        value=try { Result.success(vm.thumbnail(sourceId,page)) }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { Result.failure(error) }
     }
     val frame = frameState?.getOrNull()
     // Frames remain owned by Compose until no longer referenced; let GC release their bitmap.
@@ -339,7 +383,7 @@ private fun PdfFocusedPagePreview(vm:AppViewModel,sourceId:String,page:Int,rotat
             catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { Result.failure(error) }
     }
-    val zoomState = key(sourceId, instanceId, rotation) { rememberZoomPanState(1f, 6f, allowRotation = true) }
+    val zoomState = key(sourceId, instanceId, rotation) { rememberZoomPanState(1f, 6f, allowRotation = false) }
     val resetLabel=stringResource(R.string.ui_preview_reset_zoom)
     val zoomLabel=stringResource(R.string.print_preview_zoom,(zoomState.scale*100).toInt())
     val pageLabel=stringResource(R.string.jumlo_page_label,page)

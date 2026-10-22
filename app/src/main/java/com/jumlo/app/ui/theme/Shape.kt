@@ -12,8 +12,8 @@ import androidx.compose.ui.unit.dp
 object JumloRadii {
     val thumbnail = 12.dp
     val field = 18.dp
-    val card = 22.dp
-    val sheet = 28.dp
+    val card = 24.dp
+    val sheet = 30.dp
     val indicator = 21.dp
 }
 
@@ -56,9 +56,9 @@ data class QuietPrecisionSpacing(
     val xl: Dp = 28.dp,
     val canvasGutterCompact: Dp = 20.dp,
     val canvasGutterMedium: Dp = 28.dp,
-    val cardInteriorPadding: Dp = 16.dp,
-    val interCardGap: Dp = 10.dp,
-    val sectionGap: Dp = 24.dp,
+    val cardInteriorPadding: Dp = 18.dp,
+    val interCardGap: Dp = 12.dp,
+    val sectionGap: Dp = 28.dp,
     val dockWidth: Dp = 400.dp,
     val dockHeight: Dp = 72.dp,
     val dockBottomOffset: Dp = 14.dp,

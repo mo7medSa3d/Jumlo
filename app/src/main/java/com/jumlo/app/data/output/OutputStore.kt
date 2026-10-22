@@ -57,6 +57,7 @@ import javax.inject.Singleton
     } }
     private suspend fun persist(file:PublishedFile,metadata:OutputMetadata):OutputRecord {
         val visibleUri=try { publicOutputs.publish(file.file,file.displayName,file.mimeType,file.sha256,metadata.subfolder) }
+            catch(cancelled:CancellationException) { throw cancelled }
             catch(_:Exception) { null } // A failed external mirror must never destroy a verified private output.
         val record=OutputRecord(file.id,file.jobId,file.itemKey,FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file.file).toString(),file.displayName,file.mimeType,file.sizeBytes,file.sha256,metadata,file.createdAtEpochMs,visibleUri)
         db.processingDao().insertOutput(OutputEntity(record.id,record.jobId,record.itemKey,json.encodeToString(record)))

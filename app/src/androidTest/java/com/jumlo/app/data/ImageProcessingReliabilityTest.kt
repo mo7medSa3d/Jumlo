@@ -10,6 +10,7 @@ import com.jumlo.app.core.ImageSizeBoundException
 import com.jumlo.app.data.processing.BitmapExtras
 import com.jumlo.app.data.processing.BitmapTransforms
 import com.jumlo.app.data.processing.ImageConversionSettings
+import com.jumlo.app.data.pdf.AndroidImageCodec
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,5 +79,21 @@ class ImageProcessingReliabilityTest {
             rejects { BitmapExtras.watermarkText(source,"test",100,799) }
             rejects { BitmapTransforms.resize(source,20,20,FitMode.PAD,true,Color.WHITE,1000) }
         } finally { source.recycle();logo.recycle() }
+    }
+
+    @Test fun pdfJpegCodecBudgetsTheDecodedAndScaledBitmapsTogether() {
+        val bitmap=Bitmap.createBitmap(1000,1000,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.RED);setHasAlpha(false) }
+        val source=java.io.ByteArrayOutputStream()
+        try {
+            assertTrue(bitmap.compress(Bitmap.CompressFormat.JPEG,90,source))
+            // A 1000x1000 decode alone fits 4 MB. Keeping it resident while
+            // allocating an 800x800 resize needs 6.56 MB and must be sampled.
+            val recoded=AndroidImageCodec(4_000_000).recode(source.toByteArray(),800,800,80)
+            assertNotNull(recoded)
+            assertTrue(recoded!!.width<=500 && recoded.height<=500)
+            val result=android.graphics.BitmapFactory.decodeByteArray(recoded.bytes,0,recoded.bytes.size)
+            try { assertEquals(recoded.width,result.width);assertEquals(recoded.height,result.height) }
+            finally { result.recycle() }
+        } finally { bitmap.recycle() }
     }
 }

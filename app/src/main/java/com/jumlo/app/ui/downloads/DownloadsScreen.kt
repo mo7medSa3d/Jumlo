@@ -82,12 +82,12 @@ import com.jumlo.app.core.StoragePaths
         item("download-stats") {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Surface(shape=RoundedCornerShape(20.dp),
-                    color=MaterialTheme.colorScheme.surfaceContainerLow,
+                    color=MaterialTheme.colorScheme.primaryContainer,
                     modifier=Modifier.weight(1f)) {
                     Column(Modifier.padding(16.dp),
                         verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Rounded.Bolt,null,Modifier.size(22.dp),
-                            tint=MaterialTheme.colorScheme.primary)
+                            tint=MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(activeDownloads.size.toString(),
                             style=MaterialTheme.typography.headlineSmall)
                         Text(stringResource(R.string.ui_active_tasks),

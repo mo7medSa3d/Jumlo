@@ -44,6 +44,7 @@ import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.core.PdfAnnotationKind
+import com.jumlo.app.core.PdfInkDrawing
 import com.jumlo.app.ui.util.rememberAppHaptics
 import kotlinx.coroutines.CancellationException
 import java.util.Locale
@@ -59,7 +60,7 @@ import kotlin.math.min
  */
 private fun WorkspaceDraft.visualRect(): VisualRect {
     fun read(raw:String,fallback:Float):Float =
-        raw.toFloatOrNull()?.takeIf { it.isFinite() } ?: fallback
+        WorkspaceDraft.normalizeDigits(raw).toFloatOrNull()?.takeIf { it.isFinite() } ?: fallback
     val fallback=when(toolId) {
         "pdf_signature" -> VisualRect.SIGNATURE_START
         "pdf_image" -> VisualRect(.18f,.22f,.82f,.78f)
@@ -88,18 +89,24 @@ internal fun VisualDocumentEditor(
     val cropTool=tool in setOf("img_03","pdf_crop")
     val sourceIsPdf=tool.startsWith("pdf_")
     val haptics=rememberAppHaptics()
-    var pageCount by remember(sourceId) { mutableIntStateOf(1) }
+    var pageCount by remember(sourceId) { mutableIntStateOf(0) }
     var currentPage by rememberSaveable(sourceId,tool) {
-        mutableIntStateOf(if(sourceIsPdf) (draft.num1.toIntOrNull()?:1).coerceAtLeast(1) else 1)
+        mutableIntStateOf(if(sourceIsPdf) (WorkspaceDraft.normalizeDigits(draft.num1).toIntOrNull()?:1).coerceAtLeast(1) else 1)
     }
-    LaunchedEffect(draft.num1) { if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact")) currentPage=(draft.num1.toIntOrNull() ?: 1).coerceIn(1,pageCount) }
+    LaunchedEffect(draft.num1,pageCount) {
+        if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact")) {
+            val requested=WorkspaceDraft.normalizeDigits(draft.num1).toIntOrNull()?.coerceAtLeast(1) ?: 1
+            currentPage=if(pageCount>0) requested.coerceAtMost(pageCount) else requested
+        }
+    }
     var preview by remember(sourceId,currentPage) { mutableStateOf<PreviewFrame?>(null) }
     var failed by remember(sourceId,currentPage) { mutableStateOf(false) }
-    LaunchedEffect(sourceId,currentPage,pageCount) {
+    var retry by remember(sourceId) {mutableIntStateOf(0)}
+    LaunchedEffect(sourceId,currentPage,retry) {
         preview=null
         failed=false
         try {
-            val frame=vm.preview(sourceId,if(sourceIsPdf) currentPage.coerceIn(1,pageCount) else 1)
+            val frame=vm.preview(sourceId,if(sourceIsPdf) currentPage else 1)
             preview=frame
             pageCount=frame.count.coerceAtLeast(1)
         } catch(cancel:CancellationException) { throw cancel }
@@ -114,11 +121,11 @@ internal fun VisualDocumentEditor(
         }
     }
     var rect by remember(sourceId,tool) { mutableStateOf(draft.visualRect()) }
-    val snapshotSaver = androidx.compose.runtime.saveable.Saver<List<VisualEditSnapshot>,ArrayList<String>>(
-        save={ ArrayList(it.map { d -> kotlinx.serialization.json.Json.encodeToString(VisualEditSnapshot.serializer(),d) }) },
-        restore={ it.map { raw -> kotlinx.serialization.json.Json.decodeFromString(VisualEditSnapshot.serializer(),raw) } })
-    var undoHistory by rememberSaveable(sourceId,tool,stateSaver=snapshotSaver) { mutableStateOf(emptyList<VisualEditSnapshot>()) }
-    var redoHistory by rememberSaveable(sourceId,tool,stateSaver=snapshotSaver) { mutableStateOf(emptyList<VisualEditSnapshot>()) }
+    val historyModel:VisualDocumentEditorSession=androidx.lifecycle.viewmodel.compose.viewModel(key="visual-document-editor-session")
+    val session=remember(historyModel,sourceId,tool) {historyModel.forDocument("$tool:$sourceId")}
+    var timeline by session.timeline
+    val undoHistory=timeline.past
+    val redoHistory=timeline.future
     var lockedAspect by rememberSaveable(sourceId,tool) { mutableFloatStateOf(0f) }
     var zoom by rememberSaveable(sourceId,tool) { mutableFloatStateOf(1f) }
     var pan by remember(sourceId,tool) { mutableStateOf(Offset.Zero) }
@@ -129,9 +136,10 @@ internal fun VisualDocumentEditor(
     val currentDraft by rememberUpdatedState(draft)
     var beforeDrag by remember(sourceId,tool) { mutableStateOf<VisualRect?>(null) }
     var dragging by remember { mutableStateOf(false) }
-    // A freehand stroke is captured as it is drawn, not placed in a rectangle.
-    val inkKind = annotation && PdfAnnotationKind.from(currentDraft.text2).isFreehand
-    var inkPoints by remember(sourceId,tool) { mutableStateOf<List<Offset>>(emptyList()) }
+    // The pending pen gesture stays separate so cancellation cannot erase committed ink.
+    val inkKind by rememberUpdatedState(annotation && PdfAnnotationKind.from(currentDraft.text2).isFreehand)
+    var inkCapture by remember(sourceId,tool) { mutableStateOf(InkStrokeCapture()) }
+    var inkLimit by remember(sourceId,tool) {mutableStateOf(false)}
     // The guide line the rectangle is snapped to, drawn so the snap is visible.
     var snapGuide by remember { mutableStateOf<Offset?>(null) }
     LaunchedEffect(draft.cropLeft,draft.cropTop,draft.cropRight,draft.cropBottom,
@@ -146,19 +154,19 @@ internal fun VisualDocumentEditor(
     val density=LocalDensity.current
     val handlePx=with(density) { 34.dp.toPx() }
 
-    fun snapshot(box:VisualRect=rect)=VisualEditSnapshot(box,currentDraft.turns,currentDraft.flipX,currentDraft.flipY,lockedAspect)
+    fun snapshot(box:VisualRect=rect)=VisualEditSnapshot(box,currentDraft.turns,currentDraft.flipX,currentDraft.flipY,lockedAspect,currentDraft.inkPoints,currentDraft.inkStrokes)
     fun recordSnapshot() {
-        undoHistory=(undoHistory+snapshot()).takeLast(25)
-        redoHistory=emptyList()
+        timeline=timeline.record(snapshot())
     }
     fun recordEdit(previous:VisualRect,updated:VisualRect) {
-        if(previous!=updated) { undoHistory=(undoHistory+snapshot(previous)).takeLast(25);redoHistory=emptyList() }
+        if(previous!=updated) timeline=timeline.record(snapshot(previous))
     }
     fun restoreSnapshot(snapshot:VisualEditSnapshot) {
         rect=snapshot.rect;lockedAspect=snapshot.aspect
+        inkCapture=inkCapture.cancel();inkLimit=false
         latestEdit { it.copy(cropLeft=rect.left.serialized(),cropTop=rect.top.serialized(),cropRight=rect.right.serialized(),cropBottom=rect.bottom.serialized(),
             num2=if(annotation) rect.left.serialized() else it.num2,num3=if(annotation) rect.top.serialized() else it.num3,
-            turns=snapshot.turns,flipX=snapshot.flipX,flipY=snapshot.flipY) }
+            turns=snapshot.turns,flipX=snapshot.flipX,flipY=snapshot.flipY,inkPoints=snapshot.inkPoints,inkStrokes=snapshot.inkStrokes) }
     }
     fun saveRect(box:VisualRect) {
         val safe=box.valid()
@@ -183,54 +191,52 @@ internal fun VisualDocumentEditor(
                     "pdf_annotate" -> VisualRect(.1f,.1f,.34f,.24f)
                     else -> VisualRect.WHOLE
                 }
-                if(rect!=reset || lockedAspect!=0f) recordSnapshot()
+                if(rect!=reset || lockedAspect!=0f || draft.turns!=0 || draft.flipX || draft.flipY || draft.effectiveInkStrokes().isNotEmpty()) recordSnapshot()
                 lockedAspect=0f
                 rect=reset
-                saveRect(reset)
+                restoreSnapshot(VisualEditSnapshot(reset,0,false,false,0f))
+                zoom=1f;pan=Offset.Zero
                 haptics.selectionToggle()
             }) {
                 Icon(Icons.Rounded.RestartAlt,null)
                 Text(stringResource(R.string.visual_edit_reset))
             }
             IconButton(enabled=undoHistory.isNotEmpty(),onClick={
-                if(undoHistory.isNotEmpty()) {
-                    redoHistory=(redoHistory+snapshot()).takeLast(25)
-                    val previous=undoHistory.last()
-                    undoHistory=undoHistory.dropLast(1)
-                    restoreSnapshot(previous)
+                timeline.undo(snapshot())?.let {restored ->
+                    timeline=restored.timeline
+                    restoreSnapshot(restored.snapshot)
                     haptics.selectionToggle()
                 }
             }) { Icon(Icons.Rounded.Undo,stringResource(R.string.visual_edit_undo)) }
             IconButton(enabled=redoHistory.isNotEmpty(),onClick={
-                if(redoHistory.isNotEmpty()) {
-                    undoHistory=(undoHistory+snapshot()).takeLast(25)
-                    val next=redoHistory.last()
-                    redoHistory=redoHistory.dropLast(1)
-                    restoreSnapshot(next)
+                timeline.redo(snapshot())?.let {restored ->
+                    timeline=restored.timeline
+                    restoreSnapshot(restored.snapshot)
                     haptics.selectionToggle()
                 }
             }) { Icon(Icons.Rounded.Redo,stringResource(R.string.visual_edit_redo)) }
-            // A visible history: every recorded step is listed, so undo is discoverable
-            // and the user can jump straight back to an earlier state.
-            var historyOpen by rememberSaveable(sourceId,tool) { mutableStateOf(false) }
-            if(undoHistory.isNotEmpty()) {
-                TextButton(onClick={historyOpen=!historyOpen}) {
-                    Text(stringResource(R.string.visual_edit_history,undoHistory.size))
-                }
+        }
+        // A visible history: every recorded step is listed, so undo is discoverable
+        // and the user can jump straight back to an earlier state.
+        var historyOpen by rememberSaveable(sourceId,tool) { mutableStateOf(false) }
+        if(undoHistory.isNotEmpty()) {
+            TextButton(onClick={historyOpen=!historyOpen}) {
+                Text(stringResource(R.string.visual_edit_history,undoHistory.size))
             }
-            if(historyOpen && undoHistory.isNotEmpty()) {
-                Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                    undoHistory.asReversed().forEachIndexed { index,entry ->
-                        val step=undoHistory.size-index
-                        TextButton(onClick={
-                            redoHistory=emptyList()
-                            undoHistory=undoHistory.take(undoHistory.size-index)
-                            restoreSnapshot(entry)
-                            haptics.selectionToggle()
-                        },modifier=Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.visual_edit_history_step,step),
-                                style=QuietTheme.typography.metadata)
+        }
+        if(historyOpen && undoHistory.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                undoHistory.asReversed().forEachIndexed { index,_ ->
+                    val step=undoHistory.size-index
+                    TextButton(onClick={
+                        timeline.restore(undoHistory.size-index-1)?.let {restored ->
+                            timeline=restored.timeline
+                            restoreSnapshot(restored.snapshot)
                         }
+                        haptics.selectionToggle()
+                    },modifier=Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.visual_edit_history_step,step),
+                            style=QuietTheme.typography.metadata)
                     }
                 }
             }
@@ -273,7 +279,7 @@ internal fun VisualDocumentEditor(
                                     sourceHeight*(rect.bottom-rect.top)),
                             contentScale=ContentScale.Fit)
                     }
-                    if(annotation && draft.text1.isNotBlank()) {
+                    if(annotation && PdfAnnotationKind.from(draft.text2).carriesText && draft.text1.isNotBlank()) {
                         Text(draft.text1,
                             modifier=Modifier.absoluteOffset(x=sourceWidth*rect.left,
                                 y=sourceHeight*rect.top)
@@ -285,30 +291,31 @@ internal fun VisualDocumentEditor(
 
                     val active by rememberUpdatedState(rect)
                     var handle by remember { mutableStateOf(VisualHandle.NONE) }
-                    Canvas(Modifier.fillMaxSize().pointerInput(tool,sourceId,currentPage,handlePx) {
+                    Canvas(Modifier.fillMaxSize().pointerInput(tool,sourceId,currentPage,handlePx,draft.turns) {
                         detectDragGestures(
                             onDragStart={ tap ->
                                 if(inkKind) {
-                                    inkPoints=listOf(Offset(tap.x/size.width,tap.y/size.height))
+                                    inkCapture=InkStrokeCapture(PdfInkDrawing.strokeCapacity(currentDraft.effectiveInkStrokes()))
+                                        .append(tap.x/size.width,tap.y/size.height)
+                                    inkLimit=inkCapture.limitReached
                                     return@detectDragGestures
                                 }
                                 beforeDrag=active
                                 handle=active.hitHandle(tap.x/size.width,tap.y/size.height,
                                     size.width.toFloat(),size.height.toFloat(),handlePx)
-                                if(annotation && handle!=VisualHandle.NONE) handle=VisualHandle.BODY
                                 dragging=handle!=VisualHandle.NONE
                             },
                             onDrag={ change,delta ->
                                 if(inkKind) {
                                     change.consume()
-                                    inkPoints=inkPoints+Offset(change.position.x/size.width,change.position.y/size.height)
+                                    inkCapture=inkCapture.append(change.position.x/size.width,change.position.y/size.height)
+                                    inkLimit=inkCapture.limitReached
                                     return@detectDragGestures
                                 }
                                 if(handle!=VisualHandle.NONE) {
                                     change.consume()
-                                    val moved=active.draggedLocked(handle,delta.x/size.width,
-                                        delta.y/size.height,if(lockedAspect>0f) lockedAspect/sourceAspect else 0f).valid()
-                                    val snapped=SnapGuides.snap(moved,handle)
+                                    val snapped=active.draggedWithSnap(handle,delta.x/size.width,
+                                        delta.y/size.height,if(lockedAspect>0f) sourceCropAspect(lockedAspect,if(tool=="img_03") currentDraft.turns else 0)/sourceAspect else 0f)
                                     rect=snapped.rect
                                     if(snapped.snapped){
                                         // The guide is drawn in page coordinates, so it is
@@ -320,12 +327,14 @@ internal fun VisualDocumentEditor(
                             },
                             onDragEnd={
                                 if(inkKind) {
-                                    if(inkPoints.size>=2) {
-                                        val flat=inkPoints.flatMap { listOf(it.x,it.y) }
-                                        latestEdit { it.copy(inkPoints=flat) }
+                                    val before=currentDraft.effectiveInkStrokes()
+                                    val next=inkCapture.commitTo(before)
+                                    if(next!=before) {
+                                        recordSnapshot()
+                                        latestEdit { it.copy(inkPoints=emptyList(),inkStrokes=next) }
                                         haptics.selectionToggle()
                                     }
-                                    inkPoints=emptyList()
+                                    inkCapture=inkCapture.cancel()
                                     return@detectDragGestures
                                 }
                                 if(handle!=VisualHandle.NONE) {
@@ -339,6 +348,7 @@ internal fun VisualDocumentEditor(
                                 snapGuide=null
                             },
                             onDragCancel={
+                                inkCapture=inkCapture.cancel();inkLimit=false
                                 dragging=false
                                 handle=VisualHandle.NONE
                                 snapGuide=null
@@ -374,14 +384,17 @@ internal fun VisualDocumentEditor(
                                 PdfAnnotationKind.HIGHLIGHT ->
                                     drawRect(Color(1f,.92f,.23f).copy(alpha=.45f),Offset(x0,y0),rectSize)
                                 PdfAnnotationKind.UNDERLINE ->
-                                    drawLine(colors.primary,Offset(x0,y1),Offset(x1,y1),4.dp.toPx())
+                                    drawLine(Color(.10f,.60f,.30f),Offset(x0,y1),Offset(x1,y1),4.dp.toPx())
                                 PdfAnnotationKind.STRIKETHROUGH ->
-                                    drawLine(colors.primary,Offset(x0,(y0+y1)/2f),Offset(x1,(y0+y1)/2f),3.dp.toPx())
+                                    drawLine(Color(.85f,.20f,.20f),Offset(x0,(y0+y1)/2f),Offset(x1,(y0+y1)/2f),3.dp.toPx())
                                 PdfAnnotationKind.CIRCLE ->
-                                    drawOval(colors.primary.copy(alpha=.25f),Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
+                                    drawOval(Color(.10f,.30f,.70f),Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
+                                PdfAnnotationKind.SQUARE ->
+                                    drawRect(Color(.10f,.30f,.70f),Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
                                 PdfAnnotationKind.NOTE ->
                                     drawRect(Color(1f,.85f,.3f).copy(alpha=.55f),Offset(x0,y0),
                                         androidx.compose.ui.geometry.Size(24.dp.toPx(),24.dp.toPx()))
+                                PdfAnnotationKind.INK -> Unit
                                 else ->
                                     drawRect(colors.primary.copy(alpha=.10f),Offset(x0,y0),rectSize)
                             }
@@ -389,14 +402,17 @@ internal fun VisualDocumentEditor(
                             drawRect(colors.primary.copy(alpha=.10f),Offset(x0,y0),rectSize)
                         }
                         if(inkKind) {
-                            // The stroke is drawn as the user draws it.
-                            if(inkPoints.size>=2) {
-                                val path=androidx.compose.ui.graphics.Path()
-                                inkPoints.forEachIndexed { index,point ->
-                                    val px=point.x*size.width; val py=point.y*size.height
-                                    if(index==0) path.moveTo(px,py) else path.lineTo(px,py)
+                            val visibleInk=currentDraft.effectiveInkStrokes()+listOf(inkCapture.points)
+                            visibleInk.forEach {stroke ->
+                                if(stroke.size>=4) {
+                                    val path=androidx.compose.ui.graphics.Path()
+                                    for(index in 0 until stroke.size-1 step 2) {
+                                        val px=stroke[index].coerceIn(0f,1f)*size.width
+                                        val py=stroke[index+1].coerceIn(0f,1f)*size.height
+                                        if(index==0) path.moveTo(px,py) else path.lineTo(px,py)
+                                    }
+                                    drawPath(path,Color.Black,style=Stroke(PdfInkDrawing.STROKE_WIDTH_PT*size.width/frame.width))
                                 }
-                                drawPath(path,colors.primary,style=Stroke(4.dp.toPx()))
                             }
                         } else {
                         drawRect(colors.primary,Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
@@ -418,29 +434,15 @@ internal fun VisualDocumentEditor(
             }
             }
             TextButton(onClick={zoom=1f;pan=Offset.Zero}) { Text(stringResource(R.string.editor_fit_preview)) }
-            Text(stringResource(R.string.visual_edit_drag_hint),
+            Text(stringResource(if(inkKind) R.string.interactive_ink_hint else R.string.visual_edit_drag_hint),
                 style=QuietTheme.typography.metadata,color=colors.onSurfaceVariant)
+            if(inkKind && inkLimit) Text(stringResource(R.string.interactive_ink_limit),
+                style=QuietTheme.typography.metadata,color=colors.error)
             if(sourceIsPdf && pageCount>1) {
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center,
-                    verticalAlignment=Alignment.CenterVertically) {
-                    IconButton(enabled=currentPage>1,onClick={
-                        currentPage--
-                        if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact"))
-                            latestEdit { it.copy(num1=currentPage.toString()) }
-                    }) {
-                        Icon(Icons.AutoMirrored.Rounded.NavigateBefore,
-                            stringResource(R.string.action_previous))
-                    }
-                    Text(stringResource(R.string.ui_page_indicator,currentPage,pageCount),
-                        style=QuietTheme.typography.metadataStrong)
-                    IconButton(enabled=currentPage<pageCount,onClick={
-                        currentPage++
-                        if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact"))
-                            latestEdit { it.copy(num1=currentPage.toString()) }
-                    }) {
-                        Icon(Icons.AutoMirrored.Rounded.NavigateNext,
-                            stringResource(R.string.action_next))
-                    }
+                DocumentPageControls(currentPage,pageCount) {page ->
+                    currentPage=page
+                    if(tool in setOf("pdf_image","pdf_signature","pdf_annotate","pdf_redact"))
+                        latestEdit { it.copy(num1=page.toString()) }
                 }
                 if(tool=="pdf_crop") {
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -454,34 +456,16 @@ internal fun VisualDocumentEditor(
                 }
             }
             if(cropTool) {
-                if(!annotation) {
-                    // The handles and these fields are two views of the same rectangle.
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        CropNumberField(stringResource(R.string.field_left),draft.cropLeft,Modifier.weight(1f)) { value ->
-                            recordSnapshot();val next=rect.copy(left=value);rect=next;saveRect(next);haptics.selectionToggle()
-                        }
-                        CropNumberField(stringResource(R.string.field_top),draft.cropTop,Modifier.weight(1f)) { value ->
-                            recordSnapshot();val next=rect.copy(top=value);rect=next;saveRect(next);haptics.selectionToggle()
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        CropNumberField(stringResource(R.string.field_right),draft.cropRight,Modifier.weight(1f)) { value ->
-                            recordSnapshot();val next=rect.copy(right=value);rect=next;saveRect(next);haptics.selectionToggle()
-                        }
-                        CropNumberField(stringResource(R.string.field_bottom),draft.cropBottom,Modifier.weight(1f)) { value ->
-                            recordSnapshot();val next=rect.copy(bottom=value);rect=next;saveRect(next);haptics.selectionToggle()
-                        }
-                    }
-                }
                 Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     listOf(
                         R.string.visual_edit_free to 0f,
                         R.string.visual_edit_square to 1f,
-                        R.string.visual_edit_document to (210f/297f)
+                        R.string.visual_edit_document to (210f/297f),
+                        R.string.visual_landscape to (16f/9f)
                     ).forEach { (label,ratio) ->
                         FilterChip(lockedAspect==ratio,onClick={
                             val box=if(ratio==0f) VisualRect.WHOLE
-                                else VisualRect.fitAspect(frame.width,frame.height,ratio)
+                                else VisualRect.fitAspect(frame.width,frame.height,sourceCropAspect(ratio,if(tool=="img_03") draft.turns else 0))
                             if(rect!=box || lockedAspect!=ratio) recordSnapshot()
                             lockedAspect=ratio
                             rect=box
@@ -493,7 +477,9 @@ internal fun VisualDocumentEditor(
                 if(tool=="img_03") {
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick={
-                            recordSnapshot();latestEdit { it.copy(turns=(it.turns+1)%4) }
+                            recordSnapshot()
+                            if(lockedAspect>0f) lockedAspect=1f/lockedAspect
+                            latestEdit { it.copy(turns=(it.turns+1)%4) }
                         },modifier=Modifier.weight(1f)) {
                             Icon(Icons.AutoMirrored.Rounded.RotateRight,null,Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
@@ -512,22 +498,30 @@ internal fun VisualDocumentEditor(
             if(tool=="img_03") OutlinedButton(onClick={ recordSnapshot();latestEdit { it.copy(flipY=!it.flipY) } }) {
                 Text(stringResource(R.string.editor_flip_vertical))
             }
-            Text(stringResource(R.string.editor_adjust_region),style=QuietTheme.typography.metadataStrong)
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            if(inkKind) TextButton(onClick={
+                recordSnapshot();inkCapture=inkCapture.cancel();inkLimit=false
+                latestEdit { it.copy(inkPoints=emptyList(),inkStrokes=emptyList()) }
+            },enabled=draft.effectiveInkStrokes().isNotEmpty()) { Text(stringResource(R.string.interactive_clear_drawing)) }
+            if(!inkKind) Text(stringResource(R.string.editor_adjust_region),style=QuietTheme.typography.metadataStrong)
+            if(!inkKind) Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 listOf(R.string.editor_move_left to (-.02f to 0f),R.string.editor_move_right to (.02f to 0f),
                     R.string.editor_move_up to (0f to -.02f),R.string.editor_move_down to (0f to .02f)).forEach { (label,delta) ->
                     OutlinedButton(onClick={val next=rect.dragged(VisualHandle.BODY,delta.first,delta.second);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
                 }
             }
-            if(!annotation) Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            if(!inkKind) Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 listOf(R.string.editor_smaller to -.02f,R.string.editor_larger to .02f).forEach { (label,delta) ->
-                    OutlinedButton(onClick={val next=rect.draggedLocked(VisualHandle.BOTTOM_RIGHT,delta,delta,if(lockedAspect>0f) lockedAspect/sourceAspect else 0f);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
+                    OutlinedButton(onClick={val next=rect.draggedLocked(VisualHandle.BOTTOM_RIGHT,delta,delta,if(lockedAspect>0f) sourceCropAspect(lockedAspect,if(tool=="img_03") currentDraft.turns else 0)/sourceAspect else 0f);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
                 }
             }
             if(tool=="pdf_redact") Text(stringResource(R.string.visual_redact_warning),
                 style=QuietTheme.typography.metadata,color=colors.error)
         } else if(failed) {
             Text(stringResource(R.string.msg_preview_unavailable),color=colors.error)
+            TextButton(onClick={retry++}) {Text(stringResource(R.string.interactive_preview_retry))}
+            if(sourceIsPdf && currentPage>1) TextButton(onClick={
+                currentPage=1;latestEdit {it.copy(num1="1")};retry++
+            }) {Text(stringResource(R.string.interactive_first_page))}
         } else QuietShimmerSkeleton()
 
         if(tool=="pdf_signature" && overlayId==null) {

@@ -27,6 +27,27 @@ fun mediaFileTests(test:(String,()->Unit)->Unit) {
             block(dir,video,audio)
         } finally { dir.deleteRecursively() }
     }
+    test("production selectors resolve numeric video and audio IDs in the real bundled extractor") {
+        val dir=Files.createTempDirectory("uu-real-selector-").toFile()
+        try {
+            val assets=File("app/src/media/assets/media").absoluteFile
+            val metadata=File(dir,"fixture.info.json").apply {
+                writeText("""{"id":"fixture","title":"Fixture","extractor":"fixture","webpage_url":"https://example.org/watch/fixture","formats":[{"format_id":"137","url":"https://example.org/video.mp4","ext":"mp4","vcodec":"avc1","acodec":"none","height":1080},{"format_id":"140","url":"https://example.org/audio.m4a","ext":"m4a","vcodec":"none","acodec":"mp4a"}]}""")
+            }
+            val source=MediaAsset("fixture","fixture","Fixture",1.0,listOf(
+                MediaFormat("137","mp4","avc1","none",height=1080),
+                MediaFormat("140","m4a","none","mp4a")))
+            for(mode in MediaMode.entries) {
+                val choice=MediaCatalog.choices(source,mode).first()
+                val args=MediaArguments.download("https://example.org/watch/fixture",choice).dropLast(2)+
+                    listOf("--simulate","--load-info-json",metadata.absolutePath,"--print","%(format_id)s")
+                val result=runner.run(MediaProcessSpec(listOf("python3",File(assets,"bootstrap.py").absolutePath,
+                    File(assets,"yt-dlp").absolutePath)+args,dir,timeoutMillis=30000,stdoutLimit=65536))
+                check(result.exitCode==0) { "Exact $mode selection failed: ${result.stderr}" }
+                check(result.stdout.trim()==if(mode==MediaMode.VIDEO) "137+140" else "140") { result.stdout }
+            }
+        } finally { dir.deleteRecursively() }
+    }
     test("real FFmpeg merges separate video and audio without changing resolution") {
         fixture { dir,video,audio ->
             val output=File(dir,"media.mp4")

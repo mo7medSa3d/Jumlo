@@ -110,12 +110,16 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     }
 
     val queue=remember(form.sourceIds,imported) {val indexed=imported.associateBy {it.id};form.sourceIds.mapNotNull(indexed::get)}
-    val preview=queue.find {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
+    var selectedSourceId by rememberSaveable(tool) { mutableStateOf<String?>(null) }
+    val preview=queue.firstOrNull {it.id==selectedSourceId && (it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf")}
+        ?: queue.firstOrNull {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
+    var formFieldsReady by remember(tool,form.sourceIds) {mutableStateOf(tool!="pdf_forms")}
+    val visualPageSelection=tool in setOf("pdf_04","pdf_05","pdf_06","pdf_07","pdf_crop","pdf_stamp","pdf_ocr")
     val editorSource=if(tool in setOf("pdf_image","pdf_signature"))
         queue.firstOrNull { it.mimeType=="application/pdf" } else preview
     val overlayImage=if(tool in setOf("pdf_image","pdf_signature"))
         queue.firstOrNull { it.mimeType?.startsWith("image/")==true } else null
-    val minimum=if(tool in setOf("pdf_03","pdf_compare","img_compare","pdf_signature","pdf_image") ||
+    val minimum=if(tool in setOf("pdf_03","pdf_compare","img_compare","pdf_signature","pdf_image","img_join","img_stitch") ||
         (tool=="img_watermark" && form.flag1)) 2 else 1
     val inputMismatch=remember(tool,queue) { queue.any {source->
         val mime=source.mimeType
@@ -150,9 +154,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     }
     val countValid=when(tool) {
         "pdf_07","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
-        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms","pdf_clean" -> queue.size==1
+        "pdf_compress","pdf_stamp","pdf_annotate","pdf_forms","pdf_clean","pdf_protect","pdf_ocr" -> queue.size==1
         "pdf_image","pdf_signature","pdf_compare","img_compare" -> queue.size==2
         "pdf_metadata" -> queue.size in 1..2
+        "file_encrypted_zip" -> !form.flag1 || queue.size==1
         else -> true
     }
     val renameInput=remember(form,queue) {
@@ -171,9 +176,12 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     // Never enable a new pattern using the previous pattern's successful preview.
     val renamePreview=computedRename?.takeIf {it.input==renameInput}?.result
     val proposedNames=renamePreview?.getOrNull()
-    val ready=CapabilityRegistry.enabled(tool) && !busy && !inputMismatch && settingsError==null && countValid &&
+    val ready=CapabilityRegistry.enabled(tool) && !busy && !inputMismatch && settingsError==null && countValid && formFieldsReady &&
+        (tool!="file_encrypted_zip" || form.secret1.isNotEmpty()) &&
+        (tool!="pdf_protect" || if(form.flag1) form.secret1.isNotEmpty() else form.secret2.isNotEmpty()) &&
         (tool!="pdf_05" || !form.flag2 || form.flag1 || form.pages.isNotBlank()) &&
         (tool!="file_batch_rename" || proposedNames!=null) &&
+        (tool!="pdf_annotate" || !com.jumlo.app.core.PdfAnnotationKind.from(form.text2).isFreehand || form.effectiveInkStrokes().isNotEmpty()) &&
         (tool=="webpage_pdf" || driveImport || if(download) urls.isNotBlank() else queue.size>=minimum)
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max=840.dp).align(Alignment.CenterHorizontally),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -193,14 +201,20 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
                 if(queue.isEmpty()) item {QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body))}
+                if(queue.size>1) item("visual-source-order") {
+                    SourceOrderStrip(vm,queue,preview?.id,
+                        if(tool=="img_watermark" && form.flag1) queue.getOrNull(1)?.id else null,
+                        onSelect={selectedSourceId=it},onMove=vm::moveSource)
+                }
                 if(preview!=null && tool !in setOf(
-                    "img_03","pdf_crop","pdf_redact","pdf_signature","pdf_annotate","pdf_image"
+                    "img_03","img_02","img_adjust","img_join","img_stitch","img_watermark","pdf_crop","pdf_redact","pdf_signature","pdf_annotate","pdf_image","pdf_stamp","pdf_02"
                 ) && !(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1))
                     item(key="preview-${preview.id}") {
                         InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer,
-                            adjustment=if(tool=="img_adjust") form else null)
+                            adjustment=if(tool=="img_adjust") form else null,
+                            raster=if(tool=="pdf_07") form else null)
                     }
-                if(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1 && queue.single().mimeType=="application/pdf")
+                if(visualPageSelection && queue.size==1 && queue.single().mimeType=="application/pdf")
                     item(key="pdf-visual-editor-${queue.single().id}") { PdfPageEditor(vm,queue.single().id,form,vm::updateForm,
                         onPrint={pages->onPrintPages?.invoke(queue.single().id,pages)},printEnabled=onPrintPages!=null) }
                 if(editorSource!=null && tool in setOf(
@@ -222,13 +236,29 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if(tool in setOf("img_02","img_adjust","img_04","pdf_compress","pdf_07","pdf_02","img_watermark")) {
+                if(tool in setOf("img_02","img_adjust","img_watermark","img_join","img_stitch") && preview!=null && !inputMismatch) item("transformed-image-preview") {
+                    val ids=when {
+                        tool in setOf("img_join","img_stitch") -> queue.map {it.id}
+                        tool=="img_watermark" && form.flag1 -> listOfNotNull(
+                            preview.takeUnless {it.id==queue.getOrNull(1)?.id}?.id ?: queue.firstOrNull()?.id,
+                            queue.getOrNull(1)?.id)
+                        else -> listOf(preview.id)
+                    }
+                    ImageResultPreview(vm,ids,form)
+                }
+                if(tool.startsWith("img_") || tool in setOf("pdf_compress","pdf_07","pdf_02")) {
                     item(key="visual-intuitive-controls") {
                         VisualImageSettings(form,vm::updateForm)
                     }
                 }
-                if(tool=="pdf_02" && queue.isNotEmpty()) item("paper-preview") {
-                    ImagePdfPreview(vm,queue.first().id,form,vm::updateForm)
+                if(tool=="pdf_02" && preview!=null) item("paper-preview") {
+                    ImagePdfPreview(vm,preview.id,form,vm::updateForm)
+                }
+                if(tool=="pdf_forms" && queue.size==1 && !inputMismatch) item("pdf-form-fields") {
+                    PdfFormEditor(vm,queue.single().id,form,vm::updateForm,onReady={formFieldsReady=it})
+                }
+                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","sha256","pdf_protect","pdf_clean","pdf_metadata","webpage_pdf","img_exif")) item("primary-tool-settings") {
+                    WorkspaceFields(vm,form,vm::updateForm,onGoogleSignIn)
                 }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
                 if(queue.isNotEmpty() && !countValid) item(key="source-count-help") {
@@ -357,7 +387,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
 @OptIn(ExperimentalFoundationApi::class)
 @Composable private fun InputPreview(
     vm:AppViewModel,sourceId:String,reduceMotion:Boolean=false,
-    isFullViewer:Boolean=false,adjustment:WorkspaceDraft?=null
+    isFullViewer:Boolean=false,adjustment:WorkspaceDraft?=null,raster:WorkspaceDraft?=null
 ) {
     var pageCount by rememberSaveable(sourceId) { mutableIntStateOf(1) }
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { pageCount.coerceAtLeast(1) })
@@ -411,15 +441,16 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             loading = false
                         }
                     }
-                    DisposableEffect(frame) {
-                        val previous = frame
-                        onDispose { previous?.bitmap?.takeUnless { it.isRecycled }?.recycle() }
+                    LaunchedEffect(frame,pagerState.currentPage) {
+                        if(pageIndex==pagerState.currentPage) currentDims=frame?.let {it.width to it.height}
                     }
+                    // RenderThread can retain a displayed bitmap after composition disposal.
+                    // Release through normal ownership instead of recycling a live frame.
 
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(sourceId, pageNumber) {
+                            .pointerInput(sourceId, pageNumber,pagerState.currentPage) {
                                 detectTapGestures(
                                     onDoubleTap = {
                                         if (scale > 1.05f) {
@@ -431,7 +462,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                                     }
                                 )
                             }
-                            .pointerInput(sourceId, pageNumber) {
+                            .pointerInput(sourceId, pageNumber,pagerState.currentPage) {
                                 detectTransformGestures { _, pan, zoom, _ ->
                                     val newScale = (scale * zoom).coerceIn(1f, 4f)
                                     scale = newScale
@@ -467,15 +498,16 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             )
                         }
                         frame?.let { current ->
-                            val adjustmentFilter=remember(adjustment?.num1,adjustment?.num2,adjustment?.num3) {
-                                if(adjustment?.toolId!="img_adjust") null else {
+                            val adjustmentFilter=remember(adjustment?.num1,adjustment?.num2,adjustment?.num3,raster?.grayscale) {
+                                if(raster?.grayscale==true) ColorFilter.colorMatrix(ColorMatrix().apply {setToSaturation(0f)})
+                                else if(adjustment?.toolId!="img_adjust") null else {
                                     val brightness=(adjustment.num1.toFloatOrNull()?:0f).coerceIn(-100f,100f)
                                     val contrast=(adjustment.num2.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
                                     val saturation=(adjustment.num3.toFloatOrNull()?:100f).coerceIn(0f,300f)/100f
                                     val filterMatrix=ColorMatrix().apply {
                                         setToSaturation(saturation)
                                         val matrixValues=values
-                                        val shift=(1f-contrast)*128f+brightness*2.55f
+                                        val shift=brightness*1.27f
                                         for(row in 0..2) {
                                             for(col in 0..2) matrixValues[row*5+col]*=contrast
                                             matrixValues[row*5+4]=shift
@@ -537,7 +569,11 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     currentDims?.let { (w, h) ->
-                        Text("${w} × ${h}", style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val dimensions=if(raster!=null) {
+                            val scale=draftNumber(raster.dpi,144).coerceIn(36,600)/72f
+                            "${kotlin.math.round(w*scale).toInt()} × ${kotlin.math.round(h*scale).toInt()} px"
+                        } else "${w} × ${h}"
+                        Text(dimensions,style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if (pageCount > 1) {
@@ -583,7 +619,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
 @Composable fun TargetImageSettings(form:WorkspaceDraft,edit:((WorkspaceDraft)->WorkspaceDraft)->Unit) {
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.ui_target_jpeg_policy),style=QuietTheme.typography.metadata)
-        Field(stringResource(R.string.field_target_bytes),form.num1.ifBlank {"200000"},{v->edit {it.copy(num1=v)}},true)
+        ImageTargetControls(form,edit)
         Field(stringResource(R.string.field_output_prefix),form.prefix,{v->edit {it.copy(prefix=v)}})
     }
 }
@@ -610,7 +646,6 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
                 if(kind.carriesText) Field(stringResource(R.string.field_text),form.text1,{v->edit {it.copy(text1=v)}})
-                Field(stringResource(R.string.field_page_number),form.num1,{v->edit {it.copy(num1=v)}},true)
             }
         }
     }
@@ -720,7 +755,13 @@ private fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int =
                     Toggle(stringResource(R.string.field_grayscale),f.grayscale) {v->edit {it.copy(grayscale=v)}}
                     Text(stringResource(R.string.field_raster_note),style=QuietTheme.typography.metadata)
                 }
-                "file_07" -> { Field(stringResource(R.string.field_zip_level),f.zipLevel,{v->edit {it.copy(zipLevel=v)}},true);Text(stringResource(R.string.field_zip_create_note),style=QuietTheme.typography.metadata) }
+                "file_07" -> {
+                    PresetChoices(stringResource(R.string.field_zip_level),listOf(
+                        "0" to R.string.interactive_zip_store,"1" to R.string.interactive_zip_fast,
+                        "6" to R.string.interactive_zip_balanced,"9" to R.string.interactive_zip_maximum),f.zipLevel) {v->edit {it.copy(zipLevel=v)}}
+                    InteractiveIntSlider(stringResource(R.string.field_zip_level),draftNumber(f.zipLevel,6),0,9,6) {v->edit {it.copy(zipLevel=v.toString())}}
+                    Text(stringResource(R.string.interactive_zip_note),style=QuietTheme.typography.metadata)
+                }
                 "file_08" -> Text(stringResource(R.string.field_zip_extract_note),style=QuietTheme.typography.metadata)
                 "sha256" -> Field(stringResource(R.string.field_expected_sha256),f.expectedHash,{v->edit {it.copy(expectedHash=v)}})
                 "pdf_03" -> { Text(stringResource(R.string.field_merge_note),style=QuietTheme.typography.metadata) }
@@ -796,7 +837,7 @@ private fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int =
                     Toggle(stringResource(R.string.field_remove_title),f.flag1){v->edit {it.copy(flag1=v)}}
                     Text(stringResource(R.string.field_clean_note),style=QuietTheme.typography.metadata)
                 }
-                "pdf_metadata" -> { Field(stringResource(R.string.field_title),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_author),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_subject),f.text3,{v->edit {it.copy(text3=v)}}); Field(stringResource(R.string.field_keywords),f.text4,{v->edit {it.copy(text4=v)}}); Field(stringResource(R.string.field_insert_at_page),f.num1,{v->edit {it.copy(num1=v)}},true) }
+                "pdf_metadata" -> { Field(stringResource(R.string.field_title),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_author),f.text2,{v->edit {it.copy(text2=v)}}); Field(stringResource(R.string.field_subject),f.text3,{v->edit {it.copy(text3=v)}}); Field(stringResource(R.string.field_keywords),f.text4,{v->edit {it.copy(text4=v)}}); if(f.sourceIds.size==2) PdfInsertionControls(vm,f,edit) }
                 "pdf_protect" -> { Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true); if(!f.flag1) Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}},secret=true); Text(stringResource(R.string.field_protect_note),style=QuietTheme.typography.metadata) }
                 "pdf_forms" -> { Field(stringResource(R.string.field_forms_json),f.text1,{v->edit {it.copy(text1=v)}}); Toggle(stringResource(R.string.field_flatten_form),f.flag1) {v->edit {it.copy(flag1=v)}} }
                 "pdf_ocr" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Text(stringResource(R.string.field_ocr_note),style=QuietTheme.typography.metadata) }
@@ -822,7 +863,7 @@ private fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int =
                 "img_adjust" -> { Field(stringResource(R.string.field_brightness),f.num1,{v->edit {it.copy(num1=v)}},true); Field(stringResource(R.string.field_contrast),f.num2,{v->edit {it.copy(num2=v)}},true); Field(stringResource(R.string.field_saturation),f.num3,{v->edit {it.copy(num3=v)}},true); Field(stringResource(R.string.field_padding_px),f.num4,{v->edit {it.copy(num4=v)}},true) }
                 "img_target" -> TargetImageSettings(f,edit)
                 "img_compare" -> Text(stringResource(R.string.field_compare_img_note),style=QuietTheme.typography.metadata)
-                "file_batch_rename" -> { Field(stringResource(R.string.field_rename_pattern),f.text1,{v->edit {it.copy(text1=v)}}); Field(stringResource(R.string.field_start_number),f.num1,{v->edit {it.copy(num1=v)}},true); Text(stringResource(R.string.field_rename_note),style=QuietTheme.typography.metadata); Text(stringResource(R.string.ui_rename_copy_note),style=QuietTheme.typography.metadata) }
+                "file_batch_rename" -> { Field(stringResource(R.string.field_rename_pattern),f.text1,{v->edit {it.copy(text1=v)}}); InteractiveCounter(stringResource(R.string.field_start_number),draftNumber(f.num1,1),0,1000000) {v->edit {it.copy(num1=v.toString())}}; Text(stringResource(R.string.field_rename_note),style=QuietTheme.typography.metadata); Text(stringResource(R.string.ui_rename_copy_note),style=QuietTheme.typography.metadata) }
                 "file_duplicates" -> Text(stringResource(R.string.field_duplicates_note),style=QuietTheme.typography.metadata)
                 "file_trash" -> Text(stringResource(R.string.field_trash_note),style=QuietTheme.typography.metadata)
                 "file_encrypted_zip" -> { Toggle(stringResource(R.string.field_extract_instead),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true); Text(stringResource(R.string.field_encrypted_zip_note),style=QuietTheme.typography.metadata) }

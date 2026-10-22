@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="brand_splash_tagline">Make files flow.</string>
+    <string name="brand_splash_tagline">Create. Scan. Make it flow.</string>
     <string name="brand_downloads_tagline">Everything in motion.</string>
     <string name="brand_download_active">Active</string>
     <string name="brand_download_done">Finished</string>

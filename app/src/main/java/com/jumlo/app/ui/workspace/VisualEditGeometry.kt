@@ -86,6 +86,9 @@ internal enum class VisualHandle {
     NONE, BODY, TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
 }
 
+internal fun sourceCropAspect(displayAspect:Float,quarterTurns:Int):Float =
+    if(displayAspect>0f && quarterTurns%2!=0) 1f/displayAspect else displayAspect
+
 /**
  * The result of a snapped drag: the rectangle, and the guide line that was hit.
  * The UI draws the guide and fires a haptic tick, so the user feels the snap
@@ -179,7 +182,10 @@ internal fun VisualRect.draggedLocked(handle:VisualHandle,dx:Float,dy:Float,aspe
     val anchorX=if(leftHandle) right else left;val anchorY=if(topHandle) bottom else top
     val movingX=(if(leftHandle) left else right)+dx
     val movingY=(if(topHandle) top else bottom)+dy
-    val requestedW=kotlin.math.max(kotlin.math.abs(movingX-anchorX),kotlin.math.abs(movingY-anchorY)*aspect)
+    // Crossing the fixed corner shrinks to the minimum. Absolute distances made
+    // the rectangle grow again after the pointer crossed its opposite corner.
+    val requestedW=kotlin.math.max(if(leftHandle) anchorX-movingX else movingX-anchorX,
+        (if(topHandle) anchorY-movingY else movingY-anchorY)*aspect)
     val maxW=if(leftHandle) anchorX else 1f-anchorX
     val maxH=if(topHandle) anchorY else 1f-anchorY
     val w=requestedW.coerceIn(minOf(kotlin.math.max(VisualRect.MIN_EDGE,VisualRect.MIN_EDGE*aspect),maxW,maxH*aspect),minOf(maxW,maxH*aspect))
@@ -187,7 +193,14 @@ internal fun VisualRect.draggedLocked(handle:VisualHandle,dx:Float,dy:Float,aspe
     return VisualRect(if(leftHandle) anchorX-w else anchorX,if(topHandle) anchorY-h else anchorY,if(leftHandle) anchorX else anchorX+w,if(topHandle) anchorY else anchorY+h)
 }
 
+/** Independent edge snapping must never break a selected crop aspect ratio. */
+internal fun VisualRect.draggedWithSnap(handle:VisualHandle,dx:Float,dy:Float,aspect:Float):SnapResult {
+    val moved=draggedLocked(handle,dx,dy,aspect)
+    return if(aspect>0f && handle!=VisualHandle.BODY) SnapResult(moved)
+        else SnapGuides.snap(moved.valid(),handle)
+}
 
-/** Only editor values enter the saved-state bundle; source metadata and secrets are excluded. */
+/** Only editor values enter a history snapshot; source metadata and secrets are excluded. */
 @kotlinx.serialization.Serializable
-internal data class VisualEditSnapshot(val rect:VisualRect,val turns:Int,val flipX:Boolean,val flipY:Boolean,val aspect:Float)
+internal data class VisualEditSnapshot(val rect:VisualRect,val turns:Int,val flipX:Boolean,val flipY:Boolean,val aspect:Float,
+    val inkPoints:List<Float> = emptyList(),val inkStrokes:List<List<Float>> = emptyList())

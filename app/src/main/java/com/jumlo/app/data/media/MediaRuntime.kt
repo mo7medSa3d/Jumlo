@@ -3,7 +3,7 @@ package com.jumlo.app.data.media
 import com.jumlo.app.core.media.*
 import java.io.File
 
-/** A real, optional APK-packaged runtime. The base variant never simulates results. */
+/** Analyzer/downloader contract shared by the normal full and explicit lightweight builds. */
 interface MediaRuntime {
     fun inspect(url: String, allowHttp: Boolean, check: () -> Unit = {}): MediaAsset
     fun download(url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,

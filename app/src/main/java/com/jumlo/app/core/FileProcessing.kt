@@ -117,7 +117,8 @@ object ArchiveCore {
     fun extract(input: File, out: File, limits: ArchiveLimits, checkCancel: () -> Unit = {}): List<File> {
         require(input.isFile && !out.exists()) { "INVALID_ARCHIVE_REQUEST" }
         // Validate the central directory, including paths, before creating anything.
-        val planned=linkedSetOf<String>(); val folded=HashSet<String>()
+        val planned=linkedMapOf<String,Triple<Long,Long,Boolean>>(); val folded=HashSet<String>()
+        var declaredBytes=0L
         ZipFile(input).use { zip ->
             require(zip.size()<=limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
             val entries=zip.entries()
@@ -127,8 +128,10 @@ object ArchiveCore {
                 require(!e.isDirectory || e.size==0L) { "ARCHIVE_DIRECTORY_PAYLOAD" }
                 val key=normalized
                 require(folded.add(key.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
-                require(e.size<=limits.maxBytes) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
-                planned.add(e.name)
+                require(e.size>=0L && e.crc>=0L) { "ARCHIVE_VERIFICATION_FAILED" }
+                require(e.size<=limits.maxBytes-declaredBytes) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
+                declaredBytes+=e.size
+                planned[e.name]=Triple(e.size,e.crc,e.isDirectory)
             }
         }
         val files=mutableListOf<File>(); var total=0L; var count=0
@@ -137,8 +140,11 @@ object ArchiveCore {
             ZipInputStream(BufferedInputStream(input.inputStream())).use { zip ->
                 while(true) {
                     checkCancel(); val e=zip.nextEntry ?: break
-                    count++; require(count<=limits.maxEntries && planned.remove(e.name)) { "ARCHIVE_DIRECTORY_MISMATCH" }
+                    count++; require(count<=limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
+                    val expected=planned.remove(e.name) ?: throw IllegalArgumentException("ARCHIVE_DIRECTORY_MISMATCH")
+                    require(e.isDirectory==expected.third) { "ARCHIVE_DIRECTORY_MISMATCH" }
                     val target=SafeNames.entry(out,e.name,limits.maxDepth)
+                    val checksum=CRC32(); var entryBytes=0L
                     if(e.isDirectory) {
                         require(zip.read()==-1) { "ARCHIVE_DIRECTORY_PAYLOAD" }
                         require(target.mkdirs() || target.isDirectory) { "OUTPUT_CREATE_FAILED" }
@@ -150,7 +156,7 @@ object ArchiveCore {
                             while(true) {
                                 checkCancel(); val n=zip.read(buf); if(n<0) break
                                 require(n.toLong()<=limits.maxBytes-total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
-                                if(n>0) { sink.write(buf,0,n); total+=n }
+                                if(n>0) { sink.write(buf,0,n); total+=n; entryBytes+=n; checksum.update(buf,0,n) }
                             }
                             sink.fd.sync()
                         }
@@ -158,6 +164,10 @@ object ArchiveCore {
                     }
                     // ZipInputStream verifies CRC and uncompressed length while reading/closing.
                     zip.closeEntry()
+                    // A valid local stream is not enough: another reader uses
+                    // the central directory. Reject archives whose two records
+                    // disagree about their size or checksum.
+                    require(entryBytes==expected.first && checksum.value==expected.second) { "ARCHIVE_VERIFICATION_FAILED" }
                 }
             }
             require(planned.isEmpty()) { "ARCHIVE_DIRECTORY_MISMATCH" }

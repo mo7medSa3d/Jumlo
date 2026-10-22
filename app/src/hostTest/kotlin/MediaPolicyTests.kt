@@ -27,7 +27,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
     }
     test("reserved format names are treated as literal IDs rather than selector aliases") {
         val c=MediaCatalog.choices(asset.copy(formats=listOf(muxed.copy(id="best"))),MediaMode.VIDEO).single()
-        check(MediaCatalog.validateSelector(c)=="best*[format_id=best]")
+        check(MediaCatalog.validateSelector(c)=="best*[format_id='best']")
     }
     test("an uncertain media enqueue retries the same prepared identity") {
         val slot=MediaSubmissionSlot<String>();var calls=0
@@ -51,6 +51,21 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
     }
     test("media exposes measured qualities only, sorted by resolution") {
         check(MediaCatalog.choices(asset,MediaMode.VIDEO).map { it.expectedHeight } == listOf(1080,720,360))
+    }
+    test("portrait quality labels and balanced selection use the short display edge") {
+        val vertical=asset.copy(formats=listOf(
+            muxed.copy(id="portrait4k",width=2160,height=3840),
+            muxed.copy(id="portrait1080",width=1080,height=1920),
+            muxed.copy(id="portrait720",width=720,height=1280)))
+        val choices=MediaCatalog.choices(vertical,MediaMode.VIDEO)
+        val selected=MediaCatalog.preferred(choices,MediaMode.VIDEO)!!
+        check(selected.formatIds==listOf("portrait1080"))
+        check(MediaCatalog.qualityTitle(selected)=="1080p Full HD")
+        check(selected.expectedHeight==1920) // Track validation keeps the real coded height.
+    }
+    test("audio quality never describes the whole video bitrate as audio bitrate") {
+        val choice=MediaCatalog.choices(asset.copy(formats=listOf(muxed.copy(bitrateKbps=4500.0))),MediaMode.AUDIO).single()
+        check(MediaCatalog.qualityTitle(choice)=="MP4")
     }
     test("media pairs silent video with a compatible audio track") {
         val c=MediaCatalog.choices(asset,MediaMode.VIDEO).first()
@@ -116,6 +131,10 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         val message = "Video A: https://example.test/clip?id=1\nVideo B (https://media.test/short/2).\nVideo A again: https://example.test/clip?id=1"
         check(MediaLinks.sharedUrls(message) == listOf("https://example.test/clip?id=1", "https://media.test/short/2"))
     }
+    test("share URLs accept public domains beginning with IPv6-looking letters") {
+        check(MediaLinks.sharedUrls("https://fcdn.example/clip https://fdmusic.example/song") ==
+            listOf("https://fcdn.example/clip","https://fdmusic.example/song"))
+    }
     test("share URL parser rejects local networks, credentials and runaway batches") {
         check(MediaLinks.sharedUrls("Hello, no URLs here.").isEmpty())
         check(MediaLinks.sharedUrls("Ignore https://127.0.0.1/private https://[::ffff:127.0.0.1]/private https://127.1/private https://0x7f000001/private https://router.internal/admin and https://user:pass@evil.test/file; keep https://example.test/allowed") == listOf("https://example.test/allowed"))
@@ -132,7 +151,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
     test("selected video format is exact without silent best-quality fallback") {
         val c=MediaCatalog.choices(asset,MediaMode.VIDEO).first()
         val args=MediaArguments.download("https://example.test/video",c)
-        check(args[args.indexOf("--format")+1]=="best*[format_id=v1080]+best*[format_id=a128]")
+        check(args[args.indexOf("--format")+1]=="best*[format_id='v1080']+best*[format_id='a128']")
         check("--abort-on-unavailable-fragments" in args && "--continue" in args && "--no-overwrites" in args)
         check("--no-continue" !in args && "--force-overwrites" !in args)
         check(args[args.indexOf("--output")+1]=="media.%(ext)s")

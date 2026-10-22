@@ -49,7 +49,7 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('Bitmap.createBitmap', components)
         self.assertIn('output.uri', components)
         self.assertIn('AsyncImage(', components)
-        self.assertIn('resolveStitchIcon(tool.iconName)', components)
+        self.assertIn('ModernToolIcon(tool.iconName', components)
 
     def test_files_preserve_real_mutations_and_selection(self):
         files = read('ui/files/FilesScreen.kt')

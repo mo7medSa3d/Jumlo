@@ -25,7 +25,10 @@ object CapabilityPolicy {
         // a wrong password is rejected and the owner password is honoured.
         "pdf_protect",
         // PdfMetadataCleanerTest proves the authoring trail is really gone.
-        "pdf_clean"
+        "pdf_clean",
+        // EncryptedZipSafetyTest and ArchiveCoreReliabilityTest exercise real
+        // AES payload authentication, collisions, tampering and cancellation.
+        "file_encrypted_zip"
     )
     private val processing = hostCoreTested + setOf(
         "file_duplicates", "file_batch_rename", "dl_media",
@@ -36,7 +39,6 @@ object CapabilityPolicy {
     private val blocked = mapOf(
         "pdf_ocr" to "SEARCHABLE_OCR_INTEGRITY_QUALIFICATION_PENDING",
         "webpage_pdf" to "WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING",
-        "file_encrypted_zip" to "ENCRYPTED_ZIP_QUALIFICATION_PENDING",
         "file_drive" to "DRIVE_PRIVACY_QUALIFICATION_PENDING",
         "xf_05" to "VAULT_BACKEND_UNQUALIFIED"
     )

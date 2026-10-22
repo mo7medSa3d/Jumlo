@@ -24,17 +24,20 @@ object MediaMetadata {
             val height = f.int("height")
             val rawVcodec = f.string("vcodec")
             val rawAcodec = f.string("acodec")
-            // Missing codecs on generic URLs must not invent an audio/video stream (MediaMetadataTest),
-            // whereas platform extractors (TikTok, Instagram, Facebook, X) may omit vcodec/acodec on progressive MP4s with known dimensions.
+            val protocol = f.string("protocol").ifBlank { if (f.string("url").startsWith("https://")) "https" else "http" }
+            // "none" means an absent track; "unknown" means an existing track whose
+            // codec was not reported. Instagram sets acodec="none" for has_audio=false
+            // and omits it for ordinary progressive videos with audio.
             val vcodec = when {
-                rawVcodec.isNotBlank() && rawVcodec != "unknown" -> rawVcodec
-                !isGeneric && (height != null || width != null) && ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "h264"
+                rawVcodec.isNotBlank() -> rawVcodec
+                !isGeneric && (height != null || width != null) && ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
                 else -> "none"
             }
             val acodec = when {
-                rawAcodec.isNotBlank() && rawAcodec != "unknown" -> rawAcodec
-                !isGeneric && (f.double("abr") != null || ext in setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")) -> "mp4a"
-                !isGeneric && rawAcodec == "unknown" && ext in setOf("mp4", "webm", "mov", "mkv") -> "mp4a"
+                rawAcodec.isNotBlank() -> rawAcodec
+                !isGeneric && (f.double("abr") != null || ext in setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")) -> "unknown"
+                !isGeneric && vcodec != "none" && protocol in setOf("http", "https") &&
+                    ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
                 else -> "none"
             }
             MediaFormat(
@@ -43,7 +46,7 @@ object MediaMetadata {
                 width = width, height = height, fps = f.double("fps"),
                 bitrateKbps = f.double("tbr") ?: f.double("vbr"), audioBitrateKbps = f.double("abr"), bytes = f.long("filesize"),
                 approximateBytes = f.long("filesize_approx"), language = f.string("language").takeIf(String::isNotBlank),
-                protocol = f.string("protocol").ifBlank { if (f.string("url").startsWith("https://")) "https" else "http" },
+                protocol = protocol,
                 drm = f.bool("has_drm") || value.bool("has_drm"), preference = f.int("preference") ?: 0
             )
         }

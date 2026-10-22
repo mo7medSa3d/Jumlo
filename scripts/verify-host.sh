@@ -11,7 +11,10 @@ case "${1:-}" in
 esac
 python3 "$ROOT/scripts/test-media-bootstrap.py"
 python3 "$ROOT/scripts/test-media-network-guard.py"
+python3 "$ROOT/scripts/test-media-packaged-runtime.py"
 python3 "$ROOT/scripts/test-universal-media-architecture.py"
+python3 "$ROOT/scripts/test-release-media-isolation.py"
+python3 "$ROOT/scripts/tests/test-media-artifact.py"
 python3 "$ROOT/scripts/test-downloads-density.py"
 python3 "$ROOT/scripts/test-storage-sql.py"
 python3 "$ROOT/scripts/test-source-static.py"
