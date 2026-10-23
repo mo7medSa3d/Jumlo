@@ -3,9 +3,9 @@ package com.jumlo.app.ui.workspace
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
-import androidx.compose.material.icons.automirrored.rounded.NavigateNext
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.NavigateBefore
+import com.jumlo.app.ui.icons.automirrored.rounded.NavigateNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text

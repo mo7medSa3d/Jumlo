@@ -1,4 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
-    <application android:extractNativeLibs="true" tools:replace="android:extractNativeLibs" />
-</manifest>
+<!-- Native extraction is set by packaging.jniLibs.useLegacyPackaging in app/build.gradle.kts. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

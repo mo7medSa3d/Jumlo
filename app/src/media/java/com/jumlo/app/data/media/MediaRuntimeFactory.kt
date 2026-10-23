@@ -11,6 +11,8 @@ import com.jumlo.app.core.media.MediaChoice
 import com.jumlo.app.core.media.MediaProcessRunner
 import com.jumlo.app.core.media.MediaProcessSpec
 import com.jumlo.app.core.media.MediaLinks
+import com.jumlo.app.core.media.MediaNativeLibraries
+import com.jumlo.app.core.media.MediaFailurePolicy
 import com.jumlo.app.core.media.MediaProgress
 import com.jumlo.app.core.media.MediaProgressParser
 import com.jumlo.app.data.jobs.OperationFailure
@@ -34,11 +36,13 @@ object MediaRuntimeFactory {
         client: OkHttpClient,
         sessions: MediaSessionStore,
         serviceUrl: () -> String = { "" },
-        serviceToken: () -> String = { "" }
+        serviceToken: () -> String = { "" },
+        serviceConfiguration: (() -> Pair<String, String>)? = null
     ): MediaRuntime {
         val engines = buildList {
-            add(PackagedMediaRuntime(context.applicationContext))
-            add(RemoteExtractorRuntime(serviceUrl, client, serviceToken))
+            add(PackagedMediaRuntime(context.applicationContext,client))
+            add(RemoteExtractorRuntime(serviceUrl, client, serviceToken,
+                allowDebugLoopback = com.jumlo.app.BuildConfig.DEBUG, configurationProvider = serviceConfiguration))
             add(NativeDirectMediaRuntime(client, sessions))
         }
         return RoutingMediaRuntime(engines)
@@ -50,7 +54,7 @@ object MediaRuntimeFactory {
  * ProcessRunner provides bounded output, cancellation and process-group teardown.
  * No WebView cookies or extra authentication headers are exported to it.
  */
-private class PackagedMediaRuntime(private val context: Context) : MediaRuntime {
+private class PackagedMediaRuntime(private val context: Context,private val client:OkHttpClient) : MediaRuntime {
     @Volatile private var initialized = false
     private val packages = File(context.noBackupFilesDir, "youtubedl-android/packages")
     private val launcher = File(context.noBackupFilesDir, "media-launcher")
@@ -64,6 +68,7 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         try {
             YoutubeDL.getInstance().init(context)
             FFmpeg.getInstance().init(context)
+            MediaNativeLibraries.removePlatformLzmaAliases(packages)
             // FFmpeg.init only extracts its dependency ZIP. Repair the known 64-bit
             // WebP alignment defect before Python can launch FFmpeg or ffprobe.
             BundledFfmpegLibraries.install(context)
@@ -160,7 +165,7 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         } catch (error: com.jumlo.app.core.media.MediaProcessException) {
             throw OperationFailure(error.code)
         }
-        if (result.exitCode != 0) throw OperationFailure(classify(result.stderr))
+        if (result.exitCode != 0) throw OperationFailure(MediaFailurePolicy.extractorMessage(result.stderr))
         return result.stdout
     }
 
@@ -168,7 +173,35 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
         val normalized = MediaLinks.normalize(url, allowHttp)
         val root = File(context.cacheDir, "media-probes").apply { require(isDirectory || mkdirs()) }
         val dir = File(root, UUID.randomUUID().toString()).apply { require(mkdir()) }
-        return try { MediaMetadata.parse(execute(normalized, MediaArguments.probe(normalized, allowHttp), dir, allowHttp, true, check)) }
+        return try {
+            val raw=execute(normalized, MediaArguments.probe(normalized, allowHttp), dir, allowHttp, true, check)
+            val asset=MediaMetadata.parse(raw)
+            val format=asset.formats.singleOrNull()
+            if(asset.extractor.equals("generic",true) && format!=null && !format.hasVideo && !format.hasAudio) {
+                val source=MediaMetadata.directProbeSource(raw,format.id) ?: throw OperationFailure("MEDIA_NO_USABLE_FORMAT")
+                val sample=File(dir,"probe.sample")
+                val bytes=MediaProbeSample(client).fetch(source.url,allowHttp,sample,source.headers,check)
+                val python=File(nativeDir,"libpython.so")
+                val ffprobe=File(nativeDir,"libffprobe.so")
+                // The probe sees only a bounded local sample. OkHttp owns TLS,
+                // redirects and cancellation; FFmpeg cannot fetch nested URLs.
+                val command=listOf(python.absolutePath,"-u","-c",
+                    "import os,sys; os.setsid(); print('UU_PID:'+str(os.getpid()),flush=True); os.execv(sys.argv[1],sys.argv[1:])",
+                    ffprobe.absolutePath,"-v","error","-protocol_whitelist","file",
+                    "-format_whitelist","mov,matroska,mp3,ogg,wav,flac,aac,mpegts",
+                    "-probesize","2097152","-analyzeduration","1000000",
+                    "-show_entries","stream=codec_type,codec_name,width,height,avg_frame_rate,bit_rate:stream_disposition=attached_pic:format=duration,bit_rate",
+                    "-of","json","-i",sample.absolutePath)
+                val environment=mapOf(
+                    "PYTHONHOME" to File(packages,"python/usr").absolutePath,
+                    "PYTHONNOUSERSITE" to "1","PYTHONDONTWRITEBYTECODE" to "1",
+                    "LD_LIBRARY_PATH" to "${File(packages,"python/usr/lib")}:${File(packages,"ffmpeg/usr/lib")}",
+                    "HOME" to dir.absolutePath,"TMPDIR" to dir.absolutePath)
+                val result=runner.run(MediaProcessSpec(command,dir,environment,timeoutMillis=20_000,stdoutLimit=262144),check)
+                if(result.exitCode!=0) throw OperationFailure("MEDIA_NO_USABLE_FORMAT")
+                MediaProbeMetadata.enrich(asset,result.stdout,bytes)
+            } else asset
+        }
         finally { dir.deleteRecursively() }
     }
 
@@ -179,22 +212,4 @@ private class PackagedMediaRuntime(private val context: Context) : MediaRuntime 
             directory, allowHttp, false, check, progress)
     }
 
-    private fun classify(error: String): String {
-        val message = error.lowercase(java.util.Locale.ROOT)
-        return when {
-            "media_http_consent_required" in message -> "CLEARTEXT_CONSENT_REQUIRED"
-            "media_tls_downgrade" in message || "certificate" in message -> "MEDIA_TLS_FAILED"
-            "unsupported url" in message || "unsupported site" in message -> "MEDIA_SITE_UNSUPPORTED"
-            "requested format is not available" in message -> "MEDIA_REANALYSIS_REQUIRED"
-            "private video" in message || "this video is private" in message || "members-only" in message -> "MEDIA_PRIVATE_CONTENT"
-            "not available in your country" in message || "geo-restricted" in message -> "MEDIA_GEO_BLOCKED"
-            "video unavailable" in message || "has been removed" in message || "404" in message -> "MEDIA_REMOVED"
-            "sign in" in message || "login" in message || "cookies" in message || "not a bot" in message -> "MEDIA_SESSION_REQUIRED"
-            "drm" in message || "encrypted" in message -> "MEDIA_ENCRYPTED_SOURCE"
-            "429" in message || "rate limit" in message -> "MEDIA_RATE_LIMITED"
-            "timed out" in message || "connection reset" in message || "network is unreachable" in message -> "MEDIA_NETWORK_ERROR"
-            "403" in message || "401" in message -> "MEDIA_SOURCE_REJECTED"
-            else -> "MEDIA_EXTRACTION_FAILED"
-        }
-    }
 }

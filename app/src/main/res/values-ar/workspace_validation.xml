@@ -7,7 +7,7 @@
     <string name="ui_rename_pattern_invalid">استخدم نمط اسم ملف صالحًا لا يتجاوز 200 حرف.</string>
     <string name="ui_rename_preview_name">النسخة الجديدة: %1$s</string>
     <string name="ui_rename_checking">جارٍ التحقق من الأسماء المقترحة…</string>
-    <string name="ui_rename_preview_open">معاينة %1$d اسم جديد</string>
+    <string name="ui_rename_preview_open">معاينة الأسماء الجديدة (%1$d)</string>
     <string name="ui_rename_preview_title">معاينة إعادة التسمية</string>
     <string name="ui_rename_copy_note">ينشئ هذا الإجراء نسخًا بالأسماء الجديدة. تبقى الملفات الأصلية دون تغيير.</string>
 </resources>

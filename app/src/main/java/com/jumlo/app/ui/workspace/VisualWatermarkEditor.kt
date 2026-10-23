@@ -1,256 +1,183 @@
 package com.jumlo.app.ui.workspace
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.gestures.detectDragGestures
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
-import androidx.compose.material.icons.automirrored.rounded.NavigateNext
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
+import com.jumlo.app.core.OverlayStylePolicy
+import com.jumlo.app.data.processing.BitmapExtras
 import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
+import com.jumlo.app.ui.components.QuietStateCard
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Check
 import com.jumlo.app.ui.theme.QuietTheme
-import com.jumlo.app.ui.util.rememberAppHaptics
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/**
- * Direct-manipulation PDF watermark studio. All editor values serialize to the
- * existing workspace draft and are consumed by PdfOperationHandler.
- *
- * The bitmap is a real preview of the imported document; no fake PDF assets.
- * Changing controls NEVER changes the source bytes until Apply is selected.
- */
+/** Shared interactive PDF/image watermark controls use the exact serialized production geometry. */
 @Composable
-internal fun VisualWatermarkEditor(
-    vm: AppViewModel,
-    sourceId: String,
-    draft: WorkspaceDraft,
-    edit: ((WorkspaceDraft) -> WorkspaceDraft) -> Unit
-) {
-    val haptics = rememberAppHaptics()
-    var page by rememberSaveable(sourceId) { mutableIntStateOf(1) }
-    var count by remember(sourceId) { mutableIntStateOf(1) }
-    var frame by remember(sourceId,page) { mutableStateOf<PreviewFrame?>(null) }
-    var error by remember(sourceId,page) { mutableStateOf(false) }
-    var retry by remember(sourceId) {mutableIntStateOf(0)}
-    LaunchedEffect(sourceId,page,retry) {
-        frame = null
-        error = false
-        try {
-            val loaded = vm.preview(sourceId,page)
-            frame = loaded
-            count = loaded.count.coerceAtLeast(1)
-        } catch (cancel: CancellationException) {
-            throw cancel
-        } catch (_: Exception) {
-            error = true
+internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:WorkspaceDraft,
+    edit:((WorkspaceDraft)->WorkspaceDraft)->Unit,overlayId:String?=null,onImportImage:()->Unit={}) {
+    val imageTool=draft.toolId=="img_watermark"
+    val useImage=if(imageTool) draft.flag1 else draft.watermarkUseImage
+    var page by rememberSaveable(sourceId) {mutableIntStateOf(1)}
+    var retry by remember {mutableIntStateOf(0)}
+    var selected by rememberSaveable(sourceId) {mutableStateOf<String?>("watermark")}
+    val result by produceState<Result<PreviewFrame>?>(null,sourceId,page,retry) {
+        value=null
+        value=try {Result.success(vm.preview(sourceId,if(imageTool) 1 else page))}
+            catch(cancel:CancellationException) {throw cancel} catch(error:Exception) {Result.failure(error)}
+    }
+    val logo by produceState<Result<PreviewFrame>?>(null,overlayId,retry) {
+        value=null
+        if(overlayId!=null) value=try {Result.success(vm.preview(overlayId,1))}
+            catch(cancel:CancellationException) {throw cancel} catch(error:Exception) {Result.failure(error)}
+    }
+    val textBitmap by produceState<Bitmap?>(null,imageTool,useImage,draft.text1,draft.watermarkFont,draft.text3) {
+        value=null
+        if(imageTool && !useImage) {
+            var pending:Bitmap?=null
+            try {
+                val rendered=withContext(Dispatchers.Default) {
+                    runCatching {BitmapExtras.watermarkTextBitmap(draft.text1.ifBlank {"Jumlo"},draft.watermarkFont,draft.text3.ifBlank {"#FFFFFF"})}
+                        .getOrNull().also {pending=it}
+                }
+                value=rendered
+                pending=null
+            } finally {pending?.takeUnless {it.isRecycled}?.recycle()}
         }
     }
-
-    val tiled = draft.text2 == "TILE"
-    val colorHex = draft.text3.takeIf { Regex("^#[0-9A-Fa-f]{6}$").matches(it) } ?: "#64748B"
-    val opacity = draftNumber(draft.num4,28).coerceIn(5,100)
-    val fontSize = draftNumber(draft.num1,42).coerceIn(12,90)
-    val rotation = draftNumber(draft.text4,-35).coerceIn(-180,180)
-    var centerX by remember(sourceId) { mutableFloatStateOf((WorkspaceDraft.normalizeDigits(draft.num2).toFloatOrNull() ?: .5f).coerceIn(0f,1f)) }
-    var centerY by remember(sourceId) { mutableFloatStateOf((WorkspaceDraft.normalizeDigits(draft.num3).toFloatOrNull() ?: .5f).coerceIn(0f,1f)) }
-    LaunchedEffect(draft.num2,draft.num3) {
-        centerX = (WorkspaceDraft.normalizeDigits(draft.num2).toFloatOrNull() ?: .5f).coerceIn(0f,1f)
-        centerY = (WorkspaceDraft.normalizeDigits(draft.num3).toFloatOrNull() ?: .5f).coerceIn(0f,1f)
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(stringResource(R.string.watermark_title), style = QuietTheme.typography.sectionTitle)
-        Text(stringResource(R.string.watermark_help), style = QuietTheme.typography.metadata,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Surface(shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.fillMaxWidth().padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val currentFrame = frame
-                if (currentFrame != null && !currentFrame.bitmap.isRecycled) {
-                    val applies=page in selectedPageNumbers(draft.pages,count)
-                    PdfWatermarkPreview(currentFrame,draft,page,applies,centerX,centerY,
-                        onPosition={x,y->centerX=x;centerY=y},
-                        onCommit={edit {it.copy(num2=centerX.toString(),num3=centerY.toString())};haptics.selectionToggle()})
-                    if(!applies) Text(stringResource(R.string.interactive_page_not_selected),style=QuietTheme.typography.metadata)
-                    Row(Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { page = (page-1).coerceAtLeast(1) },
-                            enabled = page > 1) {
-                            Icon(Icons.AutoMirrored.Rounded.NavigateBefore,
-                                stringResource(R.string.watermark_previous_page))
-                        }
-                        Text(stringResource(R.string.watermark_page_counter,page,count),
-                            style = QuietTheme.typography.metadataStrong)
-                        IconButton(onClick = { page = (page+1).coerceAtMost(count) },
-                            enabled = page < count) {
-                            Icon(Icons.AutoMirrored.Rounded.NavigateNext,
-                                stringResource(R.string.watermark_next_page))
-                        }
-                    }
-                } else if(error) {
-                    Text(stringResource(R.string.watermark_preview_error),
-                        color = MaterialTheme.colorScheme.error,
-                        style = QuietTheme.typography.metadata)
-                    TextButton(onClick={retry++}) {Text(stringResource(R.string.interactive_preview_retry))}
+    DisposeOwnedPreviewBitmap(result?.getOrNull()?.bitmap)
+    DisposeOwnedPreviewBitmap(logo?.getOrNull()?.bitmap)
+    DisposeOwnedPreviewBitmap(textBitmap)
+    val centerX=(WorkspaceDraft.normalizeDigits(draft.num2).toFloatOrNull() ?: .5f).coerceIn(0f,1f)
+    val centerY=(WorkspaceDraft.normalizeDigits(draft.num3).toFloatOrNull() ?: .5f).coerceIn(0f,1f)
+    val opacity=draftNumber(if(imageTool) draft.num1 else draft.num4,if(imageTool) 40 else 28).coerceIn(if(imageTool) 1 else 5,100)
+    val rotation=draftNumber(draft.text4,if(imageTool) 0 else -35).coerceIn(-180,180)
+    val tiled=draft.text2=="TILE"
+    val color=draft.text3.ifBlank {if(imageTool) "#FFFFFF" else "#64748B"}
+    fun position(x:Float,y:Float) {edit {it.copy(num2=x.toString(),num3=y.toString())}}
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Text(stringResource(R.string.watermark_title),style=QuietTheme.typography.sectionTitle)
+        Text(stringResource(if(tiled) R.string.studio_watermark_tile_hint else R.string.studio_watermark_gesture),style=QuietTheme.typography.metadata)
+        val frame=result?.getOrNull()
+        when {
+            frame!=null -> {
+                val applies=imageTool || page in selectedPageNumbers(draft.pages,frame.count)
+                if(!imageTool && !useImage) {
+                    PdfWatermarkPreview(frame,draft,page,applies,centerX,centerY,::position,{},
+                        onScaleRotation={size,angle->edit {it.copy(num1=size.toString(),text4=angle.toString())}})
                 } else {
-                    CircularProgressIndicator(Modifier.padding(24.dp))
+                    val bitmap=if(useImage) logo?.getOrNull()?.bitmap else textBitmap
+                    val objects=if(bitmap==null || !applies) emptyList() else {
+                        val dimensions=OverlayStylePolicy.size(frame.width.toDouble(),frame.height.toDouble(),bitmap.width.toDouble(),bitmap.height.toDouble(),draft.watermarkScale)
+                        val w=(dimensions.first/frame.width).toFloat();val h=(dimensions.second/frame.height).toFloat()
+                        OverlayStylePolicy.centers(centerX.toDouble(),centerY.toDouble(),tiled).mapIndexed {index,(x,y)->
+                            PreviewObject(if(tiled) "tile-$index" else "watermark",bitmap,x.toFloat()-w/2,y.toFloat()-h/2,x.toFloat()+w/2,y.toFloat()+h/2,rotation.toFloat(),opacity/100f)
+                        }
+                    }
+                    TransformablePagePreview(frame,objects,selected,{selected=it},onTransform={obj->
+                        val oldWidth=objects.firstOrNull {it.id==obj.id}?.width ?: obj.width
+                        val newScale=(draft.watermarkScale*obj.width/oldWidth.coerceAtLeast(.001f)).coerceIn(.1,3.0)
+                        edit {it.copy(num2=if(tiled) it.num2 else obj.center.x.toString(),num3=if(tiled) it.num3 else obj.center.y.toString(),
+                            watermarkScale=newScale,text4=obj.rotation.roundToInt().toString())}
+                    },tag=if(imageTool) "image.watermark.canvas" else "pdf.logo.canvas",
+                        pageNumber=page.takeIf {!imageTool && draft.flag1 && applies},allowTranslation=!tiled)
+                    if(useImage && overlayId==null) QuietStateCard(stringResource(R.string.studio_watermark_import_logo),stringResource(R.string.ui_watermark_logo_required),
+                        stringResource(R.string.import_photo_gallery),onImportImage)
+                    if(useImage && logo?.isFailure==true) QuietStateCard(stringResource(R.string.msg_preview_unavailable),stringResource(R.string.ui_watermark_logo_required),
+                        stringResource(R.string.interactive_preview_retry),{retry++},isError=true)
+                }
+                if(!applies) Text(stringResource(R.string.interactive_page_not_selected),style=QuietTheme.typography.metadata)
+                if(!imageTool) DocumentPageControls(page,frame.count) {page=it}
+            }
+            result?.isFailure==true -> QuietStateCard(stringResource(R.string.watermark_preview_error),stringResource(R.string.msg_preview_unavailable),
+                stringResource(R.string.interactive_preview_retry),{retry++},isError=true)
+            else -> LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            listOf(false to R.string.studio_watermark_text_mode,true to R.string.studio_watermark_image_mode).forEach {(value,label)->
+                FilterChip(border=null,selected=useImage==value,onClick={edit {current->
+                    val ids=if(!value && overlayId!=null) current.sourceIds-overlayId else current.sourceIds
+                    if(imageTool) current.copy(flag1=value,sourceIds=ids) else current.copy(watermarkUseImage=value,sourceIds=ids)
+                }},label={Text(stringResource(label))})
+            }
+        }
+        if(!useImage) {
+            TextField(draft.text1,{text->edit {it.copy(text1=text.take(120))}},label={Text(stringResource(R.string.watermark_text))},
+                modifier=Modifier.fillMaxWidth(),maxLines=2,shape=QuietTheme.shapes.inputField,colors=borderlessFieldColors())
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                items(listOf(R.string.watermark_preset_confidential,R.string.watermark_preset_draft,R.string.watermark_preset_copy)) {labelId->
+                    val label=stringResource(labelId)
+                    FilterChip(border=null,selected=draft.text1==label,onClick={edit {it.copy(text1=label)}},label={Text(label)})
                 }
             }
-        }
-
-        OutlinedTextField(
-            value = draft.text1,
-            onValueChange = { value -> edit { it.copy(text1=value.take(120)) } },
-            label = { Text(stringResource(R.string.watermark_text)) },
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 2
-        )
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(
-                R.string.watermark_preset_confidential,
-                R.string.watermark_preset_draft,
-                R.string.watermark_preset_copy
-            ).forEach { nameId ->
-                val label = stringResource(nameId)
-                FilterChip(selected = draft.text1 == label,
-                    onClick = { edit { it.copy(text1=label) }; haptics.selectionToggle() },
-                    label = { Text(label, maxLines = 1) })
+            Text(stringResource(R.string.studio_font),style=QuietTheme.typography.metadataStrong)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                items(listOf("sans" to R.string.studio_font_sans,"serif" to R.string.studio_font_serif,"mono" to R.string.studio_font_mono)) {(font,label)->
+                    FilterChip(border=null,selected=draft.watermarkFont==font,onClick={edit {it.copy(watermarkFont=font)}},label={Text(stringResource(label))})
+                }
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = !tiled,
-                onClick = { edit { it.copy(text2="SINGLE") }; haptics.selectionToggle() },
-                label = { Text(stringResource(R.string.watermark_single)) })
-            FilterChip(selected = tiled,
-                onClick = { edit { it.copy(text2="TILE") }; haptics.selectionToggle() },
-                label = { Text(stringResource(R.string.watermark_tile)) })
-        }
-        Text(stringResource(R.string.watermark_colors),style = QuietTheme.typography.metadataStrong)
-        Row(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceBetween) {
-            val swatches = listOf(
-                "#64748B" to R.string.watermark_color_slate,
-                "#0F766E" to R.string.watermark_color_teal,
-                "#2563EB" to R.string.watermark_color_blue,
-                "#EA580C" to R.string.watermark_color_orange,
-                "#DC2626" to R.string.watermark_color_red,
-                "#111827" to R.string.watermark_color_dark
-            )
-            swatches.forEach { (hex,labelId) ->
-                val selected = colorHex.equals(hex,ignoreCase=true)
-                val colorLabel = stringResource(labelId)
-                Surface(
-                    onClick = {
-                        edit { it.copy(text3=hex) }
-                        haptics.selectionToggle()
-                    },
-                    modifier = Modifier.size(48.dp)
-                        .semantics { contentDescription = colorLabel;this.selected=selected },
-                    shape = CircleShape,
-                    color = Color(android.graphics.Color.parseColor(hex)),
-                    border = BorderStroke(if(selected) 3.dp else 1.dp,
-                        if(selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if(selected) Icon(Icons.Rounded.Check,null,
-                            tint=Color.White, modifier=Modifier.size(19.dp))
+            Text(stringResource(R.string.watermark_colors),style=QuietTheme.typography.metadataStrong)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                items(listOf("#FFFFFF" to R.string.studio_ink_white,"#111111" to R.string.studio_ink_black,"#64748B" to R.string.watermark_color_slate,
+                    "#1746A2" to R.string.studio_ink_blue,"#B42332" to R.string.studio_ink_red,"#145D4C" to R.string.studio_ink_green)) {(hex,label)->
+                    val name=stringResource(label);val chosen=color.equals(hex,true)
+                    Surface(onClick={edit {it.copy(text3=hex)}},shape=CircleShape,color=Color(android.graphics.Color.parseColor(hex)),
+                        modifier=Modifier.size(48.dp).semantics {contentDescription=name;this.selected=chosen},shadowElevation=2.dp) {
+                        Box(contentAlignment=Alignment.Center) {if(chosen) Icon(Icons.Rounded.Check,null,tint=if(hex=="#FFFFFF") Color.Black else Color.White)}
                     }
                 }
             }
         }
-        WatermarkSlider(
-            stringResource(R.string.watermark_opacity),
-            opacity.toFloat(),5f,100f,28f,
-            onChange = { value -> edit { it.copy(num4=value.roundToInt().toString()) } }
-        )
-        WatermarkSlider(
-            stringResource(R.string.watermark_size),
-            fontSize.toFloat(),12f,90f,42f,
-            onChange = { value -> edit { it.copy(num1=value.roundToInt().toString()) } }
-        )
-        WatermarkSlider(
-            stringResource(R.string.watermark_rotation),
-            rotation.toFloat(),-180f,180f,-35f,
-            onChange = { value -> edit { it.copy(text4=value.roundToInt().toString()) } }
-        )
+        InteractiveIntSlider(stringResource(R.string.watermark_opacity),opacity,if(imageTool) 1 else 5,100,if(imageTool) 40 else 28) {v->
+            edit {if(imageTool) it.copy(num1=v.toString()) else it.copy(num4=v.toString())}
+        }
+        if(imageTool || useImage) InteractiveIntSlider(stringResource(R.string.studio_watermark_scale),(draft.watermarkScale*100).roundToInt(),10,300,100) {v->edit {it.copy(watermarkScale=v/100.0)}}
+        else InteractiveIntSlider(stringResource(R.string.watermark_size),draftNumber(draft.num1,42),12,90,42) {v->edit {it.copy(num1=v.toString())}}
+        InteractiveIntSlider(stringResource(R.string.watermark_rotation),rotation,-180,180,if(imageTool) 0 else -35) {v->edit {it.copy(text4=v.toString())}}
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            items(listOf(-90,-45,0,45,90)) {angle->FilterChip(border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})}
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilterChip(border=null,selected=!tiled,onClick={edit {it.copy(text2="SINGLE")}},label={Text(stringResource(R.string.watermark_single))})
+            FilterChip(border=null,selected=tiled,onClick={edit {it.copy(text2="TILE")}},label={Text(stringResource(R.string.watermark_tile))})
+        }
         if(!tiled) {
-            InteractiveIntSlider(stringResource(R.string.editor_horizontal_position),(centerX*100).roundToInt(),0,100,50) {value->
-                centerX=value/100f;edit {it.copy(num2=centerX.toString())}
+            Text(stringResource(R.string.studio_watermark_placement),style=QuietTheme.typography.metadataStrong)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                items(listOf(Triple(R.string.studio_top_left,.2f,.2f),Triple(R.string.studio_top_right,.8f,.2f),Triple(R.string.studio_center,.5f,.5f),
+                    Triple(R.string.studio_bottom_left,.2f,.8f),Triple(R.string.studio_bottom_right,.8f,.8f))) {(label,x,y)->
+                    FilterChip(border=null,selected=abs(centerX-x)<.01f && abs(centerY-y)<.01f,onClick={position(x,y)},label={Text(stringResource(label))})
+                }
             }
-            InteractiveIntSlider(stringResource(R.string.editor_vertical_position),(centerY*100).roundToInt(),0,100,50) {value->
-                centerY=value/100f;edit {it.copy(num3=centerY.toString())}
+            InteractiveIntSlider(stringResource(R.string.editor_horizontal_position),(centerX*100).roundToInt(),0,100,50) {v->position(v/100f,centerY)}
+            InteractiveIntSlider(stringResource(R.string.editor_vertical_position),(centerY*100).roundToInt(),0,100,50) {v->position(centerX,v/100f)}
+        }
+        if(!imageTool) {
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                FilterChip(border=null,selected=draft.pages.equals("all",true),onClick={edit {it.copy(pages="all")}},label={Text(stringResource(R.string.watermark_all_pages))})
+                FilterChip(border=null,selected=draft.pages==page.toString(),onClick={edit {it.copy(pages=page.toString())}},label={Text(stringResource(R.string.watermark_this_page))})
             }
+            InteractiveToggle(stringResource(R.string.watermark_page_numbers),draft.flag1) {v->edit {it.copy(flag1=v)}}
         }
-        TextButton(onClick={edit {it.copy(num1="42",num2="0.5",num3="0.5",num4="28",text4="-35",text2="SINGLE")}}) {
-            Text(stringResource(R.string.interactive_watermark_reset))
-        }
-        Text(stringResource(R.string.watermark_page_scope),style=QuietTheme.typography.metadataStrong)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = draft.pages.equals("all",ignoreCase=true),
-                onClick = { edit { it.copy(pages="all") } },
-                label = { Text(stringResource(R.string.watermark_all_pages)) })
-            FilterChip(selected = draft.pages == page.toString(),
-                onClick = { edit { it.copy(pages=page.toString()) } },
-                label = { Text(stringResource(R.string.watermark_this_page)) })
-        }
-        Row(Modifier.fillMaxWidth(),verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.watermark_page_numbers),
-                modifier = Modifier.weight(1f), style = QuietTheme.typography.metadataStrong)
-            Switch(checked = draft.flag1,
-                onCheckedChange = { enabled ->
-                    edit { it.copy(flag1=enabled) }
-                    haptics.selectionToggle()
-                })
-        }
-    }
-}
-
-@Composable
-private fun WatermarkSlider(
-    label: String,
-    current: Float,
-    minimum: Float,
-    maximum: Float,
-    reset: Float,
-    onChange: (Float) -> Unit
-) {
-    InteractiveIntSlider(label,current.roundToInt(),minimum.roundToInt(),maximum.roundToInt(),reset.roundToInt()) {
-        onChange(it.toFloat())
     }
 }

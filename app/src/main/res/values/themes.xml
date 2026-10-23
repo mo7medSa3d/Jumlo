@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Jumlo" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Match the branded Compose reveal on Android versions before 12. -->
-        <item name="android:windowBackground">#0C1231</item>
+        <item name="android:windowBackground">@color/jumlo_launch_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <color name="jumlo_launch_background">#F8F9FC</color>
+    <style name="Theme.Jumlo.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/jumlo_launch_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Jumlo</item>
+        <item name="windowSplashScreenAnimationDuration">160</item>
     </style>
 </resources>

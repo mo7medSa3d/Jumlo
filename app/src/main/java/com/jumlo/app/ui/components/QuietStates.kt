@@ -25,10 +25,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Warning
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Bolt
+import com.jumlo.app.ui.icons.rounded.Info
+import com.jumlo.app.ui.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -238,7 +238,7 @@ fun QuietCard(
         modifier = modifier.then(clickModifier),
         shape = shape,
         color = containerColor,
-        border = BorderStroke(1.dp, borderColor)
+        shadowElevation = 2.dp
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),

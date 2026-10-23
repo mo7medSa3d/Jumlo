@@ -62,7 +62,7 @@ data class QuietPrecisionSpacing(
     val dockWidth: Dp = 400.dp,
     val dockHeight: Dp = 72.dp,
     val dockBottomOffset: Dp = 14.dp,
-    val listBottomBuffer: Dp = 120.dp,
+    val listBottomBuffer: Dp = 24.dp,
     val primaryButtonHeight: Dp = 56.dp,
     val tonalButtonHeight: Dp = 48.dp,
     val fileRowStandardHeight: Dp = 76.dp,

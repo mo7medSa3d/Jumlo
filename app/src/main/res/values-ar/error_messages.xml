@@ -65,7 +65,7 @@
     <string name="msg_pdf_compression_failed">تعذّر إعادة ضغط الصور في ملف PDF. تم الحفاظ على الملف الأصلي.</string>
     <string name="jumlo_page_editor_title">تحرير الصفحات</string>
     <string name="jumlo_page_editor_hint">اضغط للتحديد، واضغط مطولًا واسحب لتغيير الترتيب</string>
-    <string name="jumlo_page_count">%1$d صفحات</string>
+    <string name="jumlo_page_count">عدد الصفحات: %1$d</string>
     <string name="jumlo_page_label">صفحة %1$d</string>
     <string name="jumlo_undo">تراجع</string>
     <string name="jumlo_redo">إعادة</string>
@@ -74,7 +74,7 @@
     <string name="jumlo_split_each">تقسيم كل صفحة</string>
     <string name="jumlo_move_earlier">نقل للخلف</string>
     <string name="jumlo_move_later">نقل للأمام</string>
-    <string name="jumlo_activity_summary">%1$d نشطة · %2$d نتائج متاحة</string>
+    <string name="jumlo_activity_summary">النشطة: %1$d · النتائج المتاحة: %2$d</string>
     <string name="jumlo_activity_empty_title">لا توجد عمليات بعد</string>
     <string name="jumlo_activity_empty_body">ستظهر الملفات المكتملة والمهام الجارية هنا.</string>
     <string name="jumlo_activity_active">قيد التنفيذ</string>

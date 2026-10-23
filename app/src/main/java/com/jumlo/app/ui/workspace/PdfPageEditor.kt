@@ -16,19 +16,23 @@ import com.jumlo.app.ui.util.rememberZoomPanState
 import com.jumlo.app.ui.util.zoomPan
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.RotateRight
-import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.rounded.*
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
+import com.jumlo.app.ui.icons.automirrored.rounded.Undo
+import com.jumlo.app.ui.icons.automirrored.rounded.Redo
+import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -116,27 +120,36 @@ internal fun PdfPageEditor(
         else if (boundaryMode) runCatching { if(draft.pages.isBlank()) emptySet() else PageSelection.parse(draft.pages,total).toSet() }.getOrDefault(emptySet())
         else selectedPageNumbers(draft.pages,total)
     val haptics = rememberAppHaptics()
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val scope=rememberCoroutineScope()
     var edgeScroll by remember { mutableFloatStateOf(0f) }
     var draggedId by remember { mutableStateOf<String?>(null) }
     var viewport by remember { mutableStateOf(Rect.Zero) }
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
-    val stepPx=with(LocalDensity.current) {126.dp.toPx()}
+    var dragPoint by remember { mutableStateOf(Offset.Zero) }
+    var selectionAnchor by remember { mutableStateOf<Int?>(null) }
+    var selectionAtStart by remember { mutableStateOf(emptySet<Int>()) }
+    var selectionAdds by remember { mutableStateOf(true) }
+    fun hoveredIndex(point:Offset):Int? {
+        val local=point-viewport.topLeft
+        return listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+            local.x>=item.offset.x && local.x<=item.offset.x+item.size.width &&
+                local.y>=item.offset.y && local.y<=item.offset.y+item.size.height
+        }?.index
+    }
+    fun reorderAt(point:Offset) {
+        val live=livePages ?: return
+        val from=live.indexOfFirst {it.instanceId==draggedId}
+        val target=hoveredIndex(point)?.coerceIn(0,live.lastIndex) ?: return
+        if(from>=0 && from!=target) {
+            livePages=live.toMutableList().apply {add(target,removeAt(from))}
+            haptics.sliderTick()
+        }
+    }
     LaunchedEffect(edgeScroll) {
-        var accumulated=0f
         while(edgeScroll!=0f) {
-            accumulated+=listState.scrollBy(edgeScroll)
-            if(kotlin.math.abs(accumulated)>=stepPx) {
-                val live=livePages
-                val from=live?.indexOfFirst {it.instanceId==draggedId} ?: -1
-                if(live!=null && from>=0) {
-                    val delta=if(accumulated>0) 1 else -1
-                    val target=(from+delta).coerceIn(0,live.lastIndex)
-                    if(target!=from) {livePages=live.toMutableList().apply {add(target,removeAt(from))};haptics.sliderTick()}
-                }
-                accumulated=0f
-            }
+            listState.scrollBy(edgeScroll)
+            if(organize) reorderAt(dragPoint)
             kotlinx.coroutines.delay(16)
         }
     }
@@ -192,8 +205,11 @@ internal fun PdfPageEditor(
                 }
             }
         }
-        LazyRow(modifier=Modifier.onGloballyPositioned {viewport=it.boundsInRoot()},state=listState,horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=4.dp)) {
-            items(pages,key={ it.instanceId }) { entry ->
+        LazyVerticalGrid(columns=GridCells.Adaptive(112.dp),
+            modifier=Modifier.fillMaxWidth().height(420.dp).onGloballyPositioned {viewport=it.boundsInRoot()},
+            state=listState,horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp),
+            contentPadding=PaddingValues(vertical=4.dp)) {
+            gridItems(pages,key={ it.instanceId }) { entry ->
                 val index=pages.indexOf(entry)
                 PdfPageTile(vm,sourceId,entry.sourcePage,if(organize) entry.instanceId in selectedIds else entry.sourcePage in selected,organize,
                     rotation=entry.rotationDegrees,instanceId=entry.instanceId,position=index+1,totalPages=pages.size,canMoveEarlier=index>0,canMoveLater=index<pages.lastIndex,
@@ -207,18 +223,34 @@ internal fun PdfPageEditor(
                     },
                     selectionEnabled = !(split && draft.flag1) && (!boundaryMode || entry.sourcePage < total),
                     onMove={delta -> persist(history.move(entry.instanceId,index+delta));haptics.sliderTick() },
-                    onDragStart={ focusedId=entry.instanceId;draggedId=entry.instanceId;livePages=history.current;if(entry.instanceId !in selectedIds) selectedIds=selectedIds+entry.instanceId;haptics.longPress() },
-                    onDragStep={ delta ->
-                        val live=livePages ?: history.current
-                        val from=live.indexOfFirst { it.instanceId==entry.instanceId }
-                        val target=(from+delta).coerceIn(0,live.lastIndex)
-                        if(from!=target) { livePages=live.toMutableList().apply { add(target,removeAt(from)) };haptics.sliderTick() }
-
+                    onDragStart={
+                        focusedId=entry.instanceId
+                        if(organize) {
+                            draggedId=entry.instanceId;livePages=history.current
+                            if(entry.instanceId !in selectedIds) selectedIds=selectedIds+entry.instanceId
+                        } else {
+                            selectionAnchor=entry.sourcePage;selectionAtStart=selected;selectionAdds=entry.sourcePage !in selected
+                        }
+                        haptics.longPress()
                     },
                     onDragPosition={ point ->
-                        edgeScroll=when { point.x<viewport.left+48f -> if(rtl) 18f else -18f;point.x>viewport.right-48f -> if(rtl) -18f else 18f;else -> 0f }
+                        dragPoint=point
+                        edgeScroll=when {point.y<viewport.top+48f -> -18f;point.y>viewport.bottom-48f -> 18f;else -> 0f}
+                        if(organize) reorderAt(point) else {
+                            val target=hoveredIndex(point)?.let {pages.getOrNull(it)?.sourcePage}
+                            val anchor=selectionAnchor
+                            if(target!=null && anchor!=null) {
+                                val range=(minOf(anchor,target)..maxOf(anchor,target)).toSet()
+                                updateSelection(if(selectionAdds) selectionAtStart+range else selectionAtStart-range)
+                            }
+                        }
                     },
-                    onDragEnd={ commit -> val live=livePages;livePages=null;draggedId=null;edgeScroll=0f;if(commit && live!=null) persist(history.commit(live));haptics.selectionToggle() })
+                    onDragEnd={ commit ->
+                        val live=livePages;livePages=null;draggedId=null;edgeScroll=0f;selectionAnchor=null
+                        if(commit && live!=null) persist(history.commit(live))
+                        if(!commit && !organize) updateSelection(selectionAtStart)
+                        haptics.selectionToggle()
+                    })
             }
         }
         if (organize) {
@@ -234,22 +266,22 @@ internal fun PdfPageEditor(
             val every=(WorkspaceDraft.normalizeDigits(draft.num1).toIntOrNull() ?: 1).coerceIn(1,minOf(total,1000))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 item("each-page") {
-                    FilterChip((draft.flag1 && every==1) || (!draft.flag1 && !draft.flag2 && draft.pages.trim().equals("all",true)),onClick={
+                    FilterChip(border=null, selected=(draft.flag1 && every==1) || (!draft.flag1 && !draft.flag2 && draft.pages.trim().equals("all",true)),onClick={
                         edit { it.copy(flag1=true,flag2=false,num1="1",pages="all") }
                     },label={Text(stringResource(R.string.jumlo_split_each))})
                 }
                 item("boundary-mode") {
-                    FilterChip(boundaryMode,onClick={
+                    FilterChip(boundaryMode,border=null,onClick={
                         edit { it.copy(flag1=false,flag2=true,pages="") }
                     },enabled=total>1,label={Text(stringResource(R.string.jumlo_split_markers))})
                 }
                 item("groups") {
-                    FilterChip(draft.flag1 && every>1,onClick={
+                    FilterChip(draft.flag1 && every>1,border=null,onClick={
                         edit { it.copy(flag1=true,flag2=false,num1=minOf(2,total).toString(),pages="all") }
                     },enabled=total>1,label={Text(stringResource(R.string.interactive_split_groups))})
                 }
                 item("selected-pages") {
-                    FilterChip(!draft.flag1 && !draft.flag2 && !draft.pages.trim().equals("all",true),onClick={
+                    FilterChip(!draft.flag1 && !draft.flag2 && !draft.pages.trim().equals("all",true),border=null,onClick={
                         edit { it.copy(flag1=false,flag2=false,pages="1") }
                     },label={Text(stringResource(R.string.interactive_selected_ranges))})
                 }
@@ -316,20 +348,19 @@ private fun PdfPageTile(
     val laterDescription=stringResource(R.string.jumlo_move_later)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var displacement by remember(page) { mutableFloatStateOf(0f) }
-    Column(Modifier.width(116.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
         Column(
             Modifier
                 .onGloballyPositioned {tileCoordinates=it}
                 .graphicsLayer { translationX=displacement }
-                .then(if (reorder) Modifier.pointerInput(instanceId) {
+                .then(if (reorder || selectionEnabled) Modifier.pointerInput(instanceId,selectionEnabled) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart={latestStart()},
+                        onDragStart={start->latestStart();tileCoordinates?.let {latestPosition(it.localToRoot(start))}},
                         onDragEnd={latestEnd(true);displacement=0f},
                         onDragCancel={latestEnd(false);displacement=0f},
                         onDrag={change,drag ->
-                            change.consume();tileCoordinates?.let {latestPosition(it.localToRoot(change.position))};displacement+=drag.x
-                            val step=(displacement/126.dp.toPx()).toInt()
-                            if(step!=0) { latestStep(if(rtl) -step else step);displacement-=step*126.dp.toPx() }
+                            change.consume()
+                            tileCoordinates?.let {latestPosition(it.localToRoot(change.position))}
                         }
                     )
                 } else Modifier)
@@ -351,7 +382,7 @@ private fun PdfPageTile(
             Box(Modifier.fillMaxWidth().height(146.dp),contentAlignment=Alignment.Center) {
                 if(frame != null && frame?.bitmap?.isRecycled==false)
                     Image(frame!!.bitmap.asImageBitmap(),contentDescription=stringResource(R.string.jumlo_page_label,page),
-                        modifier=Modifier.fillMaxSize().graphicsLayer {
+                        modifier=Modifier.fillMaxSize().testTag("preview.bitmap").graphicsLayer {
                             rotationZ=rotation.toFloat()
                             if(rotation%180!=0) {val fit=minOf(size.width/size.height,size.height/size.width);scaleX=fit;scaleY=fit}
                         })

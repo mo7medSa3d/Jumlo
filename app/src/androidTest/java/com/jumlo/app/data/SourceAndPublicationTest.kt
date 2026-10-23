@@ -27,7 +27,7 @@ class SourceAndPublicationTest {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {
             val file=File(context.filesDir,"processing/results/fixture/input.bin")
-            file.parentFile.mkdirs(); val bytes=ByteArray(16384) { it.toByte() }; file.writeBytes(bytes)
+            requireNotNull(file.parentFile).mkdirs(); val bytes=ByteArray(16384) { it.toByte() }; file.writeBytes(bytes)
             val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file)
             val store=SourceStore(context,db,WorkBudget())
             val source=store.inspect(uri.toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -38,7 +38,7 @@ class SourceAndPublicationTest {
     @Test fun reimportDoesNotMutateEarlierSnapshot() = runBlocking {
         val db=Room.inMemoryDatabaseBuilder(context,AppDatabase::class.java).build()
         try {
-            val f=File(context.filesDir,"processing/results/fixture/changing.bin").apply { parentFile.mkdirs(); writeText("original") }
+            val f=File(context.filesDir,"processing/results/fixture/changing.bin").apply { requireNotNull(parentFile).mkdirs(); writeText("original") }
             val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",f)
             val store=SourceStore(context,db,WorkBudget())
             val first=store.inspect(uri.toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)

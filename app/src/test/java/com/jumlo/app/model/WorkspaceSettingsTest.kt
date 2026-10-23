@@ -13,12 +13,37 @@ import com.jumlo.app.data.processing.ImageExifSettings
 import com.jumlo.app.data.processing.ImageWatermarkSettings
 import com.jumlo.app.data.processing.PdfAnnotateSettings
 import com.jumlo.app.data.processing.PdfStampSettings
+import com.jumlo.app.data.processing.PdfProtectSettings
+import com.jumlo.app.data.processing.DownloadSettings
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Test
 
 class WorkspaceSettingsTest {
+    @Test fun pdfProtectionChoicesReachTheImmutableRequestAndSurviveRestoration() {
+        val draft=WorkspaceDraft.forTool("pdf_protect",listOf("pdf")).copy(
+            allowPrinting=false,allowCopy=false,allowModify=true,allowAnnotations=false,allowForms=false)
+        val restored=Json.decodeFromString<WorkspaceDraft>(Json.encodeToString(WorkspaceDraft.serializer(),draft))
+        val settings=Json.decodeFromString<PdfProtectSettings>(restored.executionSettings("session-secret"))
+        assertEquals("session-secret",settings.secretHandle)
+        assertFalse(settings.allowPrinting)
+        assertFalse(settings.allowCopy)
+        assertTrue(settings.allowModify)
+        assertFalse(settings.allowAnnotations)
+        assertFalse(settings.allowForms)
+    }
+
+    @Test fun oldProtectionDraftsRetainTheirEstablishedPermissionDefaults() {
+        val restored=Json.decodeFromString<WorkspaceDraft>("""{"toolId":"pdf_protect"}""")
+        val settings=Json.decodeFromString<PdfProtectSettings>(restored.executionSettings("session-secret"))
+        assertTrue(settings.allowPrinting)
+        assertTrue(settings.allowCopy)
+        assertFalse(settings.allowModify)
+        assertTrue(settings.allowAnnotations)
+        assertTrue(settings.allowForms)
+    }
+
     @Test(expected=IllegalArgumentException::class)
     fun watermarkRequiresVisibleTextBeforeEnqueue() {
         WorkspaceDraft.forTool("img_watermark",listOf("photo")).copy(text1=" \n ").executionSettings()
@@ -105,8 +130,14 @@ class WorkspaceSettingsTest {
         assertEquals(250000L,settings.targetBytes)
     }
 
-    @Test fun directDownloadsRequireExplicitCleartextConsent() {
-        assertFalse(WorkspaceDraft.forTool("dl_02",emptyList()).cleartextConsent)
+    @Test fun retiredNetworkControlsCannotRestrictNewDownloadSubmissions() {
+        val restored = WorkspaceDraft.forTool("dl_02", emptyList())
+            .copy(wifiOnly = true, unmeteredOnly = true, cleartextConsent = false)
+        val settings = Json.decodeFromString<DownloadSettings>(
+            restored.executionSettings(downloadHandle = "fixture-url-handle"))
+        assertFalse(settings.wifiOnly)
+        assertFalse(settings.unmeteredOnly)
+        assertTrue(settings.cleartextConsent)
     }
     @Test fun structuralPdfDraftsStartWithPdfOutputNames() {
         for (id in listOf("pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_metadata","pdf_forms"))

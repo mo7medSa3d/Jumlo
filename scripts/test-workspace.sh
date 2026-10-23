@@ -5,7 +5,7 @@ source "$JUMLO_ROOT/scripts/host-tests/embedded-kotlin.sh"
 JUMLO_BUILD=$(mktemp -d)
 trap 'rm -rf "$JUMLO_BUILD"' EXIT
 SOURCES=(
-  "$JUMLO_ROOT/app/src/main/java/com/jumlo/app/core/TemporaryCleanup.kt"
+  "$JUMLO_ROOT/storage-core/src/main/kotlin/com/jumlo/app/core/TemporaryCleanup.kt"
   "$JUMLO_ROOT/scripts/host-tests/WorkspaceSafetyMain.kt"
 )
 BUILD=$JUMLO_BUILD

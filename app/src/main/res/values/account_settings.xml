@@ -4,7 +4,7 @@
     <string name="account_local_workspace">Local workspace</string>
     <string name="account_local_description">Your files stay on this device unless you choose to share or export them.</string>
     <string name="account_my_files">My files</string>
-    <string name="account_result_count">%1$d saved results</string>
+    <string name="account_result_count">Saved results: %1$d</string>
     <string name="account_storage">Storage usage</string>
     <string name="account_privacy">Privacy</string>
     <string name="account_help_about">Help &amp; about</string>

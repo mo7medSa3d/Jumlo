@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read actual Kotlin registry/policy execution. Requires the project's pinned Kotlin CLI/JDK."""
 from pathlib import Path
+from source_paths import source_path
 import csv
 import io
 import json
@@ -14,7 +15,7 @@ CODE = ROOT / "app/src/main/java/com/jumlo/app"
 def main():
     with tempfile.TemporaryDirectory(prefix="jumlo-capabilities-") as temporary:
         jar = Path(temporary) / "inventory.jar"
-        sources = [CODE / "core/CapabilityPolicy.kt", CODE / "model/Models.kt", CODE / "data/jobs/CapabilityRegistry.kt",
+        sources = [source_path("core/CapabilityPolicy.kt"), CODE / "model/Models.kt", CODE / "data/jobs/CapabilityRegistry.kt",
                    ROOT / "scripts/host-tests/CapabilityInventoryMain.kt"]
         subprocess.run(["kotlinc", *map(str, sources), "-jvm-target", "17", "-include-runtime", "-d", str(jar)], check=True)
         raw = subprocess.check_output(["java", "-jar", str(jar)], text=True)

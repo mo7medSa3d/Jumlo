@@ -48,4 +48,23 @@ class MediaRoutingTest {
             assertEquals("chosen",File(dir,"selected-engine.txt").readText())
         } finally { dir.deleteRecursively() }
     }
+    @Test fun missingNativeLibrariesBecomeAnActionableFailureInsteadOfEscapingAnalysis() {
+        val unavailable=object:MediaRuntime by engine() {
+            override fun inspect(url:String,allowHttp:Boolean,check:()->Unit):MediaAsset {
+                throw UnsatisfiedLinkError("fixture missing native ABI")
+            }
+        }
+        val failure=runCatching { RoutingMediaRuntime(listOf(unavailable)).inspect("https://example.org/watch",false) }.exceptionOrNull()
+        assertTrue("Native load failure escaped the runtime boundary: $failure",failure is OperationFailure)
+        assertEquals("MEDIA_RUNTIME_INITIALIZATION_FAILED",failure?.message)
+    }
+    @Test fun analysisCancellationNeverStartsAnAlternateEngine() {
+        val cancelled=object:MediaRuntime by engine() {
+            override fun inspect(url:String,allowHttp:Boolean,check:()->Unit):MediaAsset {
+                throw java.util.concurrent.CancellationException("fixture cancellation")
+            }
+        }
+        val failure=runCatching { RoutingMediaRuntime(listOf(cancelled,engine())).inspect("https://example.org/watch",false) }.exceptionOrNull()
+        assertTrue(failure is java.util.concurrent.CancellationException)
+    }
 }

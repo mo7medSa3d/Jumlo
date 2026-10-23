@@ -6,6 +6,7 @@ import com.jumlo.app.core.PdfImagePlacementPolicy
 import com.jumlo.app.core.PdfDisplayCoordinates
 import com.jumlo.app.core.PdfDisplayFrame
 import com.jumlo.app.core.PdfWatermarkStyle
+import com.jumlo.app.core.OverlayStylePolicy
 import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSDictionary
@@ -81,8 +82,14 @@ data class PdfFormFieldInfo(
     val readOnly: Boolean,
     val choices: List<String> = emptyList(),
     val selectedIndex: Int = -1,
-    val checked: Boolean = false
+    val checked: Boolean = false,
+    val widgets: List<PdfFormWidgetInfo> = emptyList()
 )
+
+/** Visible, upright CropBox coordinates; page is one based, widgetIndex preserves radio choice order. */
+data class PdfFormWidgetInfo(val page: Int, val left: Double, val top: Double, val right: Double, val bottom: Double, val widgetIndex: Int)
+
+data class PdfImageOverlay(val pageIndex: Int, val left: Double, val top: Double, val right: Double, val bottom: Double, val rotationDegrees: Float = 0f)
 
 enum class CompareVerdict { SAME, DIFFERENT }
 data class CompareResult(val pageCountA: Int, val pageCountB: Int, val verdict: CompareVerdict, val firstDifferentPage: Int?)
@@ -269,11 +276,18 @@ object PdfBoxBackend {
     }
 
     /** AES-128 with owner/user split. Passwords are never persisted by this layer. */
-    fun protect(doc: PDDocument, userPassword: CharArray, ownerPassword: CharArray, out: File) {
+    fun protect(doc: PDDocument, userPassword: CharArray, ownerPassword: CharArray, out: File,
+                permissions: com.jumlo.app.core.PdfProtectionPermissions = com.jumlo.app.core.PdfProtectionPermissions()) {
         require(ownerPassword.isNotEmpty()) { "OWNER_PASSWORD_REQUIRED" }
         val permission = AccessPermission()
-        permission.setCanModify(false)
-        permission.setCanPrint(true)
+        permission.setCanModify(permissions.allowModify)
+        permission.setCanAssembleDocument(permissions.allowModify)
+        permission.setCanPrint(permissions.allowPrinting)
+        permission.setCanPrintFaithful(permissions.allowPrinting)
+        permission.setCanExtractContent(permissions.allowCopy)
+        permission.setCanModifyAnnotations(permissions.allowAnnotations)
+        permission.setCanFillInForm(permissions.allowForms)
+        permission.setCanExtractForAccessibility(true)
         val policy = StandardProtectionPolicy(String(ownerPassword), String(userPassword), permission)
         policy.encryptionKeyLength = 128
         policy.isPreferAES = true
@@ -290,6 +304,13 @@ object PdfBoxBackend {
         // Discovery must not run PDFBox's default fixup, which can add fonts and
         // change form dictionaries simply by opening the configuration screen.
         val acro = doc.documentCatalog.getAcroForm(null) ?: return emptyList()
+        val pages=doc.pages.toList()
+        val widgetPages=java.util.IdentityHashMap<COSDictionary,Int>()
+        val pageIndexes=java.util.IdentityHashMap<COSDictionary,Int>()
+        pages.forEachIndexed { index,page ->
+            pageIndexes[page.cosObject]=index
+            page.annotations.forEach {widgetPages[it.cosObject]=index}
+        }
         return acro.fieldTree.filterIsInstance<PDTerminalField>().map { field ->
             val type = when (field) {
                 is PDRadioButton -> "radio"
@@ -306,7 +327,26 @@ object PdfBoxBackend {
                 readOnly = field.isReadOnly,
                 choices = if (field is PDRadioButton) radioChoices(field) else emptyList(),
                 selectedIndex = if (field is PDRadioButton) field.selectedIndex else -1,
-                checked = field is PDCheckBox && field.isChecked
+                checked = field is PDCheckBox && field.isChecked,
+                widgets = field.widgets.mapIndexedNotNull { widgetIndex,widget ->
+                    val pageIndex=widgetPages[widget.cosObject] ?: widget.page?.let {pageIndexes[it.cosObject]} ?: return@mapIndexedNotNull null
+                    val rect=widget.rectangle ?: return@mapIndexedNotNull null
+                    if(listOf(rect.lowerLeftX,rect.lowerLeftY,rect.upperRightX,rect.upperRightY).any {!it.isFinite()} || rect.width<=0 || rect.height<=0) return@mapIndexedNotNull null
+                    val frame=displayFrame(pages[pageIndex]);val matrix=frame.displayToPage
+                    val determinant=matrix.a*matrix.d-matrix.b*matrix.c
+                    fun normalized(x:Double,y:Double):Pair<Double,Double> {
+                        val dx=x-matrix.e;val dy=y-matrix.f
+                        return ((matrix.d*dx-matrix.c*dy)/determinant/frame.widthPt) to
+                            (1.0-(-matrix.b*dx+matrix.a*dy)/determinant/frame.heightPt)
+                    }
+                    val corners=listOf(normalized(rect.lowerLeftX.toDouble(),rect.lowerLeftY.toDouble()),
+                        normalized(rect.upperRightX.toDouble(),rect.lowerLeftY.toDouble()),
+                        normalized(rect.lowerLeftX.toDouble(),rect.upperRightY.toDouble()),
+                        normalized(rect.upperRightX.toDouble(),rect.upperRightY.toDouble()))
+                    val left=corners.minOf {it.first}.coerceIn(0.0,1.0);val right=corners.maxOf {it.first}.coerceIn(0.0,1.0)
+                    val top=corners.minOf {it.second}.coerceIn(0.0,1.0);val bottom=corners.maxOf {it.second}.coerceIn(0.0,1.0)
+                    if(left>=right || top>=bottom) null else PdfFormWidgetInfo(pageIndex+1,left,top,right,bottom,widgetIndex)
+                }
             )
         }
     }
@@ -465,8 +505,8 @@ object PdfBoxBackend {
         PdfImageCompressor.compress(doc, maxDpi, jpegQuality, onPage, codec ?: AndroidImageCodec(maxBitmapBytes),
             maxBitmapBytes, checkCancel)
 
-    fun overlayText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float = 12f, gray: Float = 0.1f) {
-        stampText(doc, zeroBasedPages, text, xNorm, yNormTop, fontSize, gray)
+    fun overlayText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float = 12f, gray: Float = 0.1f, colorHex:String="") {
+        stampText(doc, zeroBasedPages, text, xNorm, yNormTop, fontSize, gray,colorHex)
     }
 
     /**
@@ -476,17 +516,19 @@ object PdfBoxBackend {
      */
     fun stampWatermarkAndNumbers(
         doc: PDDocument, zeroBasedPages: List<Int>, watermarkText: String,
-        addPageNumbers: Boolean, style: PdfWatermarkStyle = PdfWatermarkStyle()
+        addPageNumbers: Boolean, style: PdfWatermarkStyle = PdfWatermarkStyle(), checkCancellation: () -> Unit = {}
     ) {
         require(zeroBasedPages.all { it in 0 until doc.numberOfPages }) { "INVALID_PAGE_INDEX" }
         val text = watermarkText.trim().replace(Regex("\\s+"), " ")
         require(text.length <= 120) { "WATERMARK_TEXT_TOO_LONG" }
         if (text.isNotEmpty() && zeroBasedPages.isNotEmpty()) {
+            checkCancellation()
             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                 isFilterBitmap = true
                 textSize = 84f
-                typeface = android.graphics.Typeface.create(
-                    android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                typeface = android.graphics.Typeface.create(when(style.fontFamily) {
+                    "serif" -> "serif"; "mono" -> "monospace"; else -> "sans-serif"
+                }, android.graphics.Typeface.BOLD)
                 color = android.graphics.Color.parseColor(style.colorHex)
                 alpha = (style.opacityPercent * 255 / 100).coerceIn(0,255)
             }
@@ -506,10 +548,36 @@ object PdfBoxBackend {
             }
             val widthPt = rasterWidth * (style.fontSizePt / paint.textSize)
             val heightPt = rasterHeight * (style.fontSizePt / paint.textSize)
-            stampWatermarkImage(doc,zeroBasedPages,image,widthPt,heightPt,style)
+            stampWatermarkImage(doc,zeroBasedPages,image,widthPt,heightPt,style,checkCancellation)
         }
         if (addPageNumbers) zeroBasedPages.forEach { idx ->
+            checkCancellation()
             stampText(doc,listOf(idx),"${idx + 1}",0.47,0.96,10f,0.4f)
+        }
+    }
+
+    /** One embedded logo reused across pages; alpha is applied independently of the source PNG alpha. */
+    fun stampWatermarkLogo(doc: PDDocument, zeroBasedPages: List<Int>, image: PDImageXObject, style: PdfWatermarkStyle, checkCancellation: () -> Unit = {}) {
+        require(zeroBasedPages.all {it in 0 until doc.numberOfPages}) { "INVALID_PAGE_INDEX" }
+        val centers=OverlayStylePolicy.centers(style.centerX,style.centerY,style.tiled)
+        zeroBasedPages.forEach {index ->
+            checkCancellation()
+            val page=doc.getPage(index);val frame=displayFrame(page)
+            val (width,height)=OverlayStylePolicy.size(frame.widthPt,frame.heightPt,image.width.toDouble(),image.height.toDouble(),style.imageScale)
+            PDPageContentStream(doc,page,PDPageContentStream.AppendMode.APPEND,true,true).use {stream ->
+                stream.transform(displayMatrix(frame))
+                val alpha=com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState().apply {
+                    nonStrokingAlphaConstant=style.opacityPercent/100f
+                }
+                centers.forEach {(x,y) ->
+                    stream.saveGraphicsState()
+                    try {
+                        stream.setGraphicsStateParameters(alpha)
+                        stream.transform(Matrix.getRotateInstance(Math.toRadians(-style.rotationDegrees.toDouble()),(x*frame.widthPt).toFloat(),((1-y)*frame.heightPt).toFloat()))
+                        stream.drawImage(image,(-width/2).toFloat(),(-height/2).toFloat(),width.toFloat(),height.toFloat())
+                    } finally {stream.restoreGraphicsState()}
+                }
+            }
         }
     }
 
@@ -526,13 +594,14 @@ object PdfBoxBackend {
     }
 
     /** Shared image placement, separate from Android text rasterization for real-PDF JVM fixtures. */
-    internal fun stampWatermarkImage(doc:PDDocument,zeroBasedPages:List<Int>,image:PDImageXObject,widthPt:Float,heightPt:Float,style:PdfWatermarkStyle) {
+    internal fun stampWatermarkImage(doc:PDDocument,zeroBasedPages:List<Int>,image:PDImageXObject,widthPt:Float,heightPt:Float,style:PdfWatermarkStyle,checkCancellation:()->Unit={}) {
         require(widthPt.isFinite() && heightPt.isFinite() && widthPt>0 && heightPt>0) { "INVALID_STAMP" }
         require(zeroBasedPages.all { it in 0 until doc.numberOfPages }) { "INVALID_PAGE_INDEX" }
         val radians=Math.toRadians((-style.rotationDegrees).toDouble())
         val spots=if(style.tiled) listOf(0.18,0.5,0.82).flatMap { y -> listOf(0.18,0.5,0.82).map { x -> x to y } }
             else listOf(style.centerX to style.centerY)
         zeroBasedPages.forEach { index ->
+            checkCancellation()
             val page=doc.getPage(index)
             val frame=displayFrame(page)
             val cap=(frame.widthPt*(if(style.tiled) 0.36 else 0.8)).toFloat()
@@ -554,7 +623,7 @@ object PdfBoxBackend {
     }
 
     /** Overlay text (annotations/overlay, watermark, page numbers share this primitive). */
-    fun stampText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, gray: Float) {
+    fun stampText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float, gray: Float, colorHex:String="") {
         require(text.isNotBlank() && xNorm.isFinite() && yNormTop.isFinite() && xNorm in 0.0..1.0 && yNormTop in 0.0..1.0 && fontSize in 4f..200f && gray in 0f..1f) { "INVALID_STAMP" }
         require(zeroBasedPages.all { it in 0 until doc.pages.count }) { "INVALID_PAGE_INDEX" }
         val safeText = text.map { if (it in ' '..'~') it else ' ' }.joinToString("").ifBlank { "Note" }
@@ -565,7 +634,8 @@ object PdfBoxBackend {
                 cs.transform(displayMatrix(frame))
                 cs.beginText()
                 cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
-                cs.setNonStrokingColor(gray, gray, gray)
+                if(colorHex.isBlank()) cs.setNonStrokingColor(gray,gray,gray)
+                else cs.setNonStrokingColor(OverlayStylePolicy.rgb(colorHex))
                 cs.newLineAtOffset((xNorm*frame.widthPt).toFloat(), ((1.0-yNormTop)*frame.heightPt).toFloat())
                 cs.showText(safeText)
                 cs.endText()
@@ -590,15 +660,30 @@ object PdfBoxBackend {
     }
 
     /** Places an upright image in a normalized visible top-left rectangle. */
-    fun stampImage(doc: PDDocument, zeroBasedPage: Int, imageFile: File, left: Double, top: Double, right: Double, bottom: Double) {
+    fun stampImage(doc: PDDocument, zeroBasedPage: Int, imageFile: File, left: Double, top: Double, right: Double, bottom: Double, rotationDegrees: Float = 0f) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
         val image=PDImageXObject.createFromFile(imageFile.path,doc)
-        stampImageObject(doc,zeroBasedPage,image,left,top,right,bottom)
+        stampImageObject(doc,zeroBasedPage,image,left,top,right,bottom,rotationDegrees)
+    }
+
+    fun stampImages(doc:PDDocument,imageFile:File,placements:List<PdfImageOverlay>,checkCancellation:()->Unit={}) {
+        require(placements.isNotEmpty() && placements.size<=1000) { "INVALID_SIGNATURE_PLACEMENT" }
+        placements.forEach {
+            require(it.pageIndex in 0 until doc.numberOfPages && it.rotationDegrees.isFinite() && it.rotationDegrees in -180f..180f) { "INVALID_SIGNATURE_PLACEMENT" }
+            com.jumlo.app.core.Box(it.left,it.top,it.right,it.bottom).normalized()
+        }
+        checkCancellation()
+        val image=PDImageXObject.createFromFile(imageFile.path,doc)
+        placements.forEach {
+            checkCancellation()
+            stampImageObject(doc,it.pageIndex,image,it.left,it.top,it.right,it.bottom,it.rotationDegrees)
+        }
     }
 
     /** Placement is codec-independent, so the actual PDF operators can be tested on the JVM. */
-    internal fun stampImageObject(doc:PDDocument,zeroBasedPage:Int,image:PDImageXObject,left:Double,top:Double,right:Double,bottom:Double) {
+    internal fun stampImageObject(doc:PDDocument,zeroBasedPage:Int,image:PDImageXObject,left:Double,top:Double,right:Double,bottom:Double,rotationDegrees:Float=0f) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
+        require(rotationDegrees.isFinite() && rotationDegrees in -180f..180f) { "INVALID_ROTATION" }
         com.jumlo.app.core.Box(left,top,right,bottom).normalized()
         val page=doc.getPage(zeroBasedPage)
         val frame=displayFrame(page)
@@ -608,13 +693,15 @@ object PdfBoxBackend {
             cs.saveGraphicsState()
             try {
                 cs.transform(displayMatrix(frame))
-                cs.drawImage(image,placement.x,placement.y,placement.width,placement.height)
+                val centerX=placement.x+placement.width/2;val centerY=placement.y+placement.height/2
+                cs.transform(Matrix.getRotateInstance(Math.toRadians(-rotationDegrees.toDouble()),centerX,centerY))
+                cs.drawImage(image,-placement.width/2,-placement.height/2,placement.width,placement.height)
             } finally { cs.restoreGraphicsState() }
         }
     }
 
     /** Adds a Unicode note anchored in the visible physical page frame. */
-    fun addTextAnnotation(doc: PDDocument, zeroBasedPage: Int, contents: String, xNorm: Double, yNormTop: Double) {
+    fun addTextAnnotation(doc: PDDocument, zeroBasedPage: Int, contents: String, xNorm: Double, yNormTop: Double, colorHex:String="") {
         require(contents.isNotBlank() && zeroBasedPage in 0 until doc.pages.count && xNorm.isFinite() && yNormTop.isFinite()
             && xNorm in 0.0..1.0 && yNormTop in 0.0..1.0) { "INVALID_ANNOTATION" }
         val page=doc.getPage(zeroBasedPage)
@@ -625,6 +712,7 @@ object PdfBoxBackend {
         val annotation=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText()
         annotation.rectangle=PDRectangle(rect.x,rect.y,rect.width,rect.height)
         annotation.contents=contents
+        if(colorHex.isNotBlank()) annotation.color=com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(OverlayStylePolicy.rgb(colorHex),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB.INSTANCE)
         annotation.setPage(page)
         annotation.setOpen(true)
         page.annotations=page.annotations.toMutableList().also { it.add(annotation) }
@@ -931,7 +1019,7 @@ object PdfBoxBackend {
 
     fun addAnnotation(
         doc: PDDocument, zeroBasedPage: Int, kind: com.jumlo.app.core.PdfAnnotationKind,
-        left: Double, top: Double, right: Double, bottom: Double, contents: String = ""
+        left: Double, top: Double, right: Double, bottom: Double, contents: String = "", colorHex: String = "", thicknessPt: Float = 2f
     ) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
         require(left.isFinite() && top.isFinite() && right.isFinite() && bottom.isFinite()
@@ -939,6 +1027,7 @@ object PdfBoxBackend {
             && left < right && top < bottom) { "INVALID_ANNOTATION" }
         val page = doc.getPage(zeroBasedPage)
         val frame = displayFrame(page)
+        require(thicknessPt.isFinite() && thicknessPt in .5f..20f) { "INVALID_ANNOTATION" }
         val rect = PdfDisplayCoordinates.normalizedRectangle(frame, left, top, right, bottom)
         val annotation: com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation = when (kind) {
             com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT ->
@@ -978,8 +1067,42 @@ object PdfBoxBackend {
             }
             annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.C, rgbColor(tint.first, tint.second, tint.third))
         }
+        if(colorHex.isNotBlank()) annotation.color=com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(OverlayStylePolicy.rgb(colorHex),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB.INSTANCE)
+        annotation.cosObject.setItem(COSName.BS,com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary().apply {width=thicknessPt/page.userUnit})
         if (contents.isNotBlank()) annotation.contents = contents
+        annotation.isPrinted=true
         annotation.setPage(page)
+        if(kind.isMarkup) {
+            // PDFBox's rounded highlight generator expands /Rect beyond the selected box.
+            // An explicit appearance keeps the visible quad and editable bounds aligned.
+            val appearance=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream(doc).apply {
+                bBox=PDRectangle(rect.width,rect.height)
+                resources=com.tom_roush.pdfbox.pdmodel.PDResources()
+            }
+            val quad=PdfDisplayCoordinates.normalizedCorners(frame,left,top,right,bottom)
+            fun x(index:Int)=quad[index*2]-rect.x
+            fun y(index:Int)=quad[index*2+1]-rect.y
+            PDPageContentStream(doc,appearance).use {stream ->
+                stream.setNonStrokingColor(annotation.color);stream.setStrokingColor(annotation.color)
+                if(kind==com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT) {
+                    stream.setGraphicsStateParameters(com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState().apply {
+                        nonStrokingAlphaConstant=.35f
+                        blendMode=com.tom_roush.pdfbox.pdmodel.graphics.blend.BlendMode.MULTIPLY
+                    })
+                    stream.moveTo(x(0),y(0));stream.lineTo(x(1),y(1));stream.lineTo(x(3),y(3));stream.lineTo(x(2),y(2))
+                    stream.closePath();stream.fill()
+                } else {
+                    val thickness=thicknessPt/page.userUnit
+                    val fraction=if(kind==com.jumlo.app.core.PdfAnnotationKind.UNDERLINE)
+                        minOf(.5f,thickness/(2*kotlin.math.hypot(x(0)-x(2),y(0)-y(2)))) else .5f
+                    stream.setLineWidth(thickness)
+                    stream.moveTo(x(2)+(x(0)-x(2))*fraction,y(2)+(y(0)-y(2))*fraction)
+                    stream.lineTo(x(3)+(x(1)-x(3))*fraction,y(3)+(y(1)-y(3))*fraction)
+                    stream.stroke()
+                }
+            }
+            annotation.appearance=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary().apply {setNormalAppearance(appearance)}
+        } else annotation.constructAppearances(doc)
         page.annotations = page.annotations.toMutableList().also { it.add(annotation) }
     }
 
@@ -987,8 +1110,9 @@ object PdfBoxBackend {
         addInkStrokes(doc,zeroBasedPage,listOf(points),contents)
     }
 
-    fun addInkStrokes(doc: PDDocument, zeroBasedPage: Int, strokes: List<List<com.jumlo.app.core.PdfInkPoint>>, contents: String = "") {
+    fun addInkStrokes(doc: PDDocument, zeroBasedPage: Int, strokes: List<List<com.jumlo.app.core.PdfInkPoint>>, contents: String = "", colorHex: String = "", thicknessPt: Float = com.jumlo.app.core.PdfInkDrawing.STROKE_WIDTH_PT) {
         require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
+        require(thicknessPt.isFinite() && thicknessPt in .5f..20f) { "INVALID_ANNOTATION" }
         require(strokes.isNotEmpty() && strokes.size<=com.jumlo.app.core.PdfInkDrawing.MAX_STROKES) { "INVALID_ANNOTATION" }
         var total=0L
         strokes.forEach {points ->
@@ -1027,7 +1151,7 @@ object PdfBoxBackend {
         val ys = mapped.flatMap {points->points.map {it.second}}
         val minX = xs.min()
         val minY = ys.min()
-        val strokeWidth=com.jumlo.app.core.PdfInkDrawing.STROKE_WIDTH_PT/page.userUnit
+        val strokeWidth=thicknessPt/page.userUnit
         require(strokeWidth.isFinite() && strokeWidth>0f) { "INVALID_ANNOTATION" }
         // Include the painted stroke on both axes, including perfectly straight paths.
         val padding=strokeWidth*2f
@@ -1036,7 +1160,8 @@ object PdfBoxBackend {
         require(listOf(bounds.lowerLeftX,bounds.lowerLeftY,bounds.upperRightX,bounds.upperRightY).all {it.isFinite()} &&
             bounds.width>0f && bounds.height>0f) { "INVALID_ANNOTATION" }
         annotation.rectangle=bounds
-        annotation.color=com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(floatArrayOf(0f),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceGray.INSTANCE)
+        annotation.color=if(colorHex.isBlank()) com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(floatArrayOf(0f),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceGray.INSTANCE)
+            else com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(OverlayStylePolicy.rgb(colorHex),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB.INSTANCE)
         annotation.borderStyle=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary().apply {width=strokeWidth}
         annotation.isPrinted=true
         if (contents.isNotBlank()) annotation.contents = contents

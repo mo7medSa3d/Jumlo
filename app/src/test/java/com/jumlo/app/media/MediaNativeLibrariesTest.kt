@@ -57,11 +57,14 @@ class MediaNativeLibrariesTest {
     }
 
     @Test fun actualApkRepairAssetsMatchTheirPinsAndHaveValidLoadableLayouts() {
-        val root = listOf(File("app/src/media/assets/media/native-overrides"),
-            File("src/media/assets/media/native-overrides")).first { it.isDirectory }
-        val manifest = Properties().apply { File(root, "manifest.properties").inputStream().use(::load) }
+        val root = listOf(File("app"), File(".")).first {
+            File(it, "src/media/assets/media/native-overrides/manifest.properties").isFile
+        }
+        val commonAssets = File(root, "src/media/assets/media/native-overrides")
+        val debugAssets = File(root, "src/mediaDebug/assets/media/native-overrides")
+        val manifest = Properties().apply { File(commonAssets, "manifest.properties").inputStream().use(::load) }
         for (abi in listOf("arm64-v8a", "x86_64")) for (name in MediaNativeLibraries.repairedNames) {
-            val file = File(root, "$abi/$name")
+            val file = File(if (abi == "x86_64") debugAssets else commonAssets, "$abi/$name")
             assertEquals(manifest.getProperty("$abi.$name.sha256"), file.inputStream().use { Hashing.sha256(it) })
             MediaNativeLibraries.require16KiB(file.readBytes(), abi)
         }

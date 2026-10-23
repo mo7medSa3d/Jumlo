@@ -12,21 +12,27 @@ class FlagshipReliabilityWiringTests(unittest.TestCase):
         chunk=editor.split('item("each-page")',1)[1].split('item(',1)[0]
         # Group mode uses the same flag, so "every page" is selected only for
         # a one-page group. Merely checking flag1 would mislabel larger groups.
-        self.assertIn('FilterChip((draft.flag1 && every==1)',chunk)
+        # Styling now supplies border before the named selection argument. Check
+        # the selection contract, not the old positional argument spelling.
+        self.assertRegex(chunk,r'FilterChip\s*\([^{}]*\bselected\s*=\s*\(\s*draft\.flag1\s*&&\s*every\s*==\s*1\s*\)')
         self.assertRegex(chunk,r'flag1\s*=\s*true')
         self.assertRegex(chunk,r'flag2\s*=\s*false')
         self.assertRegex(chunk,r'num1\s*=\s*"1"')
         self.assertIn('selectionEnabled = !(split && draft.flag1)',editor)
 
-    def test_intro_caps_its_duration_from_cold_start_and_skips_external_intents(self):
+    def test_platform_splash_is_bounded_by_readiness_and_does_not_delay_intake(self):
         activity=source('MainActivity.kt')
-        # The brand reveal is bounded from process start, never an extra delay
-        # after the app has already been initializing for longer than 650ms.
-        self.assertIn('SystemClock.elapsedRealtime() - launchStartedAt',activity)
-        self.assertIn('(650L - elapsed).coerceAtLeast(0L)',activity)
-        self.assertIn('coldLauncher && !reduceMotion',activity)
-        self.assertIn('showLaunch = false',activity)
-        self.assertIn('settings.isLoaded && workspaceReady',activity)
+        # The SplashScreen API replaced the old delayed Compose overlay.
+        self.assertIn('installSplashScreen()',activity)
+        self.assertIn('splash.setKeepOnScreenCondition',activity)
+        self.assertIn('SystemClock.elapsedRealtime() - startedAt < 900L',activity)
+        self.assertIn('!appViewModel.settings.value.isLoaded || !appViewModel.workspaceReady.value',activity)
+        self.assertIn('setOnExitAnimationListener',activity)
+        self.assertIn('.withEndAction { provider.remove() }.start()',activity)
+        self.assertNotIn('delay(',activity)
+        self.assertIn('if (savedInstanceState == null) receiveIntent(intent)',activity)
+        self.assertIn('override fun onNewIntent(intent: Intent)',activity)
+        self.assertIn('receiveIntent(intent)',activity.split('override fun onNewIntent',1)[1])
 
     def test_zip_extraction_is_capped_before_extraction(self):
         archive=source('data/processing/ArchiveOperationHandler.kt')

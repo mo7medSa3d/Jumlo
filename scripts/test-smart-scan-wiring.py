@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static architecture contracts for optional Play Services scanning; not device proof."""
+"""Static integration checks for direct Play Services PDF scanning; not device proof."""
 import pathlib
 import unittest
 from xml.etree import ElementTree as ET
@@ -8,21 +8,23 @@ SRC=ROOT/'app/src/main/java/com/jumlo/app'
 def code(path):return (SRC/path).read_text(encoding="utf-8")
 
 class SmartScannerWiring(unittest.TestCase):
-    def test_manual_fallback_and_real_sdk(self):
+    def test_direct_pdf_scanner_and_real_sdk(self):
         scan=code("ui/scan/ScanScreen.kt")
         smart=code("ui/scan/SmartDocumentScanButton.kt")
-        self.assertIn("SmartDocumentScanButton(",scan)
-        self.assertIn("CameraSelector.DEFAULT_BACK_CAMERA",scan)
+        self.assertIn("SmartDocumentScanLauncher(",scan)
+        self.assertNotIn("ProcessCameraProvider",scan)
+        self.assertNotIn("Manifest.permission.CAMERA",scan)
         self.assertIn("GmsDocumentScanning.getClient(options)",smart)
         self.assertIn(".fromActivityResultIntent(activityResult.data)",smart)
         self.assertIn("SCANNER_MODE_FULL",smart)
-        self.assertIn("RESULT_FORMAT_JPEG",smart)
+        self.assertIn("RESULT_FORMAT_PDF",smart)
+        self.assertIn(".setGalleryImportAllowed(true)",smart)
+        self.assertIn("LaunchedEffect(Unit)",smart)
         self.assertIn("addOnFailureListener",smart)
     def test_batch_intake_is_ordered_and_rollback_safe(self):
         vm=code("ui/AppViewModel.kt")
         nav=code("ui/navigation/JumloNavHost.kt")
-        self.assertIn("intakeLocalFiles(files)",nav)
-        self.assertIn("onCapturedBatch={files->",nav)
+        self.assertIn("onScannedPdf",nav)
         self.assertIn("selected.forEachIndexed",vm)
         self.assertIn("sources.discardNewImport(id)",vm)
         self.assertIn("selected.forEach { it.delete() }",vm)

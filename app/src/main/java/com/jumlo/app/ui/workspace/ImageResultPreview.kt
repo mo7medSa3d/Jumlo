@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -33,12 +34,16 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import com.jumlo.app.data.processing.BitmapExtras
+import com.jumlo.app.data.processing.ImageWatermarkSettings
 import kotlin.math.roundToInt
 
 private data class ImageResult(val bitmap:Bitmap,val width:Int,val height:Int)
 private data class ImagePreviewSettings(val tool:String,val width:String,val height:String,val percent:String,
     val edge:String,val fit:String,val upscale:Boolean,val text:String,val n1:String,val n2:String,
-    val n3:String,val n4:String,val logo:Boolean)
+    val n3:String,val n4:String,val logo:Boolean,val style:List<String>)
 
 /** Bounded raster previews use original dimensions and the engine's placement policies. */
 @Composable
@@ -47,7 +52,8 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
     var retry by remember(sourceIds) {mutableIntStateOf(0)}
     var showOriginal by rememberSaveable(sourceIds.firstOrNull(),draft.toolId) {mutableStateOf(false)}
     val settings=ImagePreviewSettings(draft.toolId,draft.width,draft.height,draft.percentage,draft.longestEdge,
-        draft.fit,draft.allowUpscaling,draft.text1,draft.num1,draft.num2,draft.num3,draft.num4,draft.flag1)
+        draft.fit,draft.allowUpscaling,draft.text1,draft.num1,draft.num2,draft.num3,draft.num4,draft.flag1,
+        listOf(draft.text2,draft.text3,draft.text4,draft.watermarkFont,draft.watermarkScale.toString()))
     // Decode single images once; changing a slider does not reopen the source provider.
     val frame by produceState<Result<PreviewFrame>?>(null,sourceIds.firstOrNull(),retry) {
         value=null
@@ -93,9 +99,22 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
         Text(stringResource(if(joined) R.string.interactive_layout_preview else R.string.interactive_result_preview),style=QuietTheme.typography.sectionTitle)
         val shown=if(showOriginal && !joined) frame?.getOrNull()?.let {ImageResult(it.bitmap,it.width,it.height)} else result?.getOrNull()
         if(shown!=null) {
-            Image(shown.bitmap.asImageBitmap(),stringResource(R.string.interactive_result_preview),
+            val original=frame?.getOrNull()?.bitmap
+            if(joined && sizes?.isSuccess==true) {
+                val dimensions=sizes!!.getOrThrow()
+                val layout=if(draft.toolId=="img_stitch") "VSTRIP" else draft.text1.ifBlank {"GRID2"}
+                val plan=ImageJoinPolicy.plan(dimensions,layout,draftNumber(draft.num1,8),if(draft.toolId=="img_stitch") draftNumber(draft.num2,0) else 0)
+                val cells=plan.placements.mapIndexed {index,placement->
+                    val item=dimensions[index]
+                    androidx.compose.ui.geometry.Rect(placement.x.toFloat()/plan.width,placement.y.toFloat()/plan.height,
+                        (placement.x+item.first).toFloat()/plan.width,(placement.y+item.second-placement.trimTop).toFloat()/plan.height)
+                }
+                CollagePlacementPreview(shown.bitmap,cells) {from,to->vm.moveSource(from,to-from)}
+            } else if(draft.toolId=="img_adjust" && original!=null && !showOriginal)
+                ImageComparisonPreview(original,shown.bitmap)
+            else Image(shown.bitmap.asImageBitmap(),stringResource(R.string.interactive_result_preview),
                 contentScale=ContentScale.Fit,
-                modifier=Modifier.fillMaxWidth().height(320.dp).clip(QuietTheme.shapes.thumbnail)
+                modifier=Modifier.fillMaxWidth().height(320.dp).testTag("preview.bitmap").clip(QuietTheme.shapes.thumbnail)
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest))
             Text(stringResource(if(showOriginal) R.string.interactive_preview_source_size else R.string.visual_output_dimensions,shown.width,shown.height),style=QuietTheme.typography.metadataStrong)
         } else if(result?.isFailure==true || frame?.isFailure==true || sizes?.isFailure==true || logoResult?.isFailure==true) {
@@ -103,7 +122,7 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
             TextButton(onClick={retry++}) {Text(stringResource(R.string.interactive_preview_retry))}
         } else LinearProgressIndicator(Modifier.fillMaxWidth())
         if(!joined) {
-            OutlinedButton(onClick={showOriginal=!showOriginal},enabled=frame?.isSuccess==true,
+            FilledTonalButton(onClick={showOriginal=!showOriginal},enabled=frame?.isSuccess==true,
                 modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                 Text(stringResource(if(showOriginal) R.string.visual_show_edited else R.string.visual_show_original))
             }
@@ -151,20 +170,10 @@ private fun renderSinglePreview(frame:PreviewFrame,logo:PreviewFrame?,draft:Work
             (crop.right*source.width).roundToInt(),(crop.bottom*source.height).roundToInt()),
             RectF(draw.left.toFloat(),draw.top.toFloat(),draw.right.toFloat(),draw.bottom.toFloat()),paint)
         if(draft.toolId=="img_watermark") {
-            val opacity=draftNumber(draft.num1,40).coerceIn(1,100)
-            if(draft.flag1 && logo!=null) {
-                val pad=minOf(16,sw/20,sh/20)
-                val width=(sw/4).coerceAtLeast(1)
-                val height=(logo.height*width.toFloat()/logo.width).toInt().coerceIn(1,(sh-pad*2).coerceAtLeast(1))
-                canvas.drawBitmap(logo.bitmap,null,RectF((sw-width-pad).toFloat(),(sh-height-pad).toFloat(),(sw-pad).toFloat(),(sh-pad).toFloat()),
-                    Paint(Paint.FILTER_BITMAP_FLAG).apply {alpha=opacity*255/100})
-            } else if(!draft.flag1) {
-                val textPaint=Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color=Color.WHITE;alpha=opacity*255/100;textSize=(sw/12f).coerceAtLeast(18f)
-                    isFakeBoldText=true;setShadowLayer(4f,2f,2f,Color.BLACK)
-                }
-                canvas.drawText(draft.text1,sw*.08f,sh*.92f,textPaint)
-            }
+            val exact=Json.decodeFromString<ImageWatermarkSettings>(draft.executionSettings())
+            val styled=BitmapExtras.watermark(out,if(exact.useLogo) logo?.bitmap else null,exact,64L*1024*1024)
+            out.recycle()
+            return ImageResult(styled,geometry.width,geometry.height)
         }
         return ImageResult(out,geometry.width,geometry.height)
     } catch(error:Throwable) {out.recycle();throw error}

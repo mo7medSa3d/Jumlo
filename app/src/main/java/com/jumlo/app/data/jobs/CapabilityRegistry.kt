@@ -6,6 +6,8 @@ import com.jumlo.app.model.*
 object CapabilityRegistry {
     val allTools: List<UtilityTool> = listOf(
         // PDF Tools
+        UtilityTool("pdf_to_docx", "tools/pdf/word", PillarCategory.PDF, "PDF to Word", "PDF إلى Word", "Editable paragraphs", "فقرات قابلة للتعديل", "description"),
+        UtilityTool("pdf_to_pptx", "tools/pdf/powerpoint", PillarCategory.PDF, "PDF to PowerPoint", "PDF إلى PowerPoint", "One slide per page", "شريحة لكل صفحة", "slideshow"),
         UtilityTool("pdf_02", "images_to_pdf", PillarCategory.PDF, "Images to PDF", "صور إلى PDF", "Compile photos into clean document", "تجميع فوري للصور في مستند PDF", "picture_as_pdf"),
         UtilityTool("pdf_03", "merge_pdf", PillarCategory.PDF, "Merge PDF", "دمج ملفات PDF", "Combine multiple PDF files & ranges", "دمج عدة ملفات PDF بدون فقد جودة", "file_copy"),
         UtilityTool("pdf_05", "split_pdf", PillarCategory.PDF, "Split PDF", "تقسيم مستند PDF", "Split by page count or custom ranges", "تقسيم حسب عدد الصفحات أو النطاقات", "content_cut"),
@@ -23,8 +25,8 @@ object CapabilityRegistry {
         UtilityTool("pdf_metadata", "pdf_metadata", PillarCategory.PDF, "PDF Metadata", "بيانات PDF", "Edit title, author, subject", "تحرير العنوان والمؤلف", "info"),
         UtilityTool("pdf_clean", "pdf_clean", PillarCategory.PDF, "Clean Metadata", "تنظيف البيانات", "Strip author, device and tracking data", "إزالة بيانات المؤلف والجهاز والتتبع", "shield_lock"),
         UtilityTool("pdf_forms", "pdf_forms", PillarCategory.PDF, "Fill PDF Form", "تعبئة نموذج PDF", "Fill AcroForm fields, optional flatten", "تعبئة الحقول مع تسطيح اختياري", "assignment"),
-        UtilityTool("pdf_ocr", "pdf_ocr", PillarCategory.PDF, "OCR to Searchable PDF / Text", "تعرف ضوئي OCR", "On-device OCR, searchable PDF + .txt", "نص قابل للبحث", "text_fields"),
-        UtilityTool("scan_doc", "scan_doc", PillarCategory.PDF, "Scan Document", "مسح مستند", "Camera capture with perspective fix", "تصوير وتصحيح المنظور", "document_scanner"),
+        UtilityTool("pdf_ocr", "tools/pdf/ocr", PillarCategory.PDF, "Extract Text", "استخراج النص", "PDF or image · Latin OCR", "PDF أو صورة · OCR لاتيني", "text_fields"),
+        UtilityTool("scan_doc", "tools/scan", PillarCategory.PDF, "Smart Scan", "المسح الذكي", "Multi-page PDF", "مستند PDF متعدد الصفحات", "document_scanner"),
         UtilityTool("webpage_pdf", "webpage_pdf", PillarCategory.PDF, "Webpage to PDF", "صفحة ويب إلى PDF", "Render a public webpage to PDF", "تحويل صفحة ويب", "language"),
 
         // Image Tools

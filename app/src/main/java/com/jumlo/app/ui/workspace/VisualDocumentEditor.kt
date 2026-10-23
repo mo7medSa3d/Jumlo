@@ -15,17 +15,18 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.NavigateBefore
-import androidx.compose.material.icons.automirrored.rounded.NavigateNext
-import androidx.compose.material.icons.automirrored.rounded.RotateRight
-import androidx.compose.material.icons.rounded.*
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.NavigateBefore
+import com.jumlo.app.ui.icons.automirrored.rounded.NavigateNext
+import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
+import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -71,6 +72,11 @@ private fun WorkspaceDraft.visualRect(): VisualRect {
         read(cropLeft,fallback.left),read(cropTop,fallback.top),
         read(cropRight,fallback.right),read(cropBottom,fallback.bottom)
     ).valid()
+}
+
+private fun WorkspaceDraft.cropRectFor(page:Int,perPage:Boolean):VisualRect {
+    val box=cropOverrides.firstOrNull {it.page==page}?.takeIf {perPage && toolId=="pdf_crop"}
+    return if(box==null) visualRect() else VisualRect(box.left.toFloat(),box.top.toFloat(),box.right.toFloat(),box.bottom.toFloat()).valid()
 }
 
 private fun Float.serialized():String = String.format(Locale.US,"%.5f",this)
@@ -120,7 +126,8 @@ internal fun VisualDocumentEditor(
             catch(_:Exception) { value=null }
         }
     }
-    var rect by remember(sourceId,tool) { mutableStateOf(draft.visualRect()) }
+    var perPageCrop by rememberSaveable(sourceId,tool) {mutableStateOf(draft.cropOverrides.isNotEmpty())}
+    var rect by remember(sourceId,tool) { mutableStateOf(draft.cropRectFor(currentPage,perPageCrop)) }
     val historyModel:VisualDocumentEditorSession=androidx.lifecycle.viewmodel.compose.viewModel(key="visual-document-editor-session")
     val session=remember(historyModel,sourceId,tool) {historyModel.forDocument("$tool:$sourceId")}
     var timeline by session.timeline
@@ -143,9 +150,9 @@ internal fun VisualDocumentEditor(
     // The guide line the rectangle is snapped to, drawn so the snap is visible.
     var snapGuide by remember { mutableStateOf<Offset?>(null) }
     LaunchedEffect(draft.cropLeft,draft.cropTop,draft.cropRight,draft.cropBottom,
-        draft.num2,draft.num3,sourceId,tool) {
+        draft.num2,draft.num3,draft.cropOverrides,currentPage,perPageCrop,sourceId,tool) {
         if(!dragging) {
-            val fromDraft=draft.visualRect()
+            val fromDraft=draft.cropRectFor(currentPage,perPageCrop)
             if(fromDraft!=rect) rect=fromDraft
         }
     }
@@ -154,7 +161,7 @@ internal fun VisualDocumentEditor(
     val density=LocalDensity.current
     val handlePx=with(density) { 34.dp.toPx() }
 
-    fun snapshot(box:VisualRect=rect)=VisualEditSnapshot(box,currentDraft.turns,currentDraft.flipX,currentDraft.flipY,lockedAspect,currentDraft.inkPoints,currentDraft.inkStrokes)
+    fun snapshot(box:VisualRect=rect)=VisualEditSnapshot(box,currentDraft.turns,currentDraft.flipX,currentDraft.flipY,lockedAspect,currentDraft.inkPoints,currentDraft.inkStrokes,currentDraft.annotationColorHex,currentDraft.annotationThicknessPt,currentDraft.text2,currentDraft.text1,currentDraft.cropOverrides,currentPage,perPageCrop,currentDraft.visualRect())
     fun recordSnapshot() {
         timeline=timeline.record(snapshot())
     }
@@ -163,15 +170,22 @@ internal fun VisualDocumentEditor(
     }
     fun restoreSnapshot(snapshot:VisualEditSnapshot) {
         rect=snapshot.rect;lockedAspect=snapshot.aspect
+        if(tool=="pdf_crop") {perPageCrop=snapshot.perPageCrop;currentPage=snapshot.cropPage}
+        val draftRect=if(tool=="pdf_crop") snapshot.cropDefaultRect else rect
         inkCapture=inkCapture.cancel();inkLimit=false
-        latestEdit { it.copy(cropLeft=rect.left.serialized(),cropTop=rect.top.serialized(),cropRight=rect.right.serialized(),cropBottom=rect.bottom.serialized(),
+        latestEdit { it.copy(cropLeft=draftRect.left.serialized(),cropTop=draftRect.top.serialized(),cropRight=draftRect.right.serialized(),cropBottom=draftRect.bottom.serialized(),
+            cropOverrides=if(tool=="pdf_crop") snapshot.cropOverrides else it.cropOverrides,
             num2=if(annotation) rect.left.serialized() else it.num2,num3=if(annotation) rect.top.serialized() else it.num3,
-            turns=snapshot.turns,flipX=snapshot.flipX,flipY=snapshot.flipY,inkPoints=snapshot.inkPoints,inkStrokes=snapshot.inkStrokes) }
+            turns=snapshot.turns,flipX=snapshot.flipX,flipY=snapshot.flipY,inkPoints=snapshot.inkPoints,inkStrokes=snapshot.inkStrokes,
+            annotationColorHex=snapshot.annotationColorHex,annotationThicknessPt=snapshot.annotationThicknessPt,
+            text2=if(annotation) snapshot.annotationKind else it.text2,text1=if(annotation) snapshot.annotationText else it.text1) }
     }
     fun saveRect(box:VisualRect) {
         val safe=box.valid()
         latestEdit { current ->
-            current.copy(
+            if(tool=="pdf_crop" && perPageCrop) current.copy(cropOverrides=current.cropOverrides.filterNot {it.page==currentPage}+
+                com.jumlo.app.data.processing.PdfCropOverride(currentPage,safe.left.toDouble(),safe.top.toDouble(),safe.right.toDouble(),safe.bottom.toDouble()))
+            else current.copy(
                 cropLeft=safe.left.serialized(),cropTop=safe.top.serialized(),
                 cropRight=safe.right.serialized(),cropBottom=safe.bottom.serialized(),
                 num2=if(annotation) safe.left.serialized() else current.num2,
@@ -194,7 +208,8 @@ internal fun VisualDocumentEditor(
                 if(rect!=reset || lockedAspect!=0f || draft.turns!=0 || draft.flipX || draft.flipY || draft.effectiveInkStrokes().isNotEmpty()) recordSnapshot()
                 lockedAspect=0f
                 rect=reset
-                restoreSnapshot(VisualEditSnapshot(reset,0,false,false,0f))
+                if(tool=="pdf_crop" && perPageCrop) saveRect(reset)
+                else restoreSnapshot(VisualEditSnapshot(reset,0,false,false,0f,cropPage=currentPage,cropDefaultRect=reset))
                 zoom=1f;pan=Offset.Zero
                 haptics.selectionToggle()
             }) {
@@ -266,7 +281,7 @@ internal fun VisualDocumentEditor(
                     },contentAlignment=AbsoluteAlignment.TopLeft) {
                     Image(frame.bitmap.asImageBitmap(),
                         contentDescription=stringResource(R.string.visual_editor_title),
-                        modifier=Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                        modifier=Modifier.fillMaxSize().testTag("preview.bitmap"),contentScale=ContentScale.FillBounds)
 
                     // Preview the ACTUAL user-imported image, not a placeholder rectangle.
                     val overlay=importedOverlay?.bitmap
@@ -286,7 +301,7 @@ internal fun VisualDocumentEditor(
                                 .widthIn(max=180.dp).padding(5.dp),
                             maxLines=2,overflow=TextOverflow.Ellipsis,
                             style=QuietTheme.typography.metadataStrong,
-                            color=colors.primary)
+                            color=Color(android.graphics.Color.parseColor(draft.annotationColorHex)))
                     }
 
                     val active by rememberUpdatedState(rect)
@@ -380,19 +395,21 @@ internal fun VisualDocumentEditor(
                                     Offset(x1,y0+(y1-y0)*position),1.dp.toPx())
                             }
                         } else if(annotation) {
+                            val inkColor=Color(android.graphics.Color.parseColor(currentDraft.annotationColorHex))
+                            val inkWidth=currentDraft.annotationThicknessPt*size.width/frame.width
                             when(PdfAnnotationKind.from(currentDraft.text2)) {
                                 PdfAnnotationKind.HIGHLIGHT ->
-                                    drawRect(Color(1f,.92f,.23f).copy(alpha=.45f),Offset(x0,y0),rectSize)
+                                    drawRect(inkColor.copy(alpha=.45f),Offset(x0,y0),rectSize)
                                 PdfAnnotationKind.UNDERLINE ->
-                                    drawLine(Color(.10f,.60f,.30f),Offset(x0,y1),Offset(x1,y1),4.dp.toPx())
+                                    drawLine(inkColor,Offset(x0,y1),Offset(x1,y1),inkWidth)
                                 PdfAnnotationKind.STRIKETHROUGH ->
-                                    drawLine(Color(.85f,.20f,.20f),Offset(x0,(y0+y1)/2f),Offset(x1,(y0+y1)/2f),3.dp.toPx())
+                                    drawLine(inkColor,Offset(x0,(y0+y1)/2f),Offset(x1,(y0+y1)/2f),inkWidth)
                                 PdfAnnotationKind.CIRCLE ->
-                                    drawOval(Color(.10f,.30f,.70f),Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
+                                    drawOval(inkColor,Offset(x0,y0),rectSize,style=Stroke(inkWidth))
                                 PdfAnnotationKind.SQUARE ->
-                                    drawRect(Color(.10f,.30f,.70f),Offset(x0,y0),rectSize,style=Stroke(3.dp.toPx()))
+                                    drawRect(inkColor,Offset(x0,y0),rectSize,style=Stroke(inkWidth))
                                 PdfAnnotationKind.NOTE ->
-                                    drawRect(Color(1f,.85f,.3f).copy(alpha=.55f),Offset(x0,y0),
+                                    drawRect(inkColor.copy(alpha=.55f),Offset(x0,y0),
                                         androidx.compose.ui.geometry.Size(24.dp.toPx(),24.dp.toPx()))
                                 PdfAnnotationKind.INK -> Unit
                                 else ->
@@ -411,7 +428,7 @@ internal fun VisualDocumentEditor(
                                         val py=stroke[index+1].coerceIn(0f,1f)*size.height
                                         if(index==0) path.moveTo(px,py) else path.lineTo(px,py)
                                     }
-                                    drawPath(path,Color.Black,style=Stroke(PdfInkDrawing.STROKE_WIDTH_PT*size.width/frame.width))
+                                    drawPath(path,Color(android.graphics.Color.parseColor(currentDraft.annotationColorHex)),style=Stroke(currentDraft.annotationThicknessPt*size.width/frame.width))
                                 }
                             }
                         } else {
@@ -433,6 +450,7 @@ internal fun VisualDocumentEditor(
                 }
             }
             }
+            if(annotation) AnnotationToolbar(draft) {change->recordSnapshot();latestEdit(change)}
             TextButton(onClick={zoom=1f;pan=Offset.Zero}) { Text(stringResource(R.string.editor_fit_preview)) }
             Text(stringResource(if(inkKind) R.string.interactive_ink_hint else R.string.visual_edit_drag_hint),
                 style=QuietTheme.typography.metadata,color=colors.onSurfaceVariant)
@@ -446,13 +464,24 @@ internal fun VisualDocumentEditor(
                 }
                 if(tool=="pdf_crop") {
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        FilterChip(draft.pages=="all",onClick={
+                        FilterChip(selected=draft.pages=="all",border=null,onClick={
                             latestEdit { it.copy(pages="all") }
                         },label={Text(stringResource(R.string.visual_apply_all))})
-                        FilterChip(draft.pages==currentPage.toString(),onClick={
+                        FilterChip(selected=draft.pages==currentPage.toString(),border=null,onClick={
                             latestEdit { it.copy(pages=currentPage.toString()) }
                         },label={Text(stringResource(R.string.visual_apply_page))})
                     }
+                }
+            }
+            if(tool=="pdf_crop") {
+                InteractiveToggle(stringResource(R.string.studio_crop_per_page),perPageCrop) {enabled->
+                    recordSnapshot();perPageCrop=enabled
+                    if(!enabled) latestEdit {it.copy(cropOverrides=emptyList())}
+                    rect=currentDraft.cropRectFor(currentPage,enabled)
+                }
+                Text(stringResource(R.string.studio_crop_override_count,draft.cropOverrides.size),style=QuietTheme.typography.metadata)
+                if(draft.cropOverrides.isNotEmpty()) TextButton(onClick={recordSnapshot();latestEdit {it.copy(cropOverrides=emptyList())};perPageCrop=false}) {
+                    Text(stringResource(R.string.studio_crop_clear_overrides))
                 }
             }
             if(cropTool) {
@@ -463,7 +492,7 @@ internal fun VisualDocumentEditor(
                         R.string.visual_edit_document to (210f/297f),
                         R.string.visual_landscape to (16f/9f)
                     ).forEach { (label,ratio) ->
-                        FilterChip(lockedAspect==ratio,onClick={
+                        FilterChip(selected=lockedAspect==ratio,border=null,onClick={
                             val box=if(ratio==0f) VisualRect.WHOLE
                                 else VisualRect.fitAspect(frame.width,frame.height,sourceCropAspect(ratio,if(tool=="img_03") draft.turns else 0))
                             if(rect!=box || lockedAspect!=ratio) recordSnapshot()
@@ -476,7 +505,7 @@ internal fun VisualDocumentEditor(
                 }
                 if(tool=="img_03") {
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick={
+                        FilledTonalButton(onClick={
                             recordSnapshot()
                             if(lockedAspect>0f) lockedAspect=1f/lockedAspect
                             latestEdit { it.copy(turns=(it.turns+1)%4) }
@@ -485,7 +514,7 @@ internal fun VisualDocumentEditor(
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.visual_rotate))
                         }
-                        OutlinedButton(onClick={
+                        FilledTonalButton(onClick={
                             recordSnapshot();latestEdit { it.copy(flipX=!it.flipX) }
                         },modifier=Modifier.weight(1f)) {
                             Icon(Icons.Rounded.Flip,null,Modifier.size(18.dp))
@@ -495,7 +524,7 @@ internal fun VisualDocumentEditor(
                     }
                 }
             }
-            if(tool=="img_03") OutlinedButton(onClick={ recordSnapshot();latestEdit { it.copy(flipY=!it.flipY) } }) {
+            if(tool=="img_03") FilledTonalButton(onClick={ recordSnapshot();latestEdit { it.copy(flipY=!it.flipY) } }) {
                 Text(stringResource(R.string.editor_flip_vertical))
             }
             if(inkKind) TextButton(onClick={
@@ -506,12 +535,12 @@ internal fun VisualDocumentEditor(
             if(!inkKind) Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 listOf(R.string.editor_move_left to (-.02f to 0f),R.string.editor_move_right to (.02f to 0f),
                     R.string.editor_move_up to (0f to -.02f),R.string.editor_move_down to (0f to .02f)).forEach { (label,delta) ->
-                    OutlinedButton(onClick={val next=rect.dragged(VisualHandle.BODY,delta.first,delta.second);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
+                    FilledTonalButton(onClick={val next=rect.dragged(VisualHandle.BODY,delta.first,delta.second);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
                 }
             }
             if(!inkKind) Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 listOf(R.string.editor_smaller to -.02f,R.string.editor_larger to .02f).forEach { (label,delta) ->
-                    OutlinedButton(onClick={val next=rect.draggedLocked(VisualHandle.BOTTOM_RIGHT,delta,delta,if(lockedAspect>0f) sourceCropAspect(lockedAspect,if(tool=="img_03") currentDraft.turns else 0)/sourceAspect else 0f);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
+                    FilledTonalButton(onClick={val next=rect.draggedLocked(VisualHandle.BOTTOM_RIGHT,delta,delta,if(lockedAspect>0f) sourceCropAspect(lockedAspect,if(tool=="img_03") currentDraft.turns else 0)/sourceAspect else 0f);recordEdit(rect,next);rect=next;saveRect(next)}) { Text(stringResource(label)) }
                 }
             }
             if(tool=="pdf_redact") Text(stringResource(R.string.visual_redact_warning),

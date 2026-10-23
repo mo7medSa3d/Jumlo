@@ -18,6 +18,8 @@ import threading
 import unittest
 import urllib.parse
 import urllib.request
+from contextlib import redirect_stderr, redirect_stdout
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -27,6 +29,75 @@ import service  # noqa: E402
 
 def _completed(args, returncode=0, stdout="", stderr=""):
     return subprocess.CompletedProcess(list(args), returncode, stdout, stderr)
+
+
+class ErrorAndPrivacyTest(unittest.TestCase):
+    def test_unhandled_request_errors_do_not_expose_addresses_or_exception_text(self):
+        server = object.__new__(service.MediaHTTPServer)
+        captured = io.StringIO()
+        with redirect_stderr(captured):
+            try:
+                raise RuntimeError("https://example.org/private?token=secret")
+            except RuntimeError:
+                server.handle_error(None, ("192.0.2.42", 5678))
+        value = captured.getvalue()
+        self.assertNotIn("192.0.2.42", value)
+        self.assertNotIn("https://", value)
+        self.assertNotIn("secret", value)
+        self.assertEqual({"event": "http_request_failed", "type": "RuntimeError"}, json.loads(value))
+
+    def test_startup_logs_do_not_publish_bind_addresses_or_untrusted_version_output(self):
+        captured = io.StringIO()
+        with patch.object(sys, "argv", ["service.py", "--host", "192.0.2.42", "--token", ""]), \
+                patch.object(service, "MediaHTTPServer"), \
+                patch.object(service, "ytdlp_version", return_value="https://example.org/?token=secret"), \
+                redirect_stdout(captured):
+            service.main()
+        value = captured.getvalue()
+        self.assertNotIn("192.0.2.42", value)
+        self.assertNotIn("https://", value)
+        self.assertNotIn("secret", value)
+        event = json.loads(value)
+        self.assertEqual("server_started", event["event"])
+        self.assertEqual("unknown", event["extractor_version"])
+
+    def test_age_restrictions_are_distinct_from_login_or_network_failures(self):
+        for message in (
+            "This video is age-restricted",
+            "Sign in to confirm your age. This video may be inappropriate for some users.",
+            "Age verification is required",
+        ):
+            with self.subTest(message=message):
+                self.assertEqual("MEDIA_AGE_RESTRICTED", service.classify(message))
+
+    def test_request_logs_do_not_expose_client_addresses_or_signed_source_urls(self):
+        handler = object.__new__(service.Handler)
+        handler.path = "/stream?url=https%3A%2F%2Fexample.org%2Fprivate%3Ftoken%3Dsecret"
+        handler.requestline = "GET " + handler.path + " HTTP/1.1"
+        handler.client_address = ("192.0.2.42", 5678)
+        captured = io.StringIO()
+        with redirect_stderr(captured):
+            handler.log_request(422, 64)
+        value = captured.getvalue()
+        self.assertNotIn("192.0.2.42", value)
+        self.assertNotIn("example.org", value)
+        self.assertNotIn("secret", value)
+        event = json.loads(value)
+        self.assertEqual("http_request", event["event"])
+        self.assertEqual("/stream", event["route"])
+        self.assertEqual(422, event["status"])
+
+    def test_untrusted_error_text_is_not_interpolated_into_logs(self):
+        handler = object.__new__(service.Handler)
+        handler.client_address = ("192.0.2.42", 5678)
+        captured = io.StringIO()
+        with redirect_stderr(captured):
+            handler.log_message("stream failed: %s", "https://example.org/file?token=secret")
+        value = captured.getvalue()
+        self.assertNotIn("192.0.2.42", value)
+        self.assertNotIn("example.org", value)
+        self.assertNotIn("secret", value)
+        self.assertEqual("http_server_event", json.loads(value)["event"])
 
 
 class FormatMetadataTest(unittest.TestCase):
@@ -232,7 +303,7 @@ class ValidatorForwardingTest(unittest.TestCase):
 
     def test_the_service_forwards_the_validator_headers(self):
         # A real request through the service's own handler.
-        server = ThreadingHTTPServer(("127.0.0.1", 0), _ServiceHandler)
+        server = service.MediaHTTPServer(("127.0.0.1", 0), _ServiceHandler)
         port = server.server_address[1]
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:

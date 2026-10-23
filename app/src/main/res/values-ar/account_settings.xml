@@ -4,7 +4,7 @@
     <string name="account_local_workspace">مساحة عمل محلية</string>
     <string name="account_local_description">ملفاتك محفوظة على الجهاز إلى أن تختار مشاركتها أو تصديرها.</string>
     <string name="account_my_files">ملفاتي</string>
-    <string name="account_result_count">%1$d نتيجة محفوظة</string>
+    <string name="account_result_count">النتائج المحفوظة: %1$d</string>
     <string name="account_storage">استخدام التخزين</string>
     <string name="account_privacy">الخصوصية</string>
     <string name="account_help_about">المساعدة وعن التطبيق</string>

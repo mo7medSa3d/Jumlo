@@ -47,7 +47,7 @@ object EncryptedZip {
         require(password.isNotEmpty()) { "ZIP_PASSWORD_REQUIRED" }
         require(sources.isNotEmpty() && sources.size <= limits.maxEntries) { "ARCHIVE_ENTRY_LIMIT" }
         require(!outZip.exists()) { "OUTPUT_ALREADY_EXISTS" }
-        val parent = outZip.absoluteFile.parentFile
+        val parent = requireNotNull(outZip.absoluteFile.parentFile) { "OUTPUT_CREATE_FAILED" }
         require(parent.mkdirs() || parent.isDirectory) { "OUTPUT_CREATE_FAILED" }
         val stagedZip = File(parent, ".ezip-output-${UUID.randomUUID()}.zip")
         try {
@@ -143,7 +143,7 @@ object EncryptedZip {
     ): List<File> {
         require(password.isNotEmpty()) { "ZIP_PASSWORD_REQUIRED" }
         require(sourceZip.isFile && !targetDir.exists()) { "INVALID_ARCHIVE_REQUEST" }
-        val parent = targetDir.absoluteFile.parentFile
+        val parent = requireNotNull(targetDir.absoluteFile.parentFile) { "OUTPUT_CREATE_FAILED" }
         require(parent.mkdirs() || parent.isDirectory) { "OUTPUT_CREATE_FAILED" }
         // Stage BEFORE inspecting names. On ANY failure only our temporary tree is removed.
         val stageDir = Files.createTempDirectory(parent.toPath(), ".ezip-extract-").toFile()
@@ -201,7 +201,8 @@ object EncryptedZip {
                     if (header.isDirectory) {
                         require(dest.mkdirs() || dest.isDirectory) { "OUTPUT_CREATE_FAILED" }
                     } else {
-                        require(dest.parentFile.mkdirs() || dest.parentFile.isDirectory) { "OUTPUT_CREATE_FAILED" }
+                        val destinationParent = requireNotNull(dest.parentFile) { "OUTPUT_CREATE_FAILED" }
+                        require(destinationParent.mkdirs() || destinationParent.isDirectory) { "OUTPUT_CREATE_FAILED" }
                         require(!dest.exists()) { "ARCHIVE_COLLISION" }
                         zip.getInputStream(header).use { input ->
                             FileOutputStream(dest).use { output ->

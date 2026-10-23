@@ -43,9 +43,19 @@ class ActualSqlTests(unittest.TestCase):
         self.assertEqual(0,self.run_query('updateOwned',id='job',owner='old',snapshot='wrong',stage='COMPLETED'))
     def test_retry_waits_for_prior_worker_cleanup(self):
         self.job(stage='INTERRUPTED',owner='old',until=100)
-        self.assertEqual(0,self.run_query('retry',id='job',snapshot='queued'))
+        self.assertEqual(0,self.run_query('retry',id='job',snapshot='queued',now=10))
         self.run_query('release',id='job',owner='old')
-        self.assertEqual(1,self.run_query('retry',id='job',snapshot='queued'))
+        self.assertEqual(1,self.run_query('retry',id='job',snapshot='queued',now=11))
+    def test_retry_reclaims_expired_lease_only_in_retryable_stages(self):
+        for stage,expected in [('INTERRUPTED',1),('PAUSED',1),('WAITING_FOR_INPUT',1),('FAILED',1),('PARTIAL',1),
+                               ('RUNNING',0),('FINALIZING',0),('COMPLETED',0),('CANCELLED',0)]:
+            with self.subTest(stage=stage):
+                self.job(stage=stage,owner='old',until=100)
+                self.assertEqual(0,self.run_query('retry',id='job',snapshot='too_early',now=100))
+                self.assertEqual(expected,self.run_query('retry',id='job',snapshot='queued',now=101))
+                row=self.db.execute('SELECT stage,leaseOwner,leaseUntil,snapshotJson FROM jobs WHERE id=?',('job',)).fetchone()
+                self.assertEqual(('QUEUED',None,0,'queued') if expected else (stage,'old',100,'snapshot'),row)
+                self.db.execute('DELETE FROM jobs')
     def test_pause_is_atomic_and_cannot_overwrite_finalizing_or_terminal_results(self):
         for stage, expected in [('QUEUED',1),('VALIDATING',1),('RUNNING',1),('FINALIZING',0),('COMPLETED',0),('CANCELLED',0)]:
             self.job(stage=stage)

@@ -57,16 +57,16 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     }.build()
 
     private fun inspectDirect(url: String, allowHttp: Boolean, check: () -> Unit): Remote {
-        var current = HttpPolicy.url(url, allowHttp)
+        var current = HttpPolicy.url(MediaLinks.normalize(url,allowHttp),allowHttp)
         var rangeGet = false
         var profileIndex = 0
         repeat(14) { hop ->
             check()
-            http.newCall(request(current.toString(), rangeGet, profileIndex)).execute().use { response ->
+            http.executeCancellable(request(current.toString(), rangeGet, profileIndex),check).use { response ->
                 if (response.code in setOf(301, 302, 303, 307, 308)) {
                     if (hop >= 10) throw OperationFailure("TOO_MANY_REDIRECTS")
                     val location = response.header("Location") ?: throw OperationFailure("INVALID_REDIRECT")
-                    val next = HttpPolicy.url(current.resolve(location).toString(), allowHttp)
+                    val next = HttpPolicy.url(MediaLinks.normalize(current.resolve(location).toString(),allowHttp),allowHttp)
                     if (current.scheme == "https" && next.scheme != "https") throw OperationFailure("INSECURE_REDIRECT")
                     current = next
                     profileIndex = 0
@@ -102,7 +102,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
 
     private fun readPage(url: String, allowHttp: Boolean, check: () -> Unit,
         preferredProfileIndex: Int = 0): PageRead {
-        var current = HttpPolicy.url(url, allowHttp)
+        var current = HttpPolicy.url(MediaLinks.normalize(url,allowHttp),allowHttp)
         var profileIndex = preferredProfileIndex
         repeat(13) { hop ->
             check()
@@ -110,11 +110,11 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 headers(current.toString(), profileIndex).forEach { (k, v) -> header(k, v) }
                 header("Accept", "text/html,application/xhtml+xml")
             }.build()
-            http.newCall(req).execute().use { response ->
+            http.executeCancellable(req,check).use { response ->
                 if (response.code in setOf(301, 302, 303, 307, 308)) {
                     if (hop >= 10) throw OperationFailure("TOO_MANY_REDIRECTS")
                     val location = response.header("Location") ?: throw OperationFailure("INVALID_REDIRECT")
-                    val next = HttpPolicy.url(current.resolve(location).toString(), allowHttp)
+                    val next = HttpPolicy.url(MediaLinks.normalize(current.resolve(location).toString(),allowHttp),allowHttp)
                     if (current.scheme == "https" && next.scheme != "https") throw OperationFailure("INSECURE_REDIRECT")
                     current = next
                     profileIndex = 0
@@ -224,9 +224,10 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             (old.getProperty("etag").isNullOrBlank() && old.getProperty("modified").isNullOrBlank()))) {
             if (!partial.delete()) throw OperationFailure("MEDIA_WORKSPACE_LIMIT")
             journal.delete()
+            old.clear()
         }
         val target = File(directory, "media.${source.extension}")
-        val result = StreamTransfer(OkHttpTransport(http, ::headers)).execute(
+        val result = StreamTransfer(OkHttpTransport(http, ::headers,check)).execute(
             TransferRequest(
                 url = source.url, partialFile = partial, offset = partial.length(),
                 strongEtag = old.getProperty("etag"), lastModified = old.getProperty("modified"),

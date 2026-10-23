@@ -22,7 +22,8 @@ class ReconstructionContractTests(unittest.TestCase):
         self.assertIn('hasCompletedOnboarding', nav)
         self.assertIn('onShowGuide', nav)
         self.assertIn('onShowGuide', settings)
-        self.assertIn('settings.quickStartReplay', settings)
+        self.assertIn('"about" -> AlertDialog(', settings)
+        self.assertIn('onShowGuide() }) { Text(stringResource(R.string.quick_start_replay)) }', settings)
 
     def test_interactive_guide_is_accessible(self):
         guide = text('app/src/main/java/com/jumlo/app/ui/components/OnboardingGuide.kt')
@@ -60,7 +61,9 @@ class ReconstructionContractTests(unittest.TestCase):
         self.assertTrue(targets, 'Home actions must declare a minimum touch height')
         self.assertTrue(all(value >= 48 for value in targets), targets)
         self.assertIn('maxLines = 3', state)
-        self.assertNotIn('maxLines=1)', settings.split('R.string.neon_my_documents')[1].split(')', 1)[0])
+        self.assertIn('LazyColumn(', settings)
+        self.assertIn('heightIn(min = 56.dp)', settings)
+        self.assertIn('Text(label, Modifier.padding(start = 12.dp))', settings)
 
 if __name__=='__main__':
     unittest.main()

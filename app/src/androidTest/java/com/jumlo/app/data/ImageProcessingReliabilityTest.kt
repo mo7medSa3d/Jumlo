@@ -10,6 +10,7 @@ import com.jumlo.app.core.ImageSizeBoundException
 import com.jumlo.app.data.processing.BitmapExtras
 import com.jumlo.app.data.processing.BitmapTransforms
 import com.jumlo.app.data.processing.ImageConversionSettings
+import com.jumlo.app.data.processing.ImageWatermarkSettings
 import com.jumlo.app.data.pdf.AndroidImageCodec
 import org.junit.Assert.*
 import org.junit.Test
@@ -20,6 +21,58 @@ import java.io.File
 class ImageProcessingReliabilityTest {
     private fun temp(suffix:String)=File.createTempFile("image-reliability-",suffix,ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir)
     private val budget=1024L*1024L
+
+    @Test fun positionedRotatedLogoAndTiledOpacityReachTheExportPixels() {
+        val source=Bitmap.createBitmap(200,200,Bitmap.Config.ARGB_8888).apply {eraseColor(Color.WHITE)}
+        val logo=Bitmap.createBitmap(80,40,Bitmap.Config.ARGB_8888).apply {eraseColor(Color.RED)}
+        try {
+            val settings=ImageWatermarkSettings(useLogo=true,opacityPercent=100,centerX=.25,centerY=.3,rotationDegrees=90)
+            val output=BitmapExtras.watermark(source,logo,settings,budget)
+            try {
+                assertTrue(Color.red(output.getPixel(50,40))>240 && Color.green(output.getPixel(50,40))<10)
+                assertEquals(Color.WHITE,output.getPixel(75,60))
+                assertEquals(Color.WHITE,source.getPixel(50,40))
+            } finally {output.recycle()}
+            val tiled=BitmapExtras.watermark(source,logo,settings.copy(tiled=true,rotationDegrees=0,scale=.5,opacityPercent=50),budget)
+            try {
+                for(x in listOf(36,100,164)) for(y in listOf(36,100,164)) {
+                    val pixel=tiled.getPixel(x,y)
+                    assertTrue(Color.red(pixel)>250 && Color.green(pixel) in 120..135 && Color.blue(pixel) in 120..135)
+                }
+                assertEquals(Color.WHITE,tiled.getPixel(70,70))
+            } finally {tiled.recycle()}
+        } finally {source.recycle();logo.recycle()}
+    }
+
+    @Test fun sharedWatermarkTextRasterHasRealAlphaAndSelectedInkColor() {
+        val raster=BitmapExtras.watermarkTextBitmap("مرحبا Jumlo","serif","#2050D0")
+        try {
+            assertEquals(0,Color.alpha(raster.getPixel(0,0)))
+            assertTrue(raster.width<=1710 && raster.height<=220)
+            val pixels=IntArray(raster.width*raster.height)
+            raster.getPixels(pixels,0,raster.width,0,0,raster.width,raster.height)
+            val ink=pixels.filter {Color.alpha(it)>240}
+            assertTrue(ink.isNotEmpty())
+            assertTrue(ink.all {Color.blue(it)>190 && Color.red(it)<50})
+        } finally {raster.recycle()}
+    }
+
+    @Test fun sampledScanDecodeBoundsPixelsAndNormalizesExifWithoutChangingSource() {
+        val source=temp(".jpg")
+        val bitmap=Bitmap.createBitmap(320,160,Bitmap.Config.ARGB_8888).apply {eraseColor(Color.RED)}
+        try {
+            BitmapTransforms.encode(bitmap,source,ImageConversionSettings(format="JPEG"),budget)
+            ExifInterface(source).apply {setAttribute(ExifInterface.TAG_ORIENTATION,"6");saveAttributes()}
+            val original=source.readBytes()
+            BitmapTransforms.decodeSampled(source,30_000,160).use { decoded ->
+                assertEquals(40,decoded.bitmap.width)
+                assertEquals(80,decoded.bitmap.height)
+                assertTrue(decoded.bitmap.allocationByteCount<=30_000)
+                assertTrue(Color.red(decoded.bitmap.getPixel(20,40))>240)
+            }
+            assertArrayEquals(original,source.readBytes())
+        } finally {bitmap.recycle();source.delete()}
+    }
 
     @Test fun impossibleSizeBoundDoesNotPublishCandidateAndKeepsSource() {
         val source=temp(".png"); val output=temp(".jpg")

@@ -33,13 +33,15 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     @Query("UPDATE jobs SET stage='CANCELLED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','VALIDATING','RUNNING','FINALIZING','INTERRUPTED','PAUSED')") suspend fun cancelIfOpen(id:String,snapshot:String):Int
     // Separate user-authorized abandonment of terminal/retryable jobs. A stale generic
     // cancel action must never overwrite a completed/failed worker result.
-    @Query("UPDATE jobs SET stage='CANCELLED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('FAILED','PARTIAL','WAITING_FOR_INPUT') AND leaseOwner IS NULL") suspend fun stopRetryingIfUnleased(id:String,snapshot:String):Int
-    @Query("UPDATE jobs SET stage='QUEUED',snapshotJson=:snapshot,leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND stage IN ('FAILED','PARTIAL','INTERRUPTED','PAUSED','WAITING_FOR_INPUT') AND leaseOwner IS NULL") suspend fun retry(id:String,snapshot:String):Int
+    @Query("UPDATE jobs SET stage='CANCELLED',snapshotJson=:snapshot,leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND stage IN ('FAILED','PARTIAL','WAITING_FOR_INPUT') AND (leaseOwner IS NULL OR leaseUntil<:now)") suspend fun stopRetryingIfUnleased(id:String,snapshot:String,now:Long):Int
+    @Query("UPDATE jobs SET stage='QUEUED',snapshotJson=:snapshot,leaseOwner=NULL,leaseUntil=0 WHERE id=:id AND stage IN ('FAILED','PARTIAL','INTERRUPTED','PAUSED','WAITING_FOR_INPUT') AND (leaseOwner IS NULL OR leaseUntil<:now)") suspend fun retry(id:String,snapshot:String,now:Long):Int
     @Query("UPDATE jobs SET stage='FAILED',snapshotJson=:snapshot WHERE id=:id AND stage IN ('QUEUED','INTERRUPTED') AND leaseOwner IS NULL")
     suspend fun failBeforeClaim(id:String,snapshot:String):Int
     @Insert(onConflict=OnConflictStrategy.IGNORE) suspend fun insertOutput(output:OutputEntity):Long
     @Query("SELECT * FROM outputs WHERE jobId=:job AND itemKey=:key") suspend fun output(job:String,key:String):OutputEntity?
     @Query("SELECT * FROM outputs WHERE id=:id") suspend fun outputById(id:String):OutputEntity?
+    @Query("SELECT * FROM outputs WHERE jobId=:jobId") suspend fun outputsForJob(jobId:String):List<OutputEntity>
+    @Query("UPDATE outputs SET recordJson=:recordJson WHERE id=:id") suspend fun updateOutputRecord(id:String,recordJson:String):Int
     @Query("DELETE FROM outputs WHERE id=:id") suspend fun deleteOutput(id:String):Int
     @Query("SELECT * FROM outputs ORDER BY rowid DESC") fun outputs():Flow<List<OutputEntity>>
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun saveDraft(draft:DraftEntity)

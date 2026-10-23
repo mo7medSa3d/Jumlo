@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="encoded_preview_title">Encoded image preview</string>
+    <string name="encoded_preview_loading">Encoding your preview…</string>
+    <string name="encoded_preview_failed">The preview could not be encoded with these settings. Adjust the settings or try again.</string>
+    <string name="encoded_preview_sample_notice">Reduced preview: the size, dimensions and quality below apply only to this sample. Full-size export may choose a different quality and size; its target is checked when you export.</string>
+    <string name="encoded_preview_exact_notice">This comparison encodes the full source image with the current export settings.</string>
+    <string name="encoded_preview_source">Original: %1$s · %2$d × %3$d px</string>
+    <string name="encoded_preview_sample_output">Preview sample: %1$s · %2$s · %3$d × %4$d px</string>
+    <string name="encoded_preview_output">Encoded copy: %1$s · %2$s · %3$d × %4$d px</string>
+    <string name="encoded_preview_sample_quality">Sample quality: %1$d / 100</string>
+    <string name="encoded_preview_quality">Quality: %1$d / 100</string>
+    <string name="encoded_preview_target">Requested export target: %1$s</string>
+</resources>

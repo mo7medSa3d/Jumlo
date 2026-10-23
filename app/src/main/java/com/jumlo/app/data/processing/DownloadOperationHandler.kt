@@ -1,5 +1,7 @@
 package com.jumlo.app.data.processing
 
+import com.jumlo.app.data.pdf.PdfRendererFactory
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -10,8 +12,10 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.ParcelFileDescriptor
 import com.jumlo.app.core.*
+import com.jumlo.app.core.media.MediaLinks
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.media.MediaSessionStore
+import com.jumlo.app.data.media.executeCancellable
 import com.jumlo.app.data.pdf.PdfBoxBackend
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.model.*
@@ -39,9 +43,11 @@ class OkHttpTransport(
     private val client: OkHttpClient,
     private val defaultHeadersProvider: (String, Int) -> Map<String, String> = { url, profileIndex ->
         PlatformHeaderPolicy.headersFor(url, compatibilityAttempt = profileIndex)
-    }
+    },
+    private val checkCancellation:()->Unit = {}
 ): HttpTransport {
     override fun open(url:String,headers:Map<String,String>):TransportResponse {
+        MediaLinks.normalize(url,allowHttp=true)
         val profiles = BrowserProfilePolicy.forUrl(url)
         for (profileIndex in profiles.indices) {
             val builder=Request.Builder().url(url).get()
@@ -49,7 +55,7 @@ class OkHttpTransport(
             merged.putAll(defaultHeadersProvider(url, profileIndex))
             merged.putAll(headers)
             merged.forEach { (key,value)->builder.header(key,value) }
-            val response=client.newCall(builder.build()).execute()
+            val response=client.executeCancellable(builder.build(),checkCancellation)
             // The GET request is idempotent. Only content-negotiation errors
             // may trigger a second profile; never rotate to work around denial.
             if (BrowserProfilePolicy.tryNext(response.code, profileIndex, profiles.size)) {
@@ -64,7 +70,7 @@ class OkHttpTransport(
     }
 }
 
-/** Signed URLs remain in memory. Persist only partial bytes, opaque handles and HTTP validators. */
+/** Room stores opaque URL handles; the secret store encrypts submitted URLs for durable resume. */
 class DownloadOperationHandler @Inject constructor(
     @ApplicationContext private val app:Context,
     private val client:OkHttpClient,
@@ -92,13 +98,17 @@ class DownloadOperationHandler @Inject constructor(
     }
 
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> = withContext(Dispatchers.IO) {
-        val settings=Json.decodeFromString<DownloadSettings>(request.settingsJson)
+        val workerContext=currentCoroutineContext()
+        // Retired UI controls must not strand requests restored from earlier versions.
+        val settings=Json.decodeFromString<DownloadSettings>(request.settingsJson).copy(
+            wifiOnly=false, unmeteredOnly=false, cleartextConsent=true
+        )
         val secret=secrets.copy(settings.urlSecretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
         try {
             val urls=String(secret).lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
             require(urls.isNotEmpty() && urls.size<=100 && (request.toolId=="dl_03" || urls.size==1)) { "INVALID_DOWNLOAD_LIST" }
             urls.forEach { rawUrl ->
-                HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(rawUrl),settings.cleartextConsent)
+                MediaLinks.normalize(DownloadLinkPolicy.resolveDirectUrl(rawUrl),settings.cleartextConsent)
             }
             val folder=File(app.filesDir,"transfers/${request.id}").apply { mkdirs() }
             val outcomes=mutableListOf<ItemOutcome>()
@@ -127,13 +137,14 @@ class DownloadOperationHandler @Inject constructor(
                     val result=if(alreadyComplete){
                         TransferResult(partial.length(),knownTotal,old.getProperty("etag"),old.getProperty("modified"),
                             old.getProperty("finalUrlSha256")?:urlDigest,old.getProperty("mime"),old.getProperty("disposition"))
-                    } else StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl)).execute(
+                    } else StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl,
+                        { context.checkCancellation(); networkPolicy(settings) })).execute(
                         TransferRequest(url,partial,partial.length(),old.getProperty("etag"),old.getProperty("modified"),old.getProperty("total")?.toLongOrNull(),settings.cleartextConsent,context.budget.maxMediaWorkspaceBytes,context.budget.minFreeBytes,finalUrlSha256=old.getProperty("finalUrlSha256")),
                         checkCancel={ context.checkCancellation(); networkPolicy(settings) },
                         progress={ bytes,total ->
                             val now=android.os.SystemClock.elapsedRealtime()
                             if(now-lastReport>=250 || bytes==total) {
-                                runBlocking { context.report(JobProgress(JobStage.RUNNING,bytes,total)) }; lastReport=now
+                                runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING,bytes,total)) }; lastReport=now
                             }
                         },
                         onMetadata={ metadata ->
@@ -182,7 +193,7 @@ class DownloadOperationHandler @Inject constructor(
                         fileKind == DirectFileKind.PDF && settings.directMode == "PDF_TO_IMAGES" -> {
                             val pdfFolder = AutoOutputName.cleanBaseName(name, "PDF")
                             ParcelFileDescriptor.open(partial, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                                val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                                val renderer = PdfRendererFactory.open(fd, app.cacheDir, context.checkCancellation)
                                 renderer.use { renderer ->
                                     val totalPages = renderer.pageCount
                                     require(totalPages > 0) { "EMPTY_PDF" }
@@ -225,7 +236,7 @@ class DownloadOperationHandler @Inject constructor(
                                                             override fun close() {
                                                                 try { super.close() } finally {
                                                                     temp.delete()
-                                                                    runBlocking { context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong())) }
+                                                                    runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong())) }
                                                                 }
                                                             }
                                                         }
@@ -234,7 +245,7 @@ class DownloadOperationHandler @Inject constructor(
                                             }
                                             ArchiveCore.create(ticket.stageFile, inputs, 6, ArchiveLimits(Long.MAX_VALUE, inputs.size, 1)) {
                                                 context.checkCancellation()
-                                                if (ticket.stageFile.parentFile.usableSpace < context.budget.minFreeBytes)
+                                                if (requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace < context.budget.minFreeBytes)
                                                     throw OperationFailure("DISK_BUDGET_EXCEEDED")
                                             }
                                             val rec = context.outputs.publish(ticket) { context.outputs.inspect(it, "application/zip", subfolder = pdfFolder) }
@@ -340,7 +351,8 @@ class DownloadOperationHandler @Inject constructor(
                     outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=code)
                 }
             }
-            if(outcomes.all { it.outputId!=null }) { secrets.remove(settings.urlSecretHandle); folder.deleteRecursively() }
+            // URL ownership is released only after JobStore commits a terminal state.
+            if(outcomes.all { it.outputId!=null }) folder.deleteRecursively()
             outcomes
         } finally { secret.fill('\u0000') }
     }

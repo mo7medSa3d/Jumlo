@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import android.provider.Settings
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,16 +25,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.automirrored.rounded.RotateRight
-import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DoneAll
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Print
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
+import com.jumlo.app.ui.icons.automirrored.rounded.Redo
+import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
+import com.jumlo.app.ui.icons.automirrored.rounded.Undo
+import com.jumlo.app.ui.icons.rounded.Close
+import com.jumlo.app.ui.icons.rounded.DoneAll
+import com.jumlo.app.ui.icons.rounded.Favorite
+import com.jumlo.app.ui.icons.rounded.FavoriteBorder
+import com.jumlo.app.ui.icons.rounded.Print
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -157,7 +156,7 @@ import kotlin.math.roundToInt
             item {Text(stringResource(R.string.print_recent),style=MaterialTheme.typography.titleLarge)}
             if(state.saved.recent.isEmpty()) item {Text(stringResource(R.string.print_recent_empty))}
             items(state.saved.recent.sortedByDescending {it.favorite},key={"recent-${PrintSourceIdentity.documentKey(it.source)}"}) {recent ->
-                OutlinedCard(onClick={haptics.actionClick();viewModel.open(recent.source)},modifier=Modifier.fillMaxWidth()) {
+                Card(onClick={haptics.actionClick();viewModel.open(recent.source)},modifier=Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(12.dp).heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically) {
                         Text(recent.source.name,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
                         IconButton(onClick={haptics.selectionToggle();viewModel.favorite(recent.source)},modifier=Modifier.size(48.dp)) {Icon(if(recent.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,stringResource(if(recent.favorite) R.string.print_unfavorite else R.string.print_favorite))}
@@ -174,13 +173,13 @@ import kotlin.math.roundToInt
             }
             item("print-edit-history") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick={haptics.actionClick();viewModel::undo}, enabled=state.canUndo,
+                    FilledTonalButton(onClick={haptics.actionClick();viewModel.undo()}, enabled=state.canUndo,
                         modifier=Modifier.heightIn(min=48.dp).weight(1f)) {
                         Icon(Icons.AutoMirrored.Rounded.Undo,null,Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.action_undo))
                     }
-                    OutlinedButton(onClick={haptics.actionClick();viewModel::redo}, enabled=state.canRedo,
+                    FilledTonalButton(onClick={haptics.actionClick();viewModel.redo()}, enabled=state.canRedo,
                         modifier=Modifier.heightIn(min=48.dp).weight(1f)) {
                         Icon(Icons.AutoMirrored.Rounded.Redo,null,Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -234,7 +233,7 @@ import kotlin.math.roundToInt
                 }
             }
             item("range") {
-                OutlinedTextField(value=state.options.range,onValueChange={viewModel.edit(state.options.copy(range=it))},label={Text(stringResource(R.string.print_range))},placeholder={Text(stringResource(R.string.print_range_example))},supportingText={Text(stringResource(if(state.rangeError) R.string.print_error_range else R.string.print_range_help))},isError=state.rangeError,singleLine=true,modifier=Modifier.fillMaxWidth(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Ascii))
+                TextField(colors=com.jumlo.app.ui.workspace.borderlessFieldColors(),shape=MaterialTheme.shapes.large,value=state.options.range,onValueChange={viewModel.edit(state.options.copy(range=it))},label={Text(stringResource(R.string.print_range))},placeholder={Text(stringResource(R.string.print_range_example))},supportingText={Text(stringResource(if(state.rangeError) R.string.print_error_range else R.string.print_range_help))},isError=state.rangeError,singleLine=true,modifier=Modifier.fillMaxWidth(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Ascii))
             }
             item("paper") {
                 Text(stringResource(R.string.print_paper),style=MaterialTheme.typography.titleMedium)
@@ -317,7 +316,7 @@ import kotlin.math.roundToInt
             }}
             if(state.saved.presets.isEmpty()) item {Text(stringResource(R.string.print_presets_empty),style=MaterialTheme.typography.bodyMedium)}
             items(state.saved.presets,key={"preset-${it.name}"}) {preset -> Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                OutlinedButton(onClick={haptics.selectionToggle();viewModel.applyPreset(preset)},modifier=Modifier.weight(1f).heightIn(min=48.dp)) {Text(preset.name)}
+                FilledTonalButton(onClick={haptics.selectionToggle();viewModel.applyPreset(preset)},modifier=Modifier.weight(1f).heightIn(min=48.dp)) {Text(preset.name)}
                 IconButton(onClick={haptics.secondaryAction();viewModel.deletePreset(preset.name)},modifier=Modifier.size(48.dp)) {Icon(Icons.Rounded.Close,stringResource(R.string.print_delete_preset,preset.name))}
             }}
         }
@@ -329,7 +328,7 @@ import kotlin.math.roundToInt
     }
     if(presetDialog) {
         var name by rememberSaveable {mutableStateOf("")}
-        AlertDialog(onDismissRequest={presetDialog=false},title={Text(stringResource(R.string.print_save_preset))},text={OutlinedTextField(name,{name=it.take(60)},label={Text(stringResource(R.string.print_preset_name))},singleLine=true)},confirmButton={TextButton(onClick={haptics.actionClick();viewModel.savePreset(name);presetDialog=false},enabled=name.isNotBlank() && state.inputErrors.isEmpty(),modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_save))}},dismissButton={TextButton(onClick={presetDialog=false},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_cancel))}})
+        AlertDialog(onDismissRequest={presetDialog=false},title={Text(stringResource(R.string.print_save_preset))},text={TextField(colors=com.jumlo.app.ui.workspace.borderlessFieldColors(),shape=MaterialTheme.shapes.large,value=name,onValueChange={name=it.take(60)},label={Text(stringResource(R.string.print_preset_name))},singleLine=true)},confirmButton={TextButton(onClick={haptics.actionClick();viewModel.savePreset(name);presetDialog=false},enabled=name.isNotBlank() && state.inputErrors.isEmpty(),modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_save))}},dismissButton={TextButton(onClick={presetDialog=false},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_cancel))}})
     }
 }
 
@@ -508,11 +507,7 @@ internal fun PrintPageTile(
                 )
             }
             .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
-            .border(
-                BorderStroke(if (focused) 2.dp else 1.dp, if (focused) accent else MaterialTheme.colorScheme.outlineVariant),
-                RoundedCornerShape(14.dp)
-            )
+            .background(if (selected || focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
             .semantics {
                 this.contentDescription = description
                 role = androidx.compose.ui.semantics.Role.Checkbox
@@ -674,7 +669,7 @@ private data class PreviewImage(val bitmap:Bitmap?=null,val error:Boolean=false)
     modifier: Modifier, onValidityChanged: (String, String) -> Unit
 ) {
     val text = draft ?: String.format(java.util.Locale.US,"%.1f",number)
-    OutlinedTextField(
+    TextField(colors=com.jumlo.app.ui.workspace.borderlessFieldColors(),shape=MaterialTheme.shapes.large,
         value=text,
         onValueChange={onValidityChanged(key,it)},
         modifier=modifier,

@@ -61,7 +61,7 @@ class PrismSourceContracts(unittest.TestCase):
             arrays[mode] = re.findall(r'Color\(0xFF([0-9A-Fa-f]{6})\)',block)
         self.assertEqual(len(arrays['lightAccents']),6)
         self.assertEqual(len(arrays['darkAccents']),6)
-        for name,surface,mix_amount in [('lightAccents','FFFFFF',.12),('darkAccents','171F39',.17)]:
+        for name,surface,mix_amount in [('lightAccents','FFFFFF',.12),('darkAccents','151515',.17)]:
             for accent in arrays[name]:
                 container = mix(surface,accent,mix_amount)
                 self.assertGreaterEqual(contrast(accent,container), 3.0,(name,accent,container))
@@ -76,14 +76,19 @@ class PrismSourceContracts(unittest.TestCase):
         self.assertIn('maxLines = 2',tools)
         self.assertIn('onClick = { onSelect(id) }',picker)
 
-    def test_navigation_and_camera_leave_actions_wired(self):
+    def test_navigation_and_direct_mlkit_scan_leave_actions_wired(self):
         nav = read('ui/components/QuietNavigation.kt')
-        scan = read('ui/scan/ScanScreen.kt')
+        scan = read('ui/scan/SmartDocumentScanButton.kt')
         self.assertIn('if (reduced) snap()',nav)
         self.assertIn('onScan: () -> Unit',nav)
-        self.assertIn('PreviewView(ctx)',scan)
-        self.assertIn('capture.takePicture(',scan)
-        self.assertIn('ComposeCanvas(',scan)
+        self.assertIn('GmsDocumentScanning.getClient(options)',scan)
+        self.assertIn('.setGalleryImportAllowed(true)',scan)
+        self.assertIn('.setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_PDF)',scan)
+        self.assertIn('LaunchedEffect(Unit) { if (!launched && !externalBusy) startScan() }',scan)
+        self.assertIn('if (busy || externalBusy || launched) return',scan)
+        self.assertIn('if (!active || latestExternalBusy)',scan)
+        self.assertIn('latestBack()',scan)
+        self.assertIn('SmartScanResultStore.copyPdf(',scan)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

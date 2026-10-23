@@ -27,7 +27,11 @@ class MediaOperationHandler @Inject constructor(
     private val secrets: EphemeralSecretStore, private val preferences: UserPreferencesRepository
 ) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
-        val settings = Json.decodeFromString<DownloadSettings>(request.settingsJson)
+        val workerContext=currentCoroutineContext()
+        // Apply the current policy to persisted jobs without changing their identity.
+        val settings = Json.decodeFromString<DownloadSettings>(request.settingsJson).copy(
+            wifiOnly=false, unmeteredOnly=false, cleartextConsent=true
+        )
         val selection = settings.media ?: throw OperationFailure("MEDIA_SELECTION_REQUIRED")
         require(request.sourceIds.isEmpty() && request.toolId == "dl_media") { "INVALID_MEDIA_JOB" }
         val key = "media:0"
@@ -37,12 +41,8 @@ class MediaOperationHandler @Inject constructor(
         val directory = File(root,request.id)
         var lastStorageCheck = 0L
         var completed = false
-        fun check() {
+        fun checkLocal() {
             context.checkCancellation()
-            val cm = app.getSystemService(ConnectivityManager::class.java)
-            val network = cm.getNetworkCapabilities(cm.activeNetwork) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
-            if(settings.wifiOnly && !network.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) throw OperationFailure("WIFI_REQUIRED")
-            if(settings.unmeteredOnly && !network.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) throw OperationFailure("UNMETERED_NETWORK_REQUIRED")
             if(root.usableSpace < context.budget.minFreeBytes) throw OperationFailure("INSUFFICIENT_STORAGE")
             val now = SystemClock.elapsedRealtime()
             if(now-lastStorageCheck>=500 && directory.exists()) {
@@ -58,16 +58,23 @@ class MediaOperationHandler @Inject constructor(
                 lastStorageCheck=now
             }
         }
+        fun checkNetwork() {
+            checkLocal()
+            val cm = app.getSystemService(ConnectivityManager::class.java)
+            val network = cm.getNetworkCapabilities(cm.activeNetwork) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
+            if(settings.wifiOnly && !network.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) throw OperationFailure("WIFI_REQUIRED")
+            if(settings.unmeteredOnly && !network.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) throw OperationFailure("UNMETERED_NETWORK_REQUIRED")
+        }
         try {
-            check()
+            checkNetwork()
             require(directory.canonicalFile.parentFile == root.canonicalFile) { "MEDIA_WORKSPACE_LIMIT" }
             if (!directory.exists()) require(directory.mkdir()) { "MEDIA_WORKSPACE_MISSING" }
             require(directory.isDirectory && !Files.isSymbolicLink(directory.toPath())) { "MEDIA_WORKSPACE_LIMIT" }
-            check()
+            checkLocal()
             val url = MediaLinks.normalize(String(secret),settings.cleartextConsent)
             val mode = MediaMode.valueOf(selection.mode)
             val audio = AudioOutput.valueOf(selection.audioOutput)
-            val asset = runtime.inspect(url,settings.cleartextConsent,::check)
+            val asset = runtime.inspect(url,settings.cleartextConsent,::checkNetwork)
             if(MediaCatalog.identity(asset,url)!=selection.assetIdentity) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
             val choice = MediaCatalog.choices(asset,mode).firstOrNull { it.key==selection.choiceKey }
                 ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
@@ -75,16 +82,18 @@ class MediaOperationHandler @Inject constructor(
             choice.estimatedBytes?.let { if(it>context.budget.maxMediaWorkspaceBytes) throw OperationFailure("MEDIA_WORKSPACE_LIMIT") }
             val received = mutableMapOf<String,Long>()
             var lastReport=0L
-            runtime.download(url,choice,audio,selection.audioBitrate,settings.cleartextConsent,directory,::check) { progress ->
+            // Transport I/O detects an interrupted connection. A connectivity snapshot must not
+            // reject already received bytes while the runtime muxes or validates its local file.
+            runtime.download(url,choice,audio,selection.audioBitrate,settings.cleartextConsent,directory,::checkLocal) { progress ->
                 received[progress.streamId]=maxOf(received[progress.streamId] ?: 0,progress.downloadedBytes)
                 val now=SystemClock.elapsedRealtime()
                 if(now-lastReport>=500) {
                     val sum=received.values.fold(0L) { a,b -> if(b>Long.MAX_VALUE-a) Long.MAX_VALUE else a+b }
-                    runBlocking { context.report(JobProgress(JobStage.RUNNING,sum,choice.estimatedBytes)) }
+                    runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING,sum,choice.estimatedBytes)) }
                     lastReport=now
                 }
             }
-            check()
+            checkLocal()
             val file=MediaOutputPolicy.finishedFile(directory)
             val info=MediaOutputPolicy.inspect(file)
             require(info.sizeBytes <= context.budget.maxMediaWorkspaceBytes) { "MEDIA_WORKSPACE_LIMIT" }
@@ -93,12 +102,12 @@ class MediaOperationHandler @Inject constructor(
             val mime=if(mode==MediaMode.AUDIO && info.extension=="webm") "audio/webm" else info.mimeType
             val ticket=context.outputs.reserve(request.id,key,MediaOutputPolicy.displayName(settings.displayName,info.extension),mime)
             Files.move(file.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
-            check()
+            checkLocal()
             val output=context.outputs.publish(ticket) { staged ->
                 require(staged.length()==info.sizeBytes) { "MEDIA_PUBLICATION_MISMATCH" }
                 metadata
             }
-            secrets.remove(settings.urlSecretHandle)
+            // JobStore releases URL ownership after its durable terminal transition.
             completed = true
             listOf(ItemOutcome(key,ItemStatus.CREATED,output.id))
         } finally {

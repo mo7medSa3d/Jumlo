@@ -2,9 +2,9 @@ package com.jumlo.app.ui.workspace
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Remove
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Add
+import com.jumlo.app.ui.icons.rounded.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment

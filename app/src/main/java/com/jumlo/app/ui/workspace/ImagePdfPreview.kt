@@ -6,12 +6,13 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.automirrored.rounded.Undo
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.Redo
+import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -101,7 +102,7 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
                     val guide=MaterialTheme.colorScheme.primary
                     val bitmap=image.bitmap.asImageBitmap()
                     val hint=stringResource(R.string.upgrade_margin_drag)
-                    Canvas(Modifier.fillMaxWidth().height(310.dp).clip(QuietTheme.shapes.thumbnail)
+                    Canvas(Modifier.fillMaxWidth().height(310.dp).testTag("preview.bitmap").clip(QuietTheme.shapes.thumbnail)
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                         .semantics {contentDescription=hint}
                         .pointerInput(page,draft.paperMode) {

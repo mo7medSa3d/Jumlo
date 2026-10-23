@@ -46,7 +46,8 @@ import javax.inject.Singleton
     private suspend fun rename(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         val settings = Json.decodeFromString<BatchRenameSettings>(request.settingsJson)
         val names = request.sourceIds.map { context.sources.get(it).displayName }
-        val preview = PureDomainAlgorithms.batchRenamePreview(names, settings.pattern, settings.startAt)
+        val preview = PureDomainAlgorithms.batchRenamePreview(names, settings.pattern, settings.startAt,
+            settings.date.ifBlank { java.time.Instant.ofEpochMilli(request.submittedAtEpochMs).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() })
         val outcomes = mutableListOf<ItemOutcome>()
         val previewKey = "rename-preview"
         context.outputs.find(request.id, previewKey)?.let { outcomes += ItemOutcome(previewKey, ItemStatus.CREATED, it.id) } ?: run {
@@ -66,7 +67,7 @@ import javax.inject.Singleton
                     val buffer=ByteArray(64*1024);var copied=0L
                     while(true) {
                         context.checkCancellation();val n=input.read(buffer);if(n<0) break
-                        require(n.toLong()<=context.budget.maxTemporaryBytes-copied && ticket.stageFile.parentFile.usableSpace>=context.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
+                        require(n.toLong()<=context.budget.maxTemporaryBytes-copied && requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace>=context.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
                         if(n>0) { output.write(buffer,0,n);copied+=n }
                     };output.fd.sync()
                 } }
@@ -156,7 +157,7 @@ import javax.inject.Singleton
                         if (ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
                         EncryptedZip.create(ticket.stageFile, entrySources, password, limits) {
                             context.checkCancellation()
-                            require(ticket.stageFile.parentFile.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                            require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                         }
                     } finally {
                         tempSourcesDir.deleteRecursively()
@@ -191,7 +192,7 @@ import javax.inject.Singleton
                                             val count = input.read(buffer)
                                             if (count < 0) break
                                             if (count > 0) {
-                                                require(ticket.stageFile.parentFile.usableSpace >= context.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
+                                                require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
                                                 out.write(buffer, 0, count)
                                             }
                                         }

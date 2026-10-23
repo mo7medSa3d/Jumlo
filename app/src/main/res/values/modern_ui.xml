@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="modern_dynamic_color">Use wallpaper colors</string>
+    <string name="modern_reset_save_folder">Use Download/Jumlo</string>
+    <string name="modern_download_defaults">Download defaults</string>
+    <string name="modern_video_quality">Video quality</string>
+    <string name="modern_audio_quality">Audio quality</string>
+    <string name="modern_best_available">Best available</string>
+    <string name="modern_audio_bitrate">%1$d kbps</string>
+    <string name="modern_quality_defaults_note">Used when that quality is available. You can change it for each download.</string>
+    <string name="modern_storage_usage">Storage usage</string>
+    <string name="modern_clear_cache">Clear cache</string>
+    <string name="modern_about">About Jumlo</string>
+    <string name="modern_about_body">Jumlo %1$s\nTools for your documents, images and downloads. Your files stay under your control.</string>
+    <string name="modern_chosen_folder">Selected folder</string>
+    <string name="modern_change_folder">Change folder</string>
+    <string name="modern_home_title">Make more of\nyour files.</string>
+    <string name="modern_home_subtitle">Scan, convert and save. All in one place.</string>
+    <string name="modern_scan">Scan</string>
+    <string name="modern_convert">Convert</string>
+    <string name="modern_compress">Compress</string>
+    <string name="modern_download">Download</string>
+    <string name="modern_recent_empty">Your next document starts here</string>
+    <string name="modern_recent_empty_body">Scan a page or open a tool to create your first file.</string>
+    <string name="modern_all_tools">Explore tools</string>
+    <string name="modern_images_pdf">Images to PDF</string>
+    <string name="modern_pdf_word">PDF to Word</string>
+    <string name="modern_pdf_powerpoint">PDF to PowerPoint</string>
+    <string name="modern_pdf_images">PDF to images</string>
+    <string name="modern_convert_images">Convert images</string>
+    <string name="modern_fewer_tools">Fewer tools</string>
+    <string name="modern_more_tools">More tools</string>
+    <string name="modern_sort_group">Sort &amp; group</string>
+    <string name="modern_group_by">Group by</string>
+    <string name="modern_group_none">No grouping</string>
+    <string name="modern_today">Today</string>
+    <string name="modern_yesterday">Yesterday</string>
+    <string name="modern_earlier">Earlier</string>
+    <string name="modern_drop_files">Drop files to add them</string>
+</resources>

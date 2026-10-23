@@ -7,7 +7,7 @@
     <string name="ui_rename_pattern_invalid">Use a valid filename pattern of at most 200 characters.</string>
     <string name="ui_rename_preview_name">New copy: %1$s</string>
     <string name="ui_rename_checking">Checking proposed names…</string>
-    <string name="ui_rename_preview_open">Preview %1$d new names</string>
+    <string name="ui_rename_preview_open">Preview new names (%1$d)</string>
     <string name="ui_rename_preview_title">Rename preview</string>
     <string name="ui_rename_copy_note">This creates renamed copies. Your original files stay unchanged.</string>
 </resources>

@@ -13,22 +13,31 @@ import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.core.SafeNames
 import com.jumlo.app.core.VerifiedFileCopy
 import com.jumlo.app.data.preferences.UserPreferencesRepository
+import com.jumlo.app.diagnostics.AppDiagnostics
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** External-publication boundary; verified private output remains owned by OutputStore. */
+interface PublicOutputPublisher {
+    suspend fun publish(file:File,name:String,mime:String,sha256:String,subfolder:String?=null):String
+    fun deleteIfOwned(publicUri:String?)
+}
 
 /** Durable private publication stays authoritative; a verified visible copy is also created. */
 @Singleton class PublicOutputStore @Inject constructor(
     @ApplicationContext private val app:Context,
     private val prefs:UserPreferencesRepository
-) {
-    suspend fun publish(file:File,name:String,mime:String,sha256:String,subfolder:String?=null):String = withContext(Dispatchers.IO) {
+) : PublicOutputPublisher {
+    override suspend fun publish(file:File,name:String,mime:String,sha256:String,subfolder:String?):String = withPublicationOwnership(
+        Dispatchers.IO, ::deleteIfOwned,
+        onRollbackFailure = { AppDiagnostics.report("publication_rollback", it) }
+    ) {
         val active=currentCoroutineContext()
         val check:()->Unit={ active.ensureActive() }
         check()
@@ -96,7 +105,9 @@ import javax.inject.Singleton
         val uri=resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values) ?: error("DESTINATION_CREATE_FAILED")
         try {
             copyVerified(uri,file,sha256,check)
-            resolver.update(uri,ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING,0) },null,null)
+            require(resolver.update(uri,ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING,0) },null,null)==1) {
+                "DESTINATION_COMMIT_FAILED"
+            }
             return uri.toString()
         } catch(e:Throwable) { runCatching { resolver.delete(uri,null,null) };throw e }
     }
@@ -109,7 +120,7 @@ import javax.inject.Singleton
         VerifiedFileCopy.copy(file,destination,sha256,check)
         return Uri.fromFile(destination).toString()
     }
-    fun deleteIfOwned(publicUri:String?) {
+    override fun deleteIfOwned(publicUri:String?) {
         if(publicUri.isNullOrBlank()) return
         val parsed=Uri.parse(publicUri)
         if(parsed.scheme=="content") app.contentResolver.delete(parsed,null,null)

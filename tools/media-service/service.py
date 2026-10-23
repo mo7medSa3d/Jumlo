@@ -35,6 +35,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 # The upstream site decides what a request means; these are the shapes the app
 # understands. They mirror the app's MediaError codes exactly.
 ERROR_CODES = {
+    # Match the access restriction before the generic "sign in" category.
+    "age-restricted": "MEDIA_AGE_RESTRICTED",
+    "age restricted": "MEDIA_AGE_RESTRICTED",
+    "confirm your age": "MEDIA_AGE_RESTRICTED",
+    "age verification": "MEDIA_AGE_RESTRICTED",
     "unsupported url": "MEDIA_SITE_UNSUPPORTED",
     "unsupported site": "MEDIA_SITE_UNSUPPORTED",
     "no video formats found": "MEDIA_NO_USABLE_FORMAT",
@@ -230,12 +235,34 @@ def resolve_stream(url: str, mode: str, fmt: str, bitrate: int,
         raise
 
 
+class MediaHTTPServer(ThreadingHTTPServer):
+    def handle_error(self, request, client_address):
+        # socketserver's fallback prints the client address and raw traceback.
+        # A request can fail before Handler's guarded logging path is reached.
+        error_type = sys.exc_info()[0]
+        kind = error_type.__name__ if error_type is not None else "UnknownError"
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", kind):
+            kind = "UnknownError"
+        sys.stderr.write(json.dumps({"event": "http_request_failed", "type": kind}) + "\n")
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "JumloMediaService/1.0"
     protocol_version = "HTTP/1.1"
 
-    def log_message(self, fmt, *args):  # keep the service quiet and structured
-        sys.stderr.write("%s %s\n" % (self.address_string(), fmt % args))
+    def log_request(self, code="-", size="-"):
+        # BaseHTTPRequestHandler's default formatter includes the full request line
+        # and client address. /stream carries a signed source URL in its query.
+        # Only a fixed route vocabulary and numeric status may cross this boundary.
+        path = getattr(self, "path", "").split("?", 1)[0]
+        route = path if path in ("/extract", "/stream", "/health") else "unknown"
+        status = int(code) if str(code).isdigit() and 100 <= int(code) <= 599 else None
+        sys.stderr.write(json.dumps({"event": "http_request", "route": route, "status": status}) + "\n")
+
+    def log_message(self, fmt, *args):
+        # Never format arbitrary request/error text: exceptions can contain URLs,
+        # authorization data and user content. Request status is recorded above.
+        sys.stderr.write('{"event":"http_server_event"}\n')
 
     def _json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -421,8 +448,10 @@ def main() -> None:
         Handler.do_GET = guard(original)
         Handler.do_POST = guard(original_post)
 
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"jumlo media service on http://{args.host}:{args.port} (yt-dlp {ytdlp_version()})", flush=True)
+    server = MediaHTTPServer((args.host, args.port), Handler)
+    version = ytdlp_version()
+    safe_version = version if re.fullmatch(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:[.-][A-Za-z0-9.]{1,32})?", version) else "unknown"
+    print(json.dumps({"event": "server_started", "extractor_version": safe_version}), flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

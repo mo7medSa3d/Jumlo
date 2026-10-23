@@ -54,7 +54,10 @@ private val QuietLightColorScheme = lightColorScheme(
     surfaceContainerLow = LightSurfaceContainerLow,
     surfaceContainer = LightSurfaceContainer,
     surfaceContainerHigh = LightSurfaceContainerHigh,
-    surfaceContainerHighest = LightSurfaceContainerHighest
+    surfaceContainerHighest = LightSurfaceContainerHighest,
+    surfaceDim = LightSurfaceDim,
+    surfaceBright = LightSurfaceBright,
+    surfaceTint = Color.Transparent
 )
 
 private val QuietDarkColorScheme = darkColorScheme(
@@ -86,7 +89,10 @@ private val QuietDarkColorScheme = darkColorScheme(
     surfaceContainerLow = DarkSurfaceContainerLow,
     surfaceContainer = DarkSurfaceContainer,
     surfaceContainerHigh = DarkSurfaceContainerHigh,
-    surfaceContainerHighest = DarkSurfaceContainerHighest
+    surfaceContainerHighest = DarkSurfaceContainerHighest,
+    surfaceDim = DarkSurfaceDim,
+    surfaceBright = DarkSurfaceBright,
+    surfaceTint = Color.Transparent
 )
 
 @Composable
@@ -112,7 +118,19 @@ fun JumloTheme(
         else -> QuietLightColorScheme
     }
     val colorScheme: ColorScheme = if (useDynamicColor) {
-        baseColors
+        // Dynamic color changes accents; OLED and readable neutral surfaces remain stable.
+        val neutral = if (darkTheme) QuietDarkColorScheme else QuietLightColorScheme
+        baseColors.copy(background = neutral.background, onBackground = neutral.onBackground,
+            surface = neutral.surface, onSurface = neutral.onSurface,
+            surfaceVariant = neutral.surfaceVariant, onSurfaceVariant = neutral.onSurfaceVariant,
+            surfaceDim = neutral.surfaceDim, surfaceBright = neutral.surfaceBright,
+            surfaceContainerLowest = neutral.surfaceContainerLowest,
+            surfaceContainerLow = neutral.surfaceContainerLow,
+            surfaceContainer = neutral.surfaceContainer,
+            surfaceContainerHigh = neutral.surfaceContainerHigh,
+            surfaceContainerHighest = neutral.surfaceContainerHighest,
+            outline = neutral.outline, outlineVariant = neutral.outlineVariant,
+            surfaceTint = Color.Transparent)
     } else {
         // Coherent primary/on-primary/container pairs for every user accent.
         // Keep the entire tonal surface ladder stable while the action color changes.
@@ -144,7 +162,7 @@ fun JumloTheme(
             } else Color.White,
             primaryContainer = selectedContainer,
             onPrimaryContainer = selectedOnContainer,
-            surfaceTint = selectedAccent
+            surfaceTint = Color.Transparent
         )
     }
 

@@ -7,7 +7,7 @@
     <string name="ui_new_download">New direct download</string>
     <string name="ui_batch_download">Download multiple links</string>
     <string name="ui_workspace_draft">Saved workspace</string>
-    <string name="ui_input_count">%1$d selected files</string>
+    <string name="ui_input_count">Selected files: %1$d</string>
     <string name="ui_resume">Resume</string>
     <string name="ui_active_tasks">Active tasks</string>
     <string name="ui_recent_empty">Your completed files will appear here.</string>
@@ -23,7 +23,7 @@
     <string name="ui_folder_empty">Choose a device folder to browse files you have granted access to.</string>
     <string name="ui_provider_notice">These are original files in your selected device folder.</string>
     <string name="ui_purge_title">Delete permanently?</string>
-    <string name="ui_purge_body">Permanently delete %1$d selected files from managed trash? This cannot be undone.</string>
+    <string name="ui_purge_body">Permanently delete the selected files (%1$d) from managed trash? This cannot be undone.</string>
     <string name="ui_delete_forever">Delete permanently</string>
     <string name="ui_unsaved_title">Leave this workspace?</string>
     <string name="ui_unsaved_body">Save your current inputs and settings to resume later, or discard these changes.</string>
@@ -36,7 +36,7 @@
     <string name="ui_advanced">Advanced settings</string>
     <string name="ui_merge_minimum">Choose at least two PDF files to merge.</string>
     <string name="ui_create_pdf">Create PDF</string>
-    <string name="ui_merge_files">Merge %1$d files</string>
+    <string name="ui_merge_files">Merge files (%1$d)</string>
     <string name="ui_stage_queued">Queued</string>
     <string name="ui_stage_validating">Checking inputs</string>
     <string name="ui_stage_running">Processing</string>
@@ -57,7 +57,7 @@
     <string name="ui_recent_order">Recent first</string>
     <string name="ui_name_order">Name</string>
     <string name="ui_select_transfers">Select active transfers</string>
-    <string name="ui_cancel_selected">Cancel %1$d transfers</string>
+    <string name="ui_cancel_selected">Cancel transfers (%1$d)</string>
     <string name="ui_wifi_only">Wi-Fi only</string>
     <string name="ui_unmetered_only">Unmetered networks only</string>
     <string name="ui_http_consent">Allow unencrypted HTTP for this download</string>

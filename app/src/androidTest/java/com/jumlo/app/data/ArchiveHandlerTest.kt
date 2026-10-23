@@ -35,7 +35,7 @@ class ArchiveHandlerTest {
         try {
             val sourceStore=SourceStore(context,db,WorkBudget())
             val outputs=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
-            val source=File(context.filesDir,"processing/results/fixture/archive-input.bin").apply { parentFile.mkdirs(); writeBytes(byteArrayOf(0,1,2,127,-1)) }
+            val source=File(context.filesDir,"processing/results/fixture/archive-input.bin").apply { requireNotNull(parentFile).mkdirs(); writeBytes(byteArrayOf(0,1,2,127,-1)) }
             val uri=FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",source)
             val ref=sourceStore.inspect(uri.toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val job=JobRequest(UUID.randomUUID().toString(),"file_07",listOf(ref.id),1,Json.encodeToString(ArchiveSettings()),System.currentTimeMillis())
@@ -55,7 +55,7 @@ class ArchiveHandlerTest {
             val sources=SourceStore(context,db,WorkBudget())
             val outputs=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
             val source=File(context.filesDir,"processing/results/fixture/restart-${UUID.randomUUID()}.txt").apply {
-                parentFile.mkdirs();writeText("all original bytes")
+                requireNotNull(parentFile).mkdirs();writeText("all original bytes")
             }
             val ref=sources.inspect(FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",source).toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val job=JobRequest(UUID.randomUUID().toString(),"file_07",listOf(ref.id),1,Json.encodeToString(ArchiveSettings()),System.currentTimeMillis())
@@ -78,7 +78,7 @@ class ArchiveHandlerTest {
             val sources=SourceStore(context,db,WorkBudget())
             val outputs=OutputStore(context,db,PublicOutputStore(context,UserPreferencesRepository(context)))
             val source=File(context.filesDir,"processing/results/fixture/encrypted-${UUID.randomUUID()}.bin").apply {
-                parentFile.mkdirs();writeBytes(byteArrayOf(0,1,2,127,-1))
+                requireNotNull(parentFile).mkdirs();writeBytes(byteArrayOf(0,1,2,127,-1))
             }
             val ref=sources.inspect(FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",source).toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val settings=EncryptedArchiveSettings(secretHandle=secretStore.put(password))

@@ -18,6 +18,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PdfFormReliabilityTest {
+    @Test fun widgetBoundsUseTheActualPageRotatedCropAndIncludeMissingPagePointer() {
+        PDDocument().use { doc ->
+            val acro=form(doc)
+            val page=doc.getPage(0)
+            page.mediaBox=PDRectangle(600f,800f);page.cropBox=PDRectangle(100f,200f,300f,400f)
+            page.rotation=90;page.userUnit=2f
+            val field=PDTextField(acro).apply {partialName="visible"}
+            val widget=PDAnnotationWidget().apply {rectangle=PDRectangle(160f,240f,60f,80f)}
+            field.widgets=listOf(widget);acro.fields=listOf(field);page.annotations=listOf(widget)
+            val info=PdfBoxBackend.formFields(doc).single().widgets.single()
+            assertEquals(1,info.page);assertEquals(0,info.widgetIndex)
+            assertEquals(.1,info.left,.00001);assertEquals(.2,info.top,.00001)
+            assertEquals(.3,info.right,.00001);assertEquals(.4,info.bottom,.00001)
+            assertNull("Discovery remains read-only",acro.defaultResources)
+            assertNull(widget.page)
+        }
+    }
     private fun form(doc: PDDocument): PDAcroForm = PDAcroForm(doc).also {
         doc.documentCatalog.acroForm = it
         it.needAppearances = true

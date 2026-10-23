@@ -1,5 +1,7 @@
 package com.jumlo.app.printing
 
+import com.jumlo.app.data.pdf.PdfRendererFactory
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -167,7 +169,7 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
     /** Fixed 300 DPI grayscale with 1024-square tiles: peak raster size is 4 MiB regardless of paper.
      * It is deliberately rasterized (including text), stated in the print UI. No giant page bitmap. */
     private fun grayscale(input:File,output:File,dpi:Int,check:()->Unit,progress:(Int,Int)->Unit) {
-        ParcelFileDescriptor.open(input,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer ->
+        ParcelFileDescriptor.open(input,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRendererFactory.open(fd, context.cacheDir, check).use { renderer ->
             PDDocument(memory()).use { pdf ->
                 for(i in 0 until renderer.pageCount) {
                     check();renderer.openPage(i).use { page ->
@@ -201,7 +203,7 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
         } }
     }
     override fun preview(file:File,index:Int,maxEdge:Int):Bitmap {
-        ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { renderer ->
+        ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRendererFactory.open(fd, context.cacheDir).use { renderer ->
             renderer.openPage(index).use { page ->
                 val scale=min(maxEdge.toDouble()/page.width,maxEdge.toDouble()/page.height)
                 val bitmap=Bitmap.createBitmap((page.width*scale).roundToInt().coerceAtLeast(1),(page.height*scale).roundToInt().coerceAtLeast(1),Bitmap.Config.ARGB_8888)

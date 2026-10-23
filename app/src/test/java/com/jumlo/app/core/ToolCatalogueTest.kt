@@ -31,8 +31,10 @@ class ToolCatalogueTest {
         val primary = ToolCatalogue.primaryTools()
         assertTrue(
             "the catalogue shows ${primary.size} tiles; it must stay a scannable list",
-            primary.size in 12..20
+            // Existing primary actions plus the requested Word, PowerPoint and OCR entries.
+            primary.size in 12..22
         )
+        assertTrue(primary.containsAll(listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr")))
     }
 
     @Test fun everyWorkspaceHasAWayIn() {

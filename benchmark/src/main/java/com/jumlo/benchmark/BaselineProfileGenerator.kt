@@ -7,8 +7,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Collects an actual launcher-startup baseline, with no performance target claimed.
- * Run scripts/verify-native.sh baseline on an API 28+ rooted test device.
+ * Collects actual Home -> Tools -> crop workspace -> Back -> Files/grid paths.
+ * Requires the real Files fixtures described in benchmark/README.md and a supported test device.
  * Review generated benchmark output before copying a profile into the app.
  */
 @RunWith(AndroidJUnit4::class)
@@ -18,11 +18,17 @@ class BaselineProfileGenerator {
 
     @Test
     fun generate() = baselineProfileRule.collect(
-        packageName = "com.jumlo.app",
+        packageName = TARGET_PACKAGE,
         maxIterations = 5
     ) {
         pressHome()
         startActivityAndWait()
-        device.waitForIdle()
+        val ui=BenchmarkUi(device)
+        ui.home()
+        ui.tools()
+        ui.scrollGrid()
+        ui.openCropWorkspaceAndReturn()
+        ui.filesGrid()
+        ui.scrollGrid()
     }
 }

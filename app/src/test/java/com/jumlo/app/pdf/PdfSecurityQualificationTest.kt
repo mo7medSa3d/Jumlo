@@ -1,6 +1,7 @@
 package com.jumlo.app.pdf
 
 import com.jumlo.app.data.pdf.PdfBoxBackend
+import com.jumlo.app.core.PdfProtectionPermissions
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.junit.After
@@ -20,6 +21,30 @@ import java.io.File
  * are that proof: they run on the JVM against the real PDFBox backend, not mocks.
  */
 class PdfSecurityQualificationTest {
+    @Test fun selectedPermissionsSurviveEncryptionAndAreVisibleToTheUserPassword() {
+        val source = sample()
+        val output = File(dir, "restricted.pdf")
+        PdfBoxBackend.open(source, null).use { document ->
+            PdfBoxBackend.protect(document, "user".toCharArray(), "owner".toCharArray(), output,
+                PdfProtectionPermissions(allowPrinting = false, allowCopy = false, allowModify = true,
+                    allowAnnotations = false, allowForms = false))
+        }
+        PdfBoxBackend.open(output, "user".toCharArray()).use { document ->
+            val permission = document.currentAccessPermission
+            assertFalse(permission.canPrint())
+            assertFalse(permission.canPrintFaithful())
+            assertFalse(permission.canExtractContent())
+            assertTrue(permission.canModify())
+            assertTrue(permission.canAssembleDocument())
+            assertFalse(permission.canModifyAnnotations())
+            assertFalse(permission.canFillInForm())
+            assertTrue(permission.canExtractForAccessibility())
+        }
+        PdfBoxBackend.open(output, "owner".toCharArray()).use { document ->
+            assertTrue(document.currentAccessPermission.isOwnerPermission)
+        }
+    }
+
     private lateinit var dir: File
 
     @Before fun setup() {

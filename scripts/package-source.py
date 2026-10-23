@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Create and verify a deterministic Jumlo source ZIP without generated/private files.
 
-Build exclusions are repository-relative prefixes, deliberately NOT a generic
-"build" directory rule: verification/production-2026-10-17/build logs are retained.
+Generated build and cache directories are excluded at every module depth.
+Local signing credentials are excluded; documented example files are retained.
 All included symlinks/special files and unsafe portable ZIP member names fail closed.
 """
 from __future__ import annotations
@@ -23,24 +23,27 @@ EXCLUDED_PREFIXES = (
     ".git", ".gradle", ".kotlin", "build", "app/build", "benchmark/build",
 )
 CACHE_COMPONENTS = frozenset({
+    "build", ".git", ".gradle", ".kotlin",
     "__pycache__", ".cache", ".pytest_cache", ".mypy_cache", ".ruff_cache",
     ".cxx", ".externalNativeBuild", "node_modules",
 })
 LOCAL_NAMES = frozenset({
-    "local.properties", "keystore.properties", ".DS_Store", "Thumbs.db",
+    "local.properties", "keystore.properties", "signing.properties", "key.properties", ".DS_Store", "Thumbs.db",
     "desktop.ini", ".env", ".env.local",
 })
-PRIVATE_SUFFIXES = frozenset({".jks", ".keystore", ".p12", ".pfx", ".key", ".pk8"})
+PRIVATE_SUFFIXES = frozenset({".jks", ".keystore", ".p12", ".pfx", ".pem", ".key", ".pk8"})
 CACHE_SUFFIXES = frozenset({".pyc", ".pyo"})
 CHUNK_BYTES = 1024 * 1024
 
 
 def excluded(name: str) -> bool:
     parts = PurePosixPath(name).parts
+    basename = parts[-1].lower()
     return (
         any(name == prefix or name.startswith(prefix + "/") for prefix in EXCLUDED_PREFIXES)
         or any(part in CACHE_COMPONENTS for part in parts)
         or parts[-1] in LOCAL_NAMES
+        or (basename.endswith(".properties") and ("signing" in basename or "keystore" in basename))
         or (parts[-1].startswith(".env.") and parts[-1].endswith(".local"))
         or Path(parts[-1]).suffix.lower() in PRIVATE_SUFFIXES | CACHE_SUFFIXES
     )

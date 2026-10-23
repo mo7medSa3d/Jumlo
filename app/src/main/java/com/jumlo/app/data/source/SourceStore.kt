@@ -107,13 +107,13 @@ import javax.inject.Singleton
         Unit
     }
 
-    suspend fun openRead(sourceId:String):InputStream=withContext(Dispatchers.IO) {
+    suspend fun openRead(sourceId:String):InputStream=withInputStreamOwnership(Dispatchers.IO) {
         val source=db.processingDao().source(sourceId) ?: throw OperationFailure("SOURCE_NOT_FOUND")
         try {
             source.cachedPath?.let { path ->
                 val f=SourceSnapshotPolicy.cachedFile(inbound,sourceId,path)
                     ?: throw OperationFailure("INVALID_CACHED_SOURCE")
-                return@withContext f.inputStream()
+                return@withInputStreamOwnership f.inputStream()
             }
             resolver.openInputStream(Uri.parse(source.uri)) ?: throw OperationFailure("ACCESS_LOST")
         } catch(cancel:CancellationException) { throw cancel }
@@ -147,7 +147,7 @@ import javax.inject.Singleton
         var total=0L; val buffer=ByteArray(64*1024)
         while(true) {
             currentCoroutineContext().ensureActive(); val n=source.read(buffer); if(n<0) break
-            if(n.toLong()>budget.maxTemporaryBytes-total || file.parentFile.usableSpace<budget.minFreeBytes+n) throw OperationFailure("DISK_BUDGET_EXCEEDED")
+            if(n.toLong()>budget.maxTemporaryBytes-total || requireNotNull(file.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace<budget.minFreeBytes+n) throw OperationFailure("DISK_BUDGET_EXCEEDED")
             if(n>0) { sink.write(buffer,0,n); total+=n }
         }
     }

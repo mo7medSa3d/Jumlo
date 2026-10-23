@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    id("io.github.takahirom.roborazzi") version "1.26.0"
 }
 
 // The normal app includes the local extractor, FFmpeg and JavaScript runtime.
@@ -19,6 +21,14 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
+fun releaseSecret(environment: String, property: String): String =
+    providers.environmentVariable(environment).orNull?.takeIf(String::isNotBlank)
+        ?: keystoreProperties.getProperty(property, "")
+val releaseStorePath = releaseSecret("JUMLO_KEYSTORE_PATH", "storeFile")
+val releaseStorePassword = releaseSecret("JUMLO_STORE_PASSWORD", "storePassword")
+val releaseKeyAlias = releaseSecret("JUMLO_KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = releaseSecret("JUMLO_KEY_PASSWORD", "keyPassword")
+val releaseSigningReady = listOf(releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all(String::isNotBlank)
 
 android {
     namespace = "com.jumlo.app"
@@ -31,9 +41,11 @@ android {
         targetSdk = 36
         // Release versioning: pass -PversionCode / -PversionName at build time
         // (or set them in gradle.properties); defaults keep local builds working.
-        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10842).get()
-        versionName = providers.gradleProperty("versionName").orElse("1.4-media-candidate").get()
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).orElse(10844).get()
+        versionName = providers.gradleProperty("versionName").orElse("1.6-tools").get()
         buildConfigField("boolean", "EXTENDED_MEDIA", extendedMedia.toString())
+        buildConfigField("boolean", "CRASH_REPORTING_ENABLED",
+            providers.gradleProperty("crashReportingEnabled").map(String::toBoolean).orElse(false).get().toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -49,11 +61,11 @@ android {
     signingConfigs {
         // AGP owns the default debug configuration and creates its local keystore.
         create("release") {
-            if (keystorePropertiesFile.exists()) {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile", "release-keystore.jks"))
-                storePassword = keystoreProperties.getProperty("storePassword", "")
-                keyAlias = keystoreProperties.getProperty("keyAlias", "")
-                keyPassword = keystoreProperties.getProperty("keyPassword", "")
+            if (releaseSigningReady) {
+                storeFile = rootProject.file(releaseStorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -63,15 +75,17 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
+            ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk { abiFilters.add("arm64-v8a") }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (keystorePropertiesFile.exists()) {
+            if (releaseSigningReady) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
@@ -104,6 +118,8 @@ android {
         for (variant in listOf("debug", "release", "benchmark", "compact")) {
             sourceSets[variant].assets.srcDir("src/media/assets")
         }
+        // Emulator repair assets belong only to the full-runtime debug build.
+        sourceSets["debug"].assets.srcDir("src/mediaDebug/assets")
         // Do not override benchmark's own profileable manifest overlay.
         for (variant in listOf("debug", "release", "compact")) {
             sourceSets[variant].manifest.srcFile("src/media/AndroidManifest.xml")
@@ -120,7 +136,6 @@ android {
         jvmTarget = "17"
         freeCompilerArgs += listOf(
             "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
             "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
             "-opt-in=androidx.compose.animation.ExperimentalSharedTransitionApi"
         )
@@ -129,6 +144,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    bundle {
+        abi { enableSplit = true }
+        density { enableSplit = true }
+        // Standalone APKs include both locales; Play distributes the declared locale splits for AABs.
+        // resourceConfigurations above restricts the payload to Arabic and English.
+        language { enableSplit = true }
     }
 
     lint {
@@ -140,6 +163,7 @@ android {
     testOptions {
         // pdfbox-android JVM tests hit android.util.Log inside font parsing.
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
     }
 
     packaging {
@@ -160,12 +184,17 @@ val pdfboxAar = configurations.create("pdfboxAar") {
 }
 
 dependencies {
+    implementation(project(":core-common"))
+    implementation(project(":downloader-core"))
+    implementation(project(":document-core"))
+    implementation(project(":storage-core"))
     if (extendedMedia) {
         // Native media engine; keep the library and FFmpeg on the same version.
         implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
         implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     }
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -178,7 +207,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.window.size)
-    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.hilt.android)
@@ -203,15 +231,29 @@ dependencies {
     implementation(libs.pdfbox.android)
     pdfboxAar(libs.pdfbox.android)
     implementation(libs.zip4j)
-    implementation(libs.camera.lifecycle)
-    implementation(libs.camera.camera2)
-    implementation(libs.camera.view)
-    // On-device Google Play services scanner with CameraX manual fallback.
+    // Multi-page scanner supplied by Google Play services, including gallery import.
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0")
+    // Lifecycle-bound camera fallback; the Play-services scanner remains the primary flow.
+    implementation("androidx.camera:camera-camera2:1.4.0")
+    implementation("androidx.camera:camera-lifecycle:1.4.0")
+    implementation("androidx.camera:camera-view:1.4.0")
+    implementation(libs.mlkit.text.recognition)
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
+    testImplementation("app.cash.turbine:turbine:1.2.0")
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.26.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.26.0")
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    // Keep host Compose tests on the same cached AndroidX Test set as device tests.
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test:runner:1.6.1")
+    testImplementation("androidx.test.services:storage:1.5.0")
+    testImplementation(libs.androidx.junit)
+    testImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.room.testing)
@@ -240,6 +282,12 @@ afterEvaluate {
     val pinManifest = file("src/media/assets/media/native-overrides/manifest.properties")
     val abiNames = Regex("(arm64-v8a|x86_64|armeabi-v7a|x86)$")
     tasks.matching { it.name.matches(Regex("merge[A-Za-z]+NativeLibs")) }.configureEach {
+        if (extendedMedia) {
+            inputs.file(repackTool).withPropertyName("nativeMediaRepackTool")
+                .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            inputs.file(pinManifest).withPropertyName("nativeMediaPins")
+                .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+        }
         doLast {
             if (!extendedMedia) return@doLast
             val abiDirs = outputs.files.filter { it.isDirectory }.flatMap { dir ->
@@ -282,5 +330,39 @@ tasks.register("verifyCompactApkSize") {
         check(apk.length() <= maxBytes) {
             "Compact APK exceeds 60MB by ${apk.length() - maxBytes} bytes; full downloader is preserved. Do not distribute this build as <=60MB."
         }
+    }
+}
+
+tasks.register("verifyReleaseApkSize") {
+    group = "verification"
+    description = "Build the complete ARM64 release APK and enforce the 60,000,000-byte cap"
+    dependsOn("assembleRelease")
+    doLast {
+        check(extendedMedia) { "Release qualification requires the complete media runtime." }
+        val apks = layout.buildDirectory.dir("outputs/apk/release").get().asFile
+            .listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
+        check(apks.size == 1) { "Expected one current release APK; clean obsolete release artifacts first." }
+        val apk = apks.single()
+        println("Release APK size: ${apk.length()} bytes (maximum 60,000,000)")
+        check(apk.length() < 60_000_000L) { "Release exceeds 60MB; preserve features and optimize before distribution." }
+        ZipFile(apk).use { zip ->
+            val abis = zip.entries().asSequence().map { it.name }
+                .filter { it.startsWith("lib/") && it.endsWith(".so") }.map { it.split('/')[1] }.toSet()
+            check(abis == setOf("arm64-v8a")) { "Release APK must contain only ARM64 native libraries." }
+            check(zip.getEntry("assets/media/yt-dlp") != null) { "Full release extractor payload is missing." }
+        }
+    }
+}
+
+tasks.register("verifyPublishableRelease") {
+    group = "verification"
+    description = "Require owner release signing, optimized APK/AAB and size/lint gates; does not publish"
+    dependsOn("verifyReleaseApkSize", "bundleRelease", "lintRelease")
+    doLast {
+        check(releaseSigningReady) { "Supply JUMLO_KEYSTORE_PATH, JUMLO_STORE_PASSWORD, JUMLO_KEY_ALIAS and JUMLO_KEY_PASSWORD, or a complete gitignored keystore.properties." }
+        check(rootProject.file(releaseStorePath).isFile) { "Configured release keystore does not exist." }
+        check(!releaseKeyAlias.equals("androiddebugkey", ignoreCase = true)) { "A debug signing key cannot qualify a release." }
+        check(!rootProject.file(releaseStorePath).name.equals("debug.keystore", ignoreCase = true)) { "A debug keystore cannot qualify a release." }
+        println("Build/signing/size gates passed. Device, content-rights, privacy and Play Console gates remain in RELEASE_CHECKLIST.md.")
     }
 }

@@ -35,7 +35,8 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('artifacts', type=Path, nargs='+')
 parser.add_argument('--output', type=Path, required=True)
 args = parser.parse_args()
-forbidden_paths = ('youtubedl', 'yt-dlp', 'yt_dlp', 'ffmpeg', 'ffprobe', 'libpython', 'python3.')
+forbidden_paths = ('youtubedl', 'yt-dlp', 'yt_dlp', 'ffmpeg', 'ffprobe', 'libpython', 'python3.',
+                   'assets/media/native-overrides/')
 forbidden_dex = (b'Lcom/yausername/youtubedl_android/', b'Lcom/yausername/ffmpeg/', b'Lcom/arthenica/ffmpegkit/')
 results = []
 for artifact in args.artifacts:

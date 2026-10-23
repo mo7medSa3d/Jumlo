@@ -8,7 +8,7 @@ fi
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 BUILD=$(mktemp -d)
 trap 'rm -rf "$BUILD"' EXIT
-mapfile -t SOURCES < <(find "$ROOT/app/src/main/java/com/jumlo/app/core" "$ROOT/app/src/hostTest/kotlin" -name '*.kt' | sort)
+mapfile -t SOURCES < <(find "$ROOT/core-common/src/main/kotlin" "$ROOT/downloader-core/src/main/kotlin" "$ROOT/document-core/src/main/kotlin" "$ROOT/storage-core/src/main/kotlin" "$ROOT/app/src/hostTest/kotlin" -name '*.kt' | sort)
 SOURCES+=("$ROOT/app/src/main/java/com/jumlo/app/model/Models.kt" "$ROOT/app/src/main/java/com/jumlo/app/data/engine/PureDomainAlgorithms.kt")
 
 # Prefer the Kotlin CLI. When it is not installed, fall back to the compiler the

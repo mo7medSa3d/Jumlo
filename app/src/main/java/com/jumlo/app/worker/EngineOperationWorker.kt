@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.jumlo.app.data.jobs.JobStore
 import com.jumlo.app.data.jobs.OperationDispatcher
+import com.jumlo.app.diagnostics.AppDiagnostics
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
@@ -18,12 +19,18 @@ import kotlinx.coroutines.CancellationException
         val id=inputData.getString("job_id") ?: return Result.failure()
         return try {
             // WorkManager owns the foreground service lifecycle and OS stop handling.
-            // On Android 12+ background starts or restricted notification states, foreground promotion
-            // can throw ForegroundServiceStartNotAllowedException/SecurityException; continue job execution.
-            runCatching { setForeground(ProcessingNotification.create(applicationContext,id)) }
+            // Do not start a long transfer if the OS denied foreground promotion.
+            // The failure is recorded below; cancellation must propagate to WorkManager.
+            setForeground(ProcessingNotification.create(applicationContext,id))
             if(jobs.execute(id,dispatcher)) Result.success() else Result.retry()
         }
         catch(cancel:CancellationException) { throw cancel }
-        catch(_:Exception) { jobs.recordInfrastructureFailure(id); Result.failure() }
+        catch(error:Exception) {
+            AppDiagnostics.report("worker_start",error)
+            try { jobs.recordInfrastructureFailure(id) }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(persistenceError:Exception) { AppDiagnostics.report("worker_failure_record",persistenceError) }
+            Result.failure()
+        }
     }
 }

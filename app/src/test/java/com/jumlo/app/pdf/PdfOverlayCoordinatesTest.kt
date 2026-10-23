@@ -16,6 +16,51 @@ import kotlin.math.hypot
 
 /** Reads actual saved PDF operators; no Android bitmap/renderer emulation is involved. */
 class PdfOverlayCoordinatesTest {
+    @Test fun signatureRotationKeepsItsCenterAndAspectInTheVisiblePage() {
+        val folder=java.nio.file.Files.createTempDirectory("pdf-signature-rotation").toFile()
+        try {
+            val source=PdfFixtures.imageDoc(File(folder,"source.pdf"),false)
+            val result=File(folder,"result.pdf")
+            PdfBoxBackend.open(source,null).use { doc ->
+                val page=doc.getPage(0);page.mediaBox=PDRectangle(200f,300f);page.cropBox=page.mediaBox
+                val image=page.resources.xObjectNames.map {page.resources.getXObject(it)}.filterIsInstance<PDImageXObject>().single()
+                PdfBoxBackend.stampImageObject(doc,0,image,.2,.2,.8,.6,90f)
+                PdfBoxBackend.stampImageObject(doc,0,image,.1,.7,.4,.9,-30f)
+                doc.save(result)
+            }
+            PdfBoxBackend.open(result,null).use { doc ->
+                val images=painted(doc.getPage(0)).images.takeLast(2)
+                val first=images[0];val center=first.map(.5,.5)
+                assertEquals(100.0,center.first,.001);assertEquals(180.0,center.second,.001)
+                assertEquals(0.0,first.a,.001);assertEquals(-120.0,first.b,.001)
+                assertEquals(1.5,hypot(first.a,first.b)/hypot(first.c,first.d),.001)
+                val second=images[1].map(.5,.5)
+                assertEquals(50.0,second.first,.001);assertEquals(60.0,second.second,.001)
+            }
+        } finally {folder.deleteRecursively()}
+    }
+
+    @Test fun imageWatermarkUsesRequestedScaleOpacityAndNineTilePositions() {
+        val folder=java.nio.file.Files.createTempDirectory("pdf-logo-watermark").toFile()
+        try {
+            val source=PdfFixtures.imageDoc(File(folder,"source.pdf"),false)
+            val result=File(folder,"result.pdf")
+            PdfBoxBackend.open(source,null).use { doc ->
+                val page=doc.getPage(0);page.mediaBox=PDRectangle(200f,300f);page.cropBox=page.mediaBox
+                val image=page.resources.xObjectNames.map {page.resources.getXObject(it)}.filterIsInstance<PDImageXObject>().single()
+                PdfBoxBackend.stampWatermarkLogo(doc,listOf(0),image,PdfWatermarkStyle(tiled=true,rotationDegrees=0,opacityPercent=35,imageScale=1.5))
+                doc.save(result)
+            }
+            PdfBoxBackend.open(result,null).use { doc ->
+                val page=doc.getPage(0);val images=painted(page).images.takeLast(9)
+                assertEquals(9,images.size)
+                assertEquals(90.0,hypot(images.first().a,images.first().b),.001)
+                assertEquals(setOf(36,100,164),images.map {it.map(.5,.5).first.toInt()}.toSet())
+                assertEquals(setOf(54,150,246),images.map {kotlin.math.round(it.map(.5,.5).second).toInt()}.toSet())
+                assertTrue(page.resources.extGStateNames.any {kotlin.math.abs(page.resources.getExtGState(it).nonStrokingAlphaConstant-.35f)<.001f})
+            }
+        } finally {folder.deleteRecursively()}
+    }
     private data class Affine(val a:Double=1.0,val b:Double=0.0,val c:Double=0.0,val d:Double=1.0,val e:Double=0.0,val f:Double=0.0) {
         fun map(x:Double,y:Double)=(a*x+c*y+e) to (b*x+d*y+f)
         fun concatenate(n:Affine)=Affine(a*n.a+c*n.b,b*n.a+d*n.b,a*n.c+c*n.d,b*n.c+d*n.d,a*n.e+c*n.f+e,b*n.e+d*n.f+f)

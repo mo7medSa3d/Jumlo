@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Only StreamTransfer may use HTTP, after per-job consent. No credential downgrade. -->
+    <!-- Direct HTTP downloads and metadata are supported. Runtime guards reject
+         HTTPS-to-HTTP redirects; release extractor endpoints require HTTPS. -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />

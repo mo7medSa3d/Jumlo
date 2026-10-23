@@ -1,5 +1,11 @@
 package com.jumlo.app.ui.components
 
+import kotlinx.coroutines.ensureActive
+
+import kotlinx.coroutines.currentCoroutineContext
+
+import com.jumlo.app.data.pdf.PdfRendererFactory
+
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.graphics.pdf.PdfRenderer
@@ -9,9 +15,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.*
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
+import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -207,9 +213,10 @@ fun NeonOutputPreview(
     val isImage = output.mimeType.startsWith("image/")
     val pdfBitmap by produceState<Bitmap?>(null, output.uri, isPdf) {
         value = if (!isPdf) null else withContext(Dispatchers.IO) {
+            val coroutine = currentCoroutineContext()
             try {
                 context.contentResolver.openFileDescriptor(Uri.parse(output.uri), "r")?.use { fd ->
-                    PdfRenderer(fd).use { pdf ->
+                    PdfRendererFactory.open(fd, context.cacheDir) { coroutine.ensureActive() }.use { pdf ->
                         if (pdf.pageCount < 1) null else pdf.openPage(0).use { page ->
                             val width = 240
                             val height = (width * (page.height.toFloat() / page.width.coerceAtLeast(1)))

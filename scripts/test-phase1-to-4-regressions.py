@@ -2,6 +2,7 @@
 """Source-level regression contracts; they do not substitute for an Android build/device run."""
 from pathlib import Path
 import unittest
+from source_paths import source_path
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,7 +10,7 @@ SRC = ROOT / 'app/src/main/java/com/jumlo/app'
 
 
 def read(path):
-    return (SRC / path).read_text(encoding='utf-8')
+    return source_path(path).read_text(encoding='utf-8')
 
 
 class SourceRegressionContracts(unittest.TestCase):
@@ -19,7 +20,9 @@ class SourceRegressionContracts(unittest.TestCase):
         self.assertIn('row.leaseOwner==null || row.leaseUntil<now', jobs)
         self.assertIn('dao.updateOwned(jobId,owner', jobs)
         self.assertIn('retainedUnits=old.progress.completedUnits.coerceAtLeast(0L)', jobs)
-        self.assertIn('admission.withSlot(preferences.settingsFlow.first().maxConcurrentDownloads,ctx.checkCancellation)', jobs)
+        # Scheduling remains bounded, but concurrency is no longer a user preference.
+        self.assertIn('admission.withSlot(2,ctx.checkCancellation)', jobs)
+        self.assertNotIn('maxConcurrentDownloads', read('ui/settings/SettingsScreen.kt'))
 
     def test_imports_are_private_immutable_snapshots(self):
         source = read('data/source/SourceStore.kt')
@@ -77,8 +80,29 @@ class SourceRegressionContracts(unittest.TestCase):
         self.assertIn('host.startsWith("::ffff:")', policies)
         self.assertIn('host.endsWith(".internal")', policies)
         self.assertIn('trimEnd(\'.\')', html)
-        self.assertIn('out?.takeUnless { it.isRecycled }?.recycle()', scan)
-        self.assertIn('it.fd.sync()', scan)
+        self.assertIn('SmartDocumentScanLauncher(', scan)
+        self.assertNotIn('ProcessCameraProvider', scan)
+        scanner = read('ui/scan/SmartDocumentScanButton.kt')
+        for token in ('SCANNER_MODE_FULL', 'RESULT_FORMAT_PDF', '.setGalleryImportAllowed(true)',
+                      '.setPageLimit(100)', 'SmartScanResultStore.copyPdf(', 'owned?.delete()'):
+            self.assertIn(token, scanner)
+        result = read('data/pdf/SmartScanResultStore.kt')
+        for token in ('withContext(Dispatchers.IO)', 'coroutine.ensureActive()',
+                      'ResourceBudgetPolicy.minFreeBytes', 'output.fd.sync()',
+                      'it.pageCount == expectedPages', 'pending?.delete()'):
+            self.assertIn(token, result)
+        # The extracted renderer transfers a fresh bitmap to the export block.
+        # It is released unconditionally in finally, not behind the old nullable
+        # bitmap guard; a render failure releases its own allocation as well.
+        self.assertIn('val bitmap = renderSignature(savedStrokes, savedSize.width, savedSize.height)', scan)
+        export = scan.split('val bitmap = renderSignature(', 1)[1].split('libraryVersion++', 1)[0]
+        self.assertIn('Bitmap.CompressFormat.PNG', export)
+        self.assertIn('it.fd.sync()', export)
+        self.assertRegex(export, r'finally\s*\{\s*bitmap\.recycle\(\)\s*\}')
+        renderer = read('ui/scan/SignatureRenderer.kt')
+        self.assertIn('signatureExportGeometry(canvasWidth, canvasHeight)', renderer)
+        self.assertIn('Bitmap.Config.ARGB_8888', renderer)
+        self.assertRegex(renderer, r'catch\s*\((\w+)\s*:\s*Throwable\)\s*\{\s*bitmap\.recycle\(\)\s*throw\s+\1')
 
 
 if __name__ == '__main__':

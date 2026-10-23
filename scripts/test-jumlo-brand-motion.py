@@ -107,32 +107,48 @@ class JumloBrandMotionChecks(unittest.TestCase):
         for part in ('HapticIntensity.STRONG','HapticIntensity.LIGHT','VibrationEffect.createWaveform','HAPTIC_FEEDBACK_ENABLED','Event.SUCCESS','Event.ERROR','Event.DELETE'):
             self.assertIn(part,h)
         self.assertIn('android.permission.VIBRATE',(ROOT/'app/src/main/AndroidManifest.xml').read_text())
-    def test_haptics_sounds_settings_persist_and_controls_render(self):
+    def test_haptics_are_system_respecting_without_removed_user_controls(self):
         repo=code('data/preferences/UserPreferencesRepository.kt')
         settings=code('ui/settings/SettingsScreen.kt')
-        for part in ('HAPTIC_INTENSITY','UI_SOUNDS','setHapticIntensity','setSoundsEnabled'):
+        # Legacy storage can remain readable; the rebuilt Settings page stays simple.
+        for part in ('UI_SOUNDS','setSoundsEnabled'):
             self.assertIn(part,repo)
-        for part in ('settings.hapticIntensity','settings.soundsEnabled','viewModel::setSoundsEnabled','viewModel.setHapticIntensity('):
-            self.assertIn(part,settings)
+        for part in ('settings.hapticIntensity','setHapticIntensity','hapticOnCommit','respectReducedMotion'):
+            self.assertNotIn(part,settings)
+        main=code('MainActivity.kt')
+        self.assertIn('LocalAppHapticsEnabled provides true',main)
+        self.assertIn('LocalHapticIntensity provides HapticIntensity.LIGHT',main)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
-        for key in ('animateDpAsState','val slot = when (selectedTab)','onScan: () -> Unit','modifier.pressFeedback()','navigationTab()','contentDescription = label'):
+        for key in ('animateColorAsState','animateFloatAsState','MainDockTabs.forEach',
+                    'destination == selectedTab','if (language.isRtl) destination.labelAr else destination.labelEn',
+                    '.selectable(selected = active, role = Role.Tab','navigationTab()',
+                    'contentDescription = label','Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp)',
+                    '.clip(RoundedCornerShape(14.dp)).background(indicatorColor)'):
             self.assertIn(key,dock)
-    def test_system_and_app_reduce_motion_are_respected(self):
+        self.assertIn('listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)',dock)
+    def test_system_motion_is_respected_without_a_removed_app_toggle(self):
         system=code('ui/theme/SystemMotion.kt')
         main=code('MainActivity.kt')
         self.assertIn('ANIMATOR_DURATION_SCALE',system)
-        self.assertIn('LocalReducedMotion provides (settings.respectReducedMotion || systemReduced)',main)
+        self.assertIn('LocalReducedMotion provides systemReduced',main)
+        self.assertNotIn('settings.respectReducedMotion',main)
+        self.assertNotIn('respectReducedMotion',code('ui/settings/SettingsScreen.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/theme/JumloMotion.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/ProductionRows.kt'))
     def test_predictive_back_follows_gesture_and_respects_dirty_state(self):
         nav=code('ui/navigation/JumloNavHost.kt')
-        self.assertIn('progress.collect { backSwipe=it.progress.coerceIn',nav)
-        self.assertIn('if(route=="workspace" && dirty) confirmLeave=true else leaveWorkspace()',nav)
-        self.assertIn('translationX=(if(rtl) -1f else 1f)*backSwipe',nav)
+        compact=re.sub(r'\s+','',nav)
+        self.assertIn('progress.collect{backSwipe=it.progress.coerceIn(0f,1f)}',compact)
+        self.assertIn('if(route=="workspace"&&dirty)confirmLeave=trueelseleaveWorkspace()',compact)
+        self.assertIn('translationX=(if(rtl)-1felse1f)*backSwipe',compact)
+        self.assertIn('finally{backSwipe=0f}',compact)
     def test_files_default_grid_preserves_explicit_user_choice(self):
         self.assertIn('fileViewMode: FileViewMode = FileViewMode.GRID',code('model/Models.kt'))
-        self.assertIn('prefs[Keys.FILE_VIEW_MODE] ?: "GRID"',code('data/preferences/UserPreferencesRepository.kt'))
+        self.assertIn('FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE])',code('data/preferences/UserPreferencesRepository.kt'))
+        models=code('model/Models.kt')
+        self.assertIn('enum class FileViewMode { LIST, GRID;',models)
+        self.assertIn('entries.firstOrNull { it.name == value } ?: GRID',models)
         for token in ('BoxWithConstraints','maxWidth.value','density.fontScale','coerceIn(1,4)'):
             self.assertIn(token,code('ui/files/FilesScreen.kt'))
         self.assertIn('FileViewMode.LIST',code('ui/files/FilesScreen.kt'))

@@ -5,16 +5,24 @@ import re
 import unittest
 root=Path(__file__).resolve().parent.parent
 build=(root/'app/build.gradle.kts').read_text()
-policy=(root/'app/src/main/java/com/jumlo/app/core/CapabilityPolicy.kt').read_text()
+policy=(root/'core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt').read_text()
 
 class MediaBuildConfiguration(unittest.TestCase):
     def test_default_includes_real_media_in_all_variants(self):
         self.assertIn('orElse(true).get()',build)
-        for variant in ('debug','release','benchmark'):
+        for variant in ('debug','release','benchmark','compact'):
             self.assertIn(f'sourceSets["{variant}"].java.srcDir(if (extendedMedia) "src/media/java" else "src/base/java")',build)
         for coordinate in ('library:0.18.1','ffmpeg:0.18.1'):
             self.assertIn(f'implementation("io.github.junkfood02.youtubedl-android:{coordinate}")',build)
         self.assertIn('if (extendedMedia)',build)
+        assets_block = build.split('    if (extendedMedia) {', 1)[1].split('    sourceSets["androidTest"]', 1)[0]
+        self.assertIn('sourceSets[variant].assets.srcDir("src/media/assets")', assets_block)
+        self.assertIn('sourceSets["debug"].assets.srcDir("src/mediaDebug/assets")', assets_block)
+        common = root/'app/src/media/assets/media/native-overrides'
+        debug = root/'app/src/mediaDebug/assets/media/native-overrides/x86_64'
+        self.assertFalse((common/'x86_64').exists())
+        self.assertEqual({'libsharpyuv.so','libwebp.so','libwebpdecoder.so','libwebpdemux.so','libwebpmux.so'},
+                         {path.name for path in debug.glob('*.so')})
     def test_lite_build_remains_possible(self):
         self.assertTrue((root/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').is_file())
         self.assertIn('NativeDirectMediaRuntime(client, sessions)',(root/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text())

@@ -5,6 +5,10 @@ import com.jumlo.app.core.media.MediaCatalog
 import com.jumlo.app.core.media.MediaMode
 
 class MediaMetadataTest {
+    @Test fun unusableMetadataEntriesDoNotHideAValidSource() {
+        val asset=MediaMetadata.parse("""{"id":"clip","extractor_key":"Fixture","formats":[null,{},42,{"format_id":"18","url":"https://cdn.example/clip.mp4","ext":"mp4","vcodec":"h264","acodec":"aac"}]}""")
+        assertEquals(listOf("18"),MediaCatalog.choices(asset,MediaMode.VIDEO).single().formatIds)
+    }
     @Test fun signedEndpointsAreDiscardedFromModel() {
         val asset=MediaMetadata.parse("""{"id":"a","extractor":"generic","title":"file","formats":[{"format_id":"720","url":"https://media.example/video?secret=do-not-store","vcodec":"avc1","acodec":"aac","ext":"mp4","height":720}]}""")
         assertEquals(720,asset.formats.single().height)

@@ -6,6 +6,23 @@ import kotlinx.serialization.json.*
 /** Convert bounded extractor metadata, discarding every signed stream URL/header. */
 object MediaMetadata {
     private val json = Json { ignoreUnknownKeys = true }
+    /** Transient probe input; signed URLs and headers never enter MediaAsset or Room. */
+    internal class ProbeSource(val url:String,val headers:Map<String,String>)
+    internal fun directProbeSource(text:String,formatId:String):ProbeSource? {
+        MediaJsonGuard.check(text)
+        val root=json.parseToJsonElement(text) as? JsonObject ?: return null
+        val entries=(root["formats"] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: listOf(root)
+        val source=entries.singleOrNull { it.string("format_id")==formatId } ?: return null
+        if(source.string("protocol").ifBlank { "https" } !in setOf("http","https")) return null
+        val url=source.string("url").takeIf(String::isNotBlank) ?: return null
+        val permitted=setOf("user-agent","referer","origin","accept","accept-language")
+        val headers=((root["http_headers"] as? JsonObject).orEmpty() + (source["http_headers"] as? JsonObject).orEmpty())
+            .mapNotNull { (name,value) ->
+                val content=(value as? JsonPrimitive)?.contentOrNull
+                if(name.lowercase() in permitted && content!=null && content.length<=2048 && content.none { it<' ' || it=='\u007f' }) name to content else null
+            }.toMap()
+        return ProbeSource(url,headers)
+    }
     fun parse(text: String): MediaAsset {
         MediaJsonGuard.check(text)
         val value = json.parseToJsonElement(text).jsonObject
@@ -15,7 +32,9 @@ object MediaMetadata {
         require(!live) { "LIVE_MEDIA_NOT_FINITE" }
         val extractorName = value.string("extractor_key").ifBlank { value.string("extractor") }
         val isGeneric = extractorName.equals("generic", ignoreCase = true)
-        val entries = (value["formats"] as? JsonArray)?.map { it.jsonObject } ?: listOf(value)
+        val rawEntries=value["formats"] as? JsonArray
+        require(rawEntries==null || rawEntries.size<=2000) { "TOO_MANY_MEDIA_FORMATS" }
+        val entries = rawEntries?.mapNotNull { it as? JsonObject } ?: listOf(value)
         require(entries.size <= 2000) { "TOO_MANY_MEDIA_FORMATS" }
         val formats = entries.mapNotNull { f ->
             if (f.string("url").isBlank()) return@mapNotNull null

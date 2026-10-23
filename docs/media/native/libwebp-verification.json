@@ -1,0 +1,258 @@
+[
+  {
+    "abi": "arm64-v8a",
+    "name": "libsharpyuv.so",
+    "bytes": 21800,
+    "sha256": "377cd913f8beac3f8415e0b904d9a8e93e78d49497a251bbd337c6848d0584bf",
+    "soname": "libsharpyuv.so",
+    "originalSoname": "libsharpyuv.so",
+    "needed": [
+      "libm.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libm.so",
+      "libc.so"
+    ],
+    "originalExportCount": 7,
+    "newExportCount": 7,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "arm64-v8a",
+    "name": "libwebp.so",
+    "bytes": 455768,
+    "sha256": "34ee16875eb9b5469abbed04545a4724b10bb01372d467c94dfadb8988a32d1e",
+    "soname": "libwebp.so",
+    "originalSoname": "libwebp.so",
+    "needed": [
+      "libsharpyuv.so",
+      "libm.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libsharpyuv.so",
+      "libm.so",
+      "libc.so"
+    ],
+    "originalExportCount": 86,
+    "newExportCount": 86,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "arm64-v8a",
+    "name": "libwebpdecoder.so",
+    "bytes": 235288,
+    "sha256": "83c76b03e308833f08d3a271ef5eef01cdebd83b3323d7cf62c11ce3c6ee151c",
+    "soname": "libwebpdecoder.so",
+    "originalSoname": "libwebpdecoder.so",
+    "needed": [
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libc.so"
+    ],
+    "originalExportCount": 46,
+    "newExportCount": 46,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "arm64-v8a",
+    "name": "libwebpdemux.so",
+    "bytes": 14000,
+    "sha256": "cc0890b1f8c46496b2a6f91933a80fffa9b3e43e93126c0130b329b5df5bd0b2",
+    "soname": "libwebpdemux.so",
+    "originalSoname": "libwebpdemux.so",
+    "needed": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalExportCount": 20,
+    "newExportCount": 20,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "arm64-v8a",
+    "name": "libwebpmux.so",
+    "bytes": 40136,
+    "sha256": "810a31939fcf5c34334e0071c75d92f0429497376e8459b7722f7e9b8cc54925",
+    "soname": "libwebpmux.so",
+    "originalSoname": "libwebpmux.so",
+    "needed": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalExportCount": 27,
+    "newExportCount": 27,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "x86_64",
+    "name": "libsharpyuv.so",
+    "bytes": 27856,
+    "sha256": "b9bd958ed13b4052c035c54004d950dbfcdd7b512953e826690f266da6512205",
+    "soname": "libsharpyuv.so",
+    "originalSoname": "libsharpyuv.so",
+    "needed": [
+      "libm.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libm.so",
+      "libc.so"
+    ],
+    "originalExportCount": 7,
+    "newExportCount": 7,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "x86_64",
+    "name": "libwebp.so",
+    "bytes": 625024,
+    "sha256": "28b5ef1ba2afb0b12888c9299aa9b0165a7d70dd1fe1119c30f1be3bae52ff86",
+    "soname": "libwebp.so",
+    "originalSoname": "libwebp.so",
+    "needed": [
+      "libsharpyuv.so",
+      "libm.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libsharpyuv.so",
+      "libm.so",
+      "libc.so"
+    ],
+    "originalExportCount": 86,
+    "newExportCount": 86,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "x86_64",
+    "name": "libwebpdecoder.so",
+    "bytes": 311288,
+    "sha256": "47c6572c297099757e4da7e2e65a2a0c0eac509fd7d933207693bdb49fdc01a1",
+    "soname": "libwebpdecoder.so",
+    "originalSoname": "libwebpdecoder.so",
+    "needed": [
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libc.so"
+    ],
+    "originalExportCount": 46,
+    "newExportCount": 46,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "x86_64",
+    "name": "libwebpdemux.so",
+    "bytes": 14760,
+    "sha256": "54d564a256c65f2e473defccf1318d9bde3e640cbd3acd1dd0517da7fe8bdd4f",
+    "soname": "libwebpdemux.so",
+    "originalSoname": "libwebpdemux.so",
+    "needed": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalExportCount": 20,
+    "newExportCount": 20,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  },
+  {
+    "abi": "x86_64",
+    "name": "libwebpmux.so",
+    "bytes": 42384,
+    "sha256": "7999eb7fb357c63f1b94b0f8f5dec1768e171b6469ef8ae84d8f4450e9866b6c",
+    "soname": "libwebpmux.so",
+    "originalSoname": "libwebpmux.so",
+    "needed": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalNeeded": [
+      "libwebp.so",
+      "libc.so"
+    ],
+    "originalExportCount": 27,
+    "newExportCount": 27,
+    "exportsIdentical": true,
+    "missingOriginalExports": [],
+    "loadAlignments": [
+      16384,
+      16384
+    ],
+    "relroChecked": true
+  }
+]

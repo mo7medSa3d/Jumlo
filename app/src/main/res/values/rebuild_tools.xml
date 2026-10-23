@@ -1,0 +1,23 @@
+<resources>
+    <string name="rebuild_word_action">Convert to Word</string>
+    <string name="rebuild_slides_action">Convert to PowerPoint</string>
+    <string name="rebuild_ocr_action">Extract text</string>
+    <string name="rebuild_word_note">Keeps paragraphs and page breaks. Complex layouts and tables may change. Scanned text uses Latin OCR; Arabic scans are not supported.</string>
+    <string name="rebuild_slides_note">One slide per page, with the page image and an editable text layer when available. Objects are not reconstructed.</string>
+    <string name="rebuild_ocr_note">Choose a PDF or image. Scanned text uses Latin OCR and may need an initial model download. Arabic scans are not supported.</string>
+    <string name="rebuild_compression_before">Original: %1$s</string>
+    <string name="rebuild_download_privacy">Pending download links are encrypted on this device and removed after completion or cancellation.</string>
+    <string name="rebuild_clipboard_unavailable">The clipboard is unavailable. Paste into the link field or share the link to Jumlo.</string>
+    <string name="rebuild_office_limit">This document exceeds the conversion limit. Select fewer pages and try again.</string>
+    <string name="rebuild_office_verify">The converted document could not be verified. No incomplete file was saved.</string>
+    <string name="rebuild_office_aspect">A page has an unsupported slide size. Try converting selected pages.</string>
+    <string name="rebuild_office_empty_pages">Some pages had no readable text and were omitted. Review the document.</string>
+    <string name="rebuild_office_ocr_review">Text recognition was used. Review the converted text for mistakes.</string>
+    <string name="rebuild_ocr_model">The text recognition model is unavailable. Connect to the internet, check Google Play services, then try again.</string>
+    <string name="rebuild_ocr_empty">No readable text was found. Use a clearer scan. Arabic scan recognition is not supported.</string>
+    <string name="rebuild_ocr_text_only">The text file was saved. Some characters could not be embedded in a searchable PDF.</string>
+    <string name="rebuild_worker_start">Android could not start the background task. Reopen Jumlo and try again.</string>
+    <string name="rebuild_invalid_share">This shared content could not be opened. Choose the file or link from inside Jumlo.</string>
+    <string name="rebuild_private_output">Saved in Jumlo. The selected save folder is unavailable; change it or export the file from Files.</string>
+    <string name="rebuild_secret_storage">The download link could not be stored securely. Free some space and try again.</string>
+</resources>

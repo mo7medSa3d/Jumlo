@@ -17,6 +17,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+    @Provides @Singleton fun provideDownloadSecretPersistence(
+        storage: com.jumlo.app.data.source.EncryptedDownloadSecrets
+    ): com.jumlo.app.data.source.DownloadSecretPersistence = storage
+
     @Provides @Singleton fun provideMediaRuntime(
         @ApplicationContext context: Context,
         client: OkHttpClient,
@@ -26,7 +30,8 @@ object AppModule {
         com.jumlo.app.data.media.MediaRuntimeFactory.create(
             context, client, sessions,
             { preferences.mediaServiceUrlSnapshot },
-            { preferences.mediaServiceTokenSnapshot })
+            { preferences.mediaServiceTokenSnapshot },
+            serviceConfiguration = { preferences.mediaServiceConfigurationSnapshot })
 
     @Provides @Singleton fun provideWorkBudget() = com.jumlo.app.data.jobs.WorkBudget()
 

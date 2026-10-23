@@ -14,8 +14,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.semantics.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -72,16 +72,17 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 })
 
 @OptIn(ExperimentalFoundationApi::class)
-@Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,onLongClick:(()->Unit)?=null,menu:@Composable ColumnScope.(()->Unit)->Unit) {
+@Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,onLongClick:(()->Unit)?=null,leadingPreview:(@Composable ()->Unit)?=null,menu:@Composable ColumnScope.(()->Unit)->Unit) {
     var expanded by remember {mutableStateOf(false)}
     val haptics=rememberAppHaptics()
     Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
         onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
         onLongClick=onLongClick
-    ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surface,
-        border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+    ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,shape=QuietTheme.shapes.card,color=if(selection==true) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            if(selection!=null) Checkbox(selection,{onSelect?.invoke()}) else Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
+            if(selection!=null) Checkbox(selection,onCheckedChange=null)
+            else if(leadingPreview!=null) leadingPreview()
+            else Icon(icon,null,Modifier.size(24.dp),tint=MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                 Text(name,style=QuietTheme.typography.bodyMedium.copy(textDirection=TextDirection.Content),maxLines=2,overflow=TextOverflow.Ellipsis)
                 TechnicalText(metadata)
@@ -95,7 +96,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 }
 
 @Composable fun OutputRow(output:OutputRecord,onOpen:()->Unit,onShare:()->Unit,onExport:()->Unit,onReuse:()->Unit,onTrash:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,onDetails:(()->Unit)?=null,isFavorite:Boolean=false,onFavorite:(()->Unit)?=null,onPrint:(()->Unit)?=null,onRename:(()->Unit)?=null,onLongClick:(()->Unit)?=null) {
-    val summary = "${formatOutputSizeSummary(output)} · ${outputTypeLabel(output.mimeType)}"
+    val summary = "${formatOutputSizeSummary(output)} · ${com.jumlo.app.ui.files.fileDateLabel(output.createdAtEpochMs)}"
     val outputIcon=when {
         output.mimeType=="application/pdf" -> Icons.Rounded.PictureAsPdf
         output.mimeType.startsWith("image/") -> Icons.Rounded.Image
@@ -105,7 +106,8 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
         else -> Icons.Rounded.InsertDriveFile
     }
     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-    FileMenuRow(output.displayName,summary,onOpen,icon=outputIcon,selection=selection,onSelect=onSelect,onLongClick=onLongClick) {close->
+    FileMenuRow(output.displayName,summary,onOpen,icon=outputIcon,selection=selection,onSelect=onSelect,onLongClick=onLongClick,
+        leadingPreview={NeonOutputPreview(output,Modifier.size(56.dp))}) {close->
         DropdownMenuItem(text={Text(stringResource(R.string.action_open))},onClick={close();onOpen()})
         if(onFavorite!=null) DropdownMenuItem(
             text={Text(stringResource(if(isFavorite) R.string.files_unmark_favorite else R.string.files_mark_favorite))},

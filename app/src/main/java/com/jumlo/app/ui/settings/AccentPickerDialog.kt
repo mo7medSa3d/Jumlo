@@ -15,9 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Palette
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Check
+import com.jumlo.app.ui.icons.rounded.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,9 +54,7 @@ internal fun AccentPickerDialog(selected: String, onSelect: (String) -> Unit, on
                     Surface(
                         onClick = { onSelect(id) },
                         color = if (active) colors.primaryContainer else colors.surfaceContainerLow,
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp,
-                            if (active) colors.primary else colors.outlineVariant)
+                        shape = RoundedCornerShape(18.dp)
                     ) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically) {

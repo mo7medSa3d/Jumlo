@@ -14,6 +14,8 @@ import com.jumlo.app.core.media.MediaProgress
 import com.jumlo.app.core.media.MediaCatalog
 import com.jumlo.app.core.media.MediaJsonGuard
 import com.jumlo.app.core.media.MediaOutputPolicy
+import com.jumlo.app.core.media.MediaFailurePolicy
+import com.jumlo.app.core.media.MediaServiceEndpoint
 import com.jumlo.app.data.jobs.OperationFailure
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -57,8 +59,12 @@ import java.util.concurrent.TimeUnit
 internal class RemoteExtractorRuntime(
     private val baseUrlProvider: () -> String,
     client: OkHttpClient,
-    private val tokenProvider: () -> String = { "" }
+    private val tokenProvider: () -> String = { "" },
+    private val allowDebugLoopback: Boolean = false,
+    private val configurationProvider: (() -> Pair<String, String>)? = null
 ) : MediaRuntime {
+    // A rejected representation must not enter StreamTransfer's transient-I/O retry loop.
+    private class RejectedServiceResponse(val code: String) : IllegalArgumentException(code)
     private val client = client.newBuilder().followRedirects(false).followSslRedirects(false)
         .cookieJar(CookieJar.NO_COOKIES).build()
     // The service prepares a complete selected/muxed file before response headers.
@@ -67,28 +73,30 @@ internal class RemoteExtractorRuntime(
     private val preparationClient = this.client.newBuilder()
         .readTimeout(0, TimeUnit.MILLISECONDS).callTimeout(0, TimeUnit.MILLISECONDS).build()
     private val bodyTimeoutMillis = this.client.readTimeoutMillis.takeIf { it > 0 } ?: 30_000
-    private val baseUrl: String get() = baseUrlProvider()
-    private val token: String get() = tokenProvider()
+    private fun configuration(): Pair<String, String> {
+        val value = configurationProvider?.invoke() ?: (baseUrlProvider() to tokenProvider())
+        return MediaServiceEndpoint.normalize(value.first, allowDebugLoopback) to value.second
+    }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    private fun serviceUrl(path: String, query: Map<String, String> = emptyMap()): String {
-        val base = baseUrl.trimEnd('/')
+    private fun serviceUrl(base: String, path: String, query: Map<String, String> = emptyMap()): String {
         val encoded = query.entries.joinToString("&") { (key, value) ->
             "${key}=${URLEncoder.encode(value, StandardCharsets.UTF_8.name())}"
         }
         return if (encoded.isEmpty()) "$base$path" else "$base$path?$encoded"
     }
 
-    private fun request(url: String): Request = Request.Builder().url(url).apply {
+    private fun request(url: String, token: String): Request = Request.Builder().url(url).apply {
         if (token.isNotBlank()) header("Authorization", "Bearer $token")
     }.build()
 
     override fun inspect(url: String, allowHttp: Boolean, check: () -> Unit): MediaAsset {
         check()
+        val (baseUrl, token) = configuration()
         if (baseUrl.isBlank()) throw OperationFailure("MEDIA_SERVICE_NOT_CONFIGURED")
         val body = json.encodeToString(ExtractRequest.serializer(), ExtractRequest(url))
-        val httpRequest = Request.Builder().url(serviceUrl("/extract")).apply {
+        val httpRequest = Request.Builder().url(serviceUrl(baseUrl, "/extract")).apply {
             if (token.isNotBlank()) header("Authorization", "Bearer $token")
         }.post(body.toRequestBody("application/json".toMediaType())).build()
         val payload = try {
@@ -97,7 +105,7 @@ internal class RemoteExtractorRuntime(
                 val text = boundedBody(response.body?.byteStream(), check)
                 if (!response.isSuccessful) {
                     // The service reports the failure in the app's own vocabulary.
-                    throw OperationFailure(parseError(text) ?: "MEDIA_EXTRACTION_FAILED")
+                    throw OperationFailure(parseError(text) ?: MediaFailurePolicy.httpStatus(response.code))
                 }
                 text
             }
@@ -114,7 +122,7 @@ internal class RemoteExtractorRuntime(
         return parseAsset(payload)
     }
 
-    private fun boundedBody(input: java.io.InputStream?, check: () -> Unit): String {
+    private fun boundedBody(input: java.io.InputStream?, check: () -> Unit, limitBytes: Int = 4 * 1024 * 1024): String {
         if (input == null) return ""
         val output = ByteArrayOutputStream()
         val buffer = ByteArray(8192)
@@ -123,7 +131,7 @@ internal class RemoteExtractorRuntime(
                 check()
                 val count = it.read(buffer)
                 if (count < 0) break
-                if (output.size() + count > 4 * 1024 * 1024) throw OperationFailure("MEDIA_OUTPUT_LIMIT")
+                if (output.size() + count > limitBytes) throw OperationFailure("MEDIA_OUTPUT_LIMIT")
                 output.write(buffer, 0, count)
             }
         }
@@ -131,9 +139,11 @@ internal class RemoteExtractorRuntime(
     }
 
     private fun parseError(text: String): String? = runCatching {
+        MediaJsonGuard.check(text)
         val element = json.parseToJsonElement(text)
-        (element as? JsonObject)?.get("error")?.jsonPrimitive?.content
-            ?.takeIf { Regex("[A-Z][A-Z_0-9]{2,80}").matches(it) }
+        (element as? JsonObject)?.get("error")?.let { raw ->
+            (raw as? JsonPrimitive)?.content?.let(MediaFailurePolicy::serviceCode) ?: "MEDIA_EXTRACTION_FAILED"
+        }
     }.getOrNull()
 
     private fun parseAsset(payload: String): MediaAsset {
@@ -165,7 +175,7 @@ internal class RemoteExtractorRuntime(
             id = root["id"]?.jsonPrimitive?.content ?: urlFallback(),
             extractor = root["extractor"]?.jsonPrimitive?.content ?: "remote",
             title = root["title"]?.jsonPrimitive?.content ?: "media",
-            durationSeconds = root["duration"]?.jsonPrimitive?.doubleOrNull,
+            durationSeconds = (root["duration"] as? JsonPrimitive)?.doubleOrNull?.takeIf { it.isFinite() && it>=0 },
             formats = formats,
             isLive = root["isLive"]?.jsonPrimitive?.booleanOrNull ?: false,
             isPlaylist = root["isPlaylist"]?.jsonPrimitive?.booleanOrNull ?: false,
@@ -182,6 +192,7 @@ internal class RemoteExtractorRuntime(
         progress: (MediaProgress) -> Unit
     ) {
         check()
+        val (baseUrl, serviceToken) = configuration()
         if (baseUrl.isBlank()) throw OperationFailure("MEDIA_SERVICE_NOT_CONFIGURED")
         MediaCatalog.validateSelector(choice)
         val mode = if (choice.mode == MediaMode.AUDIO) "audio" else "video"
@@ -202,13 +213,12 @@ internal class RemoteExtractorRuntime(
                 else video?.id ?: choice.formats.first().id
             }
         }
-        val streamUrl = serviceUrl("/stream", mapOf(
+        val streamUrl = serviceUrl(baseUrl, "/stream", mapOf(
             "url" to url, "mode" to mode, "format" to format, "bitrate" to bitrate.toString(),
             "selector" to choice.formatIds.joinToString("+"),
             "container" to if (choice.requiresMux) choice.container else ""
         ))
         val endpoint = streamUrl.toHttpUrl()
-        val serviceToken = token
         val transfer = StreamTransfer(HttpTransport { targetUrl, headers ->
             val target = targetUrl.toHttpUrl()
             val request = Request.Builder().url(target).get().apply {
@@ -221,6 +231,13 @@ internal class RemoteExtractorRuntime(
             val body = response.body
             if (body == null) { response.close(); throw java.io.IOException("EMPTY_HTTP_BODY") }
             body.source().timeout().timeout(bodyTimeoutMillis.toLong(), TimeUnit.MILLISECONDS)
+            if (response.code >= 400 && response.code != 416) {
+                response.use {
+                    val error = try { boundedBody(body.byteStream(), check, 64 * 1024) }
+                    catch (failure: OperationFailure) { throw RejectedServiceResponse(failure.code) }
+                    throw RejectedServiceResponse(parseError(error) ?: MediaFailurePolicy.httpStatus(response.code))
+                }
+            }
             TransportResponse(response.code, response.headers.names().associate {
                 it.lowercase(Locale.ROOT) to response.header(it).orEmpty()
             }, body.byteStream()) { response.close() }
@@ -244,7 +261,7 @@ internal class RemoteExtractorRuntime(
             cleartextConsent = allowHttp,
             maxBytes = 8L * 1024 * 1024 * 1024
         )
-        val result = transfer.execute(
+        val result = try { transfer.execute(
             request = request,
             checkCancel = check,
             progress = { downloaded, total ->
@@ -263,7 +280,9 @@ internal class RemoteExtractorRuntime(
                 FileOutputStream(pending).use { state.store(it, null); it.fd.sync() }
                 Files.move(pending.toPath(), journal.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             }
-        )
+        ) } catch (failure: RejectedServiceResponse) {
+            throw OperationFailure(failure.code)
+        }
         if (result.bytes <= 0L) throw OperationFailure("MEDIA_DOWNLOAD_EMPTY")
         check()
         val reported = result.contentDisposition?.let {
@@ -284,10 +303,14 @@ internal class RemoteExtractorRuntime(
     /** The service can update its own extractor; the app only has to ask. */
     override fun refreshExtractor(): String {
         val payload = try {
-            client.newCall(request(serviceUrl("/health"))).execute().use { response ->
+            val (baseUrl, token) = configuration()
+            if (baseUrl.isBlank()) return "MEDIA_RUNTIME_UNAVAILABLE"
+            client.newCall(request(serviceUrl(baseUrl, "/health"), token)).execute().use { response ->
                 if (!response.isSuccessful) return "MEDIA_RUNTIME_UNAVAILABLE"
-                response.body?.string().orEmpty()
+                boundedBody(response.body?.byteStream(), {}, 64 * 1024)
             }
+        } catch (cancel: java.util.concurrent.CancellationException) {
+            throw cancel
         } catch (_: Exception) {
             return "MEDIA_RUNTIME_UNAVAILABLE"
         }
@@ -323,7 +346,7 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
         for (engine in engines) {
             check()
             try {
-                val asset = engine.inspect(url, allowHttp, check)
+                val asset = guardMediaRuntime { engine.inspect(url, allowHttp, check) }
                 answered[url] = engine
                 return asset
             } catch (cancel: java.util.concurrent.CancellationException) {
@@ -345,13 +368,13 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
     ) {
         check()
         val engine = answered[url] ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
-        engine.download(url, choice, audio, bitrate, allowHttp, directory, check, progress)
+        guardMediaRuntime { engine.download(url, choice, audio, bitrate, allowHttp, directory, check, progress) }
     }
 
     override fun refreshExtractor(): String {
         // Follow the same engine preference used for analysis.
         for (engine in engines) {
-            val result = engine.refreshExtractor()
+            val result = guardMediaRuntime { engine.refreshExtractor() }
             if (result != "MEDIA_BUILD_NOT_ENABLED" && result != "MEDIA_RUNTIME_UNAVAILABLE") return result
         }
         return "MEDIA_BUILD_NOT_ENABLED"

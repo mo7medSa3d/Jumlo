@@ -18,12 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
+import com.jumlo.app.ui.icons.rounded.MoreVert
+import com.jumlo.app.ui.icons.rounded.Person
+import com.jumlo.app.ui.icons.rounded.Search
+import com.jumlo.app.ui.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -47,92 +47,29 @@ import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun QuietRootTopBar(
     title: String,
     badgeText: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onSettingsClick: () -> Unit,
     onAccountClick: (() -> Unit)? = null,
-    onVaultClick: (() -> Unit)? = null
+    onVaultClick: (() -> Unit)? = null,
+    showSettings: Boolean = true
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
-    val searchCd = stringResource(R.string.search_title)
-    val settingsCd = stringResource(R.string.settings_title)
-    val accountAction = onAccountClick ?: onVaultClick
-    val haptics = rememberAppHaptics()
     Surface(color = colors.background, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = statusTop + 8.dp, bottom = 10.dp)
-                .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
+        Row(Modifier.fillMaxWidth().padding(top = statusTop + 8.dp, bottom = 8.dp)
+            .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(
-                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(15.dp))
-                        .background(Brush.linearGradient(listOf(colors.primary, colors.tertiary))),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(painterResource(R.drawable.ic_prism_brand_mark),
-                        contentDescription = null, modifier = Modifier.size(37.dp))
-                }
-                Text(
-                    text = title,
-                    style = QuietTheme.typography.screenTitle.copy(letterSpacing = (-0.8).sp),
-                    color = colors.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (badgeText != null) {
-                    QuietBadge(
-                        text = badgeText,
-                        containerColor = colors.primaryContainer,
-                        contentColor = colors.onPrimaryContainer
-                    )
-                }
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (onSearchClick != null) {
-                    QuietTonalIconButton(Icons.Rounded.Search, searchCd, onSearchClick)
-                }
-                if(accountAction == null) QuietTonalIconButton(Icons.Rounded.Settings, settingsCd, onSettingsClick)
-                Surface(
-                    onClick = {
-                        haptics.actionClick()
-                        accountAction?.invoke()
-                    },
-                    enabled = accountAction != null,
-                    shape = CircleShape,
-                    color = Color.Transparent,
-                    modifier = Modifier.pressFeedback().size(48.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(colors.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = stringResource(R.string.ui_account_data),
-                            tint = colors.onPrimaryContainer,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            }
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = QuietTheme.typography.screenTitle,
+                color = colors.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f))
+            badgeText?.let { QuietBadge(it, colors.primaryContainer, colors.onPrimaryContainer) }
+            if (showSettings) QuietTonalIconButton(Icons.Rounded.Settings,
+                stringResource(R.string.settings_title), onSettingsClick)
         }
     }
 }
@@ -145,7 +82,8 @@ fun QuietWorkspaceTopBar(
     pillar: PillarCategory = PillarCategory.PDF,
     onBack: () -> Unit,
     onMoreClick: (() -> Unit)? = null,
-    trailingContent: (@Composable RowScope.() -> Unit)? = null
+    trailingContent: (@Composable RowScope.() -> Unit)? = null,
+    toolId: String? = null
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val pillars = QuietTheme.pillars
@@ -176,6 +114,12 @@ fun QuietWorkspaceTopBar(
                 modifier = Modifier.weight(1f)
             ) {
                 QuietTonalIconButton(Icons.AutoMirrored.Rounded.ArrowBack, backCd, onBack)
+                toolId?.let { id ->
+                    Box(Modifier.padding(start = 10.dp).size(44.dp)
+                        .clip(RoundedCornerShape(14.dp)).background(badgeBg), contentAlignment = Alignment.Center) {
+                        ToolIcon(id, badgeFg, Modifier.size(24.dp).toolSharedElement(id))
+                    }
+                }
                 Column(
                     modifier = Modifier
                         .weight(1f)

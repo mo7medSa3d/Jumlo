@@ -74,7 +74,7 @@
     <string name="action_move_to_trash">Move to Trash</string>
     <string name="action_restore">Restore</string>
     <string name="action_undo">Undo</string>
-    <string name="output_pages_count">%1$d pages</string>
+    <string name="output_pages_count">Pages: %1$d</string>
     <string name="output_entries_count">%1$d archive entries</string>
     <string name="output_sha256_label">SHA-256: %1$s</string>
     <string name="job_outcomes_summary">%1$d published · %2$d failed</string>
@@ -96,7 +96,7 @@
     <string name="import_photo_gallery">Photo Gallery &amp; Media</string>
     <string name="import_device_files">Device Files &amp; Storage</string>
     <string name="import_my_files">My Files (Internal App Storage)</string>
-    <string name="import_privacy_pledge">Zero cloud uploads. Jumlo never accesses files outside selected directories. All transformations run locally in sandboxed memory.</string>
+    <string name="import_privacy_pledge">Documents are processed on your device using app-private files and the files you select. Downloads, remote thumbnails, optional link extraction and model installation can use the network.</string>
 
     <!-- Permission Education (sys_01) -->
     <string name="perm_sheet_badge">System Recovery Sheet</string>
@@ -170,7 +170,7 @@
     <string name="settings_about">About Jumlo</string>
     <string name="settings_storage_summary">Snapshots: %1$s · Outputs: %2$s · Trash: %3$s · Transfers: %4$s · Temp: %5$s</string>
     <string name="settings_allow_notifications">Allow background progress notifications</string>
-    <string name="settings_privacy_summary">No analytics, no cloud processing, backup disabled. Direct downloads connect only to URLs you submit.</string>
+    <string name="settings_privacy_summary">Document processing stays on your device. Downloads, remote thumbnails, optional extraction services and model installation can use the network. App backup is disabled.</string>
     <string name="processing_channel">File processing</string>
     <string name="processing_title">Processing files on this device</string>
     <string name="processing_body">Open the app to see actual progress and results.</string>
@@ -220,9 +220,9 @@
     <string name="workspace_clear_selection">Clear selection</string>
     <string name="workspace_direct_urls_batch">Direct file URLs (one per line)</string>
     <string name="workspace_direct_url_single">Direct file URL</string>
-    <string name="workspace_batch_valid_links">%1$d of %2$d links are ready to download</string>
-    <string name="workspace_batch_duplicates">%1$d duplicate link(s) will be skipped</string>
-    <string name="workspace_batch_invalid_links">%1$d link(s) are not direct HTTP/HTTPS file links</string>
+    <string name="workspace_batch_valid_links">Links ready to download: %1$d of %2$d</string>
+    <string name="workspace_batch_duplicates">Duplicate links to skip: %1$d</string>
+    <string name="workspace_batch_invalid_links">Links that are not direct HTTP/HTTPS file URLs: %1$d</string>
     <string name="workspace_direct_url_hint">Direct HTTP/HTTPS file links and Google Drive shared links.</string>
     <string name="field_expected_sha256">Expected SHA-256 (optional)</string>
     <string name="field_unmetered_only">Unmetered network only</string>
@@ -237,7 +237,7 @@
     <string name="field_image_policy_note">Original image dimensions and EXIF orientation are preserved. Multi-page PDFs are written incrementally.</string>
     <string name="field_raster_note">Select one PDF source. Each chosen page is rendered with Android PdfRenderer and written as an image.</string>
     <string name="field_pages_spec">Pages (blank = all, or e.g. 1-3,5)</string>
-    <string name="field_dpi">DPI (72..300)</string>
+    <string name="field_dpi">Resolution (36–600 DPI)</string>
     <string name="field_output_prefix">Output filename prefix</string>
     <string name="field_merge_note">Select 2+ PDFs in the order to merge.</string>
     <string name="field_pages_per_part">Pages per split part (used when ranges is blank)</string>
@@ -246,7 +246,7 @@
     <string name="field_rotate_pages">Pages to rotate (blank = none, or e.g. 1,3)</string>
     <string name="field_clockwise_rotation">Clockwise rotation</string>
     <string name="field_max_image_dpi">Max embedded image DPI (72..300)</string>
-    <string name="field_quality">JPEG recompression quality (30..95)</string>
+    <string name="field_quality">Image quality (1–100)</string>
     <string name="field_target_size_mb">Target size (MB)</string>
     <string name="field_target_size_note">With a target set, Jumlo lowers resolution and quality until the file reaches it, and reports the size it actually achieved.</string>
     <string name="field_remove_title">Also remove the title, subject and keywords</string>
@@ -281,9 +281,9 @@
     <string name="annotation_text">Plain text</string>
     <string name="field_as_note_annotation">Add as collapsible PDF note annotation</string>
     <string name="field_watermark_text">Watermark text (optional)</string>
-    <string name="field_opacity_percent">Opacity % (10..100)</string>
+    <string name="field_opacity_percent">Opacity (1–100%)</string>
     <string name="field_add_page_numbers">Add bottom-center page numbers</string>
-    <string name="field_start_number">Starting page number</string>
+    <string name="field_start_number">Starting number</string>
     <string name="field_signature_note">Select the target PDF first and a signature image second, or draw a signature on the Signature pad.</string>
     <string name="field_remove_protection">Remove existing password protection</string>
     <string name="field_user_password">Open password</string>
@@ -316,8 +316,8 @@
     <string name="field_gap_px">Gap between images (px)</string>
     <string name="field_overlap_px">Overlap trim (px, for screenshot stitching)</string>
     <string name="field_brightness">Brightness (-100..100)</string>
-    <string name="field_contrast">Contrast (-100..100)</string>
-    <string name="field_saturation">Saturation (-100..100)</string>
+    <string name="field_contrast">Contrast (0–300%)</string>
+    <string name="field_saturation">Saturation (0–300%)</string>
     <string name="field_padding_px">Canvas padding (px)</string>
     <string name="field_target_bytes">Target max file size (bytes)</string>
     <string name="field_compare_img_note">Select two images to compute pixel difference metrics and a visual diff map.</string>
@@ -352,7 +352,7 @@
     <string name="activity_start_new_run">Start another run</string>
     <string name="account_hub_title">User &amp; Engine Hub</string>
     <string name="account_hub_tier">Jumlo On-Device Pro Core</string>
-    <string name="account_privacy_status">100% Local • Zero Cloud Tracking</string>
+    <string name="account_privacy_status">Documents on device • Downloads use the network</string>
     <string name="account_storage_stats">Engine Storage &amp; Space</string>
     <string name="account_clear_cache_btn">Clear Temporary Cache</string>
     <string name="account_clear_cache_success">Temporary cache and staging cleared</string>

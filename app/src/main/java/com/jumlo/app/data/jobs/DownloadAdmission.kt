@@ -1,6 +1,8 @@
 package com.jumlo.app.data.jobs
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -21,6 +23,8 @@ import javax.inject.Singleton
             delay(150)
         }
         try {return block()}
-        finally {mutex.withLock {running--}}
+        // A cancelled transfer can be suspended behind another accounting update.
+        // Slot release must finish even when its parent Job has already been cancelled.
+        finally { withContext(NonCancellable) { mutex.withLock { running-- } } }
     }
 }

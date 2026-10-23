@@ -35,8 +35,31 @@ class PdfCompressionDeviceTest {
 
     /** Only the five scanned fixtures, not the outputs of an earlier run. */
     private fun fixtures(): List<File> =
-        benchDir().listFiles { f -> f.name.startsWith("scan_") && f.name.endsWith("pages.pdf") }
-            ?.sortedBy { it.name } ?: emptyList()
+        listOf(1, 3, 6, 10, 30).map { pages ->
+            File(benchDir(), "scan_${pages.toString().padStart(2, '0')}pages.pdf")
+        }
+
+    private fun verifyCompressedOutput(
+        output: File,
+        inputBytes: Long,
+        expectedPages: Int,
+        replaced: Int,
+        skipped: Int
+    ) {
+        assertTrue("scan images must be recompressed", replaced > 0)
+        assertEquals("valid scan images must not be skipped", 0, skipped)
+        assertTrue("the output must be a nonempty PDF", output.isFile && output.length() > 0L)
+        assertTrue("the compressed scan must be smaller than its input", output.length() < inputBytes)
+        PdfBoxBackend.open(output, null).use { doc ->
+            assertEquals("the saved PDF must retain every page", expectedPages, doc.numberOfPages)
+            for (page in doc.pages) {
+                assertTrue("every saved scan page must retain its content", page.hasContents())
+                val resources = page.resources
+                assertTrue("every saved scan page must retain its image", resources != null &&
+                    resources.xObjectNames.any { resources.getXObject(it) is PDImageXObject })
+            }
+        }
+    }
 
     /** The peak of the Java heap, sampled while the work runs. */
     private class HeapWatch {
@@ -57,19 +80,23 @@ class PdfCompressionDeviceTest {
     @Test
     fun theScannedCorpusIsCompressedOnThisDevice() {
         val files = fixtures()
-        assertTrue("the scanned fixtures must be pushed to the device", files.isNotEmpty())
+        val missing = files.filterNot { it.isFile && it.length() > 0L }
+        assertTrue("all five scanned fixtures must be pushed to the device: ${missing.map { it.name }}", missing.isEmpty())
         val presets = listOf(
             Triple("Strong", 108, 45),
             Triple("Medium", 180, 75),
             Triple("High", 240, 90)
         )
         val lines = mutableListOf<String>()
+        val failures = mutableListOf<String>()
         lines += "device=${android.os.Build.MODEL} android=${android.os.Build.VERSION.RELEASE} " +
             "abi=${android.os.Build.SUPPORTED_ABIS.first()} heapLimit=" +
             "${System.getProperty("java.vm.heaplimit")} budgetBytes=$budget"
         for ((name, dpi, quality) in presets) {
             for (file in files) {
                 val output = File(benchDir(), "${file.nameWithoutExtension}-$name-out.pdf")
+                val expectedPages = file.name.removePrefix("scan_").removeSuffix("pages.pdf").toInt()
+                val before = file.length()
                 val watch = HeapWatch()
                 val started = System.nanoTime()
                 var replaced = 0
@@ -79,6 +106,7 @@ class PdfCompressionDeviceTest {
                 try {
                     PdfBoxBackend.open(file, null).use { doc ->
                         pages = doc.numberOfPages
+                        assertEquals("the fixture must contain its advertised page count", expectedPages, pages)
                         val report = PdfBoxBackend.compressImagesWithReport(
                             doc, dpi, quality,
                             onPage = { done, _ -> watch.sample() },
@@ -90,29 +118,32 @@ class PdfCompressionDeviceTest {
                         watch.sample()
                         doc.save(output)
                     }
+                    verifyCompressedOutput(output, before, expectedPages, replaced, skipped)
                 } catch (failure: Throwable) {
                     failed = "${failure::class.simpleName}: ${failure.message}"
                 }
                 val seconds = (System.nanoTime() - started) / 1_000_000_000.0
-                val before = file.length()
                 val after = if (output.exists()) output.length() else 0L
                 val saving = if (before > 0 && after > 0) 100.0 * (1.0 - after.toDouble() / before) else 0.0
-                lines += "RESULT file=${file.name} preset=$name dpi=$dpi q=$quality pages=$pages " +
+                val line = "RESULT file=${file.name} preset=$name dpi=$dpi q=$quality pages=$pages " +
                     "replaced=$replaced skipped=$skipped before=$before after=$after " +
                     "saved=${"%.1f".format(saving)}% seconds=${"%.1f".format(seconds)} " +
                     "peakJavaBytes=${watch.peakJava} peakNativeBytes=${watch.peakNative} " +
                     (if (failed.isEmpty()) "ok" else "failed=$failed")
+                lines += line
+                if (failed.isNotEmpty()) failures += line
             }
         }
         val report = reportFile()
         report.writeText(lines.joinToString("\n") + "\n")
         assertTrue("the report must be written", report.exists())
+        assertTrue("every scanned corpus result must succeed:\n${failures.joinToString("\n")}", failures.isEmpty())
     }
 
     @Test
     fun aTwoHundredPageScanIsProcessedOnThisDevice() {
-        val source = fixtures().firstOrNull { it.name.contains("10pages") }
-            ?: fixtures().firstOrNull() ?: return
+        val source = File(benchDir(), "scan_10pages.pdf")
+        assertTrue("the ten-page scanned fixture must be pushed to the device", source.isFile && source.length() > 0L)
         // The 200 page document is built from the ten page scan: twenty copies of
         // it, put together with PDFBox on the device itself.
         val big = File(benchDir(), "scan_200pages.pdf")
@@ -145,6 +176,7 @@ class PdfCompressionDeviceTest {
                 watch.sample()
                 doc.save(output)
             }
+            verifyCompressedOutput(output, big.length(), 200, replaced, skipped)
         } catch (failure: Throwable) {
             failed = "${failure::class.simpleName}: ${failure.message}"
         }

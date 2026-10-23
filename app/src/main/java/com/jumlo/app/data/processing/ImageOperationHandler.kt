@@ -50,8 +50,7 @@ import kotlin.math.roundToInt
             if(existing!=null) outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
             else try {
                 val source=context.sources.get(id)
-                val isCompress = request.toolId == "img_04"
-                val effectiveFormat = if (isCompress && output.format == "PNG") "WEBP" else output.format
+                val effectiveFormat = if (request.toolId in setOf("img_01","img_04")) ImageOutputEncoder.outputSettings(request.toolId,output).format else output.format
                 val name = resolveOutputFileName(output.copy(format = effectiveFormat), source.displayName, index, request.sourceIds.size)
                 val ticket=context.outputs.reserve(request.id,key,name,BitmapTransforms.mime(effectiveFormat))
                 val record=context.sources.withSeekable(id,request.id) { file ->
@@ -74,13 +73,9 @@ import kotlin.math.roundToInt
                             }
                             context.checkCancellation()
                             val resident=if(bmp!==src) src.allocationByteCount.toLong() else 0L
-                            if (isCompress) {
-                                BitmapTransforms.encodeGuaranteedSmaller(
-                                    bmp, ticket.stageFile, originalSize,
-                                    output.copy(format = effectiveFormat),
-                                    context.budget.maxBitmapBytes - resident,
-                                    context.checkCancellation
-                                )
+                            if (request.toolId in setOf("img_01","img_04")) {
+                                ImageOutputEncoder.encode(bmp,ticket.stageFile,request.toolId,output,originalSize,
+                                    context.budget.maxBitmapBytes-resident,checkCancel=context.checkCancellation)
                             } else {
                                 BitmapTransforms.encode(bmp,ticket.stageFile,output,context.budget.maxBitmapBytes-resident)
                             }
@@ -196,12 +191,13 @@ import kotlin.math.roundToInt
                                 val marked=if(logoId!=null){
                                     var r:Bitmap?=null
                                     context.sources.withSeekable(logoId,request.id){ lf ->
-                                        BitmapTransforms.decode(lf,context.budget.maxBitmapBytes-d.bitmap.allocationByteCount.toLong()).use{ ld ->
-                                            r=BitmapExtras.watermarkLogo(d.bitmap,ld.bitmap,context.budget.maxBitmapBytes,settings.opacityPercent)
+                                        val remaining=context.budget.maxBitmapBytes-d.bitmap.allocationByteCount.toLong()-ImageWorkPolicy.bytes(d.bitmap.width,d.bitmap.height)
+                                        BitmapTransforms.decodeSampled(lf,remaining,1600).use{ ld ->
+                                            r=BitmapExtras.watermark(d.bitmap,ld.bitmap,settings,context.budget.maxBitmapBytes)
                                         }
                                     }
                                     r!!
-                                } else BitmapExtras.watermarkText(d.bitmap,settings.text,settings.opacityPercent,context.budget.maxBitmapBytes)
+                                } else BitmapExtras.watermark(d.bitmap,null,settings,context.budget.maxBitmapBytes)
                                 try{ BitmapTransforms.encode(marked,stage,settings.output,context.budget.maxBitmapBytes-d.bitmap.allocationByteCount.toLong()) } finally { marked.recycle() }
                             } }
                         }
@@ -296,11 +292,8 @@ import kotlin.math.roundToInt
                                 // Target Size is an inclusive requested cap; it need not be
                                 // smaller than an already tiny source.
                                 BitmapTransforms.decode(f,context.budget.maxBitmapBytes).use { d ->
-                                    BitmapTransforms.encodeGuaranteedSmaller(
-                                        d.bitmap,stage,settings.targetBytes+1L,
-                                        settings.output.copy(format="JPEG"),context.budget.maxBitmapBytes,
-                                        context.checkCancellation
-                                    )
+                                    ImageOutputEncoder.encode(d.bitmap,stage,"img_target",settings.output,f.length(),
+                                        context.budget.maxBitmapBytes,settings.targetBytes,context.checkCancellation)
                                 }
                                 require(stage.length() in 1..settings.targetBytes) { "IMAGE_SIZE_BOUND_UNMET" }
                             }

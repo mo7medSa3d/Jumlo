@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_thumbnails">Pages</string>
+    <string name="reader_dark_pages">Dark pages</string>
+    <string name="reader_loading">Opening PDF…</string>
+    <string name="reader_retry">Try again</string>
+    <string name="reader_page">Page %1$d</string>
+</resources>

@@ -30,13 +30,13 @@ class PremiumUxContracts(unittest.TestCase):
         return self.tokens[name]
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
-        # Jumlo Prism palette: cool porcelain, expressive indigo, ink-blue dark.
+        # Neutral surfaces preserve pure OLED black in every accent mode.
         expected = {
-            'LightBackground': 'F6F7FD', 'LightSurface': 'FFFFFF',
-            'LightOnSurface': '17213E', 'LightOnSurfaceVariant': '505C77',
+            'LightBackground': 'F6F6F8', 'LightSurface': 'FFFFFF',
+            'LightOnSurface': '202024', 'LightOnSurfaceVariant': '55555E',
             'LightPrimary': '2F46C6', 'LightTertiary': '7050AB',
-            'DarkBackground': '0C1226',
-            'DarkSurface': '141B33', 'DarkOnSurface': 'F1F3FF',
+            'DarkBackground': '000000',
+            'DarkSurface': '101010', 'DarkOnSurface': 'F5F5F5',
             'DarkPrimary': 'A9B7FF', 'DarkTertiary': 'D3B7FC',
         }
         for key, value in expected.items():
@@ -77,8 +77,13 @@ class PremiumUxContracts(unittest.TestCase):
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):
         code = source('tools/ToolsScreen.kt')
         self.assertIn('BoxWithConstraints(', code)
-        # The catalogue lays its workspace tiles out on the adaptive column count.
-        self.assertIn('primary.chunked(columns)', code)
+        # The current brief requires one flat, keyed lazy grid, not grouped rows.
+        self.assertEqual(1, code.count('LazyVerticalGrid('))
+        self.assertIn('columns = GridCells.Fixed(columns)', code)
+        self.assertIn('items(visible, key = { it.id }, contentType = { "tool" })', code)
+        self.assertIn('LocalDensity.current.fontScale >= 1.6f', code)
+        self.assertRegex(code, r'largeText\s*->\s*1')
+        self.assertNotIn('primary.chunked(', code)
         self.assertIn('widthIn(max = 1000.dp)', code)
         self.assertIn('maxWidth >= 600.dp', code)
 
@@ -87,43 +92,55 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('Modifier.widthIn(max = 980.dp).fillMaxSize()', source('home/HomeScreen.kt'))
         self.assertIn('Modifier.widthIn(max = 1000.dp).fillMaxSize()', source('tools/ToolsScreen.kt'))
 
-    def test_home_quick_actions_have_category_specific_icons(self):
+    def test_home_quick_actions_have_four_distinct_filled_icons(self):
         code = source('home/HomeScreen.kt')
-        components = source('components/NeonUi.kt')
-        self.assertIn('NeonToolTile(tool', code)
-        # Curated family colors have separately tuned light and dark variants.
-        self.assertIn('ToolPalette.accentFor(tool.id, isDark)', components)
-        self.assertIn('ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark)', components)
-        # One 116dp+ button surface owns both icon and readable two-line label.
-        self.assertIn('heightIn(min = if (compact) 116.dp else 126.dp)', components)
-        self.assertIn('maxLines = 2', components)
-        self.assertIn('ModernToolIcon(tool.iconName', components)
+        for label, icon in [('scan','scan'),('convert','document'),('compress','compress'),('download','download')]:
+            self.assertIn(f'Triple(R.string.modern_{label}, R.drawable.ic_prism_{icon}',code)
+        self.assertIn('HomeQuickAction(',code)
+        self.assertIn('heightIn(min = 92.dp)',code)
+        self.assertIn('maxLines = 2',code)
+        self.assertNotIn('QuietSearchBar(',code)
 
-    def test_color_picker_is_tappable_and_persists_real_setting(self):
+    def test_dynamic_color_persists_and_preserves_neutral_surfaces(self):
         settings = source('settings/SettingsScreen.kt')
-        picker = source('settings/AccentPickerDialog.kt')
-        self.assertIn('AccentPickerDialog(settings.accentColor', settings)
-        self.assertIn('viewModel.setAccentColor(it)', settings)
-        for option in ('BLUE', 'VIOLET', 'TEAL', 'CORAL', 'DYNAMIC'):
-            self.assertIn(f'"{option}"', picker)
-        self.assertIn('onClick = { onSelect(id) }', picker)
+        theme = source('theme/Theme.kt')
+        self.assertIn('settings.accentColor == "DYNAMIC"',settings)
+        self.assertIn('viewModel.setAccentColor(if (it) "DYNAMIC" else "BLUE")',settings)
+        self.assertIn('Build.VERSION.SDK_INT >= 31',settings)
+        self.assertIn('background = neutral.background',theme)
+        self.assertIn('surface = neutral.surface',theme)
+        self.assertIn('surfaceTint = Color.Transparent',theme)
 
-    def test_scan_viewfinder_guides_do_not_replace_capture_pipeline(self):
-        scanner = source('scan/ScanScreen.kt')
-        self.assertIn('ComposeCanvas(', scanner)
-        self.assertIn('PreviewView(ctx)', scanner)
-        self.assertIn('capture.takePicture(', scanner)
-        self.assertIn('onCaptured(warped)', scanner)
+    def test_direct_mlkit_scan_returns_a_validated_pdf(self):
+        scanner = source('scan/SmartDocumentScanButton.kt')
+        self.assertIn('GmsDocumentScanning.getClient(options)',scanner)
+        self.assertIn('.setGalleryImportAllowed(true)',scanner)
+        formats = re.search(r'\.setResultFormats\(([^)]*)\)', scanner)
+        self.assertIsNotNone(formats)
+        selected = set(re.findall(r'RESULT_FORMAT_\w+', formats.group(1)))
+        # PDF remains mandatory; JPEG is now required alongside it by Phase 4.
+        self.assertTrue({'RESULT_FORMAT_PDF', 'RESULT_FORMAT_JPEG'} <= selected)
+        self.assertIn('SmartScanResultStore.copyPdf(context, pdf.uri, pdf.pageCount)',scanner)
+        self.assertIn('latestResult(requireNotNull(owned))',scanner)
+        self.assertNotIn('PreviewView',scanner)
+        self.assertIn('CameraXScanFallback(onScannedPdf=onScannedPdf',scanner)
+        fallback = source('scan/CameraXScanFallback.kt')
+        self.assertIn('cameraProvider.bindToLifecycle(lifecycleOwner',fallback)
+        self.assertIn('SmartScanResultStore.createPdfFromImages(context,pages)',fallback)
 
-    def test_dark_tool_palette_and_dock_reduce_motion(self):
+    def test_tab_indicator_is_cell_local_and_honors_system_motion(self):
         palette = source('theme/ToolPalette.kt')
         dock = source('components/QuietNavigation.kt')
-        self.assertIn('private val darkAccents', palette)
+        self.assertIn('private val darkAccents',palette)
         self.assertIn('colors.background.luminance()', source('tools/ToolsScreen.kt'))
-        self.assertIn('if (reduced) snap()', dock)
-        self.assertIn('animateDpAsState(', dock)
-        self.assertNotIn('BorderStroke(1.dp, palette.outlineVariant)', dock)
-        self.assertIn('shadowElevation = 12.dp',dock)
+        self.assertIn('LocalReducedMotion.current',dock)
+        self.assertIn('if (reduced) snap()',dock)
+        self.assertIn('animateColorAsState(',dock)
+        self.assertIn('animateFloatAsState(',dock)
+        self.assertIn('Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp).height(34.dp)',dock)
+        self.assertNotIn('BorderStroke(',dock)
+        self.assertNotIn('.offset(',dock)
+        self.assertIn('role = Role.Tab',dock)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):
         code = source('components/ProductionRows.kt')
@@ -139,19 +156,25 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('ImeAction.Search', code)
         self.assertIn('KeyboardOptions(', code)
 
-    def test_settings_shortcuts_do_not_duplicate_haptics_control(self):
+    def test_settings_are_focused_and_keep_real_quality_defaults(self):
         code = source('settings/SettingsScreen.kt')
-        hero = code[code.index('item("settings-hero")'):code.index('item("appearance")')]
-        self.assertIn('onClick=onOpenFiles', hero)
-        self.assertNotIn('panel="haptic-intensity"', hero)
-        self.assertIn('panel="haptic-intensity"', code)
+        for tag in ('settings.theme','settings.language','settings.videoQuality',
+                    'settings.audioQuality','settings.storage','settings.cache','settings.about'):
+            self.assertIn(tag,code)
+        for obsolete in ('setHapticIntensity','setRespectReducedMotion','setWifiOnlyDefault',
+                         'setMaxConcurrentDownloads','mediaServerUrl','allowHttp'):
+            self.assertNotIn(obsolete,code)
+        self.assertIn('viewModel.setDefaultVideoQuality(choices[it])',code)
+        self.assertIn('viewModel.setDefaultAudioQuality(choices[it])',code)
+        self.assertIn('viewModel.cleanTemporary()',code)
 
     def test_file_import_is_distinct_primary_action(self):
         code = source('files/FilesScreen.kt')
         heading = code[code.index('item("heading")'):code.index('item("search")')]
         self.assertIn('QuietPrimaryButton(', heading)
-        self.assertIn('onImport()', heading)
-        self.assertIn('onSavedFolder()', heading)
+        self.assertIn('onClick=onImport', heading)
+        self.assertIn('SaveFolderCard(settings.downloadDestinationFolder, onChangeSaveFolder, onSavedFolder)', heading)
+        self.assertIn('onStorage()',heading)
 
     def test_media_workspace_is_readable_on_large_displays_and_uses_url_keyboard(self):
         code = source('downloads/MediaWorkspace.kt')
@@ -160,9 +183,11 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('ImeAction.Go', code)
         self.assertIn('KeyboardActions(onGo', code)
 
-    def test_output_rows_use_localized_file_types_and_visual_file_icons(self):
+    def test_output_rows_use_real_thumbnails_size_and_localized_date(self):
         code = source('components/ProductionRows.kt')
-        self.assertIn('outputTypeLabel(output.mimeType)', code)
+        self.assertIn('fileDateLabel(output.createdAtEpochMs)', code)
+        self.assertIn('formatOutputSizeSummary(output)',code)
+        self.assertIn('NeonOutputPreview(output',code)
         self.assertIn('icon=outputIcon', code)
         self.assertNotIn('· ${output.mimeType}', code)
 
@@ -173,10 +198,10 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_dock_keeps_screen_reader_labels_without_clipping_large_fonts(self):
         code = source('components/QuietNavigation.kt')
-        self.assertIn('fontScale < 1.5f', code)
+        self.assertIn('fontScale < 1.6f', code)
         self.assertIn('if (showLabel)', code)
         self.assertIn('contentDescription = label', code)
-        self.assertIn('onScan: () -> Unit', code)
+        self.assertIn('heightIn(min = 64.dp)', code)
 
     def test_new_accessibility_strings_have_arabic_and_english(self):
         en = ET.parse(ROOT / 'app/src/main/res/values/premium_ui.xml').getroot()

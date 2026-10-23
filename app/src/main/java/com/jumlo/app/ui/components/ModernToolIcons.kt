@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.jumlo.app.R
 
-/** Original 2026 rounded outline set, consistent stroke and optically centered at 24dp. */
+/** Original filled/duotone vectors, optically centered on a shared 24dp grid. */
 @DrawableRes
 internal fun modernToolIconRes(name: String): Int = when (name) {
     "picture_as_pdf", "pdf", "description", "assignment" -> R.drawable.ic_prism_document
@@ -19,7 +19,7 @@ internal fun modernToolIconRes(name: String): Int = when (name) {
     "folder_zip", "archive", "zip" -> R.drawable.ic_prism_archive
     "unarchive", "extract" -> R.drawable.ic_prism_unarchive
     "merge", "call_merge", "layers_merge", "file_copy" -> R.drawable.ic_prism_merge
-    "layers", "view_agenda" -> R.drawable.ic_prism_layers
+    "layers", "view_agenda", "slideshow" -> R.drawable.ic_prism_layers
     "copy_all" -> R.drawable.ic_prism_copy
     "crop", "crop_rotate", "aspect_ratio" -> R.drawable.ic_prism_crop
     "compress", "press", "speed" -> R.drawable.ic_prism_compress

@@ -15,28 +15,40 @@ class NeonReferenceRedesign(unittest.TestCase):
     def test_identity_and_native_scan_are_preserved(self):
         nav = read('ui/navigation/JumloNavHost.kt')
         dock = read('ui/components/QuietNavigation.kt')
-        self.assertIn('onScan={navigateTo("scan")}', nav)
+        self.assertIn('composable<ScanRoute>', nav)
+        self.assertIn('onScannedPdf={file -> scanPublishing=true; viewModel.publishScannedPdf(file,onFinished={scanPublishing=false})',nav)
+        self.assertIn('externalBusy=scanPublishing',nav)
+        self.assertIn('navController.currentBackStackEntry?.id==entryId',nav)
+        # A finished scan must keep its entry origin when the viewer replaces it.
+        compact = re.sub(r'\s+', '', nav)
+        self.assertIn('navController.navigate(ViewerRoute(output.uri,output.displayName,returnTab=transitionOrigin))',compact)
+        self.assertIn('popUpTo<ScanRoute>{inclusive=true}',compact)
+        self.assertIn('entry.toRoute<ScanRoute>().transitionOrigin',compact)
+        self.assertIn('{navigateTo("scan")}',nav)
         self.assertIn('"scan" -> com.jumlo.app.ui.scan.ScanScreen', nav)
         self.assertIn('onScan: () -> Unit', dock)
-        # Four destinations and the native scan action in the middle. Settings is
-        # reached from the home screen, not from a "me" tab.
-        self.assertIn('DockDestination(DockTab.HOME', dock)
-        self.assertIn('DockDestination(DockTab.TOOLS', dock)
-        self.assertIn('DockDestination(DockTab.DOWNLOADS', dock)
-        self.assertIn('DockDestination(DockTab.FILES', dock)
-        self.assertIn('DockTab.DOWNLOADS -> 4', dock)
+        # The center slot is Home; Scan and Print are explicit actions in Tools.
+        self.assertIn('MainDockTabs = listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)', dock)
+        self.assertIn('MainDockTabs.forEach', dock)
+        self.assertIn('destination == selectedTab', dock)
+        self.assertIn('.testTag("nav.indicator.${tab.name}")', dock)
+        self.assertIn('.selectable(selected = active, role = Role.Tab', dock)
         self.assertIn('DownloadsRoute', nav)
         self.assertIn('com.jumlo.app.ui.downloads.DownloadsScreen', nav)
 
     def test_home_uses_real_tool_catalog_and_outputs(self):
         home = read('ui/home/HomeScreen.kt')
-        self.assertIn('CapabilityRegistry.canProcess(it.id)', home)
-        self.assertIn('HomeActionPolicy.resolve(', home)
-        self.assertIn('NeonHero(', home)
-        self.assertIn('NeonToolTile(', home)
+        self.assertIn('CapabilityRegistry.enabled(id)', home)
+        for label in ('modern_scan', 'modern_convert', 'modern_compress', 'modern_download'):
+            self.assertIn('R.string.' + label, home)
+        self.assertIn('HomeQuickAction(', home)
+        self.assertIn('open("pdf_compress")', home)
+        self.assertIn('open("dl_media")', home)
         self.assertIn('NeonOutputPreview(output', home)
         self.assertIn('items(outputs.take(8)', home)
-        self.assertIn('HomeActionEditor(', home)
+        self.assertNotIn('HomeActionEditor(', home)
+        self.assertNotIn('QuietSearchBar(', home)
+        self.assertIn('fileDateLabel(output.createdAtEpochMs)', home)
         self.assertIn('onFiles: () -> Unit', home)
         self.assertIn('onDownloads: () -> Unit', home)
         self.assertNotIn('Mohamed Saad', home)
@@ -44,7 +56,15 @@ class NeonReferenceRedesign(unittest.TestCase):
 
     def test_pdf_and_image_previews_are_not_fake(self):
         components = read('ui/components/NeonUi.kt')
-        self.assertIn('PdfRenderer(fd)', components)
+        # PDFium now goes through the API 26/27 parser/cancellation safety factory.
+        self.assertIn('PdfRendererFactory.open(fd, context.cacheDir) { coroutine.ensureActive() }', components)
+        self.assertIn('pdf.openPage(0).use', components)
+        self.assertIn('page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)', components)
+        factory = read('data/pdf/PdfRendererFactory.kt')
+        self.assertIn('preflight(descriptor, scratchDirectory, checkCancellation)', factory)
+        self.assertIn('return PdfRenderer(descriptor)', factory)
+        self.assertIn('if (document.isEncrypted) throw OperationFailure("PDF_ENCRYPTED")', factory)
+        self.assertIn('parser.setLenient(false)', factory)
         self.assertIn('Dispatchers.IO', components)
         self.assertIn('Bitmap.createBitmap', components)
         self.assertIn('output.uri', components)
@@ -58,28 +78,37 @@ class NeonReferenceRedesign(unittest.TestCase):
                      'onOutputWorkflow(selectedOutputs,"pdf_03")',
                      'onOutputWorkflow(selectedOutputs,"pdf_02")',
                      'vm.trashOutputs(', 'vm.restoreOutput(', 'vm.purgeTrashIds(',
-                     'vm.setFileViewMode(', 'onImport()', 'onSavedFolder()'):
+                     'vm.setFileViewMode(', 'onImport()',
+                     'SaveFolderCard(settings.downloadDestinationFolder, onChangeSaveFolder, onSavedFolder)'):
             with self.subTest(item=text):
                 self.assertIn(text, files)
         self.assertIn('selectedOutputs.isNotEmpty()', files)
         self.assertIn('if(!selecting)', files)
 
-    def test_tool_group_keys_are_unique_and_selected_archive_is_named_correctly(self):
+    def test_flat_tool_keys_are_stable_and_selected_archive_is_named_correctly(self):
         tools = read('ui/tools/ToolsScreen.kt')
         files = read('ui/files/FilesScreen.kt')
-        # The catalogue is grouped by workspace, and every group key is unique.
-        self.assertIn('item("workspace-" + entry.workspace.id)', tools)
-        self.assertNotIn('\\${pillar.name}', tools)
+        # Every available tool gets a stable ID key; the brief removes category groups.
+        self.assertIn('CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id)', tools)
+        self.assertIn('settings.rankedToolIds', tools)
+        self.assertIn('items(visible, key = { it.id }, contentType = { "tool" })', tools)
+        self.assertIn('ToolTile(tool, language, { onTool(tool) }', tools)
+        self.assertEqual(1, tools.count('QuietSearchBar('))
+        self.assertNotIn('item("workspace-"', tools)
+        self.assertNotIn('groupBy(', tools)
         self.assertIn('R.string.files_bundle_selected,selectedOutputs.size', files)
 
     def test_settings_and_downloads_keep_real_data(self):
         settings = read('ui/settings/SettingsScreen.kt')
         downloads = read('ui/downloads/DownloadsScreen.kt')
         self.assertIn('storage.outputs', settings)
-        self.assertIn('savedOutputs.size', settings)
-        self.assertIn('viewModel::setSoundsEnabled', settings)
+        self.assertIn('viewModel.setDefaultVideoQuality', settings)
+        self.assertIn('viewModel.setDefaultAudioQuality', settings)
+        self.assertIn('viewModel.cleanTemporary()', settings)
         self.assertIn('onChooseDownloadFolder', settings)
-        self.assertIn('NeonPanel(', settings)
+        self.assertIn('SaveFolderCard(', settings)
+        for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp', 'setHapticIntensity', 'respectReducedMotion'):
+            self.assertNotIn(obsolete, settings)
         self.assertIn('NeonPanel(', downloads)
         self.assertIn('onTool(mediaTool)', downloads)
         self.assertIn('items(activeDownloads', downloads)

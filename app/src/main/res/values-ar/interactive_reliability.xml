@@ -4,7 +4,7 @@
     <string name="interactive_selected_ranges">نطاقات محددة</string>
     <string name="interactive_split_choose_boundary">اضغط على صفحة لبدء ملف جديد بعدها.</string>
     <string name="interactive_part_pages">الصفحات %1$s</string>
-    <string name="interactive_pages_selected">تم تحديد %1$d من %2$d صفحة</string>
+    <string name="interactive_pages_selected">الصفحات المحددة: %1$d من %2$d</string>
     <string name="interactive_odd_pages">الصفحات الفردية</string>
     <string name="interactive_even_pages">الصفحات الزوجية</string>
     <string name="interactive_invert_pages">عكس التحديد</string>

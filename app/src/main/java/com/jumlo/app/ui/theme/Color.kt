@@ -10,20 +10,20 @@ import androidx.compose.ui.graphics.Color
 // previews or real paper: the chroma belongs to the UI, not the file content.
 // ============================================================================
 
-// Light: cool porcelain canvas, ink text and confident indigo actions.
-val LightBackground = Color(0xFFF6F7FD)
+// Light: neutral porcelain surfaces with strong indigo actions.
+val LightBackground = Color(0xFFF6F6F8)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceDim = Color(0xFFEFF2FA)
+val LightSurfaceDim = Color(0xFFEDEDEF)
 val LightSurfaceBright = Color(0xFFFFFFFF)
 val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
 val LightSurfaceContainerLow = Color(0xFFFFFFFF)
-val LightSurfaceContainer = Color(0xFFF0F2FC)
-val LightSurfaceContainerHigh = Color(0xFFE8EDFA)
-val LightSurfaceContainerHighest = Color(0xFFDEE5F6)
-val LightOnSurface = Color(0xFF17213E)
-val LightOnSurfaceVariant = Color(0xFF505C77)
-val LightOutline = Color(0xFF7B88A4)
-val LightOutlineVariant = Color(0xFFDCE3F2)
+val LightSurfaceContainer = Color(0xFFF0F0F3)
+val LightSurfaceContainerHigh = Color(0xFFE8E8ED)
+val LightSurfaceContainerHighest = Color(0xFFDFDFE5)
+val LightOnSurface = Color(0xFF202024)
+val LightOnSurfaceVariant = Color(0xFF55555E)
+val LightOutline = Color(0xFF777781)
+val LightOutlineVariant = Color(0xFFDDDEE5)
 val LightPrimary = Color(0xFF2F46C6)
 val LightPrimaryButton = Color(0xFF2F46C6)
 val LightOnPrimary = Color(0xFFFFFFFF)
@@ -45,22 +45,22 @@ val LightError = Color(0xFFBA334A)
 val LightOnError = Color(0xFFFFFFFF)
 val LightErrorContainer = Color(0xFFFFE5E8)
 val LightOnErrorContainer = Color(0xFF781D32)
-val LightCardBorder = Color(0xFFDCE3F2)
+val LightCardBorder = Color(0xFFDDDEE5)
 
-// Dark: ink-blue, not black; containers form a legible elevation ladder.
-val DarkBackground = Color(0xFF0C1226)
-val DarkSurface = Color(0xFF141B33)
-val DarkSurfaceDim = Color(0xFF0C1226)
-val DarkSurfaceBright = Color(0xFF2B3551)
-val DarkSurfaceContainerLowest = Color(0xFF090F21)
-val DarkSurfaceContainerLow = Color(0xFF171F39)
-val DarkSurfaceContainer = Color(0xFF202A45)
-val DarkSurfaceContainerHigh = Color(0xFF2A3653)
-val DarkSurfaceContainerHighest = Color(0xFF354361)
-val DarkOnSurface = Color(0xFFF1F3FF)
-val DarkOnSurfaceVariant = Color(0xFFBBC5DE)
-val DarkOutline = Color(0xFF9CA9C9)
-val DarkOutlineVariant = Color(0xFF394561)
+// OLED: pure black canvas and a neutral gray elevation ladder. Accent belongs to actions only.
+val DarkBackground = Color(0xFF000000)
+val DarkSurface = Color(0xFF101010)
+val DarkSurfaceDim = Color(0xFF000000)
+val DarkSurfaceBright = Color(0xFF353535)
+val DarkSurfaceContainerLowest = Color(0xFF000000)
+val DarkSurfaceContainerLow = Color(0xFF151515)
+val DarkSurfaceContainer = Color(0xFF1D1D1D)
+val DarkSurfaceContainerHigh = Color(0xFF262626)
+val DarkSurfaceContainerHighest = Color(0xFF303030)
+val DarkOnSurface = Color(0xFFF5F5F5)
+val DarkOnSurfaceVariant = Color(0xFFC4C4C4)
+val DarkOutline = Color(0xFF969696)
+val DarkOutlineVariant = Color(0xFF3D3D3D)
 val DarkPrimary = Color(0xFFA9B7FF)
 val DarkPrimaryButton = Color(0xFFA9B7FF)
 val DarkOnPrimary = Color(0xFF13205A)
@@ -82,7 +82,7 @@ val DarkError = Color(0xFFFFB5C1)
 val DarkOnError = Color(0xFF690D26)
 val DarkErrorContainer = Color(0xFF72273C)
 val DarkOnErrorContainer = Color(0xFFFFE1E7)
-val DarkCardBorder = Color(0xFF394561)
+val DarkCardBorder = Color(0xFF3D3D3D)
 
 @Immutable
 data class PillarColors(
@@ -146,13 +146,13 @@ val LightPillarColors = PillarColors(
     warningPrimary = Color(0xFFA76218),
     warningContainer = Color(0xFFFFF1D6),
     cardSurface = Color(0xFFFFFFFF),
-    cardBorder = Color(0xFFDCE3F2),
-    primaryActionBackground = Color(0xFF17213E),
+    cardBorder = Color(0xFFDDDEE5),
+    primaryActionBackground = Color(0xFF202024),
     primaryActionText = Color(0xFFFFFFFF),
     dockSurface = Color(0xF7FFFFFF),
     dockBorder = Color(0x1A0F172A),
-    activePillContainer = Color(0xFFDCE3F2),
-    activePillContent = Color(0xFF17213E)
+    activePillContainer = Color(0xFFDDDEE5),
+    activePillContent = Color(0xFF202024)
 )
 
 val DarkPillarColors = PillarColors(
@@ -178,13 +178,13 @@ val DarkPillarColors = PillarColors(
     successContainer = Color(0xFF052E16),
     warningPrimary = Color(0xFFFCD34D),
     warningContainer = Color(0xFF451A03),
-    cardSurface = Color(0xFF17213E),
-    cardBorder = Color(0xFF17213E),
-    primaryActionBackground = Color(0xFFDCE3F2),
-    primaryActionText = Color(0xFF17213E),
-    dockSurface = Color(0xF00F172A),
+    cardSurface = Color(0xFF151515),
+    cardBorder = Color(0xFF3D3D3D),
+    primaryActionBackground = Color(0xFFDDDEE5),
+    primaryActionText = Color(0xFF202024),
+    dockSurface = Color(0xFF1D1D1D),
     dockBorder = Color(0x26FFFFFF),
-    activePillContainer = Color(0xFF17213E),
+    activePillContainer = Color(0xFF303030),
     activePillContent = Color(0xFFF8FAFC)
 )
 

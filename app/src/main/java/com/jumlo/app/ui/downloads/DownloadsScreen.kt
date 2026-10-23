@@ -4,10 +4,10 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.theme.QuietTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Bolt
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Download
+import com.jumlo.app.ui.icons.rounded.CheckCircle
+import com.jumlo.app.ui.icons.rounded.Bolt
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items

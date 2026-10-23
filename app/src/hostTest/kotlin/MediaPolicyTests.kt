@@ -15,6 +15,37 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
     val opus = MediaFormat("a160", "webm", "none", "opus", audioBitrateKbps=160.0, bytes=250)
     val muxed = MediaFormat("v360", "mp4", "avc1", "mp4a", 640, 360, 30.0, bytes=700)
     val asset = MediaAsset("asset-one", "FixtureExtractor", "My title", 2.0, listOf(v720,v1080,aac,opus,muxed))
+    test("mixed portrait and landscape choices rank by the displayed resolution") {
+        val mixed=asset.copy(formats=listOf(
+            muxed.copy(id="portrait720",width=720,height=1280),
+            muxed.copy(id="landscape1080",width=1920,height=1080)))
+        val choices=MediaCatalog.choices(mixed,MediaMode.VIDEO)
+        check(choices.map { it.formatIds.single() }==listOf("landscape1080","portrait720"))
+        check(MediaCatalog.preferred(choices,MediaMode.VIDEO)?.formatIds==listOf("landscape1080"))
+    }
+    test("original audio choices expose the real source container") {
+        val choice=MediaCatalog.choices(asset.copy(formats=listOf(aac)),MediaMode.AUDIO).single()
+        check(choice.container=="m4a") { "Expected M4A, got ${choice.container}" }
+    }
+    test("media output titles do not acquire the same extension twice") {
+        check(MediaOutputPolicy.displayName("My clip.mp4","mp4")=="My clip.mp4")
+        check(MediaOutputPolicy.displayName("TRACK.MP3","mp3")=="TRACK.mp3")
+        check(MediaOutputPolicy.displayName("Chapter 2.1","mp4")=="Chapter 2.1.mp4")
+    }
+    test("media conversion replaces a recognized source suffix instead of appending two extensions") {
+        check(MediaOutputPolicy.displayName("My clip.mp4","mp3")=="My clip.mp3")
+        check(MediaOutputPolicy.displayName("تسجيل.M4A","opus")=="تسجيل.opus")
+        check(MediaOutputPolicy.displayName("Chapter 2.1","mp3")=="Chapter 2.1.mp3")
+    }
+    test("Snapchat and Threads links retain their distinct platform identities") {
+        check(com.jumlo.app.core.DownloadLinkPolicy.detectPlatformName("https://www.snapchat.com/spotlight/fixture")=="Snapchat")
+        check(com.jumlo.app.core.DownloadLinkPolicy.detectPlatformName("https://www.threads.net/@fixture/post/123")=="Threads")
+    }
+    test("an unknown track bitrate does not produce a misleading combined size estimate") {
+        val partial=asset.copy(formats=listOf(v1080.copy(bytes=null,bitrateKbps=2000.0),aac.copy(bytes=null,audioBitrateKbps=null)))
+        val choice=MediaCatalog.choices(partial,MediaMode.VIDEO).single()
+        check(MediaCatalog.displayBytes(choice,60.0)==null)
+    }
     test("media selection identity detects changed dimensions behind the same ID") {
         val c = MediaCatalog.choices(asset, MediaMode.VIDEO).first()
         val changed = c.copy(formats=c.formats.map { if(it.hasVideo) it.copy(height=480) else it })
@@ -91,6 +122,11 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         val choices=MediaCatalog.choices(asset.copy(formats=listOf(v720.copy(protocol="file"),muxed.copy(protocol="m3u8_native"))),MediaMode.VIDEO)
         check(choices.single().formatIds==listOf("v360"))
     }
+    test("unplayable storyboard dimensions do not invalidate real downloadable formats") {
+        val storyboard=MediaFormat("storyboard","mhtml","none","none",width=0,height=0,protocol="mhtml")
+        val choices=MediaCatalog.choices(asset.copy(formats=listOf(storyboard,muxed)),MediaMode.VIDEO)
+        check(choices.single().formatIds==listOf("v360"))
+    }
     test("format-selector injection is rejected") {
         for(id in listOf("18/best","x+ba","--exec","a[height>0]","../x","a\n--exec")) {
             fail("INVALID_MEDIA_FORMAT") { MediaCatalog.choices(asset.copy(formats=listOf(muxed.copy(id=id))),MediaMode.VIDEO) }
@@ -130,6 +166,12 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
     test("sharing social posts extracts more than one real link from surrounding prose") {
         val message = "Video A: https://example.test/clip?id=1\nVideo B (https://media.test/short/2).\nVideo A again: https://example.test/clip?id=1"
         check(MediaLinks.sharedUrls(message) == listOf("https://example.test/clip?id=1", "https://media.test/short/2"))
+    }
+    test("pasted URLs reject private hosts just like shared URLs") {
+        for(url in listOf("https://localhost/a","https://127.0.0.1/a","https://[::1]/a","http://router.internal/a","https://192.168.1.1/a")) {
+            fail("INVALID_URL") { MediaLinks.normalize(url,allowHttp=true) }
+        }
+        check(MediaLinks.normalize("https://fcdn.example/clip")=="https://fcdn.example/clip")
     }
     test("share URLs accept public domains beginning with IPv6-looking letters") {
         check(MediaLinks.sharedUrls("https://fcdn.example/clip https://fdmusic.example/song") ==

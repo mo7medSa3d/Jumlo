@@ -11,7 +11,7 @@ enum class PillarCategory(val labelEn: String, val labelAr: String) {
 enum class ThemeMode(val labelEn: String, val labelAr: String, val subtitleEn: String, val subtitleAr: String) {
     SYSTEM("System Default", "افتراضي النظام", "Follows Android OS setting", "يتبع إعدادات نظام أندرويد"),
     LIGHT("Light Theme", "المظهر الفاتح", "Warm neutrals & crisp contrast", "ألوان دافئة وتباين واضح"),
-    DARK("Dark Theme", "المظهر الداكن", "Near-black #0B0B0D & deep containers", "أسود عميق #0B0B0D وحاويات مريحة للعين")
+    DARK("Dark Theme", "المظهر الداكن", "Pure black OLED background", "خلفية سوداء خالصة لشاشات OLED")
 }
 
 enum class AppLanguage(val code: String, val displayName: String, val nativeSubtitle: String, val isRtl: Boolean) {
@@ -19,23 +19,24 @@ enum class AppLanguage(val code: String, val displayName: String, val nativeSubt
     ARABIC("ar", "العربية (Arabic)", "العربية - واجهة كاملة من اليمين لليسار", true)
 }
 
-enum class FileViewMode { LIST, GRID, GALLERY }
+enum class FileViewMode { LIST, GRID;
+    companion object {
+        /** Migrate the removed gallery view without losing other preferences. */
+        fun fromStored(value: String?): FileViewMode = entries.firstOrNull { it.name == value } ?: GRID
+    }
+}
 enum class HapticIntensity { OFF, LIGHT, MEDIUM, STRONG }
 
 enum class DockTab(val route: String, val labelEn: String, val labelAr: String) {
     HOME("home", "Home", "الرئيسية"),
-    TOOLS("tools_catalog", "Tools", "الأدوات"),
+    TOOLS("tools", "Tools", "الأدوات"),
     DOWNLOADS("downloads", "Downloads", "التنزيلات"),
     PRINT("print", "Print", "طباعة"),
-    FILES("files_overview", "Files", "الملفات"),
+    FILES("files", "Files", "الملفات"),
     SETTINGS("settings", "Settings", "الإعدادات")
 }
 
-enum class CollisionPolicy(val labelEn: String, val labelAr: String) {
-    KEEP_BOTH("Keep both (+1)", "الاحتفاظ بالاثنين (+1)"),
-    SKIP("Skip", "تخطي"),
-    REPLACE("Replace file", "استبدال الملف")
-}
+
 
 enum class ResizeMode(val labelEn: String, val labelAr: String) {
     LONGEST_EDGE("Longest Edge", "الحافة الأطول"),
@@ -109,6 +110,8 @@ data class AppSettingsState(
     val soundsEnabled: Boolean = true,
     val downloadDestinationFolder: String = "Download/Jumlo",
     val maxConcurrentDownloads: Int = 2,
+    val defaultVideoQuality: String = "1080",
+    val defaultAudioQuality: Int = 192,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
     val accentColor: String = "BLUE",
     val fontScale: String = "NORMAL",
@@ -117,6 +120,8 @@ data class AppSettingsState(
     val quickActionIds: List<String> = listOf("pdf_02", "pdf_03", "img_02", "dl_media"),
     val recentToolIds: List<String> = emptyList(),
     val mostUsedToolIds: List<String> = emptyList(),
+    /** Complete count-based order for the flat catalogue; no usage is synthesized. */
+    val rankedToolIds: List<String> = emptyList(),
     /** Local only; UUIDs of outputs pinned by the user, not cloud identities. */
     val favoriteOutputIds: Set<String> = emptySet(),
     /** The initial ViewModel placeholder is never presented as a saved preference. */

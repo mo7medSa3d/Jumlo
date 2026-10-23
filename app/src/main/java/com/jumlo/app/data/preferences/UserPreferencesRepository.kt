@@ -6,9 +6,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.jumlo.app.BuildConfig
 import com.jumlo.app.core.OutputFavorites
 import com.jumlo.app.core.ToolUsagePolicy
 import com.jumlo.app.core.StoragePaths
+import com.jumlo.app.diagnostics.AppDiagnostics
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.AppSettingsState
 import com.jumlo.app.model.ThemeMode
@@ -19,7 +21,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
@@ -35,6 +37,12 @@ class UserPreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + kotlinx.coroutines.SupervisorJob())
+    private val mediaServiceSettings = MediaServiceSettingsStore(
+        context.dataStore,
+        KeystoreMediaServiceTokenCipher("${context.packageName}.media-service-token.v1"),
+        allowDebugLoopback = BuildConfig.DEBUG,
+        report = { area, error -> AppDiagnostics.report(area, error) }
+    )
     private object Keys {
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val PROCESSING_PRESETS = stringPreferencesKey("local_processing_presets_v1")
@@ -52,12 +60,12 @@ class UserPreferencesRepository @Inject constructor(
         val DOWNLOAD_DEST_FOLDER = stringPreferencesKey("download_dest_folder")
         val MAX_CONCURRENT_DOWNLOADS = intPreferencesKey("max_concurrent_downloads")
         val WIFI_ONLY_DEFAULT = booleanPreferencesKey("wifi_only_default")
+        val DEFAULT_VIDEO_QUALITY = stringPreferencesKey("default_video_quality")
+        val DEFAULT_AUDIO_QUALITY = intPreferencesKey("default_audio_quality")
         val FILE_VIEW_MODE = stringPreferencesKey("file_view_mode")
         val ACCENT_COLOR = stringPreferencesKey("accent_color")
         val FONT_SCALE = stringPreferencesKey("font_scale")
         val NOTIFICATIONS_GRANTED = booleanPreferencesKey("notifications_granted")
-        val MEDIA_SERVICE_URL = stringPreferencesKey("media_service_url_v1")
-        val MEDIA_SERVICE_TOKEN = stringPreferencesKey("media_service_token_v1")
         val MEDIA_RIGHTS_ACCEPTED = booleanPreferencesKey("media_rights_accepted")
     }
 
@@ -74,23 +82,20 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     /**
-     * The extraction service the downloader may use. Empty means the app only offers
-     * direct media links, which is the honest default for a store build.
+     * Optional alternate extraction service. Empty keeps the packaged/on-device
+     * engines unchanged and prevents requests to a backend.
      */
-    @Volatile var mediaServiceUrlSnapshot: String = ""
-        private set
+    val mediaServiceUrlSnapshot: String get() = mediaServiceSettings.state.value.url
 
-    @Volatile var mediaServiceTokenSnapshot: String = ""
-        private set
+    val mediaServiceTokenSnapshot: String get() = mediaServiceSettings.state.value.token
+
+    /** Read both values from one state so an in-flight settings change cannot mix origins. */
+    val mediaServiceConfigurationSnapshot: Pair<String, String> get() =
+        mediaServiceSettings.state.value.let { it.url to it.token }
 
     init {
-        // A cheap snapshot so the runtime can read the setting without suspending.
-        scope.launch {
-            context.dataStore.data.collect { prefs ->
-                mediaServiceUrlSnapshot = prefs[Keys.MEDIA_SERVICE_URL].orEmpty()
-                mediaServiceTokenSnapshot = prefs[Keys.MEDIA_SERVICE_TOKEN].orEmpty()
-            }
-        }
+        // The observer migrates plaintext before exposure, handles errors and clears stale state.
+        scope.launch { mediaServiceSettings.observe() }
     }
 
     // Fail closed on corruption. A write must never silently overwrite unreadable data.
@@ -121,37 +126,43 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
-    val settingsFlow: Flow<AppSettingsState> = context.dataStore.data.map { prefs ->
+    val settingsFlow: Flow<AppSettingsState> = combine(context.dataStore.data, mediaServiceSettings.state) { prefs, media ->
         val themeStr = prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name
         val defaultLanguage = if (java.util.Locale.getDefault().language == "ar") AppLanguage.ARABIC else AppLanguage.ENGLISH
         val langStr = prefs[Keys.LANGUAGE] ?: defaultLanguage.name
+        val counts = prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull { value ->
+            val id = value.substringBefore('=')
+            val count = value.substringAfter('=', "").toIntOrNull()
+            if (id.matches(Regex("[a-z0-9_]{1,64}")) && count != null && count > 0) id to count else null
+        }.toMap()
+        val rankedTools = ToolUsagePolicy.ranked(counts, com.jumlo.app.data.jobs.CapabilityRegistry.tools.map { it.id })
         AppSettingsState(
             hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
             themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM),
             language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(defaultLanguage),
-            respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false,
+            respectReducedMotion = false, // Removed setting; system animation policy is respected by the activity.
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             hapticIntensity = if(prefs[Keys.HAPTIC_ON_COMMIT]==false) HapticIntensity.OFF else
                 runCatching { HapticIntensity.valueOf(prefs[Keys.HAPTIC_INTENSITY] ?: "LIGHT") }.getOrDefault(HapticIntensity.LIGHT),
             soundsEnabled = prefs[Keys.UI_SOUNDS] ?: true,
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
-            maxConcurrentDownloads = (prefs[Keys.MAX_CONCURRENT_DOWNLOADS] ?: 2).coerceIn(1, 6),
-            wifiOnlyDefault = prefs[Keys.WIFI_ONLY_DEFAULT] ?: false,
-            fileViewMode = runCatching { FileViewMode.valueOf(prefs[Keys.FILE_VIEW_MODE] ?: "GRID") }.getOrDefault(FileViewMode.GRID),
+            maxConcurrentDownloads = 2, // Fixed scheduler policy; legacy preference no longer controls jobs.
+            defaultVideoQuality = (prefs[Keys.DEFAULT_VIDEO_QUALITY] ?: "1080").takeIf { it in setOf("BEST", "1080", "720", "480") } ?: "1080",
+            defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
+            wifiOnlyDefault = false,
+            fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),
             accentColor = (prefs[Keys.ACCENT_COLOR] ?: "BLUE").takeIf { it in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC") } ?: "BLUE",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
             recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter {it.matches(Regex("[a-z0-9_]{1,64}"))}?.take(8).orEmpty(),
-            mostUsedToolIds = prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull {value->
-                val id=value.substringBefore('=');val n=value.substringAfter('=',"").toIntOrNull()
-                if(id.matches(Regex("[a-z0-9_]{1,64}")) && n!=null && n>0) id to n else null
-            }.sortedByDescending {it.second}.take(5).map {it.first},
+            mostUsedToolIds = rankedTools.take(5),
+            rankedToolIds = rankedTools,
             favoriteOutputIds = OutputFavorites.sanitize(
                 prefs[Keys.FAVORITE_OUTPUT_IDS].orEmpty().split('|').filter(String::isNotBlank)
             ).toSet(),
-            mediaServiceUrl = prefs[Keys.MEDIA_SERVICE_URL].orEmpty(),
-            mediaServiceToken = prefs[Keys.MEDIA_SERVICE_TOKEN].orEmpty(),
+            mediaServiceUrl = media.url,
+            mediaServiceToken = media.token,
             outputNames = runCatching {
                 Json.decodeFromString<Map<String,String>>(prefs[Keys.OUTPUT_NAMES] ?: "{}").filter { (id,name) ->
                     com.jumlo.app.core.OutputWorkflowPolicy.isId(id) && name.isNotBlank() && name.length<=200 && name.none { it<' ' || it=='/' || it=='\\' }
@@ -237,6 +248,16 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it.remove(Keys.DOWNLOAD_DEST_FOLDER) }
     }
 
+    suspend fun setDefaultVideoQuality(value: String) {
+        require(value in setOf("BEST", "1080", "720", "480")) { "INVALID_VIDEO_QUALITY" }
+        context.dataStore.edit { it[Keys.DEFAULT_VIDEO_QUALITY] = value }
+    }
+
+    suspend fun setDefaultAudioQuality(value: Int) {
+        require(value in setOf(320, 192, 128)) { "INVALID_AUDIO_QUALITY" }
+        context.dataStore.edit { it[Keys.DEFAULT_AUDIO_QUALITY] = value }
+    }
+
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }
     suspend fun setAccentColor(value: String) {
         require(value in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC"))
@@ -254,29 +275,12 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.WIFI_ONLY_DEFAULT] = wifiOnly }
     }
 
-    val mediaServiceUrlFlow: Flow<String> = context.dataStore.data.map { it[Keys.MEDIA_SERVICE_URL].orEmpty() }
+    val mediaServiceUrlFlow: Flow<String> = mediaServiceSettings.state.map { it.url }
 
-    /** Only http/https endpoints are accepted, so a mistyped value cannot point the app elsewhere. */
-    suspend fun setMediaServiceUrl(url: String) {
-        val trimmed = url.trim()
-        if (trimmed.isEmpty()) {
-            context.dataStore.edit { it.remove(Keys.MEDIA_SERVICE_URL) }
-            return
-        }
-        require(trimmed.startsWith("http://") || trimmed.startsWith("https://")) { "INVALID_MEDIA_SERVICE_URL" }
-        require(trimmed.length <= 300) { "INVALID_MEDIA_SERVICE_URL" }
-        context.dataStore.edit { it[Keys.MEDIA_SERVICE_URL] = trimmed }
-    }
+    /** Release backends require HTTPS; debug additionally permits explicit loopback HTTP. */
+    suspend fun setMediaServiceUrl(url: String) = mediaServiceSettings.setEndpoint(url)
 
-    suspend fun setMediaServiceToken(token: String) {
-        val trimmed = token.trim()
-        if (trimmed.isEmpty()) {
-            context.dataStore.edit { it.remove(Keys.MEDIA_SERVICE_TOKEN) }
-            return
-        }
-        require(trimmed.length <= 300) { "INVALID_MEDIA_SERVICE_TOKEN" }
-        context.dataStore.edit { it[Keys.MEDIA_SERVICE_TOKEN] = trimmed }
-    }
+    suspend fun setMediaServiceToken(token: String) = mediaServiceSettings.setToken(token)
 
     suspend fun setNotificationsGranted(granted: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATIONS_GRANTED] = granted }

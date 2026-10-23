@@ -12,6 +12,22 @@ import org.junit.Test
 import java.nio.file.Files
 
 class PdfInkAppearanceTest {
+    @Test fun inkColorAndPhysicalThicknessSurviveSavingOnScaledPages() {
+        val out=Files.createTempFile("ink-style-", ".pdf").toFile()
+        try {
+            PDDocument().use {doc ->
+                doc.addPage(PDPage(PDRectangle(200f,300f)).apply {userUnit=2f})
+                PdfBoxBackend.addInkStrokes(doc,0,listOf(listOf(PdfInkPoint(.1,.2),PdfInkPoint(.8,.6))),"", "#C02040",6f)
+                doc.save(out)
+            }
+            PDDocument.load(out).use {doc ->
+                val annotation=doc.getPage(0).annotations.single() as com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup
+                assertArrayEquals(floatArrayOf(192/255f,32/255f,64/255f),annotation.color.components,.0001f)
+                assertEquals(3f,annotation.borderStyle.width,.001f)
+                assertNotNull(annotation.normalAppearanceStream)
+            }
+        } finally {out.delete()}
+    }
     @Test fun straightStrokesHaveFinitePaddedBoundsAfterSaveAndReopen() {
         val paths=listOf(
             listOf(PdfInkPoint(.2,.5),PdfInkPoint(.8,.5)),

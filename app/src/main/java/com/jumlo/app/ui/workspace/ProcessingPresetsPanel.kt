@@ -3,8 +3,8 @@ package com.jumlo.app.ui.workspace
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bookmarks
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Bookmarks
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,7 +46,7 @@ import com.jumlo.app.model.WorkspaceDraft
         } else LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             items(owned,key={it.name}) { preset ->
                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
-                    AssistChip(onClick={onApply(preset)},label={Text(preset.name)},
+                    AssistChip(onClick={onApply(preset)},label={Text(preset.name)},border=null,
                         modifier=Modifier.heightIn(min=48.dp))
                     TextButton(onClick={deleting=preset},modifier=Modifier.heightIn(min=48.dp)) {
                         Text(stringResource(R.string.preset_panel_delete))
@@ -59,7 +59,7 @@ import com.jumlo.app.model.WorkspaceDraft
         onDismissRequest={showSave=false},
         title={Text(stringResource(R.string.preset_panel_save))},
         text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(name,{name=it.take(48)},singleLine=true,
+            TextField(name,{name=it.take(48)},singleLine=true,colors=borderlessFieldColors(),
                 label={Text(stringResource(R.string.preset_panel_name))},
                 modifier=Modifier.fillMaxWidth().testTag("workspace.presetName"))
             Text(stringResource(R.string.preset_panel_privacy),style=MaterialTheme.typography.bodySmall)

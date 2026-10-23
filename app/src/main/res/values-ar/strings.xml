@@ -74,7 +74,7 @@
     <string name="action_move_to_trash">نقل إلى المهملات</string>
     <string name="action_restore">استعادة</string>
     <string name="action_undo">تراجع</string>
-    <string name="output_pages_count">%1$d صفحات</string>
+    <string name="output_pages_count">عدد الصفحات: %1$d</string>
     <string name="output_entries_count">%1$d عناصر أرشيف</string>
     <string name="output_sha256_label">SHA-256: %1$s</string>
     <string name="job_outcomes_summary">تم نشر %1$d · فشل %2$d</string>
@@ -96,7 +96,7 @@
     <string name="import_photo_gallery">معرض الصور والوسائط</string>
     <string name="import_device_files">ملفات الجهاز والتخزين</string>
     <string name="import_my_files">ملفاتي (التخزين الداخلي للتطبيق)</string>
-    <string name="import_privacy_pledge">بدون رفع سحابي. لا يصل التطبيق إلى أي ملفات خارج المجلدات المحددة.</string>
+    <string name="import_privacy_pledge">تُعالج المستندات على جهازك باستخدام ملفات التطبيق الخاصة والملفات التي تختارها. قد تستخدم التنزيلات والصور المصغّرة البعيدة واستخراج الروابط الاختياري وتثبيت النماذج الشبكة.</string>
 
     <!-- Permission Education -->
     <string name="perm_sheet_badge">نافذة استعادة النظام</string>
@@ -170,7 +170,7 @@
     <string name="settings_about">حول Jumlo</string>
     <string name="settings_storage_summary">النسخ: %1$s · المخرجات: %2$s · المهملات: %3$s · التنزيلات: %4$s · المؤقتة: %5$s</string>
     <string name="settings_allow_notifications">السماح بإشعارات التقدم في الخلفية</string>
-    <string name="settings_privacy_summary">بدون تحليلات أو معالجة سحابية أو نسخ احتياطي. التنزيلات المباشرة تتصل فقط بالروابط التي تدخلها.</string>
+    <string name="settings_privacy_summary">تجري معالجة المستندات على جهازك. قد تستخدم التنزيلات والصور المصغّرة البعيدة وخدمات الاستخراج الاختيارية وتثبيت النماذج الشبكة. النسخ الاحتياطي للتطبيق معطّل.</string>
     <string name="processing_channel">معالجة الملفات</string>
     <string name="processing_title">جاري معالجة الملفات على هذا الجهاز</string>
     <string name="processing_body">افتح التطبيق لرؤية التقدم والنتائج.</string>
@@ -220,9 +220,9 @@
     <string name="workspace_clear_selection">مسح التحديد</string>
     <string name="workspace_direct_urls_batch">روابط الملفات المباشرة (رابط في كل سطر)</string>
     <string name="workspace_direct_url_single">رابط الملف المباشر</string>
-    <string name="workspace_batch_valid_links">%1$d من %2$d رابط جاهزة للتنزيل</string>
-    <string name="workspace_batch_duplicates">%1$d رابط مكرر سيتم تخطيه</string>
-    <string name="workspace_batch_invalid_links">%1$d رابط ليس رابط ملف HTTP/HTTPS مباشر</string>
+    <string name="workspace_batch_valid_links">الروابط الجاهزة للتنزيل: %1$d من %2$d</string>
+    <string name="workspace_batch_duplicates">الروابط المكررة التي سيتم تخطيها: %1$d</string>
+    <string name="workspace_batch_invalid_links">الروابط التي لا تشير إلى ملفات HTTP/HTTPS مباشرة: %1$d</string>
     <string name="workspace_direct_url_hint">روابط ملفات HTTP/HTTPS المباشرة وروابط Google Drive.</string>
     <string name="field_expected_sha256">بصمة SHA-256 المتوقعة (اختياري)</string>
     <string name="field_unmetered_only">شبكة غير محدودة البيانات فقط</string>
@@ -237,7 +237,7 @@
     <string name="field_image_policy_note">يتم الحفاظ على أبعاد الصور الأصلية واتجاه EXIF وكتابة الصفحات تدريجياً.</string>
     <string name="field_raster_note">اختر ملف PDF واحداً لتصدير صفحاته كصور عبر محرك أندرويد المحلي.</string>
     <string name="field_pages_spec">الصفحات (فارغ = الكل، أو مثل 1-3,5)</string>
-    <string name="field_dpi">الدقة DPI (72..300)</string>
+    <string name="field_dpi">الدقة (36–600 DPI)</string>
     <string name="field_output_prefix">بادئة اسم الملف الناتج</string>
     <string name="field_merge_note">اختر ملفَي PDF أو أكثر بالترتيب المطلوب للدمج.</string>
     <string name="field_pages_per_part">عدد الصفحات لكل جزء (عند ترك النطاقات فارغة)</string>
@@ -246,7 +246,7 @@
     <string name="field_rotate_pages">الصفحات المراد تدويرها (فارغ = لا شيء، أو مثل 1,3)</string>
     <string name="field_clockwise_rotation">التدوير باتجاه عقارب الساعة</string>
     <string name="field_max_image_dpi">أقصى دقة للصور المضمنة DPI (72..300)</string>
-    <string name="field_quality">جودة ضغط JPEG (30..95)</string>
+    <string name="field_quality">جودة الصورة (1–100)</string>
     <string name="field_target_size_mb">الحجم المستهدف (ميغابايت)</string>
     <string name="field_target_size_note">عند تحديد حجم مستهدف، يخفض Jumlo الدقة والجودة حتى يصل الملف إليه، ويعرض الحجم الذي تحقق فعليًا.</string>
     <string name="field_remove_title">إزالة العنوان والموضوع والكلمات المفتاحية أيضًا</string>
@@ -281,7 +281,7 @@
     <string name="annotation_text">نص عادي</string>
     <string name="field_as_note_annotation">إضافة كملاحظة PDF قابلة للطي</string>
     <string name="field_watermark_text">نص العلامة المائية (اختياري)</string>
-    <string name="field_opacity_percent">الشفافية % (10..100)</string>
+    <string name="field_opacity_percent">العتامة (1–100%)</string>
     <string name="field_add_page_numbers">إضافة أرقام الصفحات أسفل المنتصف</string>
     <string name="field_start_number">رقم البداية للترقيم</string>
     <string name="field_signature_note">اختر ملف PDF أولاً وصورة التوقيع ثانياً، أو ارسم توقيعاً جديداً.</string>
@@ -316,8 +316,8 @@
     <string name="field_gap_px">المسافة الفاصلة بين الصور (بكسل)</string>
     <string name="field_overlap_px">قص التداخل العلوي (بكسل، لدمج لقطات الشاشة)</string>
     <string name="field_brightness">السطوع (-100..100)</string>
-    <string name="field_contrast">التباين (-100..100)</string>
-    <string name="field_saturation">التشبع اللوني (-100..100)</string>
+    <string name="field_contrast">التباين (0–300%)</string>
+    <string name="field_saturation">التشبع اللوني (0–300%)</string>
     <string name="field_padding_px">هامش اللوحة المحيط (بكسل)</string>
     <string name="field_target_bytes">الحجم الأقصى المستهدف (بايت)</string>
     <string name="field_compare_img_note">اختر صورتين لحساب الفروق اللونية وإنشاء خريطة الاختلاف.</string>
@@ -352,7 +352,7 @@
     <string name="activity_start_new_run">بدء عملية جديدة</string>
     <string name="account_hub_title">حساب المستخدم والمحرك</string>
     <string name="account_hub_tier">نسخة جملو الاحترافية المحلية</string>
-    <string name="account_privacy_status">معالجة محلية 100% • بدون تتبع سحابي</string>
+    <string name="account_privacy_status">المستندات على الجهاز • التنزيلات تستخدم الشبكة</string>
     <string name="account_storage_stats">مساحة التخزين والذاكرة</string>
     <string name="account_clear_cache_btn">تفريغ الذاكرة المؤقتة الآن</string>
     <string name="account_clear_cache_success">تم تفريغ الملفات المؤقتة والذاكرة بنجاح</string>

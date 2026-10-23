@@ -1,0 +1,23 @@
+<resources>
+    <string name="rebuild_word_action">تحويل إلى Word</string>
+    <string name="rebuild_slides_action">تحويل إلى PowerPoint</string>
+    <string name="rebuild_ocr_action">استخراج النص</string>
+    <string name="rebuild_word_note">يحافظ على الفقرات وفواصل الصفحات. قد يتغير تنسيق الجداول والصفحات المعقدة. التعرّف على النصوص المصوّرة يدعم الحروف اللاتينية فقط، ولا يدعم العربية.</string>
+    <string name="rebuild_slides_note">شريحة لكل صفحة، تضم صورة الصفحة وطبقة نص قابلة للتعديل إن توفرت. لا يعيد إنشاء عناصر التصميم.</string>
+    <string name="rebuild_ocr_note">اختر ملف PDF أو صورة. التعرّف على النص المصوّر يدعم الحروف اللاتينية فقط وقد يحتاج لتنزيل النموذج أول مرة. الصور العربية غير مدعومة.</string>
+    <string name="rebuild_compression_before">الحجم الأصلي: %1$s</string>
+    <string name="rebuild_download_privacy">تُحفظ روابط التنزيل المعلّقة مشفّرة على جهازك، وتُحذف بعد اكتمال التنزيل أو إلغائه.</string>
+    <string name="rebuild_clipboard_unavailable">الحافظة غير متاحة. الصق في حقل الرابط أو شارك الرابط مع Jumlo.</string>
+    <string name="rebuild_office_limit">المستند يتجاوز حد التحويل. اختر صفحات أقل وحاول مجددًا.</string>
+    <string name="rebuild_office_verify">تعذّر التحقق من سلامة المستند المحوّل. لم يُحفظ ملف غير مكتمل.</string>
+    <string name="rebuild_office_aspect">حجم إحدى الصفحات غير مناسب للشرائح. جرّب تحويل صفحات محددة.</string>
+    <string name="rebuild_office_empty_pages">لم تتضمن بعض الصفحات نصًا مقروءًا فتم تجاوزها. راجع المستند.</string>
+    <string name="rebuild_office_ocr_review">استُخدم التعرّف على النصوص. راجع النص المحوّل للتأكد من دقته.</string>
+    <string name="rebuild_ocr_model">نموذج التعرّف على النصوص غير متاح. اتصل بالإنترنت وتحقق من خدمات Google Play ثم حاول مجددًا.</string>
+    <string name="rebuild_ocr_empty">لم يُعثر على نص مقروء. استخدم صورة أوضح. التعرّف على النص العربي المصوّر غير مدعوم.</string>
+    <string name="rebuild_ocr_text_only">حُفظ الملف النصي. تعذّر تضمين بعض الحروف في ملف PDF قابل للبحث.</string>
+    <string name="rebuild_worker_start">تعذّر بدء المهمة في الخلفية. افتح Jumlo وحاول مجددًا.</string>
+    <string name="rebuild_invalid_share">تعذّر فتح المحتوى المشترك. اختر الملف أو الرابط من داخل Jumlo.</string>
+    <string name="rebuild_private_output">حُفظ الملف داخل Jumlo. مجلد الحفظ المحدد غير متاح؛ غيّره أو صدّر الملف من صفحة الملفات.</string>
+    <string name="rebuild_secret_storage">تعذّر حفظ رابط التنزيل بأمان. وفّر مساحة وحاول مجددًا.</string>
+</resources>

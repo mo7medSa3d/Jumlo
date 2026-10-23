@@ -2,9 +2,10 @@
 """Non-runtime source contract checks for the 2026 redesign; not an Android compile."""
 from pathlib import Path
 import unittest
+from source_paths import source_path
 ROOT=Path(__file__).resolve().parents[1]
 K=ROOT/'app/src/main/java/com/jumlo/app'
-def code(file): return (K/file).read_text()
+def code(file): return source_path(file).read_text()
 class RedesignWiringTests(unittest.TestCase):
     def test_tool_switch_is_new_empty_session(self):
         vm=code('ui/AppViewModel.kt')
@@ -12,9 +13,10 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('WorkspaceDraft.forTool(id,emptyList())',vm[start:start+550])
         self.assertIn('closeToolSession()',vm)
         self.assertIn('_sessionEpoch.value++',vm)
-    def test_media_screen_reentry_resets_url(self):
+    def test_fresh_media_session_resets_url_but_same_epoch_keeps_metadata(self):
         self.assertIn('LaunchedEffect(sessionEpoch)',code('ui/downloads/MediaWorkspace.kt'))
         self.assertIn('fun beginSession(initialUrl:String)',code('ui/downloads/MediaViewModel.kt'))
+        self.assertIn('beginSession(initialUrl,sessionEpoch,defaultVideoQuality,defaultAudioQuality)',code('ui/downloads/MediaWorkspace.kt'))
     def test_naming_is_automatic_in_workspace(self):
         self.assertNotIn('field_output_filename',code('ui/workspace/WorkspaceScreen.kt'))
         self.assertIn('AutoOutputName.fromSource',code('ui/AppViewModel.kt'))
@@ -51,21 +53,28 @@ class RedesignWiringTests(unittest.TestCase):
         for token in ('MediaStore.Downloads.EXTERNAL_CONTENT_URI','DocumentFile.fromTreeUri','Download/Jumlo'):
             self.assertTrue(token in (store+code('core/StoragePaths.kt')),token)
         self.assertIn('publicUri',code('model/OperationContracts.kt'))
-    def test_settings_picker_and_concurrency_are_connected(self):
+    def test_settings_folder_quality_and_files_display_owners_are_connected(self):
         nav=code('ui/navigation/JumloNavHost.kt')
         self.assertIn('Intent.ACTION_OPEN_DOCUMENT_TREE',nav)
         self.assertIn('viewModel.setDownloadDestinationFolder',nav)
         self.assertIn('DownloadAdmission',code('data/jobs/JobStore.kt'))
-        self.assertIn('setFileViewMode',code('ui/settings/SettingsScreen.kt'))
+        self.assertIn('setFileViewMode',code('ui/files/FilesScreen.kt'))
+        settings=code('ui/settings/SettingsScreen.kt')
+        self.assertIn('setDefaultVideoQuality',settings)
+        self.assertIn('setDefaultAudioQuality',settings)
+        self.assertNotIn('maxConcurrentDownloads',settings)
+        self.assertNotIn('wifiOnlyDefault',settings)
     def test_five_tabs_legacy_rail_unused(self):
         models=code('model/Models.kt')
         self.assertIn('SETTINGS("settings",',models)
         self.assertNotIn('QuietExpandedNavigationRail',code('ui/navigation/JumloNavHost.kt'))
         self.assertNotIn('QuietExpandedNavigationRail(',code('ui/components/QuietNavigation.kt'))
-    def test_reduce_motion_and_haptics_are_composition_preferences(self):
+    def test_system_motion_and_accessible_haptics_are_composition_policies(self):
         act=code('MainActivity.kt')
         self.assertIn('LocalReducedMotion provides',act)
-        self.assertIn('LocalAppHapticsEnabled provides',act)
+        self.assertIn('LocalAppHapticsEnabled provides true',act)
+        self.assertIn('LocalReducedMotion provides systemReduced',act)
+        self.assertNotIn('settings.respectReducedMotion',act)
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietStates.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietButtons.kt'))
     def test_english_and_arabic_redesign_strings(self):

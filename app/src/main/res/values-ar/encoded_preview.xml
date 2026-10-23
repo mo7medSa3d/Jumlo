@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="encoded_preview_title">معاينة الصورة المرمّزة</string>
+    <string name="encoded_preview_loading">جارٍ ترميز المعاينة…</string>
+    <string name="encoded_preview_failed">تعذّر ترميز المعاينة بهذه الإعدادات. عدّل الإعدادات أو حاول مجددًا.</string>
+    <string name="encoded_preview_sample_notice">معاينة مصغّرة: الحجم والأبعاد والجودة أدناه تخص هذه العينة فقط. قد يختار التصدير بالحجم الكامل جودة وحجمًا مختلفين؛ ويُتحقق من الحجم المستهدف عند التصدير.</string>
+    <string name="encoded_preview_exact_notice">تستخدم هذه المقارنة ترميز الصورة الأصلية كاملةً بإعدادات التصدير الحالية.</string>
+    <string name="encoded_preview_source">الأصل: %1$s · %2$d × %3$d بكسل</string>
+    <string name="encoded_preview_sample_output">عينة المعاينة: %1$s · %2$s · %3$d × %4$d بكسل</string>
+    <string name="encoded_preview_output">النسخة المرمّزة: %1$s · %2$s · %3$d × %4$d بكسل</string>
+    <string name="encoded_preview_sample_quality">جودة العينة: %1$d / 100</string>
+    <string name="encoded_preview_quality">الجودة: %1$d / 100</string>
+    <string name="encoded_preview_target">حجم التصدير المستهدف: %1$s</string>
+</resources>

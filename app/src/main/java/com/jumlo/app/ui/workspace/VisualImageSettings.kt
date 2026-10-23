@@ -1,6 +1,11 @@
 package com.jumlo.app.ui.workspace
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,11 +46,11 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 val percentMode=draft.percentage.isNotBlank()
                 val edgeMode=draft.longestEdge.isNotBlank()
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    item {FilterChip(percentMode,onClick={edit {it.copy(percentage="75",longestEdge="")}},
+                    item {FilterChip(percentMode,border=null,onClick={edit {it.copy(percentage="75",longestEdge="")}},
                         label={Text(stringResource(R.string.interactive_resize_scale))})}
-                    item {FilterChip(edgeMode,onClick={edit {it.copy(percentage="",longestEdge="1920")}},
+                    item {FilterChip(edgeMode,border=null,onClick={edit {it.copy(percentage="",longestEdge="1920")}},
                         label={Text(stringResource(R.string.interactive_resize_edge))})}
-                    item {FilterChip(!percentMode && !edgeMode,onClick={edit {it.copy(percentage="",longestEdge="")}},
+                    item {FilterChip(!percentMode && !edgeMode,border=null,onClick={edit {it.copy(percentage="",longestEdge="")}},
                         label={Text(stringResource(R.string.interactive_resize_dimensions))})}
                 }
                 when {
@@ -86,6 +91,7 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     items(filters,key={it[0]}) { preset ->
                         FilterChip(draftNumber(draft.num1,0)==preset[1] && draftNumber(draft.num2,100)==preset[2] && draftNumber(draft.num3,100)==preset[3],
+                            border=null,
                             onClick={edit {it.copy(num1=preset[1].toString(),num2=preset[2].toString(),num3=preset[3].toString())}},
                             label={Text(stringResource(preset[0]))})
                     }
@@ -96,9 +102,9 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 InteractiveIntSlider(stringResource(R.string.field_padding_px),draftNumber(draft.num4,0),0,2000,0) {v->edit {it.copy(num4=v.toString())}}
             }
             if(tool in setOf("img_join","img_stitch")) {
-                if(tool=="img_join") PresetChoices(stringResource(R.string.field_layout),listOf(
+                if(tool=="img_join") VisualChoiceCards(listOf(
                     "GRID2" to R.string.ui_layout_grid2,"HSTRIP" to R.string.ui_layout_hstrip,"VSTRIP" to R.string.ui_layout_vstrip),
-                    draft.text1.ifBlank {"GRID2"}) {v->edit {it.copy(text1=v)}}
+                    draft.text1.ifBlank {"GRID2"},paper=false) {v->edit {it.copy(text1=v)}}
                 InteractiveIntSlider(stringResource(R.string.field_gap_px),draftNumber(draft.num1,8),0,500,8) {v->edit {it.copy(num1=v.toString())}}
                 if(tool=="img_stitch") InteractiveIntSlider(stringResource(R.string.field_overlap_px),draftNumber(draft.num2,0),0,400,0) {v->edit {it.copy(num2=v.toString())}}
             }
@@ -106,13 +112,6 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
             if(tool=="img_target") ImageTargetControls(draft,edit)
             if(tool=="pdf_compress") {
                 Text(stringResource(R.string.visual_compression_note),style=QuietTheme.typography.metadata)
-                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    items(PdfCompressionPolicy.Preset.entries.toList(),key={it.name}) { preset ->
-                        FilterChip(draft.num2.isBlank() && draftNumber(draft.num1,150)==preset.dpi && draftNumber(draft.quality,85)==preset.quality,
-                            onClick={edit {it.copy(num1=preset.dpi.toString(),quality=preset.quality.toString(),num2="")}},
-                            label={Text(stringResource(preset.labelRes()))})
-                    }
-                }
                 InteractiveToggle(stringResource(R.string.interactive_compression_target),draft.num2.isNotBlank()) {enabled->
                     edit {it.copy(num2=if(enabled) "5" else "")}
                 }
@@ -127,9 +126,9 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 ChoiceValues(listOf(72,144,300,600),draftNumber(draft.dpi,144),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
                 InteractiveToggle(stringResource(R.string.field_grayscale),draft.grayscale) {v->edit {it.copy(grayscale=v)}}
             }
-            if(tool=="pdf_02") PresetChoices(stringResource(R.string.jumlo_paper_mode),listOf(
+            if(tool=="pdf_02") VisualChoiceCards(listOf(
                 "AUTO" to R.string.visual_auto,"A4" to R.string.visual_a4,"LETTER" to R.string.visual_letter,
-                "CUSTOM" to R.string.jumlo_custom_paper),draft.paperMode) {v->edit {it.copy(paperMode=v)}}
+                "CUSTOM" to R.string.jumlo_custom_paper),draft.paperMode,paper=true) {v->edit {it.copy(paperMode=v)}}
             if(tool=="pdf_02" && draft.paperMode=="CUSTOM") {
                 InteractiveIntSlider(stringResource(R.string.field_paper_width),draftNumber(draft.paperWidth,595),72,1440,595) {v->edit {it.copy(paperWidth=v.toString())}}
                 InteractiveIntSlider(stringResource(R.string.field_paper_height),draftNumber(draft.paperHeight,842),72,1440,842) {v->edit {it.copy(paperHeight=v.toString())}}
@@ -139,7 +138,7 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 Text(stringResource(R.string.field_output_format),style=QuietTheme.typography.metadataStrong)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     items(listOf("JPEG","PNG","WEBP")) {format ->
-                        FilterChip(draft.format==format,onClick={edit {it.copy(format=format)}},label={Text(format)})
+                        FilterChip(draft.format==format,border=null,onClick={edit {it.copy(format=format)}},label={Text(format)})
                     }
                 }
             }
@@ -165,7 +164,7 @@ internal fun ImageTargetControls(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
 @Composable
 private fun ChoiceValues(values:List<Int>,selected:Int,label:(Int)->String,onSelect:(Int)->Unit) {
     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        items(values) {value->FilterChip(selected==value,onClick={onSelect(value)},label={Text(label(value))})}
+        items(values) {value->FilterChip(selected==value,border=null,onClick={onSelect(value)},label={Text(label(value))})}
     }
 }
 
@@ -173,6 +172,39 @@ private fun ChoiceValues(values:List<Int>,selected:Int,label:(Int)->String,onSel
 internal fun PresetChoices(label:String,values:List<Pair<String,Int>>,selected:String,onSelect:(String)->Unit) {
     Text(label,style=QuietTheme.typography.metadataStrong)
     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        items(values,key={it.first}) {(value,labelId)->FilterChip(selected==value,onClick={onSelect(value)},label={Text(stringResource(labelId))})}
+        items(values,key={it.first}) {(value,labelId)->FilterChip(selected==value,border=null,onClick={onSelect(value)},label={Text(stringResource(labelId))})}
+    }
+}
+
+/** Visual paper/layout choices keep their aspect ratios visible before a real input is loaded. */
+@Composable
+private fun VisualChoiceCards(options:List<Pair<String,Int>>,selected:String,paper:Boolean,onSelect:(String)->Unit) {
+    val accent=MaterialTheme.colorScheme.primary
+    LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        items(options,key={it.first}) {(value,label) ->
+            Surface(onClick={onSelect(value)},shape=QuietTheme.shapes.inputField,
+                color=if(selected==value) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier=Modifier.width(104.dp).heightIn(min=124.dp)) {
+                Column(Modifier.padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+                        if(paper) {
+                            val ratio=when(value) {"A4"->.707f;"LETTER"->.773f;"AUTO"->1f;else->.85f}
+                            val h=size.height;val w=h*ratio
+                            drawRoundRect(Color.White,Offset((size.width-w)/2,0f),Size(w,h),androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
+                            drawRoundRect(accent.copy(alpha=.22f),Offset((size.width-w)/2+w*.12f,h*.12f),Size(w*.76f,h*.76f),androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+                        } else {
+                            val columns=if(value=="VSTRIP") 1 else 2
+                            val rows=if(value=="HSTRIP") 1 else 2
+                            val gap=4.dp.toPx()
+                            val w=(size.width-gap*(columns-1))/columns;val h=(size.height-gap*(rows-1))/rows
+                            for(row in 0 until rows) for(column in 0 until columns) {
+                                drawRoundRect(accent.copy(alpha=.55f+.1f*((row+column)%2)),Offset(column*(w+gap),row*(h+gap)),Size(w,h),androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))
+                            }
+                        }
+                    }
+                    Text(stringResource(label),style=QuietTheme.typography.metadataStrong)
+                }
+            }
+        }
     }
 }

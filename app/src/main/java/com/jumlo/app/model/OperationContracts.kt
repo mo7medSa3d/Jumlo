@@ -19,7 +19,7 @@ import java.io.File
     val subfolder:String?=null
 )
 data class OutputTicket(val jobId:String,val itemKey:String,val stageFile:File,val displayName:String,val mimeType:String)
-@Serializable data class OutputRecord(val id:String,val jobId:String,val itemKey:String,val uri:String,val displayName:String,val mimeType:String,val sizeBytes:Long,val sha256:String,val metadata:OutputMetadata,val createdAtEpochMs:Long,val publicUri:String?=null)
+@Serializable data class OutputRecord(val id:String,val jobId:String,val itemKey:String,val uri:String,val displayName:String,val mimeType:String,val sizeBytes:Long,val sha256:String,val metadata:OutputMetadata,val createdAtEpochMs:Long,val publicUri:String?=null,val publicSaveError:String?=null)
 @Serializable enum class ItemStatus { CREATED, FAILED, CANCELLED, SKIPPED, UNCHANGED, LARGER }
 @Serializable data class ItemOutcome(val itemKey:String,val status:ItemStatus,val outputId:String?=null,val errorCode:String?=null)
 @Serializable data class JobSnapshot(val request:JobRequest,val progress:JobProgress,val outcomes:List<ItemOutcome>,val updatedAtEpochMs:Long,val downloadRestartGeneration:Long=0)

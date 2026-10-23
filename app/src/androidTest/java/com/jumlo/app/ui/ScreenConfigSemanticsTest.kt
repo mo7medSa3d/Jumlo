@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Bolt
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Bolt
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -67,7 +67,7 @@ class ScreenConfigSemanticsTest {
         renderAndVerify(ThemeMode.DARK, LayoutDirection.Rtl, "Jumlo", "أدوات ملفات قوية", "استيراد")
 
     @Test
-    fun fontScale200Percent_holdsLayoutInEnglishAndArabic() {
+    fun fontScale200Percent_holdsLayoutInEnglish() {
         renderAndVerify(ThemeMode.LIGHT, LayoutDirection.Ltr, "Jumlo", "Powerful file tools", "Import", fontScale = 2.0f)
     }
 

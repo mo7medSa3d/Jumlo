@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="scan_smart_action">Smart multi-page scan</string>
-    <string name="scan_smart_hint">Automatically detect page edges and clean each scan. Manual camera stays available below.</string>
-    <string name="scan_error_smart">Smart scan is unavailable on this device right now. Use the manual camera below.</string>
+    <string name="scan_smart_hint">Scan multiple pages or import photos. Review, crop and reorder pages before saving one PDF.</string>
+    <string name="scan_error_smart">Smart Scan needs Google Play services. Connect to the internet for the first setup, then try again.</string>
 </resources>

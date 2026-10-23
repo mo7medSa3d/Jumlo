@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Offline static integration checks for the current native media transport.
 
-Legacy network_guard.py and embedded Python runtime were intentionally removed
-from the production APK. Actual URL policy and transfer logic are exercised by
+The lightweight source set uses the direct engine; the full native payload is
+selected separately from src/media. Actual URL policy and transfer logic are exercised by
 the Kotlin host tests in test-core.sh, which verify redirects, ranges, ETags,
 checksum behavior, HTTPS and error handling.
 """
 from pathlib import Path
 import unittest
+from source_paths import source_path
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ROOT / 'app/src/main/java/com/jumlo/app'
@@ -19,7 +20,7 @@ class CurrentNativeTransportContracts(unittest.TestCase):
         cls.runtime=(BASE/'data/media/NativeDirectMediaRuntime.kt').read_text()
         cls.view_model=(MAIN/'ui/downloads/MediaViewModel.kt').read_text()
         cls.handler=(MAIN/'data/media/MediaOperationHandler.kt').read_text()
-        cls.html=(MAIN/'core/media/Html5MediaDiscovery.kt').read_text()
+        cls.html=source_path('core/media/Html5MediaDiscovery.kt').read_text()
 
     def test_removed_python_runtime_is_not_a_startup_dependency(self):
         self.assertFalse((ROOT/'app/src/main/assets/media/network_guard.py').exists())
@@ -30,7 +31,7 @@ class CurrentNativeTransportContracts(unittest.TestCase):
         self.assertIn('StreamTransfer(',self.runtime)
 
     def test_runtime_checks_every_redirect_and_prevents_https_downgrade(self):
-        self.assertIn('HttpPolicy.url(current.resolve(location).toString(), allowHttp)',self.runtime)
+        self.assertIn('MediaLinks.normalize(current.resolve(location).toString(),allowHttp)',self.runtime)
         self.assertIn('current.scheme == "https" && next.scheme != "https"',self.runtime)
         self.assertIn('followRedirects(false)',self.runtime)
         self.assertIn('followSslRedirects(false)',self.runtime)

@@ -5,6 +5,26 @@ import com.jumlo.app.R
 
 /** Stable engine codes are diagnostics; presentation always uses localized copy. */
 @StringRes fun userMessageResource(code:String):Int=when {
+    code=="INVALID_MEDIA_SERVICE_URL" -> R.string.msg_invalid_media_service_url
+    code=="INVALID_MEDIA_SERVICE_TOKEN" -> R.string.msg_invalid_media_service_token
+    code=="MEDIA_SERVICE_CREDENTIALS_UNAVAILABLE" -> R.string.msg_media_service_credentials_unavailable
+    code=="MEDIA_AGE_RESTRICTED" -> R.string.msg_media_age_restricted
+    code=="DESTINATION_SAVE_FAILED" -> R.string.msg_destination_save_failed
+    code=="CLIPBOARD_EMPTY" -> R.string.studio_clipboard_empty
+    code=="CLIPBOARD_UNAVAILABLE" -> R.string.rebuild_clipboard_unavailable
+    code=="PDF_INVALID" -> R.string.msg_pdf_corrupt
+    code in setOf("OFFICE_PAGE_LIMIT","OFFICE_TEXT_BUDGET_EXCEEDED") -> R.string.rebuild_office_limit
+    code=="OFFICE_PAGE_ASPECT_UNSUPPORTED" -> R.string.rebuild_office_aspect
+    code in setOf("OFFICE_VERIFY_FAILED","OFFICE_IMAGE_INVALID") -> R.string.rebuild_office_verify
+    code=="OFFICE_EMPTY_TEXT_PAGES" -> R.string.rebuild_office_empty_pages
+    code=="OFFICE_OCR_REVIEW" -> R.string.rebuild_office_ocr_review
+    code=="OCR_MODEL_UNAVAILABLE" -> R.string.rebuild_ocr_model
+    code=="OCR_NO_TEXT" -> R.string.rebuild_ocr_empty
+    code=="OCR_TEXT_ONLY" -> R.string.rebuild_ocr_text_only
+    code=="WORKER_START_FAILED" -> R.string.rebuild_worker_start
+    code=="INVALID_SHARED_CONTENT" -> R.string.rebuild_invalid_share
+    code=="SAVED_IN_APP_ONLY" -> R.string.rebuild_private_output
+    code.startsWith("SECRET_STORAGE") -> R.string.rebuild_secret_storage
     code in setOf("IMAGE_MEMORY_BUDGET_EXCEEDED","IMAGE_DIMENSIONS_UNREPRESENTABLE") -> R.string.upgrade_image_memory
     code=="IMAGE_SIZE_BOUND_UNMET" -> R.string.upgrade_image_target_unmet
     code=="IMAGE_NOT_SMALLER" -> R.string.upgrade_image_unchanged

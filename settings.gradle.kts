@@ -23,3 +23,5 @@ dependencyResolutionManagement {
 rootProject.name = "Jumlo"
 include(":app")
 include(":benchmark")
+
+include(":core-common", ":downloader-core", ":document-core", ":storage-core")

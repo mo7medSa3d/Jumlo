@@ -64,7 +64,7 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertNotIn('updateYoutubeDL(',bootstrap)
     def test_build_documentation_discloses_packaging_and_provider_limits(self):
         doc=(ROOT/'docs/media/UNIVERSAL_ENGINE.md').read_text()
-        for word in ('GPL-3.0','Play','yt-dlp','APK'):
+        for word in ('Unlicense','GPL-3.0','Play','yt-dlp','APK','PyInstaller'):
             self.assertIn(word, doc)
         self.assertRegex(doc, r'(?i)16[ -]+KB')
         self.assertRegex(doc, r'(?i)(NOT VERIFIED|remain separate checks)')

@@ -2,6 +2,7 @@ package com.jumlo.app.hosttest
 
 import com.jumlo.app.data.pdf.PdfImageCodec
 import com.jumlo.app.data.pdf.PdfImageCompressor
+import com.jumlo.app.data.pdf.PdfCompressionRunner
 import com.jumlo.app.data.pdf.RecodedImage
 import com.tom_roush.pdfbox.cos.COSInteger
 import com.tom_roush.pdfbox.cos.COSArray
@@ -177,7 +178,8 @@ private fun check(name: String, condition: Boolean, detail: String = "") {
 }
 
 fun main() {
-    val dir = Files.createTempDirectory("pdf-compression-host").toFile().also { it.deleteOnExit() }
+    val dir = Files.createTempDirectory("pdf-compression-host").toFile()
+    try {
 
     // 1. A real 300 DPI scan: smaller output, same page count, still a JPEG.
     run {
@@ -323,6 +325,39 @@ fun main() {
         }
     }
 
+    // The preview must reflect the source's actual encoder/resolution, rather
+    // than assuming every JPEG was captured at 300 dpi.
+    for ((index, size) in listOf(600 to 780, 1275 to 1650, 2550 to 3300).withIndex()) {
+        val source = scanPdf(File(dir, "estimate-$index.pdf"), listOf(size))
+        val output = File(dir, "estimate-$index-out.pdf")
+        val before = source.readBytes()
+        val estimated = PdfCompressionRunner.measure(source, dir, 180, 75, HostImageCodec(), 192L * 1024 * 1024).outputBytes
+        PdfCompressionRunner.compress(source, output, 180, 75, HostImageCodec(), 192L * 1024 * 1024)
+        val actual = output.length()
+        val error = kotlin.math.abs(estimated - actual).toDouble() / actual
+        check("compression estimate is within 15% for sample ${index + 1}", error <= .15,
+            "input=${source.length()} estimate=$estimated output=$actual error=${"%.2f".format(error * 100)}%")
+        println("MEASURED_ESTIMATE sample=${index + 1} input=${source.length()} estimate=$estimated actual=$actual errorPercent=${error * 100}")
+        check("measuring compression preserves source ${index + 1}", source.readBytes().contentEquals(before))
+        check("compression preview cleans temporary files for sample ${index + 1}", dir.listFiles().orEmpty().none { it.isDirectory })
+    }
+    run {
+        val source = scanPdf(File(dir, "runner-cancel-source.pdf"), listOf(600 to 780))
+        val output = File(dir, "runner-cancel-out.pdf").apply { writeText("previous output") }
+        val cancelled = java.util.concurrent.CancellationException("cancel at codec")
+        val error = runCatching {
+            PdfCompressionRunner.compress(source, output, 180, 75,
+                PdfImageCodec { _, _, _, _ -> throw cancelled }, 192L * 1024 * 1024)
+        }.exceptionOrNull()
+        check("compression cancellation preserves an earlier destination", error === cancelled && output.readText() == "previous output")
+        check("compression cancellation deletes its work directory", dir.listFiles().orEmpty().none { it.isDirectory })
+        val conflict = runCatching {
+            PdfCompressionRunner.compress(source, source, 180, 75, HostImageCodec(), 192L * 1024 * 1024)
+        }.exceptionOrNull()
+        check("compression refuses a source/destination conflict", conflict?.message == "OUTPUT_SOURCE_CONFLICT")
+    }
+
     println(if (failures == 0) "ALL PASS" else "$failures FAILED")
-    if (failures > 0) kotlin.system.exitProcess(1)
+    if (failures > 0) throw AssertionError("$failures compression assertions failed")
+    } finally { dir.deleteRecursively() }
 }

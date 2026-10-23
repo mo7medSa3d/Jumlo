@@ -9,6 +9,42 @@ import java.util.concurrent.atomic.AtomicInteger
 
 fun transferTests(test:(String,()->Unit)->Unit) {
     fun fingerprint(url:String)=Hashing.sha256(ByteArrayInputStream(HttpPolicy.url(url,true).toString().toByteArray()))
+    test("ignored Range starts a new representation without stale resume validators") {
+        val dir=Files.createTempDirectory("jumlo-restart-validators-").toFile()
+        try {
+            val partial=File(dir,"file.part").apply { writeText("old") }
+            val metadata=mutableListOf<TransferMetadata>()
+            val requests=mutableListOf<Map<String,String>>()
+            val source=HttpTransport { _,headers ->
+                requests+=headers.toMap()
+                TransportResponse(200,mapOf("content-length" to "5"),ByteArrayInputStream("fresh".toByteArray()))
+            }
+            val result=StreamTransfer(source).execute(TransferRequest(
+                "https://example.org/file",partial,offset=3,strongEtag="\"old\"",
+                lastModified="Wed, 21 Oct 2026 10:00:00 GMT",knownTotalBytes=15,
+                finalUrlSha256=fingerprint("https://example.org/file"),minFreeBytes=0,maxRetries=0),onMetadata={ metadata+=it })
+            check(partial.readText()=="fresh" && result.bytes==5L)
+            check(result.strongEtag==null && result.lastModified==null) { "Restart reused old validators: $result" }
+            check(metadata.single().strongEtag==null && metadata.single().lastModified==null)
+            check(requests.size==2 && "Range" !in requests.last() && "If-Range" !in requests.last())
+        } finally { dir.deleteRecursively() }
+    }
+    test("cancellation arriving with EOF is observed before download success") {
+        val dir=Files.createTempDirectory("jumlo-cancel-eof-").toFile()
+        try {
+            var cancelled=false
+            val source=HttpTransport { _,_ ->
+                TransportResponse(200,mapOf("content-length" to "5"),object:ByteArrayInputStream("bytes".toByteArray()) {
+                    override fun read(b:ByteArray,off:Int,len:Int):Int = super.read(b,off,len).also { if(it<0) cancelled=true }
+                })
+            }
+            val error=runCatching {
+                StreamTransfer(source).execute(TransferRequest("https://example.org/file",File(dir,"file.part"),minFreeBytes=0,maxRetries=0),
+                    checkCancel={ if(cancelled) throw java.util.concurrent.CancellationException("fixture") })
+            }.exceptionOrNull()
+            check(error is java.util.concurrent.CancellationException) { "Cancelled body reported success: $error" }
+        } finally { dir.deleteRecursively() }
+    }
     fun fixture(block:(String,File)->Unit) {
         val dir=Files.createTempDirectory("uu-http-").toFile()
         val server=HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(),0),0)

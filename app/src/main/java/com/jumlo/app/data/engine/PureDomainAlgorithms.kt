@@ -154,13 +154,14 @@ object PureDomainAlgorithms {
         return rawDimensions
     }
 
-    /** Batch-rename preview: pattern supports {n}, {name}, {ext}; result is validated + uniquified. */
-    fun batchRenamePreview(names: List<String>, pattern: String, startAt: Int): List<String> {
+    /** Batch-rename preview: pattern supports {n}, {date}, {name}, {ext}; result is validated + uniquified. */
+    fun batchRenamePreview(names: List<String>, pattern: String, startAt: Int, date: String = java.time.LocalDate.now().toString()): List<String> {
+        require(runCatching { java.time.LocalDate.parse(date).toString() == date }.getOrDefault(false)) { "INVALID_RENAME_PATTERN" }
         require(pattern.isNotBlank() && pattern.length <= 200 && startAt >= 0) { "INVALID_RENAME_PATTERN" }
         val used = mutableSetOf<String>()
         return names.mapIndexed { index, original ->
             val ext = original.substringAfterLast('.', "").takeIf { original.contains('.') }?.let { ".$it" } ?: ""
-            var candidate = pattern.replace("{n}", (startAt + index).toString()).replace("{name}", original.removeSuffix(ext)).replace("{ext}", ext.removePrefix("."))
+            var candidate = pattern.replace("{date}", date).replace("{n}", (startAt.toLong() + index).toString()).replace("{name}", original.removeSuffix(ext)).replace("{ext}", ext.removePrefix("."))
             if (!candidate.endsWith(ext, true) && ext.isNotEmpty() && !pattern.contains("{ext}")) candidate += ext
             val safe = com.jumlo.app.core.SafeNames.basename(candidate)
             val unique = com.jumlo.app.core.SafeNames.unique(used, safe); used += unique.lowercase(Locale.ROOT); unique

@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DocumentScanner
-import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.GridView
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.DocumentScanner
+import com.jumlo.app.ui.icons.rounded.FolderOpen
+import com.jumlo.app.ui.icons.rounded.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -95,7 +95,7 @@ private fun OnboardingAction(
     tag: String,
     icon: @Composable () -> Unit
 ) {
-    OutlinedButton(
+    FilledTonalButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(tag),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),

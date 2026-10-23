@@ -19,7 +19,7 @@ internal fun rebindDownloadSubmissionSecret(request: JobRequest, candidate: JobR
     val fresh = Json.decodeFromString<DownloadSettings>(candidate.settingsJson)
     require(existing.copy(urlSecretHandle = fresh.urlSecretHandle) == fresh) { "JOB_IDENTITY_CONFLICT" }
     val input = secrets.copy(fresh.urlSecretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
-    try { secrets.replace(existing.urlSecretHandle, input) }
+    try { secrets.replaceDownloadBlocking(existing.urlSecretHandle, input) }
     finally { input.fill('\u0000') }
     return existing.urlSecretHandle
 }

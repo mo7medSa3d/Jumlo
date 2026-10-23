@@ -203,4 +203,6 @@ internal fun VisualRect.draggedWithSnap(handle:VisualHandle,dx:Float,dy:Float,as
 /** Only editor values enter a history snapshot; source metadata and secrets are excluded. */
 @kotlinx.serialization.Serializable
 internal data class VisualEditSnapshot(val rect:VisualRect,val turns:Int,val flipX:Boolean,val flipY:Boolean,val aspect:Float,
-    val inkPoints:List<Float> = emptyList(),val inkStrokes:List<List<Float>> = emptyList())
+    val inkPoints:List<Float> = emptyList(),val inkStrokes:List<List<Float>> = emptyList(),
+    val annotationColorHex:String="#FFEB3B",val annotationThicknessPt:Float=2f,val annotationKind:String="text",val annotationText:String="",
+    val cropOverrides:List<com.jumlo.app.data.processing.PdfCropOverride> = emptyList(),val cropPage:Int=1,val perPageCrop:Boolean=false,val cropDefaultRect:VisualRect=VisualRect.WHOLE)

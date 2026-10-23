@@ -52,8 +52,10 @@ fun QuietChip(
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
         shape = QuietTheme.shapes.button,
+        border = null,
         modifier = modifier.heightIn(min = QuietTheme.spacing.touchTarget),
         colors = FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
         )

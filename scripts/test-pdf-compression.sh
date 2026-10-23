@@ -11,9 +11,10 @@ BUILD=$(mktemp -d)
 trap 'rm -rf "$BUILD"' EXIT
 
 SOURCES=(
-  "$ROOT/app/src/main/java/com/jumlo/app/core/PdfPageGeometry.kt"
+  "$ROOT/document-core/src/main/kotlin/com/jumlo/app/core/PdfPageGeometry.kt"
   "$ROOT/app/src/main/java/com/jumlo/app/data/pdf/PdfImageCodec.kt"
   "$ROOT/app/src/main/java/com/jumlo/app/data/pdf/PdfImageCompressor.kt"
+  "$ROOT/app/src/main/java/com/jumlo/app/data/pdf/PdfCompressionRunner.kt"
   "$ROOT/app/src/pdfCompressionTest/kotlin/PdfCompressionHostTests.kt"
   "$ROOT/app/src/pdfCompressionTest/kotlin/PdfCompressionMeasure.kt"
 )

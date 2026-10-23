@@ -11,6 +11,9 @@ import kotlin.math.*
 
 data class DecodedImage(val bitmap:Bitmap,val normalizedExifOrientation:Int=1):Closeable { override fun close() { if(!bitmap.isRecycled) bitmap.recycle() } }
 
+/** Metadata for the candidate that was actually encoded, including any size-search changes. */
+data class ImageEncodingResult(val format:String,val quality:Int?,val width:Int,val height:Int,val sizeBytes:Long)
+
 data class CodecCapability(
     val format: String,
     val canDecode: Boolean,
@@ -38,18 +41,40 @@ object BitmapTransforms {
     }
 
     /** Exact, EXIF-normalized decode. Resource failure is explicit; geometry never silently changes. */
-    fun decode(file: File, budget: Long): DecodedImage {
+    fun decode(file: File, budget: Long): DecodedImage = decodeAtSample(file, inspect(file), budget, 1)
+
+    /** Explicitly sampled camera/gallery decode for scan-page generation, preserving EXIF orientation. */
+    fun decodeSampled(file: File, budget: Long, maxEdge: Int = 3200): DecodedImage {
+        require(maxEdge > 0 && budget >= 4L) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
         val info = inspect(file)
-        ImageWorkPolicy.requireFits(info.width, info.height, if (info.orientation in 2..8) ImageWorkPolicy.bytes(info.width, info.height) else 0L, budget)
+        var sample = 1
+        while (true) {
+            val width = sampledDimension(info.width, sample)
+            val height = sampledDimension(info.height, sample)
+            val copies = if (info.orientation in 2..8) 2 else 1
+            val pixels = width.toLong() * height
+            if (maxOf(width, height) <= maxEdge && pixels <= minOf(Int.MAX_VALUE / 4L, budget / copies / 4)) break
+            require(sample < (1 shl 30)) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
+            sample *= 2
+        }
+        return decodeAtSample(file, info, budget, sample)
+    }
+
+    private fun sampledDimension(value: Int, sample: Int) = ((value.toLong() + sample - 1) / sample).toInt().coerceAtLeast(1)
+
+    private fun decodeAtSample(file: File, info: ImageInfo, budget: Long, sample: Int): DecodedImage {
+        val width = sampledDimension(info.width, sample)
+        val height = sampledDimension(info.height, sample)
+        ImageWorkPolicy.requireFits(width, height, if (info.orientation in 2..8) ImageWorkPolicy.bytes(width, height) else 0L, budget)
         val options = BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.ARGB_8888
-            inSampleSize = 1
+            inSampleSize = sample
             inScaled = false
             inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
         }
         val bitmap = BitmapFactory.decodeFile(file.path, options) ?: throw IllegalArgumentException("IMAGE_DECODE_FAILED")
         try {
-            require(bitmap.width == info.width && bitmap.height == info.height) { "IMAGE_DECODE_DIMENSIONS_CHANGED" }
+            if (sample == 1) require(bitmap.width == info.width && bitmap.height == info.height) { "IMAGE_DECODE_DIMENSIONS_CHANGED" }
             require(bitmap.allocationByteCount.toLong() <= budget) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
             val matrix = Matrix().apply { when (info.orientation) {
                 2 -> setScale(-1f, 1f)
@@ -61,7 +86,9 @@ object BitmapTransforms {
                 8 -> setRotate(-90f)
             } }
             if (info.orientation in 2..8) {
-                ImageWorkPolicy.requireFits(info.normalizedWidth, info.normalizedHeight, bitmap.allocationByteCount.toLong(), budget)
+                val normalizedWidth = if (info.orientation in 5..8) bitmap.height else bitmap.width
+                val normalizedHeight = if (info.orientation in 5..8) bitmap.width else bitmap.height
+                ImageWorkPolicy.requireFits(normalizedWidth, normalizedHeight, bitmap.allocationByteCount.toLong(), budget)
                 val normalized = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
                 if (normalized !== bitmap) bitmap.recycle()
                 return DecodedImage(normalized, 1)
@@ -111,6 +138,11 @@ object BitmapTransforms {
     private fun Double.floorToInt()=floor(this).toInt()
     private fun Double.ceilToInt()=ceil(this).toInt()
     fun encode(bitmap:Bitmap,file:File,settings:ImageConversionSettings,budget:Long) {
+        encodeWithResult(bitmap,file,settings,budget)
+    }
+
+    fun encodeWithResult(bitmap:Bitmap,file:File,settings:ImageConversionSettings,budget:Long,checkCancel:()->Unit={}):ImageEncodingResult {
+        checkCancel()
         require(settings.quality in 1..100) { "INVALID_QUALITY" }
         val format=when(settings.format) {
             "JPEG" -> Bitmap.CompressFormat.JPEG
@@ -129,10 +161,23 @@ object BitmapTransforms {
                     matte=it; Canvas(it).apply { drawColor(settings.matteArgb or (0xff shl 24)); drawBitmap(bitmap,0f,0f,null) }
                 }
             } else bitmap
-            FileOutputStream(file).use { stream -> require(output.compress(format,settings.quality,stream)) { "IMAGE_ENCODE_FAILED" }; stream.fd.sync() }
+            checkCancel()
+            FileOutputStream(file).use { stream ->
+                val cancellable=object:java.io.OutputStream() {
+                    override fun write(value:Int) {checkCancel();stream.write(value);checkCancel()}
+                    override fun write(bytes:ByteArray,offset:Int,length:Int) {checkCancel();stream.write(bytes,offset,length);checkCancel()}
+                    override fun flush() {stream.flush()}
+                }
+                val compressed=output.compress(format,settings.quality,cancellable)
+                checkCancel()
+                require(compressed) { "IMAGE_ENCODE_FAILED" }
+                stream.fd.sync()
+            }
             val check=BitmapFactory.Options().apply { inJustDecodeBounds=true }
             BitmapFactory.decodeFile(file.path,check)
             require(check.outWidth==bitmap.width && check.outHeight==bitmap.height) { "IMAGE_VERIFY_FAILED" }
+            checkCancel()
+            return ImageEncodingResult(settings.format,settings.quality.takeUnless {settings.format=="PNG"},bitmap.width,bitmap.height,file.length())
         } finally { matte?.recycle() }
     }
 
@@ -148,7 +193,16 @@ object BitmapTransforms {
         preferredSettings: ImageConversionSettings,
         budget: Long,
         checkCancel: () -> Unit = {}
-    ): String {
+    ): String = encodeGuaranteedSmallerWithResult(bitmap,file,maxAllowedBytes,preferredSettings,budget,checkCancel).format
+
+    fun encodeGuaranteedSmallerWithResult(
+        bitmap: Bitmap,
+        file: File,
+        maxAllowedBytes: Long,
+        preferredSettings: ImageConversionSettings,
+        budget: Long,
+        checkCancel: () -> Unit = {}
+    ): ImageEncodingResult {
         require(maxAllowedBytes > 1L) { "INVALID_IMAGE_SIZE_BOUND" }
         val effectiveFormat = if (preferredSettings.format == "PNG") "WEBP" else preferredSettings.format
         var smallest = Long.MAX_VALUE
@@ -156,11 +210,12 @@ object BitmapTransforms {
         try {
             checkCancel()
             try {
-                encode(bitmap, candidate, preferredSettings, budget)
+                val encoded=encodeWithResult(bitmap, candidate, preferredSettings, budget,checkCancel)
                 smallest = candidate.length()
                 if (ImageWorkPolicy.meetsStrictBound(smallest, maxAllowedBytes)) {
                     candidate.copyTo(file, overwrite = true)
-                    return preferredSettings.format
+                    checkCancel()
+                    return encoded
                 }
             } catch(e: IllegalArgumentException) {
                 if(e.message != "IMAGE_MEMORY_BUDGET_EXCEEDED") throw e
@@ -186,11 +241,12 @@ object BitmapTransforms {
                         val encodeBudget = budget - if (scaled !== bitmap) bitmap.allocationByteCount.toLong() else 0L
                         for (quality in qualities) {
                             checkCancel()
-                            encode(scaled, candidate, preferredSettings.copy(format = effectiveFormat, quality = quality), encodeBudget)
+                            val encoded=encodeWithResult(scaled, candidate, preferredSettings.copy(format = effectiveFormat, quality = quality), encodeBudget,checkCancel)
                             smallest = minOf(smallest, candidate.length())
                             if (ImageWorkPolicy.meetsStrictBound(candidate.length(), maxAllowedBytes)) {
                                 candidate.copyTo(file, overwrite = true)
-                                return effectiveFormat
+                                checkCancel()
+                                return encoded
                             }
                         }
                     } finally { if (scaled !== bitmap) scaled.recycle() }
@@ -210,6 +266,58 @@ object BitmapTransforms {
 
 /** Expansion transforms: watermark, join/stitch, adjustments, codec matrix. */
 object BitmapExtras {
+    /** Bounded transparent text raster shared by the interactive studio and final image export. */
+    fun watermarkTextBitmap(text:String,fontFamily:String,colorHex:String,budget:Long=2L*1024*1024):Bitmap {
+        OverlayStylePolicy.requireFont(fontFamily);OverlayStylePolicy.requireColor(colorHex)
+        val clean=text.trim().replace(Regex("\\s+")," ")
+        require(clean.isNotEmpty() && clean.length<=512) { "WATERMARK_CONTENT_REQUIRED" }
+        val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            textSize=84f
+            typeface=Typeface.create(when(fontFamily) {"serif"->"serif";"mono"->"monospace";else->"sans-serif"},Typeface.BOLD)
+            color=Color.parseColor(colorHex)
+        }
+        val measured=paint.measureText(clean)
+        require(measured.isFinite() && measured>0) { "WATERMARK_CONTENT_REQUIRED" }
+        if(measured>1650f) paint.textSize*=1650f/measured
+        val metrics=paint.fontMetrics
+        val width=(paint.measureText(clean)+48f).toInt().coerceIn(64,1710)
+        val height=(metrics.descent-metrics.ascent+36f).toInt().coerceIn(80,220)
+        ImageWorkPolicy.requireFits(width,height,0L,budget)
+        val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+        try {Canvas(bitmap).drawText(clean,24f,18f-metrics.ascent,paint);return bitmap}
+        catch(failure:Throwable) {bitmap.recycle();throw failure}
+    }
+
+    /** Applies the exact shared placement geometry; only one output and one overlay are resident. */
+    fun watermark(source:Bitmap,logo:Bitmap?,settings:ImageWatermarkSettings,budget:Long):Bitmap {
+        require(settings.opacityPercent in 1..100 && settings.rotationDegrees in -180..180) { "INVALID_OPACITY" }
+        require(settings.useLogo==(logo!=null)) { "WATERMARK_LOGO_REQUIRED" }
+        OverlayStylePolicy.requireFont(settings.fontFamily);OverlayStylePolicy.requireColor(settings.colorHex)
+        val centers=OverlayStylePolicy.centers(settings.centerX,settings.centerY,settings.tiled)
+        val sourceBytes=source.allocationByteCount.toLong()
+        val outputBytes=ImageWorkPolicy.bytes(source.width,source.height)
+        val overlay=logo ?: watermarkTextBitmap(settings.text,settings.fontFamily,settings.colorHex,budget-sourceBytes-outputBytes)
+        try {
+            ImageWorkPolicy.requireFits(source.width,source.height,sourceBytes+overlay.allocationByteCount.toLong(),budget)
+            val size=OverlayStylePolicy.size(source.width.toDouble(),source.height.toDouble(),overlay.width.toDouble(),overlay.height.toDouble(),settings.scale)
+            val width=size.first.toFloat();val height=size.second.toFloat()
+            val output=Bitmap.createBitmap(source.width,source.height,Bitmap.Config.ARGB_8888)
+            try {
+                val canvas=Canvas(output);canvas.drawBitmap(source,0f,0f,null)
+                val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {alpha=settings.opacityPercent*255/100}
+                centers.forEach {(x,y) ->
+                    canvas.save()
+                    try {
+                        canvas.translate((x*source.width).toFloat(),(y*source.height).toFloat())
+                        canvas.rotate(settings.rotationDegrees.toFloat())
+                        canvas.drawBitmap(overlay,null,RectF(-width/2,-height/2,width/2,height/2),paint)
+                    } finally {canvas.restore()}
+                }
+                return output
+            } catch(failure:Throwable) {output.recycle();throw failure}
+        } finally {if(logo==null) overlay.recycle()}
+    }
+
     fun codecCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): List<CodecCapability> = listOf(
         CodecCapability("JPEG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = emptyList()),
         CodecCapability("PNG", canDecode = true, canEncode = true, canPreserveAnimation = false, supportedApiRange = 26..36, verifiedFixtureIds = emptyList()),

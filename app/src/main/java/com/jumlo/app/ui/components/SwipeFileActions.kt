@@ -2,9 +2,9 @@ package com.jumlo.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.MoreHoriz
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.DeleteOutline
+import com.jumlo.app.ui.icons.rounded.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment

@@ -10,6 +10,7 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,10 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Search
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Check
+import com.jumlo.app.ui.icons.rounded.Close
+import com.jumlo.app.ui.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -192,8 +193,7 @@ fun QuietSearchBar(
             .heightIn(min = 56.dp)
             .then(if (onClickBar != null) Modifier.clickable(role = Role.Button, onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.button,
-        color = colors.surfaceContainerLow,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.95f))
+        color = colors.surfaceContainerHigh
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
@@ -251,28 +251,21 @@ fun QuietCheckbox(
     val colors = MaterialTheme.colorScheme
     val checkboxAnimation = if (LocalReducedMotion.current) snap<androidx.compose.ui.graphics.Color>() else spring<androidx.compose.ui.graphics.Color>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
     val fill by animateColorAsState(
-        targetValue = if (checked) colors.primary else Color.Transparent,
+        targetValue = if (checked) colors.primary else colors.surfaceContainerHighest,
         animationSpec = checkboxAnimation,
         label = "checkFill"
-    )
-    val stroke by animateColorAsState(
-        targetValue = if (checked) colors.primary else colors.outline,
-        animationSpec = checkboxAnimation,
-        label = "checkStroke"
     )
     Box(
         modifier = modifier.pressFeedback()
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-            .clickable { onCheckedChange(!checked) }
-            .semantics { role = Role.Checkbox },
+            .toggleable(checked, role = Role.Checkbox, onValueChange = onCheckedChange),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
                 .size(26.dp)
                 .clip(RoundedCornerShape(9.dp))
-                .background(fill)
-                .border(2.dp, stroke, RoundedCornerShape(9.dp)),
+                .background(fill),
             contentAlignment = Alignment.Center
         ) {
             if (checked) {

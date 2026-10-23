@@ -4,7 +4,7 @@
     <string name="interactive_selected_ranges">Selected ranges</string>
     <string name="interactive_split_choose_boundary">Tap a page to start a new file after it.</string>
     <string name="interactive_part_pages">Pages %1$s</string>
-    <string name="interactive_pages_selected">%1$d of %2$d pages selected</string>
+    <string name="interactive_pages_selected">Selected pages: %1$d of %2$d</string>
     <string name="interactive_odd_pages">Odd pages</string>
     <string name="interactive_even_pages">Even pages</string>
     <string name="interactive_invert_pages">Invert selection</string>

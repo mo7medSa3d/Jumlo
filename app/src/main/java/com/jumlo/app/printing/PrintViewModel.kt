@@ -1,5 +1,7 @@
 package com.jumlo.app.printing
 
+import com.jumlo.app.diagnostics.viewModelErrorBoundary
+
 import android.app.Activity
 import android.app.Application
 import android.graphics.Bitmap
@@ -48,6 +50,9 @@ data class PrintUiState(
         options=restoredOptions ?: PrintOptions(),numericDrafts=restoredNumericDrafts,
         inputErrors=PrintDraftPolicy.errors(restoredNumericDrafts)))
     val state=_state.asStateFlow()
+    private val operationScope=CoroutineScope(viewModelScope.coroutineContext + viewModelErrorBoundary("printing") { error ->
+        _state.update { it.copy(error=errorCode(error),inspecting=false,preparing=false) }
+    })
     private var optionsEdited=restoredOptions!=null
     private val undoStack = ArrayDeque<PrintOptions>()
     private val redoStack = ArrayDeque<PrintOptions>()
@@ -150,7 +155,7 @@ data class PrintUiState(
     /** Retry the failing persistence observer, not just the PDF inspection stage. */
     private fun observeSavedData() {
         dataJob?.cancel()
-        dataJob = viewModelScope.launch {
+        dataJob = operationScope.launch {
             try {
                 repository.data.collect { data ->
                     val first = !_state.value.loaded
@@ -212,9 +217,9 @@ data class PrintUiState(
         _state.update {it.copy(options=options,error=null)}
         updateHistoryAvailability()
         if(dpiChanged && _state.value.source?.mimeType?.startsWith("image/")==true) inspect() else recalculate()
-        saveJob?.cancel();saveJob=viewModelScope.launch {delay(300)
+        saveJob?.cancel();saveJob=operationScope.launch {delay(300)
             try {repository.settings(options)}
-            catch(_:CancellationException) {}
+            catch(cancel:CancellationException) { throw cancel }
             catch(_:Exception) {_state.update {it.copy(error="PRINT_STORAGE")}}
         }
     }
@@ -276,11 +281,11 @@ data class PrintUiState(
     private fun inspect() {
         loadJob?.cancel();val source=_state.value.source ?: return;val options=_state.value.options
         _state.update {it.copy(inspecting=true,error=null)}
-        loadJob=viewModelScope.launch {
+        loadJob=operationScope.launch {
             try {
                 val info=withContext(ioDispatcher) {val owner=currentCoroutineContext();composer.inspect(source,options) {owner.ensureActive()}}
                 ensureActive();_state.update {it.copy(info=info,inspecting=false)};recalculate();repository.recent(source)
-            } catch(_:CancellationException) {} catch(e:Exception) {_state.update {it.copy(inspecting=false,info=null,error=errorCode(e))}}
+            } catch(cancel:CancellationException) { throw cancel } catch(e:Exception) {_state.update {it.copy(inspecting=false,info=null,error=errorCode(e))}}
         }
     }
     fun retry() {
@@ -309,14 +314,14 @@ data class PrintUiState(
     fun deletePreset(name:String) = launchStore {repository.deletePreset(name)}
     fun favorite(source:PrintSource) = launchStore {repository.favorite(source)}
     fun applyPreset(preset:PrintPreset) = edit(preset.options.reusable())
-    private fun launchStore(action:suspend ()->Unit) {viewModelScope.launch {try {action()} catch(cancel:CancellationException) {throw cancel} catch(e:Exception) {_state.update {it.copy(error=errorCode(e))}}}}
+    private fun launchStore(action:suspend ()->Unit) {operationScope.launch {try {action()} catch(cancel:CancellationException) {throw cancel} catch(e:Exception) {_state.update {it.copy(error=errorCode(e))}}}}
     fun submit(activity:Activity) {
         val current=_state.value;val source=current.source ?: return;val info=current.info ?: return;val layout=current.layout ?: return
         if(current.preparing || current.pages.isEmpty() || current.inputErrors.isNotEmpty()) return
         val manager=activity.getSystemService(PrintManager::class.java)
         if(manager==null) {_state.update {it.copy(serviceAvailable=false,error="PRINT_UNAVAILABLE")};return}
         _state.update {it.copy(preparing=true,preparedPages=0,preparationTotal=0,error=null)}
-        submitJob=viewModelScope.launch {
+        submitJob=operationScope.launch {
             var snapshot:PrintSnapshot?=null
             var submitted=false
             var recorded=false
@@ -331,7 +336,7 @@ data class PrintUiState(
                 repository.record(PrintHistoryEntry(job.id.toString(),owned,current.options,job.info.state.toPrintState(),System.currentTimeMillis()))
                 recorded=true;activeJob=job;lastStates=null
                 _state.update {it.copy(preparing=false,activeJobId=job.id.toString())}
-            } catch(_:CancellationException) {_state.update {it.copy(preparing=false)}}
+            } catch(cancel:CancellationException) {_state.update {it.copy(preparing=false)};throw cancel}
             catch(e:Exception) {_state.update {it.copy(preparing=false,error=errorCode(e))}}
             finally {
                 // If the spooler accepted but history persistence failed, keep the lease for the

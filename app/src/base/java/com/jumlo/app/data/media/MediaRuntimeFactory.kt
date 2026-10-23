@@ -23,11 +23,13 @@ object MediaRuntimeFactory {
         client: OkHttpClient,
         sessions: MediaSessionStore,
         serviceUrl: () -> String = { "" },
-        serviceToken: () -> String = { "" }
+        serviceToken: () -> String = { "" },
+        serviceConfiguration: (() -> Pair<String, String>)? = null
     ): MediaRuntime {
         val native = NativeDirectMediaRuntime(client, sessions)
         val engines = buildList {
-            add(RemoteExtractorRuntime(serviceUrl, client, serviceToken))
+            add(RemoteExtractorRuntime(serviceUrl, client, serviceToken,
+                allowDebugLoopback = com.jumlo.app.BuildConfig.DEBUG, configurationProvider = serviceConfiguration))
             add(native)
         }
         return RoutingMediaRuntime(engines)

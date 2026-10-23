@@ -7,12 +7,12 @@
     <string name="media_cancel">Cancel</string>
     <string name="media_analyzing">Checking source and available media files...</string>
     <string name="media_video">Video file</string>
-    <string name="media_audio_only">Original audio file</string>
+    <string name="media_audio_only">Audio only</string>
     <string name="media_duration">Duration: %1$d seconds</string>
-    <string name="media_actual_qualities">Only formats verified at the source are shown. Resolution or bitrate may be unknown until the file is downloaded.</string>
+    <string name="media_actual_qualities">Formats available from this source.</string>
     <string name="media_resolution_unknown">Resolution not reported</string>
     <string name="media_bitrate_unknown">Bitrate not reported</string>
-    <string name="media_size_unknown">Size calculated on download</string>
+    <string name="media_size_unknown">Size not reported</string>
     <string name="media_approximate">Approximately %1$s</string>
     <string name="media_mux">Video and audio will be merged into %1$s</string>
     <string name="media_silent">This source has no audio track.</string>
@@ -32,8 +32,8 @@
     <string name="media_rights_title">Before you download</string>
     <string name="media_rights_body">Only download content you own or have permission to download, and follow the terms of the site you are downloading from. Jumlo does not bypass DRM, paywalls or access controls; a site that requires an account will say so and the download will stop.</string>
     <string name="media_rights_confirm">I have the rights</string>
-    <string name="media_error_service">No extraction service is configured, so only direct media links can be downloaded. Set the service address in Settings.</string>
-    <string name="media_error_site">No downloadable video or audio resource was found. Jumlo supports direct media links and pages exposing HTML5 media files; dynamic or protected streams may not be available.</string>
+    <string name="media_error_service">This build has no configured extraction service. Try an original direct file link.</string>
+    <string name="media_error_site">No downloadable media was found. Check that the link is public and try again.</string>
     <string name="media_error_private">This resource requires sign-in or private access. Use an authorized direct download provided by the source.</string>
     <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>
     <string name="media_error_removed">This media has been removed or is no longer available at the source URL.</string>
@@ -43,8 +43,8 @@
     <string name="media_error_network">A network or TLS error prevented reaching the source. Check connectivity and try again.</string>
     <string name="media_error_format">The selected format changed or is unavailable. Analyze the link again.</string>
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
-    <string name="media_error_runtime">The media runtime is not available in this build or device ABI.</string>
-    <string name="media_error_generic">Direct media download could not finish. Check the file URL, network and access permissions.</string>
+    <string name="media_error_runtime">The media engine could not start. Update or reinstall Jumlo, then retry.</string>
+    <string name="media_error_generic">Could not download this media. Check the link and connection, then retry.</string>
     <string name="media_found">Found (%1$d)</string>
     <string name="media_candidates_note">Analyze a detected stream to inspect actual formats.</string>
     <string name="media_no_candidates">No media resource detected yet.</string>
@@ -54,15 +54,15 @@
     <string name="media_platform_matrix_title">Platform qualification status</string>
     <string name="media_status_unverified">UNVERIFIED</string>
     <string name="media_status_host_verified">HOST_VERIFIED</string>
-    <string name="media_select_type">1. Choose download type</string>
-    <string name="media_select_quality">2. Choose quality &amp; format</string>
-    <string name="media_pdf_original" formatted="false">Original PDF (100% full quality, no compression)</string>
-    <string name="media_pdf_recommended">Recommended PDF compression (preserve text and vectors)</string>
-    <string name="media_pdf_extreme">Smaller PDF (more image recompression, preserve text and vectors)</string>
-    <string name="media_pdf_to_images">Download &amp; Convert PDF Pages to PNG Images</string>
-    <string name="media_img_original" formatted="false">Original Image (100% quality)</string>
-    <string name="media_img_compressed">Compressed Image (Smaller file size)</string>
-    <string name="media_img_to_pdf">Convert Downloaded Image to PDF</string>
+    <string name="media_select_type">Download type</string>
+    <string name="media_select_quality">Quality and format</string>
+    <string name="media_pdf_original" formatted="false">Original PDF</string>
+    <string name="media_pdf_recommended">Balanced PDF compression</string>
+    <string name="media_pdf_extreme">Smaller PDF</string>
+    <string name="media_pdf_to_images">PDF pages as PNG images</string>
+    <string name="media_img_original" formatted="false">Original image</string>
+    <string name="media_img_compressed">Smaller image</string>
+    <string name="media_img_to_pdf">Image as PDF</string>
     <string name="media_switch_to_extractor">Inspect original audio/video file</string>
     <string name="media_supported_platforms">Direct files and HTML5 media sources. Downloading depends on source permission and accessibility.</string>
     <string name="media_supported_platforms_extended">Public media pages and direct files. Available formats depend on the source and access permissions.</string>

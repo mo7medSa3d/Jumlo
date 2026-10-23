@@ -12,8 +12,8 @@ import com.jumlo.app.R
 
 /**
  * Jumlo 2026 type scale.
- * - Font: IBM Plex Sans (bundled variable font, weights 400–700).
- * - Arabic uses the bundled IBM Plex Sans Arabic face with zero letter-spacing so cursive ligatures stay crisp.
+ * - Font: Jumlo Sans, a licensed IBM Plex Sans subset, weights 400–700.
+ * - Arabic uses the Jumlo Sans Arabic subset with zero letter-spacing for cursive shaping.
  * - Display / titles are bold and tight to give the "poster" headline feel of modern apps.
  */
 val IbmPlexSansFont = FontFamily(

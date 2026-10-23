@@ -22,12 +22,15 @@ import com.jumlo.app.data.media.MediaRuntimeFactory
 import com.jumlo.app.data.media.MediaSessionStore
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.io.DataInputStream
+import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.util.Properties
 import java.util.UUID
 
@@ -74,6 +77,27 @@ class PackagedMediaRuntimeDeviceTest {
             // Initialize through the production factory, including asset integrity and native extraction.
             val runtime = MediaRuntimeFactory.create(app, OkHttpClient(), MediaSessionStore(app))
             assertEquals("EXTRACTOR_RESTORED_FROM_APK", runtime.refreshExtractor())
+            // Exercise migration even when both upstream singletons reuse an
+            // already extracted cache instead of unpacking the new archives.
+            val privateLzmaHashes = listOf("python", "ffmpeg").associateWith { engine ->
+                val library = File(packages, "$engine/usr/lib/liblzma.so.5")
+                val alias = File(library.parentFile, "liblzma.so")
+                assertFalse("Platform alias survived initial extraction", Files.exists(alias.toPath(), NOFOLLOW_LINKS))
+                assertTrue("Versioned private LZMA library is missing", library.isFile)
+                val hash = library.inputStream().use { Hashing.sha256(it) }
+                Os.symlink(library.canonicalFile.name, alias.absolutePath)
+                hash
+            }
+            assertEquals("EXTRACTOR_RESTORED_FROM_APK",
+                MediaRuntimeFactory.create(app, OkHttpClient(), MediaSessionStore(app)).refreshExtractor())
+            for ((engine, expectedHash) in privateLzmaHashes) {
+                val library = File(packages, "$engine/usr/lib/liblzma.so.5")
+                assertFalse("Legacy cached alias was not removed",
+                    Files.exists(File(library.parentFile, "liblzma.so").toPath(), NOFOLLOW_LINKS))
+                assertEquals(expectedHash, library.inputStream().use { Hashing.sha256(it) })
+            }
+            assertEquals("private-lzma-ok", run(listOf(python, "-c",
+                "import lzma; value=b'jumlo-lzma-fixture'; assert lzma.decompress(lzma.compress(value))==value; print('private-lzma-ok')")))
             val executableHeader = ByteArray(20)
             DataInputStream(File(native, "libffmpeg.so").inputStream()).use { it.readFully(executableHeader) }
             MediaNativeLibraries.processAbi(executableHeader)?.let { abi ->

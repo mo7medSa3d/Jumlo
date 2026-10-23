@@ -1,5 +1,10 @@
 package com.jumlo.app.ui
 
+import com.jumlo.app.data.pdf.PdfRendererFactory
+
+import com.jumlo.app.diagnostics.AppDiagnostics
+import com.jumlo.app.diagnostics.viewModelErrorBoundary
+
 import android.app.Application
 import android.content.Intent
 import android.graphics.*
@@ -10,6 +15,7 @@ import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import coil.imageLoader
 import com.jumlo.app.core.ExternalIntakePolicy
 import com.jumlo.app.printing.PrintSource
 import com.jumlo.app.printing.PrintPage
@@ -51,7 +57,9 @@ data class RenameUndo(val id:String,val previousName:String?,val newName:String)
 data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:Int,val height:Int)
 data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0,val trash:Long=0)
 /** What the compression slider needs to estimate the output size. */
-data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
+data class CompressionProfile(val originalBytes:Long,val imageBytes:Long,val measuredBytes:Long?=null)
+/** Bounded text for an interactive result panel; the original output remains available for export. */
+data class TextOutputPreview(val text:String,val truncated:Boolean)
 
 @OptIn(FlowPreview::class,ExperimentalCoroutinesApi::class)
 @HiltViewModel class AppViewModel @Inject constructor(
@@ -64,8 +72,14 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     private val secrets:EphemeralSecretStore,
     private val treeStore:DocumentTreeStore,
     private val budget:WorkBudget,
+    private val ocr:com.jumlo.app.data.ocr.MlKitOcrEngine,
     private val savedState:SavedStateHandle
 ):AndroidViewModel(app) {
+    private val _message=MutableStateFlow<String?>(null)
+    // Reuse the ViewModel's SupervisorJob so all guarded work is still cancelled on clear.
+    private val operationScope=CoroutineScope(viewModelScope.coroutineContext + viewModelErrorBoundary("workspace") { error ->
+        _message.value=stableError(error)
+    })
     private val reloadRecords=MutableStateFlow(0)
     private val _sourceLoad=MutableStateFlow(DataLoadStatus.LOADING)
     private val _outputLoad=MutableStateFlow(DataLoadStatus.LOADING)
@@ -75,7 +89,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     val outputLoad=_outputLoad.asStateFlow()
     val jobLoad=_jobLoad.asStateFlow()
     val trashLoad=_trashLoad.asStateFlow()
-    fun reloadTrash() { viewModelScope.launch {
+    fun reloadTrash() { operationScope.launch {
         _trashLoad.value=DataLoadStatus.LOADING
         try { outputStore.refreshTrash(); _trashLoad.value=DataLoadStatus.READY }
         catch(cancel:CancellationException) { throw cancel }
@@ -86,18 +100,21 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         reloadRecords.value++
     }
     val settings=preferences.settingsFlow.catch { error ->
-        if (error is java.io.IOException) { _message.value="SETTINGS_READ_FAILED"; emit(AppSettingsState(isLoaded=true)) }
-        else throw error
-    }.stateIn(viewModelScope,SharingStarted.Eagerly,AppSettingsState())
+        if (error is CancellationException || error !is Exception) throw error
+        AppDiagnostics.report("workspace", error)
+        _message.value="SETTINGS_READ_FAILED"
+        emit(AppSettingsState(isLoaded=true))
+    }.stateIn(operationScope,SharingStarted.Eagerly,AppSettingsState())
     val processingPresets=preferences.processingPresetsFlow.catch { error ->
-        if(error is CancellationException) throw error
+        if(error is CancellationException || error !is Exception) throw error
+        AppDiagnostics.report("workspace", error)
         _message.value="SETTINGS_READ_FAILED"
         emit(emptyList())
-    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+    }.stateIn(operationScope,SharingStarted.WhileSubscribed(5000),emptyList())
 
     val imported=reloadRecords.flatMapLatest { sources.records.onEach { _sourceLoad.value=DataLoadStatus.READY }
-        .catch { error -> if(error is CancellationException) throw error; _sourceLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
-    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+        .catch { error -> if(error is CancellationException || error !is Exception) throw error; AppDiagnostics.report("workspace",error); _sourceLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
+    }.stateIn(operationScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val outputs=reloadRecords.flatMapLatest {
         combine(outputStore.records,settings) { records,prefs ->
             records.map { record ->
@@ -108,12 +125,12 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                 }
             }
         }.onEach { _outputLoad.value=DataLoadStatus.READY }
-            .catch { error -> if(error is CancellationException) throw error; _outputLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
-    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+            .catch { error -> if(error is CancellationException || error !is Exception) throw error; AppDiagnostics.report("workspace",error); _outputLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
+    }.stateIn(operationScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val trashed=outputStore.trashed
     val jobs=reloadRecords.flatMapLatest { jobStore.snapshots.onEach { _jobLoad.value=DataLoadStatus.READY }
-        .catch { error -> if(error is CancellationException) throw error; _jobLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
-    }.stateIn(viewModelScope,SharingStarted.WhileSubscribed(5000),emptyList())
+        .catch { error -> if(error is CancellationException || error !is Exception) throw error; AppDiagnostics.report("workspace",error); _jobLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
+    }.stateIn(operationScope,SharingStarted.WhileSubscribed(5000),emptyList())
     private val _form=MutableStateFlow(WorkspaceDraft())
     val form=_form.asStateFlow()
     private val _workspaceReady=MutableStateFlow(false)
@@ -124,7 +141,6 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     private var activeOperations=0
     private fun beginBusy()=synchronized(busyLock) { activeOperations++; _busy.value=true }
     private fun endBusy()=synchronized(busyLock) { activeOperations=(activeOperations-1).coerceAtLeast(0); _busy.value=activeOperations>0 }
-    private val _message=MutableStateFlow<String?>(null)
     val message=_message.asStateFlow()
     private val _undoTrashId=MutableStateFlow<String?>(null)
     val undoTrashId=_undoTrashId.asStateFlow()
@@ -166,7 +182,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
     }
     fun printSource(sourceId:String,pages:List<Pair<Int,Int>> = emptyList()) {
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await(); beginBusy()
             try { openPrint(printableSource(sources.get(sourceId),pages.toList())) }
             catch(cancel:CancellationException) { throw cancel }
@@ -175,7 +191,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
     }
     fun printOutput(record:OutputRecord) {
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await(); beginBusy()
             try {
                 val verified=outputStore.find(record.jobId,record.itemKey)
@@ -191,7 +207,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     }
     fun importForPrint(intake:Intake) {
         val uri=intake.uris.singleOrNull() ?: return
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await(); beginBusy()
             try { openPrint(printableSource(sources.inspect(uri,intake.offeredFlags))) }
             catch(cancel:CancellationException) { throw cancel }
@@ -206,7 +222,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         val default=smartDefaultsForTool(WorkspaceDraft.forTool(current.toolId,emptyList()).copy(wifiOnly=current.wifiOnly))
         (current!=saved || links!=savedLinks) &&
             (current.sourceIds.isNotEmpty() || saved.sourceIds.isNotEmpty() || links.isNotBlank() || current!=default)
-    }.stateIn(viewModelScope,SharingStarted.Eagerly,false)
+    }.stateIn(operationScope,SharingStarted.Eagerly,false)
     private val _tree=MutableStateFlow<DocumentListing?>(null)
     val tree=_tree.asStateFlow()
     private val _treeLoad=MutableStateFlow(DataLoadStatus.LOADING)
@@ -222,9 +238,13 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     private var storageRefresh:Job?=null
     private var lastFingerprint:String?=null
     private var lastJobId:String?=null
-    private var submissionReset:Deferred<Unit>?=null
+    private val submissionReset=SubmissionResetGate(operationScope) {
+        try { draftMutex.withLock { drafts.clearSubmission() } }
+        catch(cancel:CancellationException) { throw cancel }
+        catch(error:Exception) { notifyMessage("DRAFT_SAVE_FAILED");AppDiagnostics.report("workspace",error);throw error }
+    }
     var pendingExport:OutputRecord?
-        get()=savedState.get<String>("pending_export")?.let { Json.decodeFromString<OutputRecord>(it) }
+        get()=savedState.get<String>("pending_export")?.let { runCatching { Json.decodeFromString<OutputRecord>(it) }.getOrNull() }
         set(value) { savedState["pending_export"]=value?.let { Json.encodeToString(it) } }
     private val errorLog=com.jumlo.app.core.ErrorLog(java.io.File(app.filesDir,"error-log.txt"))
     var pendingErrorLogExport:Boolean
@@ -232,7 +252,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         private set(value) { savedState["pending_error_export"]=value }
 
     init {
-        viewModelScope.launch {
+        operationScope.launch {
             try {
                 val checkpoint=drafts.loadWorkspace()?.takeIf { it.version==1 } ?: WorkspaceDraft()
                 savedWorkspace.value=checkpoint
@@ -250,7 +270,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                 catch(_:Exception) { _message.value="DRAFT_SAVE_FAILED" }
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        operationScope.launch(Dispatchers.IO) {
             try {
                 outputStore.reconcile()
                 _trashLoad.value=DataLoadStatus.READY
@@ -264,14 +284,32 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
         reloadTree()
         refreshStorage()
+        operationScope.launch {
+            outputStore.records.map { rows -> rows.map { it.id to it.sizeBytes } }
+                .distinctUntilChanged().catch { error ->
+                    if(error is CancellationException || error !is Exception) throw error
+                    AppDiagnostics.report("workspace",error)
+                    _message.value=stableError(error)
+                }
+                .collect { refreshStorage() }
+        }
+        operationScope.launch {
+            jobStore.snapshots.map { rows -> rows.map { it.request.id to it.progress.stage } }
+                .distinctUntilChanged().catch { error ->
+                    if(error is CancellationException || error !is Exception) throw error
+                    AppDiagnostics.report("workspace",error)
+                    _message.value=stableError(error)
+                }
+                .collect { refreshStorage() }
+        }
     }
     fun dismissMessage() { _message.value=null; _undoRename.value=null; _undoTrashId.value=null; _undoTrashIds.value=emptyList() }
     fun notifyMessage(code:String) {
         _message.value=code
         val tool=form.value.toolId
-        viewModelScope.launch(Dispatchers.IO) { runCatching { errorLog.record(code,tool) } }
+        operationScope.launch(Dispatchers.IO) { runCatching { errorLog.record(code,tool) } }
     }
-    fun saveWorkspaceDraft(onSaved:()->Unit) { viewModelScope.launch {
+    fun saveWorkspaceDraft(onSaved:()->Unit) { operationScope.launch {
         initialized.await(); beginBusy()
         try {
             val snapshot=form.value; val links=urls.value
@@ -282,7 +320,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         catch(_:Exception) { _message.value="DRAFT_SAVE_FAILED" }
         finally { endBusy() }
     } }
-    fun discardWorkspaceChanges(onDiscarded:()->Unit) { viewModelScope.launch {
+    fun discardWorkspaceChanges(onDiscarded:()->Unit) { operationScope.launch {
         initialized.await(); beginBusy()
         try {
             draftMutex.withLock {
@@ -322,14 +360,17 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         if(!CapabilityRegistry.enabled(id)) { _message.value=CapabilityRegistry.reason(id); return false }
         openedSession=true
         _sessionEpoch.value++
-        savePreference { preferences.recordToolOpen(id) }
+        recordToolOpen(id)
         _urls.value=""
-        val wifiDefault=if(id.startsWith("dl_")) settings.value.wifiOnlyDefault else false
-        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool(id,emptyList()).copy(wifiOnly=wifiDefault))
+        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool(id,emptyList()))
         savedWorkspace.value=_form.value
         savedUrls.value=""
         lastFingerprint=null;lastJobId=null
         return true
+    }
+    /** Navigation-only catalogue entries count as use without replacing a working draft. */
+    fun recordToolOpen(id:String) {
+        if(CapabilityRegistry.enabled(id)) savePreference { preferences.recordToolOpen(id) }
     }
     /** Explicit handoff only, e.g. a result's "Use in another tool" action. */
     fun chooseToolWithSources(id:String,sourceIds:List<String>):Boolean {
@@ -360,8 +401,10 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         if(index in list.indices && to in list.indices) list.add(to,list.removeAt(index))
         old.copy(sourceIds=list)
     } }
-    fun intake(intake:Intake, attachToWorkspace:Boolean=true, externalShare:Boolean=false) {
-        viewModelScope.launch {
+    fun intake(intake:Intake, attachToWorkspace:Boolean=true, externalShare:Boolean=false, onFinished:()->Unit={}) {
+        val receivingSession=_sessionEpoch.value
+        operationScope.launch {
+            try {
             initialized.await()
             if(intake.uris.isEmpty()) intake.sharedText?.takeIf { it.isNotBlank() }?.let { text ->
                 // Social shares may include titles, captions and multiple URLs in one paragraph.
@@ -393,22 +436,68 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                     try {
                         val source=sources.inspect(uri,intake.offeredFlags)
                         received.add(source)
-                        if(attachToWorkspace && !externalShare) addSource(source.id,source.displayName)
+                        if(attachToWorkspace && !externalShare && receivingSession==_sessionEpoch.value) addSource(source.id,source.displayName)
                     }
                     catch(cancel:CancellationException) { throw cancel }
                     catch(error:Exception) { _message.value=stableError(error) }
                 }
-                if(externalShare && received.isNotEmpty()) {
+                if(externalShare && received.isNotEmpty() && receivingSession==_sessionEpoch.value) {
                     val tool=ExternalIntakePolicy.toolFor(received.map { it.mimeType })
                     if(tool!=null && chooseToolWithSources(tool,received.map { it.id })) sharedLinkChannel.trySend(Unit)
                 }
                 refreshStorage()
             } finally { endBusy() }
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error));AppDiagnostics.report("workspace",error) }
+            finally { onFinished() }
         }
+    }
+
+    /** The scanner returns an owned cache file; publish it through the same verified save path as tools. */
+    fun publishScannedPdf(file:File,onFinished:()->Unit={},onPublished:(OutputRecord)->Unit) {
+        operationScope.launch {
+            val owned = runCatching { file.canonicalFile.parentFile == app.cacheDir.canonicalFile && file.name.startsWith("jumlo-scan-") }.getOrDefault(false)
+            val jobId = UUID.randomUUID().toString()
+            beginBusy()
+            try {
+                require(owned && file.isFile) { "SCAN_PDF_INVALID" }
+                initialized.await()
+                val stamp=java.text.SimpleDateFormat("yyyyMMdd-HHmmss",java.util.Locale.ROOT).format(java.util.Date())
+                val ticket=outputStore.reserve(jobId,"scan","Scan-$stamp.pdf","application/pdf")
+                withContext(Dispatchers.IO) {
+                    val coroutine=currentCoroutineContext()
+                    file.inputStream().use { input -> ticket.stageFile.outputStream().use { output ->
+                        val buffer=ByteArray(64*1024)
+                        while(true) { coroutine.ensureActive();val read=input.read(buffer);if(read<0) break;output.write(buffer,0,read) }
+                    } }
+                }
+                val record=outputStore.publish(ticket) { outputStore.inspect(it,"application/pdf") }
+                refreshStorage()
+                if(record.publicSaveError!=null) notifyMessage("DESTINATION_SAVE_FAILED")
+                else if(record.publicUri==null) notifyMessage("SAVED_IN_APP_ONLY")
+                onPublished(record)
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)) }
+            finally {
+                withContext(NonCancellable+Dispatchers.IO) {
+                    if(owned) file.delete()
+                    runCatching { outputStore.discardIncomplete(jobId) }
+                }
+                endBusy()
+                onFinished()
+            }
+        }
+    }
+
+    /** A viewer receives the immutable imported bytes, never an expired original provider URI. */
+    suspend fun viewerUri(sourceId:String):String=withContext(Dispatchers.IO) {
+        val source=sources.get(sourceId)
+        val printable=printableSource(source)
+        androidx.core.content.FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",File(printable.path)).toString()
     }
     /** Imports a SAF provider entry and opens the matching tool only after true MIME inspection finishes. */
     fun importProviderEntryToWorkspace(uri:String,offeredFlags:Int,onReady:()->Unit) {
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await()
             beginBusy()
             try {
@@ -422,14 +511,22 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
             finally { endBusy() }
         }
     }
-    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) { viewModelScope.launch { initialized.await();beginBusy();try { val source=sources.importLocalFile(file,displayName,mimeType);addSource(source.id,source.displayName); refreshStorage() } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} } }
+    fun intakeLocalFile(file:java.io.File,displayName:String,mimeType:String?) {
+        val receivingSession=_sessionEpoch.value
+        operationScope.launch { initialized.await();beginBusy();try {
+            val source=sources.importLocalFile(file,displayName,mimeType)
+            if(receivingSession==_sessionEpoch.value) addSource(source.id,source.displayName)
+            refreshStorage()
+        } catch(cancel:CancellationException) { throw cancel } catch(error:Exception) { _message.value=stableError(error) } finally {endBusy()} }
+    }
     /** Import a multi-page scanner result in capture order, with rollback and cache cleanup.
      * Each page is copied to immutable SourceStore before deleting the scanner-owned temp.
      */
     fun intakeLocalFiles(files:List<java.io.File>) {
+        val receivingSession=_sessionEpoch.value
         val selected=files.toList()
         if(selected.isEmpty()) return
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await()
             beginBusy()
             val copied=mutableListOf<String>()
@@ -444,7 +541,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                     currentCoroutineContext().ensureActive()
                     val source=sources.importLocalFile(file,"Scan ${index+1}.jpg","image/jpeg",
                         onCommitted = { committed -> copied.add(committed.id) })
-                    addSource(source.id,source.displayName)
+                    if(receivingSession==_sessionEpoch.value) addSource(source.id,source.displayName)
                 }
                 refreshStorage()
             } catch(cancel:CancellationException) {
@@ -465,7 +562,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     private val _undoRename=MutableStateFlow<RenameUndo?>(null)
     val undoRename=_undoRename.asStateFlow()
     fun renameOutput(record:OutputRecord,newName:String) {
-        viewModelScope.launch {
+        operationScope.launch {
             try {
                 val verified=outputStore.find(record.jobId,record.itemKey) ?: error("OUTPUT_NOT_AVAILABLE")
                 require(verified.id==record.id) { "OUTPUT_NOT_AVAILABLE" }
@@ -480,7 +577,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
     }
     fun undoOutputRename(action:RenameUndo) {
-        viewModelScope.launch {
+        operationScope.launch {
             try {
                 if(settings.value.outputNames[action.id]==action.newName) preferences.setOutputName(action.id,action.previousName)
                 dismissMessage()
@@ -492,7 +589,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun toggleOutputFavorite(id:String) = savePreference { preferences.toggleFavoriteOutput(id) }
 
     /** Reuse an immutable imported source in an operation that actually accepts its MIME type. */
-    fun prepareSourceWorkflow(sourceId:String,onReady:()->Unit) { viewModelScope.launch {
+    fun prepareSourceWorkflow(sourceId:String,onReady:()->Unit) { operationScope.launch {
         try {
             initialized.await()
             val source=sources.get(sourceId)
@@ -507,7 +604,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
      * without duplicating bytes or silently changing the selected order. */
     fun prepareSourceBatchWorkflow(targetTool:String,chosen:List<SourceRef>,onReady:()->Unit) {
         val captured=chosen.toList()
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await()
             beginBusy()
             try {
@@ -541,7 +638,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
      */
     fun prepareOutputWorkflow(targetTool:String, chosen:List<OutputRecord>,onReady:()->Unit) {
         val captured=chosen.toList() // Freeze the actual selection before any suspension.
-        viewModelScope.launch {
+        operationScope.launch {
             initialized.await()
             beginBusy()
             val staged=mutableListOf<String>()
@@ -583,7 +680,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun trashOutputs(records:List<OutputRecord>) {
         val captured=records.map {it.id}.distinct()
         if(captured.isEmpty()) return
-        viewModelScope.launch {
+        operationScope.launch {
             beginBusy()
             try {
                 val moved=captured.mapNotNull { outputStore.moveToTrash(it) }.map {it.id}
@@ -600,7 +697,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     }
     fun restoreOutputs(ids:List<String>) {
         if(ids.isEmpty()) return
-        viewModelScope.launch {
+        operationScope.launch {
             beginBusy()
             try {
                 ids.distinct().forEach {outputStore.restoreFromTrash(it)}
@@ -613,7 +710,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
     }
     fun trashOutput(record:OutputRecord) {
-        viewModelScope.launch {
+        operationScope.launch {
             try {
                 val moved=outputStore.moveToTrash(record.id)
                 if(moved!=null) { _undoTrashIds.value=listOf(moved.id);_undoTrashId.value=moved.id; _undoRename.value=null; _message.value="MOVED_TO_TRASH"; refreshStorage() }
@@ -622,7 +719,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
     }
     fun restoreOutput(outputId:String) {
-        viewModelScope.launch {
+        operationScope.launch {
             try {
                 outputStore.restoreFromTrash(outputId)
                 _undoTrashId.value=null
@@ -636,7 +733,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     /** IDs are captured when the confirmation is shown, never expanded at deletion time. */
     fun purgeTrashIds(outputIds:Set<String>) {
         if(outputIds.isEmpty()) return
-        viewModelScope.launch {
+        operationScope.launch {
             beginBusy()
             try {
                 outputStore.purgeTrashIds(outputIds.toSet())
@@ -650,17 +747,18 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun submit(onQueued:(String)->Unit) {
         if(!submitting.compareAndSet(false,true)) return
         beginBusy()
-        viewModelScope.launch {
+        operationScope.launch {
             var newHandle:String?=null
+            var newHandleOwner:String?=null
             try {
                 initialized.await()
-                submissionReset?.await()
+                submissionReset.awaitLatest()
                 val state=form.value
                 require(CapabilityRegistry.canProcess(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
                 val driveImport=state.toolId=="file_drive" && !state.flag1
                 require(download || state.toolId=="webpage_pdf" || driveImport || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
-                if(state.toolId in setOf("pdf_07","file_08")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
+                if(state.toolId in setOf("pdf_07","file_08","pdf_to_docx","pdf_to_pptx","pdf_ocr")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
                 if(state.toolId=="file_drive") {
                     require(state.secret1.isNotBlank()) { "LOGIN_REQUIRED" }
                     if(!state.flag1) require(state.text1.isNotBlank()) { "INVALID_DRIVE_FILE_ID" }
@@ -671,7 +769,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                     require(lines.isNotEmpty() && lines.size<=100 && (state.toolId=="dl_03" || lines.size==1)) { "INVALID_DOWNLOAD_LIST" }
                     lines.forEach { line ->
                         if(DownloadLinkPolicy.requiresMediaExtractor(line)) throw OperationFailure("MEDIA_SELECTION_REQUIRED")
-                        HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line),state.cleartextConsent)
+                        HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line),true)
                     }
                 }
                 // A batch must not fetch the same link twice.
@@ -683,7 +781,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                 val fingerprint=Hashing.sha256(ByteArrayInputStream((Json.encodeToString(state)+"\n"+if(download) urlSnapshot else "").toByteArray()))
                 if(lastFingerprint==fingerprint && lastJobId!=null) { onQueued(lastJobId!!); return@launch }
                 newHandle=when {
-                    download -> secrets.put(effectiveUrlText.toCharArray())
+                    download -> effectiveUrlText.toCharArray().let { chars -> try { secrets.putDownload(chars) } finally { chars.fill('\u0000') } }
                     state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
                     state.toolId in setOf("file_encrypted_zip","file_drive") -> secrets.put(state.secret1.toCharArray())
                     else -> null
@@ -691,7 +789,8 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                 val settings=state.executionSettings(newHandle)
                 val candidate=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download || driveImport) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
                 val request=draftMutex.withLock { drafts.reserveSubmission(fingerprint,candidate,state) }
-                val reboundHandle=rebindDownloadSubmissionSecret(request,candidate,secrets)
+                if(request.id==candidate.id) newHandleOwner=request.id
+                val reboundHandle=withContext(Dispatchers.IO) { rebindDownloadSubmissionSecret(request,candidate,secrets) }
                 val id=jobStore.enqueue(request)
                 if(reboundHandle!=null) {
                     when(jobStore.observe(id).first().progress.stage) {
@@ -705,25 +804,37 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                 onQueued(id)
             } catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { notifyMessage(stableError(error)) }
-            finally { newHandle?.let(secrets::remove);endBusy();submitting.set(false) }
+            finally {
+                withContext(NonCancellable+Dispatchers.IO) {
+                    newHandle?.let { handle ->
+                        // Room can commit before scheduling reports failure or cancellation.
+                        val owner=newHandleOwner
+                        if(owner==null || runCatching { jobStore.contains(owner) }.getOrNull()==false) secrets.remove(handle)
+                    }
+                }
+                endBusy();submitting.set(false)
+            }
         }
     }
     fun allowNewRun() {
         lastFingerprint=null;lastJobId=null
-        val previous=submissionReset
-        submissionReset=viewModelScope.async { previous?.await();draftMutex.withLock { drafts.clearSubmission() } }
+        submissionReset.request()
     }
-    fun pause(job:String) { viewModelScope.launch { jobStore.pause(job) } }
-    fun cancel(job:String) { viewModelScope.launch {
+    fun pause(job:String) { operationScope.launch {
+        try { jobStore.pause(job) }
+        catch(cancel:CancellationException) { throw cancel }
+        catch(error:Exception) { notifyMessage(stableError(error)) }
+    } }
+    fun cancel(job:String) { operationScope.launch {
         try { jobStore.cancel(job) }
         catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) { notifyMessage(stableError(error)) }
     } }
-    fun retry(job:JobSnapshot,replacementUrls:String?=null) { viewModelScope.launch {
+    fun retry(job:JobSnapshot,replacementUrls:String?=null) { operationScope.launch {
         try {
             if(job.request.toolId.startsWith("dl_") && replacementUrls!=null) {
                 val config=Json.decodeFromString<DownloadSettings>(job.request.settingsJson)
-                secrets.replace(config.urlSecretHandle,replacementUrls.toCharArray())
+                replacementUrls.toCharArray().let { chars -> try { secrets.replaceDownload(config.urlSecretHandle,chars) } finally { chars.fill('\u0000') } }
             }
             jobStore.retryFailed(job.request.id)
         } catch(cancel:CancellationException) { throw cancel }
@@ -742,9 +853,9 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     }
 
     fun finishOnboarding() = savePreference { preferences.setOnboardingCompleted(true) }
-    private fun savePreference(block:suspend ()->Unit) { viewModelScope.launch {
+    private fun savePreference(block:suspend ()->Unit) { operationScope.launch {
         try { block() } catch(cancel:CancellationException) { throw cancel }
-        catch(_:Exception) { _message.value="SETTINGS_SAVE_FAILED" }
+        catch(error:Exception) { _message.value="SETTINGS_SAVE_FAILED";AppDiagnostics.report("workspace",error) }
     } }
     fun setQuickActionIds(ids:List<String>) = savePreference {
         val eligible=CapabilityRegistry.tools.filter {CapabilityRegistry.visible(it.id) && CapabilityRegistry.canProcess(it.id)}.map {it.id}
@@ -752,6 +863,8 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     }
     fun setThemeMode(mode:ThemeMode) = savePreference { preferences.setThemeMode(mode) }
     fun setLanguage(language:AppLanguage) = savePreference { preferences.setLanguage(language) }
+    fun setDefaultVideoQuality(value:String) = savePreference { preferences.setDefaultVideoQuality(value) }
+    fun setDefaultAudioQuality(value:Int) = savePreference { preferences.setDefaultAudioQuality(value) }
     fun setRespectReducedMotion(enabled:Boolean) = savePreference { preferences.setRespectReducedMotion(enabled) }
     fun setHapticFeedback(enabled:Boolean) = savePreference { preferences.setHapticOnCommit(enabled) }
     fun setHapticIntensity(intensity:com.jumlo.app.model.HapticIntensity) = savePreference { preferences.setHapticIntensity(intensity) }
@@ -762,7 +875,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun setMaxConcurrentDownloads(value:Int) = savePreference { preferences.setMaxConcurrentDownloads(value) }
     fun setMediaServiceUrl(url:String) = savePreference { preferences.setMediaServiceUrl(url) }
     fun setMediaServiceToken(token:String) = savePreference { preferences.setMediaServiceToken(token) }
-    fun setDownloadDestinationFolder(treeUri:String,flags:Int) { viewModelScope.launch {
+    fun setDownloadDestinationFolder(treeUri:String,flags:Int) { operationScope.launch {
         try {
             val uri=Uri.parse(treeUri)
             require(uri.scheme=="content") { "INVALID_TREE_URI" }
@@ -780,15 +893,15 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
             _form.update { it.copy(wifiOnly = enabled) }
         }
     }
-    fun notificationsGranted(granted:Boolean) { viewModelScope.launch { preferences.setNotificationsGranted(granted) } }
+    fun notificationsGranted(granted:Boolean) = savePreference { preferences.setNotificationsGranted(granted) }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }
     fun exportErrorLog(target:String?) {
         if(!pendingErrorLogExport) return; pendingErrorLogExport=false
         if(target==null) return
-        viewModelScope.launch(Dispatchers.IO) {
+        operationScope.launch(Dispatchers.IO) {
             try {
-                app.contentResolver.openOutputStream(Uri.parse(target),"wt")?.use { it.write(errorLog.read().toByteArray(Charsets.UTF_8)) }
+                app.contentResolver.openOutputStream(Uri.parse(target),"wt")?.use { it.write((errorLog.read()+AppDiagnostics.read()).toByteArray(Charsets.UTF_8)) }
                     ?: throw OperationFailure("EXPORT_WRITE_FAILED")
                 _message.value="ERROR_LOG_EXPORTED"
             } catch(cancel:CancellationException) { throw cancel }
@@ -798,7 +911,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     fun export(target:String?) {
         val output=pendingExport ?: return;pendingExport=null
         if(target==null) return
-        viewModelScope.launch(Dispatchers.IO) {
+        operationScope.launch(Dispatchers.IO) {
             beginBusy()
             try {
                 require(Uri.parse(target).scheme=="content") { "CONTENT_URI_REQUIRED" }
@@ -836,7 +949,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         block(current)
         treeStore.list(current.treeUri)
     } }
-    private fun treeRequest(load:suspend ()->DocumentListing?) { viewModelScope.launch {
+    private fun treeRequest(load:suspend ()->DocumentListing?) { operationScope.launch {
         treeOperations.withLock {
             _treeLoad.value=DataLoadStatus.LOADING
             try { _tree.value=load(); _treeLoad.value=DataLoadStatus.READY }
@@ -845,18 +958,21 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         }
     } }
     /** Only old reproducible previews/extraction cache. Drafts, trash and resumable jobs stay intact. */
-    fun cleanTemporary() { viewModelScope.launch(Dispatchers.IO) {
+    @OptIn(coil.annotation.ExperimentalCoilApi::class)
+    fun cleanTemporary() { operationScope.launch(Dispatchers.IO) {
         beginBusy()
         try {
             val cutoff=System.currentTimeMillis()-7L*24*3600*1000
             val context=currentCoroutineContext()
             com.jumlo.app.core.TemporaryCleanup.removeExpired(app.cacheDir,cutoff) { context.ensureActive() }
+            app.imageLoader.memoryCache?.clear()
+            app.imageLoader.diskCache?.clear()
             _message.value="CLEANUP_DONE";refreshStorage()
         } catch(cancel:CancellationException) { throw cancel }
         catch(_:Exception) { _message.value="CLEANUP_FAILED" }
         finally { endBusy() }
     } }
-    fun refreshStorage() { storageRefresh?.cancel();storageRefresh=viewModelScope.launch(Dispatchers.IO) {
+    fun refreshStorage() { storageRefresh?.cancel();storageRefresh=operationScope.launch(Dispatchers.IO) {
         val context=currentCoroutineContext()
         fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { context.ensureActive();if(it.isFile) total+=it.length() };return total }
         _storage.value=StorageUsage(
@@ -868,6 +984,62 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
         )
     } }
     suspend fun preview(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 1600)
+
+    /** Reads only a verified app-owned output, never a caller supplied path or provider URI. */
+    suspend fun textOutputPreview(record:OutputRecord,maxChars:Int=500_000):TextOutputPreview = withContext(Dispatchers.IO) {
+        require(maxChars in 1..500_000) { "INVALID_PREVIEW_SIZE" }
+        val verified=outputStore.find(record.jobId,record.itemKey)
+        require(verified?.id==record.id && verified.sha256==record.sha256 && verified.mimeType=="text/plain") { "OUTPUT_NOT_AVAILABLE" }
+        val file=File(File(File(app.filesDir,"processing/results"),verified.id),com.jumlo.app.core.SafeNames.basename(verified.displayName))
+        val text=StringBuilder(minOf(maxChars,8192))
+        var truncated=false
+        file.bufferedReader(Charsets.UTF_8).use { reader ->
+            val buffer=CharArray(8192)
+            while(text.length<maxChars) {
+                currentCoroutineContext().ensureActive()
+                val count=reader.read(buffer,0,minOf(buffer.size,maxChars-text.length))
+                if(count<0) break
+                text.append(buffer,0,count)
+            }
+            truncated=reader.read()!=-1
+        }
+        // Avoid ending a clipped preview halfway through a supplementary Unicode character.
+        if(truncated && text.isNotEmpty() && text.last().isHighSurrogate()) text.setLength(text.length-1)
+        TextOutputPreview(text.toString(),truncated)
+    }
+
+    /** Single-page OCR for the comparison panel. Submission still validates and publishes complete outputs. */
+    suspend fun recognizePage(sourceId:String,page:Int):String = withContext(Dispatchers.IO) {
+        val active=currentCoroutineContext()
+        val embedded=sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
+            val isPdf=file.inputStream().use { stream ->
+                val signature=ByteArray(5)
+                stream.read(signature)==5 && String(signature,Charsets.US_ASCII)=="%PDF-"
+            }
+            if(isPdf) com.jumlo.app.data.pdf.PdfPageText.open(file).use { document ->
+                require(page in 1..document.numberOfPages) { "PAGE_OUT_OF_RANGE" }
+                com.jumlo.app.data.pdf.PdfPageText.extract(document,page-1) { active.ensureActive() }
+            } else ""
+        }
+        if(embedded.isNotBlank()) embedded else BitmapWorkGate.run {
+            val frame=previewSized(sourceId,page,2400)
+            try { ocr.recognize(frame.bitmap).also { active.ensureActive() } }
+            finally { frame.bitmap.recycle() }
+        }
+    }
+
+    /** Exact-content groups for the visual duplicate panel; source bytes are streamed and never modified. */
+    suspend fun duplicateSourceGroups(sourceIds:List<String>):List<List<SourceRef>> = withContext(Dispatchers.IO) {
+        val active=currentCoroutineContext()
+        val byDigest=linkedMapOf<String,MutableList<SourceRef>>()
+        for(id in sourceIds.distinct()) {
+            active.ensureActive()
+            val source=sources.get(id)
+            val hash=sources.openRead(id).use { Hashing.sha256(it) { active.ensureActive() } }
+            byDigest.getOrPut(hash) { mutableListOf() }.add(source)
+        }
+        byDigest.values.filter { it.size>1 }.map { it.toList() }
+    }
 
     /** Read real AcroForm controls from the immutable source without modifying it. */
     suspend fun pdfFormFields(sourceId:String):List<com.jumlo.app.data.pdf.PdfFormFieldInfo> =
@@ -890,7 +1062,7 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
      * compression slider can show a live estimate before the job runs.
      */
     suspend fun compressionProfile(sourceId:String):CompressionProfile? = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
                 val size=file.length()
                 if(size<=0L) return@withSeekable null
@@ -901,7 +1073,47 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
                 }.getOrDefault(0L)
                 CompressionProfile(size,images)
             }
-        }.getOrNull()
+        } catch(cancel:CancellationException) { throw cancel }
+        catch(_:Exception) { null }
+    }
+
+    /** Uses the publication compressor on a private candidate; callers show loading and cancel stale settings. */
+    suspend fun measuredCompression(sourceId:String,dpi:Int,quality:Int,targetBytes:Long=0L):CompressionProfile? =
+        withContext(Dispatchers.IO) {
+            BitmapWorkGate.run {
+                sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
+                    val active=currentCoroutineContext()
+                    val result=com.jumlo.app.data.pdf.PdfCompressionRunner.measure(
+                        source=file,scratchDirectory=app.cacheDir,dpi=dpi,quality=quality,
+                        codec=com.jumlo.app.data.pdf.AndroidImageCodec(budget.maxBitmapBytes),
+                        maxWorkingBytes=budget.maxBitmapBytes,targetBytes=targetBytes,
+                        minFreeBytes=budget.minFreeBytes,checkCancel={active.ensureActive()}
+                    )
+                    CompressionProfile(result.originalBytes,0L,result.outputBytes)
+                }
+            }
+        }
+    /** Actual private codec preview. The caller owns/ closes both delivered bitmaps. */
+    suspend fun encodedImagePreview(sourceId:String,toolId:String,settingsJson:String):com.jumlo.app.data.processing.EncodedImagePreview {
+        var pending:com.jumlo.app.data.processing.EncodedImagePreview?=null
+        try {
+            val delivered=withContext(Dispatchers.IO) {
+                BitmapWorkGate.run {
+                    sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
+                        val active=currentCoroutineContext()
+                        com.jumlo.app.data.processing.ImageEncodingPreview.create(file,app.cacheDir,toolId,settingsJson,
+                            budget.maxBitmapBytes,budget.minFreeBytes,checkCancel={active.ensureActive()}).also {pending=it}
+                    }
+                }
+            }
+            pending=null
+            return delivered
+        } catch(oom:OutOfMemoryError) {
+            throw OperationFailure("LOW_MEMORY")
+        } finally {
+            // A cancelled dispatcher/provider handoff must not orphan an already decoded result.
+            pending?.close()
+        }
     }
     suspend fun thumbnail(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 240)
     private suspend fun previewSized(sourceId:String,page:Int,maxEdge:Int):PreviewFrame {
@@ -916,10 +1128,11 @@ data class CompressionProfile(val originalBytes:Long,val imageBytes:Long)
     }
     private suspend fun decodePreview(sourceId:String,page:Int,maxEdge:Int):PreviewFrame {
         return sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
-            currentCoroutineContext().ensureActive()
+            val coroutine = currentCoroutineContext()
+            coroutine.ensureActive()
             val pdf=file.inputStream().use { val signature=ByteArray(5);it.read(signature)==5 && String(signature,Charsets.US_ASCII)=="%PDF-" }
             if(pdf) ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
-                val renderer = try { PdfRenderer(fd) } catch (_: SecurityException) { throw OperationFailure("PDF_ENCRYPTED") }
+                val renderer = PdfRendererFactory.open(fd, app.cacheDir) { coroutine.ensureActive() }
                 renderer.use { renderer ->
                 require(page in 1..renderer.pageCount) { "PAGE_OUT_OF_RANGE" }
                 renderer.openPage(page-1).use { p ->

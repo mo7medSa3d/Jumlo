@@ -2,15 +2,21 @@
 """Fast source contract checks. These do not replace Gradle or emulator tests."""
 import pathlib
 import unittest
+from source_paths import source_path
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SRC=ROOT/'app/src/main/java/com/jumlo/app'
-def code(p):return (SRC/p).read_text()
+def code(p):return source_path(p).read_text()
 class VisualEditorContract(unittest.TestCase):
     def test_real_workspace_wiring(self):
         workspace=code('ui/workspace/WorkspaceScreen.kt')
         self.assertIn('VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id)',workspace)
         self.assertIn('pdf_image',workspace)
-        self.assertIn('adjustment=if(tool=="img_adjust") form else null',workspace)
+        # Adjustment now has its own real before/after preview, rather than a flag
+        # on the generic input pager (which is excluded for the adjustment tool).
+        self.assertIn('ImageResultPreview(vm,ids,form)',workspace)
+        result_preview=code('ui/workspace/ImageResultPreview.kt')
+        self.assertIn('ImageComparisonPreview(original,shown.bitmap)',result_preview)
+        self.assertIn('renderSinglePreview(source,logo,draft)',result_preview)
         self.assertIn('VisualImageSettings(form,vm::updateForm)',workspace)
     def test_engine_preserves_editing_contract(self):
         model=code('model/WorkspaceDraft.kt')
@@ -26,15 +32,27 @@ class VisualEditorContract(unittest.TestCase):
         self.assertIn('hitHandle(',editor)
     def test_compression_reduction_and_safety_contracts(self):
         compressor=code('data/processing/PdfOperationHandler.kt')
+        runner=code('data/pdf/PdfCompressionRunner.kt')
         backend=code('data/pdf/PdfBoxBackend.kt')
         policy=code('core/PdfPageGeometry.kt')
         catalog=code('data/jobs/CapabilityRegistry.kt')
         image_codec=code('data/pdf/PdfImageCodec.kt')
         image_compressor=code('data/pdf/PdfImageCompressor.kt')
         android_codec=code('data/pdf/AndroidImageCodec.kt')
-        self.assertIn('PdfCompressionPolicy.betterCandidate(',compressor)
-        self.assertIn('bestBytes = candidate.length()',compressor)
-        self.assertIn('best.delete()',compressor)
+        # Preview and publication share the extracted runner. Check the actual
+        # validation/cleanup there and preserve the handler-to-runner connection.
+        self.assertIn('PdfCompressionRunner.compress(',compressor)
+        self.assertIn('PdfCompressionPolicy.betterCandidate(originalBytes, bestBytes, candidate.length(), pageCount, candidatePages)',runner)
+        self.assertIn('val candidatePages = open(candidate, directory, minFreeBytes).use { it.numberOfPages }',runner)
+        self.assertIn('bestBytes = best.length()',runner)
+        self.assertIn('candidateBytes < originalBytes',policy)
+        self.assertIn('candidatePages == originalPages',policy)
+        self.assertIn('candidateBytes < bestBytes',policy)
+        self.assertIn('require(source.canonicalFile != destination.canonicalFile)',runner)
+        self.assertIn('require(ready.length() in 1..originalBytes)',runner)
+        self.assertIn('Files.move(ready.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)',runner)
+        compress_body=runner[runner.index('fun compress('):runner.index('private fun open(')]
+        self.assertIn('finally {\n            directory.deleteRecursively()',compress_body)
         self.assertIn('PDFormXObject',backend)
         self.assertIn('decodeSubsampling(',policy)
         self.assertIn('pdf_image',catalog)
@@ -73,8 +91,11 @@ class VisualEditorContract(unittest.TestCase):
 
     def test_compression_progress_and_signature_order_are_resilient(self):
         engine=code('data/processing/PdfOperationHandler.kt')
-        self.assertIn('profiles.withIndex()',engine)
-        self.assertIn('passIndex.toLong()*total.toLong()+done.toLong()',engine)
+        runner=code('data/pdf/PdfCompressionRunner.kt')
+        self.assertIn('profiles.withIndex()',runner)
+        self.assertIn('onProgress(pass.toLong() * total + done, profiles.size.toLong() * total)',runner)
+        self.assertIn('context.report(JobProgress(JobStage.RUNNING, completed, total))',engine)
+        self.assertIn('checkCancel = context.checkCancellation',engine)
         self.assertIn('PdfOverlaySourcePolicy.ordered(',engine)
         self.assertIn('seekAll(context,request,ordered)',engine)
 
@@ -88,7 +109,13 @@ class VisualEditorContract(unittest.TestCase):
         self.assertIn('PdfImagePlacementPolicy.fit(',renderer)
         self.assertIn('placement.width,placement.height',renderer)
         self.assertIn('contentScale=ContentScale.Fit)',editor)
-        self.assertEqual(2,backend.count('PdfOverlaySourcePolicy.ordered('))
+        # Image watermarks add a third consumer; a global count cannot establish
+        # that each image-bearing operation orders PDF/image inputs correctly.
+        for operation,next_operation in (('stamp','annotate'),('overlayImage','signature'),('signature','clean')):
+            branch=backend.split('"'+operation+'" ->',1)[1].split('"'+next_operation+'" ->',1)[0]
+            with self.subTest(operation=operation):
+                self.assertIn('PdfOverlaySourcePolicy.ordered(',branch)
+                self.assertIn('seekAll(context,request,ordered)',branch)
 
     def test_file_savings_display_uses_real_metadata(self):
         fileScreen=code('ui/files/FilesScreen.kt')

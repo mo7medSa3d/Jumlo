@@ -90,6 +90,13 @@ def inspect(path, expected=None, native_expected=None):
                        if name.startswith('lib/') and len(name.split('/')) == 3})
         if not abis:
             raise ValueError('No packaged native media runtime')
+        repair_abis = {name[len(NATIVE_OVERRIDE_ROOT):].split('/', 1)[0]
+                       for name in members if name.startswith(NATIVE_OVERRIDE_ROOT)
+                       and name.endswith('.so') and '/' in name[len(NATIVE_OVERRIDE_ROOT):]}
+        unused_repair_abis = repair_abis.difference(abis)
+        if unused_repair_abis:
+            raise ValueError('Native repair assets without a packaged runtime ABI: ' +
+                             ', '.join(sorted(unused_repair_abis)))
         for abi in abis:
             for library in REQUIRED_LIBRARIES:
                 key = f'lib/{abi}/{library}'

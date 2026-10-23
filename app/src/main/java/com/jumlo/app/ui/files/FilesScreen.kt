@@ -7,19 +7,24 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import com.jumlo.app.ui.DataLoadStatus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Sort
-import androidx.compose.material.icons.automirrored.rounded.ViewList
-import androidx.compose.material.icons.rounded.*
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.Sort
+import com.jumlo.app.ui.icons.automirrored.rounded.ViewList
+import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,13 +50,15 @@ import com.jumlo.app.model.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
-    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null) {
+    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={}) {
     val haptics=rememberAppHaptics()
     val context=LocalContext.current
     val imported by vm.imported.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val trashed by vm.trashed.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val storage by vm.storage.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.refreshStorage() }
     val tree by vm.tree.collectAsStateWithLifecycle()
     val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
     val sourceLoad by vm.sourceLoad.collectAsStateWithLifecycle()
@@ -66,16 +73,21 @@ import com.jumlo.app.model.*
     var search by rememberSaveable {mutableStateOf("")}
     var sort by rememberSaveable {mutableStateOf("date")}
     var type by rememberSaveable {mutableStateOf("all")}
+    var group by rememberSaveable {mutableStateOf("none")}
     var sortPicker by rememberSaveable {mutableStateOf(false)}
-    var selected by remember {mutableStateOf(setOf<String>())}
+    var selected by rememberSaveable(stateSaver=FileSelectionSaver) {mutableStateOf(setOf<String>())}
     var selecting by rememberSaveable {mutableStateOf(false)}
-    var selectedSources by remember { mutableStateOf(setOf<String>()) }
+    var selectedSources by rememberSaveable(stateSaver=FileSelectionSaver) { mutableStateOf(setOf<String>()) }
     var selectingSources by rememberSaveable { mutableStateOf(false) }
     var deleteIds by remember {mutableStateOf<Set<String>?>(null)}
     var purgeIds by remember {mutableStateOf<Set<String>?>(null)}
     var details by remember {mutableStateOf<OutputRecord?>(null)}
-    LaunchedEffect(outputs) {selected=selected.intersect(outputs.map {it.id}.toSet())}
-    LaunchedEffect(imported) {selectedSources=selectedSources.intersect(imported.map {it.id}.toSet())}
+    LaunchedEffect(outputs,outputLoad) {
+        if(outputLoad==DataLoadStatus.READY) selected=selected.intersect(outputs.map {it.id}.toSet())
+    }
+    LaunchedEffect(imported,sourceLoad) {
+        if(sourceLoad==DataLoadStatus.READY) selectedSources=selectedSources.intersect(imported.map {it.id}.toSet())
+    }
     val density=LocalDensity.current
     val visible=remember(outputs,search,sort,type,settings.favoriteOutputIds) {
         outputs.filter {it.displayName.contains(search,true) && (type=="all" || (type=="favorites" && it.id in settings.favoriteOutputIds) || StoragePaths.category(it.mimeType)==type)}.let {list->
@@ -84,7 +96,11 @@ import com.jumlo.app.model.*
     }
     val visibleSources=remember(imported,search,sort) {
         imported.filter {it.displayName.contains(search,true)}.let {list->
-            if(sort=="name") list.sortedBy {it.displayName.lowercase()} else list
+            when(sort) {
+                "name" -> list.sortedBy {it.displayName.lowercase()}
+                "size" -> list.sortedByDescending {it.sizeBytes ?: 0L}
+                else -> list.sortedByDescending {it.modifiedAtEpochMs ?: 0L}
+            }
         }
     }
     val visibleTrashed=remember(trashed,search) {
@@ -94,27 +110,29 @@ import com.jumlo.app.model.*
         tree?.entries?.filter {it.name.contains(search,true)}.orEmpty()
     }
     val selectedOutputs = visible.filter { it.id in selected }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize().testTag("files.screen")) {
     val columns=((maxWidth.value-40f)/(if(density.fontScale>=1.5f) 240f else 160f)).toInt().coerceIn(1,4)
     LazyColumn(
         modifier=Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,bottom=QuietTheme.spacing.listBottomBuffer),
+        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,
+            bottom=QuietTheme.spacing.listBottomBuffer + if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) 96.dp else 0.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)
     ) {
         item("heading") { Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(if(selecting && section=="outputs") stringResource(R.string.neon_selection_count,selected.size)
                 else stringResource(R.string.neon_my_documents),style=QuietTheme.typography.screenTitle)
-            Text(if(settings.downloadDestinationFolder.startsWith("content://")) stringResource(R.string.redesign_custom_saved_path)
-                else stringResource(R.string.redesign_storage_path),style=QuietTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick={haptics.actionClick();onSavedFolder()},modifier=Modifier.weight(1f).pressFeedback()) { Icon(Icons.Rounded.FolderOpen,null,Modifier.size(18.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.redesign_open_folder),maxLines=1,overflow=TextOverflow.Ellipsis) }
-                QuietPrimaryButton(text=stringResource(R.string.import_device_files),
-                    onClick={onImport()},modifier=Modifier.weight(1f),leadingIcon=Icons.Rounded.Add)
+            SaveFolderCard(settings.downloadDestinationFolder, onChangeSaveFolder, onSavedFolder)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp), verticalAlignment=Alignment.CenterVertically) {
+                TextButton(onClick={vm.refreshStorage();onStorage()},modifier=Modifier.weight(1f).testTag("files.storage")) {
+                    Text(stringResource(R.string.modern_storage_usage)+" · "+formatBytes(storage.outputs),maxLines=2)
+                }
+                QuietPrimaryButton(text=stringResource(R.string.import_device_files), onClick=onImport,
+                    modifier=Modifier.weight(1f),leadingIcon=Icons.Rounded.Add)
             }
         } }
         item("search") {QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})}
         item("sections") {LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-            items(listOf("outputs" to R.string.ui_outputs,"sources" to R.string.ui_imported,"folder" to R.string.ui_granted_folder,"trash" to R.string.files_trash_title),key={it.first}) {(key,label)->FilterChip(section==key,{haptics.selectionToggle();section=key;selecting=false;selected=emptySet();selectingSources=false;selectedSources=emptySet()},label={Text(stringResource(label),style=QuietTheme.typography.metadataStrong)})}
+            items(listOf("outputs" to R.string.ui_outputs,"sources" to R.string.ui_imported,"folder" to R.string.ui_granted_folder,"trash" to R.string.files_trash_title),key={it.first}) {(key,label)->FilterChip(section==key,{haptics.selectionToggle();section=key;selecting=false;selected=emptySet();selectingSources=false;selectedSources=emptySet()},border=null,label={Text(stringResource(label),style=QuietTheme.typography.metadataStrong)})}
         }}
         if(section=="outputs" && outputs.any { it.publicUri==null }) item("public-store-warning") {
             Surface(color=MaterialTheme.colorScheme.errorContainer.copy(alpha=0.65f),shape=MaterialTheme.shapes.medium) {
@@ -127,13 +145,15 @@ import com.jumlo.app.model.*
                 item("filter") { Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
                         items(listOf("all","favorites","Video","Audio","PDF","Images","Documents")) {filter->
-                            FilterChip(type==filter,{haptics.selectionToggle();type=filter;selected=emptySet()},label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->"PDF";"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
+                            FilterChip(type==filter,{haptics.selectionToggle();type=filter;selected=emptySet()},border=null,label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->"PDF";"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
                         }
                     }
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                        TextButton(onClick={haptics.actionClick();sortPicker=true}) { Icon(Icons.AutoMirrored.Rounded.Sort,null,Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.redesign_sort),style=QuietTheme.typography.metadataStrong) }
-                        IconButton(onClick={haptics.selectionToggle();vm.setFileViewMode(when(settings.fileViewMode) {FileViewMode.LIST->FileViewMode.GRID;FileViewMode.GRID->FileViewMode.GALLERY;FileViewMode.GALLERY->FileViewMode.LIST})}) {
-                            Icon(when(settings.fileViewMode){FileViewMode.LIST->Icons.AutoMirrored.Rounded.ViewList;FileViewMode.GRID->Icons.Rounded.GridView;FileViewMode.GALLERY->Icons.Rounded.PhotoLibrary},stringResource(R.string.redesign_file_view))
+                        TextButton(onClick={haptics.actionClick();sortPicker=true}) { Icon(Icons.AutoMirrored.Rounded.Sort,null,Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.modern_sort_group),style=QuietTheme.typography.metadataStrong) }
+                        val viewLabel=stringResource(if(settings.fileViewMode==FileViewMode.LIST) R.string.redesign_view_list else R.string.redesign_view_grid)
+                        IconButton(onClick={haptics.selectionToggle();vm.setFileViewMode(if(settings.fileViewMode==FileViewMode.LIST) FileViewMode.GRID else FileViewMode.LIST)},
+                            modifier=Modifier.testTag("files.view").semantics { stateDescription=viewLabel }) {
+                            Icon(if(settings.fileViewMode==FileViewMode.LIST) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView,stringResource(R.string.redesign_file_view))
                         }
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick={haptics.selectionToggle();selecting=!selecting;selected=emptySet()},enabled=outputs.isNotEmpty()) {Text(stringResource(if(selecting) R.string.action_cancel else R.string.ui_select_files),style=QuietTheme.typography.metadataStrong)}
@@ -153,8 +173,28 @@ import com.jumlo.app.model.*
                         stringResource(if(filtered) R.string.files_state_reset_filters else R.string.import_device_files),
                         { if(filtered) { search=""; type="all"; selected=emptySet() } else onImport() })
                 }
+                val now = System.currentTimeMillis()
+                val grouped = when(group) {
+                    "type" -> visible.groupBy { StoragePaths.category(it.mimeType) }
+                    "date" -> visible.groupBy { fileDateGroup(it.createdAtEpochMs, now).name }
+                    else -> linkedMapOf("" to visible)
+                }
+                grouped.forEach { (groupKey, groupFiles) ->
+                if(groupKey.isNotEmpty()) item("file-group-$groupKey") {
+                    Text(stringResource(when(groupKey) {
+                        "TODAY" -> R.string.modern_today
+                        "YESTERDAY" -> R.string.modern_yesterday
+                        "EARLIER" -> R.string.modern_earlier
+                        "Video" -> R.string.redesign_filter_video
+                        "Audio" -> R.string.redesign_filter_audio
+                        "Images" -> R.string.redesign_filter_images
+                        "PDF" -> R.string.redesign_pdf_type
+                        else -> R.string.redesign_filter_documents
+                    }), style=QuietTheme.typography.sectionTitle,
+                        modifier=Modifier.padding(top=8.dp).semantics { heading() })
+                }
                 if(settings.fileViewMode==FileViewMode.LIST) {
-                    items(visible,key={it.id},contentType={"output"}) { output ->
+                    items(groupFiles,key={it.id},contentType={"output"}) { output ->
                         SwipeFileActions(output.displayName,enabled=!selecting,onShare={onShare(output)},
                             onRename={rename(output)},onTrash={vm.trashOutputs(listOf(output))},onPrint=printAction(output)) {
                             OutputRow(output,{if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
@@ -166,24 +206,22 @@ import com.jumlo.app.model.*
                         }
                     }
                 } else {
-                    items(visible.chunked(columns),key={it.joinToString("-") {f->f.id}},contentType={"tileRow"}) {row->
+                    items(groupFiles.chunked(columns),key={it.joinToString("-") {f->f.id}},contentType={"tileRow"}) {row->
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
                             row.forEach {output->
-                                val cardHeight=if(settings.fileViewMode==FileViewMode.GALLERY) 340.dp else 288.dp
+                                val cardHeight=288.dp
                                 Surface(
                                     modifier=Modifier.pressFeedback().weight(1f).heightIn(min=cardHeight)
                                         .combinedClickable(onClick={haptics.actionClick();if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
                                             onLongClick={haptics.selectionToggle();selecting=true;selected=selected+output.id})
                                         .semantics { if(selecting) { this.selected=output.id in selected; role=Role.Checkbox } },
                                     shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
-                                    border=androidx.compose.foundation.BorderStroke(1.dp,
-                                        if(selecting && output.id in selected) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outlineVariant),
-                                    color=MaterialTheme.colorScheme.surfaceContainerLow
+                                    color=if(selecting && output.id in selected) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.surfaceContainerLow
                                 ) {
                                     Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                         Box(Modifier.fillMaxWidth()
-                                            .height(if(settings.fileViewMode==FileViewMode.GALLERY) 194.dp else 150.dp)) {
+                                            .height(140.dp)) {
                                             NeonOutputPreview(output, Modifier.fillMaxSize())
                                             if(selecting) Icon(
                                                 if(output.id in selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
@@ -207,6 +245,8 @@ import com.jumlo.app.model.*
                                                 maxLines=1,overflow=TextOverflow.Ellipsis
                                             )
                                         }
+                                        Text(fileDateLabel(output.createdAtEpochMs), style=QuietTheme.typography.metadata,
+                                            color=MaterialTheme.colorScheme.onSurfaceVariant)
                                         if(!selecting) {
                                             var actionsExpanded by remember(output.id) { mutableStateOf(false) }
                                             Row(horizontalArrangement=Arrangement.End,modifier=Modifier.fillMaxWidth()) {
@@ -236,6 +276,7 @@ import com.jumlo.app.model.*
                             repeat(columns-row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
+                }
                 }
             }
             "sources" -> {
@@ -283,7 +324,7 @@ import com.jumlo.app.model.*
                         stringResource(R.string.files_state_clear_search),{search="";selectedSources=emptySet()})
                 }
                 items(visibleSources,key={it.id}) {source->
-                    FileMenuRow(source.displayName,formatBytes(source.sizeBytes),
+                    FileMenuRow(source.displayName,formatBytes(source.sizeBytes) + (source.modifiedAtEpochMs?.let { " · " + fileDateLabel(it) } ?: ""),
                         {if(selectingSources) selectedSources=selectedSources.symmetric(source.id) else onSource(source.id)},
                         selection=if(selectingSources) source.id in selectedSources else null,
                         onSelect={selectedSources=selectedSources.symmetric(source.id)},
@@ -311,7 +352,7 @@ import com.jumlo.app.model.*
                 }
             }
             "folder" -> {
-                item {OutlinedButton(onClick=onFolder) {Text(stringResource(R.string.tool_browse_storage))}}
+                item {FilledTonalButton(onClick=onFolder) {Text(stringResource(R.string.tool_browse_storage))}}
                 val listing=tree
                 if(treeLoad!=DataLoadStatus.READY) item("folder-state") {DocumentLoadState(treeLoad,vm::reloadTree)}
                 else if(listing==null) item("folder-empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder)}
@@ -338,11 +379,9 @@ import com.jumlo.app.model.*
             selectedOutputs.all { it.mimeType.startsWith("image/") }
         Surface(
             modifier=Modifier.align(Alignment.BottomCenter)
-                .padding(start=14.dp,end=14.dp,bottom=98.dp),
+                .padding(start=14.dp,end=14.dp,bottom=12.dp),
             color=MaterialTheme.colorScheme.surfaceContainerHigh,
             shape=androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
-            border=androidx.compose.foundation.BorderStroke(
-                1.dp,MaterialTheme.colorScheme.primary.copy(alpha=.5f)),
             shadowElevation=9.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=7.dp),
@@ -397,11 +436,22 @@ import com.jumlo.app.model.*
         }
     }
     }
-    if(sortPicker) AlertDialog(onDismissRequest={sortPicker=false},title={Text(stringResource(R.string.redesign_sort))},text={Column {
+    if(sortPicker) AlertDialog(onDismissRequest={sortPicker=false},title={Text(stringResource(R.string.modern_sort_group))},text={Column(Modifier.verticalScroll(rememberScrollState())) {
+        Text(stringResource(R.string.redesign_sort), style=QuietTheme.typography.metadataStrong)
         listOf("date" to R.string.redesign_sort_date,"size" to R.string.redesign_sort_size,"name" to R.string.redesign_sort_name,"type" to R.string.redesign_sort_type).forEach { (key,label)->
-            TextButton(onClick={sort=key;sortPicker=false},modifier=Modifier.fillMaxWidth()) {Text(stringResource(label))}
+            Row(Modifier.fillMaxWidth().heightIn(min=52.dp).selectable(sort==key,role=Role.RadioButton,onClick={sort=key}),verticalAlignment=Alignment.CenterVertically) {
+                RadioButton(selected=sort==key,onClick=null)
+                Text(stringResource(label),Modifier.padding(start=12.dp))
+            }
         }
-    }},confirmButton={TextButton(onClick={sortPicker=false}) {Text(stringResource(R.string.account_cancel))}})
+        Text(stringResource(R.string.modern_group_by), style=QuietTheme.typography.metadataStrong)
+        listOf("none" to R.string.modern_group_none,"date" to R.string.redesign_sort_date,"type" to R.string.redesign_sort_type).forEach { (key,label) ->
+            Row(Modifier.fillMaxWidth().heightIn(min=52.dp).selectable(group==key,role=Role.RadioButton,onClick={group=key}),verticalAlignment=Alignment.CenterVertically) {
+                RadioButton(selected=group==key,onClick=null)
+                Text(stringResource(label),Modifier.padding(start=12.dp))
+            }
+        }
+    }},confirmButton={TextButton(onClick={sortPicker=false}) {Text(stringResource(R.string.account_done))}})
     deleteIds?.let { ids -> AlertDialog(onDismissRequest={deleteIds=null},title={Text(stringResource(R.string.dialog_delete_title))},text={Text(stringResource(R.string.redesign_delete_confirm))},confirmButton={
         TextButton(onClick={haptics.secondaryAction();vm.trashOutputs(outputs.filter {it.id in ids});selected=emptySet();selecting=false;deleteIds=null}) {Text(stringResource(R.string.action_delete))}
     },dismissButton={TextButton(onClick={deleteIds=null}) {Text(stringResource(R.string.account_cancel))}})}
@@ -410,7 +460,7 @@ import com.jumlo.app.model.*
             runCatching { com.jumlo.app.core.DocumentNamePolicy.rename(output.displayName,renameText) }.isSuccess
         }
         AlertDialog(onDismissRequest={renameOutput=null},title={Text(stringResource(R.string.action_rename))},
-            text={OutlinedTextField(renameText,{renameText=it},singleLine=true,label={Text(stringResource(R.string.upgrade_new_name))},isError=!nameValid)},
+            text={TextField(renameText,{renameText=it},singleLine=true,label={Text(stringResource(R.string.upgrade_new_name))},isError=!nameValid)},
             confirmButton={TextButton(onClick={vm.renameOutput(output,renameText);renameOutput=null},enabled=nameValid) {Text(stringResource(R.string.account_done))}},
             dismissButton={TextButton(onClick={renameOutput=null}) {Text(stringResource(R.string.action_cancel))}})
     }
@@ -451,6 +501,8 @@ private fun RowScope.NeonBatchAction(
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+private val FileSelectionSaver = listSaver<Set<String>, String>(save={it.toList()},restore={it.toSet()})
 
 private fun Set<String>.symmetric(id:String):Set<String> = if(id in this) this-id else this+id
 
@@ -497,7 +549,7 @@ private fun Set<String>.symmetric(id:String):Set<String> = if(id in this) this-i
         onDismissRequest=onDismiss,
         title={Text(stringResource(R.string.dialog_rename_title))},
         text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(enteredName,onNameChange,singleLine=true,modifier=Modifier.fillMaxWidth(),
+            TextField(enteredName,onNameChange,singleLine=true,modifier=Modifier.fillMaxWidth(),
                 label={Text(stringResource(R.string.files_rename_new_name))},
                 textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Content),
                 isError=preview.errorCode!=null)

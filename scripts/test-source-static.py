@@ -52,24 +52,40 @@ class SourceConsistencyTests(unittest.TestCase):
         registry=(CODE/'data/jobs/CapabilityRegistry.kt').read_text()
         self.assertIn('CapabilityPolicy.availability(id)',registry)
         self.assertNotIn('BuildConfig.DEBUG',registry)
-    def test_only_published_files_have_fileprovider_paths(self):
+    def test_fileprovider_exposes_only_outputs_and_immutable_viewer_snapshots(self):
         entries=list(ET.parse(MAIN/'res/xml/file_paths.xml').getroot())
-        self.assertTrue(entries)
-        self.assertTrue(all(n.tag=='files-path' and n.get('path').strip('/')=='processing/results' for n in entries))
+        self.assertEqual(2,len(entries))
+        self.assertTrue(all(n.tag=='files-path' for n in entries))
+        self.assertEqual({'processing/results','inbound'},{n.get('path').strip('/') for n in entries})
+        android='{http://schemas.android.com/apk/res/android}'
+        provider=next(node for node in ET.parse(MAIN/'AndroidManifest.xml').getroot().findall('application/provider')
+                      if node.get(android+'name')=='androidx.core.content.FileProvider')
+        self.assertEqual('false',provider.get(android+'exported'))
+        self.assertEqual('true',provider.get(android+'grantUriPermissions'))
+        viewer=(CODE/'ui/AppViewModel.kt').read_text().split('suspend fun viewerUri(',1)[1].split('/**',1)[0]
+        for token in ('sources.get(sourceId)','printableSource(source)','FileProvider.getUriForFile'):
+            self.assertIn(token,viewer)
     def test_cancel_receiver_is_not_exported(self):
         android='{http://schemas.android.com/apk/res/android}'
         receivers=ET.parse(MAIN/'AndroidManifest.xml').getroot().findall('application/receiver')
         match=[r for r in receivers if r.get(android+'name')=='.worker.CancelJobReceiver']
         self.assertEqual(1,len(match))
         self.assertEqual('false',match[0].get(android+'exported'))
-    def test_bundled_fonts_are_exactly_the_pinned_plex_files(self):
+    def test_bundled_fonts_are_exactly_the_licensed_arabic_latin_subsets(self):
         import hashlib
-        pinned={'ibm_plex_sans_variable.ttf':'3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3',
-                'ibm_plex_sans_arabic_regular.ttf':'6f611412270a132bbac838da9259d4c68569b4175f3b3b8fa3fa36a30b56dab9'}
+        # Derived with tools/subset-fonts.py, retaining Arabic/Latin layout tables,
+        # a fixed width and only used weights; renamed families preserve OFL terms.
+        pinned={'ibm_plex_sans_variable.ttf':'17b364b7d3e0adb0fa619370d264351f0ed7eadb3e9c5bd1067398af53c7a538',
+                'ibm_plex_sans_arabic_regular.ttf':'d01c5bf84381a0c8ecd780387865e5ab353a3cc4981a813a75abbb03f9174802'}
         found={p.name:p for p in MAIN.rglob('*') if p.suffix.lower() in {'.ttf','.otf','.woff','.woff2','.ttc','.eot'}}
         self.assertEqual(set(pinned),set(found))
         for name,path in found.items():
             self.assertEqual(pinned[name],hashlib.sha256(path.read_bytes()).hexdigest(),name)
+        self.assertLessEqual(sum(path.stat().st_size for path in found.values()),360_000)
+        derivation=(ROOT/'tools/subset-fonts.py').read_text()
+        for token in ('Jumlo Sans Arabic', "'wdth':100", "'wght':(400,400,700)", "options.layout_features=['*']", 'Required glyphs lost'):
+            self.assertIn(token,derivation)
+        self.assertIn('SIL OPEN FONT LICENSE',(MAIN/'assets/licenses/IBM-Plex-OFL.txt').read_text())
     def test_room_download_url_writes_are_redacted_and_legacy_urls_scrubbed(self):
         local = (CODE / 'data/local/AppDatabase.kt').read_text()
         module = (CODE / 'di/AppModule.kt').read_text()

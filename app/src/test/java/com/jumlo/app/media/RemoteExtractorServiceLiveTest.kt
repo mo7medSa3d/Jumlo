@@ -28,7 +28,8 @@ class RemoteExtractorServiceLiveTest {
 
     private fun runtime() = RemoteExtractorRuntime(
         baseUrlProvider = { serviceUrl.orEmpty() },
-        client = OkHttpClient()
+        client = OkHttpClient(),
+        allowDebugLoopback = true
     )
 
     @Test fun aDirectMediaLinkIsDownloadedToTheDevice() {
@@ -42,7 +43,7 @@ class RemoteExtractorServiceLiveTest {
             val choice = MediaChoice(key = "video:${format.id}", mode = MediaMode.VIDEO, formats = listOf(format),
                 container = format.extension, requiresMux = false, expectedHeight = format.height,
                 estimatedBytes = format.bytes, sizeIsApproximate = format.bytes == null)
-            // A loopback service is plain http; the cleartext consent flag covers it.
+            // This explicit test-only loopback allowance does not enable cleartext release backends.
             runtime().download(url, choice, AudioOutput.ORIGINAL, 0, true, dir, {}, {})
             val file = File(dir, "media.${format.extension}")
             assertTrue("the file must exist", file.exists())
