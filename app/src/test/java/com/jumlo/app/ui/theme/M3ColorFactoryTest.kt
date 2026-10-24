@@ -13,7 +13,7 @@ class M3ColorFactoryTest {
         assertEquals(1f, M3ColorFactory.contrast(Color.White, Color.White), 0.001f)
     }
 
-    @Test fun `meetsAA checks the 4.5 threshold`() {
+    @Test fun `meetsAA checks the 4_5 threshold`() {
         assertTrue(M3ColorFactory.meetsAA(Color.White, Color.Black))
         assertTrue(M3ColorFactory.meetsAA(Color.White, Color(0xFF555555)))
         assertFalse(M3ColorFactory.meetsAA(Color.White, Color(0xFFDDDDDD)))

@@ -83,7 +83,7 @@ data class PdfPageEdit(
     fun deleteSelected(): PdfPageEdit {
         val remaining = order.filterNot { it in selected }
         require(remaining.isNotEmpty()) { "AT_LEAST_ONE_PAGE_REQUIRED" }
-        return PdfPageEdit(remaining, rotations.filterKeys { it in remaining })
+        return PdfPageEdit(remaining, emptySet(), rotations.filterKeys { it in remaining })
     }
 
     fun duplicate(page: Int): PdfPageEdit {
@@ -115,7 +115,9 @@ data class PdfPageEdit(
 
     fun splitEvery(n: Int): List<PdfPageEdit> {
         require(n > 0) { "INVALID_SPLIT_SIZE" }
-        return order.chunked(n).map { PdfPageEdit(it, rotations.filterKeys { p in it }) }
+        return order.chunked(n).map { chunk ->
+            PdfPageEdit(chunk, emptySet(), rotations.filterKeys { it in chunk })
+        }
     }
 }
 

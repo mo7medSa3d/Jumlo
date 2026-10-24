@@ -174,7 +174,7 @@ private fun PdfViewerContent(
     }
 
     LaunchedEffect(chromeVisible, activity) {
-        val controller = activity?.let { WindowInsetsControllerCompat(it.window, it.decorView) }
+        val controller = activity?.let { WindowInsetsControllerCompat(it.window, it.window.decorView) }
         controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         if (chromeVisible) controller?.show(WindowInsetsCompat.Type.systemBars()) else controller?.hide(WindowInsetsCompat.Type.systemBars())
     }
@@ -469,7 +469,7 @@ private suspend fun pdfInfo(context: Context, uri: String): Map<String, String> 
     val file = copyToCache(context, uri, "pdf-info") ?: return@withContext emptyMap()
     try {
         PdfPageText.open(file).use { doc ->
-            val info = doc.information
+            val info = doc.documentInformation
             mutableMapOf<String, String>().apply {
                 info?.title?.takeIf { it.isNotBlank() }?.let { put("Title", it) }
                 info?.author?.takeIf { it.isNotBlank() }?.let { put("Author", it) }

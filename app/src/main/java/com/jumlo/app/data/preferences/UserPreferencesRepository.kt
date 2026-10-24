@@ -155,7 +155,7 @@ class UserPreferencesRepository @Inject constructor(
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
-            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter {it.matches(Regex("[a-z0-9_]{1,64}"))}?.orEmpty(),
+            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter { it.matches(Regex("[a-z0-9_]{1,64}")) }.orEmpty(),
             mostUsedToolIds = rankedTools,
             rankedToolIds = rankedTools,
             favoriteOutputIds = OutputFavorites.sanitize(

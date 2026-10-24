@@ -24,10 +24,12 @@ object PageDocumentMerger {
 /** Undo/redo stack over immutable [PdfPageEdit] snapshots. Non-destructive:
  *  applying an edit pushes the previous state; undo/redo move a cursor. */
 class PageEditHistory(initial: PdfPageEdit) {
-    require(initial.order.isNotEmpty()) { "EMPTY_DOCUMENT" }
     private val undoStack = ArrayDeque<PdfPageEdit>()
     private val redoStack = ArrayDeque<PdfPageEdit>()
-    init { undoStack.addLast(initial) }
+    init {
+        require(initial.order.isNotEmpty()) { "EMPTY_DOCUMENT" }
+        undoStack.addLast(initial)
+    }
 
     val current: PdfPageEdit get() = undoStack.last()
     val canUndo: Boolean get() = undoStack.size > 1

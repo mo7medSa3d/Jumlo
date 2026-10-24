@@ -33,9 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jumlo.app.R
 import com.jumlo.app.ui.theme.ColorPresets
 import com.jumlo.app.ui.theme.M3ColorFactory
 import com.jumlo.app.ui.theme.QuietTheme
@@ -72,9 +74,9 @@ fun AppearanceColorPicker(
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(stringResource(R.string.pref_app_color_preview), style = QuietTheme.typography.navigation)
                     Spacer(Modifier.height(10.dp))
-                    SwatchRow(scheme.primary, scheme.onPrimary, scheme.primaryContainer, scheme.onPrimaryContainer)
+                    SwatchRow(scheme.primary to scheme.onPrimary, scheme.primaryContainer to scheme.onPrimaryContainer)
                     Spacer(Modifier.height(8.dp))
-                    SwatchRow(scheme.secondary, scheme.onSecondary, scheme.tertiary, scheme.onTertiary)
+                    SwatchRow(scheme.secondary to scheme.onSecondary, scheme.tertiary to scheme.onTertiary)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -86,7 +88,10 @@ fun AppearanceColorPicker(
                     PresetChip(
                         preset = preset,
                         selected = preset.hex.equals(hexDraft, ignoreCase = true),
-                        onClick = { hexDraft = preset.hex }
+                        onClick = {
+                            hexDraft = preset.hex
+                            onSelect(preset.hex)
+                        }
                     )
                 }
             }
@@ -164,7 +169,7 @@ private fun PresetChip(preset: com.jumlo.app.ui.theme.ColorPreset, selected: Boo
         Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .background(
                 if (selected) scheme.primaryContainer else scheme.surfaceContainerLow,
                 RoundedCornerShape(12.dp)
@@ -188,7 +193,7 @@ private fun PresetChip(preset: com.jumlo.app.ui.theme.ColorPreset, selected: Boo
 }
 
 @Composable
-private fun HsvSlider(label: String, value: Float, range: FloatRange, onChange: (Float) -> Unit) {
+private fun HsvSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Text(label, style = QuietTheme.typography.bodyMedium)
         Slider(value = value, onValueChange = onChange, valueRange = range)

@@ -65,7 +65,7 @@ private val toolSections = listOf(
     ToolSection("download", "Download", "التنزيل", setOf("dl_media", "dl_02", "dl_03")),
     ToolSection("files", "Files", "الملفات",
         setOf("file_02", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename",
-            "file_duplicates", "file_trash", "sha256"))
+            "file_duplicates", "file_trash", "sha256", "file_drive"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
@@ -74,7 +74,7 @@ private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
 @Composable
 private fun SectionHeader(title: String) {
     Text(title, color = MaterialTheme.colorScheme.primary,
-        style = QuietTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
 }
 

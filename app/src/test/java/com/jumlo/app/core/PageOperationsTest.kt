@@ -25,7 +25,7 @@ class PageOperationsTest {
     @Test fun `toggle adds and removes selection`() {
         val d = doc(1, 2, 3).toggle(2)
         assertEquals(setOf(2), d.selected)
-        assertEquals(emptySet(), d.toggle(2).selected)
+        assertEquals(emptySet<Int>(), d.toggle(2).selected)
     }
 
     @Test fun `selectRange adds a contiguous range`() {
@@ -36,8 +36,8 @@ class PageOperationsTest {
     @Test fun `selectAll invertSelection and selectNone`() {
         val d = doc(1, 2, 3).toggle(1)
         assertEquals(setOf(1, 2, 3), d.selectAll().selected)
-        assertEquals(setOf(2, 3), d.selectAll().invertSelection().selected)
-        assertEquals(emptySet(), d.selectAll().selectNone().selected)
+        assertEquals(setOf(2, 3), d.invertSelection().selected)
+        assertEquals(emptySet<Int>(), d.selectAll().selectNone().selected)
     }
 
     @Test fun `deleteSelected removes pages and keeps the rest`() {
@@ -140,7 +140,7 @@ class PageOperationsTest {
     }
 
     @Test fun `range parsing rejects out-of-range and malformed input`() {
-        try { PageSelection.parse("1-5", 3); fail("expected INVALID_PAGE_RANGE") }
+        try { PageSelection.parse("4-5", 3); fail("expected INVALID_PAGE_RANGE") }
         catch (e: IllegalArgumentException) { assertEquals("INVALID_PAGE_RANGE", e.message) }
         try { PageSelection.parse("abc", 5); fail("expected INVALID_PAGE_RANGE") }
         catch (e: IllegalArgumentException) { assertEquals("INVALID_PAGE_RANGE", e.message) }

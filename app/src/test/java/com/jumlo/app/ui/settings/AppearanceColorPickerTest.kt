@@ -4,8 +4,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -36,7 +37,7 @@ class AppearanceColorPickerTest {
         compose.setContent {
             AppearanceColorPicker(current = "#1E88E5", onDismiss = {}, onSelect = { selected = it })
         }
-        compose.onAllNodes(hasText("Teal")).performClick()
+        compose.onAllNodes(hasText("Teal"))[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals("#00897B", selected)
     }
 
@@ -47,7 +48,7 @@ class AppearanceColorPickerTest {
             AppearanceColorPicker(current = "#1E88E5", onDismiss = {}, onSelect = { selected = it })
         }
         // The teal preset confirms the onSelect path with a canonical hex.
-        compose.onAllNodes(hasText("Violet")).performClick()
+        compose.onAllNodes(hasText("Violet"))[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals("#7B4DFF", selected)
     }
 }

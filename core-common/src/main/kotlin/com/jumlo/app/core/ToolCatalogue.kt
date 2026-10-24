@@ -86,6 +86,7 @@ object ToolCatalogue {
             merged = listOf(
                 "file_08",            // extract an archive
                 "file_encrypted_zip", // encrypted archive
+                "file_drive",         // google drive import / export
                 "sha256"              // verify a digest
             )
         ),
