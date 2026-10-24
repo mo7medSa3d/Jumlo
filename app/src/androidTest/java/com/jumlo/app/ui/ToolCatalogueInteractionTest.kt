@@ -20,7 +20,7 @@ class ToolCatalogueInteractionTest {
         var selected = ""
         compose.setContent {
             JumloTheme(ThemeMode.LIGHT, AppLanguage.ENGLISH) {
-                ToolsCatalogue(listOf(tool), AppLanguage.ENGLISH, emptyList(), "", {}, { selected = it.id })
+                ToolsCatalogue(listOf(tool), AppLanguage.ENGLISH, emptyList(), emptyList(), emptyList(), "", {}, { selected = it.id })
             }
         }
         compose.onNodeWithTag("tool.icon.pdf_crop", useUnmergedTree = true).assertExists()
@@ -28,15 +28,15 @@ class ToolCatalogueInteractionTest {
         compose.runOnIdle { assertEquals("pdf_crop", selected) }
     }
 
-    @Test fun persistedUsagePlacesMostUsedToolFirstWithoutRemovingOtherTools() {
-        val tools = listOf("pdf_crop", "pdf_03", "img_02").map { id -> CapabilityRegistry.tools.single { it.id == id } }
+    @Test fun persistedUsagePlacesMostUsedToolFirstWithinASection() {
+        val tools = listOf("img_03", "img_02").map { id -> CapabilityRegistry.tools.single { it.id == id } }
         compose.setContent {
             JumloTheme(ThemeMode.DARK, AppLanguage.ARABIC) {
-                ToolsCatalogue(tools, AppLanguage.ARABIC, listOf("img_02", "pdf_crop"), "", {}, {})
+                ToolsCatalogue(tools, AppLanguage.ARABIC, listOf("img_02", "img_03"), emptyList(), emptyList(), "", {}, {})
             }
         }
         val first = compose.onNodeWithTag("tool.img_02").fetchSemanticsNode().boundsInRoot
-        val last = compose.onNodeWithTag("tool.pdf_03").fetchSemanticsNode().boundsInRoot
+        val last = compose.onNodeWithTag("tool.img_03").fetchSemanticsNode().boundsInRoot
         assertTrue(first.top < last.top)
         tools.forEach { compose.onNodeWithTag("tool.${it.id}").assertExists() }
     }
@@ -46,7 +46,7 @@ class ToolCatalogueInteractionTest {
         var reset = false
         compose.setContent {
             JumloTheme(ThemeMode.LIGHT, AppLanguage.ARABIC) {
-                ToolsCatalogue(listOf(tool), AppLanguage.ARABIC, emptyList(), "no-such-tool", { reset = it.isEmpty() }, {})
+                ToolsCatalogue(listOf(tool), AppLanguage.ARABIC, emptyList(), emptyList(), emptyList(), "no-such-tool", { reset = it.isEmpty() }, {})
             }
         }
         compose.onNodeWithTag("tool.pdf_crop").assertDoesNotExist()

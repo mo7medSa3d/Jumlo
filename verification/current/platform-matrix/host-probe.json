@@ -1,0 +1,44 @@
+{
+  "scope": "HOST_METADATA_ONLY",
+  "android_matrix_modified": false,
+  "created_utc": "2026-10-24T00:49:57.979209+00:00",
+  "extractor": {
+    "version": "2026.10.21",
+    "archive_sha256": "b7af77f686e95f7845ce8d09d21957718febb8b48b30555adb9dd2292ad7bf14",
+    "bootstrap_sha256": "678efe237bdb48f76a0b9920eb29d7340fff01bcaf6c2765239730964b22121a"
+  },
+  "host_python": "3.11.2",
+  "host_os": "Linux",
+  "host_js_tools_present": {
+    "deno": false,
+    "node": true,
+    "qjs": false
+  },
+  "proxy_environment_present": false,
+  "limits": {
+    "seconds_per_url": 8,
+    "stdout_bytes": 4194304,
+    "stderr_bytes": 65536,
+    "media_download": false,
+    "cookies": false
+  },
+  "probes": [
+    {
+      "platform": "youtube",
+      "field": "video_url",
+      "input_sha256": "0424974c68530290458c8d58674e2637f65abc127057957d7b3acbd24c208f93",
+      "input_host": "www.youtube.com",
+      "outcome": "HOST_EXTRACTOR_ERROR",
+      "elapsed_seconds": 0.846,
+      "exit_code": 1,
+      "diagnostic": "WARNING: [youtube] dQw4w9WgXcQ: Unable to download webpage: TLS/SSL connection has been closed (EOF) (_ssl.c:992) (caused by SSLError('TLS/SSL connection has been closed (EOF) (_ssl.c:992)')); please report this issue on  <url> , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U\nERROR: [youtube] dQw4w9WgXcQ: Unable to download API page: TLS/SSL connection has been closed (EOF) (_ssl.c:992) (caused by SSLError('TLS/SSL connection has been closed (EOF) (_ssl.c:992)')); please report this issue on  <url> , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U\n"
+    },
+    {
+      "platform": "direct",
+      "field": "video_url",
+      "input_sha256": "",
+      "input_host": "",
+      "outcome": "NOT_RUN_MISSING_URL"
+    }
+  ]
+}

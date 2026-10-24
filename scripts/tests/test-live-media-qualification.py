@@ -22,13 +22,23 @@ class QualificationRunnerTests(unittest.TestCase):
         cls.runner = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.runner)
 
-    def test_plan_keeps_all_35_required_cases_per_target_unqualified(self):
+    def test_plan_keeps_all_required_cases_per_target_unqualified(self):
         manifest = self.runner.template()
         rows = self.runner.matrix_rows(manifest)
         required = [r for r in rows if r['case'] in self.runner.PLATFORM_CASES]
-        self.assertEqual(7 * 5 * 3, len(required))
+        self.assertEqual(len(self.runner.PLATFORMS) * 5 * 3, len(required))
         self.assertEqual({'NOT_RUN'}, {r['status'] for r in rows})
         self.assertTrue(all(r['input_ready'] == 'false' for r in required))
+
+    def test_plan_covers_every_routed_platform_with_meta(self):
+        # The plan must not drop a route the app actually dispatches, and every
+        # plan key must carry a badge and its representative routing hosts.
+        self.assertEqual(set(self.runner.PLATFORMS), set(self.runner.PLATFORM_META))
+        for key, (badge, hosts) in self.runner.PLATFORM_META.items():
+            self.assertTrue(badge)
+            self.assertIsInstance(hosts, tuple)
+            if key != 'direct':
+                self.assertTrue(hosts, f'{key} must declare at least one routing host')
 
     def test_plan_has_no_raw_input_urls_and_uses_audio_fallback(self):
         manifest = self.runner.template()

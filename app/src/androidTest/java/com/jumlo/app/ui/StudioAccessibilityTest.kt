@@ -51,7 +51,7 @@ class StudioAccessibilityTest {
     private fun verifyLargeCatalogue(language:AppLanguage) {
         val tool=CapabilityRegistry.tools.single {it.id=="pdf_to_pptx"}
         compose.setContent {LargeType(language) {
-            Column(Modifier.width(320.dp)) {ToolsCatalogue(listOf(tool),language,emptyList(),"",{},{})}
+            Column(Modifier.width(320.dp)) {ToolsCatalogue(listOf(tool),language,emptyList(),emptyList(),emptyList(),"",{},{})}
         }}
         compose.onNodeWithTag("tool.${tool.id}").assertIsDisplayed().assertHasClickAction()
             .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)

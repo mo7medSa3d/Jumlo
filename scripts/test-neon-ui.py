@@ -85,13 +85,15 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('selectedOutputs.isNotEmpty()', files)
         self.assertIn('if(!selecting)', files)
 
-    def test_flat_tool_keys_are_stable_and_selected_archive_is_named_correctly(self):
+    def test_tool_keys_are_stable_and_sections_render_headers(self):
         tools = read('ui/tools/ToolsScreen.kt')
         files = read('ui/files/FilesScreen.kt')
-        # Every available tool gets a stable ID key; the brief removes category groups.
+        # Every available tool gets a stable ID key inside the sectioned catalogue.
         self.assertIn('CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id)', tools)
         self.assertIn('settings.rankedToolIds', tools)
-        self.assertIn('items(visible, key = { it.id }, contentType = { "tool" })', tools)
+        self.assertIn('ToolSection(', tools)
+        self.assertIn('SectionHeader(', tools)
+        self.assertIn('items(filtered, key = { it.id }, contentType = { "tool" })', tools)
         self.assertIn('ToolTile(tool, language, { onTool(tool) }', tools)
         self.assertEqual(1, tools.count('QuietSearchBar('))
         self.assertNotIn('item("workspace-"', tools)

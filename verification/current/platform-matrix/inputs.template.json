@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "platforms": {
+    "youtube": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "tiktok": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "instagram": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "facebook": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "linkedin": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "x_twitter": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "soundcloud": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "vimeo": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "reddit": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "twitch": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "dailymotion": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "pinterest": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "bilibili": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "threads": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "snapchat": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "google_drive": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    },
+    "direct": {
+      "video_url": "",
+      "audio_url": "",
+      "file_url": "",
+      "invalid_url": ""
+    }
+  },
+  "targets": [
+    {
+      "id": "android9-emulator",
+      "device_kind": "emulator",
+      "api": 28,
+      "abi": "",
+      "device_label": "",
+      "apk_sha256": ""
+    },
+    {
+      "id": "android14plus-emulator",
+      "device_kind": "emulator",
+      "api": 34,
+      "abi": "",
+      "device_label": "",
+      "apk_sha256": ""
+    },
+    {
+      "id": "physical-device",
+      "device_kind": "physical",
+      "api": null,
+      "abi": "",
+      "device_label": "",
+      "apk_sha256": ""
+    }
+  ]
+}
