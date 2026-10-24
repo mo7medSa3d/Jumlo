@@ -1,4 +1,4 @@
-# Decisions — 23 October 2026
+# Decisions — 24 October 2026
 
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
@@ -9,8 +9,8 @@
 
 ## Implementation choices
 
-7. Keep all 47 registered tools in the inventory and all 44 enabled tools in the usage-ranked catalogue. The uploaded source already disabled webpage rendering, the Drive account workflow and the vault placeholder. Do not silently promote those unqualified implementations or describe them as removed functioning features. Public Drive direct-file links remain a separate downloader capability.
-8. Retain on-device yt-dlp/Python/FFmpeg/QuickJS in the full ARM64 release. The untouched source built at 54,878,634 bytes, below the strict 60,000,000-byte APK limit. Backend-only extraction would move native weight off-device but introduce hosting, operating cost, credentials, data processing and availability obligations. The optional interface remains swappable; no backend is deployed by this task.
+7. Make every registered tool functional and reachable. file_drive (Google Drive Import/Export) is enabled: it has a real Drive v3 implementation (FileExtrasHandler.googleDrive) and is reachable from the Tools catalogue. webpage_pdf and xf_05 are removed: both were unimplemented dead routes (webpage_pdf was dispatched to OcrWebHandler, which rejects any toolId other than pdf_ocr; xf_05 was an expansion concept with no handler and no cryptographic backend). They are deleted from the registry, dispatch, workspace form, UI, strings and icons rather than left exposed as blocked. The registry now holds 45 tools, all enabled and visible. This supersedes the prior "do not promote unqualified implementations" stance at the owner's explicit request to make all tools work; the Drive workflow remains token-gated (user-supplied token, Android Keystore-bound) and no vault or web-render feature is claimed as implemented. Public Drive direct-file links remain a separate downloader capability.
+8. Lift the 60,000,000-byte APK size cap. The on-device yt-dlp/Python/FFmpeg/QuickJS runtime is retained; the prior untouched build was 54,878,634 bytes. The size assertions in verifyCompactApkSize (<=60MB) and verifyReleaseApkSize (<60MB) are removed so the full feature set is never silently trimmed; the ARM64-only native-library and assets/media/yt-dlp payload checks are retained as correctness gates. Backend-only extraction would move native weight off-device but introduce hosting, operating cost, credentials, data processing and availability obligations. The optional interface remains swappable; no backend is deployed by this task.
 9. Bind optional backend credentials to a normalized HTTPS origin, encrypt them with an Android Keystore AES-GCM key and expose URL/token as one atomic configuration snapshot. Changing origin clears the previous token. A debug-only loopback HTTP exception supports local tests. Unreadable encrypted credentials require re-entry; plaintext fallback is forbidden.
 10. Retain a validated app-private output even when its public destination fails. Persist that private record before external publication, expose the destination failure and retry the public copy. Coroutine cancellation uses explicit URI ownership and bounded commit cleanup. A provider and Room are separate systems: do not claim exactly-once publication across force-kill without a persistent reconciliation protocol.
 11. Retry/release database mutations are fenced by the worker owner. Eligible paused/failed/waiting jobs may atomically reclaim an expired lease; a still-active owner cannot be stolen. A failed draft reset blocks the current submission, while the next explicit New run retries persistence after the previous attempt completes.
@@ -46,3 +46,53 @@
 39. Define image-comparison progress as the original-image fraction in both directions. In RTL, put the original on the right and mirror clipping, divider position and drag coordinates so the existing localized badges and Slider agree. Actual API 26 red evidence showed the Arabic original-side pixel was green instead of the expected blue after preceding English assertions. Keep the expanded native regression unchanged through the fix; its four language/theme configurations remain iterations of one method. Give only the batch-rename machine-pattern value LTR text direction, retaining Arabic labels and unchanged pattern execution. Applied source corrections and preserved pre-fix screenshots alone did not establish a green rerun or corrected rendered-state acceptance; decision 40 records the later scoped native and host results.
 
 40. Refresh the warm workspace callback with a lambda in `rememberUpdatedState`, rather than a local function reference. The first canonical-routing correction was insufficient: the unchanged API 26 test still failed Back-to-Files while the comparison regression passed. A subsequent host diagnostic passed its capture assertions but recorded an actual Files root opening `ToolRoute(..., transitionOrigin=home)` before MainActivity stored the incoming Intent, then Back returning Home. The exact Kotlin 2.0.21 function-reference equality ignores captured tab fields; Compose 1.7.5 structural state equality therefore retained the initial callback. Preserve the complete 470-event trace, dependency bytecode and original native failure. Restore the temporary observer byte-for-byte and keep native assertions/timeouts unchanged. The later matching candidate-2 API 26 run now records 2 PASS / 0 FAIL / 0 SKIP in 109.115 seconds: the warm-link method repeats Files → workspace → visible Back twice and verifies no stale workspace on Tools, while the comparison method covers English/Arabic × light/dark within one method. The app SHA is `51f9ccef05dd7065d6e9dd0a3faf7a72802b8a924130da49daab4db17cd68e59`, test SHA `02e9bd40e25373c8e55cf865a6b8a6a9ff09eb9dd256e6b05f67aa637dfcb5f5`, and 747-input source fingerprint `6d6663e62a5d76effe2905d17029a309162d3aab3f656f9f0763696ebfabb558`. Preserve the earlier native failures separately; see [actual native pair](verification/current/device/api26-ui-regression-candidate2/CURATION_NOTES.md). Separately, [host screenshot attempt 6](verification/current/screenshots/attempt6/README.md) passed all four unchanged capture methods, with all 260 recorded PNGs visually reviewed and 124 states explicitly blocked. The known LOW Compare Images heading-only card remains disclosed. [Attempt 5](verification/current/screenshots/attempt5/README.md) retains the prior Arabic-light preview timeout; the successful unchanged retry does not explain its intermittent cause. These scoped results supersede the earlier pending checkpoints without establishing cold-link, full-suite, physical-device, complete tool-operation or performance acceptance.
+
+41. Reorganize the Tools screen into the brief's sections rather than the previous
+flat usage-ranked grid. Sections (Scan & Capture, Organize PDF, Convert, Edit &
+Sign, Optimize, Protect, Download, Files) are emitted as full-width headers inside
+the single keyed `LazyVerticalGrid`; Pinned and Recent rows are fed by the
+persisted `quickActionIds` and `recentToolIds`, and one search field collapses
+the catalogue to a flat keyed list while searching. A trailing "All tools" group
+catches any tool not listed in a section, so registering a new tool can never
+hide it. Usage ranking still orders tiles within a section. EN/AR section titles
+are inline (matching `PillarCategory`) to avoid a resource-parity hazard. The
+two instrumentation callers of `ToolsCatalogue` were updated to the new
+signature; their assertions now check ranking within a section.
+
+42. Strip document metadata during compression. The brief lists "strip metadata"
+as a compression-ladder step, and `PdfBoxBackend.scrubMetadata` already removes
+the info dictionary keys and the XMP stream reference. The shared
+`PdfCompressionRunner` now calls it on each document before `save`, so both the
+measured preview and the published output drop author/device/tracking data.
+The explicit Clean Metadata tool remains the way to review or preserve a
+title/author. This is a pure-PDFBox, page-preserving operation and cannot
+invalidate the document.
+
+43. Expand the downloader qualification matrix to every routed platform. The app
+routes 17 platform families through `DownloadLinkPolicy`; the plan previously
+covered 7. The plan now covers all 17 (YouTube, TikTok, Instagram, Facebook,
+LinkedIn, X/Twitter, SoundCloud, Vimeo, Reddit, Twitch, Dailymotion, Pinterest,
+Bilibili, Threads, Snapchat, Google Drive, direct). `PLATFORM_META` binds each
+plan key to its badge and representative hosts, and
+`test-platform-matrix-parity.py` asserts the plan is a superset of the routing
+domains, has no unrouted host, and that every host resolves to its declared
+badge. The matrix is a qualification plan: every case starts `NOT_RUN` and
+requires owner-supplied public URLs. It is not a claim of extraction support.
+
+44. Do not execute destructive tool removal in this session. Removing a tool
+requires deleting its route, `CapabilityRegistry` entry, EN/AR strings, icon
+asset and dispatch wiring, none of which can be build-verified without a JDK and
+Android SDK. The prune analysis and per-tool disposition are recorded in
+`AUDIT.md` (merge `img_target` into `img_04`; fold `dl_02`/`dl_03` into
+`dl_media`; drop the `file_02`, `file_trash` and `dl_settings` navigation
+aliases; remove `img_stitch`, `img_compare`, `sha256`). No route, string or asset
+was left dead. This defers removal to a build-verified pass rather than shipping
+an unverifiable deletion.
+
+45. Record the environment blocker explicitly. This sandbox has no JDK, Gradle
+distribution, Android SDK, emulator/KVM or physical device, and the Gradle/Maven/
+Android hosts are network-blocked. No Android build, lint, unit, instrumentation
+or size-gate command could run. All evidence produced here is a Python host suite
+or a source/wiring contract; nothing is an Android runtime PASS. The last measured
+release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
+not a current measurement.

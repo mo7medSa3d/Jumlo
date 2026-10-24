@@ -14,7 +14,8 @@ data class CapabilityAvailability(
 /**
  * Auditable standard-distribution policy, independent of DEBUG and build flavor.
  * Availability is not release qualification: Android/device evidence is still required
- * before distribution. Security/privacy-sensitive candidates remain blocked in every build.
+ * before distribution. All registered tools are enabled; unimplemented tools are
+ * removed from the registry rather than exposed as blocked (see DECISIONS.md).
  */
 object CapabilityPolicy {
     private val navigation = setOf("pdf_01", "file_02", "dl_settings", "file_trash", "scan_doc")
@@ -31,19 +32,13 @@ object CapabilityPolicy {
         "file_encrypted_zip"
     )
     private val processing = hostCoreTested + setOf(
-        "file_duplicates", "file_batch_rename", "dl_media",
+        "file_duplicates", "file_batch_rename", "file_drive", "dl_media",
         "pdf_02", "pdf_07", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
         "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_image", "pdf_metadata", "pdf_forms", "pdf_compare",
         "pdf_to_docx", "pdf_to_pptx", "pdf_ocr",
         "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch"
     )
-    private val blocked = mapOf(
-        "webpage_pdf" to "WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING",
-        "file_drive" to "DRIVE_PRIVACY_QUALIFICATION_PENDING",
-        "xf_05" to "VAULT_BACKEND_UNQUALIFIED"
-    )
     fun availability(id: String): CapabilityAvailability = when {
-        id in blocked -> CapabilityAvailability(false, false, blocked.getValue(id), CapabilityKind.UNAVAILABLE, CapabilityEvidence.SECURITY_PENDING)
         id in navigation -> CapabilityAvailability(true, true, null, CapabilityKind.NAVIGATION, CapabilityEvidence.DEVICE_PENDING)
         id in processing -> CapabilityAvailability(true, true, null, CapabilityKind.PROCESSING, if (id in hostCoreTested) CapabilityEvidence.HOST_CORE_TESTED else CapabilityEvidence.SOURCE_IMPLEMENTED)
         else -> CapabilityAvailability(false, false, "CAPABILITY_NOT_IMPLEMENTED", CapabilityKind.UNAVAILABLE, CapabilityEvidence.NOT_IMPLEMENTED)

@@ -435,7 +435,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         title=if(shellRoute=="home") stringResource(R.string.app_name)
                             else if(settings.language.isRtl) tab.labelAr else tab.labelEn,
                         onSettingsClick={navigateTo("settings")},showSettings=shellRoute!="settings"
-                    ) else QuietWorkspaceTopBar(
+                    ) else if(shellRoute!="viewer") QuietWorkspaceTopBar(
                         title=when(shellRoute) {
                             "workspace" -> CapabilityRegistry.tools.find {it.id==headerToolId}?.let {title(it,settings.language)} ?: stringResource(R.string.workspace_title)
                             "activity" -> stringResource(R.string.activity_title)
@@ -491,7 +491,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()},
                                 onShowGuide={showGuide=true},onOpenStorage={navigateTo("storage")})
                             "storage" -> com.jumlo.app.ui.settings.StorageScreen(viewModel,::pickDownloadDestination,::openSavedFolder)
-                            "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title) }
+                            "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title,onBack=::goBack,onOpenFile={navigateTab(DockTab.FILES)},onPrint={u,_->viewModel.importForPrint(Intake(listOf(u),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))}) }
                             "scan" -> com.jumlo.app.ui.scan.ScanScreen(
                                 externalBusy=scanPublishing,
                                 onScannedPdf={file -> scanPublishing=true; viewModel.publishScannedPdf(file,onFinished={scanPublishing=false}) { output ->

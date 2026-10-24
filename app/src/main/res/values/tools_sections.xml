@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tools_section_pinned">Pinned</string>
+    <string name="tools_section_recent">Recent</string>
+    <string name="tools_section_all">All tools</string>
+</resources>

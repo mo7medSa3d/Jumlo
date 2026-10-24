@@ -28,7 +28,34 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'app/src/media/assets/media'
-PLATFORMS = ('youtube', 'tiktok', 'instagram', 'facebook', 'linkedin', 'google_drive', 'direct')
+# Every platform the app routes through DownloadLinkPolicy has a qualification row,
+# so the plan can never silently drop a supported route. PLATFORM_META binds each
+# plan key to the human-readable badge and the representative hosts that
+# DownloadLinkPolicy recognises; test-platform-matrix-parity.py asserts the two
+# sources stay in lockstep. `direct` is the generic file/direct-link fallback and
+# has no extractor host. This is a qualification plan, not a claim of support.
+PLATFORMS = ('youtube', 'tiktok', 'instagram', 'facebook', 'linkedin', 'x_twitter',
+             'soundcloud', 'vimeo', 'reddit', 'twitch', 'dailymotion', 'pinterest',
+             'bilibili', 'threads', 'snapchat', 'google_drive', 'direct')
+PLATFORM_META = {
+    'youtube': ('YouTube', ('youtube.com', 'youtu.be', 'youtube-nocookie.com')),
+    'tiktok': ('TikTok', ('tiktok.com', 'tiktokv.com')),
+    'instagram': ('Instagram', ('instagram.com', 'instagr.am', 'ig.me')),
+    'facebook': ('Facebook', ('facebook.com', 'fb.watch', 'fb.com', 'fb.gg')),
+    'linkedin': ('LinkedIn', ('linkedin.com', 'lnkd.in')),
+    'x_twitter': ('X (Twitter)', ('twitter.com', 'x.com', 't.co', 'fxtwitter.com', 'vxtwitter.com')),
+    'soundcloud': ('SoundCloud', ('soundcloud.com',)),
+    'vimeo': ('Vimeo', ('vimeo.com',)),
+    'reddit': ('Reddit', ('reddit.com', 'redd.it', 'redditmedia.com')),
+    'twitch': ('Twitch', ('twitch.tv',)),
+    'dailymotion': ('Dailymotion', ('dailymotion.com', 'dai.ly')),
+    'pinterest': ('Pinterest', ('pinterest.com', 'pin.it')),
+    'bilibili': ('Bilibili', ('bilibili.com', 'b23.tv')),
+    'threads': ('Threads', ('threads.net',)),
+    'snapchat': ('Snapchat', ('snapchat.com',)),
+    'google_drive': ('Google Drive', ('drive.google.com', 'docs.google.com', 'drive.usercontent.google.com')),
+    'direct': ('Direct file', ()),
+}
 PLATFORM_CASES = ('video', 'audio', 'quality', 'invalid', 'offline')
 WORKFLOW_CASES = ('paste_recreate', 'pause_resume', 'cancel', 'background', 'process_death',
                   'duplicate_names', 'save_folder')

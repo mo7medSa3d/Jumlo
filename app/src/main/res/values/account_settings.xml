@@ -25,6 +25,16 @@
     <string name="pref_theme_system">Use device setting</string>
     <string name="pref_theme_light">Light</string>
     <string name="pref_theme_dark">Dark</string>
+    <string name="pref_theme_amoled">AMOLED Black</string>
+    <string name="pref_app_color">App color</string>
+    <string name="pref_app_color_preview">Live preview</string>
+    <string name="pref_app_color_presets">Presets</string>
+    <string name="pref_app_color_hsv">Custom color</string>
+    <string name="pref_app_color_hue">Hue</string>
+    <string name="pref_app_color_sat">Saturation</string>
+    <string name="pref_app_color_val">Brightness</string>
+    <string name="pref_app_color_hex">Hex</string>
+    <string name="pref_app_color_reset">Reset</string>
     <string name="pref_language">Language</string>
     <string name="pref_reduce_motion">Reduce motion</string>
     <string name="pref_reduce_motion_summary">System motion preferences are always respected.</string>

@@ -25,6 +25,16 @@
     <string name="pref_theme_system">حسب إعداد الجهاز</string>
     <string name="pref_theme_light">فاتحة</string>
     <string name="pref_theme_dark">داكنة</string>
+    <string name="pref_theme_amoled">أسود OLED</string>
+    <string name="pref_app_color">لون التطبيق</string>
+    <string name="pref_app_color_preview">معاينة حية</string>
+    <string name="pref_app_color_presets">الإعدادات المسبقة</string>
+    <string name="pref_app_color_hsv">لون مخصص</string>
+    <string name="pref_app_color_hue">تدرج اللون</string>
+    <string name="pref_app_color_sat">التشبع</string>
+    <string name="pref_app_color_val">السطوع</string>
+    <string name="pref_app_color_hex">القيمة السداسية</string>
+    <string name="pref_app_color_reset">إعادة تعيين</string>
     <string name="pref_language">اللغة</string>
     <string name="pref_reduce_motion">تقليل الحركة</string>
     <string name="pref_reduce_motion_summary">تُحترم إعدادات الحركة في النظام دائمًا.</string>

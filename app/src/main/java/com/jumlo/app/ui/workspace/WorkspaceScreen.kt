@@ -193,7 +193,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         (tool!="file_batch_rename" || proposedNames!=null) &&
         (tool!="pdf_signature" || form.signaturePlacements.isNotEmpty()) &&
         (tool!="pdf_annotate" || !com.jumlo.app.core.PdfAnnotationKind.from(form.text2).isFreehand || form.effectiveInkStrokes().isNotEmpty()) &&
-        (tool=="webpage_pdf" || driveImport || if(download) urls.isNotBlank() else queue.size>=minimum)
+        (driveImport || if(download) urls.isNotBlank() else queue.size>=minimum)
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max=840.dp).align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error)}
@@ -301,7 +301,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         }
                     }
                 }
-                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","sha256","pdf_protect","pdf_clean","webpage_pdf","img_exif")) item("primary-tool-settings") {
+                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","sha256","pdf_protect","pdf_clean","img_exif")) item("primary-tool-settings") {
                     WorkspaceFields(vm,form,vm::updateForm,onGoogleSignIn)
                 }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
@@ -898,7 +898,6 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                 }
                 "pdf_forms" -> Toggle(stringResource(R.string.field_flatten_form),f.flag1) {v->edit {it.copy(flag1=v)}}
                 "pdf_to_docx","pdf_to_pptx","pdf_ocr" -> Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}})
-                "webpage_pdf" -> { Field(stringResource(R.string.field_webpage_url),f.text1,{v->edit {it.copy(text1=v)}}); Text(stringResource(R.string.field_webpage_note),style=QuietTheme.typography.metadata) }
                 "img_exif" -> { Toggle(stringResource(R.string.field_exif_remove_all),f.flag1) {v->edit {it.copy(flag1=v)}}; Toggle(stringResource(R.string.field_exif_remove_location),f.flag2) {v->edit {it.copy(flag2=v)}}; Text(stringResource(R.string.field_exif_note),style=QuietTheme.typography.metadata) }
                 "img_watermark" -> {
                     ContentToolSettings(f,edit)

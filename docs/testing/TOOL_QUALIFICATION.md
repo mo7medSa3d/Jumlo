@@ -36,9 +36,7 @@ Their four input rows are `N/A` because they are not dispatcher processing jobs.
 | `dl_settings` | Settings route. Persist changes and verify later downloads use them. |
 | `file_02` | Files route. Verify granted/read-only/revoked provider access and actual file actions. |
 | `file_trash` | Files/trash route. Verify recoverable removal and restoration with matching hashes. |
-| `webpage_pdf` | `WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING`; stays unavailable. |
-| `file_drive` | `DRIVE_PRIVACY_QUALIFICATION_PENDING`; stays unavailable. Public Drive URL downloading is separately covered by `dl_02`. |
-| `xf_05` | `VAULT_BACKEND_UNQUALIFIED`; stays unavailable. |
+| `file_drive` | Enabled: real Drive v3 workflow, user token-gated. Verify import/export with a user-supplied OAuth token; device/account/privacy qualification remains outstanding. Public Drive URL downloading is separately covered by `dl_02`. |
 
 ## Existing related tests: scope matters
 

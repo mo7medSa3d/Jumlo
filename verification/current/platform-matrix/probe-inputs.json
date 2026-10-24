@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "platforms": {
+    "youtube": {"video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "invalid_url": "https://www.youtube.com/watch?v=notavalidid"},
+    "direct": {"file_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}
+  }
+}

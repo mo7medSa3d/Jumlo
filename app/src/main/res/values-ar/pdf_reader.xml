@@ -1,8 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="reader_thumbnails">الصفحات</string>
-    <string name="reader_dark_pages">صفحات داكنة</string>
+    <string name="reader_back">رجوع</string>
+    <string name="reader_menu">المزيد</string>
+    <string name="reader_page_indicator">صفحة %1$d من %2$d</string>
     <string name="reader_loading">جارٍ فتح PDF…</string>
     <string name="reader_retry">أعد المحاولة</string>
     <string name="reader_page">الصفحة %1$d</string>
+    <string name="reader_thumbnails">الصفحات</string>
+    <string name="reader_menu_open">فتح ملف آخر</string>
+    <string name="reader_menu_night">الوضع الليلي</string>
+    <string name="reader_menu_thumbnails">اللقطات</string>
+    <string name="reader_menu_search">بحث</string>
+    <string name="reader_menu_share">مشاركة</string>
+    <string name="reader_menu_print">طباعة</string>
+    <string name="reader_menu_info">معلومات الملف</string>
+    <string name="reader_search_hint">بحث في المستند</string>
+    <string name="reader_search_no_results">لا نتائج</string>
+    <string name="reader_jump_title">انتقال إلى صفحة</string>
+    <string name="reader_jump_go">انتقال</string>
+    <string name="reader_close">إغلاق</string>
+    <string name="reader_info_error">تعذّر قراءة البيانات</string>
 </resources>

@@ -376,7 +376,6 @@ Typed Navigation Compose route objects exist for every listed route and ToolRout
 | `pdf_forms` | Fill PDF Form | `pdf_forms` | `assignment` | missing for production: Discovers real AcroForm text/checkbox/radio fields; fields listed below page, not clickable overlays; raw JSON visible in advanced. |
 | `pdf_ocr` | Extract Text | `tools/pdf/ocr` | `text_fields` | missing for production: Real page selector + conversion limits; no side-by-side recognized text/copy/export workspace. |
 | `scan_doc` | Smart Scan | `tools/scan` | `document_scanner` | missing for production: Direct ML Kit multi-page launch path; scanner fallback pending owner audit. |
-| `webpage_pdf` | Webpage to PDF | `webpage_pdf` | `language` | broken / blocked: Security blocked and hidden; preserve blocker, not a qualified tool. |
 | `img_01` | Convert Images | `convert_images` | `photo_library` | missing for production: Real input preview + format/quality controls; no compressed output preview. |
 | `img_02` | Resize Images | `resize_images` | `aspect_ratio` | missing for production: Real rendered preview with sampled transforms + sliders; alternate advanced numeric inputs remain. |
 | `img_03` | Crop, Rotate & Flip | `crop_rotate_flip` | `crop` | missing for production: Real crop/rotate/flip with handles + history; alternate advanced numeric inputs remain. |
@@ -399,8 +398,7 @@ Typed Navigation Compose route objects exist for every listed route and ToolRout
 | `file_batch_rename` | Batch Rename (copies) | `batch_rename` | `drive_file_rename_outline` | missing for production: Live normalized names computed off-main; list is text-only; pattern chips missing. |
 | `file_duplicates` | Duplicate Finder | `duplicates` | `copy_all` | missing for production: Source list and backend report; no visual duplicate results grid. |
 | `file_trash` | Managed Trash Info | `trash` | `delete` | missing for production: Navigation alias to Files managed trash; hidden from catalogue. |
-| `file_drive` | Google Drive Import / Export | `google_drive` | `cloud` | broken / blocked: Privacy/security blocked and hidden; no qualified Drive API workflow. |
-| `xf_05` | Private Vault (unavailable) | `secure_vault` | `enhanced_encryption` | broken / blocked: Unavailable vault backend and hidden; must remain blocked. |
+| `file_drive` | Google Drive Import / Export | `google_drive` | `cloud` | enabled: real Drive v3 workflow, user token-gated; device/account qualification outstanding. |
 | `sha256` | SHA-256 verification | `sha256` | `verified` | missing for production: Expected-hash text field and source list; backend digest report. |
 
 ## Principal workspace composables
@@ -454,3 +452,83 @@ must be checked against final R8 output; an unused source path alone is not proo
 that a release APK excludes it. Generic HTTP downloads remain an intentional,
 documented cleartext compatibility path with no HTTP preference or separate
 consent dialog. No broad lint suppression was introduced to manufacture a pass.
+
+---
+
+# Current source audit — executed 2026-10-24
+
+This table supersedes the inventory above for the **current** source tree. It was
+produced by reading the source in this session. The sandbox has **no JDK, no
+Gradle distribution, no Android SDK, no emulator/KVM and no physical device**, and
+the Gradle/Maven/Android hosts are network-blocked, so `:app:assembleDebug`,
+`:app:testDebugUnitTest` and `:app:lintRelease` could not be run. "SOURCE" means
+the handler is implemented and is **not** a device PASS. "HOST-TESTED" means an
+executed host/JVM suite covers the real backend path (see TEST_REPORT.md).
+Verification status comes from `core-common/.../CapabilityPolicy.kt`.
+
+| Tool ID | Tool | Category | Source status | Verified by | Usage value | Decision |
+|---|---|---|---|---|---|---|
+| `scan_doc` | Smart Scan | Scan & Capture | SOURCE (ML Kit + CameraX fallback) | wiring contract | high | KEEP-AND-IMPROVE |
+| `pdf_01` | View PDF | Organize PDF | SOURCE | wiring contract | high | KEEP-AND-IMPROVE |
+| `pdf_03` | Merge PDF | Organize PDF | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_04` | Organize Pages | Organize PDF | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_05` | Split PDF | Organize PDF | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_06` | Extract Pages | Organize PDF | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_crop` | Crop PDF Pages | Organize PDF | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_to_docx` | PDF to Word | Convert | SOURCE | HOST-TESTED (OOXML) | high | KEEP-AND-IMPROVE |
+| `pdf_to_pptx` | PDF to PowerPoint | Convert | SOURCE | HOST-TESTED (OOXML) | medium | KEEP-AND-IMPROVE |
+| `pdf_02` | Images to PDF | Convert | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_07` | PDF to Images | Convert | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_ocr` | Extract Text (OCR) | Convert | SOURCE (Latin only) | wiring contract | high | KEEP-AND-IMPROVE |
+| `img_01` | Convert Images | Convert | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_compress` | Compress PDF | Optimize | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `img_04` | Compress Images | Optimize | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `img_02` | Resize Images | Optimize | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `img_03` | Crop, Rotate & Flip | Optimize | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `img_adjust` | Adjust & Pad | Optimize | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `img_target` | Target Size | Optimize | SOURCE | HOST-TESTED | medium | MERGE candidate → `img_04` |
+| `img_join` | Join / Collage | Optimize | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `img_watermark` | Watermark Images | Optimize | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `img_exif` | EXIF Inspector | Optimize | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `img_stitch` | Stitch Screenshots | Optimize | SOURCE | HOST-TESTED | low | REMOVE candidate (documented, not executed) |
+| `img_compare` | Compare Images | Optimize | SOURCE | HOST-TESTED | low | REMOVE candidate (documented, not executed) |
+| `pdf_annotate` | Annotate PDF | Edit & Sign | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_signature` | Sign PDF | Edit & Sign | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_stamp` | Watermark & Page Numbers | Edit & Sign | SOURCE | HOST-TESTED | high | KEEP-AND-IMPROVE |
+| `pdf_image` | Add Image to PDF | Edit & Sign | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_forms` | Fill PDF Form | Edit & Sign | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_metadata` | PDF Metadata | Edit & Sign | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_clean` | Clean Metadata | Edit & Sign | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `pdf_protect` | Password Protect PDF | Protect | SOURCE | HOST-TESTED (AES-128) | high | KEEP-AND-IMPROVE |
+| `dl_media` | Video, Audio & File Downloads | Download | SOURCE | wiring contract | high | KEEP-AND-IMPROVE |
+| `dl_02` | New Direct Download | Download | SOURCE | HOST-TESTED | medium | MERGE candidate → `dl_media` |
+| `dl_03` | Batch URL Intake | Download | SOURCE | HOST-TESTED | medium | MERGE candidate → `dl_media` |
+| `dl_settings` | Download Settings | Download | Navigation alias → Settings | wiring contract | low | REMOVE candidate (alias) |
+| `file_02` | Browse Storage | Files | Navigation alias → Files | wiring contract | low | REMOVE candidate (alias) |
+| `file_07` | Create ZIP Archive | Files | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `file_08` | Extract ZIP Archive | Files | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `file_encrypted_zip` | Encrypted ZIP | Files | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `file_batch_rename` | Batch Rename | Files | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `file_duplicates` | Duplicate Finder | Files | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
+| `file_trash` | Managed Trash Info | Files | Navigation alias → Files | wiring contract | low | REMOVE candidate (alias) |
+| `sha256` | SHA-256 verification | Files | SOURCE | HOST-TESTED | low | REMOVE candidate (documented, not executed) |
+| `file_drive` | Google Drive Import/Export | Files | ENABLED | token-gated Drive v3 | medium | ENABLED (real impl; Drive direct links remain in downloader) |
+
+**Removal/merge disposition (Phase 1).** Removing a tool is not a one-line edit:
+each requires deleting its route, its `CapabilityRegistry` entry, its strings
+(EN+AR), its icon asset and any dispatch wiring. That work cannot be
+build-verified in this sandbox, so destructive removals were **not** executed
+here. The concrete disposition recorded above is the input for a build-verified
+pass: merge `img_target` into `img_04`; fold `dl_02`/`dl_03` into the single
+`dl_media` input; drop the `file_02`, `file_trash` and `dl_settings` navigation
+aliases; and remove the low-value `img_stitch`, `img_compare` and `sha256`. The
+three blocked tools stay disabled until their security/privacy gates clear. No
+route, string or asset was left dead by this session.
+
+**Catalogue reorganisation (executed).** The Tools screen now renders the
+brief's sections — Scan & Capture, Organize PDF, Convert, Edit & Sign, Optimize,
+Protect, Download, Files — each a full-width header over its tiles, with Pinned
+and Recent rows at the top fed by `settings.quickActionIds` /
+`settings.recentToolIds`, and one search field. Search still collapses to a flat
+keyed list. Ungrouped tools fall into a trailing "All tools" group so a new
+tool is never hidden.

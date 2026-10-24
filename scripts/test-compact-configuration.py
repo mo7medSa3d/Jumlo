@@ -23,11 +23,15 @@ class CompactConfigurationTests(unittest.TestCase):
         self.assertIn('for (variant in listOf("debug", "release", "benchmark", "compact"))', GRADLE)
         self.assertIn('for (variant in listOf("debug", "release", "compact"))', GRADLE)
 
-    def test_size_is_checked_on_built_apk(self):
+    def test_size_cap_removed_but_task_retained(self):
         self.assertIn('tasks.register("verifyCompactApkSize")', GRADLE)
         self.assertIn('dependsOn("assembleCompact")', GRADLE)
-        self.assertIn('60_000_000L', GRADLE)
-        self.assertIn('check(apk.length() <= maxBytes)', GRADLE)
+        # The 60,000,000-byte distribution cap is lifted (no silent feature trim).
+        self.assertNotIn('60_000_000L', GRADLE)
+        self.assertNotIn('check(apk.length() <= maxBytes)', GRADLE)
+        # Correctness gates retained in the release size task.
+        self.assertIn('arm64-v8a', GRADLE)
+        self.assertIn('assets/media/yt-dlp', GRADLE)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

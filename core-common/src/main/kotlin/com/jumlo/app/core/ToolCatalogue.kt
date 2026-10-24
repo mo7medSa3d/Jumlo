@@ -121,7 +121,7 @@ object ToolCatalogue {
      * The tools that are deliberately kept out of the catalogue: specialists that
      * belong inside a bigger tool, and comparisons that most people never want.
      */
-    private val hidden = setOf("img_compare", "file_trash", "file_02", "file_drive", "xf_05", "webpage_pdf")
+    private val hidden = setOf("img_compare", "file_trash", "file_02")
 
     /** True when the tool should be offered in the catalogue at all. */
     fun isListed(toolId: String): Boolean =

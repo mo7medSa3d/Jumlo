@@ -48,6 +48,7 @@
     <string name="filter_archives">Archives</string>
     <string name="action_view">View</string>
     <string name="action_open">Open</string>
+    <string name="action_print">Print</string>
     <string name="action_share">Share</string>
     <string name="action_apply">Apply</string>
     <string name="action_cancel">Cancel</string>
@@ -154,7 +155,6 @@
     <string name="tool_create_zip_sub">Package files into compressed archive</string>
     <string name="tool_extract_zip">Extract ZIP Archive</string>
     <string name="tool_extract_zip_sub">Decompress local ZIP archives</string>
-    <string name="tool_secure_vault">Zero Knowledge Archive Vault</string>
 
     <!-- Settings (set_01, set_02, set_04) -->
     <string name="settings_title">General Settings</string>
@@ -297,8 +297,6 @@
     <string name="field_forms_json">Field values (key=value per line)</string>
     <string name="field_flatten_form">Flatten form fields into static page content</string>
     <string name="field_ocr_note">Runs on-device ML Kit text recognition to export .txt and a searchable PDF copy.</string>
-    <string name="field_webpage_url">HTTPS Webpage URL</string>
-    <string name="field_webpage_note">Captures public web pages via local WebView print adapter.</string>
     <string name="field_output_format">Output format</string>
     <string name="field_target_width">Target width px</string>
     <string name="field_target_height">Target height px</string>

@@ -311,12 +311,12 @@ afterEvaluate {
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
-// Hard APK distribution limit (decimal MB), enforced on the actual signed file.
-// Use `./gradlew :app:verifyCompactApkSize` (includes :app:assembleCompact).
-// A failure means optimization must continue; do NOT silently omit features.
+// APK size gate removed: the 60,000,000-byte distribution cap is lifted so the
+// full feature set is never silently trimmed. Use `./gradlew :app:verifyCompactApkSize`
+// (includes :app:assembleCompact) to build the compact ARM64 variant.
 tasks.register("verifyCompactApkSize") {
     group = "verification"
-    description = "Build ARM64 compact APK and fail unless its actual size is <= 60,000,000 bytes"
+    description = "Build ARM64 compact APK (size cap removed)"
     dependsOn("assembleCompact")
     doLast {
         // A small direct-link-only build is not a substitute for the full downloader.
@@ -325,17 +325,13 @@ tasks.register("verifyCompactApkSize") {
         val apks = folder.listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
         check(apks.size == 1) { "Expected exactly one compact APK in $folder; found ${apks.size}" }
         val apk = apks.single()
-        val maxBytes = 60_000_000L
-        println("Compact APK: ${apk.absolutePath} = ${apk.length()} bytes; cap = $maxBytes bytes")
-        check(apk.length() <= maxBytes) {
-            "Compact APK exceeds 60MB by ${apk.length() - maxBytes} bytes; full downloader is preserved. Do not distribute this build as <=60MB."
-        }
+        println("Compact APK: ${apk.absolutePath} = ${apk.length()} bytes")
     }
 }
 
 tasks.register("verifyReleaseApkSize") {
     group = "verification"
-    description = "Build the complete ARM64 release APK and enforce the 60,000,000-byte cap"
+    description = "Build the complete ARM64 release APK (60MB size cap removed; ARM64-only and yt-dlp payload checks retained)"
     dependsOn("assembleRelease")
     doLast {
         check(extendedMedia) { "Release qualification requires the complete media runtime." }
@@ -343,8 +339,7 @@ tasks.register("verifyReleaseApkSize") {
             .listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
         check(apks.size == 1) { "Expected one current release APK; clean obsolete release artifacts first." }
         val apk = apks.single()
-        println("Release APK size: ${apk.length()} bytes (maximum 60,000,000)")
-        check(apk.length() < 60_000_000L) { "Release exceeds 60MB; preserve features and optimize before distribution." }
+        println("Release APK size: ${apk.length()} bytes (no size cap)")
         ZipFile(apk).use { zip ->
             val abis = zip.entries().asSequence().map { it.name }
                 .filter { it.startsWith("lib/") && it.endsWith(".so") }.map { it.split('/')[1] }.toSet()

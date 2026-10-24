@@ -77,10 +77,14 @@ class PremiumUxContracts(unittest.TestCase):
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):
         code = source('tools/ToolsScreen.kt')
         self.assertIn('BoxWithConstraints(', code)
-        # The current brief requires one flat, keyed lazy grid, not grouped rows.
+        # The catalogue is one keyed lazy grid whose sections and full-width
+        # headers are emitted inside it; search still appears exactly once.
         self.assertEqual(1, code.count('LazyVerticalGrid('))
         self.assertIn('columns = GridCells.Fixed(columns)', code)
-        self.assertIn('items(visible, key = { it.id }, contentType = { "tool" })', code)
+        self.assertIn('GridItemSpan(maxLineSpan)', code)
+        self.assertIn('ToolSection(', code)
+        self.assertIn('SectionHeader(', code)
+        self.assertIn('items(filtered, key = { it.id }, contentType = { "tool" })', code)
         self.assertIn('LocalDensity.current.fontScale >= 1.6f', code)
         self.assertRegex(code, r'largeText\s*->\s*1')
         self.assertNotIn('primary.chunked(', code)

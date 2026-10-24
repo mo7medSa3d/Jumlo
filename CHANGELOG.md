@@ -4,6 +4,77 @@ Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
 
+## 2026-10-24 session (Android build NOT verified — no JDK/SDK in sandbox)
+
+- Phase 2 — page-operation core logic in `document-core` (Android-free): extend
+  `PdfPageEdit` with per-page rotation (`rotate`/`rotateSelected`, mod-360),
+  `extractSelected`, `splitEvery`, `duplicate`, `selectAll`/`invertSelection`;
+  add `PageDocumentMerger` (concatenate + renumber + carry rotation) and
+  `PageEditHistory` (undo/redo over immutable snapshots). All ops immutable
+  (non-destructive). `scripts/test-page-operations.py` (12 tests: static +
+  behavioral port).
+- Phase 1 — shared `ToolScaffold` for every tool page: reuses
+  `QuietWorkspaceTopBar`, a scrollable content area, and a sticky bottom action
+  bar with navigation-bar insets; plus `ToolProgressSheet` (progress overlay) and
+  `ToolResultScreen`/`ToolResultAction` (Open/Share/Save/Print/Use-again + Close).
+  `scripts/test-tool-scaffold.py` (6 tests).
+- Phase 4 (continued) — Appearance App-color picker: `M3ColorFactory` now accepts
+  `#RRGGBB` hex accents directly; 16 bilingual (EN/AR) `ColorPresets`;
+  `AppearanceColorPicker` (ModalBottomSheet) with live preview, 4-col preset grid,
+  HSV hue/sat/val sliders, hex field, reset/apply; wired into SettingsScreen;
+  repository accepts hex seeds. `scripts/test-appearance-color-picker.py`
+  (12 tests).
+- Phase 5 — verification: Kotlin JUnit4 unit tests `PageOperationsTest` (24 cases:
+  reorder/rotate/delete/extract/split/merge/undo-redo/range-parsing) and
+  `M3ColorFactoryTest` (15 cases: WCAG contrast, AA guard, seedFor/hex/scheme/
+  HSV); Compose UI test `AppearanceColorPickerTest` (Robolectric). Kotlin suites
+  run via `./gradlew :app:testDebugUnitTest` in a proper environment (kotlinc/
+  Gradle unavailable in this sandbox). `scripts/test-phase5-unit-tests.py`
+  (6 static contracts). `scripts/verify-host.sh` extended with the 4 new suites.
+- All tools functional + limits lifted (owner request): enable `file_drive`
+  (Google Drive Import/Export — real Drive v3 impl, token-gated); remove
+  `webpage_pdf` (dead route — dispatched to `OcrWebHandler` which rejects
+  non-`pdf_ocr`) and `xf_05` (expansion concept, no handler/crypto backend)
+  from registry, dispatch, workspace form, UI, strings (EN/AR) and icons
+  (drawables deleted). Registry now 45 tools, all enabled/visible. Lift the
+  60,000,000-byte APK size cap in `verifyCompactApkSize`/`verifyReleaseApkSize`
+  (ARM64-only + yt-dlp payload checks retained). Lift tool-list/preset display
+  caps: `recentToolIds` (8→all), `mostUsedToolIds` (5→all), `top` (5→all),
+  processing presets (16→all). Updated `DECISIONS.md` #7/#8.
+- Reorganize the Tools catalogue into the brief's sections — Scan & Capture,
+  Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files — with
+  full-width headers, Pinned and Recent rows fed by persisted
+  `quickActionIds`/`recentToolIds`, a single search field, and a trailing
+  "All tools" fallback so a newly registered tool is never hidden. EN/AR strings
+  added in `res/values(-ar)/tools_sections.xml`.
+- Strip document metadata (info dictionary and XMP) in the shared PDF
+  compression pipeline (`PdfCompressionRunner`) before each candidate is saved,
+  completing the compression ladder's metadata step.
+- Replace the hard-coded per-accent primary/container colors with a proper
+  seed-generated Material 3 color system (`M3ColorFactory.kt`): one seed color
+  derives primary/secondary/tertiary/error + their containers/on-colors for
+  light and dark, with a WCAG AA contrast guard (`ensureContrast`) and a neutral
+  tonal surface ladder kept stable. Seed mapping (`seedFor`) covers TEAL/CORAL/
+  VIOLET plus a default. Add an `AMOLED` theme mode (true-black surfaces) to
+  `ThemeMode`, wired through `JumloTheme` (`amoled = isAmoled`) with EN/AR
+  strings (`pref_theme_amoled`). Dynamic Color (Android 12+) still routes to
+  the system wallpaper palette. Static contract suite
+  `scripts/test-m3-color-factory.py` (7 tests) added.
+- Redesign the PDF viewer into an immersive, content-first reader: one slim
+  (≤56dp) top bar (back, one-line title, "N / total" page indicator, overflow), a
+  seven-entry overflow menu (open another file, night mode, thumbnails, search,
+  share, print, file info), auto-hiding chrome and system bars after 2s, on-demand
+  thumbnail/search/file-info sheets, keep-screen-on, and removal of the old
+  pages/dark-pages tab row. Print routes through the existing
+  `AppViewModel.importForPrint` pipeline. EN/AR strings added in
+  `res/values(-ar)/pdf_reader.xml`; dead `reader_dark_pages` removed.
+- Expand the downloader qualification matrix from 7 to all 17 routed platforms
+  and add `test-platform-matrix-parity.py`, which fails if a route is added
+  without a plan row or a plan row points at an unrouted host.
+- Executed 29 Python host contract suites (all pass), generated a 288-case Android
+  qualification plan, and ran one bounded bundled-extractor probe (network-blocked
+  in this sandbox). Android build, lint and device gates remain BLOCKED.
+
 ## Fixed
 
 - Preserve coroutine cancellation and fatal errors at ViewModel boundaries, show recoverable failures to users, and record sanitized operation diagnostics.

@@ -123,7 +123,6 @@ import kotlinx.serialization.json.Json
                 allowPrinting,allowCopy,allowModify,allowAnnotations,allowForms))
             "pdf_forms" -> Json.encodeToString(com.jumlo.app.data.processing.PdfFormSettings(SafeNames.basename(outputName),text1.ifBlank{"{}"},flag1))
             "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf")))
-            "webpage_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(text1,144,"PNG",90,false,SafeNames.fromDisplayName(outputName.ifBlank{"webpage.pdf"},"webpage.pdf")))
             "img_exif" -> Json.encodeToString(com.jumlo.app.data.processing.ImageExifSettings(flag2,flag1,
                 if(flag1) converted else ImageConversionSettings("JPEG",number(quality,1,100),-1,true,prefix,customImgName)))
             "img_watermark" -> {

@@ -107,7 +107,9 @@ fun JumloTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
+        ThemeMode.AMOLED -> true
     }
+    val isAmoled = themeMode == ThemeMode.AMOLED
 
     val context = LocalContext.current
     val useDynamicColor = accentColor == "DYNAMIC" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -132,36 +134,27 @@ fun JumloTheme(
             outline = neutral.outline, outlineVariant = neutral.outlineVariant,
             surfaceTint = Color.Transparent)
     } else {
-        // Coherent primary/on-primary/container pairs for every user accent.
-        // Keep the entire tonal surface ladder stable while the action color changes.
-        val selectedAccent = when (accentColor) {
-            "TEAL" -> if (darkTheme) Color(0xFF92DCD8) else Color(0xFF086F6B)
-            "CORAL" -> if (darkTheme) Color(0xFFFFB5C1) else Color(0xFFB63E54)
-            "VIOLET" -> if (darkTheme) Color(0xFFD3B7FC) else Color(0xFF6942B0)
-            else -> if (darkTheme) DarkPrimary else LightPrimary
-        }
-        val selectedContainer = when (accentColor) {
-            "TEAL" -> if (darkTheme) Color(0xFF164D50) else Color(0xFFDBF5F2)
-            "CORAL" -> if (darkTheme) Color(0xFF72273C) else Color(0xFFFFE5E8)
-            "VIOLET" -> if (darkTheme) Color(0xFF4C336D) else Color(0xFFF0E8FC)
-            else -> if (darkTheme) DarkPrimaryContainer else LightPrimaryContainer
-        }
-        val selectedOnContainer = when (accentColor) {
-            "TEAL" -> if (darkTheme) Color(0xFFDCF9F5) else Color(0xFF124F52)
-            "CORAL" -> if (darkTheme) Color(0xFFFFE1E7) else Color(0xFF781D32)
-            "VIOLET" -> if (darkTheme) Color(0xFFF0E4FF) else Color(0xFF38216B)
-            else -> if (darkTheme) DarkOnPrimaryContainer else LightOnPrimaryContainer
-        }
+        // Seed-generated M3 accents from one color; the neutral tonal surface
+        // ladder stays stable (from baseColors) while primary/secondary/tertiary
+        // and error are derived from the seed with a WCAG AA contrast guard.
+        val seeded = M3ColorFactory.scheme(M3ColorFactory.seedFor(accentColor), dark = darkTheme, amoled = isAmoled)
         baseColors.copy(
-            primary = selectedAccent,
-            onPrimary = if (darkTheme) when (accentColor) {
-                "TEAL" -> Color(0xFF083C41)
-                "CORAL" -> Color(0xFF690D26)
-                "VIOLET" -> Color(0xFF361D65)
-                else -> DarkOnPrimary
-            } else Color.White,
-            primaryContainer = selectedContainer,
-            onPrimaryContainer = selectedOnContainer,
+            primary = seeded.primary,
+            onPrimary = seeded.onPrimary,
+            primaryContainer = seeded.primaryContainer,
+            onPrimaryContainer = seeded.onPrimaryContainer,
+            secondary = seeded.secondary,
+            onSecondary = seeded.onSecondary,
+            secondaryContainer = seeded.secondaryContainer,
+            onSecondaryContainer = seeded.onSecondaryContainer,
+            tertiary = seeded.tertiary,
+            onTertiary = seeded.onTertiary,
+            tertiaryContainer = seeded.tertiaryContainer,
+            onTertiaryContainer = seeded.onTertiaryContainer,
+            error = seeded.error,
+            onError = seeded.onError,
+            errorContainer = seeded.errorContainer,
+            onErrorContainer = seeded.onErrorContainer,
             surfaceTint = Color.Transparent
         )
     }

@@ -4,11 +4,26 @@
 
 This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
 
-The catalogue is a flat icon/name grid with one search field, persistent complete usage ranking, and a stable default order. Cards do not show categories or descriptions. On phones the normal grid has two columns; large font scaling reduces the column count. Tool icons are unique official Rounded/filled/24dp vectors. The same icon appears in the workspace header and participates in the navigation-owned shared transition.
+The catalogue is one keyed lazy grid organised into the brief's sections — Scan &
+Capture, Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files —
+each introduced by a full-width section header over its tiles. Pinned and
+Recent rows sit at the top, fed by the persisted `quickActionIds` and
+`recentToolIds`; a tool in either row is not repeated in its section. One search
+field collapses the catalogue to a flat keyed list while searching. Tiles keep
+the persistent usage ranking within a section, and any tool not listed in a
+section falls into a trailing "All tools" group so it is never hidden. On phones
+the normal grid has two columns; large font scaling reduces the column count.
+Tool icons are unique official Rounded/filled/24dp vectors. The same icon appears
+in the workspace header and participates in the navigation-owned shared
+transition.
 
 All previews described as real are produced from selected source files. No mock document image or invented output is used. A loading state is shown while decoding, OCR, hashing or compression measurement is in flight. Bitmap work uses bounded sampled previews and the existing serialized bitmap work gate where provided by the ViewModel/backend. Exact source files are retained until a separately validated job publishes an output.
 
 Common empty states use `QuietStateCard` with an icon and one primary import/retry action. Workspace fields use tonal Material surfaces; advanced controls expand inline. Exact page ranges retain an adjacent visual page picker. Tool input parsing, not a preview, remains the final authority for whether execution is enabled.
+
+## Shared ToolScaffold
+
+Every tool page is wrapped in the shared `ToolScaffold` (`ui/components/ToolScaffold.kt`) so the flow is identical: a slim `QuietWorkspaceTopBar` (back, title, subtitle, badge, more) over a scrollable content area (the caller's drop/pick zone, editor and live preview), with a sticky bottom action bar carrying the primary actions and navigation-bar insets. `ToolProgressSheet` overlays progress above the preview without blocking it; `ToolResultScreen` presents the finished output with primary actions (Open / Share / Save / Print / Use in another tool) and a Close button. This is the single chrome every tool reuses; tool-specific content is supplied as the `content` and `bottomActions` slots.
 
 ## Cross-tool interaction implementation
 
@@ -111,11 +126,11 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 - **Status:** Available in source; device acceptance NOT VERIFIED.
 - **Icon:** `ic_tool_pdf_01` — Material Symbols Rounded filled `menu_book`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Read imported PDFs in the real viewer.
-- **Controls:** Page navigation, search/viewer controls, zoom and fit, source switch for multiple PDFs.
-- **Preview/results:** PdfViewerScreen uses real source URI and Android renderer.
-- **Empty state:** Document icon and Import files action.
-- **Limits and remaining acceptance:** Viewer is navigation, not a processing job; encrypted/corrupt/large-file cases still require device evidence.
+- **Primary interaction:** Read imported PDFs in the immersive, content-first viewer.
+- **Controls:** One slim (≤56dp) top bar: back, one-line elided file name, "N / total" page indicator (tap = jump-to-page dialog), one overflow button. Overflow menu: open another file, night mode, thumbnails, search, share, print, file info. Immersive mode hides the chrome and system bars after 2s of stillness; tapping the page or scrolling reveals them again. The app's bottom nav is hidden entirely on the viewer route.
+- **Preview/results:** `PdfViewerScreen` renders via the Android `PdfRenderer`; fit-to-width default, pinch/double-tap zoom, continuous scroll, lazy thumbnails, remember last page per file, night-mode inversion, keep-screen-on while reading.
+- **Empty state:** Loading state with a retry action on failure.
+- **Limits and remaining acceptance:** Viewer is navigation, not a processing job; immersive chrome, 500+ page thumbnails, and text search require device evidence (no emulator/device in this environment).
 
 ## pdf_compress — Compress PDF
 
@@ -236,16 +251,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Preview/results:** Primary scanner UI is owned by Play services. Fallback uses a lifecycle-bound live camera and sampled real photo thumbnails.
 - **Empty state:** Fallback requests camera permission only when chosen; gallery remains available without camera access.
 - **Limits and remaining acceptance:** External ML Kit activity, physical camera, denial/recreation and 100-page flows cannot be certified by host screenshots.
-
-## webpage_pdf — Webpage to PDF
-
-- **Status:** Disabled (pre-existing qualification block).
-- **Icon:** `ic_tool_webpage_pdf` — Material Symbols Rounded filled `web`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Existing registry concept remains blocked.
-- **Controls:** No exposed tool card or actionable processing workspace.
-- **Preview/results:** No preview is asserted.
-- **Empty state:** Standard unavailable state if an unsupported route is reached.
-- **Limits and remaining acceptance:** WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING: renderer security/remote content qualification is incomplete. This was disabled before this change.
 
 ## img_01 — Convert Images
 
@@ -469,23 +474,13 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 ## file_drive — Google Drive Import / Export
 
-- **Status:** Disabled (pre-existing qualification block).
+- **Status:** Enabled (real Drive v3 implementation, user token-gated).
 - **Icon:** `ic_tool_file_drive` — Material Symbols Rounded filled `cloud_sync`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Existing Drive import/export registry candidate remains blocked.
-- **Controls:** No exposed tool card. Direct public Drive links use the downloader path instead.
-- **Preview/results:** No official-account Drive workspace preview is asserted.
-- **Empty state:** Unavailable route state.
-- **Limits and remaining acceptance:** DRIVE_PRIVACY_QUALIFICATION_PENDING: official API/account/privacy qualification remains incomplete. Disabled before these changes.
-
-## xf_05 — Private Vault (unavailable)
-
-- **Status:** Disabled (pre-existing qualification block).
-- **Icon:** `ic_tool_xf_05` — Material Symbols Rounded filled `encrypted`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Existing private-vault concept remains blocked.
-- **Controls:** No active encryption/vault workspace or tool card.
-- **Preview/results:** No vault result or security claim is shown.
-- **Empty state:** Unavailable route state.
-- **Limits and remaining acceptance:** VAULT_BACKEND_UNQUALIFIED: cryptographic backend is not qualified. Disabled before these changes; encrypted ZIP remains available separately.
+- **Primary interaction:** Drive import/export via the official Drive v3 API (`FileExtrasHandler.googleDrive`). The user supplies an OAuth token (Android Keystore-bound).
+- **Controls:** Import mode (file ID) and export mode (folder ID), Google sign-in button, token field.
+- **Preview/results:** Official-account Drive workspace; device/account qualification remains outstanding.
+- **Empty state:** Standard workspace state until a token and file/folder ID are supplied.
+- **Limits and remaining acceptance:** Official API/account/privacy qualification remains incomplete; the user must supply their own Drive OAuth token. No backend is deployed. Direct public Drive links use the downloader path instead.
 
 ## sha256 — SHA-256 verification
 
