@@ -342,7 +342,7 @@ fun main() {
     test("200 to range never appends") { rejects<RestartRequired> { ResumePolicy.validate(10,"\"v1\"",null,20,200,emptyMap()) } }
     test("wrong range and changed validator are rejected") { for (h in listOf(mapOf("content-range" to "bytes 9-19/20","etag" to "\"v1\""),mapOf("content-range" to "bytes 10-19/20","etag" to "\"v2\""))) rejects<RestartRequired> { ResumePolicy.validate(10,"\"v1\"",null,20,206,h) } }
     test("missing and weak resume validators are rejected") { for (tag in listOf(null,"W/\"v1\"")) rejects<RestartRequired> { ResumePolicy.validate(10,tag,null,20,206,mapOf("content-range" to "bytes 10-19/20")) } }
-    test("legacy and security gates stay closed") { check(!Capabilities.isEnabled("legacy_demo_engine")); check(!Capabilities.isEnabled("xf_05")); check(!Capabilities.isEnabled("xp_redaction")) }
+    test("legacy gates stay closed") { check(!Capabilities.isEnabled("legacy_demo_engine")); check(!Capabilities.isEnabled("xp_redaction")) }
     test("keep both respects case-insensitive filesystem names") { check(SafeNames.unique(setOf("Photo.JPG"),"photo.jpg")=="photo (1).jpg") }
     test("Arabic and emoji collision resolution stays within 200 UTF-8 bytes without splitting surrogates") {
         val longArabic = "\u0645\u0633\u062a\u0646\u062f_\u0639\u0631\u0628\u064a_".repeat(12) + "\uD83D\uDCF7"
@@ -398,9 +398,10 @@ fun main() {
         check(Capabilities.isEnabled("dl_media"))
         check(CapabilityPolicy.canProcess("dl_media"))
     }
-    test("release security-sensitive candidates remain unavailable") {
-        for (id in listOf("file_drive", "webpage_pdf"))
-            check(!Capabilities.isEnabled(id)) { "$id must be gated" }
+    test("file_drive enabled; removed dead tools stay unavailable") {
+        check(Capabilities.isEnabled("file_drive")) { "file_drive must be enabled" }
+        check(!Capabilities.isEnabled("webpage_pdf")) { "webpage_pdf must stay unavailable" }
+        check(!Capabilities.isEnabled("xf_05")) { "xf_05 must stay unavailable" }
     }
     test("implemented document and encrypted archive capabilities are available in the catalog") {
         // Real PDF and authenticated AES fixture suites cover these backends.

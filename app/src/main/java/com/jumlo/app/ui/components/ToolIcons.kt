@@ -31,7 +31,6 @@ internal val toolIconResources: Map<String, Int> = linkedMapOf(
     "pdf_forms" to R.drawable.ic_tool_pdf_forms,
     "pdf_ocr" to R.drawable.ic_tool_pdf_ocr,
     "scan_doc" to R.drawable.ic_tool_scan_doc,
-    "webpage_pdf" to R.drawable.ic_tool_webpage_pdf,
     "img_01" to R.drawable.ic_tool_img_01,
     "img_02" to R.drawable.ic_tool_img_02,
     "img_03" to R.drawable.ic_tool_img_03,
@@ -55,7 +54,6 @@ internal val toolIconResources: Map<String, Int> = linkedMapOf(
     "file_duplicates" to R.drawable.ic_tool_file_duplicates,
     "file_trash" to R.drawable.ic_tool_file_trash,
     "file_drive" to R.drawable.ic_tool_file_drive,
-    "xf_05" to R.drawable.ic_tool_xf_05,
     "sha256" to R.drawable.ic_tool_sha256,
 )
 

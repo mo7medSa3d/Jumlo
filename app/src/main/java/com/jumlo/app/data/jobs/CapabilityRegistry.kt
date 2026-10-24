@@ -27,8 +27,6 @@ object CapabilityRegistry {
         UtilityTool("pdf_forms", "pdf_forms", PillarCategory.PDF, "Fill PDF Form", "تعبئة نموذج PDF", "Fill AcroForm fields, optional flatten", "تعبئة الحقول مع تسطيح اختياري", "assignment"),
         UtilityTool("pdf_ocr", "tools/pdf/ocr", PillarCategory.PDF, "Extract Text", "استخراج النص", "PDF or image · Latin OCR", "PDF أو صورة · OCR لاتيني", "text_fields"),
         UtilityTool("scan_doc", "tools/scan", PillarCategory.PDF, "Smart Scan", "المسح الذكي", "Multi-page PDF", "مستند PDF متعدد الصفحات", "document_scanner"),
-        UtilityTool("webpage_pdf", "webpage_pdf", PillarCategory.PDF, "Webpage to PDF", "صفحة ويب إلى PDF", "Render a public webpage to PDF", "تحويل صفحة ويب", "language"),
-
         // Image Tools
         UtilityTool("img_01", "convert_images", PillarCategory.IMAGES, "Convert Images", "تحويل الصور", "Batch convert JPG, PNG, WebP", "تحويل دفعات WebP, PNG, JPG", "photo_library"),
         UtilityTool("img_02", "resize_images", PillarCategory.IMAGES, "Resize Images", "تغيير أبعاد الصور", "Scale by pixels or percentage", "تحجيم بالبكسل أو النسبة المئوية", "aspect_ratio"),
@@ -56,8 +54,7 @@ object CapabilityRegistry {
         UtilityTool("file_batch_rename", "batch_rename", PillarCategory.FILES, "Batch Rename (copies)", "إعادة تسمية دفعية", "Preview pattern, publish renamed copies", "معاينة ونشر نسخ", "drive_file_rename_outline"),
         UtilityTool("file_duplicates", "duplicates", PillarCategory.FILES, "Duplicate Finder", "كاشف التكرار", "SHA-256 exact duplicate report", "تقرير تكرار بالبصمة", "copy_all"),
         UtilityTool("file_trash", "trash", PillarCategory.FILES, "Managed Trash Info", "سلة مُدارة", "Outputs are kept recoverable; see Files", "المخرجات قابلة للاسترداد", "delete"),
-        UtilityTool("file_drive", "google_drive", PillarCategory.FILES, "Google Drive Import / Export", "استيراد وتصدير Google Drive", "Import or export via official Drive v3 API", "استيراد وتصدير عبر واجهة Drive الرسمية", "cloud"),
-        UtilityTool("xf_05", "secure_vault", PillarCategory.VAULT, "Private Vault (unavailable)", "الخزنة المشفرة (AES-256)", "Unavailable: cryptographic backend not qualified", "تشفير الأجهزة المحلي AES-256-GCM", "enhanced_encryption", isExpansionConcept = true, conceptCode = "XF-05")
+        UtilityTool("file_drive", "google_drive", PillarCategory.FILES, "Google Drive Import / Export", "استيراد وتصدير Google Drive", "Import or export via official Drive v3 API", "استيراد وتصدير عبر واجهة Drive الرسمية", "cloud")
     )
     val tools get() = allTools + UtilityTool("sha256","sha256",PillarCategory.FILES,"SHA-256 verification","التحقق من بصمة SHA-256","Compute or compare actual file digests","حساب ومقارنة البصمة الرقمية للملفات","verified")
     fun availability(id:String) = CapabilityPolicy.availability(id)

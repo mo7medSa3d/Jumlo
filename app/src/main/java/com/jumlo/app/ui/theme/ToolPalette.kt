@@ -29,7 +29,7 @@ object ToolPalette {
     fun accentFor(toolId: String, dark: Boolean = false): Color {
         val index = when {
             toolId == "scan_doc" -> 3
-            toolId.startsWith("pdf_") || toolId == "webpage_pdf" -> 0
+            toolId.startsWith("pdf_") -> 0
             toolId.startsWith("img_") -> 1
             toolId.startsWith("dl_") -> 2
             toolId.startsWith("file_") || toolId == "sha256" -> 3

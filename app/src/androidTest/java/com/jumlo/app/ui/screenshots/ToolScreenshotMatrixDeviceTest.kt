@@ -204,7 +204,6 @@ class ToolScreenshotMatrixDeviceTest {
             open(tool.id)
             when (tool.id) {
                 "dl_03" -> compose.runOnUiThread { viewModel().setUrls("https://example.invalid/report.pdf\nhttps://example.invalid/photo.png") }
-                "webpage_pdf" -> compose.runOnUiThread { viewModel().updateForm { it.copy(text1 = "https://example.invalid/report") } }
                 "file_02" -> compose.onNodeWithText(compose.activity.getString(R.string.ui_imported)).performClick()
                 "dl_settings" -> Unit
                 else -> {
@@ -252,7 +251,7 @@ class ToolScreenshotMatrixDeviceTest {
             entry.file = target.name
             entry.detail = when (tool) {
                 "dl_settings" -> "SETTINGS_ROUTE_HAS_NO_FILE_INPUT_STATE"
-                "webpage_pdf", "dl_03" -> if (state == "loaded") "INPUT_CONFIGURED_NO_NETWORK_REQUEST" else ""
+                "dl_03" -> if (state == "loaded") "INPUT_CONFIGURED_NO_NETWORK_REQUEST" else ""
                 "pdf_ocr" -> if (state == "loaded") {
                     if (hostPdfUnavailable) "IMAGE_INPUT_NO_RECOGNITION_EXECUTION" else "PDF_INPUT_NO_RECOGNITION_EXECUTION"
                 } else ""
@@ -380,7 +379,7 @@ class ToolScreenshotMatrixDeviceTest {
         tool in setOf("img_join", "img_stitch", "img_compare") -> listOf("image", "image_second")
         tool.startsWith("img_") -> listOf("image")
         tool == "file_08" -> listOf("zip")
-        tool in setOf("dl_03", "webpage_pdf", "dl_settings", "file_02") -> emptyList()
+        tool in setOf("dl_03", "dl_settings", "file_02") -> emptyList()
         else -> listOf("text", "duplicate")
     }
 

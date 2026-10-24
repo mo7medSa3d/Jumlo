@@ -757,7 +757,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 require(CapabilityRegistry.canProcess(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
                 val driveImport=state.toolId=="file_drive" && !state.flag1
-                require(download || state.toolId=="webpage_pdf" || driveImport || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+                require(download || driveImport || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
                 if(state.toolId in setOf("pdf_07","file_08","pdf_to_docx","pdf_to_pptx","pdf_ocr")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
                 if(state.toolId=="file_drive") {
                     require(state.secret1.isNotBlank()) { "LOGIN_REQUIRED" }

@@ -155,7 +155,6 @@
     <string name="tool_create_zip_sub">ضغط الملفات في أرشيف محلي</string>
     <string name="tool_extract_zip">فك ضغط ZIP</string>
     <string name="tool_extract_zip_sub">استخراج ملفات أرشيف ZIP بأمان</string>
-    <string name="tool_secure_vault">الخزنة المشفرة (AES-256)</string>
 
     <!-- Settings -->
     <string name="settings_title">الإعدادات العامة</string>
@@ -298,8 +297,6 @@
     <string name="field_forms_json">قيم الحقول (مفتاح=قيمة في كل سطر)</string>
     <string name="field_flatten_form">دمج حقول النموذج في محتوى الصفحة الثابت</string>
     <string name="field_ocr_note">يشغل التعرف الضوئي على الحروف محلياً لتصدير نص .txt ونسخة PDF قابلة للبحث.</string>
-    <string name="field_webpage_url">رابط صفحة الويب (HTTPS)</string>
-    <string name="field_webpage_note">يحفظ صفحات الويب العامة كملف PDF عبر محرك الطباعة المحلي.</string>
     <string name="field_output_format">صيغة الإخراج</string>
     <string name="field_target_width">العرض المطلوب (بكسل)</string>
     <string name="field_target_height">الارتفاع المطلوب (بكسل)</string>

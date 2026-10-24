@@ -31,6 +31,16 @@ Android qualification. See TEST_REPORT.md for current artifact and test status.
   run via `./gradlew :app:testDebugUnitTest` in a proper environment (kotlinc/
   Gradle unavailable in this sandbox). `scripts/test-phase5-unit-tests.py`
   (6 static contracts). `scripts/verify-host.sh` extended with the 4 new suites.
+- All tools functional + limits lifted (owner request): enable `file_drive`
+  (Google Drive Import/Export — real Drive v3 impl, token-gated); remove
+  `webpage_pdf` (dead route — dispatched to `OcrWebHandler` which rejects
+  non-`pdf_ocr`) and `xf_05` (expansion concept, no handler/crypto backend)
+  from registry, dispatch, workspace form, UI, strings (EN/AR) and icons
+  (drawables deleted). Registry now 45 tools, all enabled/visible. Lift the
+  60,000,000-byte APK size cap in `verifyCompactApkSize`/`verifyReleaseApkSize`
+  (ARM64-only + yt-dlp payload checks retained). Lift tool-list/preset display
+  caps: `recentToolIds` (8→all), `mostUsedToolIds` (5→all), `top` (5→all),
+  processing presets (16→all). Updated `DECISIONS.md` #7/#8.
 - Reorganize the Tools catalogue into the brief's sections — Scan & Capture,
   Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files — with
   full-width headers, Pinned and Recent rows fed by persisted

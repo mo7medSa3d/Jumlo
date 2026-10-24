@@ -252,16 +252,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** Fallback requests camera permission only when chosen; gallery remains available without camera access.
 - **Limits and remaining acceptance:** External ML Kit activity, physical camera, denial/recreation and 100-page flows cannot be certified by host screenshots.
 
-## webpage_pdf — Webpage to PDF
-
-- **Status:** Disabled (pre-existing qualification block).
-- **Icon:** `ic_tool_webpage_pdf` — Material Symbols Rounded filled `web`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Existing registry concept remains blocked.
-- **Controls:** No exposed tool card or actionable processing workspace.
-- **Preview/results:** No preview is asserted.
-- **Empty state:** Standard unavailable state if an unsupported route is reached.
-- **Limits and remaining acceptance:** WEBPAGE_RENDER_SECURITY_QUALIFICATION_PENDING: renderer security/remote content qualification is incomplete. This was disabled before this change.
-
 ## img_01 — Convert Images
 
 - **Status:** Available in source; device acceptance NOT VERIFIED.
@@ -484,23 +474,13 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 ## file_drive — Google Drive Import / Export
 
-- **Status:** Disabled (pre-existing qualification block).
+- **Status:** Enabled (real Drive v3 implementation, user token-gated).
 - **Icon:** `ic_tool_file_drive` — Material Symbols Rounded filled `cloud_sync`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Existing Drive import/export registry candidate remains blocked.
-- **Controls:** No exposed tool card. Direct public Drive links use the downloader path instead.
-- **Preview/results:** No official-account Drive workspace preview is asserted.
-- **Empty state:** Unavailable route state.
-- **Limits and remaining acceptance:** DRIVE_PRIVACY_QUALIFICATION_PENDING: official API/account/privacy qualification remains incomplete. Disabled before these changes.
-
-## xf_05 — Private Vault (unavailable)
-
-- **Status:** Disabled (pre-existing qualification block).
-- **Icon:** `ic_tool_xf_05` — Material Symbols Rounded filled `encrypted`, 24dp. Exact pinned source/license: `ICON_MAP.md`.
-- **Primary interaction:** Existing private-vault concept remains blocked.
-- **Controls:** No active encryption/vault workspace or tool card.
-- **Preview/results:** No vault result or security claim is shown.
-- **Empty state:** Unavailable route state.
-- **Limits and remaining acceptance:** VAULT_BACKEND_UNQUALIFIED: cryptographic backend is not qualified. Disabled before these changes; encrypted ZIP remains available separately.
+- **Primary interaction:** Drive import/export via the official Drive v3 API (`FileExtrasHandler.googleDrive`). The user supplies an OAuth token (Android Keystore-bound).
+- **Controls:** Import mode (file ID) and export mode (folder ID), Google sign-in button, token field.
+- **Preview/results:** Official-account Drive workspace; device/account qualification remains outstanding.
+- **Empty state:** Standard workspace state until a token and file/folder ID are supplied.
+- **Limits and remaining acceptance:** Official API/account/privacy qualification remains incomplete; the user must supply their own Drive OAuth token. No backend is deployed. Direct public Drive links use the downloader path instead.
 
 ## sha256 — SHA-256 verification
 

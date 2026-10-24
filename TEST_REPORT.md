@@ -80,7 +80,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK < 60,000,000 bytes | Not measured this session (last measured baseline 54,878,634 B is inherited, not current) | NOT VERIFIED |
+| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |

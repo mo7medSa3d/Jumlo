@@ -115,14 +115,14 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { prefs ->
             val old=decodePresets(prefs[Keys.PROCESSING_PRESETS])
             val replacement=old.filterNot { it.toolId==preset.toolId && it.name==preset.name } + preset
-            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement.takeLast(16))
+            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement)
         }
     }
     suspend fun removeProcessingPreset(toolId: String,name: String) {
         context.dataStore.edit { prefs ->
             val old=decodePresets(prefs[Keys.PROCESSING_PRESETS])
             val replacement=old.filterNot { it.toolId==toolId && it.name==name }
-            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement.take(16))
+            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement)
         }
     }
 
@@ -155,8 +155,8 @@ class UserPreferencesRepository @Inject constructor(
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
-            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter {it.matches(Regex("[a-z0-9_]{1,64}"))}?.take(8).orEmpty(),
-            mostUsedToolIds = rankedTools.take(5),
+            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter {it.matches(Regex("[a-z0-9_]{1,64}"))}?.orEmpty(),
+            mostUsedToolIds = rankedTools,
             rankedToolIds = rankedTools,
             favoriteOutputIds = OutputFavorites.sanitize(
                 prefs[Keys.FAVORITE_OUTPUT_IDS].orEmpty().split('|').filter(String::isNotBlank)

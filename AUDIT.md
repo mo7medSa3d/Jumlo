@@ -376,7 +376,6 @@ Typed Navigation Compose route objects exist for every listed route and ToolRout
 | `pdf_forms` | Fill PDF Form | `pdf_forms` | `assignment` | missing for production: Discovers real AcroForm text/checkbox/radio fields; fields listed below page, not clickable overlays; raw JSON visible in advanced. |
 | `pdf_ocr` | Extract Text | `tools/pdf/ocr` | `text_fields` | missing for production: Real page selector + conversion limits; no side-by-side recognized text/copy/export workspace. |
 | `scan_doc` | Smart Scan | `tools/scan` | `document_scanner` | missing for production: Direct ML Kit multi-page launch path; scanner fallback pending owner audit. |
-| `webpage_pdf` | Webpage to PDF | `webpage_pdf` | `language` | broken / blocked: Security blocked and hidden; preserve blocker, not a qualified tool. |
 | `img_01` | Convert Images | `convert_images` | `photo_library` | missing for production: Real input preview + format/quality controls; no compressed output preview. |
 | `img_02` | Resize Images | `resize_images` | `aspect_ratio` | missing for production: Real rendered preview with sampled transforms + sliders; alternate advanced numeric inputs remain. |
 | `img_03` | Crop, Rotate & Flip | `crop_rotate_flip` | `crop` | missing for production: Real crop/rotate/flip with handles + history; alternate advanced numeric inputs remain. |
@@ -399,8 +398,7 @@ Typed Navigation Compose route objects exist for every listed route and ToolRout
 | `file_batch_rename` | Batch Rename (copies) | `batch_rename` | `drive_file_rename_outline` | missing for production: Live normalized names computed off-main; list is text-only; pattern chips missing. |
 | `file_duplicates` | Duplicate Finder | `duplicates` | `copy_all` | missing for production: Source list and backend report; no visual duplicate results grid. |
 | `file_trash` | Managed Trash Info | `trash` | `delete` | missing for production: Navigation alias to Files managed trash; hidden from catalogue. |
-| `file_drive` | Google Drive Import / Export | `google_drive` | `cloud` | broken / blocked: Privacy/security blocked and hidden; no qualified Drive API workflow. |
-| `xf_05` | Private Vault (unavailable) | `secure_vault` | `enhanced_encryption` | broken / blocked: Unavailable vault backend and hidden; must remain blocked. |
+| `file_drive` | Google Drive Import / Export | `google_drive` | `cloud` | enabled: real Drive v3 workflow, user token-gated; device/account qualification outstanding. |
 | `sha256` | SHA-256 verification | `sha256` | `verified` | missing for production: Expected-hash text field and source list; backend digest report. |
 
 ## Principal workspace composables
@@ -514,9 +512,7 @@ Verification status comes from `core-common/.../CapabilityPolicy.kt`.
 | `file_duplicates` | Duplicate Finder | Files | SOURCE | HOST-TESTED | medium | KEEP-AND-IMPROVE |
 | `file_trash` | Managed Trash Info | Files | Navigation alias → Files | wiring contract | low | REMOVE candidate (alias) |
 | `sha256` | SHA-256 verification | Files | SOURCE | HOST-TESTED | low | REMOVE candidate (documented, not executed) |
-| `webpage_pdf` | Webpage to PDF | PDF | BLOCKED | security gate | low | REMOVE (blocked, not qualified) |
-| `file_drive` | Google Drive Import/Export | Files | BLOCKED | privacy gate | medium | REMOVE (blocked; Drive direct links remain in downloader) |
-| `xf_05` | Private Vault | Vault | BLOCKED | backend unqualified | low | REMOVE (blocked placeholder) |
+| `file_drive` | Google Drive Import/Export | Files | ENABLED | token-gated Drive v3 | medium | ENABLED (real impl; Drive direct links remain in downloader) |
 
 **Removal/merge disposition (Phase 1).** Removing a tool is not a one-line edit:
 each requires deleting its route, its `CapabilityRegistry` entry, its strings
