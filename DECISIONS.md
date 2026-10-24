@@ -46,3 +46,53 @@
 39. Define image-comparison progress as the original-image fraction in both directions. In RTL, put the original on the right and mirror clipping, divider position and drag coordinates so the existing localized badges and Slider agree. Actual API 26 red evidence showed the Arabic original-side pixel was green instead of the expected blue after preceding English assertions. Keep the expanded native regression unchanged through the fix; its four language/theme configurations remain iterations of one method. Give only the batch-rename machine-pattern value LTR text direction, retaining Arabic labels and unchanged pattern execution. Applied source corrections and preserved pre-fix screenshots alone did not establish a green rerun or corrected rendered-state acceptance; decision 40 records the later scoped native and host results.
 
 40. Refresh the warm workspace callback with a lambda in `rememberUpdatedState`, rather than a local function reference. The first canonical-routing correction was insufficient: the unchanged API 26 test still failed Back-to-Files while the comparison regression passed. A subsequent host diagnostic passed its capture assertions but recorded an actual Files root opening `ToolRoute(..., transitionOrigin=home)` before MainActivity stored the incoming Intent, then Back returning Home. The exact Kotlin 2.0.21 function-reference equality ignores captured tab fields; Compose 1.7.5 structural state equality therefore retained the initial callback. Preserve the complete 470-event trace, dependency bytecode and original native failure. Restore the temporary observer byte-for-byte and keep native assertions/timeouts unchanged. The later matching candidate-2 API 26 run now records 2 PASS / 0 FAIL / 0 SKIP in 109.115 seconds: the warm-link method repeats Files → workspace → visible Back twice and verifies no stale workspace on Tools, while the comparison method covers English/Arabic × light/dark within one method. The app SHA is `51f9ccef05dd7065d6e9dd0a3faf7a72802b8a924130da49daab4db17cd68e59`, test SHA `02e9bd40e25373c8e55cf865a6b8a6a9ff09eb9dd256e6b05f67aa637dfcb5f5`, and 747-input source fingerprint `6d6663e62a5d76effe2905d17029a309162d3aab3f656f9f0763696ebfabb558`. Preserve the earlier native failures separately; see [actual native pair](verification/current/device/api26-ui-regression-candidate2/CURATION_NOTES.md). Separately, [host screenshot attempt 6](verification/current/screenshots/attempt6/README.md) passed all four unchanged capture methods, with all 260 recorded PNGs visually reviewed and 124 states explicitly blocked. The known LOW Compare Images heading-only card remains disclosed. [Attempt 5](verification/current/screenshots/attempt5/README.md) retains the prior Arabic-light preview timeout; the successful unchanged retry does not explain its intermittent cause. These scoped results supersede the earlier pending checkpoints without establishing cold-link, full-suite, physical-device, complete tool-operation or performance acceptance.
+
+41. Reorganize the Tools screen into the brief's sections rather than the previous
+flat usage-ranked grid. Sections (Scan & Capture, Organize PDF, Convert, Edit &
+Sign, Optimize, Protect, Download, Files) are emitted as full-width headers inside
+the single keyed `LazyVerticalGrid`; Pinned and Recent rows are fed by the
+persisted `quickActionIds` and `recentToolIds`, and one search field collapses
+the catalogue to a flat keyed list while searching. A trailing "All tools" group
+catches any tool not listed in a section, so registering a new tool can never
+hide it. Usage ranking still orders tiles within a section. EN/AR section titles
+are inline (matching `PillarCategory`) to avoid a resource-parity hazard. The
+two instrumentation callers of `ToolsCatalogue` were updated to the new
+signature; their assertions now check ranking within a section.
+
+42. Strip document metadata during compression. The brief lists "strip metadata"
+as a compression-ladder step, and `PdfBoxBackend.scrubMetadata` already removes
+the info dictionary keys and the XMP stream reference. The shared
+`PdfCompressionRunner` now calls it on each document before `save`, so both the
+measured preview and the published output drop author/device/tracking data.
+The explicit Clean Metadata tool remains the way to review or preserve a
+title/author. This is a pure-PDFBox, page-preserving operation and cannot
+invalidate the document.
+
+43. Expand the downloader qualification matrix to every routed platform. The app
+routes 17 platform families through `DownloadLinkPolicy`; the plan previously
+covered 7. The plan now covers all 17 (YouTube, TikTok, Instagram, Facebook,
+LinkedIn, X/Twitter, SoundCloud, Vimeo, Reddit, Twitch, Dailymotion, Pinterest,
+Bilibili, Threads, Snapchat, Google Drive, direct). `PLATFORM_META` binds each
+plan key to its badge and representative hosts, and
+`test-platform-matrix-parity.py` asserts the plan is a superset of the routing
+domains, has no unrouted host, and that every host resolves to its declared
+badge. The matrix is a qualification plan: every case starts `NOT_RUN` and
+requires owner-supplied public URLs. It is not a claim of extraction support.
+
+44. Do not execute destructive tool removal in this session. Removing a tool
+requires deleting its route, `CapabilityRegistry` entry, EN/AR strings, icon
+asset and dispatch wiring, none of which can be build-verified without a JDK and
+Android SDK. The prune analysis and per-tool disposition are recorded in
+`AUDIT.md` (merge `img_target` into `img_04`; fold `dl_02`/`dl_03` into
+`dl_media`; drop the `file_02`, `file_trash` and `dl_settings` navigation
+aliases; remove `img_stitch`, `img_compare`, `sha256`). No route, string or asset
+was left dead. This defers removal to a build-verified pass rather than shipping
+an unverifiable deletion.
+
+45. Record the environment blocker explicitly. This sandbox has no JDK, Gradle
+distribution, Android SDK, emulator/KVM or physical device, and the Gradle/Maven/
+Android hosts are network-blocked. No Android build, lint, unit, instrumentation
+or size-gate command could run. All evidence produced here is a Python host suite
+or a source/wiring contract; nothing is an Android runtime PASS. The last measured
+release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
+not a current measurement.

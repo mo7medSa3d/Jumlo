@@ -10,11 +10,11 @@ The logical order is **Tools · Files · Home · Downloads · Settings**. Home o
 
 | Position in English | Route type | Stable serial name | Screen | Main responsibilities |
 | --- | --- | --- | --- | --- |
-| 1 | `ToolsRoute` | `tools` | `ToolsScreen` | Search the flat icon/name catalog; persistent usage ranking across all enabled tools |
+| 1 | `ToolsRoute` | `tools` | `ToolsScreen` | Sectioned icon/name catalog (Scan & Capture, Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files) with Pinned/Recent rows and one search field; usage ranking orders tiles within a section |
 | 2 | `FilesRoute` | `files` | `FilesScreen` | Outputs, imported sources, granted folders and trash; list/grid, sort/filter/group, selection and file actions |
 | 3 | `HomeRoute` | `home` | `HomeScreen` | Start destination; Scan/Convert/Compress/Download, draft continuation, active jobs and recent files |
 | 4 | `DownloadsRoute` | `downloads` | `DownloadsScreen` | New download entry, current transfers, previous downloads and verified outputs |
-| 5 | `SettingsRoute` | `settings` | `SettingsScreen` | Appearance, language, save folder, quality defaults, storage, cache and About |
+| 5 | `SettingsRoute` | `settings` | `SettingsScreen` | Appearance (theme mode incl. AMOLED, App color picker, dynamic color), language, save folder, quality defaults, storage, cache and About |
 
 The indicator is drawn inside its destination cell. Each cell has `Role.Tab`, selection semantics and a retained spoken label at large font scales. Print is a detail screen; `DockTab.PRINT` remains a compatibility value and is excluded from `MainDockTabs`.
 
@@ -32,7 +32,7 @@ All fourteen destinations are Kotlin-serialization route types. The names below 
 | `ToolRoute(toolId: String, transitionOrigin: String = "tools")` | `tools/run` | `WorkspaceScreen`, `ViewerWorkspace`, or `MediaWorkspace` | Catalog tools, Home conversion/compression/download, explicit source/output handoff, shared links, repeat run | Yes; Tools stack |
 | `ScanRoute(transitionOrigin: String = "tools")` | `tools/scan` | `ScanScreen` / ML Kit launcher | Home Scan, `scan_doc`, onboarding Scan | No |
 | `PrintRoute` | `tools/print` | `PrintScreen` | Printable output/source actions and page-editor print handoff | No |
-| `ViewerRoute(uri: String, title: String, returnTab: String? = null)` | `files/viewer` | `PdfViewerScreen` | Open PDF output, granted-provider PDF, completed scan | No |
+| `ViewerRoute(uri: String, title: String, returnTab: String? = null)` | `files/viewer` | `PdfViewerScreen` (immersive, full-screen) | Open PDF output, granted-provider PDF, completed scan | No |
 | `JobRoute(jobId: String)` | `downloads/job` | `ActivityScreen` filtered to one job | Job rows, successful queue submission, notification job ID | Yes; caller's selected tab |
 | `ActivityRoute` | `downloads/activity` | `ActivityScreen` with all jobs | Show all from a job detail and activity navigation without a selected job | Yes; caller's selected tab |
 | `SettingsDetailRoute` | `settings/details` | `SettingsScreen` | Toolbar settings shortcut and legacy `dl_settings` action | No |
@@ -40,6 +40,8 @@ All fourteen destinations are Kotlin-serialization route types. The names below 
 | `WorkspaceRoute` | `workspace` | Existing workspace dispatch | Compatibility deep link `jumlo://workspace` | Yes; compatibility caller context |
 
 `JobRoute` and `ViewerRoute` remain on the caller's stack. Their serial-name prefix does not force a tab switch. The graph is one flat typed NavHost with saved root-tab stacks, not five nested navigation graphs.
+
+The `viewer` route is full-screen: the shell suppresses both the bottom dock and the workspace top bar, and `PdfViewerScreen` owns its own slim, auto-hiding chrome (see the `pdf_01` entry in [TOOL_UI_SPEC.md](TOOL_UI_SPEC.md)).
 
 ## Tab, Back and state behavior
 
@@ -64,8 +66,8 @@ All fourteen destinations are Kotlin-serialization route types. The names below 
 | Home Convert | Opens a local chooser for Images→PDF, PDF→Word, PDF→PowerPoint, PDF→images or image conversion; then dispatches the real tool ID. |
 | Home Compress | Fresh `ToolRoute("pdf_compress")`. |
 | Home Download / Downloads New | Fresh `ToolRoute("dl_media")`; quality and conversion choices depend on inspected source metadata. |
-| View PDF tool | `ToolRoute("pdf_01")` uses `ViewerWorkspace` to select/import a source and embed the same bounded PDF reader. It is a navigation capability, not a processing job. |
-| Open saved PDF | `ViewerRoute(output.uri, output.displayName)` reads the verified private output. Other file types use an Android external viewer with the available public/private URI. |
+| View PDF tool | `ToolRoute("pdf_01")` uses `ViewerWorkspace` to select/import a source and embed the same immersive bounded PDF reader. It is a navigation capability, not a processing job. |
+| Open saved PDF | `ViewerRoute(output.uri, output.displayName)` opens the full-screen immersive reader over the verified private output. Other file types use an Android external viewer with the available public/private URI. |
 | Use an output/source in a tool | AppViewModel explicitly prepares input IDs/snapshots before opening the workspace. This is the supported nonempty-entry handoff. |
 | Print | AppViewModel prepares a printable immutable source and emits a print request; `PrintViewModel` handles setup/history and the Android print adapter. |
 | Job completion | `JobRoute(jobId)` shows durable status and only available output records; opening a PDF uses the internal viewer. |
