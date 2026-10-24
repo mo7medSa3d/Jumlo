@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tools_section_pinned">المثبتة</string>
+    <string name="tools_section_recent">الأخيرة</string>
+    <string name="tools_section_all">جميع الأدوات</string>
+</resources>

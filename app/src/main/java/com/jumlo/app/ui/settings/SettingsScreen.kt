@@ -24,6 +24,8 @@ import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
+import com.jumlo.app.ui.theme.ColorPresets
+import com.jumlo.app.ui.theme.M3ColorFactory
 import com.jumlo.app.ui.theme.QuietTheme
 
 /** Preferences that change an everyday action. Platform and scheduler policy stay out of this page. */
@@ -63,6 +65,9 @@ fun SettingsScreen(
                 Switch(settings.accentColor == "DYNAMIC", onCheckedChange = null)
             }
         }
+        item("app-color") { PreferenceRow(stringResource(R.string.pref_app_color),
+            previewAccentLabel(settings.accentColor), Icons.Rounded.Palette, { panel = "app-color" },
+            Modifier.testTag("settings.appColor")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
@@ -96,6 +101,11 @@ fun SettingsScreen(
     when (panel) {
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },
             settings.themeMode.ordinal, { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
+        "app-color" -> AppearanceColorPicker(
+            current = settings.accentColor,
+            onDismiss = { panel = null },
+            onSelect = { viewModel.setAccentColor(it); panel = null }
+        )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
         "video" -> {
@@ -135,7 +145,15 @@ fun SettingsScreen(
     ThemeMode.SYSTEM -> R.string.pref_theme_system
     ThemeMode.LIGHT -> R.string.pref_theme_light
     ThemeMode.DARK -> R.string.pref_theme_dark
+    ThemeMode.AMOLED -> R.string.pref_theme_amoled
 })
+
+private fun previewAccentLabel(accent: String): String {
+    val preset = ColorPresets.ALL.firstOrNull { it.key == accent }
+    if (preset != null) return preset.nameEn
+    if (M3ColorFactory.hexColor(accent) != null) return accent
+    return "Blue"
+}
 @Composable private fun languageLabel(language: AppLanguage): String = stringResource(
     if (language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
 

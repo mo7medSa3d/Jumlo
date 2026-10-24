@@ -48,6 +48,7 @@
     <string name="filter_archives">الأرشيف</string>
     <string name="action_view">عرض</string>
     <string name="action_open">فتح</string>
+    <string name="action_print">طباعة</string>
     <string name="action_share">مشاركة</string>
     <string name="action_apply">تطبيق</string>
     <string name="action_cancel">إلغاء</string>

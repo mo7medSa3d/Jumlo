@@ -30,7 +30,8 @@ import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
-/** Every available tool has one tile; the complete persisted usage ranking determines order. */
+/** Every available tool has one tile; the catalogue is grouped into sections and
+ *  the persisted usage ranking orders the tiles within each section. */
 @Composable
 fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
@@ -38,7 +39,43 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val eligible = remember { CapabilityRegistry.tools.filter {
         CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id)
     } }
-    ToolsCatalogue(eligible, settings.language, settings.rankedToolIds, search, { search = it }, onTool)
+    ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
+        settings.quickActionIds, settings.recentToolIds, search, { search = it }, onTool)
+}
+
+/** One catalogue group: a header and the tool IDs it contains. */
+private data class ToolSection(val key: String, val titleEn: String, val titleAr: String, val ids: Set<String>)
+
+/**
+ * Sections follow the product brief. Tools outside every section fall into the
+ * trailing "All tools" group, so a newly registered tool is never silently hidden.
+ */
+private val toolSections = listOf(
+    ToolSection("scan", "Scan & Capture", "المسح والالتقاط", setOf("scan_doc")),
+    ToolSection("organize", "Organize PDF", "تنظيم PDF",
+        setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop")),
+    ToolSection("convert", "Convert", "التحويل",
+        setOf("pdf_to_docx", "pdf_to_pptx", "pdf_02", "pdf_07", "pdf_ocr", "img_01")),
+    ToolSection("edit", "Edit & Sign", "التحرير والتوقيع",
+        setOf("pdf_annotate", "pdf_signature", "pdf_stamp", "pdf_image", "pdf_forms", "pdf_metadata", "pdf_clean")),
+    ToolSection("optimize", "Optimize", "التحسين",
+        setOf("pdf_compress", "img_02", "img_03", "img_04", "img_adjust", "img_target", "img_join",
+            "img_stitch", "img_compare", "img_exif", "img_watermark")),
+    ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect")),
+    ToolSection("download", "Download", "التنزيل", setOf("dl_media", "dl_02", "dl_03")),
+    ToolSection("files", "Files", "الملفات",
+        setOf("file_02", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename",
+            "file_duplicates", "file_trash", "sha256"))
+)
+
+private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
+    if (language.isRtl) section.titleAr else section.titleEn
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(title, color = MaterialTheme.colorScheme.primary,
+        style = QuietTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
 }
 
 /** Stateless UI boundary lets interaction tests exercise the real catalogue without a database. */
@@ -47,11 +84,14 @@ internal fun ToolsCatalogue(
     tools: List<UtilityTool>,
     language: AppLanguage,
     rankedToolIds: List<String>,
+    pinnedToolIds: List<String>,
+    recentToolIds: List<String>,
     search: String,
     onSearch: (String) -> Unit,
     onTool: (UtilityTool) -> Unit
 ) {
-    val visible = remember(tools, rankedToolIds, search) {
+    val byId = remember(tools) { tools.associateBy { it.id } }
+    val filtered = remember(tools, rankedToolIds, search) {
         val ranks = rankedToolIds.withIndex().associate { it.value to it.index }
         tools.withIndex().filter { (_, tool) ->
             search.isBlank() || listOf(tool.titleEn, tool.titleAr, tool.subtitleEn, tool.subtitleAr)
@@ -59,6 +99,14 @@ internal fun ToolsCatalogue(
         }.sortedWith(compareBy<IndexedValue<UtilityTool>> { ranks[it.value.id] ?: Int.MAX_VALUE }
             .thenBy { it.index }).map { it.value }
     }
+    val pinned = remember(tools, pinnedToolIds) {
+        pinnedToolIds.mapNotNull { byId[it] }.filter { CapabilityRegistry.enabled(it.id) }
+    }
+    val recent = remember(tools, recentToolIds, pinned) {
+        val pinnedIds = pinned.map { it.id }.toSet()
+        recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds }.take(8)
+    }
+    val featuredIds = (pinned.map { it.id } + recent.map { it.id }).toSet()
     val largeText = LocalDensity.current.fontScale >= 1.6f
     BoxWithConstraints(Modifier.fillMaxSize().testTag("tools.screen")) {
         val columns = when {
@@ -79,13 +127,52 @@ internal fun ToolsCatalogue(
                 QuietSearchBar(search, stringResource(R.string.neon_tools_search),
                     onSearch, { onSearch("") }, modifier=Modifier.testTag("tools.search"))
             }
-            if (visible.isEmpty()) item("empty", span = { GridItemSpan(maxLineSpan) }) {
-                QuietStateCard(stringResource(R.string.tools_no_matching),
-                    stringResource(R.string.tools_no_matching_sub),
-                    stringResource(R.string.tools_reset_filters), { onSearch("") })
-            }
-            items(visible, key = { it.id }, contentType = { "tool" }) { tool ->
-                ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+            if (search.isNotBlank()) {
+                if (filtered.isEmpty()) item("empty", span = { GridItemSpan(maxLineSpan) }) {
+                    QuietStateCard(stringResource(R.string.tools_no_matching),
+                        stringResource(R.string.tools_no_matching_sub),
+                        stringResource(R.string.tools_reset_filters), { onSearch("") })
+                }
+                items(filtered, key = { it.id }, contentType = { "tool" }) { tool ->
+                    ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                }
+            } else {
+                if (pinned.isNotEmpty()) {
+                    item("pinned", span = { GridItemSpan(maxLineSpan) }) {
+                        SectionHeader(stringResource(R.string.tools_section_pinned))
+                    }
+                    items(pinned, key = { "pinned:" + it.id }, contentType = { "tool" }) { tool ->
+                        ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                    }
+                }
+                if (recent.isNotEmpty()) {
+                    item("recent", span = { GridItemSpan(maxLineSpan) }) {
+                        SectionHeader(stringResource(R.string.tools_section_recent))
+                    }
+                    items(recent, key = { "recent:" + it.id }, contentType = { "tool" }) { tool ->
+                        ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                    }
+                }
+                val remaining = filtered.filter { it.id !in featuredIds }
+                for (section in toolSections) {
+                    val sectionTools = remaining.filter { it.id in section.ids }
+                    if (sectionTools.isEmpty()) continue
+                    item("section:" + section.key, span = { GridItemSpan(maxLineSpan) }) {
+                        SectionHeader(sectionTitle(section, language))
+                    }
+                    items(sectionTools, key = { it.id }, contentType = { "tool" }) { tool ->
+                        ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                    }
+                }
+                val ungrouped = remaining.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
+                if (ungrouped.isNotEmpty()) {
+                    item("section:all", span = { GridItemSpan(maxLineSpan) }) {
+                        SectionHeader(stringResource(R.string.tools_section_all))
+                    }
+                    items(ungrouped, key = { it.id }, contentType = { "tool" }) { tool ->
+                        ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                    }
+                }
             }
         }
     }

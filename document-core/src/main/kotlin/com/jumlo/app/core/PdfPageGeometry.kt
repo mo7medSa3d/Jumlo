@@ -42,8 +42,13 @@ object PdfPageGeometry {
     }
 }
 
-/** Immutable editing commands; the UI retains previous snapshots for undo/redo. */
-data class PdfPageEdit(val order: List<Int>, val selected: Set<Int> = emptySet()) {
+/** Immutable editing commands; the UI retains previous snapshots for undo/redo.
+ *  Each operation returns a new instance so edits are non-destructive. */
+data class PdfPageEdit(
+    val order: List<Int>,
+    val selected: Set<Int> = emptySet(),
+    val rotations: Map<Int, Int> = emptyMap()
+) {
     companion object {
         fun start(count: Int): PdfPageEdit {
             require(count > 0) { "INVALID_PAGE_COUNT" }
@@ -69,10 +74,48 @@ data class PdfPageEdit(val order: List<Int>, val selected: Set<Int> = emptySet()
         return copy(selected = selected + (first..last))
     }
 
+    fun selectAll(): PdfPageEdit = copy(selected = order.toSet())
+
+    fun selectNone(): PdfPageEdit = copy(selected = emptySet())
+
+    fun invertSelection(): PdfPageEdit = copy(selected = order.toSet() - selected)
+
     fun deleteSelected(): PdfPageEdit {
         val remaining = order.filterNot { it in selected }
         require(remaining.isNotEmpty()) { "AT_LEAST_ONE_PAGE_REQUIRED" }
-        return PdfPageEdit(remaining)
+        return PdfPageEdit(remaining, rotations.filterKeys { it in remaining })
+    }
+
+    fun duplicate(page: Int): PdfPageEdit {
+        require(page in order) { "INVALID_PAGE_INDEX" }
+        val idx = order.indexOf(page)
+        return copy(order = order.toMutableList().apply { add(idx + 1, page) })
+    }
+
+    fun rotate(page: Int, degrees: Int): PdfPageEdit {
+        require(page in order) { "INVALID_PAGE_INDEX" }
+        require(degrees in setOf(90, 180, 270)) { "INVALID_ROTATION" }
+        val next = ((rotations[page] ?: 0) + degrees) % 360
+        return copy(rotations = rotations + (page to next))
+    }
+
+    fun rotateSelected(degrees: Int): PdfPageEdit {
+        require(degrees in setOf(90, 180, 270)) { "INVALID_ROTATION" }
+        if (selected.isEmpty()) return this
+        val next = rotations.toMutableMap()
+        selected.forEach { p -> next[p] = ((rotations[p] ?: 0) + degrees) % 360 }
+        return copy(rotations = next)
+    }
+
+    fun extractSelected(): PdfPageEdit {
+        val pages = order.filter { it in selected }
+        require(pages.isNotEmpty()) { "NO_PAGES_SELECTED" }
+        return PdfPageEdit(pages, emptySet(), rotations.filterKeys { it in selected })
+    }
+
+    fun splitEvery(n: Int): List<PdfPageEdit> {
+        require(n > 0) { "INVALID_SPLIT_SIZE" }
+        return order.chunked(n).map { PdfPageEdit(it, rotations.filterKeys { p in it }) }
     }
 }
 

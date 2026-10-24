@@ -11,7 +11,8 @@ enum class PillarCategory(val labelEn: String, val labelAr: String) {
 enum class ThemeMode(val labelEn: String, val labelAr: String, val subtitleEn: String, val subtitleAr: String) {
     SYSTEM("System Default", "افتراضي النظام", "Follows Android OS setting", "يتبع إعدادات نظام أندرويد"),
     LIGHT("Light Theme", "المظهر الفاتح", "Warm neutrals & crisp contrast", "ألوان دافئة وتباين واضح"),
-    DARK("Dark Theme", "المظهر الداكن", "Pure black OLED background", "خلفية سوداء خالصة لشاشات OLED")
+    DARK("Dark Theme", "المظهر الداكن", "Pure black OLED background", "خلفية سوداء خالصة لشاشات OLED"),
+    AMOLED("AMOLED Black", "أسود OLED", "True black for OLED displays", "أسود حقيقي لشاشات OLED")
 }
 
 enum class AppLanguage(val code: String, val displayName: String, val nativeSubtitle: String, val isRtl: Boolean) {

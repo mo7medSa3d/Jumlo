@@ -35,7 +35,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
     focusedContainerColor=MaterialTheme.colorScheme.surfaceContainer,
     unfocusedContainerColor=MaterialTheme.colorScheme.surfaceContainerLow)
 
-@Composable internal fun ViewerWorkspace(vm:AppViewModel,sources:List<SourceRef>,onImport:()->Unit) {
+@Composable internal fun ViewerWorkspace(vm:AppViewModel,sources:List<SourceRef>,onImport:()->Unit,onBack:()->Unit = {},onOpenFile:()->Unit = onImport) {
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     val pdfs=sources.filter { it.mimeType=="application/pdf" }
     val source=pdfs.firstOrNull {it.id==selected} ?: pdfs.firstOrNull()
@@ -55,7 +55,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
             }
             Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
                 when {
-                    uri!=null -> PdfViewerScreen(uri!!,source.displayName,Modifier.fillMaxSize())
+                    uri!=null -> PdfViewerScreen(uri!!,source.displayName,onBack,onOpenFile,{u,_->vm.importForPrint(com.jumlo.app.ui.intake.Intake(listOf(u),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},Modifier.fillMaxSize())
                     error!=null -> Text(stringResource(userMessageResource(error!!)),modifier=Modifier.padding(24.dp))
                     else -> CircularProgressIndicator()
                 }

@@ -94,6 +94,11 @@ object PdfCompressionRunner {
                             onProgress(pass.toLong() * total + done, profiles.size.toLong() * total)
                         }, codec = codec, maxWorkingBytes = maxWorkingBytes, checkCancel = ::check)
                     check()
+                    // Strip document metadata (info dictionary and XMP) as part of the size
+                    // ladder. The private output is re-derived from the source on every run,
+                    // and the explicit Clean Metadata tool remains the way to review or keep a
+                    // title/author. This helper is pure PDFBox and cannot invalidate the pages.
+                    PdfBoxBackend.scrubMetadata(document)
                     document.save(candidate)
                 }
                 check()

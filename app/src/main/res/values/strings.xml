@@ -48,6 +48,7 @@
     <string name="filter_archives">Archives</string>
     <string name="action_view">View</string>
     <string name="action_open">Open</string>
+    <string name="action_print">Print</string>
     <string name="action_share">Share</string>
     <string name="action_apply">Apply</string>
     <string name="action_cancel">Cancel</string>
