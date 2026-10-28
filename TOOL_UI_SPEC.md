@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 current-registry qualification
+
+The historical scope header and several older per-tool statements above refer to **47 entries / 44 enabled / three disabled** in an earlier source state. The current `main` `CapabilityRegistry.kt` registers **45 tools** (44 in `allTools` plus `sha256`); its current `CapabilityPolicy.kt` marks those 45 visible and enabled, while navigation-only tools are not processing jobs. This qualification does **not** certify that 45 end-to-end flows work. Refer to `docs/AUDIT_2.md` for the current source registry and per-entry qualification status. This WP-00 change is documentation only; no tool interactions or screenshot captures were changed or newly executed.
