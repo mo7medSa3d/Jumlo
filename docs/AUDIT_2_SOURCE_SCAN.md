@@ -1,6 +1,8 @@
 # AUDIT_2 Phase 0 production Kotlin/Java lexical scan
 
-**Base:** `d599b8a3159f38623e3d0b83c3d58a23073e70cf`. Direct GitHub contents API read. This is a **candidate inventory**, not runtime qualification. Matches inside token definitions can be intentional; no match is a substitute for behavior testing. **INCOMPLETE: 14/244 files**.
+**Base:** `d599b8a3159f38623e3d0b83c3d58a23073e70cf`. Direct GitHub contents API read. This is a **candidate inventory**, not runtime qualification. Matches inside token definitions can be intentional; no match is a substitute for behavior testing. **COMPLETE for the declared lexical rules: 244/244 production Kotlin/Java files, zero failed fetches.** This is not a semantic UI/operation audit and does not include XML, shell/Python or generated binaries.
+
+**Aggregate matched candidates:** 0 TODO/FIXME/stub-marker locations; 0 syntactically empty callbacks; **204** direct color references (mostly intentionally centralized tokens); **7** direct `Text("…")`/contentDescription literals (most are numeric values, symbols or source filenames). Every match is listed below with the exact source file and line. Multiline string construction and semantically inert nonempty callbacks remain outside this lexical detector.
 
 ## Batch 0–13
 
