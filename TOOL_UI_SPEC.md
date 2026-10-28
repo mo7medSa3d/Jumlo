@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP01 scope note
+
+No tool interaction or UI behavior was changed by this release-gates package. The current catalog derives from `CapabilityRegistry`: 45 entries (44 in `allTools` plus `sha256`). Older descriptions of 47 entries above reflect the preceding snapshot and must not be treated as present runtime tools. All pick/configure/run/result device acceptance remains NOT VERIFIED.
