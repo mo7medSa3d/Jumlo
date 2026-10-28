@@ -2,16 +2,10 @@ name: Android CI & APK
 
 on:
   push:
-    branches: [main, 'arena/**']
+    branches: [main, 'arena/**', 'wp/**']
     tags: ['v*']
-    paths-ignore:
-      - 'docs/**'
-      - 'verification/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'verification/**'
   workflow_dispatch:
     inputs:
       device_tests:
@@ -71,10 +65,8 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
-          # KSP2's Analysis API token can be invalidated if multiple Android
-          # variants run KSP workers simultaneously. Run every required gate,
-          # but serialize compiler workers; do not suppress KSP diagnostics.
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
+          # Serialize KSP2 debug/compact/release analysis workers; retain all gates.
+          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :app:testDebugUnitTest :app:lintRelease \
             --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
 

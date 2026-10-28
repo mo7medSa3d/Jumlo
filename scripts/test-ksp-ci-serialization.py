@@ -13,7 +13,7 @@ class KspCiVerification(unittest.TestCase):
         command = re.search(r"./gradlew .*?\| tee gradle\.log", segment, flags=re.DOTALL)
         self.assertIsNotNone(command, "The required Gradle verification command is absent")
         text = command.group(0)
-        for task in (":app:assembleDebug", ":app:verifyCompactApkSize", ":app:testDebugUnitTest", ":app:lintRelease"):
+        for task in (":app:assembleDebug", ":app:verifyCompactApkSize", ":app:verifyReleaseApkSize", ":app:testDebugUnitTest", ":app:lintRelease"):
             self.assertIn(task, text)
         self.assertIn("-PextendedMedia=true", text)
 
