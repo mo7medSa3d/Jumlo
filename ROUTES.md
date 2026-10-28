@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP01 2026-10-28:** no route or navigation changes; Phase 0 inventory is in [AUDIT_2.md](docs/AUDIT_2.md). Full route-device acceptance remains NOT VERIFIED. CI/release gates are being restored in the separate WP01 PR.
+
+
 This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
 
 Authoritative implementation: [JumloNavHost.kt](app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt), [QuietNavigation.kt](app/src/main/java/com/jumlo/app/ui/components/QuietNavigation.kt), [MainActivity.kt](app/src/main/java/com/jumlo/app/MainActivity.kt), and [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
