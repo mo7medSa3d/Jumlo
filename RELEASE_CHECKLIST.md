@@ -16,7 +16,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 ## Automated build gates
 
 - [ ] Fresh `./gradlew :app:lintRelease :app:testDebugUnitTest :app:connectedDebugAndroidTest` completes with no unresolved correctness/policy findings.
-- [ ] Before the unfiltered connected run, complete the [fixture/storage preflight](verification/current/device/preflight-source/README.md): stage all five scan inputs in the installed debug app's `files/bench`, record their hashes, and check guest space plus host growth for the 200-page case. Preserve any method filters, SDK skips and opt-in screenshot exclusions in the final results.
+- [ ] Before the unfiltered connected run, complete the [fixture/storage preflight](verification/current/device/preflight-source/README.md): generate the five scan inputs, record **new per-run** host/device SHA-256 hashes (none are supplied in the repo), and verify guest/host space for the 200-page case. Stage only verified inputs. Preserve any method filters, SDK skips and opt-in screenshot exclusions in the final results.
 - [ ] Build `:app:assembleDebugAndroidTest`, `:app:verifyReleaseApkSize` and `:app:bundleRelease`; inspect the final merged permissions and the ABI/language splits.
 - [ ] Run the host transfer/storage/diagnostic/Office/document regression scripts and keep their current logs. Do not treat inherited reports as fresh results.
 - [ ] Record/verify the Roborazzi empty/loaded matrix for every tool in English/Arabic and light/dark, then visually review all images. Review the separate blocked-state manifest.
