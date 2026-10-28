@@ -101,3 +101,14 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP03 interaction preferences
+
+| Test / scope | Outcome | Evidence |
+|---|---|---|
+| PreferencesPersistenceTest appearanceFolderQualityAndViewSurviveRepositoryRecreation | NOT RUN on WP03 | Test source covers persisted reduced motion and Strong haptics |
+| Reduce-motion OS and app preference | NOT RUN | MainActivity combines system observer and stored value |
+| Touch feedback Off/Light/Medium/Strong | NOT RUN | SettingsScreen and AppHaptics wiring, hardware check pending |
+| EN/AR 200% font and TalkBack | NOT RUN | New controls have translated resources, device test pending |
+
+**Blocked:** physical tactile and accessibility acceptance requires an authorized device; JVM build is not device qualification.
