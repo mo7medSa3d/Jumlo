@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Jumlo</string>
     <string name="tagline">ملفاتك. أدواتك.</string>
-    <string name="tagline_subtitle">ملفاتك. أدواتك. معالجة محلية 100% بدون سحابة.</string>
+    <string name="tagline_subtitle">حرّر ملفات PDF والصور محلياً، مع عمليات نقل عبر الشبكة عند اختيارك.</string>
     <string name="offline_pledge_short">تحرير المستندات محلياً. تستخدم الميزات المتصلة الشبكة عند اختيارها.</string>
     <string name="offline_badge">تحرير محلي واتصال اختياري</string>
     <string name="local_only_badge">تعديل على الجهاز</string>
@@ -91,7 +91,7 @@
 
     <!-- Choose Source Import -->
     <string name="import_title">استيراد الملفات</string>
-    <string name="import_subtitle">اختر ملفات الإدخال لأدوات PDF والصور. معالجة محلية 100%.</string>
+    <string name="import_subtitle">اختر ملفات PDF والصور. تبقى التعديلات على المستندات على جهازك.</string>
     <string name="import_received_share">تم الاستلام عبر مشاركة أندرويد</string>
     <string name="import_use_shared">استخدام الملفات المشاركة</string>
     <string name="import_photo_gallery">معرض الصور والوسائط</string>
