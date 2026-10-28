@@ -3,9 +3,9 @@
     <string name="app_name">Jumlo</string>
     <string name="tagline">Your files. Your tools.</string>
     <string name="tagline_subtitle">Edit PDFs, transform images, download and organize with instant local speed.</string>
-    <string name="offline_pledge_short">100% on-device processing. No cloud uploads.</string>
-    <string name="offline_badge">Offline &amp; Private</string>
-    <string name="local_only_badge">Local Only</string>
+    <string name="offline_pledge_short">Local document editing. Selected online features use the network.</string>
+    <string name="offline_badge">Local editing &amp; optional network</string>
+    <string name="local_only_badge">On-device edits</string>
 
     <!-- Navigation Dock -->
     <string name="nav_home">Home</string>
@@ -15,10 +15,10 @@
 
     <!-- Welcome Launch (app_01) -->
     <string name="welcome_title">Welcome to Jumlo</string>
-    <string name="welcome_badge">On-Device Processing • Local Sandbox</string>
-    <string name="welcome_card_title">100% Local On-Device Processing</string>
-    <string name="welcome_card_body">File manipulation stays strictly inside this phone\'s isolated operating sandbox. Zero cloud accounts, zero tracking.</string>
-    <string name="welcome_sandbox_active">Sandboxed offline filesystem active</string>
+    <string name="welcome_badge">Local editing • Optional downloads and Drive</string>
+    <string name="welcome_card_title">Edit locally. Share when you choose.</string>
+    <string name="welcome_card_body">PDF and image edits stay on your device. Downloads, remote previews, optional extraction services and Google Drive transfers use the network when selected.</string>
+    <string name="welcome_sandbox_active">Private app storage ready</string>
     <string name="welcome_pillars_header">Engine Pillars</string>
     <string name="welcome_ready">Ready</string>
     <string name="welcome_get_started">Get Started</string>
@@ -170,7 +170,7 @@
     <string name="settings_about">About Jumlo</string>
     <string name="settings_storage_summary">Snapshots: %1$s · Outputs: %2$s · Trash: %3$s · Transfers: %4$s · Temp: %5$s</string>
     <string name="settings_allow_notifications">Allow background progress notifications</string>
-    <string name="settings_privacy_summary">Document processing stays on your device. Downloads, remote thumbnails, optional extraction services and model installation can use the network. App backup is disabled.</string>
+    <string name="settings_privacy_summary">Document editing stays on your device. Downloads, remote thumbnails, optional extraction services, Google Drive transfers and scanner/OCR model installation can use the network. App backup is disabled.</string>
     <string name="processing_channel">File processing</string>
     <string name="processing_title">Processing files on this device</string>
     <string name="processing_body">Open the app to see actual progress and results.</string>
