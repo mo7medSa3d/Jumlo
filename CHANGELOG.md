@@ -1,5 +1,11 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
+
+- `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
+- Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
