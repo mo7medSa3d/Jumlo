@@ -1,5 +1,18 @@
 # Jumlo — verification report
 
+## WP05 — 2026-10-28 privacy strings and Drive data-flow disclosure
+
+| Evidence | Status | Notes |
+|---|---|---|
+| `PrivacyDisclosureTest` (Robolectric, EN/AR) | **NOT RUN** until branch CI | Checks that both welcome/settings copy discloses Drive and removes false universal/offline wording |
+| `GoogleDriveClient.kt:68-265`; `FileExtrasHandler.kt:216-275` | SOURCE-INSPECTED | Enabled token-gated Drive v3 import/export; explicit selected files are uploaded/downloaded |
+| Android manifest and Google Drive permissions | SOURCE-INSPECTED only | INTERNET is requested; no new permissions added in WP05 |
+| Live Google Drive account import/export | **BLOCKED** (no authorized account fixture/device) | Requires user-authorized token, actual round trip and provider validation |
+| Play data safety, production privacy URL/contact | **BLOCKED** owner policy details | Existing `PRIVACY_POLICY.md` still needs owner legal identity and public URL |
+
+WP05 does not claim a Play policy approval, an executed Drive integration test or a new Android runtime result.
+
+
 ## 2026-10-28 work-package verification — release quality gates
 
 - `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
