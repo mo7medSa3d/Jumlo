@@ -1,7 +1,6 @@
 # Tool UI specification
 
-- WP04 transfer integrity: failed gzip/legacy partials restart cleanly rather than range-appending decoded bytes. User-visible progress/report still requires device validation.
-**WP04 2026-10-28:** direct/batch downloads gain automatic mid-transfer recovery when the source supplies an HTTP validator. The user sees existing WorkManager progress; no new UI is claimed. `StreamTransferMidstreamRetryTest` provides three deterministic regression cases (NOT RUN until CI). Pause/foreground/device matrix remains outstanding.
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
@@ -12,7 +11,7 @@
 
 ## Scope and evidence
 
-This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
+This is the source-level contract for the **45 entries currently registered** in `CapabilityRegistry.tools`. The current `CapabilityPolicy` marks the registered entries available in source; **source availability is not an end-to-end runtime PASS**. Prior references to 47 tools / 44 enabled and three disabled describe superseded historical revisions. Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
 
 The catalogue is one keyed lazy grid organised into the brief's sections — Scan &
 Capture, Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files —
@@ -501,4 +500,16 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Preview/results:** Actual source metadata; hash report is generated from file bytes.
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
+
+
+## 2026-10-28 — WP02a setting behavior
+
+The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+- WP04 transfer integrity: failed gzip/legacy partials restart cleanly rather than range-appending decoded bytes. User-visible progress/report still requires device validation.
+**WP04 2026-10-28:** direct/batch downloads gain automatic mid-transfer recovery when the source supplies an HTTP validator. The user sees existing WorkManager progress; no new UI is claimed. `StreamTransferMidstreamRetryTest` provides three deterministic regression cases (NOT RUN until CI). Pause/foreground/device matrix remains outstanding.
+
 

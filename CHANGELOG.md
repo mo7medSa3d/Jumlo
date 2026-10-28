@@ -1,10 +1,8 @@
 # Changelog — current production-hardening candidate
 
-- Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
-## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
-- `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
-- Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -165,4 +163,20 @@ declarations/policy review, the complete live-provider matrix, physical-device
 qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
+
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+- Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
+## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
+
+- `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
+- Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
+
 
