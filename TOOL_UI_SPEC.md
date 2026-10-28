@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**WP05 2026-10-28 — View PDF (`pdf_01`):** last-read page is stored in app-private DataStore by an opaque SHA-256 document fingerprint, restored before scroll writes, bounded to 128 recent documents. `PdfReaderPositionStoreTest` includes 3 real DataStore Robolectric JUnit cases, NOT RUN until CI. Real device process death/200-page jank and memory remains a release gate.
+
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
