@@ -35,6 +35,11 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP06: Compress a noncompressible/already optimized PDF and verify the result visibly says unchanged, never partial savings even when codec skips images.
+- [ ] WP06: Compress a scan with some unsupported image streams; when output becomes smaller, show partial warning plus measured before/after bytes.
+- [ ] WP06: Run all five README scan fixtures and the 200-page test on a supported device without OOM; record hashes, sizes, page counts and image fidelity.
+
+
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |
