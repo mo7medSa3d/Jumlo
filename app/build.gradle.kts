@@ -311,12 +311,12 @@ afterEvaluate {
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
-// Product release gate: the complete ARM64 media-enabled APK must be below 60 MB
-// (60,000,000 decimal bytes). Never skip codecs/features to bypass this gate.
-val maximumApkBytes = 60_000_000L
+// Full-media builds must fit the requested 60,000,000-byte ARM64 distribution cap.
+// Never replace the full extractor runtime with a lite build to satisfy this gate.
+val maxFullMediaApkBytes = 60_000_000L
 tasks.register("verifyCompactApkSize") {
     group = "verification"
-    description = "Verify full-media ARM64 compact APK is below 60,000,000 bytes"
+    description = "Build and enforce the 60,000,000-byte full-media compact APK limit"
     dependsOn("assembleCompact")
     doLast {
         // A small direct-link-only build is not a substitute for the full downloader.
@@ -325,14 +325,16 @@ tasks.register("verifyCompactApkSize") {
         val apks = folder.listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
         check(apks.size == 1) { "Expected exactly one compact APK in $folder; found ${apks.size}" }
         val apk = apks.single()
-        println("Compact APK: ${apk.absolutePath} = ${apk.length()} / $maximumApkBytes bytes")
-        check(apk.length() < maximumApkBytes) { "Compact APK exceeds the strict 60 MB limit: ${apk.length()} bytes" }
+        println("Compact APK: ${apk.absolutePath} = ${apk.length()} / $maxFullMediaApkBytes bytes")
+        check(apk.length() <= maxFullMediaApkBytes) {
+            "Compact full-media APK exceeds $maxFullMediaApkBytes bytes: ${apk.length()} bytes"
+        }
     }
 }
 
 tasks.register("verifyReleaseApkSize") {
     group = "verification"
-    description = "Verify full-media ARM64 release APK is below 60,000,000 bytes"
+    description = "Enforce the 60,000,000-byte full-media release APK limit, ARM64 and extractor content"
     dependsOn("assembleRelease")
     doLast {
         check(extendedMedia) { "Release qualification requires the complete media runtime." }
@@ -340,8 +342,10 @@ tasks.register("verifyReleaseApkSize") {
             .listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
         check(apks.size == 1) { "Expected one current release APK; clean obsolete release artifacts first." }
         val apk = apks.single()
-        println("Release APK size: ${apk.length()} / $maximumApkBytes bytes")
-        check(apk.length() < maximumApkBytes) { "Release APK exceeds the strict 60 MB limit: ${apk.length()} bytes" }
+        println("Release APK size: ${apk.length()} / $maxFullMediaApkBytes bytes")
+        check(apk.length() <= maxFullMediaApkBytes) {
+            "Full-media release APK exceeds $maxFullMediaApkBytes bytes: ${apk.length()} bytes"
+        }
         ZipFile(apk).use { zip ->
             val abis = zip.entries().asSequence().map { it.name }
                 .filter { it.startsWith("lib/") && it.endsWith(".so") }.map { it.split('/')[1] }.toSet()

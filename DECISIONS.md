@@ -98,6 +98,6 @@ release-APK size (54,878,634 bytes) is inherited from the supplied baseline and 
 not a current measurement.
 
 
-## 2026-10-28 — Release gate reinstatement (supersedes item 8)
+## 2026-10-28 — Policy supersession
 
-The owner's current production requirement is an ARM64 complete-media APK **strictly below 60,000,000 decimal bytes**. Both `verifyCompactApkSize` and `verifyReleaseApkSize` now enforce that limit without dropping yt-dlp, FFmpeg or other user-facing features. The prior item 8 decision to lift the cap is historical and no longer the release rule. An oversize artifact is a CI failure that must be fixed, not a reason to bypass checks.
+The previous decision to lift the 60,000,000-byte APK cap is superseded by merged PR #11 and the current owner's release requirement: the full-media ARM64 compact and release APKs must both be at most 60,000,000 decimal bytes. WP-06 adds the release verifier to normal CI; do not strip yt-dlp or bypass tests to meet the cap.

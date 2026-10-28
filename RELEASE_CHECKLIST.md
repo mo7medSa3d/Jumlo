@@ -59,8 +59,3 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
-
-
-## 2026-10-28 — mandatory automated gates
-
-The default PR/main workflow now invokes both strict byte-size check tasks and `lintRelease` (in addition to unit tests and debug build). Verify its **completed and successful** run for the final commit before merging. The resulting unsigned release APK does **not** replace owner's upload-key signing, independent signature identity, API 26/36 instrumentation, 200-page performance, or real-platform qualification.

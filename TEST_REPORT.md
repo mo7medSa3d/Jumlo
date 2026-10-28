@@ -1,5 +1,13 @@
 # Jumlo — verification report
 
+## 2026-10-28 work-package verification — release quality gates
+
+- `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
+- Baseline `main` Actions run [#40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318): debug build + tests + lintDebug succeeded, compact measured 55,368,299 bytes. It did not run release lint and was not gated by the size maximum.
+- Device runs, release signing, Five-PDF-fixture compression, 200-page memory and live authorized downloader matrix remain **NOT VERIFIED**.
+- Do not replace or overwrite the October 24 report's original session history with new claims.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
@@ -103,6 +111,6 @@ run here).
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
 
 
-## 2026-10-28 — WP-06 release quality gate candidate
+## 2026-10-28 — WP-06 follow-up verification
 
-The CI workflow now schedules `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:verifyCompactApkSize :app:verifyReleaseApkSize` for full media. Both APK verification tasks enforce **less than 60,000,000 bytes** and the release task still checks ARM64-only content and the yt-dlp payload. **NOT RUN for this PR until GitHub reports a completed check**; passing CI from the prior SHA does not qualify this candidate. The last separately observed main compact APK was **55,368,299 bytes** in [run #40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318); that is not a measurement of this branch's release APK. Signed bundle/device/profiling and Play Console checks remain blocked.
+GitHub main commit `10f3aed16ddaa82e188ec12466259c091e1e0b88` merged PR #11 with a 60,000,000-byte compact/release task cap and `lintRelease` in CI. This WP-06 follow-up schedules **both** verifier tasks and both debug/release lint in normal PR CI. `scripts/test-compact-configuration.py` now asserts this cap instead of contradicting the current Gradle script. **PENDING:** build/test/lint and APK byte results for this exact commit. Unsigned release size is not a signed publishing gate and device/workflow acceptance remains not run.

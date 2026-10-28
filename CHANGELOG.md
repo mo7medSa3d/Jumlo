@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+### 2026-10-28 — wp/01 release gate correction (verification pending)
+
+- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
+- Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
+- These are source changes, **not yet a passing CI result**; capture the work-package run before merging.
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
@@ -146,8 +153,7 @@ before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
 
-## 2026-10-28 — WP-06 release gate repair (pending CI)
 
-- Restore an enforced strict 60,000,000-byte cap to both full-media ARM64 compact and unsigned-release APK verifier tasks. Keep bundled extractor and ABI/payload assertions intact; do **not** trim functionality to hide a failed gate.
-- Require `lintRelease` and `verifyReleaseApkSize` in normal GitHub PR/main CI as well as existing debug build, unit, debug lint, compact checks and artifact inspection.
-- Update the compact-configuration contract test to assert the actual limit and both Gradle tasks. A green CI build must establish these gates; source review alone is not a PASS.
+## 2026-10-28 — WP-06 CI follow-up after #11
+
+- Building on merged #11 (which already reinstated both 60,000,000-byte checks), add `:app:verifyReleaseApkSize` to the **automatic** PR/main CI command, keep debug lint alongside release lint, and correct the stale `test-compact-configuration.py` expectation that incorrectly required *no* size cap. No change to shipped features or release signing.

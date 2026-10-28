@@ -68,8 +68,3 @@ The fonts are OFL-licensed subsets of IBM Plex Sans and IBM Plex Sans Arabic, in
 On Android 10+ default public copies use MediaStore; a selected SAF folder persists its URI grant. On Android 8–9 the default copy is in the app-specific external Downloads directory; choose a SAF folder for a durable shared location. Clearing cache leaves source documents, published outputs and active job state intact.
 
 This rebuild does not establish the original paste-crash stack trace, live provider availability, successful physical-device tests, or Microsoft Office application compatibility. Refer to the explicit evidence and pending matrix in `TEST_REPORT.md` before shipping.
-
-
-## 2026-10-28 release gate
-
-The full ARM64 media-enabled compact and release APKs must both be smaller than **60,000,000 bytes**. `verifyCompactApkSize` and `verifyReleaseApkSize` now fail if that limit is exceeded. Automatic PR CI includes `:app:lintRelease`, `:app:verifyCompactApkSize` and `:app:verifyReleaseApkSize` alongside the debug build/unit tests. No release signing key is committed; complete signed-device qualification still requires owner credentials and device evidence.

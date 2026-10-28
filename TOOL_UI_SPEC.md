@@ -1,5 +1,8 @@
 # Tool UI specification
 
+> 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
+
+
 ## Scope and evidence
 
 This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
@@ -493,6 +496,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
 
-## 2026-10-28 — release CI qualification boundary
 
-WP-06 reinstates the strict media-enabled full ARM64 APK limit and mandatory release lint. It changes no tool configuration or result UI. Passing these build gates is necessary but insufficient for a per-tool end-to-end PASS; all tool-device tests and retained screenshot acceptance remain independently required.
+## 2026-10-28 — CI-only follow-up
+
+WP-06 changes package verification and matching source-level test assertions, not tool controls, previews, format choices or routing. Per-tool device and download acceptance remains independent of size/lint success.

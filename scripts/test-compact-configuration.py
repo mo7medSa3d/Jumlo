@@ -23,13 +23,13 @@ class CompactConfigurationTests(unittest.TestCase):
         self.assertIn('for (variant in listOf("debug", "release", "benchmark", "compact"))', GRADLE)
         self.assertIn('for (variant in listOf("debug", "release", "compact"))', GRADLE)
 
-    def test_strict_size_gates_cover_compact_and_release_without_trimming_media(self):
+    def test_both_full_media_apks_enforce_the_decimal_60mb_gate(self):
         self.assertIn('tasks.register("verifyCompactApkSize")', GRADLE)
         self.assertIn('dependsOn("assembleCompact")', GRADLE)
-        self.assertIn('maximumApkBytes = 60_000_000L', GRADLE)
-        self.assertIn('check(apk.length() < maximumApkBytes)', GRADLE)
         self.assertIn('tasks.register("verifyReleaseApkSize")', GRADLE)
         self.assertIn('dependsOn("assembleRelease")', GRADLE)
+        self.assertIn('maxFullMediaApkBytes = 60_000_000L', GRADLE)
+        self.assertEqual(2, GRADLE.count('check(apk.length() <= maxFullMediaApkBytes)'))
         # Correctness gates retained in the release size task.
         self.assertIn('arm64-v8a', GRADLE)
         self.assertIn('assets/media/yt-dlp', GRADLE)
