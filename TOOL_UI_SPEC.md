@@ -516,3 +516,5 @@ Added an API26/API35/API36 instrumented smoke workflow exercising existing UI an
 ### WP09 added on-device backend flows
 
 The smoke matrix includes real generated-file tests for PDF editing/Office output, image pixels, ZIP, file publication, reader/scan storage and print adapter in addition to UI tests. These qualify specific output contracts only when executed; they are not equivalent to completing all 45 tool pick/configure/run/result journeys.
+
+- WP09: PdfReaderSession has an instrumented 200-page generated document random-access test covering page 200 and cache eviction. Pending execution and physical-device 200-page scroll/jank/scan-memory acceptance.

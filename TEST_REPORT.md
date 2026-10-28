@@ -157,3 +157,7 @@ The workflow now invokes a dedicated Bash script with one shell command, retains
 ### Follow-up: reproducible `/bin/sh` failure after heredoc
 
 [Run 40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016) shows all three API jobs failed with `set: Illegal option -o pipefail`. In API 36, the emulator reported boot completed before the runner used `/usr/bin/sh -c set -euo pipefail`. Wrapping the script in a multiline heredoc was insufficient. A new dedicated `scripts/run-emulator-smoke.sh` invoked as a **single** action command is committed; full instrumentation is **NOT RUN** for this patch until CI evidence is collected.
+
+### WP09 generated 200-page PDF reader stress (new, not yet executed)
+
+- Added Android instrumentation `PdfReaderAndScanStoreTest.twoHundredPageReaderSupportsRandomAccessWithoutRetainingEveryBitmap`: produces a real 200-page vector PDF fixture, opens with platform PdfRenderer, samples random pages including page 200, tests pixels, evictions, externally retained first bitmap and source preservation. This is **NOT RUN** pending matching emulator CI and does not prove 200-page *scanned-image compression*, frame-time smoothness or physical-device OOM safety.
