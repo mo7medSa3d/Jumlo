@@ -38,6 +38,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP13: Confirm no Settings option suggests global Wi-Fi-only or concurrency customization; verify per-job Wi-Fi flag still reaches a real download job and fixed 2-task scheduler remains enforced.
+
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |

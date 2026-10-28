@@ -99,3 +99,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+- **WP13 (2026-10-28):** Remove hidden setters/keys when their values cannot affect scheduler or global network behavior. Keep per-job download policy independently editable. An Android persistence assertion and executable source regression guard prevent reintroduction of misleading no-op settings.

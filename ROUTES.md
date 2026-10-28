@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP13: No route or visible setting was removed; only obsolete hidden preference write methods were eliminated.
+
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 

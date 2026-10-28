@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP13: The obsolete global Wi-Fi and concurrency settings cannot be saved to DataStore anymore. Per-job download Wi-Fi selection and fixed scheduler limit remain intact; no UI tool flow is disabled.
+
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 

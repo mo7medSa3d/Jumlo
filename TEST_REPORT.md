@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## WP13 — no-op global preference cleanup (2026-10-28)
+
+`UserPreferencesRepository` no longer writes `max_concurrent_downloads` or `wifi_only_default`. Settings state continues to report `maxConcurrentDownloads=2` (fixed scheduler) and `wifiOnlyDefault=false` (not globally forced). Per-job `wifiOnly` remains in the workspace model. `PreferencesPersistenceTest` no longer invokes fake setters and still asserts fixed values. Source contract `scripts/test-inert-preferences.py` is CI-gated; latest branch CI **PENDING**, device flow **NOT RUN**.
+
+
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
 
 Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.

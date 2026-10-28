@@ -28,10 +28,8 @@ class PreferencesPersistenceTest {
             preferences.setDefaultAudioQuality(128)
             preferences.setFileViewMode(FileViewMode.LIST)
             preferences.setDownloadDestinationFolder("content://com.android.externalstorage.documents/tree/primary%3ADownload")
-            preferences.setWifiOnlyDefault(true)
             preferences.setRespectReducedMotion(true)
             preferences.setHapticIntensity(HapticIntensity.STRONG)
-            preferences.setMaxConcurrentDownloads(6)
             val restored = UserPreferencesRepository(context).settingsFlow.first()
             assertTrue(restored.isLoaded)
             assertEquals(ThemeMode.DARK, restored.themeMode)
@@ -47,8 +45,8 @@ class PreferencesPersistenceTest {
             assertEquals(128, restored.defaultAudioQuality)
             assertEquals(FileViewMode.LIST, restored.fileViewMode)
             assertEquals("content://com.android.externalstorage.documents/tree/primary%3ADownload",restored.downloadDestinationFolder)
-            // Removed legacy preferences cannot silently keep blocking mobile downloads
-            // or disable animation after the corresponding controls disappear.
+            // The fixed scheduler policy and removed global Wi-Fi-only default are not writable.
+            // Per-job Wi-Fi policy remains independent of these obsolete DataStore keys.
             assertFalse(restored.wifiOnlyDefault)
             assertTrue(restored.respectReducedMotion)
             assertTrue(restored.hapticFeedbackOnCommit)
@@ -63,10 +61,8 @@ class PreferencesPersistenceTest {
             preferences.setFileViewMode(original.fileViewMode)
             if(original.downloadDestinationFolder.startsWith("content://")) preferences.setDownloadDestinationFolder(original.downloadDestinationFolder)
             else preferences.resetDownloadDestinationFolder()
-            preferences.setWifiOnlyDefault(original.wifiOnlyDefault)
             preferences.setRespectReducedMotion(original.respectReducedMotion)
             preferences.setHapticIntensity(original.hapticIntensity)
-            preferences.setMaxConcurrentDownloads(original.maxConcurrentDownloads)
         }
     }
 }

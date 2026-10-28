@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP13 remove dead global network/concurrency writes
+
+- Delete obsolete DataStore Wi-Fi-only and concurrency keys/setters and their unused ViewModel wrappers. They previously wrote values that settings state deliberately ignored (fixed `false` and `2`).
+- Preserve the actual per-job download Wi-Fi field and the fixed scheduler policy; no new global Wi-Fi-only behavior is exposed.
+- Add a portable source contract and retain Android persistence assertions for fixed settings. Branch CI and device tests are **NOT RUN** at authoring.
+
+
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.

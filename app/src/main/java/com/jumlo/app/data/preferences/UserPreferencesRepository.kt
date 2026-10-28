@@ -58,8 +58,6 @@ class UserPreferencesRepository @Inject constructor(
         val HAPTIC_INTENSITY = stringPreferencesKey("haptic_intensity")
         val UI_SOUNDS = booleanPreferencesKey("ui_sounds")
         val DOWNLOAD_DEST_FOLDER = stringPreferencesKey("download_dest_folder")
-        val MAX_CONCURRENT_DOWNLOADS = intPreferencesKey("max_concurrent_downloads")
-        val WIFI_ONLY_DEFAULT = booleanPreferencesKey("wifi_only_default")
         val DEFAULT_VIDEO_QUALITY = stringPreferencesKey("default_video_quality")
         val DEFAULT_AUDIO_QUALITY = intPreferencesKey("default_audio_quality")
         val FILE_VIEW_MODE = stringPreferencesKey("file_view_mode")
@@ -267,14 +265,6 @@ class UserPreferencesRepository @Inject constructor(
         require(value in setOf("SMALL","NORMAL","LARGE"))
         context.dataStore.edit { it[Keys.FONT_SCALE] = value }
     }
-    suspend fun setMaxConcurrentDownloads(max: Int) {
-        context.dataStore.edit { it[Keys.MAX_CONCURRENT_DOWNLOADS] = max.coerceIn(1, 6) }
-    }
-
-    suspend fun setWifiOnlyDefault(wifiOnly: Boolean) {
-        context.dataStore.edit { it[Keys.WIFI_ONLY_DEFAULT] = wifiOnly }
-    }
-
     val mediaServiceUrlFlow: Flow<String> = mediaServiceSettings.state.map { it.url }
 
     /** Release backends require HTTPS; debug additionally permits explicit loopback HTTP. */
