@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP09 restores the missing Android compression-device fixture preflight linked from README/RELEASE_CHECKLIST. It makes **no navigation changes** and does not certify on-device routes.
+
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
