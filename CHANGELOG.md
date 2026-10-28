@@ -7,6 +7,11 @@
 - Surface reusable single-target Compose switches for Reduce motion, Haptic feedback and Interface sounds; add a Light/Medium/Strong picker and full English/Arabic labels.
 - Add JVM policy tests and Android DataStore-recreation/UI tests. **No device, emulator or CI PASS is asserted until executed.**
 
+### 2026-10-28 — wp/01 release gate correction (verification pending)
+
+- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
+- Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
+- Verified on [PR #11 CI #40639269251](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639269251): assembleDebug, testDebugUnitTest, lintRelease, verifyCompactApkSize passed with a 55,368,299-byte compact APK. Main push CI #40639985876 also succeeded. Emulator/device tests remain outstanding.
 
 
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
