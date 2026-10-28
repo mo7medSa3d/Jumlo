@@ -1,10 +1,13 @@
 # Jumlo — verification report
 
-## 2026-10-28 WP03 — Four-tab source fix; new merged-base CI PENDING
+## 2026-10-28 WP03 four-tab UI, source-contract CI pending
 
-**CODE WRITTEN:** four-tab `MainDockTabs`, Back detail `DownloadsRoute`, Home-history entry, JVM and Android navigation tests, refreshed three Python static regression scripts. Exact previous head `2b3fc081` Actions [#40641078349](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641078349) **PASS** for its configured JVM/lint/APK-size build. Updated merged-base head CI is **NOT RUN** at documentation authoring. 
+Updated `MainDockTabs` to four entries, retained Downloads as Back detail and Home history, added `FourTabNavigationTest`/`MainDockContractTest`/`JumloUiTest` navigation assertions. The previously successful branch Actions [#40641078349](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641078349) covered prior SHA `2b3fc081`, **not this amended head**. Current merged-base CI now invokes `python3 scripts/test-neon-ui.py`, `scripts/test-redesign-static.py`, `scripts/test-jumlo-brand-motion.py`; its result is **NOT RUN** at authoring. Device/emulator/RTL/200% screenshots remain NOT VERIFIED.
 
-**NOT VERIFIED:** `FourTabNavigationTest` / `JumloUiTest` Android instrumentation, EN/AR 200% font screenshots, real device navigation, deep-link caller recreation. No claim of release approval.
+
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)

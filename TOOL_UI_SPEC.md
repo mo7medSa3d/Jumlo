@@ -1,8 +1,11 @@
 # Tool UI specification
 
-## 2026-10-28 WP03 — Root dock and Downloads details
+## WP03 — Four-tab UI + real haptics static contracts (2026-10-28)
 
-Precisely four root tabs Home, Tools, Files, Settings with Arabic RTL order. The Downloads manager remains a Back-navigable full screen; Home displays its history entry even with zero active jobs. Processing downloader routes and notifications remain. Source contracts: `FourTabNavigationTest`, `MainDockContractTest`, `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`, three updated Python host regression scripts. Android runtime **NOT VERIFIED**.
+Root dock has Home, Tools, Files and Settings; Downloads is preserved as a separate Back-navigable manager reachable from Home with zero active transfers. `MainDockContractTest` provides JVM identity checks; `FourTabNavigationTest` / `JumloUiTest` require Android instrumentation. Three host Python UI scripts run in the PR CI and test the updated user haptics/motion contract as well as four-tab invariants. They do not prove device quality.
+
+
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.

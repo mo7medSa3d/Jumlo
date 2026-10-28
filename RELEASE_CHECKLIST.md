@@ -1,6 +1,9 @@
 # Release checklist
 
-- [ ] Verify WP03 exact 4-tab navigation in LTR/Arabic RTL and 200% font, Home Downloads-history button with zero and active jobs, Back to Home and restored tool draft. Run `FourTabNavigationTest`, `MainDockContractTest`, `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab` and Python host UI contract scripts. Earlier branch CI is not a substitute for device qualification.
+- [ ] Verify four-root-tab UI on Android: English/Arabic/200% font, absent fifth Downloads cell, always-visible Home history, Back to original tab, draft preservation and deep-link behavior. Run `FourTabNavigationTest`, `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`, `MainDockContractTest` and the three Python source contracts. Python assertions are not device confirmation.
+
+
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.

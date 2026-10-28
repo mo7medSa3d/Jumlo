@@ -1,6 +1,9 @@
 # Decisions — 24 October 2026
 
-**2026-10-28 WP03 navigation:** Four root tabs are Home, Tools, Files, Settings. Downloads remains a first-class details screen with job history, entered from Home even with no active jobs. Do not delete Downloader features. A legacy `DockTab.DOWNLOADS` value stays for compatible call sites, never as a fifth tab.
+**2026-10-28 WP03 four-tab follow-through:** Home, Tools, Files and Settings are the only root bottom tabs; Downloads remains an independently navigable detail and job history. Maintain and run `test-jumlo-brand-motion.py`, `test-neon-ui.py`, `test-redesign-static.py` in the PR CI gate; their assertions must reflect the persisted haptics and reduce-motion feature, not historical hidden switches.
+
+
+**2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
 
 
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.

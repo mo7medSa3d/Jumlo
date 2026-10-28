@@ -107,17 +107,16 @@ class JumloBrandMotionChecks(unittest.TestCase):
         for part in ('HapticIntensity.STRONG','HapticIntensity.LIGHT','VibrationEffect.createWaveform','HAPTIC_FEEDBACK_ENABLED','Event.SUCCESS','Event.ERROR','Event.DELETE'):
             self.assertIn(part,h)
         self.assertIn('android.permission.VIBRATE',(ROOT/'app/src/main/AndroidManifest.xml').read_text())
-    def test_haptics_are_system_respecting_without_removed_user_controls(self):
+    def test_user_haptics_are_persisted_and_activated_in_compose(self):
         repo=code('data/preferences/UserPreferencesRepository.kt')
         settings=code('ui/settings/SettingsScreen.kt')
-        # Legacy storage can remain readable; the rebuilt Settings page stays simple.
-        for part in ('UI_SOUNDS','setSoundsEnabled'):
+        for part in ('HAPTIC_ON_COMMIT','HAPTIC_INTENSITY','RESPECT_REDUCED_MOTION','setHapticIntensity','setRespectReducedMotion'):
             self.assertIn(part,repo)
-        for part in ('settings.hapticIntensity','setHapticIntensity','hapticOnCommit','respectReducedMotion'):
-            self.assertNotIn(part,settings)
+        for part in ('settings.hapticIntensity','setHapticIntensity','settings.respectReducedMotion','setRespectReducedMotion'):
+            self.assertIn(part,settings)
         main=code('MainActivity.kt')
-        self.assertIn('LocalAppHapticsEnabled provides true',main)
-        self.assertIn('LocalHapticIntensity provides HapticIntensity.LIGHT',main)
+        self.assertIn('LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit',main)
+        self.assertIn('LocalHapticIntensity provides settings.hapticIntensity',main)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
         for key in ('animateColorAsState','animateFloatAsState','MainDockTabs.forEach',
@@ -127,13 +126,14 @@ class JumloBrandMotionChecks(unittest.TestCase):
                     '.clip(RoundedCornerShape(14.dp)).background(indicatorColor)'):
             self.assertIn(key,dock)
         self.assertIn('listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)',dock)
-    def test_system_motion_is_respected_without_a_removed_app_toggle(self):
+    def test_system_and_user_motion_preferences_are_combined(self):
         system=code('ui/theme/SystemMotion.kt')
         main=code('MainActivity.kt')
+        settings=code('ui/settings/SettingsScreen.kt')
         self.assertIn('ANIMATOR_DURATION_SCALE',system)
-        self.assertIn('LocalReducedMotion provides systemReduced',main)
-        self.assertNotIn('settings.respectReducedMotion',main)
-        self.assertNotIn('respectReducedMotion',code('ui/settings/SettingsScreen.kt'))
+        self.assertIn('LocalReducedMotion provides (systemReduced || settings.respectReducedMotion)',main)
+        self.assertIn('settings.respectReducedMotion',settings)
+        self.assertIn('setRespectReducedMotion',settings)
         self.assertIn('LocalReducedMotion.current',code('ui/theme/JumloMotion.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/ProductionRows.kt'))
     def test_predictive_back_follows_gesture_and_respects_dirty_state(self):

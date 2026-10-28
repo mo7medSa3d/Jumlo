@@ -1,10 +1,15 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 WP03 — Four primary tabs, complete source host-assertion migration
+## 2026-10-28 — WP03 four-tab navigation and renewed UX CI assertions
 
-- Use exactly Home / Tools / Files / Settings in the bottom bar; keep the complete Downloads manager as a Back-navigable detail with an always-visible Home entry.
-- Add `FourTabNavigationTest`, `MainDockContractTest`, `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`; update all 55 Python scripts’ discovered five-tab assumptions (`test-neon-ui.py`, `test-jumlo-brand-motion.py`, `test-redesign-static.py`).
-- Earlier matching branch CI [#40641078349](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641078349) PASSED (build/unit/lint/compact); **current merged-base head CI PENDING** and Android instrumentation/RTL screenshots NOT RUN.
+- Four bottom tabs Home, Tools, Files, Settings; preserve Downloads as reachable Back detail with a persistent Home history action. Added JVM and Android navigation regressions.
+- Migrated all maintained host five-tab assertions; `test-jumlo-brand-motion.py` now tests actual user haptics/Reduce-motion settings from merged WP03 rather than asserting those controls are absent.
+- CI now executes the three Python host UI contracts before Gradle. Previous branch Actions #40641078349 passed before this merged-base amendment; current-head CI and device acceptance pending.
+
+
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)

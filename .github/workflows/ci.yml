@@ -59,6 +59,14 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
 
+      - name: Check bilingual UI and navigation host contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/test-neon-ui.py
+          python3 scripts/test-redesign-static.py
+          python3 scripts/test-jumlo-brand-motion.py
+
       - name: Media build (full downloader), unit tests, lint, compact size gate
         shell: bash
         run: |
