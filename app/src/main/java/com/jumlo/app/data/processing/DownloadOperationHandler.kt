@@ -82,7 +82,7 @@ class DownloadOperationHandler @Inject constructor(
     private val redirectSafeClient = client.newBuilder()
         .followRedirects(false).followSslRedirects(false).build()
 
-    private fun buildHeadersForUrl(targetUrl: String, profileIndex: Int): Map<String, String> {
+    private fun buildHeadersForUrl(targetUrl: String, profileIndex: Int, initialUrl: String): Map<String, String> {
         val extraMap = sessionStore.getExtraHeaders().lineSequence()
             .map { it.trim() }
             .filter { ':' in it }
@@ -93,7 +93,8 @@ class DownloadOperationHandler @Inject constructor(
             preferDesktop = sessionStore.isPreferDesktopUa(),
             cookieHeader = sessionStore.cookieHeaderFor(targetUrl),
             customHeaders = extraMap,
-            compatibilityAttempt = profileIndex
+            compatibilityAttempt = profileIndex,
+            customHeaderOrigin = initialUrl
         )
     }
 
@@ -146,7 +147,8 @@ class DownloadOperationHandler @Inject constructor(
                     val result=if(alreadyComplete){
                         TransferResult(partial.length(),knownTotal,old.getProperty("etag"),old.getProperty("modified"),
                             old.getProperty("finalUrlSha256")?:urlDigest,old.getProperty("mime"),old.getProperty("disposition"))
-                    } else StreamTransfer(OkHttpTransport(redirectSafeClient, ::buildHeadersForUrl,
+                    } else StreamTransfer(OkHttpTransport(redirectSafeClient,
+                        { targetUrl, profileIndex -> buildHeadersForUrl(targetUrl, profileIndex, url) },
                         { context.checkCancellation(); networkPolicy(settings) })).execute(
                         TransferRequest(url,partial,partial.length(),old.getProperty("etag"),old.getProperty("modified"),old.getProperty("total")?.toLongOrNull(),settings.cleartextConsent,context.budget.maxMediaWorkspaceBytes,context.budget.minFreeBytes,finalUrlSha256=old.getProperty("finalUrlSha256")),
                         checkCancel={ context.checkCancellation(); networkPolicy(settings) },

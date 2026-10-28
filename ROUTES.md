@@ -1,5 +1,13 @@
 # Navigation and route inventory
 
+**2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
+
+
+## 2026-10-28 — WP06 CI contract (no route changes)
+
+Navigation remains unchanged by this CI-only work package. The build adds debug lint and a source-size assertion to existing release/compact artifact checks while retaining serialized KSP2. Device/Back/RTL verification remains separate.
+
+
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 
@@ -113,7 +121,6 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
 - WP04 download restart now fails safe for compressed/legacy partials; resumes only validator-verified representation bytes. This does not change navigation.
 **WP04 2026-10-28:** route graph unchanged. A durable `dl_02`/`dl_03` transfer may recover transient mid-stream bytes with HTTP Range + validator in `StreamTransfer`; UI job navigation is unchanged. Android pause/retry/notification acceptance remains NOT VERIFIED.
-
-
