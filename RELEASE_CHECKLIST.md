@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
@@ -59,9 +62,3 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
-
-## 2026-10-28 — Settings/device acceptance
-
-- [ ] Verify haptic intensity Off/Light/Medium/Strong persists and is honored across tool actions and OS haptics-disabled mode.
-- [ ] Verify Reduce motion switch and OS override through tool transitions after recreation.
-- [ ] Verify settings target sizes, TalkBack and 200% font EN/AR layout on physical device/emulator.
