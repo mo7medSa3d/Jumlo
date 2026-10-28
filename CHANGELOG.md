@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP03 — capability policy/handler parity (CI pending)
+
+- Stop advertising nonexistent `pdf_compare` as a processing capability and remove orphan `pdf_compare` / `pdf_redact` dispatcher cases; the PDF handler never implemented them and the registry never displayed them.
+- Remove redundant job-dispatch route for navigation-only `file_trash` without affecting the real Files trash workflow.
+- Add `CapabilityContractTest` (4 JUnit cases) for registry uniqueness/visibility, fail-closed ghost IDs, navigation-only safety and supported real tools. **NOT RUN until GitHub CI executes**; this is a source-level fix, not a device PASS.
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
