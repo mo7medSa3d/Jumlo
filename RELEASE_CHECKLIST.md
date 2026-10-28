@@ -59,3 +59,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## WP09 emulator checks (must be evidenced, not inferred)
+
+- [ ] Record successful `Android UI and persistence smoke` workflow on API 26 and API 36 at the final release candidate SHA; preserve logcat and actual XML results.
+- [ ] Execute the **complete** device test suite with hash-verified five compression fixtures and large-PDF memory checks; smoke is not full qualification.
+- [ ] Validate camera/scanner, print providers, TalkBack and all tool flows on qualifying physical hardware; GitHub software emulator results cannot substitute.
