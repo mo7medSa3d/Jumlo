@@ -19,7 +19,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 ## Automated build gates
 
 - [ ] Fresh `./gradlew :app:lintRelease :app:testDebugUnitTest :app:connectedDebugAndroidTest` completes with no unresolved correctness/policy findings.
-- [ ] Before the unfiltered connected run, follow [fixture/storage preflight](verification/current/device/preflight-source/README.md): generate and hash all five scans, stage the verified inputs, and record guest/host disk budget for 200-page testing. Any missing input remains BLOCKED.
+- [ ] Before the unfiltered connected run, complete the [fixture/storage preflight](verification/current/device/preflight-source/README.md): stage all five scan inputs in the installed debug app's `files/bench`, record their hashes, and check guest space plus host growth for the 200-page case. Preserve any method filters, SDK skips and opt-in screenshot exclusions in the final results.
 - [ ] Build `:app:assembleDebugAndroidTest`, `:app:verifyReleaseApkSize` and `:app:bundleRelease`; inspect the final merged permissions and the ABI/language splits.
 - [ ] Run the host transfer/storage/diagnostic/Office/document regression scripts and keep their current logs. Do not treat inherited reports as fresh results.
 - [ ] Record/verify the Roborazzi empty/loaded matrix for every tool in English/Arabic and light/dark, then visually review all images. Review the separate blocked-state manifest.
@@ -62,3 +62,16 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.
+
+## 2026-10-28 — CI release shrinker memory guard
+
+PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
+
+- [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
+
+- [ ] Before the unfiltered connected run, follow [fixture/storage preflight](verification/current/device/preflight-source/README.md): generate and hash all five scans, stage the verified inputs, and record guest/host disk budget for 200-page testing. Any missing input remains BLOCKED.
