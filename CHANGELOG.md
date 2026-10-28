@@ -1,5 +1,11 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP08 — CameraX scan-thumbnail bitmap ownership
+
+- CameraX fallback's lazy thumbnail list now uses the existing `DisposeOwnedPreviewBitmap` reusable Compose owner. Removing, reordering off-screen, scrolling or exiting the scanner releases each thumbnail's decoded native `Bitmap` once the corresponding composable is disposed.
+- Added `ScanPreviewBitmapOwnershipTest` instrumentation test to verify a rendered bitmap becomes recycled after removing the thumbnail. This is a real test file, **not an executed PASS** until an Android emulator/device run is recorded.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
