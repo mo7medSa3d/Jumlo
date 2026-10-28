@@ -1,5 +1,12 @@
 # Jumlo — verification report
 
+## 2026-10-28 — WP09 emulator smoke failure and fix
+
+Observed on [Actions #40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016): API 26 and API 36 emulator instances booted successfully, then their runner exited with `/usr/bin/sh: 1: set: Illegal option -o pipefail` (exit 2). No app instrumentation tests ran in these failed jobs. This is a script interpreter mismatch, **not an Android test assertion failure**.
+
+The workflow now invokes Bash explicitly inside the emulator runner script, retains strict `pipefail` for Gradle/`tee`, all API 26/35/36 matrices and artifacts, and runs a host source contract before emulator startup. **GREEN NOT RUN** for this patch at report edit. Real device results and native print/camera behavior still require execution.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.

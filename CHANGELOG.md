@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP09 emulator runner Bash invocation repair
+
+- Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.
+- Run that unchanged strict-mode script inside an explicit Bash heredoc; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
+- Add `scripts/test-emulator-smoke-runner.py` as a required preflight. **Device tests NOT VERIFIED** until fresh emulator runs complete.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
