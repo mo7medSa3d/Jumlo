@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.intake.IntakeController
 import com.jumlo.app.ui.navigation.JumloNavHost
@@ -61,11 +60,11 @@ class MainActivity : AppCompatActivity() {
             DisposableEffect(sound) { onDispose { sound.release() } }
             JumloTheme(settings.themeMode, settings.language, settings.accentColor, settings.fontScale) {
                 CompositionLocalProvider(
-                    LocalAppHapticsEnabled provides true,
-                    LocalHapticIntensity provides HapticIntensity.LIGHT,
+                    LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit,
+                    LocalHapticIntensity provides settings.hapticIntensity,
                     LocalAppSoundsEnabled provides settings.soundsEnabled,
                     LocalUiSoundPlayer provides sound,
-                    LocalReducedMotion provides systemReduced
+                    LocalReducedMotion provides (systemReduced || settings.respectReducedMotion)
                 ) {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         JumloNavHost(appViewModel)

@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
@@ -116,6 +121,10 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP02a regression status
+
+- `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
 
 ## 2026-10-28 — WP08 standalone JVM modules
 
