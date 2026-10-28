@@ -64,7 +64,7 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('setDefaultAudioQuality',settings)
         self.assertNotIn('maxConcurrentDownloads',settings)
         self.assertNotIn('wifiOnlyDefault',settings)
-    def test_five_tabs_legacy_rail_unused(self):
+    def test_four_tabs_legacy_rail_unused(self):
         models=code('model/Models.kt')
         self.assertIn('SETTINGS("settings",',models)
         self.assertNotIn('QuietExpandedNavigationRail',code('ui/navigation/JumloNavHost.kt'))
