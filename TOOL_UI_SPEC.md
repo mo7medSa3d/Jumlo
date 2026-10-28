@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**WP03 2026-10-28:** This update does not remove a visible tool: `pdf_compare` and `pdf_redact` were never in `CapabilityRegistry` and had no PDF handler implementation. They now fail closed at `CapabilityPolicy`. The existing `file_trash` navigation alias still opens Files. See `CapabilityContractTest` for source regression tests (NOT RUN until CI).
+
+
 ## Scope and evidence
 
 This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
