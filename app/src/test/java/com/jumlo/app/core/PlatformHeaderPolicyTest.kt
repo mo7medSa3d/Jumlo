@@ -40,8 +40,7 @@ class PlatformHeaderPolicyTest {
             "https://attacker.example.net/file",
             "https://sub.origin.example.com/file",
             "https://origin.example.com:8443/file",
-            "http://origin.example.com/file",
-            "https://user@origin.example.com/file"
+            "http://origin.example.com/file"
         )) {
             val headers = PlatformHeaderPolicy.headersFor(
                 url = redirected,
@@ -62,6 +61,7 @@ class PlatformHeaderPolicyTest {
         assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "http://example.org"))
         assertFalse(PlatformHeaderPolicy.sameOrigin("not-a-url", "https://example.org"))
         assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "not-a-url"))
+        assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "https://user@example.org/file"))
     }
 
     @Test fun preferDesktopSelectsPrimaryUserAgentAndRotatesOnFallback() {
