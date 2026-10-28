@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
+import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
@@ -70,6 +71,28 @@ fun SettingsScreen(
             Modifier.testTag("settings.appColor")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
+        item("interaction-heading") { PreferenceHeading(stringResource(R.string.settings_interaction_heading)) }
+        item("reduce-motion") {
+            PreferenceToggleRow(stringResource(R.string.settings_reduce_motion),
+                settings.respectReducedMotion, viewModel::setRespectReducedMotion,
+                Modifier.testTag("settings.reduceMotion"))
+        }
+        item("haptics") {
+            PreferenceToggleRow(stringResource(R.string.settings_haptic_feedback),
+                settings.hapticFeedbackOnCommit, viewModel::setHapticFeedback,
+                Modifier.testTag("settings.haptics"))
+        }
+        item("haptic-strength") {
+            PreferenceRow(stringResource(R.string.settings_haptic_intensity),
+                stringResource(hapticIntensityLabel(settings.hapticIntensity)),
+                Icons.Rounded.Vibration, { panel = "haptic-intensity" },
+                Modifier.testTag("settings.hapticIntensity"), enabled = settings.hapticFeedbackOnCommit)
+        }
+        item("sounds") {
+            PreferenceToggleRow(stringResource(R.string.settings_ui_sounds),
+                settings.soundsEnabled, viewModel::setSoundsEnabled,
+                Modifier.testTag("settings.sounds"))
+        }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
@@ -108,6 +131,14 @@ fun SettingsScreen(
         )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
+        "haptic-intensity" -> {
+            val levels = listOf(HapticIntensity.LIGHT, HapticIntensity.MEDIUM, HapticIntensity.STRONG)
+            ChoiceDialog(stringResource(R.string.settings_haptic_intensity),
+                levels.map { stringResource(hapticIntensityLabel(it)) },
+                levels.indexOf(settings.hapticIntensity).coerceAtLeast(0),
+                { viewModel.setHapticIntensity(levels[it]); panel = null },
+                { panel = null })
+        }
         "video" -> {
             val choices = listOf("BEST", "1080", "720", "480")
             ChoiceDialog(stringResource(R.string.modern_video_quality),
@@ -139,6 +170,13 @@ fun SettingsScreen(
                 Text(stringResource(R.string.pref_clear)) } },
             dismissButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
+}
+
+private fun hapticIntensityLabel(level: HapticIntensity): Int = when (level) {
+    HapticIntensity.OFF -> R.string.settings_haptic_off
+    HapticIntensity.LIGHT -> R.string.settings_haptic_light
+    HapticIntensity.MEDIUM -> R.string.settings_haptic_medium
+    HapticIntensity.STRONG -> R.string.settings_haptic_strong
 }
 
 @Composable private fun themeLabel(mode: ThemeMode): String = stringResource(when (mode) {
