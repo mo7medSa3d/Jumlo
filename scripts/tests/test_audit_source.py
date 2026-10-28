@@ -42,7 +42,7 @@ class SourceAuditTests(unittest.TestCase):
         self.assertEqual([1], [x.line for x in findings if x.kind == "hardcoded_ui_text"])
 
     def test_core_import_contract_flags_android_only_in_pure_modules(self):
-        source = "package com.example\\nimport androidx.compose.runtime.Composable\\nimport kotlin.text.StringBuilder\\n"
+        source = "package com.example\nimport androidx.compose.runtime.Composable\nimport kotlin.text.StringBuilder\n"
         core = scan_source("document-core/src/main/kotlin/com/example/Pure.kt", source)
         self.assertEqual([("android_import_in_core", 2)],
                          [(x.kind, x.line) for x in core])
