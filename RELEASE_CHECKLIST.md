@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify exactly four bottom tabs and Home Downloads history in English/Arabic RTL, 200% font, Back, draft preservation and real Android devices. Host Python tests in CI are not device acceptance.
+
+
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
@@ -41,7 +44,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |
-| Navigation | Home–Tools–Files–Settings order in LTR/RTL, four contained indicators; Downloads remains reachable from Home with no active jobs, Back restores its caller; Settings detail returns to its caller; each root restores its state. |
+| Navigation | Tools–Files–Home–Downloads–Settings order; centered contained indicator in both directions; Settings detail returns to its caller; each root restores its state. |
 | Intake | PDF/image/ZIP/text share, multiple files, malformed URI/Parcelable, warm deep link, no compatible external viewer, revoked provider grant. |
 | Downloads | Paste does not terminate the app; metadata precedes selectors; chosen format matches available source; progress and cancellation are actionable; private and public output status are distinguished. |
 | Document studios | Preview corresponds to saved settings; text/logo transforms and multiple signature positions survive submission; undo/redo and page scope affect the intended pages. |
@@ -62,3 +65,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.

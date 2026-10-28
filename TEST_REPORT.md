@@ -1,17 +1,13 @@
 # Jumlo — verification report
 
-## 2026-10-28 — WP04 four-tab navigation qualification
+## 2026-10-28 WP04 four-tab navigation, updated-base CI pending
 
-| Check | Observed result | Evidence / condition |
-|---|---|---|
-| Unit regression before implementation | **RED (expected)** | [Actions #40639796921](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639796921): `MainDockContractTest.onlyHomeToolsFilesSettingsArePrimaryTabs` failed with `AssertionError` at line 12 when `MainDockTabs` still contained five entries. |
-| Unit regression after implementation | **NOT RUN at report edit** | Re-run `:app:testDebugUnitTest` on the WP04 head commit; attach latest workflow and exact result before claiming PASS. |
-| Full mandatory build / lintRelease / release size | **NOT VERIFIED for WP04** | The main-branch CI configuration before gate changes still uses `lintDebug`; do not substitute its result for release lint. |
-| `FourTabNavigationTest` Android RTL and selector | **NOT RUN** | Instrumentation runner is skipped in regular CI; must execute on emulator/device. |
-| `JumloUiTest.downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome` | **NOT RUN** | Real Activity/Back and empty-queue navigation require emulator/device. |
+Four primary tabs, a retained Downloads detail and Home history, localized EN/AR strings, JVM and Android route tests. Four maintained Python source UI suites are now in required CI ahead of latest KSP/size/lint gates. Prior branch Actions [#40640571141](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640571141) passed only at older SHA; **current merged-head CI pending**. Android instrumentation, Arabic RTL/large-font screenshots and real Back/draft interactions NOT VERIFIED.
 
-This WP modifies navigation only, not downloader/processing engines. **Not production qualified** until full tool and device evidence exists.
 
+## 2026-10-28 — WP06 lint and size source-guard integration
+
+The older WP06 commit `7fbab51b8e233f38a6a2a7a58120164ef5e12c02` completed both [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746) successfully. This follow-up merges the established KSP2 serialization fix from main, retains full-size checks, adds `:app:lintDebug`, and runs `scripts/test-compact-configuration.py` as a required CI step. **Current combined head: NOT VERIFIED until a fresh run completes.** Device tests, external download integrations, signing and Play Console remain NOT RUN.
 
 
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
@@ -114,7 +110,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
+| Release/compact APK size | Both enforce 60,000,000 decimal bytes in current source; branch CI #40639445934 measured 55,356,059/55,368,299 bytes | PASS for that exact branch SHA; merged-base run pending |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |
@@ -135,3 +131,27 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP02a regression status
+
+- `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+## 2026-10-28 — WP12 CI duplication mitigation
+
+| Check | Status | Evidence |
+|---|---|---|
+| CI event matrix: no duplicate WP push builds | NOT RUN until PR CI | scripts/tests/test-ci-event-matrix.py; PR builds still trigger on all main-targeted pull requests |
+| Full-media assemble/test/lint/size gates | NOT RUN on WP12 yet | Existing mandatory job, same commands and artifacts; no checks waived |
+| Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
+
+The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.

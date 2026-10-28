@@ -1,13 +1,14 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — Work package 04: four-tab navigation (CI verification pending)
+## 2026-10-28 WP04 — four primary tabs with retained Downloads
 
-- Four primary tabs are **Home, Tools, Files, Settings**; legacy Downloads remains an ordinary typed detail route, not removed functionality.
-- Home offers a persistent localized **View all downloads** action even when no transfer is active. Existing download jobs, download-entry tools, and activity history remain reachable.
-- Downloads preserves the calling primary tab's selection, displays a Back toolbar and keeps the four-tab dock visible.
-- Added `MainDockContractTest` plus Android `FourTabNavigationTest` and `JumloUiTest.downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome`.
-- **TDD RED evidence:** [GitHub CI #40639796921](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639796921) failed at `MainDockContractTest.kt:12` against the old five-tab implementation. GREEN CI and device/RTL execution are not yet verified.
+Home, Tools, Files and Settings are the bottom tabs. Downloads stays a Back-navigable manager with a permanent Home history action even with no transfers. Android/JVM navigation tests and four maintained Python UI suites are preserved; CI runs scripts ahead of KSP/size/lint gates. Exact-head CI and device tests remain pending.
 
+
+## 2026-10-28 — WP06 CI guard consolidation
+
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
 
 
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
@@ -174,3 +175,17 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP12 single CI execution per pull request
+
+- Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
+- Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.

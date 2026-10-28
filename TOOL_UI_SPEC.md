@@ -1,9 +1,11 @@
 # Tool UI specification
 
-## 2026-10-28 WP04 — primary navigation change
+**2026-10-28 WP04:** Four roots Home, Tools, Files, Settings. Downloads is not deleted; manager and history remain as Back detail reachable from Home with zero active jobs. CI now runs bilingual UI source contracts; real-device checks remain pending.
 
-The primary bottom navigation has four localized tabs in reading order: **Home, Tools, Files, Settings**. `DownloadsScreen` stays implemented as a typed detail route, reachable from Home's always-present **View all downloads** secondary action or the active-jobs heading. Moving Downloads out of the dock **does not delete** download history, worker actions, metadata or source handlers. The detail has a Back toolbar; the four-tab dock remains visible with its caller tab selected. Semantics/RTL instrumentation is in `FourTabNavigationTest`; full runtime qualification must still be reported in `TEST_REPORT.md`.
 
+## 2026-10-28 — WP06 quality gate contract (UI unaffected)
+
+The tool registry and screens are unchanged by the CI update. Routine media CI checks the full runtime, both decimal-60MB artifact limits, JVM tests, debug/release lint, and source constraints. KSP2 workers are serialized, not bypassed. Successful compilation does not qualify each tool's Android UI and processing flow.
 
 
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
@@ -507,3 +509,11 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP02a setting behavior
+
+The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.

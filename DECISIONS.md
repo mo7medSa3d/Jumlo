@@ -1,11 +1,11 @@
 # Decisions — 24 October 2026
 
-## 2026-10-28 — WP04 navigation ruling
+**2026-10-28 WP04:** Four primary tabs Home, Tools, Files, Settings; preserve Downloads manager and history as an independently Back-navigable detail. Keep legacy `DockTab.DOWNLOADS` only for call-site compatibility.
 
-- Replace the previous five-root dock with **Home / Tools / Files / Settings** as explicitly required by the current release brief. The previous `Downloads` bottom tab was redundant with Home's download action and Tools' Download section.
-- **Retain** `DownloadsRoute` and `DownloadsScreen` as a dedicated backable detail route, with a persistent Home action to access the list even when no jobs are running. Existing job notification and output links continue using their typed routes. This is a navigation presentation change, not removal of download functionality.
-- Preserve `DockTab.DOWNLOADS` and the typed `DownloadsRoute` as compatibility symbols; intercept the old tab navigation request and open the detail instead. Four primary tabs use the existing `saveState/restoreState` behavior.
-- Before declaring release quality, execute `FourTabNavigationTest` and `JumloUiTest` on Android; a JVM array contract alone does not qualify accessibility, Back, predictive gestures or RTL runtime behavior.
+
+## 2026-10-28 — WP06 release gate preservation
+
+Normal Android CI runs both `lintDebug` and `lintRelease`, JVM tests, the full-media compact and release APK 60MB byte-limit checks, and the Python source-contract check. Preserve KSP2 serial worker flags from merged PR #36; never disable the media runtime or skip the size gate to get green CI. No Android UI/route changes.
 
 
 **2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
