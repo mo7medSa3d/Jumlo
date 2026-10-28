@@ -37,7 +37,7 @@ jobs:
   build:
     # Media runtime is the DEFAULT artifact: bundled yt-dlp/FFmpeg payload,
     # 60,000,000-byte compact gate enforced on the real signed APK.
-    name: Media APK, unit tests, lint and package gates
+    name: Media APK, unit tests, release lint and size gates
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     steps:
@@ -65,13 +65,13 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
 
-      - name: Media build (full downloader), unit tests, lint, compact size gate
+      - name: Media build, unit tests, release lint, compact and release size gates
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
           ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
-            :app:testDebugUnitTest :app:lintDebug \
+            :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:verifyReleaseApkSize \
             --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime
