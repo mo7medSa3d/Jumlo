@@ -38,7 +38,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |
-| Navigation | Tools–Files–Home–Downloads–Settings order; centered contained indicator in both directions; Settings detail returns to its caller; each root restores its state. |
+| Navigation | Home–Tools–Files–Settings order in LTR/RTL, four contained indicators; Downloads remains reachable from Home with no active jobs, Back restores its caller; Settings detail returns to its caller; each root restores its state. |
 | Intake | PDF/image/ZIP/text share, multiple files, malformed URI/Parcelable, warm deep link, no compatible external viewer, revoked provider grant. |
 | Downloads | Paste does not terminate the app; metadata precedes selectors; chosen format matches available source; progress and cancellation are actionable; private and public output status are distinguished. |
 | Document studios | Preview corresponds to saved settings; text/logo transforms and multiple signature positions survive submission; undo/redo and page scope affect the intended pages. |
