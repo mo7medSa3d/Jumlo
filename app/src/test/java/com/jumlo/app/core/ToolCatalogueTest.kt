@@ -59,14 +59,19 @@ class ToolCatalogueTest {
     }
 
     @Test fun theWorkspaceOfAToolIsTheOneThatContainsIt() {
-        ToolCatalogue.primaryTools().forEach { id ->
-            assertEquals(id, ToolCatalogue.workspaceOf(id)?.let { it }?.let { _ -> ToolCatalogue.workspaceOf(id) },
-                ToolCatalogue.workspaceOf(id))
-            assertTrue("$id must be a primary tool", ToolCatalogue.isPrimary(id))
+        // Previously this test compared workspaceOf(id) to itself, so it could
+        // never catch a misrouted tool. Assert against the declared entry instead.
+        ToolCatalogue.all().forEach { entry ->
+            entry.primary.forEach { id ->
+                assertEquals("$id has the wrong workspace", entry.workspace, ToolCatalogue.workspaceOf(id))
+                assertTrue("$id must be a primary tool", ToolCatalogue.isPrimary(id))
+            }
+            entry.merged.forEach { id ->
+                assertEquals("$id has the wrong merged workspace", entry.workspace, ToolCatalogue.workspaceOf(id))
+                assertTrue("$id must not be a primary tool", !ToolCatalogue.isPrimary(id))
+            }
         }
-        ToolCatalogue.mergedTools().forEach { id ->
-            assertTrue("$id must not be a primary tool", !ToolCatalogue.isPrimary(id))
-        }
+        assertEquals(null, ToolCatalogue.workspaceOf("missing_tool"))
     }
 
     @Test fun theSpecialistsAreKeptOutOfTheCatalogue() {
