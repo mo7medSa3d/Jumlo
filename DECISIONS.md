@@ -96,3 +96,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+47. WP05 corrects inconsistent privacy assertions: the app includes a user-initiated, token-gated Google Drive v3 import/export path, so neither onboarding nor store-facing text may promise that no cloud account is ever used or that every operation is offline. EN/AR disclosures must mention optional network recipients and distinguish source support from account/device qualification. A Robolectric contract tests both locales; its result is pending CI.
