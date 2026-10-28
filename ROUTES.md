@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP07 introduces a **read-only static audit**; no navigation paths change. A no-op callback candidate in the generated report is not a verified dead button until the corresponding route and interaction have been exercised.
+
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
