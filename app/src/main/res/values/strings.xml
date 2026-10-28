@@ -161,6 +161,13 @@
     <string name="settings_appearance_language">Appearance &amp; Language</string>
     <string name="settings_haptic_feedback">Haptic Feedback</string>
     <string name="settings_reduce_motion">Reduce Motion</string>
+    <string name="settings_interaction_heading">Interaction</string>
+    <string name="settings_haptic_intensity">Haptic strength</string>
+    <string name="settings_haptic_off">Off</string>
+    <string name="settings_haptic_light">Light</string>
+    <string name="settings_haptic_medium">Medium</string>
+    <string name="settings_haptic_strong">Strong</string>
+    <string name="settings_ui_sounds">Interface sounds</string>
     <string name="settings_tool_defaults">Tool &amp; Output Defaults</string>
     <string name="settings_download_prefs">Download Preferences</string>
     <string name="settings_storage_history_cache">Storage, History &amp; Cache</string>
