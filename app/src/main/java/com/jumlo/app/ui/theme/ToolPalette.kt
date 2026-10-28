@@ -9,21 +9,22 @@ import androidx.compose.ui.graphics.Color
  * Every family has a brighter dark-mode partner to keep the icon discernible.
  */
 object ToolPalette {
+    // One source of truth: values are the semantic tokens declared in Color.kt.
     private val lightAccents = listOf(
-        Color(0xFFB63557), // rose: PDF
-        Color(0xFFAC641D), // amber: images
-        Color(0xFF087A73), // lagoon: transfers
-        Color(0xFF2F46C6), // indigo: documents
-        Color(0xFF7150A9), // iris: organizing
-        Color(0xFF326E99)  // ocean: utilities
+        LightPillarColors.pdfPrimary,
+        LightPillarColors.imagesPrimary,
+        LightPillarColors.downloadsPrimary,
+        LightPillarColors.filesPrimary,
+        LightPillarColors.vaultPrimary,
+        LightSecondary
     )
     private val darkAccents = listOf(
-        Color(0xFFFF9DB3),
-        Color(0xFFFFCE88),
-        Color(0xFF82DED2),
-        Color(0xFFACB9FF),
-        Color(0xFFD3B7FC),
-        Color(0xFF9CCDF0)
+        DarkPillarColors.pdfPrimary,
+        DarkPillarColors.imagesPrimary,
+        DarkPillarColors.downloadsPrimary,
+        DarkPillarColors.filesPrimary,
+        DarkPillarColors.vaultPrimary,
+        DarkSecondary
     )
 
     fun accentFor(toolId: String, dark: Boolean = false): Color {
@@ -38,6 +39,10 @@ object ToolPalette {
         }
         return if (dark) darkAccents[index] else lightAccents[index]
     }
+
+    /** Foreground is WCAG AA-readable against the saturated tile background. */
+    fun onAccentFor(toolId: String, dark: Boolean = false): Color =
+        M3ColorFactory.ensureContrast(accentFor(toolId, dark), if (dark) Color.Black else Color.White)
 
     fun containerFor(toolId: String, surface: Color, dark: Boolean = false): Color =
         mix(surface, accentFor(toolId, dark), if (dark) 0.17f else 0.12f)
