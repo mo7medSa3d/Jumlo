@@ -15,36 +15,51 @@ class StreamTransfer(private val transport:HttpTransport) {
     private fun isTransientIo(e:IOException):Boolean {
         if(e is InterruptedIOException && e !is java.net.SocketTimeoutException) return false
         val msg=e.message.orEmpty()
-        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","TRUNCATED_HTTP_BODY","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH")) return false
+        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH")) return false
         return true
     }
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferMetadata)->Unit={}):TransferResult {
         require(request.offset>=0 && (request.offset==0L || request.partialFile.length()==request.offset)) { "PARTIAL_OFFSET_MISMATCH" }
-        val resolvedInitialUrl = DownloadLinkPolicy.resolveDirectUrl(request.url)
+        var current=request.copy(url=DownloadLinkPolicy.resolveDirectUrl(request.url))
         var attempt=0
-        val startOffset=request.offset
+        var latestMetadata:TransferMetadata?=null
+        fun retryWithVerifiedRange():Boolean {
+            if(attempt>=request.maxRetries) return false
+            val bytes=request.partialFile.length()
+            // A ranged server can ignore If-Range and force the inner transfer to
+            // restart at zero. Never retain an offset beyond the current file.
+            if(bytes<current.offset) current=current.copy(offset=0,strongEtag=null,lastModified=null,
+                knownTotalBytes=null,finalUrlSha256=null)
+            if(bytes>current.offset) {
+                // Never append after a broken connection without a response
+                // validator. A changing representation would corrupt the output.
+                val metadata=latestMetadata ?: return false
+                val etag=ResumePolicy.strong(metadata.strongEtag)
+                val modified=metadata.lastModified
+                if(etag==null && modified.isNullOrBlank()) return false
+                if(metadata.totalBytes!=null && bytes>=metadata.totalBytes) return false
+                current=current.copy(offset=bytes,strongEtag=etag,lastModified=modified,
+                    knownTotalBytes=metadata.totalBytes,finalUrlSha256=metadata.finalUrlSha256)
+            }
+            attempt++
+            sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1).coerceAtMost(10)),checkCancel)
+            return true
+        }
         while(true) {
             checkCancel()
             try {
-                return executeSingleAttempt(request.copy(url = resolvedInitialUrl),checkCancel,progress,onMetadata)
+                return executeSingleAttempt(current,checkCancel,progress) { metadata ->
+                    latestMetadata=metadata
+                    onMetadata(metadata)
+                }
             } catch(restart:RestartRequired) {
+                // A mismatching ETag, Content-Range, or redirect must not append.
                 throw restart
             } catch(e:IllegalArgumentException) {
-                val code=e.message.orEmpty()
-                val status=code.removePrefix("HTTP_").toIntOrNull()
-                if(status!=null && isTransient(status) && attempt<request.maxRetries && request.partialFile.length()==startOffset) {
-                    attempt++
-                    sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1)),checkCancel)
-                    continue
-                }
-                throw e
+                val status=e.message.orEmpty().removePrefix("HTTP_").toIntOrNull()
+                if(status==null || !isTransient(status) || !retryWithVerifiedRange()) throw e
             } catch(e:IOException) {
-                if(isTransientIo(e) && attempt<request.maxRetries && request.partialFile.length()==startOffset) {
-                    attempt++
-                    sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1)),checkCancel)
-                    continue
-                }
-                throw e
+                if(!isTransientIo(e) || !retryWithVerifiedRange()) throw e
             }
         }
     }
