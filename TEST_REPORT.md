@@ -1,5 +1,11 @@
 # Jumlo — verification report
 
+## WP03 2026-10-28 — CI qualification checkpoints
+
+- [PR #18 original CI](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639773046): **PASS** for `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `verifyCompactApkSize` with full media, actual compact APK **55,371,523 bytes**. **No release lint in this checkpoint**; it is not the required merge gate.
+- The branch now carries `main`'s enforced 60,000,000-byte Gradle gates and `:app:lintRelease` CI job. **Updated-run result pending**. Android connected tests and actual haptic vibration checks were not run by the first CI.
+- App/device acceptance and 200% RTL screenshots remain **NOT RUN / BLOCKED**.
+
 ## WP03 2026-10-28 interaction preferences — evidence pending
 
 | Check | Expected behavior | Current status |
