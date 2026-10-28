@@ -76,6 +76,7 @@ jobs:
             app/build/outputs/apk/compact/app-compact.apk \
             app/build/outputs/apk/debug/app-debug.apk
           python3 scripts/tests/test-media-artifact.py 2>&1
+          python3 scripts/test-compact-configuration.py 2>&1
           (cd app/build/outputs/apk/compact && sha256sum app-compact.apk > app-compact.apk.sha256)
           (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
 
