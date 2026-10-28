@@ -2,7 +2,7 @@ name: Android CI & APK
 
 on:
   push:
-    branches: [main, 'arena/**']
+    branches: [main, 'arena/**', 'wp/**']
     tags: ['v*']
     paths-ignore:
       - 'docs/**'
@@ -71,7 +71,7 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
-            :app:testDebugUnitTest :app:lintDebug \
+             :app:testDebugUnitTest :app:lintRelease \
             --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime
