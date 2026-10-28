@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.data.jobs.CapabilityRegistry
+import com.jumlo.app.core.ToolCatalogue
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.AppViewModel
@@ -30,8 +31,8 @@ import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
-/** Every available tool has one tile; the catalogue is grouped into sections and
- *  the persisted usage ranking orders the tiles within each section. */
+/** The primary catalogue stays scannable. Specialist tools remain searchable and expandable,
+ *  and persisted usage ranking orders every tile within its section. */
 @Composable
 fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
@@ -91,6 +92,8 @@ internal fun ToolsCatalogue(
     onTool: (UtilityTool) -> Unit
 ) {
     val byId = remember(tools) { tools.associateBy { it.id } }
+    val primaryIds = remember { ToolCatalogue.primaryTools().toSet() }
+    var showSpecialists by rememberSaveable { mutableStateOf(false) }
     val filtered = remember(tools, rankedToolIds, search) {
         val ranks = rankedToolIds.withIndex().associate { it.value to it.index }
         tools.withIndex().filter { (_, tool) ->
@@ -154,8 +157,10 @@ internal fun ToolsCatalogue(
                     }
                 }
                 val remaining = filtered.filter { it.id !in featuredIds }
+                val primary = remaining.filter { it.id in primaryIds }
+                val specialists = remaining.filter { it.id !in primaryIds }
                 for (section in toolSections) {
-                    val sectionTools = remaining.filter { it.id in section.ids }
+                    val sectionTools = primary.filter { it.id in section.ids }
                     if (sectionTools.isEmpty()) continue
                     item("section:" + section.key, span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(sectionTitle(section, language))
@@ -164,13 +169,49 @@ internal fun ToolsCatalogue(
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
                     }
                 }
-                val ungrouped = remaining.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
+                val ungrouped = primary.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
                 if (ungrouped.isNotEmpty()) {
                     item("section:all", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(stringResource(R.string.tools_section_all))
                     }
                     items(ungrouped, key = { it.id }, contentType = { "tool" }) { tool ->
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                    }
+                }
+                if (specialists.isNotEmpty()) {
+                    item("specialists-toggle", span = { GridItemSpan(maxLineSpan) }) {
+                        OutlinedButton(
+                            onClick = { showSpecialists = !showSpecialists },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("tools.more")
+                        ) {
+                            Text(stringResource(
+                                if (showSpecialists) R.string.tools_hide_specialists else R.string.tools_show_specialists,
+                                specialists.size
+                            ))
+                        }
+                    }
+                    if (showSpecialists) {
+                        for (section in toolSections) {
+                            val sectionTools = specialists.filter { it.id in section.ids }
+                            if (sectionTools.isEmpty()) continue
+                            item("more-section:" + section.key, span = { GridItemSpan(maxLineSpan) }) {
+                                SectionHeader(sectionTitle(section, language))
+                            }
+                            items(sectionTools, key = { "more:" + it.id }, contentType = { "tool" }) { tool ->
+                                ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                            }
+                        }
+                        val ungroupedSpecialists = specialists.filter { tool ->
+                            toolSections.none { section -> section.ids.contains(tool.id) }
+                        }
+                        if (ungroupedSpecialists.isNotEmpty()) {
+                            item("more-section:all", span = { GridItemSpan(maxLineSpan) }) {
+                                SectionHeader(stringResource(R.string.tools_section_all))
+                            }
+                            items(ungroupedSpecialists, key = { "more:" + it.id }, contentType = { "tool" }) { tool ->
+                                ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
+                            }
+                        }
                     }
                 }
             }
