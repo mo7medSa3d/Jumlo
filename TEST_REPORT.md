@@ -1,5 +1,11 @@
 # Jumlo — verification report
 
+## 2026-10-28 — Contrast test failure and attempted repair
+
+- **FAIL (previous SHA):** [Actions #40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377): `ToolPaletteContrastTest.accentForegroundsMeetAaForLightDarkAndAmoled` at line 31; 522 unit tests, 1 failed, 6 skipped. APK/lint gates not accepted on that run.
+- **CODE UPDATED (not verified):** `M3ColorFactory.ensureContrast` now targets 4.55:1 for generated on-colors while `meetsAA` still uses the required 4.5:1 cutoff. Avoid weakening the test. A fresh PR CI is required to classify this as fixed; EN/AR device screenshots also pending.
+
+
 ## 2026-10-28 work-package verification — release quality gates
 
 - `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
