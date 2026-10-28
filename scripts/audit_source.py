@@ -36,6 +36,7 @@ PATTERNS = {
         r"\s*=\s*\{\s*\}",
     ),
     "hardcoded_color": re.compile(r"\bColor\s*\(\s*0x[0-9a-fA-F]{6,8}\s*\)"),
+    "android_import_in_core": re.compile(r"(?m)^\\s*import\\s+(?:android|androidx)\\."),
     "hardcoded_ui_text": re.compile(
         r"\b(?:Text|BasicText)\s*\(\s*\"[^\"]{1,120}\"",
     ),
@@ -59,6 +60,10 @@ def scan_source(path: str, content: str) -> list[Finding]:
     for kind, pattern in PATTERNS.items():
         if kind == "hardcoded_color" and "/ui/theme/" in f"/{path}":
             continue  # Literal token *definitions* are centralized, not UI bypasses.
+        if kind == "android_import_in_core" and not path.startswith((
+            "core-common/", "downloader-core/", "document-core/", "storage-core/"
+        )):
+            continue  # Android belongs in app adapters, never these pure JVM modules.
         for match in pattern.finditer(content):
             number = content.count("\n", 0, match.start()) + 1
             snippet = lines[number - 1].strip()[:180] if number <= len(lines) else ""
