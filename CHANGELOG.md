@@ -170,6 +170,10 @@ TEST_REPORT.md.
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
 
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
 ## 2026-10-28 — WP06 bold palette and WCAG correction (pending CI)
 
 - Corrected sRGB WCAG AA luminance to the actual 2.4 exponent and 0.04045 threshold (old code incorrectly cubed the gamma-corrected channel).

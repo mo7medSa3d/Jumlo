@@ -110,6 +110,10 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
 
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
 ## 2026-10-28 — WP06 visual-only change
 
 No navigation route or tab behavior changed. ToolsRoute now uses more saturated category-colored tool tiles and stronger semantic-color section headers. The token review uses Compose previews only, not a new production route.
