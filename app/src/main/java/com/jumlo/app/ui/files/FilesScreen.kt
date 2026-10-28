@@ -460,7 +460,10 @@ import com.jumlo.app.model.*
             runCatching { com.jumlo.app.core.DocumentNamePolicy.rename(output.displayName,renameText) }.isSuccess
         }
         AlertDialog(onDismissRequest={renameOutput=null},title={Text(stringResource(R.string.action_rename))},
-            text={TextField(renameText,{renameText=it},singleLine=true,label={Text(stringResource(R.string.upgrade_new_name))},isError=!nameValid)},
+            text={TextField(renameText,{renameText=it},singleLine=true,
+                label={Text(stringResource(R.string.upgrade_new_name))},
+                isError=!nameValid,
+                supportingText=if(!nameValid) {{Text(stringResource(R.string.files_rename_invalid_name))}} else null)},
             confirmButton={TextButton(onClick={vm.renameOutput(output,renameText);renameOutput=null},enabled=nameValid) {Text(stringResource(R.string.account_done))}},
             dismissButton={TextButton(onClick={renameOutput=null}) {Text(stringResource(R.string.action_cancel))}})
     }

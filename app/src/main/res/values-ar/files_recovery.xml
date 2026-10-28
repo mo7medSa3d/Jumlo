@@ -2,7 +2,7 @@
 <resources>
     <string name="files_rename_new_name">الاسم الجديد</string>
     <string name="files_rename_proposed">اسم الملف المقترح</string>
-    <string name="files_rename_invalid_name">اختر اسماً أقصر وغير فارغ، دون شرطات مائلة أو نقطتين رأسيتين أو محارف تحكم. تجنب النقاط والمسافات في نهايته.</string>
+    <string name="files_rename_invalid_name">اختر اسماً أقصر وغير فارغ دون شرطات مائلة أو نقطتين رأسيتين أو محارف تحكم أو علامات اتجاه مخفية. تجنب النقاط والمسافات في نهايته.</string>
     <string name="files_rename_exists">يوجد عنصر آخر بهذا الاسم. اختر اسماً مختلفاً.</string>
     <string name="files_rename_unchanged">أدخل اسماً مختلفاً لإعادة تسمية هذا الملف.</string>
 </resources>

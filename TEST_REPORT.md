@@ -140,3 +140,5 @@ run here).
 
 - Source review: `core-common/Validation.kt` now rejects bidi format controls in both `SafeNames.basename` and `SafeNames.fitUtf8` *before* truncation, protecting rename and archive entry paths. Ordinary RTL script letters, emoji and U+200C (joining orthography) remain valid.
 - New JVM methods: `SafeNamesBidiControlTest.unsafeDirectionalFormattingIsRejected`, `.aSpoofMarkerBeyondTheTruncationLimitIsNotSilentlyAccepted`, `.nestedArchiveEntriesCannotIntroduceBidiControlNames`, `.legitimateRtlArabicHebrewAndEmojiNamesRemainValid`. **NOT RUN until GitHub CI on exact PR head**; no production claim before verified build/test/lint and size gates.
+
+- Files rename dialog now shows a bilingual actionable supporting message when the name is invalid; confirmation stays disabled. Android Compose/device appearance remains **NOT VERIFIED** until its CI/device tests run.

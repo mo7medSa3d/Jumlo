@@ -513,3 +513,5 @@ No interaction contract changes. KSP2 worker serialization does not establish pa
 ## WP12 filename spoof prevention
 
 Files rename/import and archive entry naming reject invisible bidirectional formatting controls rather than allowing an extension to be visually reversed. Keep readable Arabic/Hebrew/emoji names. `INVALID_FILENAME` is a validation response; tool UI should show a localized actionable message. Error UI has not been re-verified on device.
+
+- The Files rename dialog displays `files_rename_invalid_name` below invalid input, including hidden direction marks; no raw exception or silent red outline is used as the sole guidance. Arabic/English resources updated.
