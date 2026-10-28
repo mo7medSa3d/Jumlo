@@ -1,5 +1,14 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP03 accessibility and tactile feedback (branch; CI pending)
+
+- Replace the ignored reduce-motion preference with a persisted user choice added to Android's own animation-reduction setting. Route the effective value through `LocalReducedMotion` without overriding system accessibility preferences.
+- Wire the actual persisted haptic enable/strength values into `MainActivity`'s `LocalAppHapticsEnabled`/`LocalHapticIntensity`, replacing hard-coded enabled/LIGHT.
+- Surface reusable single-target Compose switches for Reduce motion, Haptic feedback and Interface sounds; add a Light/Medium/Strong picker and full English/Arabic labels.
+- Add JVM policy tests and Android DataStore-recreation/UI tests. **No device, emulator or CI PASS is asserted until executed.**
+
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
