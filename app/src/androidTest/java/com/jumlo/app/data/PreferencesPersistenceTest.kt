@@ -23,7 +23,7 @@ class PreferencesPersistenceTest {
         try {
             preferences.setThemeMode(ThemeMode.DARK)
             preferences.setLanguage(AppLanguage.ARABIC)
-            preferences.setAccentColor("DYNAMIC")
+            preferences.setAccentColor("#7B4DFF")
             preferences.setDefaultVideoQuality("720")
             preferences.setDefaultAudioQuality(128)
             preferences.setFileViewMode(FileViewMode.LIST)
@@ -37,13 +37,19 @@ class PreferencesPersistenceTest {
             assertTrue(restored.isLoaded)
             assertEquals(ThemeMode.DARK, restored.themeMode)
             assertEquals(AppLanguage.ARABIC, restored.language)
-            assertEquals("DYNAMIC", restored.accentColor)
+            assertEquals("#7B4DFF", restored.accentColor)
+            try {
+                preferences.setAccentColor("not-a-color")
+                fail("Invalid accent must fail")
+            } catch (_: IllegalArgumentException) {
+                assertEquals("#7B4DFF", UserPreferencesRepository(context).settingsFlow.first().accentColor)
+            }
             assertEquals("720", restored.defaultVideoQuality)
             assertEquals(128, restored.defaultAudioQuality)
             assertEquals(FileViewMode.LIST, restored.fileViewMode)
             assertEquals("content://com.android.externalstorage.documents/tree/primary%3ADownload",restored.downloadDestinationFolder)
-            // Removed legacy preferences cannot silently keep blocking mobile downloads
-            // or disable animation after the corresponding controls disappear.
+            // The removed Wi-Fi-only setting no longer blocks mobile downloads.
+            // Reduce motion and haptic/sound choices are intentionally persisted.
             assertFalse(restored.wifiOnlyDefault)
             assertTrue(restored.respectReducedMotion)
             assertTrue(restored.hapticFeedbackOnCommit)
