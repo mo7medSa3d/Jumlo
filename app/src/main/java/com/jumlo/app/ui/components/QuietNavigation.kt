@@ -39,8 +39,8 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
-/** Exactly five destinations. The indicator belongs to its cell, so it cannot escape it in RTL. */
-val MainDockTabs = listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)
+/** The four primary destinations; Downloads remains a reachable detail route, not a tab. */
+val MainDockTabs = listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)
 
 @Composable
 @Suppress("UNUSED_PARAMETER") // Retained for callers compiled against the previous dock API.
