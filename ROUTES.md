@@ -1,5 +1,6 @@
 # Navigation and route inventory
 
+- WP02 downloader interaction: automatic filename is used by default, with manual override in Advanced (no route change).
 **WP02 2026-10-28:** `ToolRoute("dl_media")` is unchanged; `MediaWorkspace` now selects best available media automatically and exposes video/audio, codec and quality overrides only after Advanced expansion. This is a source-level navigation/interaction update; full-device completion remains NOT VERIFIED.
 
 
