@@ -143,3 +143,7 @@ No package is marked complete until its branch/PR has cited commands, results an
 - Main CI run observed: **success**, but did not enforce release lint or size cap and skipped instrumentation.
 - APK under-limit measurement: **55,368,299 bytes** for compact build, but the current task checks the number only by printing.
 - **No source fix and no emulator/physical-device execution is claimed by this Phase 0 document.**
+
+## 2026-10-28 follow-up: complete production Kotlin/Java lexical scan
+
+The follow-up [AUDIT_2_SOURCE_SCAN.md](AUDIT_2_SOURCE_SCAN.md) records **244/244** production Kotlin/Java files read from the audited base GitHub commit with **zero fetch failures**. The reproducible lexical candidate rules located **204 direct raw-color references**, **7 direct UI text literals**, **0 TODO/FIXME/stub markers** and **0 syntactically empty callbacks**. These are **candidates**, not claims that every color is wrong: most are token definitions, document-paper/ink colors or intentional numeric labels. No finding certifies runtime behavior, catches semantically inert *nonempty* callbacks or covers XML/scripts/binary assets. The full file:line inventory is retained in the linked source scan. Original capability/status table above remains authoritative for missing end-to-end evidence.

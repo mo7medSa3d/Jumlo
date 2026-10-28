@@ -1,8 +1,15 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WCAG role contrast follow-up
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
-- The earlier `wp/05-bold-theme-tokens` CI failed `ToolPaletteContrastTest.accentForegroundsMeetAaForLightDarkAndAmoled` at the 4.5:1 boundary (Actions #40641801377). Add a 0.05 contrast-ratio headroom to generated `M3ColorFactory.ensureContrast` defaults to avoid float/color packing rounding below AA. Exact-head regression CI **pending**; do not mark PASS until its logs confirm.
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
 
 
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
@@ -157,6 +164,15 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
 
 ## 2026-10-28 — WP-05 saturated design tokens (candidate, CI pending)
 

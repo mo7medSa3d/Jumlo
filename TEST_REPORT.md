@@ -1,9 +1,15 @@
 # Jumlo — verification report
 
-## 2026-10-28 — Contrast test failure and attempted repair
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
 
-- **FAIL (previous SHA):** [Actions #40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377): `ToolPaletteContrastTest.accentForegroundsMeetAaForLightDarkAndAmoled` at line 31; 522 unit tests, 1 failed, 6 skipped. APK/lint gates not accepted on that run.
-- **CODE UPDATED (not verified):** `M3ColorFactory.ensureContrast` now targets 4.55:1 for generated on-colors while `meetsAA` still uses the required 4.5:1 cutoff. Avoid weakening the test. A fresh PR CI is required to classify this as fixed; EN/AR device screenshots also pending.
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
+
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
 
 
 ## 2026-10-28 work-package verification — release quality gates
@@ -94,7 +100,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
+| Release/compact APK size | Both enforce 60,000,000 decimal bytes in current source; branch CI #40639445934 measured 55,356,059/55,368,299 bytes | PASS for that exact branch SHA; merged-base run pending |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |
@@ -116,6 +122,19 @@ run here).
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
 
+## 2026-10-28 — WP02a regression status
+
+- `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
 
 ## 2026-10-28 — WP-05 design system verification boundary
 
