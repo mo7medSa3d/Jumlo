@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP04 2026-10-28:** route graph unchanged. A durable `dl_02`/`dl_03` transfer may recover transient mid-stream bytes with HTTP Range + validator in `StreamTransfer`; UI job navigation is unchanged. Android pause/retry/notification acceptance remains NOT VERIFIED.
+
+
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
