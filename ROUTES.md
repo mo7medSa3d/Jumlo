@@ -96,3 +96,8 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+
+## 2026-10-28 — WP-02 downloader interaction
+
+Existing `ToolRoute("dl_media")` and Downloads tab/route remain unchanged. `MediaWorkspace` opens with automatic link inspection and preselected best available media; an **Advanced options** item reveals video/audio mode, formats, quality, transforms and filename. Selection is still serialized by `MediaViewModel` when queued, without new routes. Device/browser provider qualification remains outstanding.
