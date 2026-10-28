@@ -1,6 +1,9 @@
 # Navigation and route inventory
 
-**WP03 2026-10-28:** `file_trash` remains a Files navigation alias, not an operation. `pdf_compare` and `pdf_redact` are not registered routes, and cannot enqueue PDF processing. Registered typed route behavior is otherwise unchanged. Device validation remains NOT VERIFIED.
+**2026-10-28 capability parity:** Registered `file_trash` remains a navigation alias to Files, not a processing handler; `pdf_compare`/`pdf_redact` are not active registered routes. No user-facing route was removed. See `CapabilityContractTest` for JVM policy assertions; device flows pending.
+
+
+**WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
@@ -102,3 +105,7 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+## 2026-10-28 — WP02a scope note
+
+Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.

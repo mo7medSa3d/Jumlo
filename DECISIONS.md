@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP03 capability contract:** A registry/navigation-only action must never enqueue a processing job. `pdf_compare` and `pdf_redact` are not registered PDF capabilities and must fail closed. `file_trash` is navigation into Files, not a processing operation. Remove only unreachable dead dispatcher code, not any registered feature. Test these invariants before release.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.

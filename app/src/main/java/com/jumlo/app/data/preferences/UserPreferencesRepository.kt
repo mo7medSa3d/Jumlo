@@ -260,7 +260,7 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }
     suspend fun setAccentColor(value: String) {
-        require(value in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC"))
+        require(isValidAccent(value)) { "INVALID_ACCENT_COLOR" }
         context.dataStore.edit { it[Keys.ACCENT_COLOR] = value }
     }
     suspend fun setFontScale(value: String) {
