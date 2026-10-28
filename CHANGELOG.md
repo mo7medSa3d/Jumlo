@@ -145,3 +145,9 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-06 release gate repair (pending CI)
+
+- Restore an enforced strict 60,000,000-byte cap to both full-media ARM64 compact and unsigned-release APK verifier tasks. Keep bundled extractor and ABI/payload assertions intact; do **not** trim functionality to hide a failed gate.
+- Require `lintRelease` and `verifyReleaseApkSize` in normal GitHub PR/main CI as well as existing debug build, unit, debug lint, compact checks and artifact inspection.
+- Update the compact-configuration contract test to assert the actual limit and both Gradle tasks. A green CI build must establish these gates; source review alone is not a PASS.
