@@ -109,6 +109,15 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                         { vm.pause(job.request.id) }, { vm.cancel(job.request.id) }, { vm.retry(job) })
                 }
             }
+            // Downloads history must remain reachable even when there are no active transfers.
+            item("download-history") {
+                FilledTonalButton(onClick = onDownloads, modifier = Modifier.fillMaxWidth()
+                    .heightIn(min = 52.dp).testTag("home.downloads.history")) {
+                    Icon(painterResource(R.drawable.ic_prism_download), null, Modifier.size(22.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(stringResource(R.string.nav_downloads))
+                }
+            }
             item("recent-heading") { NeonSectionHeader(stringResource(R.string.neon_recent),
                 action = stringResource(R.string.neon_show_all), onAction = onFiles) }
             item("recent-files") {
