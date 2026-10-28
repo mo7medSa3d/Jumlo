@@ -498,3 +498,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+## 2026-10-28 — WP10 visible catalogue vs registered capabilities
+
+The registry retains 45 tool IDs, while default Tools surfacing uses the existing 41 listed workspace entries instead of displaying all registered aliases. Image Comparison remains **search-only**; `file_02`, `file_trash` and `dl_settings` are navigation aliases to existing Files/Settings functionality, not additional processing tiles. The operation handlers stay intact. Each actual file operation remains unqualified until end-to-end tests pass, regardless of catalogue visibility.
