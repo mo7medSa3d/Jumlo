@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP07 source audit inventory (CI pending)
+
+- Add a deterministic Python scanner for production Kotlin/Java files and unit tests; report literal colors, hardcoded Text labels, TODO/FIXME markers and no-op Compose callbacks by exact source line.
+- Add an informational GitHub workflow that publishes JSON and Markdown report artifacts on relevant source PRs; this does not bypass or replace Android compile/lint/device gates.
+- The scan is a *candidate inventory*. Any report count, confirmed dead control, or device claim requires the execution evidence; PR creation is not PASS.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
