@@ -163,3 +163,7 @@ TEST_REPORT.md.
 
 - Added a separate Android UI and persistence smoke workflow on GitHub Actions PR/main for API 26, 35 and 36 using `reactivecircus/android-emulator-runner@v2`. It runs selected **existing** Compose UI, viewer, gesture, workspace, catalogue and DataStore instrumentation classes, and retains logcat + test reports on failure.
 - The default workflow's build/unit/release lint/compact+release APK gates remain unchanged. This is an additive lane, not a replacement for the full connected suite or physical-device testing.
+
+### WP09 expanded file-operation qualification
+
+The API26/35/36 emulator smoke now includes generated-fixture real PDF, Office, image, ZIP, file publication, scanner/reader and print-adapter instrumentation classes. No existing tests were disabled. Running them must produce actual job reports before this is called verified.
