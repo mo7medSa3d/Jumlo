@@ -101,3 +101,10 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+
+## 2026-10-28 — GitHub CI evidence update (WP-00 audit)
+
+**Do not reinterpret the 2026-10-24 sandbox-specific blocked results above as having run in that environment.** Independently, the current GitHub `main` SHA `d599b8a3159f38623e3d0b83c3d58a23073e70cf` has a [successful CI run #40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318) dated 2026-10-24. The run's build job passed `-PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:testDebugUnitTest :app:lintDebug`, media artifact inspection, and artifact upload. The optional lite build and API 26/36 device jobs were **SKIPPED**. This was a build-level result, not a successful end-to-end run of every tool.
+
+For this audit PR: `lintRelease` **NOT RUN**; `verifyReleaseApkSize` **NOT RUN**; physical emulator/device matrix **NOT RUN**; authorized live platform download matrix **NOT RUN**; signed production AAB **BLOCKED** (owner signing material absent); five-scanned-PDF fixture measurements **NOT RUN**. `docs/AUDIT_2.md` documents all 45 entries conservatively as **partial / missing end-to-end qualification**. Full TODO/stub sweep **INCOMPLETE** (GitHub code search returned `incomplete_results=true` and GitHub clone was network-blocked). No new APK or screenshot was generated for WP-00.
