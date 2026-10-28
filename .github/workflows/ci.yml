@@ -65,7 +65,7 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
-          # Serialize KSP2 debug/compact/release analysis workers; retain all gates.
+          # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
           ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :app:testDebugUnitTest :app:lintRelease \
             --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
