@@ -27,6 +27,9 @@ import kotlin.math.pow
 object M3ColorFactory {
 
     private const val AA_NORMAL = 4.5f
+    // Colors are quantized into Compose's packed representation. A small AA
+    // headroom avoids 4.499...:1 contrast after the generated roles round-trip.
+    private const val AA_RENDER_MARGIN = 0.05f
     private const val NEAR_BLACK = 0xFF1A1C1E
     private const val NEAR_WHITE = 0xFFE6E1E5
 
@@ -56,7 +59,7 @@ object M3ColorFactory {
      * Fixed-step interpolation can finish below AA for near-threshold backgrounds;
      * binary search converges, with the guaranteed readable endpoint as fallback.
      */
-    fun ensureContrast(bg: Color, fg: Color, min: Float = AA_NORMAL): Color {
+    fun ensureContrast(bg: Color, fg: Color, min: Float = AA_NORMAL + AA_RENDER_MARGIN): Color {
         if (contrast(bg, fg) >= min) return fg
         val whiteRatio = contrast(bg, Color.White)
         val blackRatio = contrast(bg, Color.Black)
