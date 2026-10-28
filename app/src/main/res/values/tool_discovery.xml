@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="tools_show_specialists">Explore %1$d more tools</string>
-    <string name="tools_hide_specialists">Hide %1$d additional tools</string>
-</resources>
