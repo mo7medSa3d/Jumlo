@@ -1,5 +1,10 @@
 # Tool UI specification
 
+## 2026-10-28 WP04 — primary navigation change
+
+The primary bottom navigation has four localized tabs in reading order: **Home, Tools, Files, Settings**. `DownloadsScreen` stays implemented as a typed detail route, reachable from Home's always-present **View all downloads** secondary action or the active-jobs heading. Moving Downloads out of the dock **does not delete** download history, worker actions, metadata or source handlers. The detail has a Back toolbar; the four-tab dock remains visible with its caller tab selected. Semantics/RTL instrumentation is in `FourTabNavigationTest`; full runtime qualification must still be reported in `TEST_REPORT.md`.
+
+
 ## Scope and evidence
 
 This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
