@@ -495,3 +495,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP-05 saturated palette and previews
+
+Source palette adds shared `LightToolAccents`/`DarkToolAccents` in `Color.kt`; each section's tile color in `ToolPalette.kt` and pillar primary accent now derive from the same family. Light surface ladder is lavender-neutral, and the root page top bar uses semantic `primaryContainer/onPrimaryContainer`. New `ThemePreviews.kt` previews four English/Arabic light/dark combinations; `ToolPaletteContrastTest` asserts icon and main scheme contrast. These are authored source and pending unit/render execution, not certified screenshots or visual QA.
