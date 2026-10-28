@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP03 feedback and motion behavior
+
+Screens using rememberAppHaptics() now consume persisted on/off and intensity values from MainActivity composition locals. LocalReducedMotion is true if either Android accessibility/animation settings request reduced motion or the new Jumlo preference is enabled. The tool gesture and animation components continue using shared feedback mechanisms. Device validation is pending.
