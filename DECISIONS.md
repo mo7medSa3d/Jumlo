@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP08 scanner bitmap ownership:** Reuse `DisposeOwnedPreviewBitmap` for the CameraX fallback lazy thumbnail list instead of retaining preview-native `Bitmap` instances for the entire scanner session. Do not recycle uploaded original sources or output bitmaps; only decoded thumbnail previews owned by their individual Compose row. Real heap/device behavior remains a separate release gate.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
