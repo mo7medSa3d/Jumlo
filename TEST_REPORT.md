@@ -116,3 +116,9 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP10 Tools visibility / search regression
+
+- Source diff: `ToolCatalogue.isSearchable` distinguishes the searchable `img_compare` specialist from `file_02`, `file_trash` and `dl_settings` navigation aliases. `ToolsCatalogue` filters default results, Pinned and Recent consistently while retaining specialist search.
+- New tests: `ToolCatalogueTest.searchRetainsSpecialistsButNeverDuplicatesNavigationTabs` (JVM) and `ToolCatalogueInteractionTest.defaultGridHidesAliasesButSearchCanOpenImageComparison` (Android Compose). **NOT RUN until the matching CI and emulator tests report results.**
+- No handler or route was deleted; this test does not qualify any tool's file output or establish that all settings work.
