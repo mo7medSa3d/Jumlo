@@ -109,3 +109,7 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## 2026-10-28 — WP02a scope note
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP11 direct-download redirect header boundary
+
+No route/navigation changes. The `dl_media` and direct-file intake still inspect permitted redirects; user-entered custom header values are not repeated across origin changes during direct-link inspection. The protected source URI and URL-scoped cookie handling stay independent. See TEST_REPORT.md for pending compilation and live-network verification.
