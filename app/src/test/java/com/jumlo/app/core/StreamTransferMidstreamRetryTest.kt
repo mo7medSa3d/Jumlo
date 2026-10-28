@@ -1,13 +1,16 @@
 package com.jumlo.app.core
 
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.zip.GZIPOutputStream
 
 class StreamTransferMidstreamRetryTest {
     private fun partial():File = File(Files.createTempDirectory("jumlo-resume").toFile(), "download.part")
@@ -80,5 +83,33 @@ class StreamTransferMidstreamRetryTest {
         assertTrue(failure is IOException)
         assertEquals(1,calls)
         assertEquals("hello",file.readText())
+    }
+
+    @Test fun compressedRepresentationsNeverResumeUsingDecodedByteOffsets() {
+        val file=partial()
+        val original="repeated gzip fixture ".repeat(3000).toByteArray()
+        val buffer=ByteArrayOutputStream()
+        GZIPOutputStream(buffer).use { it.write(original) }
+        // Remove the gzip trailer, causing a failure after some decoded bytes
+        // have been copied to disk. The correct response is NOT a ranged retry.
+        val truncated=buffer.toByteArray().dropLast(8).toByteArray()
+        var calls=0
+        var safeForResume:Boolean?=null
+        val transport=HttpTransport { _, headers ->
+            calls++
+            assertFalse("Never send a Range for decoded bytes", headers.containsKey("Range"))
+            TransportResponse(200,mapOf("etag" to "\"gzip-v1\"",
+                "content-encoding" to "gzip"),ByteArrayInputStream(truncated))
+        }
+        val failure=runCatching {
+            StreamTransfer(transport).execute(
+                TransferRequest("https://example.org/compressed",file,
+                    minFreeBytes=0,retryBackoffMs=0,maxRetries=3),
+                onMetadata={ safeForResume=it.resumeSafe })
+        }.exceptionOrNull()
+        assertTrue("Incomplete gzip must fail, not publish", failure is IOException)
+        assertEquals("Do not issue a second GET or unsafe ranged append",1,calls)
+        assertEquals(false,safeForResume)
+        assertTrue("Fixture must have actually produced partial decoded data", file.length()>0L)
     }
 }
