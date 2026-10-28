@@ -174,3 +174,5 @@ TEST_REPORT.md.
 
 - Direct-download link inspection now keeps user-entered `Referer`, `Origin`, language and other custom headers confined to the original scheme/host/port. Cross-origin redirects preserve ordinary browser headers and URL-scoped cookie lookup but never replay initial custom extras. Added `PlatformHeaderPolicyTest` cases for matching origins, alternate hosts/subdomains, ports, scheme downgrades and malformed URLs.
 - Source fix is proposed on `wp/11-cross-origin-media-headers`; release build and tests are **NOT VERIFIED** until matching GitHub CI completes.
+
+- Extra protection: a custom User-Agent value is also replaced by an ordinary browser profile if the redirect crosses the original origin, avoiding transfer of a caller-specific identity.

@@ -78,3 +78,5 @@ No Play Console submission, rights determination, physical-device qualification 
 ## 2026-10-28 — Direct-download custom-header redirect isolation
 
 User-entered custom request headers can include private origin context, so during direct-file inspection their scope is now limited to the original HTTP(S) origin; redirects to other schemes/hosts/ports receive no original custom headers. WebView cookie lookup still happens for the currently requested HTTPS URL, not by copying the original host's cookie string. This source safeguard is pending GitHub CI and network/device verification; it does not establish that all external media providers respect these boundaries.
+
+- A user-defined User-Agent may identify an account/browser profile; it is likewise not forwarded to cross-origin redirect targets. The default browser profile remains available so legitimate file redirects can proceed.
