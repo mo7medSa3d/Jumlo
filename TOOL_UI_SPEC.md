@@ -509,3 +509,5 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## WP11 direct media inspection security
 
 A direct URL may redirect during inspection. Custom user-entered HTTP headers are retained only for the initial scheme, host, and effective port; cross-origin redirects use fresh browser defaults and separate URL-scoped cookies. This prevents leaking user-supplied `Referer`/`Origin` information across hosts without changing the visible downloader interaction. Real redirect/extractor acceptance requires permitted live fixtures and remains NOT VERIFIED.
+
+- WP11 security contract covers both Analyze/Inspect and the Download execution path: user-customized Referer/Origin/UA only follow same-origin redirects, while standard profile headers and URL-scoped cookies are reconstructed per target. Scripted transfer regression added; live and device behavior not yet verified.

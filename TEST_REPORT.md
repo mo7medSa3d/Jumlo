@@ -133,3 +133,9 @@ run here).
 - `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintRelease`, compact/release full-media APK size gates: **NOT RUN at this PR SHA until GitHub Actions completes**. Live redirect integrations, user accounts and authorized provider access: **NOT VERIFIED**. No downloader feature or test was disabled.
 
 - Additional source-level guard: cross-origin redirects also discard the explicit custom User-Agent value, falling back to a normal browser profile. Kotlin test verifies same-origin retention and cross-origin removal. **NOT RUN at this revision until matching CI**.
+
+### WP11 actual transfer redirect boundary regression (new source, CI pending)
+
+- `DownloadOperationHandler.kt` previously rebuilt custom HTTP headers for *every* `StreamTransfer` redirect hop using `buildHeadersForUrl(targetUrl, profileIndex)`; the original user-entered Referer/Origin/User-Agent could follow a redirect to another host despite per-hop cookie scoping. Now each transfer binds `customHeaderOrigin` to the original resolved URL while rebuilding target-specific browser headers and cookies.
+- Added JVM integration regression `PlatformHeaderPolicyTest.realStreamRedirectRetainsOnlyOriginScopedCustomHeaders`: scripted source → same-origin hop → cross-origin CDN response, asserts 5 real downloaded bytes, same-origin extras retained, cross-origin custom Referer/Origin/User-Agent stripped. This uses a scripted `HttpTransport`, **not a live provider or Android device**.
+- **NOT RUN** for latest PR SHA until GitHub CI finishes; no PASS can be inferred from source tests alone. Explicitly recheck actual redirect/expiry/resume cases in Android instrumentation and authorized live provider test matrix.

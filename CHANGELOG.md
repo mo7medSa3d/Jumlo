@@ -176,3 +176,5 @@ TEST_REPORT.md.
 - Source fix is proposed on `wp/11-cross-origin-media-headers`; release build and tests are **NOT VERIFIED** until matching GitHub CI completes.
 
 - Extra protection: a custom User-Agent value is also replaced by an ordinary browser profile if the redirect crosses the original origin, avoiding transfer of a caller-specific identity.
+
+- WP11 follow-up: protect the **actual direct download transfer**, not only the preview/probe. `DownloadOperationHandler` now binds custom headers to each job's original URL across manually-followed StreamTransfer redirects. Added real streamed-byte/redirect JVM regression; pending matching-head CI.
