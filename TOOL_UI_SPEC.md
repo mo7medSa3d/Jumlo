@@ -1,6 +1,9 @@
 # Tool UI specification
 
-> WP05: welcome/offline/privacy-facing strings now distinguish on-device document editing from optional network downloads, remote thumbnails/extraction and Google Drive import/export. The existing `file_drive` tool is enabled in source; its account/device integration is **NOT VERIFIED**, not blocked at registration. No tool UI or processing logic was changed in this package.
+> WP05: Welcome/settings copy accurately states that editing remains local while selected downloads, remote previews/extractors and Drive transfers require network access; Drive itself is source-implemented, NOT ACCOUNT-QUALIFIED.
+
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
+
 
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
@@ -504,3 +507,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.

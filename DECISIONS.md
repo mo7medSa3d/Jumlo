@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
@@ -97,4 +100,4 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
-47. WP05 corrects inconsistent privacy assertions: the app includes a user-initiated, token-gated Google Drive v3 import/export path, so neither onboarding nor store-facing text may promise that no cloud account is ever used or that every operation is offline. EN/AR disclosures must mention optional network recipients and distinguish source support from account/device qualification. A Robolectric contract tests both locales; its result is pending CI.
+- **WP05 privacy (2026-10-28):** User-initiated Google Drive v3 import/export and optional online media services preclude universal offline/zero-cloud promises. Explain network recipients accurately in both languages and do not claim provider account/device approval from source checks.

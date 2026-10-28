@@ -1,6 +1,9 @@
 # Navigation and route inventory
 
-> WP05 privacy disclosure: `file_drive` is reachable via `ToolRoute(toolId = "file_drive")`. Google Drive v3 transfers occur only as user-selected actions; their online data flows are described in PRIVACY_POLICY.md. No navigation route was changed by this work package.
+> WP05: Existing `file_drive` route and data-flow behavior are unchanged, but user-facing EN/AR disclosure now accurately distinguishes local edits from explicit network/cloud actions.
+
+**2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
+
 
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
@@ -108,3 +111,7 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## 2026-10-28 — WP02a scope note
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.

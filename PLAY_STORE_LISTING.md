@@ -1,6 +1,6 @@
 # Store listing drafts
 
-> WP05 privacy: user-initiated Google Drive export sends selected file contents/metadata to Google. The feature is enabled in code but not account/device-qualified; do not make stronger consumer-facing Drive claims until tested and the operator publishes a completed privacy policy.
+> WP05: Google Drive import/export is source-implemented and can upload selected files, so avoid categorical no-cloud/offline claims. Actual account/device qualification and final Play policy declarations are still required.
 
 These are review drafts, not published listing assets. Remove or qualify any feature that has not passed the final device matrix before submission. Do not promise universal platform downloads, scanned-Arabic OCR, exact Office layout reconstruction, unlimited background work or guaranteed Play approval.
 

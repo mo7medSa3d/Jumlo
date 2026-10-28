@@ -1,11 +1,16 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP05 privacy disclosure correction (CI pending)
+## 2026-10-28 — WP05 accurate local/cloud disclosure
 
-- Replace inaccurate English/Arabic absolute welcome/offline claims with explicit local editing plus user-initiated online feature disclosures (downloads, thumbnails, optional extractor, Google Drive, scanner/OCR models).
-- Document that enabled `file_drive` uses Google Drive v3 REST requests and selected-file upload/download, rather than calling Drive blocked.
-- Add a JVM Robolectric `PrivacyDisclosureTest` to check both locales. Passed in initial [PR #28 CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) (assembleDebug, testDebugUnitTest, lintRelease, compact 55,368,479 bytes); release APK size and device checks require newer-base qualification.
-- Update privacy and release documents without changing any app network behavior, access permissions or feature availability.
+- Replace absolute offline/zero-cloud promises with factual bilingual language: file editing is local, while chosen downloads, remote thumbnails, optional extractors, model installation and Drive import/export can transfer data.
+- Document enabled Google Drive v3 import/export and ephemeral transfer credentials, without claiming cloud-account qualification. Robolectric EN/AR string contract is added.
+- [CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) PASSED debug, unit tests, release lint and compact 55,368,479-byte gate on original head; latest full release size gate and device/provider checks pending.
+
+
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -171,3 +176,7 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.

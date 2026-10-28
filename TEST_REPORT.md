@@ -1,18 +1,14 @@
 # Jumlo — verification report
 
-## WP05 — 2026-10-28 privacy strings and Drive data-flow disclosure
+## WP05 privacy source and test evidence
 
-| Evidence | Status | Notes |
-|---|---|---|
-| `PrivacyDisclosureTest` (Robolectric, EN/AR) | **PASS** in [PR #28 #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882), source-only UI string contract | Checks that both welcome/settings copy discloses Drive and removes false universal/offline wording |
-| `GoogleDriveClient.kt:68-265`; `FileExtrasHandler.kt:216-275` | SOURCE-INSPECTED | Enabled token-gated Drive v3 import/export; explicit selected files are uploaded/downloaded |
-| Android manifest and Google Drive permissions | SOURCE-INSPECTED only | INTERNET is requested; no new permissions added in WP05 |
-| Live Google Drive account import/export | **BLOCKED** (no authorized account fixture/device) | Requires user-authorized token, actual round trip and provider validation |
-| Play data safety, production privacy URL/contact | **BLOCKED** owner policy details | Existing `PRIVACY_POLICY.md` still needs owner legal identity and public URL |
+`PrivacyDisclosureTest` checks that English and Arabic welcome/settings strings disclose Drive and avoid universal offline claims. Original [CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) **PASS** for assembleDebug, unit tests, lintRelease and compact APK size (55,368,479/60,000,000 bytes). Latest integration with main and full release-size check **PENDING**. Real Google Drive account round-trip, production privacy URL and Play Data Safety confirmation **BLOCKED / NOT RUN**.
 
-WP05 does not claim a Play policy approval, an executed Drive integration test or a new Android runtime result.
 
-- Initial PR #28 CI #40640270882 **PASS**: assembleDebug, testDebugUnitTest, lintRelease and full-media compact 55,368,479 bytes. No emulator/Drive account test, release size, or signed build ran in that checkpoint. Branch qualification after integrating newer WP01 release CI remains pending.
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -134,3 +130,13 @@ run here).
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
