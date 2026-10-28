@@ -1,4 +1,4 @@
-name: Android UI and persistence smoke (API 26 and 36)
+name: Android UI and persistence smoke (API 26, 35 and 36)
 
 on:
   pull_request:
@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [26, 36]
+        api: [26, 35, 36]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
