@@ -1,5 +1,6 @@
 # Tool UI specification
 
+- WP04 transfer integrity: failed gzip/legacy partials restart cleanly rather than range-appending decoded bytes. User-visible progress/report still requires device validation.
 **WP04 2026-10-28:** direct/batch downloads gain automatic mid-transfer recovery when the source supplies an HTTP validator. The user sees existing WorkManager progress; no new UI is claimed. `StreamTransferMidstreamRetryTest` provides three deterministic regression cases (NOT RUN until CI). Pause/foreground/device matrix remains outstanding.
 
 
