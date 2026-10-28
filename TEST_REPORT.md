@@ -1,5 +1,17 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP06 — PDF compression result classification
+
+| Check | Evidence | Status |
+|---|---|---|
+| `PdfCompressionResultPolicyTest` (7 JVM methods) | New pure Kotlin test for unchanged-with-skips, smaller-with-skips, smaller, unchanged, empty, larger and invalid skip count | **NOT RUN** until PR CI finishes |
+| Handler output status | `PdfOperationHandler.kt` calls `PdfCompressionResultPolicy.classify(originalBytes, actualOutputBytes, skippedImages)` before publishing | SOURCE REVIEW only |
+| Five scanned benchmark fixtures | `PdfCompressionDeviceTest.theScannedCorpusIsCompressedOnThisDevice` | **NOT RUN**; real inputs must be staged |
+| 200-page OOM / device sizing | `PdfCompressionDeviceTest.aTwoHundredPageScanIsProcessedOnThisDevice` | **NOT RUN**; physical/emulator and storage budget required |
+
+Do not call any compression preset verified solely because a result-classification JUnit test passes. A PDF may legitimately be incompressible; the UI must not promise savings where measured bytes do not decrease.
+
+
 ## 2026-10-28 work-package verification — release quality gates
 
 - `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
