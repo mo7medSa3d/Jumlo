@@ -62,3 +62,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+
+## 2026-10-28 — CI release shrinker memory guard
+
+PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
