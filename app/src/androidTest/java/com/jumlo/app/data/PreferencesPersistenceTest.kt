@@ -7,6 +7,7 @@ import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.model.FileViewMode
+import com.jumlo.app.model.HapticIntensity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -29,6 +30,7 @@ class PreferencesPersistenceTest {
             preferences.setDownloadDestinationFolder("content://com.android.externalstorage.documents/tree/primary%3ADownload")
             preferences.setWifiOnlyDefault(true)
             preferences.setRespectReducedMotion(true)
+            preferences.setHapticIntensity(HapticIntensity.STRONG)
             preferences.setMaxConcurrentDownloads(6)
             val restored = UserPreferencesRepository(context).settingsFlow.first()
             assertTrue(restored.isLoaded)
@@ -48,7 +50,9 @@ class PreferencesPersistenceTest {
             // Removed legacy preferences cannot silently keep blocking mobile downloads
             // or disable animation after the corresponding controls disappear.
             assertFalse(restored.wifiOnlyDefault)
-            assertFalse(restored.respectReducedMotion)
+            assertTrue(restored.respectReducedMotion)
+            assertTrue(restored.hapticFeedbackOnCommit)
+            assertEquals(HapticIntensity.STRONG, restored.hapticIntensity)
             assertEquals(2, restored.maxConcurrentDownloads)
         } finally {
             preferences.setThemeMode(original.themeMode)
@@ -61,6 +65,7 @@ class PreferencesPersistenceTest {
             else preferences.resetDownloadDestinationFolder()
             preferences.setWifiOnlyDefault(original.wifiOnlyDefault)
             preferences.setRespectReducedMotion(original.respectReducedMotion)
+            preferences.setHapticIntensity(original.hapticIntensity)
             preferences.setMaxConcurrentDownloads(original.maxConcurrentDownloads)
         }
     }

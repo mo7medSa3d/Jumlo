@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
@@ -35,10 +38,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
-- [ ] WP06: Compress a noncompressible/already optimized PDF and verify the result visibly says unchanged, never partial savings even when codec skips images.
-- [ ] WP06: Compress a scan with some unsupported image streams; when output becomes smaller, show partial warning plus measured before/after bytes.
-- [ ] WP06: Run all five README scan fixtures and the 200-page test on a supported device without OOM; record hashes, sizes, page counts and image fidelity.
-
+- [ ] WP06: Compress already optimized input and assert unchanged status, with no false partial-savings text.
+- [ ] WP06: Compress a scan with some skipped streams; assert partial warning only alongside verified reduction and preserved pages.
+- [ ] WP06: Run all five scan benchmarks and 200-page memory test with real devices, hashes, storage limits, and outputs.
 
 | Flow | Required observation |
 | --- | --- |

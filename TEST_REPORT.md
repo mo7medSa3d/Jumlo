@@ -1,17 +1,14 @@
 # Jumlo — verification report
 
-## 2026-10-28 WP06 — PDF compression result classification
+## 2026-10-28 — WP06 verified source correction, device qualification pending
 
-| Check | Evidence | Status |
-|---|---|---|
-| `PdfCompressionResultPolicyTest` (7 JVM methods) | New pure Kotlin test for unchanged-with-skips, smaller-with-skips, smaller, unchanged, empty, larger and invalid skip count | **PASS** on initial [CI #40640831258](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640831258) (7 cases under testDebugUnitTest) |
-| Handler output status | `PdfOperationHandler.kt` calls `PdfCompressionResultPolicy.classify(originalBytes, actualOutputBytes, skippedImages)` before publishing | SOURCE REVIEW only |
-| Five scanned benchmark fixtures | `PdfCompressionDeviceTest.theScannedCorpusIsCompressedOnThisDevice` | **NOT RUN**; real inputs must be staged |
-| 200-page OOM / device sizing | `PdfCompressionDeviceTest.aTwoHundredPageScanIsProcessedOnThisDevice` | **NOT RUN**; physical/emulator and storage budget required |
+[PR #32 CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) **PASS**, exact tested head `3c2cb65c2b21`: assembleDebug, testDebugUnitTest, lintRelease, compact 55,368,267 bytes and release 55,355,939 bytes, each under 60,000,000. New `PdfCompressionResultPolicyTest` has seven cases. Classification uses actual output length; an unchanged file no longer reports partial compression merely because images were skipped. Full Android device corpus/memory tests **NOT RUN**.
 
-Do not call any compression preset verified solely because a result-classification JUnit test passes. A PDF may legitimately be incompressible; the UI must not promise savings where measured bytes do not decrease.
 
-- Initial [CI #40640831258](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640831258) **PASS**: assembleDebug, testDebugUnitTest, lintRelease, verifyCompactApkSize (55,367,967 bytes). It did not yet run the newer main default verifyReleaseApkSize, or any emulator/device tests; updated-base CI pending.
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -133,3 +130,13 @@ run here).
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.

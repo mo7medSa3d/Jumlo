@@ -1,11 +1,16 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP06 honest PDF compression outcomes (initial CI passed, merged-base qualification pending)
+## 2026-10-28 — WP06 PDF compression result integrity
 
-- After a real PDF compression pass, inspect the **measured stage-file byte count** before classifying the result. A byte-identical/unreduced output is `UNCHANGED` with `PDF_NOT_COMPRESSIBLE` even if the codec skipped images. Only an actually smaller file may report `PDF_IMAGE_COMPRESSION_PARTIAL`.
-- Centralize classification in Android-free `document-core/PdfCompressionResultPolicy.kt`; add seven JVM `PdfCompressionResultPolicyTest` cases for reduced/unchanged/partial and invalid output.
-- No file or page is removed; existing verified-output publishing remains unchanged. The 5-scan-fixture and 200-page device memory gates remain **BLOCKED / NOT RUN** until staged and executed.
-- Initial [CI #40640831258](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640831258) **PASS** for assembleDebug, testDebugUnitTest, lintRelease and compact APK **55,367,967 / 60,000,000 bytes**; release APK gate requires the updated main-base rerun.
+- Count only measured size reductions as `CREATED`; unchanged outputs now report `PDF_NOT_COMPRESSIBLE`, even when embedded images were skipped.
+- Android-free `PdfCompressionResultPolicy` and seven JVM regression cases. [CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) PASSED debug build, unit tests, release lint, compact (55,368,267 bytes) and release (55,355,939 bytes) 60 MB gates on PR #32.
+- Real five-scan and 200-page Android device fixture tests are still NOT RUN.
+
+
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -171,3 +176,7 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.

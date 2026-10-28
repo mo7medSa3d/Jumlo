@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
@@ -97,4 +100,4 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
-48. WP06 distinguishes measured reduction from codec warnings. The PDF compression result's source and output byte counts determine whether it is CREATED or UNCHANGED. A skipped-image warning must not override a no-saving result; partial compression is reported only when a smaller PDF was produced. Classification is pure Kotlin in document-core with JVM regression tests; the full device fixture suite remains a separate gate.
+- **WP06 (2026-10-28):** Classify PDF compression from measured original and stage-file byte counts. Report partial skipped-image warning only when output is strictly smaller. New pure-Kotlin regression tests do not substitute for Android fixture qualification.
