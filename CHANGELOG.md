@@ -4,7 +4,7 @@
 
 - Add a deterministic Python scanner for production Kotlin/Java files and unit tests; report literal colors, hardcoded Text labels, TODO/FIXME markers and no-op Compose callbacks by exact source line.
 - Add an informational GitHub workflow that publishes JSON and Markdown report artifacts on relevant source PRs; this does not bypass or replace Android compile/lint/device gates.
-- The scan is a *candidate inventory*. Any report count, confirmed dead control, or device claim requires the execution evidence; PR creation is not PASS.
+- [Actions #40641509888](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641509888) executed the source scan: **5/5 parser tests PASS; 244 production files / 27 candidate matches**. The report artifact is retained; no matching row is automatically classified as a functional defect and Android release gates remain separate.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
