@@ -76,4 +76,6 @@
     <string name="media_restricted_hint">This link requires a login or its provider has restricted access. Jumlo will not request cookies or bypass protected content. Try an openly downloadable link.</string>
     <string name="downloads_live_count">%1$d active</string>
     <string name="downloads_completed_count">%1$d completed</string>
+    <string name="media_advanced_show">Advanced options</string>
+    <string name="media_advanced_hide">Hide advanced options</string>
 </resources>
