@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**WP02 2026-10-28:** The downloader now auto-selects the best available source quality; it displays the chosen quality as a compact summary and defaults to original files for direct PDF/image URLs. An optional Advanced expander exposes manual audio/video, encoding and format choices. `MediaBestSelectionTest` includes six JUnit selection cases but is **NOT RUN** in this edit session until CI passes. Live platforms, Android 8–15 and accessibility remain NOT VERIFIED.
+
+
 ## Scope and evidence
 
 This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
