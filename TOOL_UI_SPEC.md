@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — release CI qualification boundary
+
+WP-06 reinstates the strict media-enabled full ARM64 APK limit and mandatory release lint. It changes no tool configuration or result UI. Passing these build gates is necessary but insufficient for a per-tool end-to-end PASS; all tool-device tests and retained screenshot acceptance remain independently required.
