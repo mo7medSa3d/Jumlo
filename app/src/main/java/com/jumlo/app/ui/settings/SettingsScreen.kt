@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
+import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.SaveFolderCard
@@ -70,6 +71,33 @@ fun SettingsScreen(
             Modifier.testTag("settings.appColor")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
+        item("haptics") {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
+                .toggleable(settings.hapticFeedbackOnCommit, role = Role.Switch,
+                    onValueChange = viewModel::setHapticFeedback)
+                .testTag("settings.haptics")
+                .padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.accessibility_haptics), Modifier.weight(1f), style = QuietTheme.typography.body)
+                Switch(settings.hapticFeedbackOnCommit, onCheckedChange = null)
+            }
+        }
+        item("motion") {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
+                .toggleable(settings.respectReducedMotion, role = Role.Switch,
+                    onValueChange = viewModel::setRespectReducedMotion)
+                .testTag("settings.reduceMotion")
+                .padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.accessibility_reduce_motion), Modifier.weight(1f), style = QuietTheme.typography.body)
+                Switch(settings.respectReducedMotion, onCheckedChange = null)
+            }
+        }
+        item("haptics-intensity") { PreferenceRow(stringResource(R.string.accessibility_haptic_intensity),
+            when (settings.hapticIntensity) {
+                HapticIntensity.OFF -> stringResource(R.string.accessibility_haptic_off)
+                HapticIntensity.LIGHT -> stringResource(R.string.accessibility_haptic_light)
+                HapticIntensity.MEDIUM -> stringResource(R.string.accessibility_haptic_medium)
+                HapticIntensity.STRONG -> stringResource(R.string.accessibility_haptic_strong)
+            }, Icons.Rounded.Tune, { panel = "haptics-intensity" }, Modifier.testTag("settings.hapticIntensity")) }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
@@ -99,6 +127,11 @@ fun SettingsScreen(
             { panel = "about" }, Modifier.testTag("settings.about")) }
     }
     when (panel) {
+        "haptics-intensity" -> ChoiceDialog(stringResource(R.string.accessibility_haptic_intensity),
+            listOf(R.string.accessibility_haptic_off, R.string.accessibility_haptic_light,
+                R.string.accessibility_haptic_medium, R.string.accessibility_haptic_strong).map { stringResource(it) },
+            settings.hapticIntensity.ordinal,
+            { viewModel.setHapticIntensity(HapticIntensity.entries[it]); panel = null }, { panel = null })
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },
             settings.themeMode.ordinal, { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
         "app-color" -> AppearanceColorPicker(
