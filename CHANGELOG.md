@@ -169,3 +169,8 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP11 redirect-scoped downloader headers
+
+- Direct-download link inspection now keeps user-entered `Referer`, `Origin`, language and other custom headers confined to the original scheme/host/port. Cross-origin redirects preserve ordinary browser headers and URL-scoped cookie lookup but never replay initial custom extras. Added `PlatformHeaderPolicyTest` cases for matching origins, alternate hosts/subdomains, ports, scheme downgrades and malformed URLs.
+- Source fix is proposed on `wp/11-cross-origin-media-headers`; release build and tests are **NOT VERIFIED** until matching GitHub CI completes.
