@@ -36,7 +36,7 @@ PATTERNS = {
         r"\s*=\s*\{\s*\}",
     ),
     "hardcoded_color": re.compile(r"\bColor\s*\(\s*0x[0-9a-fA-F]{6,8}\s*\)"),
-    "android_import_in_core": re.compile(r"(?m)^\\s*import\\s+(?:android|androidx)\\."),
+    "android_import_in_core": re.compile(r"(?m)^\s*import\s+(?:android|androidx)\."),
     "hardcoded_ui_text": re.compile(
         r"\b(?:Text|BasicText)\s*\(\s*\"[^\"]{1,120}\"",
     ),
