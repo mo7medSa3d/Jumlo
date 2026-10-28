@@ -32,6 +32,7 @@ class KspCiVerification(unittest.TestCase):
         self.assertIsNotNone(command)
         self.assertIn("--no-parallel", command.group(0))
         self.assertIn("--max-workers=1", command.group(0))
+        self.assertIn('-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"', command.group(0))
         # The KSP2 engine must remain enabled rather than bypassed to get a green build.
         gradle = (ROOT / "gradle.properties").read_text()
         self.assertRegex(gradle, r"(?m)^ksp\.useKSP2=true\s*$")

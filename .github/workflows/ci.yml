@@ -67,8 +67,10 @@ jobs:
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
           python3 scripts/tests/test-ci-event-matrix.py
-          # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
+          # CI-only heap increase: full-media R8 release shrinker ran out of 2560 MB
+          # in run 40644691679. Do not disable minification, tests or 60 MB limits.
+          # --max-workers=1 prevents concurrent multi-GB Gradle workers.
+          ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :core-common:test :downloader-core:test :document-core:test :storage-core:test \
             :app:testDebugUnitTest :app:lintDebug :app:lintRelease \
             --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log

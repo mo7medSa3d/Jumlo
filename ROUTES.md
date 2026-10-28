@@ -1,6 +1,6 @@
 # Navigation and route inventory
 
-**Core test gate:** no route changes; unit tests guard names, download resume, PDF split boundaries and storage collision logic consumed by existing routes.
+**2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
 
 
 ## 2026-10-28 — WP06 CI contract (no route changes)
@@ -121,3 +121,5 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+**Core test gate:** no route changes; unit tests guard names, download resume, PDF split boundaries and storage collision logic consumed by existing routes.

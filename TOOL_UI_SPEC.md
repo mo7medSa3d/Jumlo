@@ -1,6 +1,6 @@
 # Tool UI specification
 
-**Core tests:** Naming, resume policy, PDF split plan and collision rules have new JVM regressions in mandatory CI; this cannot substitute actual Android tool action and result testing.
+**WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
 
 
 ## 2026-10-28 — WP06 quality gate contract (UI unaffected)
@@ -517,3 +517,5 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+**Core tests:** Naming, resume policy, PDF split plan and collision rules have new JVM regressions in mandatory CI; this cannot substitute actual Android tool action and result testing.
