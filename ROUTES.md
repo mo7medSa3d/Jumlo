@@ -2,6 +2,9 @@
 
 > WP06: No navigation routes changed. `ToolRoute("pdf_compress")` preserves its import/configure/run/result flow; the job now classifies `UNCHANGED` based on actual bytes even if some embedded images were skipped. Device interaction verification remains pending.
 
+**WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
+
+
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
