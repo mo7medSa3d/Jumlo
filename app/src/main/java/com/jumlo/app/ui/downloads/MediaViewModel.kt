@@ -109,7 +109,8 @@ data class MediaUiState(
                 preferDesktop = sessionStore.isPreferDesktopUa(),
                 cookieHeader = sessionStore.cookieHeaderFor(uri.toString()),
                 customHeaders = extraMap,
-                compatibilityAttempt = profileIndex
+                compatibilityAttempt = profileIndex,
+                customHeaderOrigin = url // never forward custom headers to cross-origin redirect targets
             ).forEach { (k, v) -> reqBuilder.header(k, v) }
             val req = if (useRangeGet) reqBuilder.get().header("Range", "bytes=0-0").build() else reqBuilder.head().build()
             probeClient.executeCancellable(req,check,remainingMillis()).use { response ->

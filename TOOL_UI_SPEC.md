@@ -1,6 +1,6 @@
 # Tool UI specification
 
-**WP03 capability parity:** 45 registered tools remain accessible. Phantom `pdf_compare`/`pdf_redact` dispatch arms removed; Files Trash remains UI navigation, never background processing. JVM tests guard policy; device workflows pending.
+**WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
 
 
 ## 2026-10-28 — WP06 quality gate contract (UI unaffected)
@@ -517,3 +517,5 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+**WP03 capability parity:** 45 registered tools remain accessible. Phantom `pdf_compare`/`pdf_redact` dispatch arms removed; Files Trash remains UI navigation, never background processing. JVM tests guard policy; device workflows pending.
