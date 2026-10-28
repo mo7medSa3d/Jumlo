@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP09 restores the reproducible 5-scan/200-page Android compression preflight. This adds **no new UI implementation or test PASS**; all device-dependent `pdf_compress` interactions remain NOT VERIFIED.
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
