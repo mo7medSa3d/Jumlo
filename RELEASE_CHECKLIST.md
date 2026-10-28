@@ -65,3 +65,5 @@ No publishing, external messaging, service deployment or signing-key creation fo
 - [ ] Record successful `Android UI and persistence smoke` workflow on API 26, API 35 and API 36 at the final release candidate SHA; preserve logcat and actual XML results.
 - [ ] Execute the **complete** device test suite with hash-verified five compression fixtures and large-PDF memory checks; smoke is not full qualification.
 - [ ] Validate camera/scanner, print providers, TalkBack and all tool flows on qualifying physical hardware; GitHub software emulator results cannot substitute.
+
+- [ ] Inspect matching API26/API35/API36 XML results for PDF, Office, image, ZIP, scanner, file publication and print-adapter tests. Preserve failures/skips, especially the SDK29+ reader-provider method on API26. Do not mistake this lane for the five compression scan benchmark fixtures or physical hardware acceptance.
