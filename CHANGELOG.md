@@ -1,5 +1,16 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP11 — origin-bound downloader custom headers
+
+Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers are now accepted only on the exact original scheme/host/port. Cross-origin redirects use regular browser headers, while URL-scoped cookie retrieval stays separate. Tests cover normalised default ports, malicious subdomains and real two-hop redirect simulation. Earlier CI passed on older SHA `6c689c2e`; current-head CI pending.
+
+
+## 2026-10-28 — WP06 CI guard consolidation
+
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
+
+
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
@@ -173,6 +184,16 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP12 single CI execution per pull request
+
+- Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
+- Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
+
+## 2026-10-28 — WP-08 CI-only R8 heap stabilization
+
+- Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
+- Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
 ## 2026-10-28 — WP12 document filename bidi-spoof protection
 
