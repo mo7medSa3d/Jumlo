@@ -11,22 +11,22 @@ class CopyDestinationPolicyTest {
 
     @Test fun keepBothGeneratesSafeDeterministicName() {
         assertEquals("Archive (1).zip", CopyDestinationPolicy.name(
-            "source-a", "Archive.zip", existing, move = false, CollisionPolicy.KEEP_BOTH))
+            "source-a", "Archive.zip", existing, move = false, policy = CollisionPolicy.KEEP_BOTH))
     }
 
     @Test fun skipNeverSilentlyOverwritesMatchingDestination() {
         assertNull(CopyDestinationPolicy.name(
-            "source-a", "archive.zip", existing, move = false, CollisionPolicy.SKIP))
+            "source-a", "archive.zip", existing, move = false, policy = CollisionPolicy.SKIP))
     }
 
     @Test fun moveToSameDocumentAndUnsafeAtomicReplaceFailClosed() {
         assertThrows(IllegalArgumentException::class.java) {
             CopyDestinationPolicy.name("source-b", "Archive.zip", existing,
-                move = true, CollisionPolicy.KEEP_BOTH)
+                move = true, policy = CollisionPolicy.KEEP_BOTH)
         }
         assertThrows(IllegalArgumentException::class.java) {
             CopyDestinationPolicy.name("source-a", "Archive.zip", existing,
-                move = false, CollisionPolicy.REPLACE)
+                move = false, policy = CollisionPolicy.REPLACE)
         }
     }
 }
