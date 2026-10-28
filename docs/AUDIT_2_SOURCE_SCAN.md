@@ -278,3 +278,8 @@ Files attempted: 14, failures: 0, candidates: 8.
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualImageSettings.kt:193`: `drawRoundRect(Color.White,Offset((size.width-w)/2,0f),Size(w,h),androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualWatermarkEditor.kt:146`: `Box(contentAlignment=Alignment.Center) {if(chosen) Icon(Icons.Rounded.Check,null,tint=if(hex=="#FFFFFF") Color.Black else Color.White)}`
 - **TEXT** `app/src/main/java/com/jumlo/app/ui/workspace/VisualWatermarkEditor.kt:158`: `items(listOf(-90,-45,0,45,90)) {angle->FilterChip(border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})`
+
+## Batch 182–195
+
+Files attempted: 14, failures: 0, candidates: 0.
+
