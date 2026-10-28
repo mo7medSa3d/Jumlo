@@ -1,5 +1,17 @@
 # Jumlo — verification report
 
+## 2026-10-28 — WP07 source inventory verification
+
+| Gate | Expected evidence | Status |
+|---|---|---|
+| `python3 -m unittest discover -s scripts/tests -p test_audit_source.py -v` | 5 parser/report contracts including exact line numbers and token exclusions | **NOT RUN**, CI pending |
+| `python3 scripts/audit_source.py` | Full source candidate list `build/reports/source-audit.{json,md}` uploaded via GitHub Actions | **NOT RUN**, CI pending |
+| Whole-app dead button / settings behavioral sweep | Compose/instrumentation actions, actual side effects and output inspection | **NOT VERIFIED** by static analysis |
+| Existing Android build/unit/lint/size | Kept separate; no Android gate weakened | **NOT RUN on this branch** at authoring |
+
+Static candidate output cannot be used to mark the 45 partial tools in AUDIT_2.md as working.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
