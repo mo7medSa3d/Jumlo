@@ -6,7 +6,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 PREF = ROOT / "app/src/main/java/com/jumlo/app/data/preferences/UserPreferencesRepository.kt"
 VM = ROOT / "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt"
-MODEL = ROOT / "app/src/main/java/com/jumlo/app/model/Models.kt"
+MODEL = ROOT / "app/src/main/java/com/jumlo/app/model/WorkspaceDraft.kt"
 ANDROID_TEST = ROOT / "app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt"
 
 
@@ -31,7 +31,7 @@ class InertPreferencesTest(unittest.TestCase):
     def test_real_per_job_wifi_policy_not_removed(self):
         model = MODEL.read_text(encoding="utf-8")
         vm = VM.read_text(encoding="utf-8")
-        self.assertIn("wifiOnly: Boolean", model)
+        self.assertIn("val wifiOnly:Boolean", model)
         self.assertIn("wifiOnly=current.wifiOnly", vm)
 
 
