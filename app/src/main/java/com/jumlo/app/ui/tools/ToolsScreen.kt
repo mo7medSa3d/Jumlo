@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
+import com.jumlo.app.core.ToolCatalogue
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.UtilityTool
@@ -93,18 +94,24 @@ internal fun ToolsCatalogue(
     val byId = remember(tools) { tools.associateBy { it.id } }
     val filtered = remember(tools, rankedToolIds, search) {
         val ranks = rankedToolIds.withIndex().associate { it.value to it.index }
+        val query = search.trim()
         tools.withIndex().filter { (_, tool) ->
-            search.isBlank() || listOf(tool.titleEn, tool.titleAr, tool.subtitleEn, tool.subtitleAr)
-                .any { it.contains(search.trim(), ignoreCase = true) }
+            if (query.isEmpty()) {
+                ToolCatalogue.isListed(tool.id)
+            } else {
+                ToolCatalogue.isSearchable(tool.id) &&
+                    listOf(tool.titleEn, tool.titleAr, tool.subtitleEn, tool.subtitleAr)
+                        .any { it.contains(query, ignoreCase = true) }
+            }
         }.sortedWith(compareBy<IndexedValue<UtilityTool>> { ranks[it.value.id] ?: Int.MAX_VALUE }
             .thenBy { it.index }).map { it.value }
     }
     val pinned = remember(tools, pinnedToolIds) {
-        pinnedToolIds.mapNotNull { byId[it] }.filter { CapabilityRegistry.enabled(it.id) }
+        pinnedToolIds.mapNotNull { byId[it] }.filter { CapabilityRegistry.enabled(it.id) && ToolCatalogue.isListed(it.id) }
     }
     val recent = remember(tools, recentToolIds, pinned) {
         val pinnedIds = pinned.map { it.id }.toSet()
-        recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds }.take(8)
+        recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds && ToolCatalogue.isListed(it.id) }.take(8)
     }
     val featuredIds = (pinned.map { it.id } + recent.map { it.id }).toSet()
     val largeText = LocalDensity.current.fontScale >= 1.6f
