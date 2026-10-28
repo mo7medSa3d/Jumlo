@@ -62,7 +62,6 @@ Every registered entry has a row. Backend identifiers, source files and plans ar
 | `file_trash` — Managed Trash Info | partial | `CapabilityRegistry.kt:56`; `FileExtrasHandler.kt` (source; not a device PASS) | Navigation alias: test restore, permanent deletion and source isolation; consider pruning alias. |
 | `file_drive` — Google Drive Import / Export | partial | `CapabilityRegistry.kt:57`; `FileExtrasHandler.kt` (source; not a device PASS) | Explicit approved-account authorized tests: import, export, revoked token, offline failure, no credential leaks. |
 | `sha256` — undefined | partial | `CapabilityRegistry.kt:59`; `ArchiveOperationHandler.kt` (source; not a device PASS) | Verify expected digest entry, valid/mismatch results and clipboard/published report. |
-| `sha256` — SHA-256 verification | partial | `CapabilityRegistry.kt:59`; `ArchiveOperationHandler.kt` (source; not a device PASS) | Verify expected digest entry, valid/mismatch results and clipboard/published report. |
 
 ## 2. Routes, screens and overlays
 
