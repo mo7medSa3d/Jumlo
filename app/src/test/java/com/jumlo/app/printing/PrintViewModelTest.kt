@@ -176,6 +176,17 @@ class PrintViewModelTest {
         assertEquals("1-2",vm.state.value.options.range)
         assertEquals(listOf(3,1),vm.state.value.pages.map { it.sourcePage })
     }
+    @Test fun moveButtonKeepsTheSameSourcePagesSelectedAfterReorder()=runTest(dispatcher) {
+        val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
+        vm.attach(source);advanceUntilIdle()
+        vm.setPageSelection(listOf(0,2));advanceUntilIdle()
+        assertEquals(listOf(1,3),vm.state.value.pages.map { it.sourcePage })
+        vm.movePage(0,2);advanceUntilIdle()
+        assertEquals(listOf(2,3,1),vm.state.value.orderedPages.map { it.sourcePage })
+        assertEquals("2-3",vm.state.value.options.range)
+        assertEquals(listOf(3,1),vm.state.value.pages.map { it.sourcePage })
+    }
+
     @Test fun draggedPageOrderRecoversFromStaleOrDuplicateSavedValues()=runTest(dispatcher) {
         val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
         vm.attach(source);advanceUntilIdle()
