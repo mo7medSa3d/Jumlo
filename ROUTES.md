@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP02 2026-10-28:** `ToolRoute("dl_media")` is unchanged; `MediaWorkspace` now selects best available media automatically and exposes video/audio, codec and quality overrides only after Advanced expansion. This is a source-level navigation/interaction update; full-device completion remains NOT VERIFIED.
+
+
 This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
 
 Authoritative implementation: [JumloNavHost.kt](app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt), [QuietNavigation.kt](app/src/main/java/com/jumlo/app/ui/components/QuietNavigation.kt), [MainActivity.kt](app/src/main/java/com/jumlo/app/MainActivity.kt), and [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
