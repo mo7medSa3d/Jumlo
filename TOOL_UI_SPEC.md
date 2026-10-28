@@ -495,3 +495,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+## 2026-10-28 — WP08 no tool-contract changes
+
+The KSP2 worker-serialization CI change does not alter any downloader, document, scanner, Files or printing interaction. Tool qualification remains unchanged until passing Android/device artifacts prove the relevant flows.
