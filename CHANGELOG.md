@@ -198,3 +198,7 @@ TEST_REPORT.md.
 ## 2026-10-28 WP08 — Scanner thumbnail native Bitmap cleanup
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
+
+## 2026-10-28 WP03 — remove ghost PDF dispatch routes
+
+Remove unreachable `pdf_compare`/`pdf_redact` dispatcher branches and navigation-only `file_trash` processing branch. Preserve all registered tools, including Files Trash as navigation. Add JVM capability policy regression. Earlier PR head CI passed at `e9c776ba`; post-merge-base SHA CI pending.
