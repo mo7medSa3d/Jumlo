@@ -121,3 +121,5 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+**2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
