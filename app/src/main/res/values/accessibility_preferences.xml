@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_haptics">Haptic feedback</string>
+    <string name="accessibility_reduce_motion">Reduce motion</string>
+    <string name="accessibility_haptic_intensity">Vibration strength</string>
+    <string name="accessibility_haptic_off">Off</string>
+    <string name="accessibility_haptic_light">Light</string>
+    <string name="accessibility_haptic_medium">Medium</string>
+    <string name="accessibility_haptic_strong">Strong</string>
+</resources>
