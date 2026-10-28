@@ -109,3 +109,7 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## 2026-10-28 — WP02a scope note
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
