@@ -7,3 +7,8 @@
 Read 14 files; fetch failures 0; candidates 0.
 
 
+
+## Batch 14–27
+
+Files attempted: 14, failures: 0, candidates: 0.
+
