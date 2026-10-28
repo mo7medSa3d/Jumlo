@@ -131,7 +131,7 @@ fun AppearanceColorPicker(
                     hexDraft = M3ColorFactory.hexString(M3ColorFactory.seedFor("BLUE"))
                 }) { Text(stringResource(R.string.pref_app_color_reset)) }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { onSelect(hexDraft) }) {
+                TextButton(onClick = { onSelect(hexDraft) }, enabled = M3ColorFactory.hexColor(hexDraft) != null) {
                     Text(stringResource(R.string.action_apply), fontWeight = FontWeight.SemiBold)
                 }
             }

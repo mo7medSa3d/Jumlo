@@ -72,9 +72,10 @@ class RedesignWiringTests(unittest.TestCase):
     def test_system_motion_and_accessible_haptics_are_composition_policies(self):
         act=code('MainActivity.kt')
         self.assertIn('LocalReducedMotion provides',act)
-        self.assertIn('LocalAppHapticsEnabled provides true',act)
-        self.assertIn('LocalReducedMotion provides systemReduced',act)
-        self.assertNotIn('settings.respectReducedMotion',act)
+        self.assertIn('LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit',act)
+        self.assertIn('LocalReducedMotion provides (systemReduced || settings.respectReducedMotion)',act)
+        self.assertIn('settings.respectReducedMotion',act)
+        self.assertIn('LocalHapticIntensity provides settings.hapticIntensity',act)
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietStates.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietButtons.kt'))
     def test_english_and_arabic_redesign_strings(self):
