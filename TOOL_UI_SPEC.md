@@ -498,3 +498,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP08 core guarantees, not device qualification
+
+Standalone JUnit4 modules now exercise the underlying safe-name, byte-range restart, PDF split-plan and storage-collision policy logic, invoked by tool backends. These do not independently establish full Pick → Configure → Run → Result acceptance and do not validate Android-backed PDF rendering or SAF providers.
