@@ -145,3 +145,9 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP01 (release gates; awaiting CI)
+
+- Restored actual 60,000,000-decimal-byte failure checks for full-media compact and release APKs in `app/build.gradle.kts` while preserving payload/ABI validation.
+- Switched GitHub Actions main verification from `:app:lintDebug` to `:app:lintRelease`; enabled work-package branch CI events.
+- Source changes are **NOT VERIFIED** by a completed new workflow until the PR check finishes. No APK size or compile result is asserted here.
