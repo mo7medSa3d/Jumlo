@@ -1,6 +1,6 @@
 # Tool UI specification
 
-**2026-10-28 WP03 capability contract:** Registry-driven tool UI is unchanged; `pdf_compare`/`pdf_redact` ghost dispatcher entries and `file_trash` processing branch were retired. The Files Trash UI remains reachable. New `CapabilityContractTest` JVM assertions are pending fresh merged-base CI; they are not end-to-end device qualification.
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
@@ -505,3 +505,10 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+**2026-10-28 WP03 capability contract:** Registry-driven tool UI is unchanged; `pdf_compare`/`pdf_redact` ghost dispatcher entries and `file_trash` processing branch were retired. The Files Trash UI remains reachable. New `CapabilityContractTest` JVM assertions are pending fresh merged-base CI; they are not end-to-end device qualification.
+
+

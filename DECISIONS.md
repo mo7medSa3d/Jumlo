@@ -1,6 +1,6 @@
 # Decisions — 24 October 2026
 
-**2026-10-28 WP03 capability contract:** A registry/navigation-only action must never enqueue a processing job. `pdf_compare` and `pdf_redact` are not registered PDF capabilities and must fail closed. `file_trash` is navigation into Files, not a processing operation. Remove only unreachable dead dispatcher code, not any registered feature. Test these invariants before release.
+**2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
 
 
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
@@ -99,3 +99,6 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+**2026-10-28 WP03 capability contract:** A registry/navigation-only action must never enqueue a processing job. `pdf_compare` and `pdf_redact` are not registered PDF capabilities and must fail closed. `file_trash` is navigation into Files, not a processing operation. Remove only unreachable dead dispatcher code, not any registered feature. Test these invariants before release.
+
+

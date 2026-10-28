@@ -1,9 +1,8 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 WP03 — Capability registry/dispatch parity
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
-- Removed ghost `pdf_compare` and `pdf_redact` dispatch arms that were not registered as executable PDF handlers; removed processing dispatch for navigation-only `file_trash`.
-- Removed ghost `pdf_compare` ID from CapabilityPolicy, leaving existing user-facing tools intact. Added JVM registry/policy unit tests. Current merged-base CI PENDING; earlier branch run #40640675038 succeeded at prior head.
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -170,3 +169,13 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+## 2026-10-28 WP03 — Capability registry/dispatch parity
+
+- Removed ghost `pdf_compare` and `pdf_redact` dispatch arms that were not registered as executable PDF handlers; removed processing dispatch for navigation-only `file_trash`.
+- Removed ghost `pdf_compare` ID from CapabilityPolicy, leaving existing user-facing tools intact. Added JVM registry/policy unit tests. Current merged-base CI PENDING; earlier branch run #40640675038 succeeded at prior head.
+
+
