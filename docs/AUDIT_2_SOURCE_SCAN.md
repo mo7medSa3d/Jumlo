@@ -36,3 +36,17 @@ Files attempted: 14, failures: 0, candidates: 4.
 - **TEXT** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:538`: `Text("${page.rotationDegrees}°", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)`
 - **COLOR** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:637`: `}},contentAlignment=Alignment.Center) {Box(Modifier.size(12.dp).background(accent,CircleShape).border(2.dp,Color.White,CircleShape))}`
 - **COLOR** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:661`: `Box(modifier.background(Color.White),contentAlignment=Alignment.Center) {`
+
+## Batch 84–97
+
+Files attempted: 14, failures: 0, candidates: 9.
+
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:98`: `Color(0xFF0C1231), Color(0xFF231D66), Color(0xFF4434A9)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:106`: `Brush.radialGradient(listOf(Color(0xFF6B61EB).copy(alpha = .37f), Color.Transparent)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:113`: `Brush.radialGradient(listOf(Color(0xFF3EABD0).copy(alpha = .16f), Color.Transparent)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:124`: `.background(Color(0xFF88F5D1).copy(alpha = breath + .37f), CircleShape)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:128`: `.size(5.dp).background(Color.White.copy(alpha = .25f), CircleShape)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:142`: `.background(Brush.linearGradient(listOf(Color(0xFF6452E8), Color(0xFF8F68F4)))),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:156`: `color = Color.White`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:160`: `.background(Color(0xFF81F2CE), CircleShape)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:166`: `color = Color(0xFFE0E5FF), textAlign = TextAlign.Center`
