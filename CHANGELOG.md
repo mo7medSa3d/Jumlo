@@ -145,3 +145,10 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP04 downloader automatic defaults (pending CI)
+
+- Default new downloads to the best usable actual source format, preserving existing explicitly saved resolution limits. Set default video quality BEST in settings/MediaViewModel/workspace.
+- The downloader now shows the metadata/preview and one Download action without exposing media-type, quality-grid, PDF/image transforms or filename controls by default. Those controls remain accessible through an Advanced expander; no capability or extraction runtime was removed.
+- Added localized EN/AR copy for Advanced and auto-selection. Added AutoBestMediaChoiceTest covering highest audible video, constrained resolution and audio-only sources.
+- Tests have not run for this branch. Live provider and device media/notification acceptance remain blocked/not verified.
