@@ -74,3 +74,7 @@ Primary policy references, checked on the review date:
 - [ML Kit document scanner](https://developers.google.com/ml-kit/vision/doc-scanner/android)
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
+
+## 2026-10-28 — Reader bookmarks
+
+The PDF viewer locally persists a bounded history of at most 64 last-read page indices. Each entry uses a SHA-256 hash of a document URI as its key; the URI itself, file name and contents are not written to this bookmark DataStore. No new Android permissions or network transmission are introduced by reader bookmarking. The history remains in app-private storage and is deleted with the app data.
