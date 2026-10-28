@@ -152,3 +152,10 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP05 reader position persistence (CI pending)
+
+- Replace a process-local unbounded Map of raw document URIs and last-read pages with an app-private DataStore of at most 64 SHA-256-keyed reader positions.
+- On opening a PDF, load its previous page before allowing new page values to be persisted; coalesce rapid scroll updates. Keep long-page lazy rendering and error UI unchanged.
+- Add ReaderPositionStoreTest Android instrumentation for saved page restoration, per-URI isolation and opaque keys.
+- Real close/reopen and process-death tests are pending; a source regression does not establish device acceptance.
