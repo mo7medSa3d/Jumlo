@@ -113,3 +113,7 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+## 2026-10-28 — WP12 filename validation
+
+No navigation or route changes. File rename, archive extraction and automatically generated output names continue through `SafeNames`; invisible bidi-spoof formatting is now invalid. Arabic and Hebrew names remain supported.

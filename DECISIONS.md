@@ -99,3 +99,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## WP12 — Unicode filename policy
+
+Bidirectional formatting controls can disguise `.pdf`/other suffixes, so reject U+202A–U+202E, U+2066–U+2069 and U+200E/U+200F/U+061C at filename policy boundaries. Ordinary RTL letters and zero-width non-joiner used in text remain permitted. Preserve all file operations; do not remove tools or force English filenames.

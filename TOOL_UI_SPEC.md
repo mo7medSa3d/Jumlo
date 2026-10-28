@@ -509,3 +509,7 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+## WP12 filename spoof prevention
+
+Files rename/import and archive entry naming reject invisible bidirectional formatting controls rather than allowing an extension to be visually reversed. Keep readable Arabic/Hebrew/emoji names. `INVALID_FILENAME` is a validation response; tool UI should show a localized actionable message. Error UI has not been re-verified on device.

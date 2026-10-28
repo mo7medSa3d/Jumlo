@@ -74,3 +74,7 @@ Primary policy references, checked on the review date:
 - [ML Kit document scanner](https://developers.google.com/ml-kit/vision/doc-scanner/android)
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
+
+## WP12 secure output names — 2026-10-28
+
+An imported filename may include invisible Unicode formatting characters that visually reverse its apparent extension. Jumlo now rejects bidi overrides/isolates in stored or extracted entry names while preserving ordinary Arabic/Hebrew Unicode filenames; no new permission is requested. Security regression tests are queued; this does not replace malware scanning or provider validation.

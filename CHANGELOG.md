@@ -173,3 +173,8 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP12 document filename bidi-spoof protection
+
+- Reject invisible Unicode bidirectional overrides and isolates (including U+202E) from file and archive entry names without prohibiting ordinary Arabic/Hebrew characters or emoji. Validate before UTF-8 truncation; malformed names return INVALID_FILENAME.
+- Added pure-JVM `SafeNamesBidiControlTest` (4 methods) including rename, archive entry and legitimate RTL examples. CI not yet verified on this SHA.
