@@ -1,11 +1,20 @@
 # Changelog — current production-hardening candidate
 
-- Follow-up UX: filename override remains editable under Advanced; default run uses the clean source-derived name. Advanced toggles are full-width with 48 dp minimum touch targets.
-## 2026-10-28 WP02 — automatic download format selection (CI pending)
+## WP02 — Auto-best downloader (2026-10-28, integration CI pending)
+- Fresh media sessions default to `BEST`; the inspected highest usable video/audio is selected automatically. Video/audio, quality, re-encoding and filename overrides are available behind a 48dp Advanced control. Source-derived filename is the default. Paired English/Arabic strings; six new JUnit tests. Device/live-provider verification remains required.
 
-- Fresh downloads use best-available video (prefer a voiced stream, or mux eligible extractor video/audio), while audio-only sources auto-select the highest actual bitrate; the default is `BEST` rather than 1080p. Explicit saved user resolution overrides remain available.
-- Link inspection chooses the available format automatically, with video/audio mode, output audio encoding, and quality cards under an optional Advanced expander. PDF/image direct-download conversions are also Advanced; original file is downloaded by default. EN/AR strings are paired.
-- Added `MediaBestSelectionTest` with 6 JUnit checks of best/video/audio/capped/unavailable behavior. **NOT RUN in this source-edit session**; require new GitHub CI result. Live platform extraction, Android notification/resume/pause and foreground-service behavior remain NOT VERIFIED.
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
+
+
+### 2026-10-28 — wp/01 release gate correction (verification pending)
+
+- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
+- Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
+- These are source changes, **not yet a passing CI result**; capture the work-package run before merging.
 
 
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes

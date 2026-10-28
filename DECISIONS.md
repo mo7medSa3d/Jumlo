@@ -97,6 +97,6 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
-## WP02 2026-10-28 — automatic media selection
 
-Default to the actual highest eligible available video quality rather than a fixed 1080p cap; prefer video with audio when possible, and use the best bitrate for audio-only links. Keep explicit user quality overrides, format choice and audio-only mode reachable through Advanced. Preserve direct original files unless the user deliberately selects a conversion. Do not fabricate a format when the extractor gives no usable formats. This is a product choice, not a claim of live-provider qualification.
+## WP02 — Automatic source quality and optional Advanced controls (2026-10-28)
+The default video preference is `BEST`, selecting the highest real available source with audio when possible rather than silently capping at 1080p. Audio-only chooses best available bitrate. Preserve explicit user-selected caps, manual format and name as optional Advanced settings. Direct PDF/images download the original by default. Do not invent formats when inspection fails, and do not count source-level implementation as a live-provider pass.

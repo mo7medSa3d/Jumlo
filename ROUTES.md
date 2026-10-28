@@ -1,7 +1,11 @@
 # Navigation and route inventory
 
-- WP02 downloader interaction: automatic filename is used by default, with manual override in Advanced (no route change).
-**WP02 2026-10-28:** `ToolRoute("dl_media")` is unchanged; `MediaWorkspace` now selects best available media automatically and exposes video/audio, codec and quality overrides only after Advanced expansion. This is a source-level navigation/interaction update; full-device completion remains NOT VERIFIED.
+**WP02 downloader:** typed tool routes are unchanged. `MediaWorkspace` automatically chooses the highest eligible inspected source format, with optional Advanced video/audio, codec, quality and filename controls. Verify Back/RTL and deep-link routes on device; NOT RUN here.
+
+**WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
+
+
+> Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
 This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
