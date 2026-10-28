@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP11 downloader cross-origin header policy
+
+**CODE WRITTEN:** `PlatformHeaderPolicy.sameOrigin` checks normalized origin and rejects credentials, with `customHeaderOrigin` passed through stream/probe requests. `PlatformHeaderPolicyTest` covers scheme/host/port changes and an actual mock transport 302-hop chain. Earlier Actions [#40643832677](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643832677) passed for older SHA `6c689c2e`. **Current merged-base SHA CI NOT VERIFIED**, real HTTP/cookie/live media flows NOT RUN.
+
+
 ## 2026-10-28 — WP06 lint and size source-guard integration
 
 The older WP06 commit `7fbab51b8e233f38a6a2a7a58120164ef5e12c02` completed both [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746) successfully. This follow-up merges the established KSP2 serialization fix from main, retains full-size checks, adds `:app:lintDebug`, and runs `scripts/test-compact-configuration.py` as a required CI step. **Current combined head: NOT VERIFIED until a fresh run completes.** Device tests, external download integrations, signing and Play Console remain NOT RUN.
@@ -150,6 +155,10 @@ run here).
 | Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
 
 The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.
+
+## 2026-10-28 — WP-08 R8 release CI OOM
+
+[PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
 
 ## 2026-10-28 — WP13 page-range memory safety
 
