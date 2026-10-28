@@ -96,3 +96,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+49. WP07 adds a repeatable, informational source-inventory workflow instead of inferring an exhaustive static sweep from incomplete GitHub code search. Candidates include unimplemented markers, empty callbacks, UI literals and out-of-theme Color constructors. Findings must be manually classified in AUDIT_2; the scanner does not replace Android lint, tests or device qualification.
