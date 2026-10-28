@@ -5,7 +5,7 @@
 - The missing `verification/current/device/preflight-source/README.md` link has been restored. It documents generation, hash verification, device staging and the exact existing `PdfCompressionDeviceTest` methods.
 - **NO DEVICE EXECUTION** is claimed. The five scan PDFs are **not** committed; their fingerprints must be generated, captured and verified per run. The previous README wording claiming a preserved supplied-hash manifest was not supported by this repository and is corrected.
 - The generated 200-page corpus, guest/host free-space planning, OOM/performance measurements and Android API-specific outcomes all remain **BLOCKED / NOT RUN** until real device logs and artifacts exist.
-
+- [PR #40 CI #40642228501](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642228501) completed **PASS** for assembleDebug, testDebugUnitTest (FROM-CACHE), lintRelease, full-media compact **55,368,299** and release **55,356,059** bytes (<60,000,000). Device fixture tests still NOT RUN.
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -123,3 +123,7 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP02a regression status
+
+- `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.

@@ -4,8 +4,7 @@
 
 - Restore the previously broken README and release-checklist link `verification/current/device/preflight-source/README.md`.
 - Provide real JDK corpus generation and per-run SHA-256 recording, ADB staging, host/guest free-space safeguards, 5-scan and 200-page instrumentation commands, evidence handling and explicit blocked conditions.
-- This is **documentation restoration only**, not a new executed fixture, compression result, device benchmark, or production approval.
-
+- This is **documentation restoration only**, not a device benchmark or production approval. [PR #40 CI #40642228501](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642228501) passed all build/unit/lint/size gates (testDebugUnitTest cached, no emulator).
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -166,3 +165,8 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
