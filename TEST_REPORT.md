@@ -109,3 +109,14 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP05 PDF reader position
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| ReaderPositionStoreTest.lastPageSurvivesSeparateReadsAndIsIsolatedPerDocument | NOT RUN | Instrumentation test commits to DataStore read/write and second URI isolation |
+| ReaderPositionStoreTest.opaqueKeyNeverIncludesOriginalUriText | NOT RUN | Keys are SHA-256 of the source URI, not raw paths/URLs |
+| Reopen PDF after process death | NOT RUN | PdfViewerScreen reads persisted saved page before enabling writes |
+| 200-page memory / scroll | NOT RUN | Existing bounded PdfReaderSession retained; physical runtime/performance still unqualified |
+
+Last-page writes are coalesced; very rapid exit before an asynchronous write is committed remains a risk until measured on device. Reader position data is app-private, capped, and not synced.
