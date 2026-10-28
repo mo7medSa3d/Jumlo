@@ -127,6 +127,15 @@ class DownloadOperationHandler @Inject constructor(
                 if(DownloadRestartPolicy.resetUncommittedFiles(context.downloadRestartGeneration,journalGeneration,
                         partial,journal,File(folder,"$index.pending"),context.checkCancellation)) old.clear()
                 val urlDigest=Hashing.sha256(ByteArrayInputStream(url.toByteArray(Charsets.UTF_8)))
+                // Old journal formats predate the encoded-byte safety marker.
+                // Restart those incomplete transfers from zero rather than risk a
+                // Range based on decompressed gzip output byte counts.
+                if(partial.length()>0L && old.getProperty("resumeSafe")!="true") {
+                    context.checkCancellation()
+                    require(partial.delete()) { "DOWNLOAD_RESTART_FAILED" }
+                    require(!journal.exists() || journal.delete()) { "DOWNLOAD_RESTART_FAILED" }
+                    old.clear()
+                }
                 if(partial.length()>0L && old.getProperty("urlDigest")!=urlDigest) throw OperationFailure("DOWNLOAD_RESTART_REQUIRED")
                 try {
                     var lastReport=0L
@@ -155,6 +164,7 @@ class DownloadOperationHandler @Inject constructor(
                                 metadata.strongEtag?.let { setProperty("etag",it) }
                                 metadata.lastModified?.let { setProperty("modified",it) }
                                 metadata.totalBytes?.let { setProperty("total",it.toString()) }
+                                setProperty("resumeSafe",metadata.resumeSafe.toString())
                                 // The type of a finished transfer is needed to publish it again.
                                 metadata.mimeType?.let { setProperty("mime",it) }
                                 metadata.contentDisposition?.let { setProperty("disposition",it) }
