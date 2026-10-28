@@ -104,7 +104,8 @@ fun SettingsScreen(
         "app-color" -> AppearanceColorPicker(
             current = settings.accentColor,
             onDismiss = { panel = null },
-            onSelect = { viewModel.setAccentColor(it); panel = null }
+            onSelect = { viewModel.setAccentColor(it); panel = null },
+            language = settings.language
         )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
