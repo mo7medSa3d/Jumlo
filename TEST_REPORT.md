@@ -109,3 +109,14 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP06 visual/contrast qualification
+
+| Scope | Status | Evidence |
+|---|---|---|
+| M3ColorFactoryTest exact WCAG reference contrast | NOT RUN until WP06 CI | White/#777777 ≈4.48:1 normal-text AA failure; source now uses exponent 2.4 |
+| M3ColorFactoryTest category tile AA light/dark | NOT RUN until WP06 CI | The test computes foreground/background contrast for all six accent families |
+| Light/Dark and Arabic RTL color previews | SOURCE PREVIEWS only | ui/theme/JumloPalettePreviews.kt; not exported screenshots |
+| 200% font, TalkBack/real-device AA | NOT RUN | Requires rendered UI and accessibility audit |
+
+This is not a WCAG certification claim. No screenshot was fabricated.
