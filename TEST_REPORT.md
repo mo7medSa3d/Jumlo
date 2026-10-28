@@ -109,3 +109,9 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP08 compiler isolation
+
+- Observed failed GitHub Actions run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) on design PR #33: `:app:kspDebugKotlin`, `:app:kspCompactKotlin`, and `:app:kspReleaseKotlin` each failed with `KaInvalidLifetimeOwnerAccessException` / `PSI has changed since creation` (job 122658516392). This is an observed CI failure, not a demonstrated functional defect in Jumlo's tool code.
+- WP08 changes **only the CI Gradle execution concurrency** and adds a source-level guard; the normal full-media compile, unit and release lint tasks remain mandatory. `scripts/test-ksp-ci-serialization.py` is invoked as an early CI step.
+- **NOT VERIFIED** until the exact WP08 commit's GitHub workflow completes: Android compilation, unit tests, lint, APK size, emulator/device, and KSP crash remediation. Recheck after merging other in-flight PRs because the issue may be specific to simultaneous KSP variants.
