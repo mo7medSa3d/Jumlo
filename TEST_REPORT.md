@@ -125,3 +125,9 @@ run here).
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP11 redirect custom-header isolation
+
+- Root cause: `MediaViewModel.probeDirect` loops through redirects and formerly called `PlatformHeaderPolicy.headersFor` with identical `extraMap` on every target; custom `Referer`/`Origin` values could be forwarded to a different origin, contrary to the policy comment. No evidence that a user credential was actually exposed; this is a source-confirmed data boundary weakness.
+- Fix: pass the original URL as `customHeaderOrigin`, compare normalized HTTP(S) scheme/host/effective port in Android-free `downloader-core`, drop custom extras on cross-origin hops, keep ordinary browser headers and separately URL-scoped CookieManager lookups. Added JVM regression methods `customRefererAndOriginDoNotLeakAcrossRedirectOrigins` and `originMatchingNormalizesPortsAndRejectsMalformedSources`.
+- `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintRelease`, compact/release full-media APK size gates: **NOT RUN at this PR SHA until GitHub Actions completes**. Live redirect integrations, user accounts and authorized provider access: **NOT VERIFIED**. No downloader feature or test was disabled.
