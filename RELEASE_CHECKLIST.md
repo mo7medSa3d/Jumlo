@@ -59,3 +59,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — Locale verification
+
+- [ ] Verify color preset labels track in-app EN/AR setting, including RTL after activity recreation; verify hex seeds remain readable, unchanged.
