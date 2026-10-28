@@ -102,3 +102,8 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+
+## 2026-10-28 — WP-04 ephemeral workspace state isolation
+
+No typed destinations or navigation contracts change. Within `ToolRoute`, the source preview, selected page source, batch-rename preview and Advanced UI state now have explicit tool/source keys. New input queues should not retain unrelated prior previews; Android UI test evidence is still required to qualify it.
