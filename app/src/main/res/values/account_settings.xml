@@ -39,6 +39,10 @@
     <string name="pref_reduce_motion">Reduce motion</string>
     <string name="pref_reduce_motion_summary">System motion preferences are always respected.</string>
     <string name="pref_haptics">Touch feedback</string>
+    <string name="pref_haptic_off">Off</string>
+    <string name="pref_haptic_light">Light</string>
+    <string name="pref_haptic_medium">Medium</string>
+    <string name="pref_haptic_strong">Strong</string>
     <string name="pref_media_service_hint">Service address</string>
     <string name="pref_media_service_help">The service resolves the formats; Jumlo downloads the chosen stream to your device. Leave empty to offer direct media links only.</string>
     <string name="pref_media_service">Downloader service</string>

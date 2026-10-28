@@ -64,9 +64,14 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
+          python3 scripts/test-ksp-ci-serialization.py
+          # The audit scanner itself is tested and scans every production JVM/Android source.
+          python3 -m unittest discover -s scripts/tests -p 'test_audit_source.py' -v
+          python3 scripts/audit_source.py --output build/reports/source-audit.json --markdown build/reports/source-audit.md
+          # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
           ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :app:testDebugUnitTest :app:lintRelease \
-            --no-daemon --console=plain 2>&1 | tee gradle.log
+            --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime
         shell: bash

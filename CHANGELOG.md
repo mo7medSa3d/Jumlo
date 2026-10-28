@@ -1,10 +1,15 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP07 source audit inventory (CI pending)
+## 2026-10-28 — WP07 reproducible static audit
 
-- Add a deterministic Python scanner for production Kotlin/Java files and unit tests; report literal colors, hardcoded Text labels, TODO/FIXME markers and no-op Compose callbacks by exact source line.
-- Add an informational GitHub workflow that publishes JSON and Markdown report artifacts on relevant source PRs; this does not bypass or replace Android compile/lint/device gates.
-- [Actions #40641509888](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641509888) executed the source scan: **5/5 parser tests PASS; 244 production files / 27 candidate matches**. The report artifact is retained; no matching row is automatically classified as a functional defect and Android release gates remain separate.
+- Source scanner `scripts/audit_source.py` reports file:line candidates across app and four pure core modules. Six regression tests cover markers, empty callbacks, UI literals, report determinism and Android-import boundaries.
+- [Initial audit run #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606): 244 files scanned, 27 candidates (20 hardcoded colors, 7 dynamic/inline text patterns; none matched basic TODO or empty-callback patterns). Candidate matches are not validated defects.
+- Test and scan invocation are now included in regular Android CI before Gradle; independent source inventory workflow still uploads report artifacts.
+
+
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -166,3 +171,12 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.

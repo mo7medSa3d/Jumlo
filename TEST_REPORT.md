@@ -1,15 +1,13 @@
 # Jumlo — verification report
 
-## 2026-10-28 — WP07 source inventory verification
+## WP07 — source audit, 2026-10-28
 
-| Gate | Expected evidence | Status |
-|---|---|---|
-| `python3 -m unittest discover -s scripts/tests -p test_audit_source.py -v` | 6 parser/report contracts including exact line numbers, token exclusions and Android-free core boundary | **PASS 5/5**, [Actions #40641509888](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641509888) |
-| `python3 scripts/audit_source.py` | 244 production files scanned, 27 candidate source matches; [artifact #12795561990](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641509888/artifacts/12795561990) | **PASS as source scan**, findings require manual triage |
-| Whole-app dead button / settings behavioral sweep | Compose/instrumentation actions, actual side effects and output inspection | **NOT VERIFIED** by static analysis |
-| Existing Android build/unit/lint/size | Kept separate; no Android gate weakened | **NOT RUN on this branch** at authoring |
+[CI #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606) **PASS** for five initial scanner unit tests and 244-file source scan: 27 candidates (20 color constants, 7 inline/dynamic text patterns), none from the basic TODO/empty-callback rules. New sixth Android-import contract is added to regular CI but **NOT RUN** on this reconciled branch until its new GitHub run completes. No device/runtime tool pass is inferred from a regex scan.
 
-Static candidate output cannot be used to mark the 45 partial tools in AUDIT_2.md as working.
+
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -128,3 +126,17 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP02a regression status
+
+- `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.

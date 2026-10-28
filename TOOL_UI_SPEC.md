@@ -1,6 +1,9 @@
 # Tool UI specification
 
-> WP07 adds a generated Kotlin/Java source inventory for TODO markers, no-op callbacks, literal Text and UI colors. The inventory is *review-required*, not proof of live previews, accessibility or real processing. Android UI tests remain authoritative for tool flows.
+> WP07: The generated source inventory captures file/line candidates but does not replace 45-tool real input→output verification. Twenty literal colors and seven inline-text patterns require design/context triage, not automatic removal.
+
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
+
 
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
@@ -10,7 +13,7 @@
 
 ## Scope and evidence
 
-This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
+This is the source-level contract for the **45 entries currently registered** in `CapabilityRegistry.tools`. The current `CapabilityPolicy` marks the registered entries available in source; **source availability is not an end-to-end runtime PASS**. Prior references to 47 tools / 44 enabled and three disabled describe superseded historical revisions. Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
 
 The catalogue is one keyed lazy grid organised into the brief's sections — Scan &
 Capture, Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files —
@@ -500,3 +503,11 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP02a setting behavior
+
+The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
