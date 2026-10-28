@@ -19,6 +19,12 @@
 
 Source evidence: `MainActivity.kt`, `model/AppFeedbackPolicy.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt`, `PreferenceComponents.kt`. No previous baseline test claim is reused as a current result.
 
+## 2026-10-28 work-package verification — release quality gates
+
+- `wp/01-release-quality-gates`: **PASS** in GitHub Actions [#40639269251](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639269251) for `assembleDebug`, `testDebugUnitTest` (FROM-CACHE), `lintRelease`, `verifyCompactApkSize` with full media. Compact APK measured **55,368,299 / 60,000,000 bytes**. Main merge push [#40639985876](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639985876) also passed; release signing and device tests were not run.
+- Baseline `main` Actions run [#40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318): debug build + tests + lintDebug succeeded, compact measured 55,368,299 bytes. It did not run release lint and was not gated by the size maximum.
+- Device runs, release signing, Five-PDF-fixture compression, 200-page memory and live authorized downloader matrix remain **NOT VERIFIED**.
+- Do not replace or overwrite the October 24 report's original session history with new claims.
 
 
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
