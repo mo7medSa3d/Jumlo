@@ -106,4 +106,4 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## 2026-10-28 — WP02a scope note
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
-**WP06 appearance labeling:** Settings route signatures and Back logic unchanged. The App-color preference now uses the selected language for the current preset label; see `AccentLocalizationTest` (CI pending). No navigation tests are claimed.
+**WP06 appearance labeling:** Settings route signatures and Back logic unchanged. The App-color preference now uses the selected language for the current preset label; see `AccentLocalizationTest` (CI pending). No navigation tests are claimed.- WP06 Settings > App color passes the active in-app language into its modal; picker swatches no longer derive their language from Android device locale.
