@@ -53,8 +53,10 @@ object PlatformHeaderPolicy {
         require(uri.scheme?.lowercase(Locale.ROOT) in setOf("https", "http") &&
             !uri.host.isNullOrBlank() && uri.rawUserInfo == null) { "INVALID_URL" }
 
+        val allowOriginExtras = sameOrigin(customHeaderOrigin, url)
         val agent = customUserAgent.trim().takeIf {
-            compatibilityAttempt == 0 && it.isNotEmpty() && it.length <= 320 && it.none(Char::isISOControl)
+            allowOriginExtras && compatibilityAttempt == 0 &&
+                it.isNotEmpty() && it.length <= 320 && it.none(Char::isISOControl)
         } ?: BrowserProfilePolicy.forUrl(url, preferDesktop).let { profiles ->
             // Attempt 0 is stable for an origin; attempt 1 is used only after
             // a 406/415 content-negotiation response, never after 401/403.
@@ -72,7 +74,7 @@ object PlatformHeaderPolicy {
         // Cross-origin redirects may be controlled by a third party. The
         // original user's Referer/Origin/custom headers must not follow them.
         // URL-scoped CookieManager lookups are performed by the caller.
-        val scopedExtras = if (sameOrigin(customHeaderOrigin, url)) customHeaders else emptyMap()
+        val scopedExtras = if (allowOriginExtras) customHeaders else emptyMap()
         for ((key, value) in scopedExtras) {
             val name = key.trim()
             val text = value.trim()
