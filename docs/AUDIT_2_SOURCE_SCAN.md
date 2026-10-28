@@ -67,3 +67,167 @@ Files attempted: 14, failures: 0, candidates: 6.
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:152`: `listOf(Color.Black, Color(0xFF1746A2), Color(0xFF8E2430), Color(0xFF145D4C)).forEachIndexed { index, ink ->`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:156`: `Box(contentAlignment = Alignment.Center) { if (inkArgb == ink.toArgb()) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(22.dp)) }`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:194`: `Surface(onClick = { if (!busy) onSaved(file) }, shape = QuietTheme.shapes.thumbnail, color = Color.White,`
+
+## Batch 126–139
+
+Files attempted: 14, failures: 0, candidates: 159.
+
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AccentPickerDialog.kt:40`: `Triple("BLUE", R.string.redesign_accent_blue, Color(0xFF2F46C6)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AccentPickerDialog.kt:41`: `Triple("VIOLET", R.string.redesign_accent_violet, Color(0xFF6942B0)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AccentPickerDialog.kt:42`: `Triple("TEAL", R.string.redesign_accent_teal, Color(0xFF086F6B)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AccentPickerDialog.kt:43`: `Triple("CORAL", R.string.redesign_accent_coral, Color(0xFFB63E54)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AppearanceColorPicker.kt:68`: `val seed = M3ColorFactory.hexColor(hexDraft) ?: Color(0xFF1E88E5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AppearanceColorPicker.kt:167`: `val scheme = M3ColorFactory.scheme(M3ColorFactory.hexColor(preset.hex) ?: Color.Gray, dark = false)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/settings/AppearanceColorPicker.kt:182`: `M3ColorFactory.hexColor(preset.hex) ?: Color.Gray, RoundedCornerShape(6.dp)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:14`: `val LightBackground = Color(0xFFF6F6F8)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:15`: `val LightSurface = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:16`: `val LightSurfaceDim = Color(0xFFEDEDEF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:17`: `val LightSurfaceBright = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:18`: `val LightSurfaceContainerLowest = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:19`: `val LightSurfaceContainerLow = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:20`: `val LightSurfaceContainer = Color(0xFFF0F0F3)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:21`: `val LightSurfaceContainerHigh = Color(0xFFE8E8ED)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:22`: `val LightSurfaceContainerHighest = Color(0xFFDFDFE5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:23`: `val LightOnSurface = Color(0xFF202024)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:24`: `val LightOnSurfaceVariant = Color(0xFF55555E)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:25`: `val LightOutline = Color(0xFF777781)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:26`: `val LightOutlineVariant = Color(0xFFDDDEE5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:27`: `val LightPrimary = Color(0xFF2F46C6)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:28`: `val LightPrimaryButton = Color(0xFF2F46C6)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:29`: `val LightOnPrimary = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:30`: `val LightPrimaryContainer = Color(0xFFE5E9FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:31`: `val LightOnPrimaryContainer = Color(0xFF19266C)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:32`: `val LightPrimaryFixed = Color(0xFFE5E9FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:33`: `val LightPrimaryFixedDim = Color(0xFFC3CEFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:34`: `val LightOnPrimaryFixed = Color(0xFF16246E)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:35`: `val LightOnPrimaryFixedVariant = Color(0xFF35469D)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:36`: `val LightSecondary = Color(0xFF276D77)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:37`: `val LightOnSecondary = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:38`: `val LightSecondaryContainer = Color(0xFFDBF5F2)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:39`: `val LightOnSecondaryContainer = Color(0xFF124F52)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:40`: `val LightTertiary = Color(0xFF7050AB)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:41`: `val LightOnTertiary = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:42`: `val LightTertiaryContainer = Color(0xFFF0E8FC)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:43`: `val LightOnTertiaryContainer = Color(0xFF38216B)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:44`: `val LightError = Color(0xFFBA334A)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:45`: `val LightOnError = Color(0xFFFFFFFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:46`: `val LightErrorContainer = Color(0xFFFFE5E8)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:47`: `val LightOnErrorContainer = Color(0xFF781D32)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:48`: `val LightCardBorder = Color(0xFFDDDEE5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:51`: `val DarkBackground = Color(0xFF000000)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:52`: `val DarkSurface = Color(0xFF101010)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:53`: `val DarkSurfaceDim = Color(0xFF000000)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:54`: `val DarkSurfaceBright = Color(0xFF353535)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:55`: `val DarkSurfaceContainerLowest = Color(0xFF000000)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:56`: `val DarkSurfaceContainerLow = Color(0xFF151515)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:57`: `val DarkSurfaceContainer = Color(0xFF1D1D1D)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:58`: `val DarkSurfaceContainerHigh = Color(0xFF262626)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:59`: `val DarkSurfaceContainerHighest = Color(0xFF303030)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:60`: `val DarkOnSurface = Color(0xFFF5F5F5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:61`: `val DarkOnSurfaceVariant = Color(0xFFC4C4C4)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:62`: `val DarkOutline = Color(0xFF969696)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:63`: `val DarkOutlineVariant = Color(0xFF3D3D3D)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:64`: `val DarkPrimary = Color(0xFFA9B7FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:65`: `val DarkPrimaryButton = Color(0xFFA9B7FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:66`: `val DarkOnPrimary = Color(0xFF13205A)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:67`: `val DarkPrimaryContainer = Color(0xFF29376E)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:68`: `val DarkOnPrimaryContainer = Color(0xFFE5E9FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:69`: `val DarkPrimaryFixed = Color(0xFFE0E5FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:70`: `val DarkPrimaryFixedDim = Color(0xFFB8C4FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:71`: `val DarkOnPrimaryFixed = Color(0xFF111D5A)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:72`: `val DarkOnPrimaryFixedVariant = Color(0xFF293B91)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:73`: `val DarkSecondary = Color(0xFF92DCD8)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:74`: `val DarkOnSecondary = Color(0xFF083C41)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:75`: `val DarkSecondaryContainer = Color(0xFF164D50)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:76`: `val DarkOnSecondaryContainer = Color(0xFFDCF9F5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:77`: `val DarkTertiary = Color(0xFFD3B7FC)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:78`: `val DarkOnTertiary = Color(0xFF361D65)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:79`: `val DarkTertiaryContainer = Color(0xFF4C336D)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:80`: `val DarkOnTertiaryContainer = Color(0xFFF0E4FF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:81`: `val DarkError = Color(0xFFFFB5C1)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:82`: `val DarkOnError = Color(0xFF690D26)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:83`: `val DarkErrorContainer = Color(0xFF72273C)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:84`: `val DarkOnErrorContainer = Color(0xFFFFE1E7)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:85`: `val DarkCardBorder = Color(0xFF3D3D3D)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:126`: `pdfPrimary = Color(0xFFBC3555),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:127`: `pdfContainer = Color(0xFFFFE7EC),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:128`: `pdfOnContainer = Color(0xFF7E2340),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:129`: `pdfSubtitle = Color(0xFF922744),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:130`: `imagesPrimary = Color(0xFFA76218),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:131`: `imagesContainer = Color(0xFFFFF1D6),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:132`: `imagesOnContainer = Color(0xFF78350F),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:133`: `imagesSubtitle = Color(0xFF92400E),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:134`: `downloadsPrimary = Color(0xFF087E77),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:135`: `downloadsContainer = Color(0xFFDDF8F3),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:136`: `downloadsOnContainer = Color(0xFF115E59),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:137`: `downloadsSubtitle = Color(0xFF087E77),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:138`: `filesPrimary = Color(0xFF2F46C6),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:139`: `filesContainer = Color(0xFFE5E9FF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:140`: `filesOnContainer = Color(0xFF19266C),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:141`: `filesSubtitle = Color(0xFF2F46C6),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:142`: `vaultPrimary = Color(0xFF7152B3),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:143`: `vaultContainer = Color(0xFFF0E8FC),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:144`: `successPrimary = Color(0xFF15803D),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:145`: `successContainer = Color(0xFFDCFCE7),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:146`: `warningPrimary = Color(0xFFA76218),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:147`: `warningContainer = Color(0xFFFFF1D6),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:148`: `cardSurface = Color(0xFFFFFFFF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:149`: `cardBorder = Color(0xFFDDDEE5),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:150`: `primaryActionBackground = Color(0xFF202024),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:151`: `primaryActionText = Color(0xFFFFFFFF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:152`: `dockSurface = Color(0xF7FFFFFF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:153`: `dockBorder = Color(0x1A0F172A),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:154`: `activePillContainer = Color(0xFFDDDEE5),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:155`: `activePillContent = Color(0xFF202024)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:159`: `pdfPrimary = Color(0xFFFFB5C1),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:160`: `pdfContainer = Color(0xFF4C0519),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:161`: `pdfOnContainer = Color(0xFFFFE7EC),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:162`: `pdfSubtitle = Color(0xFFFECDD3),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:163`: `imagesPrimary = Color(0xFFFCD34D),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:164`: `imagesContainer = Color(0xFF451A03),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:165`: `imagesOnContainer = Color(0xFFFFF1D6),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:166`: `imagesSubtitle = Color(0xFFFDE68A),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:167`: `downloadsPrimary = Color(0xFF92DCD8),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:168`: `downloadsContainer = Color(0xFF042F2E),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:169`: `downloadsOnContainer = Color(0xFFDDF8F3),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:170`: `downloadsSubtitle = Color(0xFF99F6E4),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:171`: `filesPrimary = Color(0xFF93C5FD),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:172`: `filesContainer = Color(0xFF172554),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:173`: `filesOnContainer = Color(0xFFE5E9FF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:174`: `filesSubtitle = Color(0xFFBFDBFE),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:175`: `vaultPrimary = Color(0xFFC4B5FD),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:176`: `vaultContainer = Color(0xFF2E1065),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:177`: `successPrimary = Color(0xFF4ADE80),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:178`: `successContainer = Color(0xFF052E16),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:179`: `warningPrimary = Color(0xFFFCD34D),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:180`: `warningContainer = Color(0xFF451A03),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:181`: `cardSurface = Color(0xFF151515),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:182`: `cardBorder = Color(0xFF3D3D3D),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:183`: `primaryActionBackground = Color(0xFFDDDEE5),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:184`: `primaryActionText = Color(0xFF202024),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:185`: `dockSurface = Color(0xFF1D1D1D),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:186`: `dockBorder = Color(0x26FFFFFF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:187`: `activePillContainer = Color(0xFF303030),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/Color.kt:188`: `activePillContent = Color(0xFFF8FAFC)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:54`: `val towardWhite = contrast(bg, Color.White) >= contrast(bg, Color.Black)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:55`: `val target = if (towardWhite) Color.White else Color.Black`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:74`: `"TEAL" -> Color(0xFF00897B)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:75`: `"CORAL" -> Color(0xFFE64A3A)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:76`: `"VIOLET" -> Color(0xFF7B4DFF)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:77`: `else -> Color(0xFF1E88E5)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:140`: `background = Color.White,`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:142`: `surface = Color(0xFFFCFCFD),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:144`: `surfaceVariant = Color(0xFFE0E2EC),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:145`: `onSurfaceVariant = Color(0xFF44474F),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:146`: `outline = Color(0xFF74777F),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:147`: `outlineVariant = Color(0xFFC4C6D0),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:151`: `val surface = if (amoled) Color.Black else Color(0xFF121316)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:162`: `onPrimary = ensureContrast(primary, Color.White),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:166`: `onSecondary = ensureContrast(secondary, Color.White),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:170`: `onTertiary = ensureContrast(tertiary, Color.White),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:174`: `onError = ensureContrast(error, Color.White),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:176`: `onErrorContainer = ensureContrast(errorContainer, Color(0xFFFFDAD6)),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:181`: `surfaceVariant = Color(0xFF49454F),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:182`: `onSurfaceVariant = Color(0xFFCAC4D0),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:183`: `outline = Color(0xFF938F99),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:184`: `outlineVariant = Color(0xFF63606A),`
