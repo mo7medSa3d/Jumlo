@@ -159,3 +159,8 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP07 localized accent settings
+
+- Make the saved App-color preset subtitle follow the selected Jumlo language: Arabic names are shown in RTL instead of hardcoded English preset names. Custom hex seeds stay unchanged; fallback Blue label is localized.
+- Add AccentLabelLocalizationTest for saved English/Arabic named preset labels and custom hex preservation. CI pending; no UI screenshot claimed.
