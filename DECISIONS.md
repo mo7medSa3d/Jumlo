@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 work package 03 decision:** Downloads remains a full, durable manager screen but is **not a fifth primary tab**. Keep the existing `DownloadsRoute`, downloader operations and Room/WorkManager state. The four-tab dock is Home, Tools, Files, Settings; expose downloads history from Home even if no job is active, and restore the caller with Android Back. Preserve `DockTab.DOWNLOADS` internally for compatibility; new code must not present it as a fifth tab. This resolves the explicit four-tab design request without removing a feature. Verification status is pending in `TEST_REPORT.md`.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
