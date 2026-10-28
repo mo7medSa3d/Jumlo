@@ -113,9 +113,14 @@ run here).
 
 ## 2026-10-28 — WP-05 design system verification boundary
 
-Source changes: shared saturated color families in `Color.kt`/`ToolPalette.kt`, expressive semantic-color root header, `app/src/debug/java/com/jumlo/app/ui/theme/ThemePreviews.kt` with 4 Compose preview configurations (EN/AR × light/dark), `ToolPaletteContrastTest` checking category icon contrast >=3:1 and M3 foreground-role contrast >=4.5:1. The tests and previews exist as source only: **NOT RUN** until CI/Android Studio renders them. Manual targeted color arithmetic found no obvious low-contrast light/dark category tokens against the tested 20% blend but this does not certify WCAG AA for every screen/control. Real screenshots, 200%-font accessibility, TalkBack and real device RTL layouts **NOT VERIFIED**.
+Source changes: shared saturated color families in `Color.kt`/`ToolPalette.kt`, expressive semantic-color root header, `app/src/test/java/com/jumlo/app/ui/theme/ThemePreviews.kt` with 4 Compose preview configurations (EN/AR × light/dark), `ToolPaletteContrastTest` checking category icon contrast >=3:1 and M3 foreground-role contrast >=4.5:1. The tests and previews exist as source only: **NOT RUN** until CI/Android Studio renders them. Manual targeted color arithmetic found no obvious low-contrast light/dark category tokens against the tested 20% blend but this does not certify WCAG AA for every screen/control. Real screenshots, 200%-font accessibility, TalkBack and real device RTL layouts **NOT VERIFIED**.
 
 
 ### WP-05 first CI failure and follow-up
 
 First PR #34 CI attempt [40640945349](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640945349) **FAILED** at KSP debug, compact and release Kotlin symbol-processing tasks with `KaInvalidLifetimeOwnerAccessException` (`PSI has changed since creation`). No Kotlin source-compilation or unit-test PASS may be inferred from that attempt. The design-only Compose preview source was moved from `src/main` to `src/debug` so it no longer enters release/compact runtime sources; this is a candidate isolation, not a proven root-cause fix. Re-run new CI and preserve any continuing failures.
+
+
+### WP-05 second CI failure
+
+Current-head CI [40641343597](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641343597) again **FAILED** at KSP with `KaInvalidLifetimeOwnerAccessException`, despite moving design previews out of the common runtime source set to `src/debug`. That attempt did not complete compilation/tests. The preview-only composables have now been placed in `src/test` so they remain Kotlin-typechecked in unit-test compilation while no longer contributing to KSP processing of any production build variant. This is a further isolation attempt, **not yet proven**; no rule/test or required binary component was disabled.
