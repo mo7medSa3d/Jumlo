@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**2026-10-28 WP08 scanner resource lifecycle:** The existing `ScanRoute` and CameraX fallback route/permissions are unchanged. Gallery/camera thumbnail rows now dispose native bitmaps when their composable leaves the screen; no new route or behavior claim. `ScanPreviewBitmapOwnershipTest` requires Android instrumentation.
+
+
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
