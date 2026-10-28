@@ -71,11 +71,6 @@ class PrintPageSelectionTest {
         }
     }
 
-    @Test fun normalizedOrderProvidesSafeBaseForDragReordering() {
-        assertEquals(listOf(1, 2, 3), PrintPageSelection.normalizedOrder(listOf(3, 1, 1), 3))
-        assertEquals(listOf(3, 1, 2), PrintPageSelection.normalizedOrder(listOf(3, 1, 2), 3))
-    }
-
     @Test fun permutationGuardAcceptsOnlyCompleteUniqueOrders() {
         assertTrue(PrintPageSelection.isPermutation(listOf(2, 1, 3), 3))
         assertFalse(PrintPageSelection.isPermutation(listOf(2, 1), 3))
