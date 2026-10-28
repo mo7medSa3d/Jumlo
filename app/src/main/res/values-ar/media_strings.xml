@@ -23,7 +23,7 @@
     <string name="media_http">السماح باتصالات HTTP غير مشفرة لهذه المهمة</string>
     <string name="media_direct_instead">تنزيل كملف مباشر</string>
     <string name="media_queueing">جاري بدء التنزيل...</string>
-    <string name="media_download_selected">تنزيل بالجودة المختارة</string>
+    <string name="media_download_selected">تنزيل الآن</string>
     <string name="media_found">الروابط (%1$d)</string>
     <string name="media_error_url">أدخل رابط HTTP أو HTTPS كاملًا وواحدًا.</string>
     <string name="media_intro">الصق رابط ملف أو صفحة فيديو عامة تسمح بالتنزيل، وسيبقى المحتوى على جهازك.</string>
