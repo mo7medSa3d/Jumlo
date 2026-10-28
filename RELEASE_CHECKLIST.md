@@ -59,3 +59,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — Standalone core JVM CI
+
+- [ ] Confirm all four `core-common`, `downloader-core`, `document-core`, `storage-core` `test` tasks pass on JDK17 as part of the same required PR CI gate.
+- [ ] Verify no Android imports enter core-main sources, in addition to module tests.
