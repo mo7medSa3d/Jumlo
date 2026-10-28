@@ -2,7 +2,7 @@ name: Android CI & APK
 
 on:
   push:
-    branches: [main, 'arena/**', 'wp/**']
+    branches: [main, 'arena/**']
     tags: ['v*']
   pull_request:
     branches: [main]
@@ -65,6 +65,7 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
+          python3 scripts/tests/test-ci-event-matrix.py
           # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
           ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :app:testDebugUnitTest :app:lintRelease \
