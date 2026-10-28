@@ -1,5 +1,14 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP03 — capability policy/handler parity (CI pending)
+
+- Stop advertising nonexistent `pdf_compare` as a processing capability and remove orphan `pdf_compare` / `pdf_redact` dispatcher cases; the PDF handler never implemented them and the registry never displayed them.
+- Remove redundant job-dispatch route for navigation-only `file_trash` without affecting the real Files trash workflow.
+- Add `CapabilityContractTest` (4 JUnit cases) for registry uniqueness/visibility, fail-closed ghost IDs, navigation-only safety and supported real tools. **NOT RUN until GitHub CI executes**; this is a source-level fix, not a device PASS.
+
+**Required qualification:** `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` on this exact PR SHA. Existing main-green CI does not validate this branch.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
