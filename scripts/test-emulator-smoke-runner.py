@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-"""Prevent emulator smoke from failing before tests due to /bin/sh vs Bash."""
+"""Guard emulator strict-mode shell and real Android UI test selection."""
 from pathlib import Path
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 
 class EmulatorSmokeRunnerContract(unittest.TestCase):
-    def test_bash_shell_hosts_pipefail_in_android_emulator_runner(self):
+    def test_single_bash_command_runs_a_syntax_checked_script(self):
         workflow = (ROOT / ".github/workflows/android-smoke.yml").read_text()
-        step = workflow.split("      - name: Execute real Android UI and persistence tests", 1)[1]
-        script = step.split("      - name: Keep reports and logcat even on failure", 1)[0]
-        self.assertIn("script: |\n            bash <<'BASH'\n", script)
-        self.assertIn("set -euo pipefail", script)
-        self.assertIn("            BASH\n", script)
-        self.assertIn(":app:connectedDebugAndroidTest", script)
-        self.assertIn("tee android-smoke.log", script)
-        self.assertIn("adb logcat -d -v time", script)
+        fragment = workflow.split("      - name: Execute real Android UI and persistence tests", 1)[1].split("      - name: Keep reports and logcat even on failure", 1)[0]
+        self.assertIn("script: bash scripts/run-emulator-smoke.sh", fragment)
+        self.assertNotIn("bash <<", fragment)
+        script = ROOT / "scripts/run-emulator-smoke.sh"
+        body = script.read_text()
+        self.assertTrue(body.startswith("#!/usr/bin/env bash"))
+        self.assertIn("set -euo pipefail", body)
+        self.assertIn(":app:connectedDebugAndroidTest", body)
+        self.assertIn("tee android-smoke.log", body)
+        self.assertIn("adb logcat -d -v time", body)
+        subprocess.run(["bash", "-n", str(script)], check=True)
 
-    def test_all_three_api_levels_and_log_artifacts_remain(self):
+    def test_matrix_and_failure_artifacts_still_required(self):
         workflow = (ROOT / ".github/workflows/android-smoke.yml").read_text()
         self.assertIn("api: [26, 35, 36]", workflow)
         self.assertIn("if: always()", workflow)

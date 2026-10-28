@@ -4,7 +4,7 @@
 
 Observed on [Actions #40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016): API 26 and API 36 emulator instances booted successfully, then their runner exited with `/usr/bin/sh: 1: set: Illegal option -o pipefail` (exit 2). No app instrumentation tests ran in these failed jobs. This is a script interpreter mismatch, **not an Android test assertion failure**.
 
-The workflow now invokes Bash explicitly inside the emulator runner script, retains strict `pipefail` for Gradle/`tee`, all API 26/35/36 matrices and artifacts, and runs a host source contract before emulator startup. **GREEN NOT RUN** for this patch at report edit. Real device results and native print/camera behavior still require execution.
+The workflow now invokes a dedicated Bash script with one shell command, retains strict `pipefail` for Gradle/`tee`, all API 26/35/36 matrices and artifacts, and runs a host source contract before emulator startup. **GREEN NOT RUN** for this patch at report edit. Real device results and native print/camera behavior still require execution.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -134,3 +134,7 @@ run here).
 
 - Added seven existing instrumentation classes to API 26/35/36 matrix: `PdfHandlerReliabilityTest` (real PDF/signature/annotation/split/image output), `PdfOfficeHandlerTest` (DOCX/PPTX archive contents and selected-page output), `ImageProcessingReliabilityTest` (real pixels and encoding), `ArchiveHandlerTest` (ZIP encryption/recovery), `SourceAndPublicationTest` (real file snapshots/publication), `PdfReaderAndScanStoreTest` (reader/scanner output, with one API29+ test expected to skip on API26), and `JumloPrintAdapterTest` (page range/print output). Fixtures are generated within these tests, not replaced by mocks of resulting files.
 - **NOT RUN at the latest source SHA until its new GitHub Actions matrix completes**. These are backend/device fidelity tests alongside Compose UI checks, not proof of every UI pick→run→result path; external extractor and five benchmark compression fixtures remain excluded from smoke and NOT VERIFIED.
+
+### Follow-up: reproducible `/bin/sh` failure after heredoc
+
+[Run 40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016) shows all three API jobs failed with `set: Illegal option -o pipefail`. In API 36, the emulator reported boot completed before the runner used `/usr/bin/sh -c set -euo pipefail`. Wrapping the script in a multiline heredoc was insufficient. A new dedicated `scripts/run-emulator-smoke.sh` invoked as a **single** action command is committed; full instrumentation is **NOT RUN** for this patch until CI evidence is collected.

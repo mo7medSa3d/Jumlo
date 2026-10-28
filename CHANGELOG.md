@@ -3,7 +3,7 @@
 ## 2026-10-28 — WP09 emulator runner Bash invocation repair
 
 - Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.
-- Run that unchanged strict-mode script inside an explicit Bash heredoc; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
+- Run the strict-mode commands in a dedicated Bash file invoked through a single `bash scripts/run-emulator-smoke.sh` command; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
 - Add `scripts/test-emulator-smoke-runner.py` as a required preflight. **Device tests NOT VERIFIED** until fresh emulator runs complete.
 
 
@@ -174,3 +174,5 @@ TEST_REPORT.md.
 ### WP09 expanded file-operation qualification
 
 The API26/35/36 emulator smoke now includes generated-fixture real PDF, Office, image, ZIP, file publication, scanner/reader and print-adapter instrumentation classes. No existing tests were disabled. Running them must produce actual job reports before this is called verified.
+
+- Follow-up from the failed API 26/35/36 run: the heredoc is still split by the emulator action's `/bin/sh -c`; it does not protect `set -o pipefail`. The single-command Bash file resolves this interpreter boundary; device CI remains pending.

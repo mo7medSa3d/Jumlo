@@ -67,3 +67,5 @@ No publishing, external messaging, service deployment or signing-key creation fo
 - [ ] Validate camera/scanner, print providers, TalkBack and all tool flows on qualifying physical hardware; GitHub software emulator results cannot substitute.
 
 - [ ] Inspect matching API26/API35/API36 XML results for PDF, Office, image, ZIP, scanner, file publication and print-adapter tests. Preserve failures/skips, especially the SDK29+ reader-provider method on API26. Do not mistake this lane for the five compression scan benchmark fixtures or physical hardware acceptance.
+
+- [ ] The API 26, 35 and 36 smoke jobs must run `:app:connectedDebugAndroidTest` to completion using the dedicated Bash file; logcat, XML reports and failure logs remain required artifacts. A successful emulator boot alone is not a PASS.
