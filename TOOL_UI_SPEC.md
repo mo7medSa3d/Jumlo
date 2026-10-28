@@ -1,11 +1,19 @@
 # Tool UI specification
 
+> WP03 OCR: the current engine supports Latin recognition. Both Arabic and English locale UI must disclose the scanned-Arabic limitation. No new OCR model was added; device accuracy remains unqualified.
+
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
+
+
+**WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
+
+
 > 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 
 ## Scope and evidence
 
-This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
+This is the source-level contract for the **45 entries currently registered** in `CapabilityRegistry.tools`. The current `CapabilityPolicy` marks the registered entries available in source; **source availability is not an end-to-end runtime PASS**. Prior references to 47 tools / 44 enabled and three disabled describe superseded historical revisions. Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
 
 The catalogue is one keyed lazy grid organised into the brief's sections — Scan &
 Capture, Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files —
@@ -496,6 +504,10 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
 
-## 2026-10-28 — WP-03 OCR user guidance
+## 2026-10-28 — WP02a setting behavior
 
-The `pdf_ocr` workspace now states before recognition that scanned Arabic is not supported by the installed Latin-script OCR model; pre-existing embedded Arabic text can still be extracted. The notice is localized in EN/AR. Two Robolectric Compose resource/semantics checks were added, but are pending CI. This is a clearer error expectation, **not** recognition of Arabic scans.
+The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.

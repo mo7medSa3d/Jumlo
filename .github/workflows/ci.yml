@@ -2,16 +2,10 @@ name: Android CI & APK
 
 on:
   push:
-    branches: [main, 'arena/**']
+    branches: [main, 'arena/**', 'wp/**']
     tags: ['v*']
-    paths-ignore:
-      - 'docs/**'
-      - 'verification/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'verification/**'
   workflow_dispatch:
     inputs:
       device_tests:
@@ -70,9 +64,11 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
+          python3 scripts/test-ksp-ci-serialization.py
+          # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
+          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :app:testDebugUnitTest :app:lintRelease \
-            --no-daemon --console=plain 2>&1 | tee gradle.log
+            --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime
         shell: bash
