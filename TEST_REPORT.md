@@ -1,5 +1,13 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
+
+- `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
+- Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
+
+**Required CI:** `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` and full APK size gates, plus Android 8–15 network interruption tests; no device or live-provider PASS claimed.
+
+
 ## 2026-10-28 work-package verification — release quality gates
 
 - `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
