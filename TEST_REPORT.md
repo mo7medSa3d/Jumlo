@@ -121,3 +121,8 @@ run here).
 ## 2026-10-28 — WP-06 resolved main integration
 
 Main merged PRs #11 and #16, restoring strict full-media APK size tasks and requiring their execution from main/PR CI. WP-06 now only adds `lintDebug` and corrects a stale size-policy Python guard that would otherwise falsely fail source verification. The earlier PR #25 run [40640539847](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640539847) was successful and reported compact **55,368,299 bytes**, unsigned release **55,356,059 bytes**, unit tests and `lintDebug`/`lintRelease`; it applied to earlier head `3589fafb...`, **not** this follow-up commit. Fresh current-head CI pending. Device/tool E2E not established.
+
+
+### WP-06 source guard now part of CI
+
+The workflow additionally executes `python3 scripts/test-compact-configuration.py` after artifact inspection, making the corrected 60MB-cap check an actual build-gating test rather than an unexecuted assertion. **Result pending** for this new commit; older CI success applies only to older SHAs.
