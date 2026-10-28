@@ -152,3 +152,8 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-03 honest scanned-Arabic OCR guidance
+
+- Display a persistent bilingual note in the actual OCR workspace clarifying that the installed ML Kit unbundled Latin recognizer cannot recognize Arabic in scanned page images, while already embedded PDF Arabic text can still be extracted.
+- Add English/Arabic resources and two Robolectric Compose assertions that the note appears in both locales. The feature does **not** fabricate Arabic recognition or send private documents to an external service.
