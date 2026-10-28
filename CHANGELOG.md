@@ -1,5 +1,17 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
@@ -152,6 +164,11 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
 
 ## 2026-10-28 — WP05 reader position persistence (CI pending)
 
