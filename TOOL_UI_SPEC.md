@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP-01 interaction update
+
+WP-01 reintroduces working in-app haptic enable/intensity and reduce-motion controls, superseding the historical statement above that legacy switches remain hidden. `MainActivity` reads both persisted settings and Android's animator-scale observer; the off setting disables Jumlo-triggered haptics, and either app/system motion reduction requests reduced movement. Source wiring is implemented; Android instrumentation and real device feedback are **NOT VERIFIED**. This change does not certify tool-specific pick/process/result flows.
