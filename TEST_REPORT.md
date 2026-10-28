@@ -101,3 +101,8 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+
+## 2026-10-28 — WP-01 verification boundary
+
+Source changes: `MainActivity.kt` now provides persisted `hapticFeedbackOnCommit`, `hapticIntensity` and `systemReduced || respectReducedMotion`; `SettingsScreen.kt` exposes three corresponding controls with bilingual resources; repository mapping now reads the motion preference. `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` expects persisted motion and haptic intensity on an Android device. **This test was edited but NOT RUN in this PR creation session**: automatic GitHub CI runs debug build/unit/debug lint/compact checks, but its device job is opt-in. Release lint, device vibration on/off/strength, animator-scale override and RTL visual acceptance are **NOT VERIFIED**. Do not infer their result from the code diff.
