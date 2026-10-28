@@ -96,3 +96,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+50. WP09 restores the missing instrumentation-preflight documentation without inventing fixed corpus hashes or device results. Generated scan samples must carry per-run SHA-256 provenance and enough host/guest storage for the 200-page benchmark; an unrun gate stays blocked. Source-only documentation is not product acceptance.
