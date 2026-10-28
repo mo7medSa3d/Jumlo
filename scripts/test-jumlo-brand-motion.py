@@ -126,7 +126,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
                     'contentDescription = label','Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp)',
                     '.clip(RoundedCornerShape(14.dp)).background(indicatorColor)'):
             self.assertIn(key,dock)
-        self.assertIn('listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)',dock)
+        self.assertIn('listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)',dock)
     def test_system_motion_is_respected_without_a_removed_app_toggle(self):
         system=code('ui/theme/SystemMotion.kt')
         main=code('MainActivity.kt')

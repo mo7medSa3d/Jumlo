@@ -1,6 +1,7 @@
 # Decisions — 24 October 2026
 
-**2026-10-28 WP03 decision:** Keep the Downloads manager and its job history as a detail destination, but present precisely four root tabs (Home, Tools, Files, Settings). Preserve legacy `DockTab.DOWNLOADS` for navigation compatibility; Home exposes history even without active jobs. Do not remove download functionality to simplify the dock.
+**2026-10-28 WP03 navigation:** Four root tabs are Home, Tools, Files, Settings. Downloads remains a first-class details screen with job history, entered from Home even with no active jobs. Do not delete Downloader features. A legacy `DockTab.DOWNLOADS` value stays for compatible call sites, never as a fifth tab.
+
 
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.

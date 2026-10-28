@@ -1,6 +1,7 @@
 # Release checklist
 
-- [ ] Run `MainDockContractTest`, `FourTabNavigationTest` and `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab` on current head; verify four tabs/RTL/Downloads history and Back with no active jobs, 200% font and screenshots. Pending instrumentation must not be reported as passing.
+- [ ] Verify WP03 exact 4-tab navigation in LTR/Arabic RTL and 200% font, Home Downloads-history button with zero and active jobs, Back to Home and restored tool draft. Run `FourTabNavigationTest`, `MainDockContractTest`, `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab` and Python host UI contract scripts. Earlier branch CI is not a substitute for device qualification.
+
 
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
