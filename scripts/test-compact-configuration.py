@@ -23,12 +23,13 @@ class CompactConfigurationTests(unittest.TestCase):
         self.assertIn('for (variant in listOf("debug", "release", "benchmark", "compact"))', GRADLE)
         self.assertIn('for (variant in listOf("debug", "release", "compact"))', GRADLE)
 
-    def test_size_cap_removed_but_task_retained(self):
+    def test_full_media_compact_and_release_tasks_enforce_size_limit(self):
         self.assertIn('tasks.register("verifyCompactApkSize")', GRADLE)
         self.assertIn('dependsOn("assembleCompact")', GRADLE)
-        # The 60,000,000-byte distribution cap is lifted (no silent feature trim).
-        self.assertNotIn('60_000_000L', GRADLE)
-        self.assertNotIn('check(apk.length() <= maxBytes)', GRADLE)
+        self.assertIn('tasks.register("verifyReleaseApkSize")', GRADLE)
+        self.assertIn('dependsOn("assembleRelease")', GRADLE)
+        self.assertIn('maxFullMediaApkBytes = 60_000_000L', GRADLE)
+        self.assertEqual(2, GRADLE.count('check(apk.length() <= maxFullMediaApkBytes)'))
         # Correctness gates retained in the release size task.
         self.assertIn('arm64-v8a', GRADLE)
         self.assertIn('assets/media/yt-dlp', GRADLE)
