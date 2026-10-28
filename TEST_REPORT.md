@@ -107,3 +107,8 @@ run here).
 - Baseline source is main `d599b8a3159f38623e3d0b83c3d58a23073e70cf`. Previous successful GitHub Actions [run #96](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318) applies only to that historical main commit, not WP01.
 - `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintRelease`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`: **NOT RUN yet against WP01**; inspect GitHub Actions PR logs and update before merge.
 - Missing owner signing and physical-device qualification: **BLOCKED: credentials/device not provided**. No new APK bytes measured in this documentation update.
+
+### WP01 initial CI failure and correction
+
+- PR #10 initial GitHub Actions [run 40639242388](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639242388) **FAILED** on Kotlin DSL script parsing: a literal escaped newline was committed before the two size tasks. This was a regression introduced in WP01, not a pre-existing app failure.
+- Commit `3d578b968a70c2711b09ddfb068b68ca233efb96` replaced the malformed escaped sequence with actual line breaks. Post-fix Android build, tests, release lint and measured APK sizes **NOT VERIFIED until subsequent CI completes**.
