@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
+
+
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
@@ -63,6 +66,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
 
-## WP08 bitmap leak follow-up
+## 2026-10-28 — CI trigger deduplication
 
-- [ ] Run ScanPreviewBitmapOwnershipTest on an actual Android emulator and profile 100-page scan scrolling, rearrange/remove and activity recreation before marking release-ready.
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.
