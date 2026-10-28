@@ -1,4 +1,9 @@
 # Jumlo — AUDIT_2 (source evidence and release gap register)
+
+## 2026-10-28 origin-scoping follow-up
+
+User-provided downloader custom headers were at risk of being reused on redirected hosts. The pending WP11 branch adds exact scheme/host/effective-port matching, disabled cross-origin custom headers, and JVM redirect tests. Do not close the P0 risk or call it production verified until latest CI and actual redirect testing pass.
+
 Date: 2026-10-28. Target repository: `mo7medSa3d/Jumlo`; baseline `main` tree/commit `d599b8a3159f38623e3d0b83c3d58a23073e70cf`.
 **Verdict: NOT RELEASE QUALIFIED.** This is an audit, not a claim that implementations were executed on a device. Source inventory and historic test evidence are different from a freshly passing complete pick→result flow.
 
