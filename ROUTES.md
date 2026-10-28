@@ -96,3 +96,8 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+
+## 2026-10-28 audit qualification
+
+The canonical 14 destinations above are unchanged by WP-00. `docs/AUDIT_2.md` inventories each and distinguishes registered routing from demonstrated device operation. The current five-tab arrangement (Tools · Files · Home · Downloads · Settings) differs from the newly requested four-tab Home · Tools · Files · Settings. Refactoring the shell and normalizing existing deep links/back stacks is assigned to a later build-verified work package; it was **not** performed in the audit.
