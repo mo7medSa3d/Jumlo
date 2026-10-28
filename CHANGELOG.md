@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP06 honest PDF compression outcomes (CI pending)
+
+- After a real PDF compression pass, inspect the **measured stage-file byte count** before classifying the result. A byte-identical/unreduced output is `UNCHANGED` with `PDF_NOT_COMPRESSIBLE` even if the codec skipped images. Only an actually smaller file may report `PDF_IMAGE_COMPRESSION_PARTIAL`.
+- Centralize classification in Android-free `document-core/PdfCompressionResultPolicy.kt`; add seven JVM `PdfCompressionResultPolicyTest` cases for reduced/unchanged/partial and invalid output.
+- No file or page is removed; existing verified-output publishing remains unchanged. The 5-scan-fixture and 200-page device memory gates remain **BLOCKED / NOT RUN** until staged and executed.
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
