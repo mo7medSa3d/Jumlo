@@ -4,8 +4,8 @@
 
 | Gate | Expected evidence | Status |
 |---|---|---|
-| `python3 -m unittest discover -s scripts/tests -p test_audit_source.py -v` | 5 parser/report contracts including exact line numbers and token exclusions | **NOT RUN**, CI pending |
-| `python3 scripts/audit_source.py` | Full source candidate list `build/reports/source-audit.{json,md}` uploaded via GitHub Actions | **NOT RUN**, CI pending |
+| `python3 -m unittest discover -s scripts/tests -p test_audit_source.py -v` | 5 parser/report contracts including exact line numbers and token exclusions | **PASS 5/5**, [Actions #40641509888](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641509888) |
+| `python3 scripts/audit_source.py` | 244 production files scanned, 27 candidate source matches; [artifact #12795561990](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641509888/artifacts/12795561990) | **PASS as source scan**, findings require manual triage |
 | Whole-app dead button / settings behavioral sweep | Compose/instrumentation actions, actual side effects and output inspection | **NOT VERIFIED** by static analysis |
 | Existing Android build/unit/lint/size | Kept separate; no Android gate weakened | **NOT RUN on this branch** at authoring |
 
