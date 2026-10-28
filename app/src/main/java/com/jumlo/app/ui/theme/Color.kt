@@ -175,19 +175,19 @@ val LightPillarColors = PillarColors(
 )
 
 val DarkPillarColors = PillarColors(
-    pdfPrimary = Color(0xFFFFB5C1),
+    pdfPrimary = DarkToolAccents[0],
     pdfContainer = Color(0xFF4C0519),
     pdfOnContainer = Color(0xFFFFE7EC),
     pdfSubtitle = Color(0xFFFECDD3),
-    imagesPrimary = Color(0xFFFCD34D),
+    imagesPrimary = DarkToolAccents[1],
     imagesContainer = Color(0xFF451A03),
     imagesOnContainer = Color(0xFFFFF1D6),
     imagesSubtitle = Color(0xFFFDE68A),
-    downloadsPrimary = Color(0xFF92DCD8),
+    downloadsPrimary = DarkToolAccents[2],
     downloadsContainer = Color(0xFF042F2E),
     downloadsOnContainer = Color(0xFFDDF8F3),
     downloadsSubtitle = Color(0xFF99F6E4),
-    filesPrimary = Color(0xFF93C5FD),
+    filesPrimary = DarkToolAccents[3],
     filesContainer = Color(0xFF172554),
     filesOnContainer = Color(0xFFE5E9FF),
     filesSubtitle = Color(0xFFBFDBFE),
