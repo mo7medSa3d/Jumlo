@@ -109,3 +109,8 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+
+## 2026-10-28 — WP-03 Arabic scan guidance (source candidate)
+
+`OcrWorkspacePanel.kt` now shows `OcrLanguageNotice`, powered by `ocr_scanned_arabic_limit` resources in both locales. Two Robolectric tests `OcrLanguageNoticeTest.englishOcrWorkspaceShowsHonestScriptLimitation` and `arabicOcrWorkspaceShowsLocalizedScriptLimitation` were authored. **NOT RUN** pending PR CI. Scanned Arabic OCR remains unsupported by the installed Latin model; real-device first-install model loading and 5-fixture document workflow remain NOT VERIFIED. No external OCR service is invoked by this change.
