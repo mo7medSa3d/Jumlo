@@ -4,12 +4,16 @@ import java.util.Locale
 
 /** Pure path policy used by MediaStore and the user's optional SAF destination. */
 object StoragePaths {
-    fun category(mime:String):String=when {
-        mime.startsWith("video/") -> "Video"
-        mime.startsWith("audio/") -> "Audio"
-        mime == "application/pdf" -> "PDF"
-        mime.startsWith("image/") -> "Images"
-        else -> "Documents"
+    /** Provider-reported MIME types are case-insensitive and may include parameters. */
+    fun category(mime:String):String {
+        val type = mime.substringBefore(';').trim().lowercase(Locale.ROOT)
+        return when {
+            type.startsWith("video/") -> "Video"
+            type.startsWith("audio/") -> "Audio"
+            type == "application/pdf" -> "PDF"
+            type.startsWith("image/") -> "Images"
+            else -> "Documents"
+        }
     }
     fun relativePath(mime:String, subfolder:String?=null):String {
         val base="Download/Jumlo/${category(mime)}"
