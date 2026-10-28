@@ -120,3 +120,8 @@ run here).
 | 200-page memory / scroll | NOT RUN | Existing bounded PdfReaderSession retained; physical runtime/performance still unqualified |
 
 Last-page writes are coalesced; very rapid exit before an asynchronous write is committed remains a risk until measured on device. Reader position data is app-private, capped, and not synced.
+
+### WP05 first CI run failure and non-skipping repair
+
+- [run 40640410599](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640410599): **FAILED** `:app:testDebugUnitTest` with 520 completed tests, **7 failed** and 2 skipped. The seven failures were unmodified `ToolScreenshotMatrixTest` (4 modes) and `AppearanceColorPickerTest` (3 methods), each `java.lang.AssertionError at MavenArtifactFetcher.java:129`, caused by `java.io.IOException at HttpURLConnection.java:2059` while downloading Robolectric runtime Maven artifacts. This is a real CI failure, not a bookmark test failure.
+- A follow-up `app/build.gradle.kts` change sets `robolectric.dependency.repo.url=https://repo.maven.apache.org/maven2` for all unit test tasks, preserving every test and rule. **Mitigation NOT VERIFIED** until new CI completes; if it still fails, inspect runtime artifact coordinates/HTTP status and continue debugging.
