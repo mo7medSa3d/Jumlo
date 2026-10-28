@@ -500,4 +500,4 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 ## WP09 Compose/device smoke acceptance — 2026-10-28
 
-Added an API26/API36 instrumented smoke workflow exercising existing UI and settings tests. It is scoped to core navigation, shared workspace, tool catalogue, viewer, gestures and persistence; it cannot certify every registered tool pick/run/result. Full device screen matrix and the five PDF compression fixtures remain required before any `works` label.
+Added an API26/API35/API36 instrumented smoke workflow exercising existing UI and settings tests. It is scoped to core navigation, shared workspace, tool catalogue, viewer, gestures and persistence; it cannot certify every registered tool pick/run/result. Full device screen matrix and the five PDF compression fixtures remain required before any `works` label.
