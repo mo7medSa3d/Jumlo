@@ -1,6 +1,9 @@
 # Tool UI specification
 
-> WP03 OCR: the current engine supports Latin recognition. Both Arabic and English locale UI must disclose the scanned-Arabic limitation. No new OCR model was added; device accuracy remains unqualified.
+## 2026-10-28 — WP06 quality gate contract (UI unaffected)
+
+The tool registry and screens are unchanged by the CI update. Routine media CI checks the full runtime, both decimal-60MB artifact limits, JVM tests, debug/release lint, and source constraints. KSP2 workers are serialized, not bypassed. Successful compilation does not qualify each tool's Android UI and processing flow.
+
 
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
@@ -511,3 +514,7 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+## 2026-10-28 — WP-03 script limitation notice
+
+In `pdf_ocr`, disclose that Latin-script scanned OCR works with the installed ML Kit model but Arabic scanned image text is unsupported; embedded Arabic text in PDF is a separate extraction path. The guidance is bilingual and tagged `ocr.script-limitation`. Two Robolectric assertions are authored; current-head CI/device acceptance remains pending.

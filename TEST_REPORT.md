@@ -1,8 +1,8 @@
 # Jumlo — verification report
 
-## WP03 OCR disclosure and verification
+## 2026-10-28 — WP06 lint and size source-guard integration
 
-`OcrWorkspacePanel` now renders `OcrLanguageNotice` before recognizing text. English/Arabic locale resources are provided; unit Compose visibility tests are authored. The old [CI failure #40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390) was an unresolved invalid test import, which is corrected. Latest full build/lint/size run **PENDING**. Actual Arabic OCR output is **unsupported**, not claimed working; real-device UI locale checks **NOT RUN**.
+The older WP06 commit `7fbab51b8e233f38a6a2a7a58120164ef5e12c02` completed both [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746) successfully. This follow-up merges the established KSP2 serialization fix from main, retains full-size checks, adds `:app:lintDebug`, and runs `scripts/test-compact-configuration.py` as a required CI step. **Current combined head: NOT VERIFIED until a fresh run completes.** Device tests, external download integrations, signing and Play Console remain NOT RUN.
 
 
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
@@ -141,6 +141,16 @@ run here).
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
 
-### OCR bilingual notice compile regression — 2026-10-28
+## 2026-10-28 — WP12 CI duplication mitigation
 
-Previous [Actions #40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390), job 122659533094, failed `:app:compileDebugUnitTestKotlin` because `OcrLanguageNoticeTest.kt` invoked `assertExists()` without importing the Compose test extension. Source fix adds `androidx.compose.ui.test.assertExists`. This corrects a verified compilation error, **not yet verified** on the new exact head until CI completes. Arabic OCR model support remains limited and device text-recognition accuracy unverified.
+| Check | Status | Evidence |
+|---|---|---|
+| CI event matrix: no duplicate WP push builds | NOT RUN until PR CI | scripts/tests/test-ci-event-matrix.py; PR builds still trigger on all main-targeted pull requests |
+| Full-media assemble/test/lint/size gates | NOT RUN on WP12 yet | Existing mandatory job, same commands and artifacts; no checks waived |
+| Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
+
+The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.
+
+## 2026-10-28 — WP-03 OCR script compatibility verification
+
+Run [40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390) **FAILED** compiling `OcrLanguageNoticeTest.kt:5` because `assertExists` was imported as a nonexistent top-level symbol. It is a `SemanticsNodeInteraction` member; the erroneous import was deleted without removing either bilingual assertion. Current-head **NOT RUN** until GitHub CI finishes. The model remains Latin-script-only; scanned Arabic OCR, physical device and model download/installation are **NOT VERIFIED**. No service/API receives OCR data from this change.

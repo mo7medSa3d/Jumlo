@@ -1,9 +1,9 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP03 OCR language disclosure
+## 2026-10-28 — WP06 CI guard consolidation
 
-- Show a localized notice before running scanned OCR: the installed recognizer targets Latin script and does not promise recognition of handwritten or scanned Arabic.
-- Add English/Arabic resource text and a Robolectric UI notice test. An initial [CI #40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390) failed at a bad top-level `assertExists` import; that import is removed, and the branch is reconciled with current main. Fresh CI pending.
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
 
 
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
@@ -180,4 +180,12 @@ TEST_REPORT.md.
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
 
-- Fix missing Compose `assertExists` import in bilingual OCR notice test, based on failed GitHub job 122659533094. Repeat complete CI; no test removed or disabled.
+## 2026-10-28 — WP12 single CI execution per pull request
+
+- Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
+- Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
+
+## 2026-10-28 — WP-03 bilingual OCR script disclosure
+
+- Show an English/Arabic notice inside the live PDF OCR workspace that the installed ML Kit Latin model cannot recognize Arabic pixels in scanned documents, while already-embedded Arabic PDF text remains extractable.
+- Add two Robolectric Compose notice assertions; remove invalid `androidx.compose.ui.test.assertExists` import after CI compile failure. No external OCR upload or unsupported Arabic scan capability introduced.
