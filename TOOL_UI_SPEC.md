@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP07 adds a generated Kotlin/Java source inventory for TODO markers, no-op callbacks, literal Text and UI colors. The inventory is *review-required*, not proof of live previews, accessibility or real processing. Android UI tests remain authoritative for tool flows.
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
