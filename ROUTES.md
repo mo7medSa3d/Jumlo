@@ -118,3 +118,7 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+## WP14 Files filter/group route contract
+
+No navigation change. `FilesScreen` category filters call `StoragePaths.category`, which now groups MIME values regardless of provider capitalization and optional parameters. The saved output folder uses the same canonical category.

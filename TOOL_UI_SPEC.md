@@ -514,3 +514,7 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+## WP14 Files category and saved destination consistency
+
+An image, PDF, video or audio should appear under the expected Files category even if its content provider reports `IMAGE/JPEG` or `Application/Pdf; charset=binary`. The default `Download/Jumlo/<Category>/` folder must agree with the UI grouping. Requires actual provider/UI instrumentation beyond the pure Kotlin tests.

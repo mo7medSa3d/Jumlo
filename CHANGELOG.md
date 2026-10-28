@@ -184,3 +184,8 @@ TEST_REPORT.md.
 
 - Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
 - Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
+
+## 2026-10-28 — WP14 file MIME classification normalization
+
+- Files grouping/filter and default publication folder now treat MIME values case-insensitively and ignore optional `;` parameters. Uppercase `APPLICATION/PDF; charset=binary` correctly maps to PDF rather than Documents. Unknown types remain Documents.
+- Added two `StorageMimeCategoryTest` JVM methods covering category and saved path. Exact-head CI pending; file-provider device integration not verified.

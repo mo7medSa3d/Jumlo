@@ -150,3 +150,8 @@ run here).
 | Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
 
 The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.
+
+## 2026-10-28 — WP14 Files MIME category consistency
+
+- Source-confirmed inconsistency: `StoragePaths.category` compared MIME with case-sensitive `startsWith` and equality; values like `APPLICATION/PDF` or `image/jpeg; name=...` could appear under Documents rather than PDF/Images, and route to the wrong public destination folder.
+- Fix in Android-free `storage-core`, covered by `StorageMimeCategoryTest.canonicalAndMixedCaseMimeTypesGroupInTheSameFilesSection` and `publishedFolderUsesTheSameCategoryAsFilesFilter` (15+ cases including unknown types). **JVM unit tests, Gradle build, lint and both APK size gates NOT RUN on exact new head until matching GitHub Actions**. Provider-level UI and SAF export still NOT VERIFIED.

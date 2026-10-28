@@ -104,3 +104,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## WP14 MIME type categorization
+
+Normalize provider-reported type with trim + lowercase(Locale.ROOT) + remove semicolon parameters before computing Files category and publication directory. This conforms to MIME case-insensitivity and does not change the byte content or output identity. No tool is hidden or removed.
