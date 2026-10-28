@@ -23,7 +23,7 @@ class CompactConfigurationTests(unittest.TestCase):
         self.assertIn('for (variant in listOf("debug", "release", "benchmark", "compact"))', GRADLE)
         self.assertIn('for (variant in listOf("debug", "release", "compact"))', GRADLE)
 
-    def test_both_full_media_apks_enforce_the_decimal_60mb_gate(self):
+    def test_full_media_compact_and_release_tasks_enforce_size_limit(self):
         self.assertIn('tasks.register("verifyCompactApkSize")', GRADLE)
         self.assertIn('dependsOn("assembleCompact")', GRADLE)
         self.assertIn('tasks.register("verifyReleaseApkSize")', GRADLE)

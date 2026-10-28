@@ -2,16 +2,10 @@ name: Android CI & APK
 
 on:
   push:
-    branches: [main, 'arena/**']
+    branches: [main, 'arena/**', 'wp/**']
     tags: ['v*']
-    paths-ignore:
-      - 'docs/**'
-      - 'verification/**'
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'verification/**'
   workflow_dispatch:
     inputs:
       device_tests:
@@ -65,13 +59,13 @@ jobs:
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
 
-      - name: Media build, unit tests, release lint and both APK size gates
+      - name: Media build (full downloader), unit tests, lint, compact size gate
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
-            :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:verifyReleaseApkSize \
+          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
+            :app:testDebugUnitTest :app:lintDebug :app:lintRelease \
             --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime

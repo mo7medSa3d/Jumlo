@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
+
+
 > 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 
@@ -497,6 +500,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 
 
-## 2026-10-28 — CI-only follow-up
+## 2026-10-28 — WP-06 CI-only resolution
 
-WP-06 changes package verification and matching source-level test assertions, not tool controls, previews, format choices or routing. Per-tool device and download acceptance remains independent of size/lint success.
+The full-runtime source and tool registry remain unchanged. Debug lint joins release lint and both full-media APK size gates, while legacy source checks now require the real enforced cap. This is not per-tool runtime acceptance.

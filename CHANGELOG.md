@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
@@ -154,6 +161,6 @@ TEST_REPORT.md.
 
 
 
-## 2026-10-28 — WP-06 CI follow-up after #11
+## 2026-10-28 — WP-06 follow-up after merged PRs #11 and #16
 
-- Building on merged #11 (which already reinstated both 60,000,000-byte checks), add `:app:verifyReleaseApkSize` to the **automatic** PR/main CI command, keep debug lint alongside release lint, and correct the stale `test-compact-configuration.py` expectation that incorrectly required *no* size cap. No change to shipped features or release signing.
+- Preserve mandatory release APK size, compact APK size, release lint and unit tests already merged into main. Also run `lintDebug`, and update legacy compact-config test to assert **both** real 60 MB gates rather than contradictory no-size-cap expectations. Documentation/report only otherwise.

@@ -98,6 +98,6 @@ release-APK size (54,878,634 bytes) is inherited from the supplied baseline and 
 not a current measurement.
 
 
-## 2026-10-28 — Policy supersession
+## 2026-10-28 — WP-06 stale guard follow-up
 
-The previous decision to lift the 60,000,000-byte APK cap is superseded by merged PR #11 and the current owner's release requirement: the full-media ARM64 compact and release APKs must both be at most 60,000,000 decimal bytes. WP-06 adds the release verifier to normal CI; do not strip yt-dlp or bypass tests to meet the cap.
+Owner's 60,000,000-decimal-byte full-media APK limit is enforced by merged CI PRs #11 and #16. Keep both size gates and the media runtime; align the legacy Python guard and retain both lint variants. This WP does not change binary policy beyond that merged baseline.

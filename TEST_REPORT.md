@@ -1,5 +1,12 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
+
+
 ## 2026-10-28 work-package verification — release quality gates
 
 - `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
@@ -88,7 +95,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
+| Release/compact APK size | Both enforce 60,000,000 decimal bytes in current source; branch CI #40639445934 measured 55,356,059/55,368,299 bytes | PASS for that exact branch SHA; merged-base run pending |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |
@@ -111,6 +118,6 @@ run here).
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
 
 
-## 2026-10-28 — WP-06 follow-up verification
+## 2026-10-28 — WP-06 resolved main integration
 
-GitHub main commit `10f3aed16ddaa82e188ec12466259c091e1e0b88` merged PR #11 with a 60,000,000-byte compact/release task cap and `lintRelease` in CI. This WP-06 follow-up schedules **both** verifier tasks and both debug/release lint in normal PR CI. `scripts/test-compact-configuration.py` now asserts this cap instead of contradicting the current Gradle script. **PENDING:** build/test/lint and APK byte results for this exact commit. Unsigned release size is not a signed publishing gate and device/workflow acceptance remains not run.
+Main merged PRs #11 and #16, restoring strict full-media APK size tasks and requiring their execution from main/PR CI. WP-06 now only adds `lintDebug` and corrects a stale size-policy Python guard that would otherwise falsely fail source verification. The earlier PR #25 run [40640539847](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640539847) was successful and reported compact **55,368,299 bytes**, unsigned release **55,356,059 bytes**, unit tests and `lintDebug`/`lintRelease`; it applied to earlier head `3589fafb...`, **not** this follow-up commit. Fresh current-head CI pending. Device/tool E2E not established.

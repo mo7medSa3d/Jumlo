@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
+
+
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
@@ -101,6 +104,6 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
 
 
-## 2026-10-28 — CI-only follow-up
+## 2026-10-28 — WP-06 CI-only resolution
 
-WP-06 does not alter navigation. CI now includes both full-media APK byte-size verifier tasks, along with `lintRelease`; this is not route-level acceptance evidence.
+No route or navigation change. Current main already checks full release/compact APKs; this follow-up adds debug lint and fixes contradictory source guard. UI device acceptance remains a separate gate.
