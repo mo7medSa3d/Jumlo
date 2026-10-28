@@ -105,4 +105,4 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 
 ## WP09 automatic emulator route smoke — 2026-10-28
 
-An additive GitHub Actions UI matrix now targets API 26 and API 36 for real `JumloUiTest`, workspace recovery, catalogue, viewer, gesture, localized component semantics and persisted preferences. No route code changed; test results must come from matching Actions jobs, not this declaration. Full scanner and external provider journeys remain unverified.
+An additive GitHub Actions UI matrix now targets API 26, API 35 and API 36 for real `JumloUiTest`, workspace recovery, catalogue, viewer, gesture, localized component semantics and persisted preferences. No route code changed; test results must come from matching Actions jobs, not this declaration. Full scanner and external provider journeys remain unverified.
