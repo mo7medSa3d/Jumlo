@@ -59,3 +59,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — Settings/device acceptance
+
+- [ ] Verify haptic intensity Off/Light/Medium/Strong persists and is honored across tool actions and OS haptics-disabled mode.
+- [ ] Verify Reduce motion switch and OS override through tool transitions after recreation.
+- [ ] Verify settings target sizes, TalkBack and 200% font EN/AR layout on physical device/emulator.
