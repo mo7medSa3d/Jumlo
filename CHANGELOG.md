@@ -145,3 +145,7 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+## 2026-10-28 — WP-03 downloader automatic defaults (CI pending)
+
+- Existing `MediaCatalog.preferred` selection is now the primary no-picker download flow. Quality, output format, PDF/image transforms, and filename editing remain available under an opt-in Advanced expander. Added EN/AR labels.
+- Added `scripts/test-media-auto-advanced.py` and included it in the host verification script. No Android runtime or live-provider success is claimed.
