@@ -1,10 +1,16 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP09 missing device-fixture preflight documentation
+## 2026-10-28 — WP09 Android fixture preflight restored
 
-- Restore the previously broken README and release-checklist link `verification/current/device/preflight-source/README.md`.
-- Provide real JDK corpus generation and per-run SHA-256 recording, ADB staging, host/guest free-space safeguards, 5-scan and 200-page instrumentation commands, evidence handling and explicit blocked conditions.
-- This is **documentation restoration only**, not a device benchmark or production approval. [PR #40 CI #40642228501](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642228501) passed all build/unit/lint/size gates (testDebugUnitTest cached, no emulator).
+- Restore the missing `verification/current/device/preflight-source/README.md` linked from README and RELEASE_CHECKLIST.
+- Provide source-backed fixture generation, per-run SHA-256, Android staging/storage and 200-page memory instructions, without fabricating test results.
+- [CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior branch head: unit tests, release lint, compact 55,367,131 bytes and release 55,354,871 bytes under 60 MB. Actual device benchmark NOT RUN.
+
+
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -170,3 +176,7 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.

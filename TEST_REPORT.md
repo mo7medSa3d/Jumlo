@@ -1,11 +1,14 @@
 # Jumlo — verification report
 
-## WP09 (2026-10-28) — source-backed Android fixture preflight
+## 2026-10-28 — WP09 device fixture preflight evidence
 
-- The missing `verification/current/device/preflight-source/README.md` link has been restored. It documents generation, hash verification, device staging and the exact existing `PdfCompressionDeviceTest` methods.
-- **NO DEVICE EXECUTION** is claimed. The five scan PDFs are **not** committed; their fingerprints must be generated, captured and verified per run. The previous README wording claiming a preserved supplied-hash manifest was not supported by this repository and is corrected.
-- The generated 200-page corpus, guest/host free-space planning, OOM/performance measurements and Android API-specific outcomes all remain **BLOCKED / NOT RUN** until real device logs and artifacts exist.
-- [PR #40 CI #40642228501](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642228501) completed **PASS** for assembleDebug, testDebugUnitTest (FROM-CACHE), lintRelease, full-media compact **55,368,299** and release **55,356,059** bytes (<60,000,000). Device fixture tests still NOT RUN.
+The previously broken preflight link is restored; source instructions describe five freshly generated scan files and 200-page device testing. No input fixture hashes were supplied in repo, and no Android device runs are claimed. [PR #40 CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior head for assembleDebug, testDebugUnitTest, lintRelease, compact and release size gates. **Device tests NOT RUN**.
+
+
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
@@ -127,3 +130,13 @@ run here).
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
