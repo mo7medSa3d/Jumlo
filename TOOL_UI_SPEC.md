@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
+
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
@@ -502,4 +505,8 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 **WP06 localization:** bilingual ColorPresets now display actual Arabic labels on Arabic Settings, rather than English-only names; custom hex seeds remain unchanged. Device theme and RTL screenshot acceptance remains NOT VERIFIED.- WP06 color-picker RTL language source is the explicit in-app preference, not the Android system locale; Arabic swatch labels are checked in a Robolectric Compose test (CI pending).

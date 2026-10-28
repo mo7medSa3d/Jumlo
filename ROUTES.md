@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
+
+
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
@@ -106,4 +109,8 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## 2026-10-28 — WP02a scope note
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 **WP06 appearance labeling:** Settings route signatures and Back logic unchanged. The App-color preference now uses the selected language for the current preset label; see `AccentLocalizationTest` (CI pending). No navigation tests are claimed.- WP06 Settings > App color passes the active in-app language into its modal; picker swatches no longer derive their language from Android device locale.
