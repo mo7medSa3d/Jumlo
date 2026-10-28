@@ -161,5 +161,5 @@ TEST_REPORT.md.
 
 ## 2026-10-28 — WP09 actual Android emulator smoke (verification pending)
 
-- Added a separate Android UI and persistence smoke workflow on GitHub Actions PR/main for API 26 and 36 using `reactivecircus/android-emulator-runner@v2`. It runs selected **existing** Compose UI, viewer, gesture, workspace, catalogue and DataStore instrumentation classes, and retains logcat + test reports on failure.
+- Added a separate Android UI and persistence smoke workflow on GitHub Actions PR/main for API 26, 35 and 36 using `reactivecircus/android-emulator-runner@v2`. It runs selected **existing** Compose UI, viewer, gesture, workspace, catalogue and DataStore instrumentation classes, and retains logcat + test reports on failure.
 - The default workflow's build/unit/release lint/compact+release APK gates remain unchanged. This is an additive lane, not a replacement for the full connected suite or physical-device testing.
