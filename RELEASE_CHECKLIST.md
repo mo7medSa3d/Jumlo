@@ -59,3 +59,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — Downloader automatic-selection acceptance
+
+- [ ] Verify source platform and file-type auto-detection on authorized links; correct output extension, selected format, playable audio/video and clean filename.
+- [ ] Verify newly installed BEST default, Advanced expand/collapse, custom limits preserved, and audio-only mode for both mixed and audio-only sources.
+- [ ] Run live/provider failure matrix and Android 8–15 foreground notification/resume/kill tests; record download file SHA-256 and playback.
