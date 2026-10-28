@@ -1,6 +1,6 @@
 # Navigation and route inventory
 
-This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
+This document describes the current source navigation contract. WP03 adds interaction preferences to the existing Settings route without adding new destinations; device and RTL navigation are pending. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
 
 Authoritative implementation: [JumloNavHost.kt](app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt), [QuietNavigation.kt](app/src/main/java/com/jumlo/app/ui/components/QuietNavigation.kt), [MainActivity.kt](app/src/main/java/com/jumlo/app/MainActivity.kt), and [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
 
@@ -14,7 +14,7 @@ The logical order is **Tools · Files · Home · Downloads · Settings**. Home o
 | 2 | `FilesRoute` | `files` | `FilesScreen` | Outputs, imported sources, granted folders and trash; list/grid, sort/filter/group, selection and file actions |
 | 3 | `HomeRoute` | `home` | `HomeScreen` | Start destination; Scan/Convert/Compress/Download, draft continuation, active jobs and recent files |
 | 4 | `DownloadsRoute` | `downloads` | `DownloadsScreen` | New download entry, current transfers, previous downloads and verified outputs |
-| 5 | `SettingsRoute` | `settings` | `SettingsScreen` | Appearance (theme mode incl. AMOLED, App color picker, dynamic color), language, save folder, quality defaults, storage, cache and About |
+| 5 | `SettingsRoute` | `settings` | `SettingsScreen` | Appearance, language, accessibility motion, haptic enable/strength, interface sounds, save folder, quality defaults, storage, cache and About |
 
 The indicator is drawn inside its destination cell. Each cell has `Role.Tab`, selection semantics and a retained spoken label at large font scales. Print is a detail screen; `DockTab.PRINT` remains a compatibility value and is excluded from `MainDockTabs`.
 
