@@ -38,7 +38,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
-- [ ] WP03: Verify Interface sounds off/on changes audible UI cues (except when system silent/ringer volume is zero), persists across app relaunch, and remains reachable in Arabic RTL at 200% text.
+- [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
 
 | Flow | Required observation |
 | --- | --- |

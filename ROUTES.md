@@ -1,6 +1,6 @@
 # Navigation and route inventory
 
-> WP03 adds a localized Interface sounds switch to the existing Settings route. PR #20's haptic/reduce-motion controls and the typed navigation graph are unchanged.
+> WP03 adds an accessible Interface sounds switch to the existing Settings screen without changing the navigation graph.
 
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
@@ -111,3 +111,7 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## 2026-10-28 — WP02a scope note
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.

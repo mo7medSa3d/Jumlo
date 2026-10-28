@@ -1,6 +1,6 @@
 # Tool UI specification
 
-> WP03 Settings now exposes the previously hidden `soundsEnabled` preference. The shared accessible `PreferenceToggleRow` updates DataStore and supplies `LocalAppSoundsEnabled` through the existing MainActivity composition. Android speaker and RTL checks remain pending.
+> WP03 exposes the already persisted `soundsEnabled` preference through a single-toggle Compose row; real speaker, Android sound policy and RTL checks remain NOT RUN.
 
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
@@ -507,3 +507,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.

@@ -100,4 +100,4 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
-51. WP03 preserves the haptic and Reduce motion implementation already merged from PR #20. The remaining sound toggle is useful because `soundsEnabled` is already stored and passed to UiSoundPlayer but had no visible Settings control. Expose one accessible role=Switch target with EN/AR text; test persistence and device output. Do not duplicate haptic switches from other branches.
+- **WP03 interface audio (2026-10-28):** Keep haptics and motion already merged in PR #20; expose stored `soundsEnabled` with one bilingual, accessible switch, persistent behavior and Android device tests.

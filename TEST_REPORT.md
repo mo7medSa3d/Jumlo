@@ -1,16 +1,8 @@
 # Jumlo — verification report
 
-## 2026-10-28 WP03 remaining interface-sounds control
+## WP03 — Interface sounds, Android qualification pending
 
-| Check | Status | Evidence |
-|---|---|---|
-| Audio cue UI switch | SOURCE-IMPLEMENTED, **NOT DEVICE VERIFIED** | `SettingsScreen` exposes `settings.sounds` via `PreferenceToggleRow` into `AppViewModel.setSoundsEnabled`; main `MainActivity` already provides `LocalAppSoundsEnabled` |
-| `PreferencesPersistenceTest` (recreation) | **NOT RUN** on Android | Added sound-off/restore checks alongside existing color/haptic/motion regressions |
-| `InteractionSoundSettingsUiTest` | **NOT RUN** on Android | Switch semantics, persisted state and activity recreation |
-| Audio output/silent mode | **BLOCKED** until device | Existing `UiSoundPlayer.play(enabled)` checks setting/ringer/system volume. No actual speaker pass claimed. |
-| Existing PR #20 haptics/reduce motion | Already in main source | This work package preserves those changes; no competing reimplementation. |
-
-Source authoring and GitHub Actions are not equivalent to device qualification.
+`settings.sounds` calls existing `setSoundsEnabled`. `MainActivity` supplies `LocalAppSoundsEnabled`; `UiSoundPlayer` respects the switch and system ringer/volume settings. EN/AR switch labels and Android tests exist. First [CI #40643551859](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643551859) failed in `lintAnalyzeRelease` due to an unexpected lint internal failure while analyzing `ImageResultPreview.kt`, not an identified source diagnostic. This branch now integrates the serialized KSP and current CI policy from main; fresh CI **PENDING**. Device sound testing **NOT RUN**.
 
 
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
@@ -138,3 +130,13 @@ run here).
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.

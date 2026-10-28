@@ -1,10 +1,9 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP03 remaining interface-sounds setting (merged haptics preserved)
+## 2026-10-28 — WP03 interface sound settings
 
-- Main already includes working persistent haptic intensity and system/user reduce-motion preferences from PR #20. This follow-up does **not** duplicate or replace those implementations.
-- Expose the pre-existing `soundsEnabled` DataStore preference through a shared accessible Compose switch. `MainActivity` already provides the preference to `LocalAppSoundsEnabled`; `UiSoundPlayer` honors the enabled flag and system sound/ringer state.
-- Add the missing EN/AR Settings label and persistence/UI instrumentation regressions. **Device test not run** at authoring; current branch CI pending.
+- Add an accessible, persisted `Interface sounds` toggle to Settings, with English/Arabic strings. No duplicate changes to the haptic and reduce-motion settings already merged in PR #20.
+- Reuse `AppViewModel.setSoundsEnabled`, existing stored `soundsEnabled` and audio cue composition. New Android persistence and UI tests are source-added but **not yet device-qualified**.
 
 
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
@@ -176,3 +175,7 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
