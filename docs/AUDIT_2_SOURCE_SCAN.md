@@ -50,3 +50,9 @@ Files attempted: 14, failures: 0, candidates: 9.
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:156`: `color = Color.White`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:160`: `.background(Color(0xFF81F2CE), CircleShape)`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/components/JumloSplash.kt:166`: `color = Color(0xFFE0E5FF), textAlign = TextAlign.Center`
+
+## Batch 98–111
+
+Files attempted: 14, failures: 0, candidates: 1.
+
+- **TEXT** `app/src/main/java/com/jumlo/app/ui/downloads/MediaWorkspace.kt:400`: `label={Text("$kbps kbps",style=QuietTheme.typography.metadataStrong)}`
