@@ -20,7 +20,7 @@ import com.jumlo.app.model.ThemeMode
 
 /** Preview-only token gallery: no fake document image or fabricated runtime state. */
 @Composable
-private fun JumloTokensPreview(arabic: Boolean) {
+private fun JumloTokensPreview(arabic: Boolean, dark: Boolean) {
     val scheme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().background(scheme.background).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -38,11 +38,10 @@ private fun JumloTokensPreview(arabic: Boolean) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("pdf_03", "img_01", "dl_media").forEach { id ->
-                Surface(modifier = Modifier.weight(1f), color = ToolPalette.containerFor(id, scheme.surfaceContainerLow,
-                    dark = M3ColorFactory.contrast(scheme.background, scheme.onBackground) > 0f &&
-                        scheme.background.red < 0.25f), shape = RoundedCornerShape(16.dp)) {
+                Surface(modifier = Modifier.weight(1f), color = ToolPalette.containerFor(id, scheme.surfaceContainerLow, dark),
+                    shape = RoundedCornerShape(16.dp)) {
                     Text(id.substringBefore('_').uppercase(), modifier = Modifier.padding(12.dp),
-                        color = ToolPalette.accentFor(id, dark = scheme.background.red < 0.25f),
+                        color = ToolPalette.accentFor(id, dark),
                         style = MaterialTheme.typography.labelLarge)
                 }
             }
@@ -52,7 +51,7 @@ private fun JumloTokensPreview(arabic: Boolean) {
 
 @Preview(name = "Jumlo · light EN", showBackground = true, widthDp = 390)
 @Composable private fun LightEnglishTokens() {
-    JumloTheme(ThemeMode.LIGHT, AppLanguage.ENGLISH) { JumloTokensPreview(false) }
+    JumloTheme(ThemeMode.LIGHT, AppLanguage.ENGLISH) { JumloTokensPreview(false, false) }
 }
 
 @Preview(name = "Jumlo · dark EN", showBackground = true, widthDp = 390)
@@ -62,7 +61,7 @@ private fun JumloTokensPreview(arabic: Boolean) {
 
 @Preview(name = "Jumlo · light AR", locale = "ar", showBackground = true, widthDp = 390)
 @Composable private fun LightArabicTokens() {
-    JumloTheme(ThemeMode.LIGHT, AppLanguage.ARABIC) { JumloTokensPreview(true) }
+    JumloTheme(ThemeMode.LIGHT, AppLanguage.ARABIC) { JumloTokensPreview(true, false) }
 }
 
 @Preview(name = "Jumlo · dark AR", locale = "ar", showBackground = true, widthDp = 390)
