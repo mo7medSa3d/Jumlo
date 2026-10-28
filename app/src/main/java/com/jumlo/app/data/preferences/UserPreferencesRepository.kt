@@ -140,7 +140,7 @@ class UserPreferencesRepository @Inject constructor(
             hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
             themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM),
             language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(defaultLanguage),
-            respectReducedMotion = false, // Removed setting; system animation policy is respected by the activity.
+            respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false,
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             hapticIntensity = if(prefs[Keys.HAPTIC_ON_COMMIT]==false) HapticIntensity.OFF else
                 runCatching { HapticIntensity.valueOf(prefs[Keys.HAPTIC_INTENSITY] ?: "LIGHT") }.getOrDefault(HapticIntensity.LIGHT),
@@ -260,7 +260,7 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }
     suspend fun setAccentColor(value: String) {
-        require(value in setOf("VIOLET","BLUE","TEAL","CORAL","DYNAMIC"))
+        require(isValidAccent(value)) { "INVALID_ACCENT_COLOR" }
         context.dataStore.edit { it[Keys.ACCENT_COLOR] = value }
     }
     suspend fun setFontScale(value: String) {
