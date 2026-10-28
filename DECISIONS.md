@@ -96,3 +96,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## 2026-10-28 — Interaction preferences override
+
+The current owner requirements restore visible haptic-intensity and Reduce motion controls, superseding the October 24 choice to hide them. Android system reduced-motion always wins when enabled; the app preference can additionally suppress motion but cannot force it on against the OS. Haptic feedback remains off when Jumlo Off, OS vibration disabled or view feedback denied.
