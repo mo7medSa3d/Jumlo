@@ -14,6 +14,11 @@ object PageSelection {
         val normalized = normalize(value)
         require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
         val result = mutableListOf<List<Int>>()
+        // A 100 KB range expression can repeat "1-10000" thousands of times.
+        // Avoid allocating millions of duplicated boxed page numbers before
+        // downstream document size limits can reject the request.
+        var expandedPages = 0L
+        val maxExpandedPages = 100_000L
         normalized.split(',').forEach { part ->
             val match = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$").matchEntire(part)
             require(match != null) { "INVALID_PAGE_RANGE" }
@@ -21,7 +26,10 @@ object PageSelection {
             val endpoint = match.groupValues[2]
             val last = if (endpoint.isEmpty()) first else endpoint.toIntOrNull()
             require(first != null && last != null && first in 1..count && last >= first) { "INVALID_PAGE_RANGE" }
-            result += (first..minOf(last, count)).toList()
+            val boundedEnd = minOf(last, count)
+            expandedPages += boundedEnd.toLong() - first + 1L
+            require(expandedPages <= maxExpandedPages) { "PAGE_SELECTION_LIMIT" }
+            result += (first..boundedEnd).toList()
         }
         return result
     }
