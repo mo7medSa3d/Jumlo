@@ -59,3 +59,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — Reader position acceptance
+
+- [ ] Verify last page persists after returning from Files, app relaunch and process death; test restored page bounds when the PDF is replaced by a shorter document.
+- [ ] Verify bookmark write/read errors do not crash or prevent PDF opening, with no raw URI in app-private preference file.
+- [ ] Measure 200-page reader scrolling and memory on a mid-range physical Android device.
