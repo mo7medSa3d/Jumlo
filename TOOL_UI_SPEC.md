@@ -1,5 +1,6 @@
 # Tool UI specification
 
+- Filename input is an Advanced override rather than a mandatory field; the primary Download action uses the analyzed source title. Verify screen reader order and 48 dp targets on-device.
 **WP02 2026-10-28:** The downloader now auto-selects the best available source quality; it displays the chosen quality as a compact summary and defaults to original files for direct PDF/image URLs. An optional Advanced expander exposes manual audio/video, encoding and format choices. `MediaBestSelectionTest` includes six JUnit selection cases but is **NOT RUN** in this edit session until CI passes. Live platforms, Android 8–15 and accessibility remain NOT VERIFIED.
 
 
