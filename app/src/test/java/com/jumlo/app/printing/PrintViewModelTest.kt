@@ -176,6 +176,26 @@ class PrintViewModelTest {
         assertEquals("1-2",vm.state.value.options.range)
         assertEquals(listOf(3,1),vm.state.value.pages.map { it.sourcePage })
     }
+    @Test fun draggedPageOrderRecoversFromStaleOrDuplicateSavedValues()=runTest(dispatcher) {
+        val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
+        vm.attach(source);advanceUntilIdle()
+        // The existing renderer ignores invalid permutations, showing pages 1,2,3.
+        vm.edit(vm.state.value.options.copy(pageOrder=listOf(1,1,3)));advanceUntilIdle()
+        assertEquals(listOf(1,2,3),vm.state.value.orderedPages.map { it.sourcePage })
+        vm.applyPageOrder(listOf(2,0,1));advanceUntilIdle()
+        assertEquals(listOf(3,1,2),vm.state.value.orderedPages.map { it.sourcePage })
+        assertEquals(listOf(3,1,2),vm.state.value.options.pageOrder)
+    }
+
+    @Test fun moveButtonRecoversFromStaleSavedPageOrder()=runTest(dispatcher) {
+        val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
+        vm.attach(source);advanceUntilIdle()
+        vm.edit(vm.state.value.options.copy(pageOrder=listOf(2,2,3)));advanceUntilIdle()
+        assertEquals(listOf(1,2,3),vm.state.value.orderedPages.map { it.sourcePage })
+        vm.movePage(0,2);advanceUntilIdle()
+        assertEquals(listOf(2,3,1),vm.state.value.orderedPages.map { it.sourcePage })
+    }
+
     @Test fun rotatingAPageStoresTheRotationAgainstTheSourceOrder()=runTest(dispatcher) {
         val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
         vm.attach(source);advanceUntilIdle()
