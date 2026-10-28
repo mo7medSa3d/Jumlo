@@ -1,5 +1,13 @@
 # Tool UI specification
 
+**WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
+
+
+## 2026-10-28 — WP06 quality gate contract (UI unaffected)
+
+The tool registry and screens are unchanged by the CI update. Routine media CI checks the full runtime, both decimal-60MB artifact limits, JVM tests, debug/release lint, and source constraints. KSP2 workers are serialized, not bypassed. Successful compilation does not qualify each tool's Android UI and processing flow.
+
+
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 
@@ -506,8 +514,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
 
-## WP11 direct media inspection security
+## 2026-10-28 — WP08 compiler workflow, no UI changes
 
-A direct URL may redirect during inspection. Custom user-entered HTTP headers are retained only for the initial scheme, host, and effective port; cross-origin redirects use fresh browser defaults and separate URL-scoped cookies. This prevents leaking user-supplied `Referer`/`Origin` information across hosts without changing the visible downloader interaction. Real redirect/extractor acceptance requires permitted live fixtures and remains NOT VERIFIED.
-
-- WP11 security contract covers both Analyze/Inspect and the Download execution path: user-customized Referer/Origin/UA only follow same-origin redirects, while standard profile headers and URL-scoped cookies are reconstructed per target. Scripted transfer regression added; live and device behavior not yet verified.
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.

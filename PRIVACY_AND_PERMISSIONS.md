@@ -1,5 +1,8 @@
 # Privacy, permissions and distribution review
 
+**2026-10-28 WP11 redirect hardening:** User-entered custom media HTTP headers may contain account-specific values. Their scope is limited to the origin of the initially requested resource; a redirect changing scheme, hostname or effective port cannot inherit them. Normal browser headers remain; cookie jar queries are scoped to the actual target URL. This is source policy, not a guarantee against malicious servers at the original origin.
+
+
 Review date: 23 October 2026. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
 
 ## Manifest permissions
@@ -74,11 +77,3 @@ Primary policy references, checked on the review date:
 - [ML Kit document scanner](https://developers.google.com/ml-kit/vision/doc-scanner/android)
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
-
-## 2026-10-28 — Direct-download custom-header redirect isolation
-
-User-entered custom request headers can include private origin context, so during direct-file inspection their scope is now limited to the original HTTP(S) origin; redirects to other schemes/hosts/ports receive no original custom headers. WebView cookie lookup still happens for the currently requested HTTPS URL, not by copying the original host's cookie string. This source safeguard is pending GitHub CI and network/device verification; it does not establish that all external media providers respect these boundaries.
-
-- A user-defined User-Agent may identify an account/browser profile; it is likewise not forwarded to cross-origin redirect targets. The default browser profile remains available so legitimate file redirects can proceed.
-
-- The same cross-origin scoping now applies to the **actual resumable download worker**, not just preview inspection. Manually followed redirects are sent standard browser headers and target URL-scoped cookies without original custom Referer/Origin/User-Agent. The regression uses simulated HTTP transport and does not prove external providers' handling or exclude unrelated network risks.

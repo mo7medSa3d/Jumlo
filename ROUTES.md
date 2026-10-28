@@ -1,5 +1,13 @@
 # Navigation and route inventory
 
+**2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
+
+
+## 2026-10-28 — WP06 CI contract (no route changes)
+
+Navigation remains unchanged by this CI-only work package. The build adds debug lint and a source-size assertion to existing release/compact artifact checks while retaining serialized KSP2. Device/Back/RTL verification remains separate.
+
+
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 
@@ -110,8 +118,6 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
 
-## 2026-10-28 — WP11 direct-download redirect header boundary
+## 2026-10-28 — WP08 CI compiler gate
 
-No route/navigation changes. The `dl_media` and direct-file intake still inspect permitted redirects; user-entered custom header values are not repeated across origin changes during direct-link inspection. The protected source URI and URL-scoped cookie handling stay independent. See TEST_REPORT.md for pending compilation and live-network verification.
-
-- WP11 clarification: `dl_media` direct-file jobs use the same initial-origin boundary for the actual background `StreamTransfer` as for link inspection. No screen/route changes; redirected CDN downloads still use target-appropriate standard headers.
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.

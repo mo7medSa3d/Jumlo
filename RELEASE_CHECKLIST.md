@@ -62,3 +62,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.

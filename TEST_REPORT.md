@@ -1,5 +1,15 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP11 downloader cross-origin header policy
+
+**CODE WRITTEN:** `PlatformHeaderPolicy.sameOrigin` checks normalized origin and rejects credentials, with `customHeaderOrigin` passed through stream/probe requests. `PlatformHeaderPolicyTest` covers scheme/host/port changes and an actual mock transport 302-hop chain. Earlier Actions [#40643832677](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643832677) passed for older SHA `6c689c2e`. **Current merged-base SHA CI NOT VERIFIED**, real HTTP/cookie/live media flows NOT RUN.
+
+
+## 2026-10-28 — WP06 lint and size source-guard integration
+
+The older WP06 commit `7fbab51b8e233f38a6a2a7a58120164ef5e12c02` completed both [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746) successfully. This follow-up merges the established KSP2 serialization fix from main, retains full-size checks, adds `:app:lintDebug`, and runs `scripts/test-compact-configuration.py` as a required CI step. **Current combined head: NOT VERIFIED until a fresh run completes.** Device tests, external download integrations, signing and Play Console remain NOT RUN.
+
+
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
 
 Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
@@ -126,16 +136,22 @@ run here).
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
 
-## 2026-10-28 — WP11 redirect custom-header isolation
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
 
-- Root cause: `MediaViewModel.probeDirect` loops through redirects and formerly called `PlatformHeaderPolicy.headersFor` with identical `extraMap` on every target; custom `Referer`/`Origin` values could be forwarded to a different origin, contrary to the policy comment. No evidence that a user credential was actually exposed; this is a source-confirmed data boundary weakness.
-- Fix: pass the original URL as `customHeaderOrigin`, compare normalized HTTP(S) scheme/host/effective port in Android-free `downloader-core`, drop custom extras on cross-origin hops, keep ordinary browser headers and separately URL-scoped CookieManager lookups. Added JVM regression methods `customRefererAndOriginDoNotLeakAcrossRedirectOrigins` and `originMatchingNormalizesPortsAndRejectsMalformedSources`.
-- `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintRelease`, compact/release full-media APK size gates: **NOT RUN at this PR SHA until GitHub Actions completes**. Live redirect integrations, user accounts and authorized provider access: **NOT VERIFIED**. No downloader feature or test was disabled.
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
 
-- Additional source-level guard: cross-origin redirects also discard the explicit custom User-Agent value, falling back to a normal browser profile. Kotlin test verifies same-origin retention and cross-origin removal. **NOT RUN at this revision until matching CI**.
+### WP08 measured CI evidence — 2026-10-28
 
-### WP11 actual transfer redirect boundary regression (new source, CI pending)
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
 
-- `DownloadOperationHandler.kt` previously rebuilt custom HTTP headers for *every* `StreamTransfer` redirect hop using `buildHeadersForUrl(targetUrl, profileIndex)`; the original user-entered Referer/Origin/User-Agent could follow a redirect to another host despite per-hop cookie scoping. Now each transfer binds `customHeaderOrigin` to the original resolved URL while rebuilding target-specific browser headers and cookies.
-- Added JVM integration regression `PlatformHeaderPolicyTest.realStreamRedirectRetainsOnlyOriginScopedCustomHeaders`: scripted source → same-origin hop → cross-origin CDN response, asserts 5 real downloaded bytes, same-origin extras retained, cross-origin custom Referer/Origin/User-Agent stripped. This uses a scripted `HttpTransport`, **not a live provider or Android device**.
-- **NOT RUN** for latest PR SHA until GitHub CI finishes; no PASS can be inferred from source tests alone. Explicitly recheck actual redirect/expiry/resume cases in Android instrumentation and authorized live provider test matrix.
+## 2026-10-28 — WP12 CI duplication mitigation
+
+| Check | Status | Evidence |
+|---|---|---|
+| CI event matrix: no duplicate WP push builds | NOT RUN until PR CI | scripts/tests/test-ci-event-matrix.py; PR builds still trigger on all main-targeted pull requests |
+| Full-media assemble/test/lint/size gates | NOT RUN on WP12 yet | Existing mandatory job, same commands and artifacts; no checks waived |
+| Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
+
+The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.

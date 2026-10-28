@@ -1,4 +1,9 @@
 # Jumlo — AUDIT_2 (source evidence and release gap register)
+
+## 2026-10-28 origin-scoping follow-up
+
+User-provided downloader custom headers were at risk of being reused on redirected hosts. The pending WP11 branch adds exact scheme/host/effective-port matching, disabled cross-origin custom headers, and JVM redirect tests. Do not close the P0 risk or call it production verified until latest CI and actual redirect testing pass.
+
 Date: 2026-10-28. Target repository: `mo7medSa3d/Jumlo`; baseline `main` tree/commit `d599b8a3159f38623e3d0b83c3d58a23073e70cf`.
 **Verdict: NOT RELEASE QUALIFIED.** This is an audit, not a claim that implementations were executed on a device. Source inventory and historic test evidence are different from a freshly passing complete pick→result flow.
 
@@ -147,10 +152,3 @@ No package is marked complete until its branch/PR has cited commands, results an
 ## 2026-10-28 follow-up: complete production Kotlin/Java lexical scan
 
 The follow-up [AUDIT_2_SOURCE_SCAN.md](AUDIT_2_SOURCE_SCAN.md) records **244/244** production Kotlin/Java files read from the audited base GitHub commit with **zero fetch failures**. The reproducible lexical candidate rules located **204 direct raw-color references**, **7 direct UI text literals**, **0 TODO/FIXME/stub markers** and **0 syntactically empty callbacks**. These are **candidates**, not claims that every color is wrong: most are token definitions, document-paper/ink colors or intentional numeric labels. No finding certifies runtime behavior, catches semantically inert *nonempty* callbacks or covers XML/scripts/binary assets. The full file:line inventory is retained in the linked source scan. Original capability/status table above remains authoritative for missing end-to-end evidence.
-
-## WP11 source-confirmed redirect custom-header risk — 2026-10-28
-
-- In `MediaViewModel.kt:99-120`, the same user-entered custom headers were passed on every direct-file redirect, even when destination origin changed. Since `MediaSessionStore` permits custom `Referer` and `Origin`, redirect destinations could receive privacy-sensitive request context. This finding is based on source wiring; no breach is claimed.
-- Proposed fix `wp/11-cross-origin-media-headers`: `PlatformHeaderPolicy.sameOrigin` and `customHeaderOrigin` gate custom extra headers by normalized scheme/host/port, while the browser UA and per-URL CookieManager remain available. Tests added for same origin versus host/port/scheme change and invalid URLs. **CI and live redirect acceptance NOT VERIFIED until matching run**.
-
-- Further WP11 source finding: `DownloadOperationHandler.buildHeadersForUrl` was called on every manually followed `StreamTransfer` redirect and previously passed the same custom header map regardless of destination. Bound the original transfer URL in `customHeaderOrigin`; added `PlatformHeaderPolicyTest.realStreamRedirectRetainsOnlyOriginScopedCustomHeaders` with scripted 302/302/200 and verified byte payload. **Execution NOT VERIFIED** until matching PR CI. Do not mark live downloads `works` on this scripted test alone.

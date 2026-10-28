@@ -1,5 +1,16 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP11 — origin-bound downloader custom headers
+
+Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers are now accepted only on the exact original scheme/host/port. Cross-origin redirects use regular browser headers, while URL-scoped cookie retrieval stays separate. Tests cover normalised default ports, malicious subdomains and real two-hop redirect simulation. Earlier CI passed on older SHA `6c689c2e`; current-head CI pending.
+
+
+## 2026-10-28 — WP06 CI guard consolidation
+
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
+
+
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
@@ -170,11 +181,11 @@ TEST_REPORT.md.
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
 
-## 2026-10-28 — WP11 redirect-scoped downloader headers
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
-- Direct-download link inspection now keeps user-entered `Referer`, `Origin`, language and other custom headers confined to the original scheme/host/port. Cross-origin redirects preserve ordinary browser headers and URL-scoped cookie lookup but never replay initial custom extras. Added `PlatformHeaderPolicyTest` cases for matching origins, alternate hosts/subdomains, ports, scheme downgrades and malformed URLs.
-- Source fix is proposed on `wp/11-cross-origin-media-headers`; release build and tests are **NOT VERIFIED** until matching GitHub CI completes.
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
 
-- Extra protection: a custom User-Agent value is also replaced by an ordinary browser profile if the redirect crosses the original origin, avoiding transfer of a caller-specific identity.
+## 2026-10-28 — WP12 single CI execution per pull request
 
-- WP11 follow-up: protect the **actual direct download transfer**, not only the preview/probe. `DownloadOperationHandler` now binds custom headers to each job's original URL across manually-followed StreamTransfer redirects. Added real streamed-byte/redirect JVM regression; pending matching-head CI.
+- Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
+- Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
