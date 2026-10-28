@@ -14,7 +14,7 @@ The primary bottom navigation has four localized tabs in reading order: **Home, 
 
 ## Scope and evidence
 
-This is the source-level contract for all **47 registry entries** after the UI implementation. **44 entries are available; three pre-existing security/privacy blocks remain disabled.** Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
+This is the source-level contract for the **45 entries currently registered** in `CapabilityRegistry.tools`. The current `CapabilityPolicy` marks the registered entries available in source; **source availability is not an end-to-end runtime PASS**. Prior references to 47 tools / 44 enabled and three disabled describe superseded historical revisions. Source presence is not runtime qualification. Every device-dependent behavior in this document is **NOT VERIFIED** until the corresponding build, device test, screenshot or manual result is recorded in `TEST_REPORT.md`.
 
 The catalogue is one keyed lazy grid organised into the brief's sections — Scan &
 Capture, Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files —
