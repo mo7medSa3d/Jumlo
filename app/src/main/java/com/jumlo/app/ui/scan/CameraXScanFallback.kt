@@ -197,8 +197,8 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onBack:()->Unit,exter
                                 }.getOrNull()
                             }
                         }
-                        // The decoded Bitmap is native memory. Release it whenever this lazy
-                        // item leaves composition (scroll, delete, reorder, or scanner exit).
+                        // This row owns the decoded native preview, not its original source.
+                        // Release it on remove, scroll disposal, rotation and scanner exit.
                         DisposeOwnedPreviewBitmap(bitmap)
                         Column(Modifier.width(144.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                             Surface(shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {

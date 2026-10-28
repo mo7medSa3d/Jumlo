@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
+import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.SaveFolderCard
@@ -70,6 +71,25 @@ fun SettingsScreen(
             Modifier.testTag("settings.appColor")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
+        item("haptics") { PreferenceRow(stringResource(R.string.pref_haptics),
+            hapticLabel(settings.hapticIntensity), Icons.Rounded.Vibration,
+            { panel = "haptics" }, Modifier.testTag("settings.haptics")) }
+        item("reduce-motion") {
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
+                .testTag("settings.reduceMotion")
+                .toggleable(value = settings.respectReducedMotion, role = Role.Switch,
+                    onValueChange = { viewModel.setRespectReducedMotion(it) })
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.pref_reduce_motion), style = QuietTheme.typography.body)
+                    Text(stringResource(R.string.pref_reduce_motion_summary),
+                        style = QuietTheme.typography.metadata,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = settings.respectReducedMotion, onCheckedChange = null)
+            }
+        }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
@@ -108,6 +128,8 @@ fun SettingsScreen(
         )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
+        "haptics" -> ChoiceDialog(stringResource(R.string.pref_haptics), HapticIntensity.entries.map { hapticLabel(it) },
+            settings.hapticIntensity.ordinal, { viewModel.setHapticIntensity(HapticIntensity.entries[it]); panel = null }, { panel = null })
         "video" -> {
             val choices = listOf("BEST", "1080", "720", "480")
             ChoiceDialog(stringResource(R.string.modern_video_quality),
@@ -154,6 +176,12 @@ private fun previewAccentLabel(accent: String): String {
     if (M3ColorFactory.hexColor(accent) != null) return accent
     return "Blue"
 }
+@Composable private fun hapticLabel(intensity: HapticIntensity): String = stringResource(when (intensity) {
+    HapticIntensity.OFF -> R.string.pref_haptic_off
+    HapticIntensity.LIGHT -> R.string.pref_haptic_light
+    HapticIntensity.MEDIUM -> R.string.pref_haptic_medium
+    HapticIntensity.STRONG -> R.string.pref_haptic_strong
+})
 @Composable private fun languageLabel(language: AppLanguage): String = stringResource(
     if (language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
 

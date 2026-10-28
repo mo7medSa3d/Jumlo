@@ -1,6 +1,6 @@
 # Navigation and route inventory
 
-**2026-10-28 WP08 scanner resource lifecycle:** The existing `ScanRoute` and CameraX fallback route/permissions are unchanged. Gallery/camera thumbnail rows now dispose native bitmaps when their composable leaves the screen; no new route or behavior claim. `ScanPreviewBitmapOwnershipTest` requires Android instrumentation.
+**2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
@@ -105,3 +105,15 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+## 2026-10-28 — WP02a scope note
+
+Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+## 2026-10-28 — WP08 scanner lifecycle
+
+No scanner route or permission changed. CameraX fallback lazy thumbnail rows dispose native Bitmap previews when their composable leaves composition. No device success is claimed without instrumentation evidence.

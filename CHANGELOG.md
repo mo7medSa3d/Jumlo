@@ -1,9 +1,8 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 WP08 — CameraX scan-thumbnail bitmap ownership
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
-- CameraX fallback's lazy thumbnail list now uses the existing `DisposeOwnedPreviewBitmap` reusable Compose owner. Removing, reordering off-screen, scrolling or exiting the scanner releases each thumbnail's decoded native `Bitmap` once the corresponding composable is disposed.
-- Added `ScanPreviewBitmapOwnershipTest` instrumentation test to verify a rendered bitmap becomes recycled after removing the thumbnail. This is a real test file, **not an executed PASS** until an Android emulator/device run is recorded.
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -165,3 +164,16 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP08 CameraX scan-preview native memory
+
+- Scanner lazy thumbnails now register each separately decoded Bitmap with the existing DisposeOwnedPreviewBitmap Compose owner, which releases it on disposal. An instrumentation test checks recycling after removal. Real 100-page memory profiling remains NOT VERIFIED.

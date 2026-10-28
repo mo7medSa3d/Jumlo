@@ -1,6 +1,6 @@
 # Release checklist
 
-- [ ] Scan-thumbnail cleanup: run `ScanPreviewBitmapOwnershipTest` on actual Android target and inspect scanner fallback with 100 gallery/camera pages, repeated scroll/reorder/delete, activity recreation and memory profiler. Source registration is not memory/performance acceptance.
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
@@ -62,3 +62,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## WP08 bitmap leak follow-up
+
+- [ ] Run ScanPreviewBitmapOwnershipTest on an actual Android emulator and profile 100-page scan scrolling, rearrange/remove and activity recreation before marking release-ready.

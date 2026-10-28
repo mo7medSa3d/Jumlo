@@ -1,6 +1,6 @@
 # Decisions — 24 October 2026
 
-**2026-10-28 WP08 scanner bitmap ownership:** Reuse `DisposeOwnedPreviewBitmap` for the CameraX fallback lazy thumbnail list instead of retaining preview-native `Bitmap` instances for the entire scanner session. Do not recycle uploaded original sources or output bitmaps; only decoded thumbnail previews owned by their individual Compose row. Real heap/device behavior remains a separate release gate.
+**2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
 
 
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
@@ -99,3 +99,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## 2026-10-28 — WP08 scanner bitmap lifetime
+
+Only decoded CameraX preview thumbnails are owned and recycled by each composed lazy row. Original imported image source files and output PDF bitmaps remain outside this ownership boundary.
