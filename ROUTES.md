@@ -1,5 +1,13 @@
 # Navigation and route inventory
 
+**2026-10-28 WP06:** AppearanceColorPicker within Settings renders persisted accent preset names in selected EN/AR locale. No new route, no color key/schema change; device/RTL testing pending.
+
+
+## 2026-10-28 — WP06 CI contract (no route changes)
+
+Navigation remains unchanged by this CI-only work package. The build adds debug lint and a source-size assertion to existing release/compact artifact checks while retaining serialized KSP2. Device/Back/RTL verification remains separate.
+
+
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 
@@ -113,4 +121,3 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
-**WP06 appearance labeling:** Settings route signatures and Back logic unchanged. The App-color preference now uses the selected language for the current preset label; see `AccentLocalizationTest` (CI pending). No navigation tests are claimed.- WP06 Settings > App color passes the active in-app language into its modal; picker swatches no longer derive their language from Android device locale.

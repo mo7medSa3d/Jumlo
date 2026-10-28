@@ -1,5 +1,16 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP06 — localized accent preset labels
+
+- Accent picker and saved-theme labels now use bilingual EN/AR labels rather than English names while Arabic is active; persisted color keys and custom hex values unchanged. Added JVM localization assertions. Earlier Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at earlier SHA `a82d89fe`; current merged-base CI pending.
+
+
+## 2026-10-28 — WP06 CI guard consolidation
+
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
+
+
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
@@ -173,5 +184,8 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
-## WP06 — Arabic Settings accent labeling (2026-10-28, CI pending)
-- Settings appearance now renders each of the 16 named accent presets in the selected Arabic/English language instead of always displaying English; invalid/stale preset values fall back to localized Blue. Custom hex accents remain recognizable hex text. Added four JUnit cases in `AccentLocalizationTest`. Device/RTL screenshots still NOT VERIFIED.- Follow-up: the Appearance picker now receives `settings.language`; its 16 swatches use Arabic names under Arabic selection even when the Android device locale is English. Added a Robolectric Compose UI test for this actual language mismatch.
+
+## 2026-10-28 — WP12 single CI execution per pull request
+
+- Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
+- Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
