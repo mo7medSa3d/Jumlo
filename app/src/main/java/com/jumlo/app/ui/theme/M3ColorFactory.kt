@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Color
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -46,7 +47,7 @@ object M3ColorFactory {
     }
 
     private fun Float.toLinear(): Float =
-        if (this <= 0.03928f) this / 12.92f else ((this + 0.055f) / 1.055f).let { it * it * it }
+        if (this <= 0.04045f) this / 12.92f else ((this + 0.055f) / 1.055f).toDouble().pow(2.4).toFloat()
 
     /** Pushes `fg` toward the extreme that maximizes contrast with `bg` until AA passes. */
     fun ensureContrast(bg: Color, fg: Color, min: Float = AA_NORMAL): Color {
