@@ -1,6 +1,12 @@
 # Navigation and route inventory
 
-> WP05: Existing `file_drive` route and data-flow behavior are unchanged, but user-facing EN/AR disclosure now accurately distinguishes local edits from explicit network/cloud actions.
+**2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
+
+
+## 2026-10-28 — WP06 CI contract (no route changes)
+
+Navigation remains unchanged by this CI-only work package. The build adds debug lint and a source-size assertion to existing release/compact artifact checks while retaining serialized KSP2. Device/Back/RTL verification remains separate.
+
 
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
@@ -115,3 +121,7 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+**2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
+
+> WP05: Existing `file_drive` route and data-flow behavior are unchanged, but user-facing EN/AR disclosure now accurately distinguishes local edits from explicit network/cloud actions.

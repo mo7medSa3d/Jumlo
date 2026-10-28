@@ -1,7 +1,5 @@
 # Store listing drafts
 
-> WP05: Google Drive import/export is source-implemented and can upload selected files, so avoid categorical no-cloud/offline claims. Actual account/device qualification and final Play policy declarations are still required.
-
 These are review drafts, not published listing assets. Remove or qualify any feature that has not passed the final device matrix before submission. Do not promise universal platform downloads, scanned-Arabic OCR, exact Office layout reconstruction, unlimited background work or guaranteed Play approval.
 
 ## English
@@ -63,3 +61,5 @@ Use actual reviewed app captures in `SCREENSHOTS/`, with synthetic/owned sample 
 The icon/feature graphic should use Jumlo's own branding. Do not imply affiliation with a platform or use its branding without the required rights. A feature graphic still needs a separate final export and owner review; the repository's application icon is not automatically a completed Play feature graphic.
 
 Before upload: fill contact/policy fields, verify actual character limits in Console, confirm target audience/content rating, review all listed functions against TEST_REPORT.md, and obtain the necessary content/platform permissions.
+
+> WP05: Google Drive import/export is source-implemented and can upload selected files, so avoid categorical no-cloud/offline claims. Actual account/device qualification and final Play policy declarations are still required.

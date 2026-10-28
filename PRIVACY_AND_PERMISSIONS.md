@@ -1,6 +1,9 @@
 # Privacy, permissions and distribution review
 
-Review date: 28 October 2026. Updated to match the current enabled `file_drive` registry and Drive v3 client instead of the older blocked-Drive description. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
+**2026-10-28 WP11 redirect hardening:** User-entered custom media HTTP headers may contain account-specific values. Their scope is limited to the origin of the initially requested resource; a redirect changing scheme, hostname or effective port cannot inherit them. Normal browser headers remain; cookie jar queries are scoped to the actual target URL. This is source policy, not a guarantee against malicious servers at the original origin.
+
+
+Review date: 23 October 2026. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
 
 ## Manifest permissions
 
@@ -49,7 +52,7 @@ The structured crash record contains a timestamp, fixed operation scope, excepti
 | Display a remote media thumbnail | The thumbnail host receives its image request and connection IP. |
 | Configure and use an optional extractor backend | The configured server receives the submitted media URL and bearer token and processes the requested media. Its operator must specify retention, hosting and deletion policies. No server was deployed in this delivery. |
 | First scanner/OCR use | Google Play services may retrieve models/UI components. Document processing uses the selected Android/ML Kit APIs; consult their current data disclosures. |
-| Explicit export/share or Drive handoff | Files selected for export/share are transmitted to the chosen provider/application. The registered `file_drive` path is enabled and uses Google Drive v3 with user-supplied, ephemeral access credentials; uploading selected files sends their contents and metadata to Google. This capability remains NOT DEVICE/ACCOUNT QUALIFIED and must not be called verified. |
+| Explicit export/share or Drive handoff | Only the files/URIs selected by the user go to the chosen provider/application. The legacy Drive tool remains blocked pending its own OAuth/privacy qualification. |
 
 Generic cleartext HTTP file downloads remain a deliberate compatibility path controlled by transfer policy; there is no global HTTP/HTTPS preference or separate per-job HTTP-consent dialog. HTTP requests and their contents are not encrypted in transit. HTTPS must not silently downgrade, and bearer credentials must not cross origins. Optional production extractor backends require HTTPS. The broad Android network-security setting needed for generic HTTP links is not evidence that every network caller may use HTTP.
 
@@ -62,7 +65,7 @@ Generic cleartext HTTP file downloads remain a deliberate compatibility path con
 | Target API | `compileSdk=36`, `targetSdk=36`, `minSdk=26` | Recheck Play requirements at upload. Current requirement for ordinary new apps/updates is API 36. |
 | Native runtime and 16 KB pages | Pinned full ARM64 native payload; repacker and `inspect-media-artifact.py` validate nested ELF alignment/closure | Final artifact inspection plus actual ARM64 16 KB device execution. Static ELF checks do not establish runtime compatibility. |
 | Data safety and privacy policy | Local-first processing, minimal permissions, encrypted credentials, no default analytics/crash upload | Publish an owner-completed privacy URL and complete the Console form against the actual shipped SDKs, providers and optional service configuration. |
-| Unqualified/external integrations | Drive import/export is present and enabled (token-gated), while Webpage→PDF and the vault expansion were removed as unimplemented routes in the current registry. | Device/account/authorization and Play policy qualification is still required; enabling source code does not establish provider acceptance. |
+| Unqualified legacy tools | Existing Webpage→PDF, Drive and vault entries remain blocked rather than being described as tested | Security/privacy/backend qualification is required before enabling them. This change did not remove previously enabled functionality. |
 
 Primary policy references, checked on the review date:
 
@@ -74,3 +77,7 @@ Primary policy references, checked on the review date:
 - [ML Kit document scanner](https://developers.google.com/ml-kit/vision/doc-scanner/android)
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
+
+Review date: 28 October 2026. Updated to match the current enabled `file_drive` registry and Drive v3 client instead of the older blocked-Drive description. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
+| Explicit export/share or Drive handoff | Files selected for export/share are transmitted to the chosen provider/application. The registered `file_drive` path is enabled and uses Google Drive v3 with user-supplied, ephemeral access credentials; uploading selected files sends their contents and metadata to Google. This capability remains NOT DEVICE/ACCOUNT QUALIFIED and must not be called verified. |
+| Unqualified/external integrations | Drive import/export is present and enabled (token-gated), while Webpage→PDF and the vault expansion were removed as unimplemented routes in the current registry. | Device/account/authorization and Play policy qualification is still required; enabling source code does not establish provider acceptance. |
