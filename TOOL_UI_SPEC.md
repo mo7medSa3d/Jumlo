@@ -1,8 +1,10 @@
 # Tool UI specification
 
-## 2026-10-28 navigation contract — work package 03
+## WP03 four-root-tab layout (2026-10-28)
 
-The bottom dock has **exactly four root destinations** in English order: Home, Tools, Files and Settings. In Arabic the visual order mirrors with correct tab selection and bounded indicators. The Downloads manager is preserved as a separate detail route, opened through the always-visible Home Downloads-history button or the active-job Show all action, with a Back toolbar returning to the calling stack. Download tools, jobs, foreground notifications and the previous/active download lists retain their existing routing. The change does **not** remove a tool or a downloader feature. The source-level contract is covered by `FourTabNavigationTest` and `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`; Android runtime results remain **NOT RUN** pending CI/emulator qualification.
+The dock shows Home, Tools, Files and Settings, mirrored in Arabic. The existing Downloads manager keeps its complete active/past transfers and job routes as a Back-navigable detail. An always-visible Home history action makes it reachable without active downloads. This does not remove tools. Real-device tests are NOT RUN, see `TEST_REPORT.md`.
+
+> 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 
 ## Scope and evidence

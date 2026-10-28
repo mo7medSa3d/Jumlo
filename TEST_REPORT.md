@@ -1,18 +1,17 @@
 # Jumlo — verification report
 
-## 2026-10-28 — Work package 03: Four-tab navigation (unverified build/runtime)
+## 2026-10-28 — WP03 four-tab navigation (NOT VERIFIED yet)
 
-| Check | Result | Evidence / next action |
-|---|---|---|
-| Source change | CODE WRITTEN | `QuietNavigation.kt` four tabs; `JumloNavHost.kt` preserves Downloads as Back detail; `HomeScreen.kt` always-visible history action |
-| JVM unit tests | **NOT RUN** | `MainDockContractTest` (two tests for four-tab identity, no Downloads/Print, legacy route intact); run `:app:testDebugUnitTest` in PR CI |
-| Android UI tests | **NOT RUN** | `FourTabNavigationTest`: four-tab order, Arabic RTL, indicator clipping, absent Downloads/Print tabs |
-| Activity navigation | **NOT RUN** | `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`: Home → Downloads → Back |
-| Host static contracts | **NOT RUN** | `python3 scripts/test-neon-ui.py` updated to match new nav |
-| Build / release lint / size | **NOT RUN** | Requires successful PR GitHub Actions; other open release-gate PRs must be resolved before full release sign-off |
-| Screenshots / physical devices | **BLOCKED: no device or emulator connected in this GitHub API-only task** | Capture EN/AR/light/dark and 200% font as separate evidence when available |
+- **CODE WRITTEN:** `QuietNavigation.kt`, `JumloNavHost.kt`, `HomeScreen.kt` plus updated route documentation.
+- **NOT RUN (current head):** `MainDockContractTest`, `FourTabNavigationTest`, `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab` and updated `scripts/test-neon-ui.py`. Require matching CI SHA and real device/emulator test results before calling these PASS.
+- **BLOCKED:** screenshots, 200% font and Android RTL/Back validation until actual emulator/device run. No production sign-off.
 
-**This source change is not a production approval.** The report dated 2026-10-24 below documents a different execution environment. Do not reuse its 35/35 Python results or earlier CI result as passing evidence for this new code.
+## 2026-10-28 work-package verification — release quality gates
+
+- `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
+- Baseline `main` Actions run [#40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318): debug build + tests + lintDebug succeeded, compact measured 55,368,299 bytes. It did not run release lint and was not gated by the size maximum.
+- Device runs, release signing, Five-PDF-fixture compression, 200-page memory and live authorized downloader matrix remain **NOT VERIFIED**.
+- Do not replace or overwrite the October 24 report's original session history with new claims.
 
 
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**

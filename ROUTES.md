@@ -1,21 +1,24 @@
 # Navigation and route inventory
 
+> Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
+
+
 This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
 
 Authoritative implementation: [JumloNavHost.kt](app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt), [QuietNavigation.kt](app/src/main/java/com/jumlo/app/ui/components/QuietNavigation.kt), [MainActivity.kt](app/src/main/java/com/jumlo/app/MainActivity.kt), and [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
 
 ## Four primary tabs and Downloads detail
 
-The four bottom tabs are **Home · Tools · Files · Settings** (in that logical English order). Arabic mirrors the visual order, with `MainDockTabs` the source of truth rather than the legacy enum order. **Downloads is not a fifth tab:** the existing `DownloadsRoute` is a Back-navigable detail screen, reachable from the always-visible Home Downloads-history button and from the active-job Show all action. The download-processing tool and job detail/activity routes remain independently reachable.
+The four bottom tabs are **Home · Tools · Files · Settings**; Arabic mirrors their visual order. `DownloadsRoute` remains a separate Back-navigable screen, reachable through the always-visible Home history button and active-job Show all. The `DockTab` enum retains compatibility values not shown in `MainDockTabs`.
 
 | Position in English | Route type | Stable serial name | Screen | Main responsibilities |
 | --- | --- | --- | --- | --- |
-| 1 | `HomeRoute` | `home` | `HomeScreen` | Start destination; Scan/Convert/Compress/Download, saved drafts, active jobs, history and recent files |
-| 2 | `ToolsRoute` | `tools` | `ToolsScreen` | Sectioned catalog of tools with search, pinned/recent rows and usage ranking |
-| 3 | `FilesRoute` | `files` | `FilesScreen` | Outputs, imported sources, granted folders and trash; sort/filter/search/selection |
-| 4 | `SettingsRoute` | `settings` | `SettingsScreen` | Theme, color, language, save folder, defaults, storage/cache and About |
+| 1 | `HomeRoute` | `home` | `HomeScreen` | Home actions, active tasks, Downloads history, recent files |
+| 2 | `ToolsRoute` | `tools` | `ToolsScreen` | Sectioned search, pinned/recent tools, tool selection |
+| 3 | `FilesRoute` | `files` | `FilesScreen` | Storage, outputs, import, trash, sorting, selection |
+| 4 | `SettingsRoute` | `settings` | `SettingsScreen` | Theme, language, save folder, quality, storage and About |
 
-The indicator is drawn inside its destination cell. Each cell has `Role.Tab`, selection semantics and a retained spoken label at large font scales. Downloads and Print are detail screens; both legacy enum values remain for call-site compatibility but are excluded from `MainDockTabs`.
+The indicator stays inside the tab cell with `Role.Tab` and a readable label at large font scales. Downloads and Print remain detail routes, not extra dock tabs.
 
 ## Complete destination inventory
 
@@ -26,7 +29,7 @@ All fourteen destinations are Kotlin-serialization route types. The names below 
 | `HomeRoute` | `home` | `HomeScreen` | App start and Home tab | Yes |
 | `ToolsRoute` | `tools` | `ToolsScreen` | Tools tab and Home Explore tools | Yes |
 | `FilesRoute` | `files` | `FilesScreen` | Files tab, Home recent-files action, legacy storage navigation | Yes |
-| `DownloadsRoute` | `downloads` | `DownloadsScreen` | Always-visible Home Downloads-history action, active-jobs Show all, compatibility navigation | No; detail with Back |
+| `DownloadsRoute` | `downloads` | `DownloadsScreen` | Home Downloads-history action, active-jobs Show all, compatibility entry | No; Back detail |
 | `SettingsRoute` | `settings` | `SettingsScreen` | Settings tab | Yes |
 | `ToolRoute(toolId: String, transitionOrigin: String = "tools")` | `tools/run` | `WorkspaceScreen`, `ViewerWorkspace`, or `MediaWorkspace` | Catalog tools, Home conversion/compression/download, explicit source/output handoff, shared links, repeat run | Yes; Tools stack |
 | `ScanRoute(transitionOrigin: String = "tools")` | `tools/scan` | `ScanScreen` / ML Kit launcher | Home Scan, `scan_doc`, onboarding Scan | No |
@@ -55,7 +58,7 @@ The `viewer` route is full-screen: the shell suppresses both the bottom dock and
 - Details pop to the preceding entry. Back from a dirty processing workspace opens Save and leave / Keep editing / Discard and leave. The session is closed only after leaving that workspace, not during a root-tab switch.
 - A saveable history of root tabs handles Back from a visited root. When there is no app-managed previous entry/history, normal activity Back applies. If a detail cannot pop, the app restores Home.
 - `PredictiveBackHandler` collects gesture progress for detail transitions and tab-history Back. The manifest enables `OnBackInvokedCallback`. Motion follows the Android animator setting through `LocalReducedMotion`; there is no user-facing app motion toggle. Actual predictive-gesture qualification must be read from the test report. `SharedTransitionLayout` spans the typed destinations; card and workspace-header icons share a stable tool key, destination visibility scope and spring bounds animation. Home and Tools use distinct origin keys, carried in the typed tool route, to avoid a third participant during a root switch. Header identity is pinned to the destination tool argument while an outgoing destination animates. Standalone previews fall back to normal icons.
-- The dock is a Scaffold bottom bar, not an overlay. It appears on the four roots, processing workspaces and activity screens; the Downloads detail has its own Back toolbar and no fifth dock cell. Detail toolbars provide Back, and root toolbars contain no search button.
+- The dock is a Scaffold bottom bar, not an overlay. It appears on four root tabs, workspaces and job activity; Downloads is a full detail with its own Back toolbar. Detail toolbars provide Back, and root toolbars contain no search button.
 
 ## Important action flows
 
@@ -94,4 +97,4 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 
 ## Navigation verification references
 
-[FourTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FourTabNavigationTest.kt) covers the exact four-tab order, RTL, selection, absent Downloads tab and indicator bounds. `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab` covers the Home → Downloads detail → Back chain. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+[FourTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FourTabNavigationTest.kt) covers four-tab order, RTL, selection, indicator bounds and absent Downloads/Print tabs. `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab` covers Home → Downloads detail → Back. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.

@@ -1,11 +1,16 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — Work package 03: Four primary tabs (verification pending)
+## 2026-10-28 — WP03 four-tab navigation (CI / Android tests pending)
 
-- Replaced five-slot navigation with **Home, Tools, Files, Settings** in `MainDockTabs`. Downloads remains a dedicated detail destination with a Back toolbar, preserving the existing download manager, active/past job lists, downloader tool, and job history.
-- Added a permanent **Downloads** history entry to Home even when there are no running transfers.
-- Replaced the obsolete five-tab instrumentation test with `FourTabNavigationTest` (exact order, RTL mirroring, indicator bounds, absence of Downloads/Print tab), and extended `JumloUiTest` for Home → Downloads → Back. Updated `scripts/test-neon-ui.py` to assert the new contract.
-- **NOT RUN in this change authoring environment:** Android compilation, connected instrumentation, RTL snapshots, accessibility review and device Back behavior. See `TEST_REPORT.md`. Do not mark this navigation change runtime-verified without the CI/device logs.
+- Four bottom tabs are Home, Tools, Files and Settings; Downloads remains a full detail route with Back, not a deleted feature.
+- Home always exposes Downloads history, even when no transfer is active.
+- Added `FourTabNavigationTest`, `MainDockContractTest` and a real-activity download-history Back regression. See `TEST_REPORT.md` for evidence boundaries.
+
+### 2026-10-28 — wp/01 release gate correction (verification pending)
+
+- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
+- Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
+- These are source changes, **not yet a passing CI result**; capture the work-package run before merging.
 
 
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
