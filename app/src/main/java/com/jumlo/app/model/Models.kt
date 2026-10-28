@@ -111,7 +111,7 @@ data class AppSettingsState(
     val soundsEnabled: Boolean = true,
     val downloadDestinationFolder: String = "Download/Jumlo",
     val maxConcurrentDownloads: Int = 2,
-    val defaultVideoQuality: String = "1080",
+    val defaultVideoQuality: String = "BEST",
     val defaultAudioQuality: Int = 192,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
     val accentColor: String = "BLUE",
