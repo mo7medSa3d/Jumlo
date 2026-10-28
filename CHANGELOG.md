@@ -159,3 +159,9 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP08 core-module JVM verification
+
+- Added dedicated JUnit4 tests to all four Android-import-free modules: core-common (safe names, Arabic page ranges), downloader-core (byte ranges and strong-validator resumptions), document-core (split-boundary/page preservation), storage-core (safe conflict policies).
+- Added JUnit4 test dependencies to each Kotlin/JVM module and wired `:core-common:test`, `:downloader-core:test`, `:document-core:test` and `:storage-core:test` to the mandatory CI gate, alongside existing Android build, unit tests, release lint and 60 MB APK verification.
+- All new tests are source-committed; results NOT VERIFIED until fresh GitHub Actions completes.
