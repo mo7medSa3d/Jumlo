@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
