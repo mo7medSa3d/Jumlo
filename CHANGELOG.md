@@ -9,6 +9,11 @@
 - **TDD RED confirmed:** [GitHub Actions #40640984856](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640984856) listed all five new tests as FAILED against previous source; **GREEN pending** final code CI. Android PrintManager/spooler remains device NOT_RUN.
 
 
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.

@@ -5,6 +5,9 @@
 Page thumbnails represent the actual visible order. Invalid cached order mappings (duplicates, missing pages or out-of-range references) must never cause dragging or rotation to affect a different page. Move buttons and drag gestures share the same permutation application; after reordering, page-range selection is remapped to preserve the same original source pages rather than their previous positions. Undo/redo still uses the existing ViewModel options history. Five JVM regressions verified RED before implementation; passing tests and device print/page-preview interaction remain the acceptance gate.
 
 
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
+
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
