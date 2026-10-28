@@ -234,7 +234,8 @@ import kotlin.math.roundToInt
                     }
                 }
                 item("direct-advanced-toggle") {
-                    TextButton(onClick={haptics.actionClick();advancedExpanded=!advancedExpanded}) {
+                    TextButton(onClick={haptics.actionClick();advancedExpanded=!advancedExpanded},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                         Text(stringResource(if (advancedExpanded) R.string.media_advanced_hide else R.string.media_advanced_show))
                     }
                 }
@@ -346,7 +347,8 @@ import kotlin.math.roundToInt
                     }
                 }
                 item("media-advanced-toggle") {
-                    TextButton(onClick={haptics.actionClick();advancedExpanded=!advancedExpanded}) {
+                    TextButton(onClick={haptics.actionClick();advancedExpanded=!advancedExpanded},
+                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                         Text(stringResource(if (advancedExpanded) R.string.media_advanced_hide else R.string.media_advanced_show))
                     }
                 }
@@ -519,7 +521,7 @@ import kotlin.math.roundToInt
                 }
             }
 
-            if (state.asset != null || state.direct != null) item("filename") {
+            if (advancedExpanded && (state.asset != null || state.direct != null)) item("filename") {
                 TextField(value=state.name,onValueChange=viewModel::name,
                     singleLine=true,label={Text(stringResource(R.string.media_filename))},
                     modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),
