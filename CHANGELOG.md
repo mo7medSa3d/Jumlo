@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP01 — strict release gates (verification pending)
+
+- Restored decimal 60,000,000-byte fail-closed checks in both `:app:verifyCompactApkSize` and `:app:verifyReleaseApkSize`; full-media requirement, ARM64 ABI and extractor payload checks remain.
+- CI now runs `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` and both size gates for PRs, including docs-only PRs; work-package push branches trigger CI.
+- **Not verified yet:** these changes require a new GitHub Actions result. A passing older run does not qualify the changed branch; emulator, signed release and device flows remain NOT RUN.
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
