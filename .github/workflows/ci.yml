@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize \
+          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
              :app:testDebugUnitTest :app:lintRelease \
             --no-daemon --console=plain 2>&1 | tee gradle.log
 
