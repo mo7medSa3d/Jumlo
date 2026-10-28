@@ -7,7 +7,7 @@ import java.util.zip.GZIPInputStream
 data class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,val close:()->Unit={})
 fun interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
 data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=8L*1024*1024*1024,val minFreeBytes:Long=64L*1024*1024,val finalUrlSha256:String?=null,val maxRetries:Int=3,val retryBackoffMs:Long=300L)
-data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?,val mimeType:String?=null,val contentDisposition:String?=null)
+data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?,val mimeType:String?=null,val contentDisposition:String?=null,val resumeSafe:Boolean=true)
 data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val finalUrlSha256:String,val mimeType:String?=null,val contentDisposition:String?=null)
 
 class StreamTransfer(private val transport:HttpTransport) {
@@ -34,6 +34,10 @@ class StreamTransfer(private val transport:HttpTransport) {
                 // Never append after a broken connection without a response
                 // validator. A changing representation would corrupt the output.
                 val metadata=latestMetadata ?: return false
+                // An HTTP range is in encoded representation bytes. If gzip was
+                // transparently decompressed, partial.length() counts decoded
+                // bytes and cannot be used as a Range offset.
+                if(!metadata.resumeSafe) return false
                 val etag=ResumePolicy.strong(metadata.strongEtag)
                 val modified=metadata.lastModified
                 if(etag==null && modified.isNullOrBlank()) return false
@@ -128,7 +132,8 @@ class StreamTransfer(private val transport:HttpTransport) {
                 request.partialFile.parentFile?.mkdirs()
                 val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
                 val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }
-                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total,mime,disposition))
+                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total,mime,disposition,
+                    resumeSafe=contentEncoding==null || contentEncoding=="identity"))
                 var written=request.offset
                 val streamToRead: InputStream = if(isGzipped && request.offset==0L) GZIPInputStream(response.body) else response.body
                 FileOutputStream(request.partialFile,request.offset>0).use { out ->
