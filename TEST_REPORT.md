@@ -1,5 +1,12 @@
 # Jumlo — verification report
 
+## WP09 (2026-10-28) — source-backed Android fixture preflight
+
+- The missing `verification/current/device/preflight-source/README.md` link has been restored. It documents generation, hash verification, device staging and the exact existing `PdfCompressionDeviceTest` methods.
+- **NO DEVICE EXECUTION** is claimed. The five scan PDFs are **not** committed; their fingerprints must be generated, captured and verified per run. The previous README wording claiming a preserved supplied-hash manifest was not supported by this repository and is corrected.
+- The generated 200-page corpus, guest/host free-space planning, OOM/performance measurements and Android API-specific outcomes all remain **BLOCKED / NOT RUN** until real device logs and artifacts exist.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
