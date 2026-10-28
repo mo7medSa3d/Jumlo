@@ -152,3 +152,7 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+## 2026-10-28 — WP08 isolate parallel KSP2 Android variants
+
+- Android full-media CI now retains assembleDebug, compact size verification, unit tests and lintRelease but passes `--no-parallel --max-workers=1` to Gradle. This is a bounded workaround for observed KSP2 Analysis API `KaInvalidLifetimeOwnerAccessException` when debug, compact and release processors run simultaneously in PR #33. Worker serialization is not a test skip.
+- Added `scripts/test-ksp-ci-serialization.py` as an early CI contract. Android build result for this branch is pending GitHub Actions.
