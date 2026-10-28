@@ -101,3 +101,15 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP04 downloader behavior
+
+| Test / evidence | Status | Caveat |
+|---|---|---|
+| AutoBestMediaChoiceTest.bestAutoSelectionUsesHighestAvailableAudibleVideo | NOT RUN | JVM unit test written; CI pending |
+| AutoBestMediaChoiceTest.audioOnlySourcesSelectHighestQualityAudioWithoutVideo | NOT RUN | JVM unit test written; CI pending |
+| Default BEST and Advanced state/preview | NOT RUN | Compose source wired, activity/device interaction not observed |
+| Social YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive and generic live URLs | BLOCKED: authorized URLs and device results not supplied | Existing 288-case plan remains NOT RUN |
+| Android 8–15 foreground download, pause, retry, cancellation, process death | NOT VERIFIED | Requires emulator/physical device |
+
+A green JVM test would not prove that any particular provider currently exposes a public downloadable format, or that an audio-only file played back correctly.
