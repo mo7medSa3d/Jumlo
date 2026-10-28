@@ -1,8 +1,13 @@
 # Jumlo — verification report
 
-## 2026-10-28 WP08 — standalone pure-core JVM tests
+## 2026-10-28 — Core-module JVM CI
 
-Source: four new JUnit4 core tests and module dependencies; CI calls all four module test tasks. Previous branch Actions [#40644696922](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644696922) **PASS** at SHA `0f71d679`: direct tasks `:core-common:test`, `:downloader-core:test`, `:document-core:test`, `:storage-core:test`, app unit, lintRelease, compact 55,370,647 B and release 55,358,319 B. **This reconciled head is NOT VERIFIED until its own CI completes.** Physical Android/SAF/network/PDF fixtures NOT RUN.
+Prior work-package [Actions #40646544504](https://github.com/mo7medSa3d/Jumlo/actions/runs/40646544504) **PASS** at SHA `bd3831bc`: four core test modules, Android debug build/unit, lint and size. Reconciled version now also inherits `lintDebug`, `test-ci-event-matrix.py` and KSP worker serialisation from latest `main`; **current SHA CI pending**. No physical/emulator claims.
+
+
+## 2026-10-28 — WP06 lint and size source-guard integration
+
+The older WP06 commit `7fbab51b8e233f38a6a2a7a58120164ef5e12c02` completed both [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746) successfully. This follow-up merges the established KSP2 serialization fix from main, retains full-size checks, adds `:app:lintDebug`, and runs `scripts/test-compact-configuration.py` as a required CI step. **Current combined head: NOT VERIFIED until a fresh run completes.** Device tests, external download integrations, signing and Play Console remain NOT RUN.
 
 
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
@@ -140,3 +145,13 @@ run here).
 
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+## 2026-10-28 — WP12 CI duplication mitigation
+
+| Check | Status | Evidence |
+|---|---|---|
+| CI event matrix: no duplicate WP push builds | NOT RUN until PR CI | scripts/tests/test-ci-event-matrix.py; PR builds still trigger on all main-targeted pull requests |
+| Full-media assemble/test/lint/size gates | NOT RUN on WP12 yet | Existing mandatory job, same commands and artifacts; no checks waived |
+| Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
+
+The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.

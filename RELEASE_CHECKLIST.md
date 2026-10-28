@@ -1,6 +1,6 @@
 # Release checklist
 
-- [ ] Confirm exact-head CI passes `:core-common:test`, `:downloader-core:test`, `:document-core:test`, `:storage-core:test` plus app/build/lint/size. Android emulator/device flows, release signing and Play checks remain distinct gates.
+- [ ] Confirm exact merged-base SHA green for core-common, downloader-core, document-core and storage-core `test` alongside lintDebug, lintRelease and both 60 MB APK checks; capture Android device qualification separately.
 
 
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
@@ -65,3 +65,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.

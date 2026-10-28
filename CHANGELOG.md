@@ -1,8 +1,14 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP08 standalone Kotlin core module tests
+## 2026-10-28 — Core test gate merged-base follow-up
 
-- Four JVM modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) now provide JUnit4 tests for safe naming, Arabic page ranges, resume validation, PDF split boundaries and collision policies. All module test tasks run as part of required APK/release CI. Earlier branch run [#40644696922](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644696922) passed, including module tasks, 55.37 MB compact / 55.36 MB release, but **current merged-base SHA CI still pending**.
+Added standalone JUnit4 tests and dependencies in all four Android-free modules. CI executes four `:module:test` tasks alongside debug/release lint, APK size and serialized KSP. Earlier Actions [#40646544504](https://github.com/mo7medSa3d/Jumlo/actions/runs/40646544504) passed at SHA `bd3831bc`; this latest merged-base SHA still needs CI.
+
+
+## 2026-10-28 — WP06 CI guard consolidation
+
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
 
 
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
@@ -178,3 +184,8 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP12 single CI execution per pull request
+
+- Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
+- Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
