@@ -259,3 +259,9 @@ Files attempted: 14, failures: 0, candidates: 23.
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:60`: `drawLine(Color.Black,Offset(x-4.dp.toPx(),size.height/2),Offset(x+4.dp.toPx(),size.height/2),2.dp.toPx())`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:63`: `Text(stringResource(R.string.studio_before),Modifier.background(Color.Black.copy(alpha=.7f),QuietTheme.shapes.thumbnail).padding(6.dp),color=Color.White,style=Q`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:64`: `Text(stringResource(R.string.studio_after),Modifier.background(Color.Black.copy(alpha=.7f),QuietTheme.shapes.thumbnail).padding(6.dp),color=Color.White,style=Qu`
+
+## Batch 154–167
+
+Files attempted: 14, failures: 0, candidates: 1.
+
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImagePdfPreview.kt:135`: `drawRect(Color.White,Offset(x,y),Size(w,h))`
