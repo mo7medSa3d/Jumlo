@@ -145,3 +145,9 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-02 single-click media defaults (unverified candidate)
+
+- New downloader first-run defaults to the **best usable** media format instead of applying an invisible 1080p cap; explicit saved quality preferences remain honored.
+- Simplified media/download UI: quality, audio format/bitrate, alternative direct-file transforms and file name editing live behind one accessible **Advanced options** expander. The selected best video/audio format remains available without opening controls; original source filenames are cleaned during publication.
+- Added `MediaAutoSelectionTest` with best 2160p, explicit 1080p cap, highest available audio-only and audio-only source fixtures. No live provider/device claims are made.
