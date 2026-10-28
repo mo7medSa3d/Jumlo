@@ -1,5 +1,18 @@
 # Jumlo — verification report
 
+## 2026-10-28 — WP04 four-tab navigation qualification
+
+| Check | Observed result | Evidence / condition |
+|---|---|---|
+| Unit regression before implementation | **RED (expected)** | [Actions #40639796921](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639796921): `MainDockContractTest.onlyHomeToolsFilesSettingsArePrimaryTabs` failed with `AssertionError` at line 12 when `MainDockTabs` still contained five entries. |
+| Unit regression after implementation | **NOT RUN at report edit** | Re-run `:app:testDebugUnitTest` on the WP04 head commit; attach latest workflow and exact result before claiming PASS. |
+| Full mandatory build / lintRelease / release size | **NOT VERIFIED for WP04** | The main-branch CI configuration before gate changes still uses `lintDebug`; do not substitute its result for release lint. |
+| `FourTabNavigationTest` Android RTL and selector | **NOT RUN** | Instrumentation runner is skipped in regular CI; must execute on emulator/device. |
+| `JumloUiTest.downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome` | **NOT RUN** | Real Activity/Back and empty-queue navigation require emulator/device. |
+
+This WP modifies navigation only, not downloader/processing engines. **Not production qualified** until full tool and device evidence exists.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
