@@ -16,12 +16,14 @@ import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -62,6 +64,7 @@ import kotlin.math.roundToInt
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
+    var showAdvanced by rememberSaveable(sessionEpoch) { mutableStateOf(false) }
     var clipboardEmpty by remember { mutableStateOf(false) }
     val readClipboard = remember(clipboard) {
         { try { clipboard.getText()?.text?.take(32768) } catch (_:RuntimeException) { null } }
@@ -231,7 +234,10 @@ import kotlin.math.roundToInt
                         }
                     }
                 }
-                if (preview.kind == DirectFileKind.PDF) {
+                item("direct-advanced-toggle") {
+                    MediaAdvancedToggle(showAdvanced) { showAdvanced = !showAdvanced }
+                }
+                if (showAdvanced && preview.kind == DirectFileKind.PDF) {
                     item("direct-pdf-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -257,7 +263,7 @@ import kotlin.math.roundToInt
                             }
                         }
                     }
-                } else if (preview.kind == DirectFileKind.IMAGE) {
+                } else if (showAdvanced && preview.kind == DirectFileKind.IMAGE) {
                     item("direct-image-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -329,8 +335,12 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
-                item("media-type-selector") {
+                // Optional overrides never block the automatically selected result.
+                item("media-advanced-toggle") {
+                    MediaAdvancedToggle(showAdvanced) { showAdvanced = !showAdvanced }
+                }
+                // 1. Explicit video/audio mode override.
+                if (showAdvanced) item("media-type-selector") {
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
@@ -359,7 +369,7 @@ import kotlin.math.roundToInt
                 }
 
                 // 2. If Audio Mode is active: Audio Format (MP3, M4A, OPUS, ORIGINAL) + Bitrate (320..64 kbps)
-                if (state.mode == MediaMode.AUDIO) {
+                if (showAdvanced && state.mode == MediaMode.AUDIO) {
                     item("audio-format-controls") {
                         Surface(
                             shape=RoundedCornerShape(22.dp),
@@ -407,15 +417,15 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 3. Quality & Resolution Grid — Visible directly!
-                item("media-quality-header") {
+                // 3. Full format/quality choices are available on demand.
+                if (showAdvanced) item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
                         Text(stringResource(R.string.media_actual_qualities),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
+                if (showAdvanced) items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { choice ->
                             val selected = state.selectedKey == choice.key
@@ -488,7 +498,7 @@ import kotlin.math.roundToInt
                 }
             }
 
-            if (state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
+            if (showAdvanced && state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
                 item("choose-quality-hint") {
                     Text(stringResource(R.string.media_choose_quality_hint),
                         style=QuietTheme.typography.bodyMedium,
@@ -496,7 +506,7 @@ import kotlin.math.roundToInt
                 }
             }
 
-            if (state.asset != null || state.direct != null) item("filename") {
+            if (showAdvanced && (state.asset != null || state.direct != null)) item("filename") {
                 TextField(value=state.name,onValueChange=viewModel::name,
                     singleLine=true,label={Text(stringResource(R.string.media_filename))},
                     modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),
@@ -516,7 +526,6 @@ import kotlin.math.roundToInt
                 Text(
                     text=when {
                         state.submitting -> stringResource(R.string.media_queueing)
-                        state.asset != null -> stringResource(R.string.media_download_selected)
                         else -> stringResource(R.string.redesign_download_now)
                     },
                     style=QuietTheme.typography.button
@@ -527,6 +536,14 @@ import kotlin.math.roundToInt
     }
 
 
+}
+
+/** Advanced controls are opt-in; the primary Download action uses the inspected default. */
+@Composable
+private fun MediaAdvancedToggle(expanded:Boolean, onToggle:()->Unit) {
+    TextButton(onClick=onToggle,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("media.advanced")) {
+        Text(stringResource(if(expanded) R.string.media_advanced_hide else R.string.media_advanced_show))
+    }
 }
 
 @Composable
