@@ -96,3 +96,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## 2026-10-28 — Dedicated pure-core test gates
+
+All four existing Kotlin/JVM modules must have their own runnable unit suites, rather than relying only on Android app tests. Preserve `core-common`, `downloader-core`, `document-core`, `storage-core` as Android-free main source modules. The unified CI job now executes these suites alongside the app's build, release lint, unit tests and size gates. Test failures must block PR merge; do not hide them by marking SKIPPED.
