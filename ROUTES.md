@@ -1,6 +1,9 @@
 # Navigation and route inventory
 
-**WP01 2026-10-28:** no route or navigation changes; Phase 0 inventory is in [AUDIT_2.md](docs/AUDIT_2.md). Full route-device acceptance remains NOT VERIFIED. CI/release gates are being restored in the separate WP01 PR.
+**WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
+
+
+> Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
 This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
