@@ -27,14 +27,17 @@ class PlatformHeaderPolicyTest {
             "Accept-Language" to "ar-EG"
         )
         val original = "https://origin.example.com/path?private_token=keep_here"
+        val secretUserAgent = "PrivateClientProfile/1.0"
         val sameSite = PlatformHeaderPolicy.headersFor(
             url = "https://ORIGIN.example.com:443/redirected-file",
             customHeaders = sensitive,
+            customUserAgent = secretUserAgent,
             customHeaderOrigin = original
         )
         assertEquals(sensitive["Referer"], sameSite["Referer"])
         assertEquals(sensitive["Origin"], sameSite["Origin"])
         assertEquals("ar-EG", sameSite["Accept-Language"])
+        assertEquals(secretUserAgent, sameSite["User-Agent"])
 
         for (redirected in listOf(
             "https://attacker.example.net/file",
@@ -45,8 +48,10 @@ class PlatformHeaderPolicyTest {
             val headers = PlatformHeaderPolicy.headersFor(
                 url = redirected,
                 customHeaders = sensitive,
+                customUserAgent = secretUserAgent,
                 customHeaderOrigin = original
             )
+            assertFalse("$redirected must not inherit custom User-Agent", headers["User-Agent"] == secretUserAgent)
             assertFalse("$redirected leaked a user Referer", headers.keys.any { it.equals("Referer", true) })
             assertFalse("$redirected leaked a user Origin", headers.keys.any { it.equals("Origin", true) })
             assertFalse("$redirected leaked a custom language", headers.keys.any { it.equals("Accept-Language", true) })
