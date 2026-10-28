@@ -76,4 +76,7 @@
     <string name="media_restricted_hint">الرابط يحتاج تسجيل دخول أو المصدر يمنع الوصول إليه. لا يطلب Jumlo كوكيز ولا يتجاوز المحتوى المحمي؛ استخدم رابط تحميل عام ومتاح.</string>
     <string name="downloads_live_count">%1$d نشط</string>
     <string name="downloads_completed_count">%1$d مكتمل</string>
+    <string name="media_advanced_show">خيارات متقدمة (صوت فقط والصيغة والجودة)</string>
+    <string name="media_advanced_hide">إخفاء الخيارات المتقدمة</string>
+    <string name="media_selected_quality_summary">جاهز للتنزيل: %1$s</string>
 </resources>
