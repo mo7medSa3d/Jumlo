@@ -72,7 +72,7 @@ data class MediaUiState(
     }
     private var analysis: Job?=null
     private var sessionEpoch:Long?=null
-    private var preferredVideoHeight=1080
+    private var preferredVideoHeight=0
     private var generation=0
     private var analyzedUrl: String?=null
     // Debounced URL changes must not restart a probe already requested by Paste,
@@ -159,7 +159,7 @@ data class MediaUiState(
     fun beginSession(initialUrl:String,epoch:Long,defaultVideoQuality:String,defaultAudioQuality:Int) {
         if(sessionEpoch==epoch) return
         sessionEpoch=epoch
-        preferredVideoHeight=when(defaultVideoQuality) { "BEST" -> 0;"720" -> 720;"480" -> 480;else -> 1080 }
+        preferredVideoHeight=when(defaultVideoQuality) { "BEST" -> 0;"720" -> 720;"480" -> 480;else -> 0 }
         beginSession(initialUrl)
         _state.update { it.copy(bitrate=defaultAudioQuality.takeIf { rate -> rate in setOf(128,192,320) } ?: 192) }
     }
