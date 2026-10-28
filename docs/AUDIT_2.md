@@ -143,3 +143,9 @@ No package is marked complete until its branch/PR has cited commands, results an
 - Main CI run observed: **success**, but did not enforce release lint or size cap and skipped instrumentation.
 - APK under-limit measurement: **55,368,299 bytes** for compact build, but the current task checks the number only by printing.
 - **No source fix and no emulator/physical-device execution is claimed by this Phase 0 document.**
+
+## Reproducible whole-source static inventory (WP07, 2026-10-28)
+
+- `scripts/audit_source.py` inventories Kotlin/Java production code (app including source variants, core-common, downloader-core, document-core, storage-core), reports exact file:line and kind for TODO/FIXME/HACK/XXX, empty callbacks, raw Color(0x...) outside semantic theme definitions, and directly quoted Text labels.
+- `.github/workflows/source-inventory.yml` tests the scanner and uploads JSON/Markdown candidate lists on relevant PRs or manual dispatch.
+- This **does not** establish every control works. Dynamic no-op settings, invisible gesture targets, external-provider failures, localization accuracy and device behavior require independent execution. A hit is a candidate, not an automatically proven bug. Full output totals are **PENDING CI**; do not invent counts. Review and triage findings into this audit before marking rows resolved.
