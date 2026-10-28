@@ -158,3 +158,6 @@ TEST_REPORT.md.
 - Centralize saturated category accents for PDF, images, downloads and files in `Color.kt` and reuse them from `ToolPalette.kt`, removing duplicate palette literals in tile code. Strengthen both light and dark tool-tile containers to 20% accent blend and introduce lavender-toned light surface ladder.
 - Give root screen headers a primary-container surface with matching semantic foreground, using existing Material 3 token roles rather than hardcoded text colors.
 - Add four source Compose token previews (light/dark × English/Arabic) and new JUnit token/non-text contrast regression tests; **no preview screenshot or device evaluation was performed**.
+
+
+- CI-driven fix: corrected WCAG sRGB luminance gamma from cubic approximation to 2.4 and replaced an unreliable fixed-step AA foreground fallback with bounded binary search. Expanded JUnit cases and failure messages; original contrast gate remains enabled. Initial failure: [run #40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377), one contrast test among 522 executed. New CI pending.
