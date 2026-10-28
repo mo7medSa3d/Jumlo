@@ -69,6 +69,47 @@ class PlatformHeaderPolicyTest {
         assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "https://user@example.org/file"))
     }
 
+    @Test fun realStreamRedirectRetainsOnlyOriginScopedCustomHeaders() {
+        val start = "https://source.example.org/start"
+        val sameOriginHop = "https://source.example.org/continue"
+        val newHost = "https://cdn.example.net/file.bin"
+        val privateAgent = "AccountSpecificAgent/1.0"
+        val custom = mapOf("Referer" to "https://source.example.org/account?id=private", "Origin" to "https://source.example.org")
+        val observed = mutableListOf<Pair<String, Map<String, String>>>()
+        val transport = HttpTransport { target, _ ->
+            val actual = PlatformHeaderPolicy.headersFor(
+                url = target, customHeaderOrigin = start,
+                customUserAgent = privateAgent, customHeaders = custom
+            )
+            observed += target to actual
+            when (target) {
+                start -> TransportResponse(302, mapOf("location" to sameOriginHop), byteArrayOf().inputStream())
+                sameOriginHop -> TransportResponse(302, mapOf("location" to newHost), byteArrayOf().inputStream())
+                newHost -> TransportResponse(200, mapOf("content-length" to "5", "content-type" to "application/octet-stream"), "hello".byteInputStream())
+                else -> error("Unexpected redirected target: $target")
+            }
+        }
+        val file = java.nio.file.Files.createTempFile("scoped-headers-", ".part").toFile()
+        try {
+            val result = StreamTransfer(transport).execute(TransferRequest(
+                url = start, partialFile = file, minFreeBytes = 0L, maxRetries = 0
+            ))
+            assertEquals(5L, result.bytes)
+            assertEquals("hello", file.readText())
+            assertEquals(listOf(start, sameOriginHop, newHost), observed.map { it.first })
+            for (index in 0..1) {
+                assertEquals(custom["Referer"], observed[index].second["Referer"])
+                assertEquals(privateAgent, observed[index].second["User-Agent"])
+            }
+            val redirected = observed.last().second
+            assertFalse(redirected.keys.any { it.equals("Referer", ignoreCase = true) })
+            assertFalse(redirected.keys.any { it.equals("Origin", ignoreCase = true) })
+            assertFalse(redirected["User-Agent"] == privateAgent)
+        } finally {
+            file.delete()
+        }
+    }
+
     @Test fun preferDesktopSelectsPrimaryUserAgentAndRotatesOnFallback() {
         val desktopFirst = PlatformHeaderPolicy.headersFor("https://downloads.example.org/file", preferDesktop = true, compatibilityAttempt = 0)
         val mobileFirst = PlatformHeaderPolicy.headersFor("https://downloads.example.org/file", preferDesktop = false, compatibilityAttempt = 0)
