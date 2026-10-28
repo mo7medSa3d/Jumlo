@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Jumlo</string>
     <string name="tagline">Your files. Your tools.</string>
-    <string name="tagline_subtitle">Edit PDFs, transform images, download and organize with instant local speed.</string>
+    <string name="tagline_subtitle">Edit PDFs and images locally, with optional online transfers.</string>
     <string name="offline_pledge_short">Local document editing. Selected online features use the network.</string>
     <string name="offline_badge">Local editing &amp; optional network</string>
     <string name="local_only_badge">On-device edits</string>
@@ -91,7 +91,7 @@
 
     <!-- Choose Source Import (import_01) -->
     <string name="import_title">Import Intake</string>
-    <string name="import_subtitle">Select input files for PDF &amp; Image utilities. 100% on-device processing.</string>
+    <string name="import_subtitle">Choose PDF and image files. Document edits stay on this device.</string>
     <string name="import_received_share">Received via Android Share</string>
     <string name="import_use_shared">Use Shared Files</string>
     <string name="import_photo_gallery">Photo Gallery &amp; Media</string>
