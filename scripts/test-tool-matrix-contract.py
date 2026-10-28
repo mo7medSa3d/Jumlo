@@ -19,11 +19,11 @@ SCENARIOS = {"normal", "large", "encrypted", "corrupt"}
 
 
 def ids_in_set(source: str, name: str) -> set[str]:
-    pat = rf"private val {name}\\s*=\\s*(?:hostCoreTested\\s*\\+\\s*)?setOf\\((.*?)\\)"
+    pat = rf"private val {name}\s*=\s*(?:hostCoreTested\s*\+\s*)?setOf\((.*?)\)"
     match = re.search(pat, source, re.DOTALL)
     if not match:
         raise AssertionError(f"Cannot inspect {name} in CapabilityPolicy")
-    without_comments = re.sub(r"//[^\\n]*", "", match.group(1))
+    without_comments = re.sub(r"//[^\n]*", "", match.group(1))
     return set(re.findall(r'"([^"]+)"', without_comments))
 
 
@@ -34,7 +34,7 @@ def rows(path: Path) -> list[dict[str, str]]:
 
 def active_ids() -> list[str]:
     source = REGISTRY.read_text(encoding="utf-8")
-    return re.findall(r'UtilityTool\\(\\s*"([^"]+)"', source)
+    return re.findall(r'UtilityTool\(\s*"([^"]+)"', source)
 
 
 class ToolMatrixContractTest(unittest.TestCase):
