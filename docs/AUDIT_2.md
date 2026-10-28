@@ -147,3 +147,9 @@ No package is marked complete until its branch/PR has cited commands, results an
 ## 2026-10-28 follow-up: complete production Kotlin/Java lexical scan
 
 The follow-up [AUDIT_2_SOURCE_SCAN.md](AUDIT_2_SOURCE_SCAN.md) records **244/244** production Kotlin/Java files read from the audited base GitHub commit with **zero fetch failures**. The reproducible lexical candidate rules located **204 direct raw-color references**, **7 direct UI text literals**, **0 TODO/FIXME/stub markers** and **0 syntactically empty callbacks**. These are **candidates**, not claims that every color is wrong: most are token definitions, document-paper/ink colors or intentional numeric labels. No finding certifies runtime behavior, catches semantically inert *nonempty* callbacks or covers XML/scripts/binary assets. The full file:line inventory is retained in the linked source scan. Original capability/status table above remains authoritative for missing end-to-end evidence.
+
+## WP10 catalogue policy discrepancy — 2026-10-28
+
+- Observed before patch: `ToolsScreen.kt:39-41` selected all enabled/visible registry entries, ignoring `ToolCatalogue.isListed`; `ToolsCatalogue` used that complete input for default rows, Pinned and Recent. This made intentionally hidden specialist and navigation alias entries appear as normal tiles.
+- Code fix proposed on `wp/10-catalogue-visibility-contract`: filter default browse/pinned/recent through `isListed`, preserve a search-only Image Comparison, and drop only redundant Files/Settings aliases from search. No operation handler is removed.
+- Tests written: `ToolCatalogueTest.searchRetainsSpecialistsButNeverDuplicatesNavigationTabs`; `ToolCatalogueInteractionTest.defaultGridHidesAliasesButSearchCanOpenImageComparison`. **Device and CI verification NOT RUN until matching Actions complete.** This corrects a source-confirmed UI contract bug; it does not turn tool-level partial rows into works.
