@@ -1,5 +1,13 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP05 privacy disclosure correction (CI pending)
+
+- Replace inaccurate English/Arabic absolute welcome/offline claims with explicit local editing plus user-initiated online feature disclosures (downloads, thumbnails, optional extractor, Google Drive, scanner/OCR models).
+- Document that enabled `file_drive` uses Google Drive v3 REST requests and selected-file upload/download, rather than calling Drive blocked.
+- Add a JVM Robolectric `PrivacyDisclosureTest` to check both locales. This is **source-authored, NOT RUN** until the work-package CI reports a result.
+- Update privacy and release documents without changing any app network behavior, access permissions or feature availability.
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
