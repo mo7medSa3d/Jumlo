@@ -52,6 +52,8 @@ Treat payload-size figures in the media architecture note as historical. The [pr
 ## Documents and limits
 
 - `AUDIT.md`: source inventory and the decisions behind retained, hidden and removed items.
+- `docs/AUDIT_2.md`: 2026-10-28 evidence-backed inventory of 45 tools, 14 routes and 16 settings/actions, with P0/P1 release blockers and explicit device gaps.
+- `docs/AUDIT_2_SOURCE_SCAN.md`: source-level lexical candidate register for all 244 production Kotlin/Java files (paths and line numbers); not runtime proof or an XML resource audit.
 - `ROUTES.md`: typed routes, entry points, tab ownership and back behavior.
 - `CHANGELOG.md`: concrete implementation changes.
 - `TEST_REPORT.md`: measured builds, sizes, tests and outstanding device/platform checks.
