@@ -101,3 +101,9 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP01 new-source qualification (pending)
+
+- Baseline source is main `d599b8a3159f38623e3d0b83c3d58a23073e70cf`. Previous successful GitHub Actions [run #96](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318) applies only to that historical main commit, not WP01.
+- `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintRelease`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`: **NOT RUN yet against WP01**; inspect GitHub Actions PR logs and update before merge.
+- Missing owner signing and physical-device qualification: **BLOCKED: credentials/device not provided**. No new APK bytes measured in this documentation update.
