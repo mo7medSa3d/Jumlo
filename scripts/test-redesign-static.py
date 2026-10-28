@@ -69,12 +69,12 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('SETTINGS("settings",',models)
         self.assertNotIn('QuietExpandedNavigationRail',code('ui/navigation/JumloNavHost.kt'))
         self.assertNotIn('QuietExpandedNavigationRail(',code('ui/components/QuietNavigation.kt'))
-    def test_system_motion_and_accessible_haptics_are_composition_policies(self):
+    def test_app_and_system_motion_and_haptics_use_live_persisted_preferences(self):
         act=code('MainActivity.kt')
         self.assertIn('LocalReducedMotion provides',act)
-        self.assertIn('LocalAppHapticsEnabled provides true',act)
-        self.assertIn('LocalReducedMotion provides systemReduced',act)
-        self.assertNotIn('settings.respectReducedMotion',act)
+        self.assertIn('LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit',act)
+        self.assertIn('LocalHapticIntensity provides settings.hapticIntensity',act)
+        self.assertIn('LocalReducedMotion provides (systemReduced || settings.respectReducedMotion)',act)
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietStates.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietButtons.kt'))
     def test_english_and_arabic_redesign_strings(self):
