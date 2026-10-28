@@ -110,6 +110,10 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 
 Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
 
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
 ## 2026-10-28 — WP05 reader lifecycle
 
 ViewerRoute keeps the same serialized arguments and caller-stack return behavior. On each document open, the viewer restores the last-read page from an app-private SHA-256-keyed DataStore instead of an in-memory map. This does not grant additional filesystem rights or change any route. Device acceptance pending.
