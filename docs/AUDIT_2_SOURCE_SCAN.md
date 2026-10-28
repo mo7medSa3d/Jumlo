@@ -265,3 +265,16 @@ Files attempted: 14, failures: 0, candidates: 23.
 Files attempted: 14, failures: 0, candidates: 1.
 
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImagePdfPreview.kt:135`: `drawRect(Color.White,Offset(x,y),Size(w,h))`
+
+## Batch 168–181
+
+Files attempted: 14, failures: 0, candidates: 8.
+
+- **TEXT** `app/src/main/java/com/jumlo/app/ui/workspace/SourceOrderStrip.kt:84`: `Text("${index+1}. ${source.displayName}",maxLines=2,overflow=TextOverflow.Ellipsis,style=QuietTheme.typography.metadata)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualDocumentEditor.kt:381`: `val shade=Color.Black.copy(alpha=.48f)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualDocumentEditor.kt:390`: `drawLine(Color.White.copy(alpha=.5f),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualDocumentEditor.kt:393`: `drawLine(Color.White.copy(alpha=.5f),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualDocumentEditor.kt:445`: `drawCircle(Color.White,11.dp.toPx(),center=corner)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualImageSettings.kt:193`: `drawRoundRect(Color.White,Offset((size.width-w)/2,0f),Size(w,h),androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()))`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/VisualWatermarkEditor.kt:146`: `Box(contentAlignment=Alignment.Center) {if(chosen) Icon(Icons.Rounded.Check,null,tint=if(hex=="#FFFFFF") Color.Black else Color.White)}`
+- **TEXT** `app/src/main/java/com/jumlo/app/ui/workspace/VisualWatermarkEditor.kt:158`: `items(listOf(-90,-45,0,45,90)) {angle->FilterChip(border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})`
