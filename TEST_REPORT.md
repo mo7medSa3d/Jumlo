@@ -1,5 +1,6 @@
 # Jumlo — verification report
 
+- Source follow-up: filename override hidden unless Advanced opens; interaction target raised to 48 dp. **NOT VERIFIED on emulator/device**; retest exact updated PR head in CI.
 ## 2026-10-28 WP02 — automatic download format selection (CI pending)
 
 - Fresh downloads use best-available video (prefer a voiced stream, or mux eligible extractor video/audio), while audio-only sources auto-select the highest actual bitrate; the default is `BEST` rather than 1080p. Explicit saved user resolution overrides remain available.
