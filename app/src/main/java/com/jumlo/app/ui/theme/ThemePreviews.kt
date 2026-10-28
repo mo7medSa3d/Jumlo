@@ -56,7 +56,7 @@ private fun JumloTokensPreview(arabic: Boolean, dark: Boolean) {
 
 @Preview(name = "Jumlo · dark EN", showBackground = true, widthDp = 390)
 @Composable private fun DarkEnglishTokens() {
-    JumloTheme(ThemeMode.DARK, AppLanguage.ENGLISH) { JumloTokensPreview(false) }
+    JumloTheme(ThemeMode.DARK, AppLanguage.ENGLISH) { JumloTokensPreview(false, true) }
 }
 
 @Preview(name = "Jumlo · light AR", locale = "ar", showBackground = true, widthDp = 390)
@@ -66,5 +66,5 @@ private fun JumloTokensPreview(arabic: Boolean, dark: Boolean) {
 
 @Preview(name = "Jumlo · dark AR", locale = "ar", showBackground = true, widthDp = 390)
 @Composable private fun DarkArabicTokens() {
-    JumloTheme(ThemeMode.DARK, AppLanguage.ARABIC) { JumloTokensPreview(true) }
+    JumloTheme(ThemeMode.DARK, AppLanguage.ARABIC) { JumloTokensPreview(true, true) }
 }
