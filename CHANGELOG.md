@@ -152,3 +152,10 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP06 bold palette and WCAG correction (pending CI)
+
+- Corrected sRGB WCAG AA luminance to the actual 2.4 exponent and 0.04045 threshold (old code incorrectly cubed the gamma-corrected channel).
+- Consolidated category accents into Color.kt semantic tokens and reused them in ToolPalette rather than maintaining a duplicate hardcoded palette.
+- Applied saturated category tile surfaces and high-contrast foreground, plus stronger full-width section headers.
+- Added JUnit reference-pair and light/dark category AA tests, and Android Studio light/dark/Arabic RTL palette previews. Device snapshots and TalkBack acceptance remain pending.
