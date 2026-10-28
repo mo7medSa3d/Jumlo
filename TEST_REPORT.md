@@ -1,5 +1,17 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP08 — Scanner preview Bitmap lifecycle
+
+| Check | Result | Evidence required |
+|---|---|---|
+| Source wiring | WRITTEN | `CameraXScanFallback.kt` imports and calls `DisposeOwnedPreviewBitmap(bitmap)` for each lazy thumbnail; existing helper already guards double recycle |
+| Debug/Release build and JVM unit/lint/size gates | **NOT RUN on this branch** | PR Actions full-media job (exact head SHA) |
+| Real Compose disposal | **NOT RUN** | `ScanPreviewBitmapOwnershipTest.thumbnailDisposalRecyclesItsOwnedBitmap` on API 26+ emulator / physical device |
+| 100-page scanner / gallery memory budget | **NOT VERIFIED** | Capture/import, scroll/remove/reorder 100 thumbnail pages and inspect heap/frame traces |
+
+This only fixes ownership of displayed preview bitmaps. It does **not** prove the entire scanner or edge/perspective correction is production qualified.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
