@@ -76,4 +76,5 @@
     <string name="media_restricted_hint">الرابط يحتاج تسجيل دخول أو المصدر يمنع الوصول إليه. لا يطلب Jumlo كوكيز ولا يتجاوز المحتوى المحمي؛ استخدم رابط تحميل عام ومتاح.</string>
     <string name="downloads_live_count">%1$d نشط</string>
     <string name="downloads_completed_count">%1$d مكتمل</string>
+    <string name="home_manage_downloads">عرض جميع التنزيلات</string>
 </resources>
