@@ -5,6 +5,10 @@
 The primary bottom navigation has four localized tabs in reading order: **Home, Tools, Files, Settings**. `DownloadsScreen` stays implemented as a typed detail route, reachable from Home's always-present **View all downloads** secondary action or the active-jobs heading. Moving Downloads out of the dock **does not delete** download history, worker actions, metadata or source handlers. The detail has a Back toolbar; the four-tab dock remains visible with its caller tab selected. Semantics/RTL instrumentation is in `FourTabNavigationTest`; full runtime qualification must still be reported in `TEST_REPORT.md`.
 
 
+
+**WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
+
+
 > 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 
