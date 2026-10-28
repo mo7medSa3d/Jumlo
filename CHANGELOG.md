@@ -1,5 +1,6 @@
 # Changelog — current production-hardening candidate
 
+- Follow-up UX: filename override remains editable under Advanced; default run uses the clean source-derived name. Advanced toggles are full-width with 48 dp minimum touch targets.
 ## 2026-10-28 WP02 — automatic download format selection (CI pending)
 
 - Fresh downloads use best-available video (prefer a voiced stream, or mux eligible extractor video/audio), while audio-only sources auto-select the highest actual bitrate; the default is `BEST` rather than 1080p. Explicit saved user resolution overrides remain available.
