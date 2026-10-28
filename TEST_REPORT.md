@@ -5,6 +5,7 @@
 | Check | Result | Evidence / next action |
 |---|---|---|
 | Source change | CODE WRITTEN | `QuietNavigation.kt` four tabs; `JumloNavHost.kt` preserves Downloads as Back detail; `HomeScreen.kt` always-visible history action |
+| JVM unit tests | **NOT RUN** | `MainDockContractTest` (two tests for four-tab identity, no Downloads/Print, legacy route intact); run `:app:testDebugUnitTest` in PR CI |
 | Android UI tests | **NOT RUN** | `FourTabNavigationTest`: four-tab order, Arabic RTL, indicator clipping, absent Downloads/Print tabs |
 | Activity navigation | **NOT RUN** | `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`: Home → Downloads → Back |
 | Host static contracts | **NOT RUN** | `python3 scripts/test-neon-ui.py` updated to match new nav |
