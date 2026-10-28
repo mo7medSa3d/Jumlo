@@ -231,3 +231,31 @@ Files attempted: 14, failures: 0, candidates: 159.
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:182`: `onSurfaceVariant = Color(0xFFCAC4D0),`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:183`: `outline = Color(0xFF938F99),`
 - **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/M3ColorFactory.kt:184`: `outlineVariant = Color(0xFF63606A),`
+
+## Batch 140–153
+
+Files attempted: 14, failures: 0, candidates: 23.
+
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:13`: `Color(0xFFB63557), // rose: PDF`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:14`: `Color(0xFFAC641D), // amber: images`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:15`: `Color(0xFF087A73), // lagoon: transfers`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:16`: `Color(0xFF2F46C6), // indigo: documents`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:17`: `Color(0xFF7150A9), // iris: organizing`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:18`: `Color(0xFF326E99)  // ocean: utilities`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:21`: `Color(0xFFFF9DB3),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:22`: `Color(0xFFFFCE88),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:23`: `Color(0xFF82DED2),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:24`: `Color(0xFFACB9FF),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:25`: `Color(0xFFD3B7FC),`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/theme/ToolPalette.kt:26`: `Color(0xFF9CCDF0)`
+- **TEXT** `app/src/main/java/com/jumlo/app/ui/viewer/PdfViewerScreen.kt:394`: `TextButton(onClick = ::reset, enabled = scale > 1.01f, modifier = Modifier.heightIn(min = 48.dp)) { Text("${(scale * 100).toInt()}% · $fitLabel") }`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/viewer/PdfViewerScreen.kt:397`: `.clip(QuietTheme.shapes.thumbnail).background(if (dark) Color.Black else Color.White).clipToBounds()`
+- **TEXT** `app/src/main/java/com/jumlo/app/ui/viewer/PdfViewerScreen.kt:436`: `Text("${page + 1}", style = MaterialTheme.typography.labelMedium)`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/AnnotationToolbar.kt:51`: `Box(contentAlignment=Alignment.Center) {if(chosen) Text("✓",color=if(hex=="#FFEB3B") Color.Black else Color.White)}`
+- **TEXT** `app/src/main/java/com/jumlo/app/ui/workspace/AnnotationToolbar.kt:51`: `Box(contentAlignment=Alignment.Center) {if(chosen) Text("✓",color=if(hex=="#FFEB3B") Color.Black else Color.White)}`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:57`: `drawLine(Color.Black.copy(alpha=.35f),Offset(x,0f),Offset(x,size.height),5.dp.toPx())`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:58`: `drawLine(Color.White,Offset(x,0f),Offset(x,size.height),2.dp.toPx())`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:59`: `drawCircle(Color.White,14.dp.toPx(),Offset(x,size.height/2))`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:60`: `drawLine(Color.Black,Offset(x-4.dp.toPx(),size.height/2),Offset(x+4.dp.toPx(),size.height/2),2.dp.toPx())`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:63`: `Text(stringResource(R.string.studio_before),Modifier.background(Color.Black.copy(alpha=.7f),QuietTheme.shapes.thumbnail).padding(6.dp),color=Color.White,style=Q`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/workspace/ImageComparisonPreview.kt:64`: `Text(stringResource(R.string.studio_after),Modifier.background(Color.Black.copy(alpha=.7f),QuietTheme.shapes.thumbnail).padding(6.dp),color=Color.White,style=Qu`
