@@ -495,3 +495,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP06 category-tile design tokens
+
+ToolTile uses a single Color.kt semantic category accent per family for its entire surface, with a foreground chosen to meet WCAG normal-text AA. Full-width section headers use Material 3 primary/onPrimary roles. Colors are centralized through ToolPalette and semantically tokenized; original document preview pixels are not tinted. Light/Dark/Arabic RTL Compose preview sources are provided for design review, but real device contrast and font-scale acceptance remain NOT VERIFIED.
