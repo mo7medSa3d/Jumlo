@@ -4,8 +4,14 @@
 
 - Replace inaccurate English/Arabic absolute welcome/offline claims with explicit local editing plus user-initiated online feature disclosures (downloads, thumbnails, optional extractor, Google Drive, scanner/OCR models).
 - Document that enabled `file_drive` uses Google Drive v3 REST requests and selected-file upload/download, rather than calling Drive blocked.
-- Add a JVM Robolectric `PrivacyDisclosureTest` to check both locales. This is **source-authored, NOT RUN** until the work-package CI reports a result.
+- Add a JVM Robolectric `PrivacyDisclosureTest` to check both locales. Passed in initial [PR #28 CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) (assembleDebug, testDebugUnitTest, lintRelease, compact 55,368,479 bytes); release APK size and device checks require newer-base qualification.
 - Update privacy and release documents without changing any app network behavior, access permissions or feature availability.
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
 
 
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
