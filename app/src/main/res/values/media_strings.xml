@@ -28,7 +28,7 @@
     <string name="media_limits">Media workspace limit: 8 GiB, subject to free storage. Retry restarts unpublished media transfers; finalized outputs are not duplicated.</string>
     <string name="media_direct_instead">Download as a direct file</string>
     <string name="media_queueing">Starting download...</string>
-    <string name="media_download_selected">Download selected quality</string>
+    <string name="media_download_selected">Download now</string>
     <string name="media_rights_title">Before you download</string>
     <string name="media_rights_body">Only download content you own or have permission to download, and follow the terms of the site you are downloading from. Jumlo does not bypass DRM, paywalls or access controls; a site that requires an account will say so and the download will stop.</string>
     <string name="media_rights_confirm">I have the rights</string>
