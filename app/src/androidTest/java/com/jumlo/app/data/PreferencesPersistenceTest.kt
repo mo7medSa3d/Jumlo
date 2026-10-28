@@ -7,6 +7,7 @@ import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.model.FileViewMode
+import com.jumlo.app.model.HapticIntensity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -22,19 +23,26 @@ class PreferencesPersistenceTest {
         try {
             preferences.setThemeMode(ThemeMode.DARK)
             preferences.setLanguage(AppLanguage.ARABIC)
-            preferences.setAccentColor("DYNAMIC")
+            preferences.setAccentColor("#7B4DFF")
             preferences.setDefaultVideoQuality("720")
             preferences.setDefaultAudioQuality(128)
             preferences.setFileViewMode(FileViewMode.LIST)
             preferences.setDownloadDestinationFolder("content://com.android.externalstorage.documents/tree/primary%3ADownload")
             preferences.setWifiOnlyDefault(true)
             preferences.setRespectReducedMotion(true)
+            preferences.setHapticIntensity(HapticIntensity.STRONG)
             preferences.setMaxConcurrentDownloads(6)
             val restored = UserPreferencesRepository(context).settingsFlow.first()
             assertTrue(restored.isLoaded)
             assertEquals(ThemeMode.DARK, restored.themeMode)
             assertEquals(AppLanguage.ARABIC, restored.language)
-            assertEquals("DYNAMIC", restored.accentColor)
+            assertEquals("#7B4DFF", restored.accentColor)
+            try {
+                preferences.setAccentColor("not-a-color")
+                fail("Invalid accent must fail")
+            } catch (_: IllegalArgumentException) {
+                assertEquals("#7B4DFF", UserPreferencesRepository(context).settingsFlow.first().accentColor)
+            }
             assertEquals("720", restored.defaultVideoQuality)
             assertEquals(128, restored.defaultAudioQuality)
             assertEquals(FileViewMode.LIST, restored.fileViewMode)
@@ -42,7 +50,9 @@ class PreferencesPersistenceTest {
             // Removed legacy preferences cannot silently keep blocking mobile downloads
             // or disable animation after the corresponding controls disappear.
             assertFalse(restored.wifiOnlyDefault)
-            assertFalse(restored.respectReducedMotion)
+            assertTrue(restored.respectReducedMotion)
+            assertTrue(restored.hapticFeedbackOnCommit)
+            assertEquals(HapticIntensity.STRONG, restored.hapticIntensity)
             assertEquals(2, restored.maxConcurrentDownloads)
         } finally {
             preferences.setThemeMode(original.themeMode)
@@ -55,6 +65,7 @@ class PreferencesPersistenceTest {
             else preferences.resetDownloadDestinationFolder()
             preferences.setWifiOnlyDefault(original.wifiOnlyDefault)
             preferences.setRespectReducedMotion(original.respectReducedMotion)
+            preferences.setHapticIntensity(original.hapticIntensity)
             preferences.setMaxConcurrentDownloads(original.maxConcurrentDownloads)
         }
     }

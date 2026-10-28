@@ -1,10 +1,8 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP09 emulator runner Bash invocation repair
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
-- Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.
-- Run the strict-mode commands in a dedicated Bash file invoked through a single `bash scripts/run-emulator-smoke.sh` command; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
-- Add `scripts/test-emulator-smoke-runner.py` as a required preflight. **Device tests NOT VERIFIED** until fresh emulator runs complete.
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
 
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
@@ -165,6 +163,22 @@ declarations/policy review, the complete live-provider matrix, physical-device
 qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
+
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+## 2026-10-28 — WP09 emulator runner Bash invocation repair
+
+- Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.
+- Run the strict-mode commands in a dedicated Bash file invoked through a single `bash scripts/run-emulator-smoke.sh` command; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
+- Add `scripts/test-emulator-smoke-runner.py` as a required preflight. **Device tests NOT VERIFIED** until fresh emulator runs complete.
+
 
 ## 2026-10-28 — WP09 actual Android emulator smoke (verification pending)
 
