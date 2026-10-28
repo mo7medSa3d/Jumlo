@@ -15,13 +15,38 @@ object PlatformHeaderPolicy {
     )
     private val headerName = Regex("[A-Za-z0-9-]{1,64}")
 
+    /**
+     * Extra user-supplied headers (including Origin and Referer) belong only
+     * to the origin where the user started. A redirect can change host, port
+     * or scheme; never replay those headers to an unrelated destination.
+     * Standard browser headers and URL-scoped cookies remain independent.
+     */
+    fun sameOrigin(initialUrl: String, requestUrl: String): Boolean {
+        val initial = runCatching { URI(initialUrl) }.getOrNull() ?: return false
+        val request = runCatching { URI(requestUrl) }.getOrNull() ?: return false
+        fun port(uri: URI): Int = if (uri.port >= 0) uri.port else when (uri.scheme?.lowercase(Locale.ROOT)) {
+            "https" -> 443
+            "http" -> 80
+            else -> -1
+        }
+        val aScheme = initial.scheme?.lowercase(Locale.ROOT)
+        val bScheme = request.scheme?.lowercase(Locale.ROOT)
+        return aScheme in setOf("http", "https") &&
+            aScheme == bScheme &&
+            !initial.host.isNullOrBlank() &&
+            initial.host.equals(request.host, ignoreCase = true) &&
+            initial.rawUserInfo == null && request.rawUserInfo == null &&
+            port(initial) > 0 && port(initial) == port(request)
+    }
+
     fun headersFor(
         url: String,
         customUserAgent: String = "",
         preferDesktop: Boolean = true,
         cookieHeader: String? = null,
         customHeaders: Map<String, String> = emptyMap(),
-        compatibilityAttempt: Int = 0
+        compatibilityAttempt: Int = 0,
+        customHeaderOrigin: String = url
     ): Map<String, String> {
         val uri = runCatching { URI(url) }.getOrNull()
             ?: throw IllegalArgumentException("INVALID_URL")
@@ -44,8 +69,11 @@ object PlatformHeaderPolicy {
         }
         if (safeCookie != null) headers["Cookie"] = safeCookie
 
-        // Custom headers never override the cookie jar or transport security.
-        for ((key, value) in customHeaders) {
+        // Cross-origin redirects may be controlled by a third party. The
+        // original user's Referer/Origin/custom headers must not follow them.
+        // URL-scoped CookieManager lookups are performed by the caller.
+        val scopedExtras = if (sameOrigin(customHeaderOrigin, url)) customHeaders else emptyMap()
+        for ((key, value) in scopedExtras) {
             val name = key.trim()
             val text = value.trim()
             if (!headerName.matches(name) || name.lowercase(Locale.ROOT) !in safeExtras ||
