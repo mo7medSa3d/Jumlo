@@ -96,3 +96,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## 2026-10-28 — Owner's production-size rule supersedes decision 8
+
+The strict compact/release ARM64 full-media APK limit of **60,000,000 decimal bytes** is restored in WP01. The previous explicit decision to lift it is superseded by the new production requirements. Features must not be silently disabled to achieve this cap; if full-media optimized APK exceeds it, CI must fail, and engineering must measure safe packaging optimizations without sacrificing enabled features.
