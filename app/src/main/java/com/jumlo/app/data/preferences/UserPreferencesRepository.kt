@@ -140,7 +140,7 @@ class UserPreferencesRepository @Inject constructor(
             hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
             themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM),
             language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(defaultLanguage),
-            respectReducedMotion = false, // Removed setting; system animation policy is respected by the activity.
+            respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false, // User choice supplements Android system accessibility animation settings.
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             hapticIntensity = if(prefs[Keys.HAPTIC_ON_COMMIT]==false) HapticIntensity.OFF else
                 runCatching { HapticIntensity.valueOf(prefs[Keys.HAPTIC_INTENSITY] ?: "LIGHT") }.getOrDefault(HapticIntensity.LIGHT),
