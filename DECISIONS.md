@@ -96,3 +96,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## 2026-10-28 — WCAG and saturated category surfaces
+
+The previous low-chroma neutral card design is superseded for tool discovery. Keep real documents color-accurate, but render category tool cards with saturated tokenized surfaces and mathematically checked readable labels/icons. WCAG relative luminance uses the standards-based sRGB transfer exponent of 2.4, not cube; 4.5:1 remains the minimum normal-text criterion. Every visual theme still requires device capture/TalkBack testing.
