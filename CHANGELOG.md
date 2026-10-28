@@ -159,3 +159,7 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+## 2026-10-28 — WP10 catalogue visibility policy (verification pending)
+
+- Match the default Tools tiles, Pinned and Recent rows to the existing `ToolCatalogue.isListed` policy. Keep Image Comparison searchable as a specialist, without a default tile; omit duplicate Files/Settings navigation aliases from the catalogue.
+- Preserve all registered handlers/IDs and add Kotlin pure-policy and Compose interaction regressions. Android lint/unit and device results remain pending exact branch CI.
