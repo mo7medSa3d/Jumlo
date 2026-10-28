@@ -63,6 +63,10 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
 
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.
 
 ## 2026-10-28 — CI release shrinker memory guard
 
