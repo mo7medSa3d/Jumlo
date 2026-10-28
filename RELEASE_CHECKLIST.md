@@ -35,6 +35,12 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP03: Change Reduce motion with Android animations enabled and disabled; confirm `LocalReducedMotion` honors either source, all transitions stop/reduce as intended, and the preference survives restart.
+- [ ] WP03: Turn haptics off, set Light/Medium/Strong, and verify actual device vibration plus Android's system haptic-off override. Test interface sounds off/on independently.
+- [ ] WP03: Confirm interaction controls are reachable at 200% text and RTL Arabic without clipped switch labels.
+
+
+
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |
