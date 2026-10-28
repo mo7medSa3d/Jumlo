@@ -122,3 +122,5 @@ run here).
 - Source diff: `ToolCatalogue.isSearchable` distinguishes the searchable `img_compare` specialist from `file_02`, `file_trash` and `dl_settings` navigation aliases. `ToolsCatalogue` filters default results, Pinned and Recent consistently while retaining specialist search.
 - New tests: `ToolCatalogueTest.searchRetainsSpecialistsButNeverDuplicatesNavigationTabs` (JVM) and `ToolCatalogueInteractionTest.defaultGridHidesAliasesButSearchCanOpenImageComparison` (Android Compose). **NOT RUN until the matching CI and emulator tests report results.**
 - No handler or route was deleted; this test does not qualify any tool's file output or establish that all settings work.
+
+- Strengthened `ToolCatalogueTest.theWorkspaceOfAToolIsTheOneThatContainsIt`: it previously compared `workspaceOf(id)` to itself (tautology); it now checks the declared primary/merged workspace identity and missing-ID lookup. Execution remains **NOT RUN** until matching CI passes.
