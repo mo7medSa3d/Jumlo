@@ -1,5 +1,14 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP07 print-page reorder recovery (tests pending GREEN)
+
+- `PrintPageSelection.normalizedOrder` falls back to the currently rendered source order when a persisted permutation is missing, duplicated or references removed pages, matching `arrange` semantics.
+- `PrintViewModel.movePage` now delegates to `applyPageOrder` rather than editing order alone, so visible page selection follows original source pages through move operations.
+- Drag-permutation and per-page rotation use the same normalized visible source IDs. All edits remain non-destructive until actual printing.
+- Added five JVM regression cases in `PrintPageSelectionTest` and `PrintViewModelTest`.
+- **TDD RED confirmed:** [GitHub Actions #40640984856](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640984856) listed all five new tests as FAILED against previous source; **GREEN pending** final code CI. Android PrintManager/spooler remains device NOT_RUN.
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.

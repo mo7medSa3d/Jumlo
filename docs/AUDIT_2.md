@@ -1,4 +1,14 @@
 # Jumlo — AUDIT_2 (source evidence and release gap register)
+
+## WP07 — confirmed print-page defects (2026-10-28)
+
+| Finding | Source evidence | Proof/qualification |
+|---|---|---|
+| Printed pages change when user uses Move button after selecting a subset | `PrintViewModel.movePage` previously updated `pageOrder` without remapping `range` | [TDD RED CI #40640984856](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640984856): `moveButtonKeepsTheSameSourcePagesSelectedAfterReorder` FAIL; code correction pending GREEN on WP07 head. |
+| Old persisted page permutation makes drag/move no-op or rotates the wrong visible page | `PrintPageSelection.arrange` ignores invalid permutations, but `move` and ViewModel previously used invalid raw `pageOrder` | Same RED CI: `staleInvalidOrderIsReplacedByCurrentSourceOrderBeforeDragging`, `draggedPageOrderRecoversFromStaleOrDuplicateSavedValues`, `moveButtonRecoversFromStaleSavedPageOrder`, and `rotationTargetsTheVisiblePageWhenSavedOrderIsInvalid` all FAIL. |
+ 
+Mitigation uses one `PrintPageSelection.normalizedOrder` for edits and delegates Move to the drag reordering path, preserving original source-page selection. A code patch without the follow-up passing CI and print-device checks does **not** advance these rows to works.
+
 Date: 2026-10-28. Target repository: `mo7medSa3d/Jumlo`; baseline `main` tree/commit `d599b8a3159f38623e3d0b83c3d58a23073e70cf`.
 **Verdict: NOT RELEASE QUALIFIED.** This is an audit, not a claim that implementations were executed on a device. Source inventory and historic test evidence are different from a freshly passing complete pick→result flow.
 

@@ -1,5 +1,10 @@
 # Tool UI specification
 
+## 2026-10-28 WP07 — Print page manager interaction correction
+
+Page thumbnails represent the actual visible order. Invalid cached order mappings (duplicates, missing pages or out-of-range references) must never cause dragging or rotation to affect a different page. Move buttons and drag gestures share the same permutation application; after reordering, page-range selection is remapped to preserve the same original source pages rather than their previous positions. Undo/redo still uses the existing ViewModel options history. Five JVM regressions verified RED before implementation; passing tests and device print/page-preview interaction remain the acceptance gate.
+
+
 > 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 

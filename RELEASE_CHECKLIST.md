@@ -1,5 +1,12 @@
 # Release checklist
 
+## 2026-10-28 WP07 — print page identity smoke gate
+
+- [ ] From Print, select pages 1 and 3 of a three-page PDF, move page 1 to last, and independently confirm the selected source pages remain 3 and 1 (not 2 and 1).
+- [ ] Reopen an old stored print session with duplicate/missing `pageOrder`; the displayed source order must be authoritative for drag/move/rotate and undo/redo, with no wrong-page output.
+- [ ] On a physical device, verify page range, orientation, copies, native print preview, printer service errors and actual spool output. JVM regressions alone do not satisfy this gate.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing

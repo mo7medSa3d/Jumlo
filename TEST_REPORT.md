@@ -1,5 +1,21 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP07 — print-page edit regression
+
+| Verification | Observed | Evidence |
+|---|---|---|
+| `PrintPageSelectionTest.staleInvalidOrderIsReplacedByCurrentSourceOrderBeforeDragging` | **RED before patch** | [CI 40640984856](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640984856): `AssertionError` line 69 |
+| `PrintViewModelTest.draggedPageOrderRecoversFromStaleOrDuplicateSavedValues` | **RED before patch** | same run: `AssertionError` line 190 |
+| `PrintViewModelTest.moveButtonRecoversFromStaleSavedPageOrder` | **RED before patch** | same run: `AssertionError` line 201 |
+| `PrintViewModelTest.rotationTargetsTheVisiblePageWhenSavedOrderIsInvalid` | **RED before patch** | same run: `AssertionError` line 210 |
+| `PrintViewModelTest.moveButtonKeepsTheSameSourcePagesSelectedAfterReorder` | **RED before patch** | same run: `ComparisonFailure` line 179 |
+| Same JVM tests after code patch | **NOT RUN at report edit** | Must attach current WP07 head CI with `:app:testDebugUnitTest` exit 0 |
+| Full `assembleDebug/lintRelease/verifyCompactApkSize` | **NOT RUN for WP07 head at report edit** | Pending GitHub Actions |
+| Real Android PrintManager, orientation/copies/duplex, hardware printer | **NOT RUN** | Requires emulator/physical printer/services; no fabricated system-spool evidence |
+
+Work package changes page-editor selection and mapping only. It does not qualify system print dialog, device drivers, or release signing.
+
+
 ## 2026-10-28 work-package verification — release quality gates
 
 - `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.

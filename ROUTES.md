@@ -1,5 +1,10 @@
 # Navigation and route inventory
 
+## 2026-10-28 WP07 — Print destination (no route changes)
+
+`PrintRoute` retains its typed navigation and existing Android PrintManager handoff. The visual page manager now normalizes stale saved page-order data before drag, move and rotation and keeps selection attached to original source pages. Regressions: `PrintPageSelectionTest` and `PrintViewModelTest`, with pre-fix failures recorded in `TEST_REPORT.md`. Real printer and device Back flow remain NOT_RUN.
+
+
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 

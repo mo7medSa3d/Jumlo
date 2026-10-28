@@ -1,5 +1,13 @@
 # Decisions — 24 October 2026
 
+## 2026-10-28 — WP07 print selection and saved-order recovery
+
+- **Source-page identity is authoritative for print selection.** A numeric page-range describes positions in the **current visible order**, but after a move the selected physical source pages must not silently change.
+- When persisted `pageOrder` is an invalid permutation, use the currently displayed identity source order (`1..pageCount`) for drag/move/rotate edits. Do not trust malformed stored positions just because their list is nonempty.
+- Move buttons invoke the same `applyPageOrder` path used by drag reordering rather than changing `pageOrder` alone, preventing selected-page mismatch. Existing valid page permutations and non-destructive print preparation remain intact.
+- Android print spool and preview pixel correctness still require device-level execution; do not infer from JVM tests.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
