@@ -1,5 +1,13 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — Work package 03: Four primary tabs (verification pending)
+
+- Replaced five-slot navigation with **Home, Tools, Files, Settings** in `MainDockTabs`. Downloads remains a dedicated detail destination with a Back toolbar, preserving the existing download manager, active/past job lists, downloader tool, and job history.
+- Added a permanent **Downloads** history entry to Home even when there are no running transfers.
+- Replaced the obsolete five-tab instrumentation test with `FourTabNavigationTest` (exact order, RTL mirroring, indicator bounds, absence of Downloads/Print tab), and extended `JumloUiTest` for Home → Downloads → Back. Updated `scripts/test-neon-ui.py` to assert the new contract.
+- **NOT RUN in this change authoring environment:** Android compilation, connected instrumentation, RTL snapshots, accessibility review and device Back behavior. See `TEST_REPORT.md`. Do not mark this navigation change runtime-verified without the CI/device logs.
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
