@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP09 missing device-fixture preflight documentation
+
+- Restore the previously broken README and release-checklist link `verification/current/device/preflight-source/README.md`.
+- Provide real JDK corpus generation and per-run SHA-256 recording, ADB staging, host/guest free-space safeguards, 5-scan and 200-page instrumentation commands, evidence handling and explicit blocked conditions.
+- This is **documentation restoration only**, not a new executed fixture, compression result, device benchmark, or production approval.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
