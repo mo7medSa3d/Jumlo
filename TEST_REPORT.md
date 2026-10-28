@@ -1,5 +1,12 @@
 # Jumlo — verification report
 
+## Candidate 2026-10-28 WP01 — strict release gates (verification pending)
+
+- Restored decimal 60,000,000-byte fail-closed checks in both `:app:verifyCompactApkSize` and `:app:verifyReleaseApkSize`; full-media requirement, ARM64 ABI and extractor payload checks remain.
+- CI now runs `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` and both size gates for PRs, including docs-only PRs; work-package push branches trigger CI.
+- **Not verified yet:** these changes require a new GitHub Actions result. A passing older run does not qualify the changed branch; emulator, signed release and device flows remain NOT RUN.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
@@ -80,7 +87,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
+| Release and compact APK size | WP01 reinstates 60,000,000-byte limits; exact candidate GitHub CI/build and byte measurements pending | NOT VERIFIED for WP01 |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |
