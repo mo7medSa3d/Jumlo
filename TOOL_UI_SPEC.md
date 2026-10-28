@@ -34,7 +34,7 @@ Every tool page is wrapped in the shared `ToolScaffold` (`ui/components/ToolScaf
 - `PdfFormEditor`: backend-discovered real widget coordinates and typed controls; `OcrWorkspacePanel`: real text/OCR, copy and export; `DuplicateResultsPanel`: real streamed hashes and thumbnail groups.
 - `CollagePlacementPreview`: pointer hit regions come from production layout plans; moving a slot updates the actual input order. `ImageComparisonPreview`: actual before/after bitmaps with draggable clipping divider.
 - `EncodedImagePreviewPanel`: Convert Images, Compress Images and Target Size use an actual private encode/decode through the same production codec/settings. The panel debounces edits, owns/releases both layers, exposes loading/retry, and shows real format/bytes/dimensions/chosen quality. Reduced previews label every output size/quality as sample-only and never claim the full export met its target.
-- Settings visible to users: theme, optional dynamic accent, Arabic/English, save location, default qualities, measured storage, clear cache, about/version/privacy/diagnostics. Removed legacy motion/haptic/network/concurrency switches stay hidden. System accessibility motion preferences remain honored.
+- Settings visible to users: theme, optional dynamic accent, Arabic/English, save location, default qualities, measured storage, clear cache, about/version/privacy/diagnostics, reduce motion, haptics and interface sounds. Motion respects system accessibility reduction AND the user preference; OFF disables haptic calls. Old Wi-Fi-only and concurrency options remain hidden as unsupported policy. WP03 interaction/UI tests are new test source, NOT RUN until CI/device execution.
 
 ## Tests and screenshot acceptance
 
