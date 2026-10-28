@@ -1,5 +1,10 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WCAG role contrast follow-up
+
+- The earlier `wp/05-bold-theme-tokens` CI failed `ToolPaletteContrastTest.accentForegroundsMeetAaForLightDarkAndAmoled` at the 4.5:1 boundary (Actions #40641801377). Add a 0.05 contrast-ratio headroom to generated `M3ColorFactory.ensureContrast` defaults to avoid float/color packing rounding below AA. Exact-head regression CI **pending**; do not mark PASS until its logs confirm.
+
+
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
 - Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
