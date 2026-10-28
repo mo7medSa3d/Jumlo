@@ -27,13 +27,15 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('{navigateTo("scan")}',nav)
         self.assertIn('"scan" -> com.jumlo.app.ui.scan.ScanScreen', nav)
         self.assertIn('onScan: () -> Unit', dock)
-        # The center slot is Home; Scan and Print are explicit actions in Tools.
-        self.assertIn('MainDockTabs = listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)', dock)
+        # Four root tabs retain Home, while Scan, Downloads and Print remain reachable detail flows.
+        self.assertIn('MainDockTabs = listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)', dock)
         self.assertIn('MainDockTabs.forEach', dock)
         self.assertIn('destination == selectedTab', dock)
         self.assertIn('.testTag("nav.indicator.${tab.name}")', dock)
         self.assertIn('.selectable(selected = active, role = Role.Tab', dock)
         self.assertIn('DownloadsRoute', nav)
+        self.assertIn('if (next == DockTab.DOWNLOADS)', nav)
+        self.assertNotIn('DockTab.DOWNLOADS, DockTab.SETTINGS)', dock)
         self.assertIn('com.jumlo.app.ui.downloads.DownloadsScreen', nav)
 
     def test_home_uses_real_tool_catalog_and_outputs(self):
@@ -51,6 +53,7 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('fileDateLabel(output.createdAtEpochMs)', home)
         self.assertIn('onFiles: () -> Unit', home)
         self.assertIn('onDownloads: () -> Unit', home)
+        self.assertIn('testTag("home.downloads.history")', home)
         self.assertNotIn('Mohamed Saad', home)
         self.assertNotIn('Pro subscription', home)
 
