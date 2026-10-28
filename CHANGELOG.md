@@ -1,5 +1,14 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — Work package 04: four-tab navigation (CI verification pending)
+
+- Four primary tabs are **Home, Tools, Files, Settings**; legacy Downloads remains an ordinary typed detail route, not removed functionality.
+- Home offers a persistent localized **View all downloads** action even when no transfer is active. Existing download jobs, download-entry tools, and activity history remain reachable.
+- Downloads preserves the calling primary tab's selection, displays a Back toolbar and keeps the four-tab dock visible.
+- Added `MainDockContractTest` plus Android `FourTabNavigationTest` and `JumloUiTest.downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome`.
+- **TDD RED evidence:** [GitHub CI #40639796921](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639796921) failed at `MainDockContractTest.kt:12` against the old five-tab implementation. GREEN CI and device/RTL execution are not yet verified.
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.
