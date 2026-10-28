@@ -502,3 +502,4 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+**WP06 localization:** bilingual ColorPresets now display actual Arabic labels on Arabic Settings, rather than English-only names; custom hex seeds remain unchanged. Device theme and RTL screenshot acceptance remains NOT VERIFIED.
