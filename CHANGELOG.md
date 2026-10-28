@@ -1,10 +1,17 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP06 honest PDF compression outcomes (CI pending)
+## 2026-10-28 — WP06 honest PDF compression outcomes (initial CI passed, merged-base qualification pending)
 
 - After a real PDF compression pass, inspect the **measured stage-file byte count** before classifying the result. A byte-identical/unreduced output is `UNCHANGED` with `PDF_NOT_COMPRESSIBLE` even if the codec skipped images. Only an actually smaller file may report `PDF_IMAGE_COMPRESSION_PARTIAL`.
 - Centralize classification in Android-free `document-core/PdfCompressionResultPolicy.kt`; add seven JVM `PdfCompressionResultPolicyTest` cases for reduced/unchanged/partial and invalid output.
 - No file or page is removed; existing verified-output publishing remains unchanged. The 5-scan-fixture and 200-page device memory gates remain **BLOCKED / NOT RUN** until staged and executed.
+- Initial [CI #40640831258](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640831258) **PASS** for assembleDebug, testDebugUnitTest, lintRelease and compact APK **55,367,967 / 60,000,000 bytes**; release APK gate requires the updated main-base rerun.
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
 
 
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
