@@ -1,6 +1,6 @@
 # Icon map
 
-All 47 registry entries have distinct vector geometry, including the three pre-existing disabled entries. Assets are official **Material Symbols Rounded, filled, optical size 24**, converted to Android 24dp vector drawables without a font payload.
+The **45 currently registered tools** have distinct vector geometry. The historical 47-tool count and three-disabled-entries claim are superseded by the current registry and capability policy. Assets are official **Material Symbols Rounded, filled, optical size 24**, converted to Android 24dp vector drawables without a font payload.
 
 Pinned upstream commit: `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` in [google/material-design-icons](https://github.com/google/material-design-icons/tree/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7). License: [Apache-2.0](https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE), bundled in `app/src/main/assets/licenses/material-symbols-Apache-2.0.txt`. Each vector records its source symbol and pinned commit in a comment; exact source URLs are listed below. Most Android vectors use a 960x960 viewport with a translated group for the original SVG negative Y coordinates. Batch Rename uses the original 24x24 path and viewport without a translation.
 
