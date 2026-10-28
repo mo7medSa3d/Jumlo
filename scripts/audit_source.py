@@ -143,6 +143,10 @@ def main() -> None:
         "Source inventory: {source_files_scanned} files, {total_candidates} candidates; "
         "manual review required".format(**report)
     )
+    # Deliberately print the exact candidates to the job log as well as the artifact.
+    # These are source-review leads, not verified failures or secrets.
+    for finding in report["findings"]:
+        print(f"SOURCE_CANDIDATE | {finding['kind']} | {finding['path']}:{finding['line']} | {finding['snippet']}")
 
 
 if __name__ == "__main__":
