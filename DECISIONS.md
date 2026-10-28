@@ -5,7 +5,7 @@
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
 4. No feature is labelled runtime-working without this execution's build and device evidence. Physical-device/Play Console checks cannot be fabricated.
 5. Keep prior audit/test reports only as clearly labeled recovered history. The current root reports supersede their status claims.
-6. Preserve Android accessibility animation-scale behavior even though the in-app reduce-motion setting is removed; no additional in-app motion toggle will be exposed.
+6. Preserve Android accessibility animation-scale behavior. Superseded on 2026-10-28 by an explicit owner requirement: expose a separate Reduce motion switch; combine Android's reduction and the saved in-app choice with OR, so the OS setting cannot be overridden.
 
 ## Implementation choices
 
@@ -96,3 +96,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+46. WP03 restores in-app interaction controls that were retained in DataStore but ignored by the Compose root: Reduce motion, haptic enable/strength and optional interface sounds. Preference writes must cause real app behavior; the existing Android system haptic setting still has precedence. EN/AR strings, shared switch semantics, JVM tests and Android tests accompany the change. Source changes are not device acceptance; verify before declaring release readiness.
