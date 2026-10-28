@@ -1,5 +1,10 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
@@ -159,7 +164,16 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
-## 2026-10-28 — WP10 catalogue visibility policy (verification pending)
 
-- Match the default Tools tiles, Pinned and Recent rows to the existing `ToolCatalogue.isListed` policy. Keep Image Comparison searchable as a specialist, without a default tile; omit duplicate Files/Settings navigation aliases from the catalogue.
-- Preserve all registered handlers/IDs and add Kotlin pure-policy and Compose interaction regressions. Android lint/unit and device results remain pending exact branch CI.
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP10 catalogue visibility, integrated with latest CI
+
+Tools browse/pinned/recent now honor existing `ToolCatalogue.isListed`. Image Comparison remains search-only; Files/Settings navigation aliases no longer clutter the grid. Registry entries/operation handlers are preserved. Added Kotlin and Compose tests; updated-head CI pending.
