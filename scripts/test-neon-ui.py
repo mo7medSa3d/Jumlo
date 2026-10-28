@@ -112,8 +112,12 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('viewModel.cleanTemporary()', settings)
         self.assertIn('onChooseDownloadFolder', settings)
         self.assertIn('SaveFolderCard(', settings)
-        for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp', 'setHapticIntensity', 'respectReducedMotion'):
+        for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp'):
             self.assertNotIn(obsolete, settings)
+        # Haptic intensity and Reduce motion were restored as real persisted settings in PR #20.
+        self.assertIn('setHapticIntensity', settings)
+        self.assertIn('settings.respectReducedMotion', settings)
+        self.assertIn('setRespectReducedMotion', settings)
         self.assertIn('NeonPanel(', downloads)
         self.assertIn('onTool(mediaTool)', downloads)
         self.assertIn('items(activeDownloads', downloads)
