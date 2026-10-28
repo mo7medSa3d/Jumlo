@@ -96,3 +96,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+48. WP06 distinguishes measured reduction from codec warnings. The PDF compression result's source and output byte counts determine whether it is CREATED or UNCHANGED. A skipped-image warning must not override a no-saving result; partial compression is reported only when a smaller PDF was produced. Classification is pure Kotlin in document-core with JVM regression tests; the full device fixture suite remains a separate gate.
