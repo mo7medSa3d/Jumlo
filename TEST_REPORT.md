@@ -4,12 +4,20 @@
 
 | Check | Evidence | Status |
 |---|---|---|
-| `PdfCompressionResultPolicyTest` (7 JVM methods) | New pure Kotlin test for unchanged-with-skips, smaller-with-skips, smaller, unchanged, empty, larger and invalid skip count | **NOT RUN** until PR CI finishes |
+| `PdfCompressionResultPolicyTest` (7 JVM methods) | New pure Kotlin test for unchanged-with-skips, smaller-with-skips, smaller, unchanged, empty, larger and invalid skip count | **PASS** on initial [CI #40640831258](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640831258) (7 cases under testDebugUnitTest) |
 | Handler output status | `PdfOperationHandler.kt` calls `PdfCompressionResultPolicy.classify(originalBytes, actualOutputBytes, skippedImages)` before publishing | SOURCE REVIEW only |
 | Five scanned benchmark fixtures | `PdfCompressionDeviceTest.theScannedCorpusIsCompressedOnThisDevice` | **NOT RUN**; real inputs must be staged |
 | 200-page OOM / device sizing | `PdfCompressionDeviceTest.aTwoHundredPageScanIsProcessedOnThisDevice` | **NOT RUN**; physical/emulator and storage budget required |
 
 Do not call any compression preset verified solely because a result-classification JUnit test passes. A PDF may legitimately be incompressible; the UI must not promise savings where measured bytes do not decrease.
+
+- Initial [CI #40640831258](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640831258) **PASS**: assembleDebug, testDebugUnitTest, lintRelease, verifyCompactApkSize (55,367,967 bytes). It did not yet run the newer main default verifyReleaseApkSize, or any emulator/device tests; updated-base CI pending.
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
 
 
 ## 2026-10-28 work-package verification — release quality gates
@@ -100,7 +108,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
+| Release/compact APK size | Both enforce 60,000,000 decimal bytes in current source; branch CI #40639445934 measured 55,356,059/55,368,299 bytes | PASS for that exact branch SHA; merged-base run pending |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |
