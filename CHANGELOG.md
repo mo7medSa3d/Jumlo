@@ -164,3 +164,5 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+## WP06 — Arabic Settings accent labeling (2026-10-28, CI pending)
+- Settings appearance now renders each of the 16 named accent presets in the selected Arabic/English language instead of always displaying English; invalid/stale preset values fall back to localized Blue. Custom hex accents remain recognizable hex text. Added four JUnit cases in `AccentLocalizationTest`. Device/RTL screenshots still NOT VERIFIED.
