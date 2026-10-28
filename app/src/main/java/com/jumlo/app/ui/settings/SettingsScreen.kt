@@ -66,7 +66,7 @@ fun SettingsScreen(
             }
         }
         item("app-color") { PreferenceRow(stringResource(R.string.pref_app_color),
-            previewAccentLabel(settings.accentColor), Icons.Rounded.Palette, { panel = "app-color" },
+            previewAccentLabel(settings.accentColor, settings.language), Icons.Rounded.Palette, { panel = "app-color" },
             Modifier.testTag("settings.appColor")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
@@ -148,11 +148,12 @@ fun SettingsScreen(
     ThemeMode.AMOLED -> R.string.pref_theme_amoled
 })
 
-private fun previewAccentLabel(accent: String): String {
+internal fun previewAccentLabel(accent: String, language: AppLanguage): String {
     val preset = ColorPresets.ALL.firstOrNull { it.key == accent }
-    if (preset != null) return preset.nameEn
+    if (preset != null) return if (language.isRtl) preset.nameAr else preset.nameEn
     if (M3ColorFactory.hexColor(accent) != null) return accent
-    return "Blue"
+    val fallback = ColorPresets.ALL.first { it.key == "BLUE" }
+    return if (language.isRtl) fallback.nameAr else fallback.nameEn
 }
 @Composable private fun languageLabel(language: AppLanguage): String = stringResource(
     if (language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
