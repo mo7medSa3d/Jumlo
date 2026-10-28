@@ -498,3 +498,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP07 Arabic settings parity
+
+The App color preference uses selected AppLanguage to render named preset labels, including an Arabic fallback for unknown names; explicit hex values remain LTR identifiers. This is a source-level fix with a JVM regression, not device visual acceptance.
