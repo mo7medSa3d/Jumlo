@@ -119,6 +119,6 @@ run here).
 
 ## 2026-10-28 — WP09 Android 8/15 emulator smoke qualification
 
-- Workflow: `.github/workflows/android-smoke.yml`, on PR/main and manual requests. Matrix: API 26 and API 36 x86_64; selected classes: `JumloUiTest`, `WorkspaceRecoveryInteractionTest`, `ToolCatalogueInteractionTest`, `ScreenConfigSemanticsTest`, `PdfViewerInteractionTest`, `StudioGestureInteractionTest`, `PreferencesPersistenceTest`. Uploads `android-smoke.log`, captured logcat, connected instrumentation reports.
+- Workflow: `.github/workflows/android-smoke.yml`, on PR/main and manual requests. Matrix: API 26, API 35 and API 36 x86_64; selected classes: `JumloUiTest`, `WorkspaceRecoveryInteractionTest`, `ToolCatalogueInteractionTest`, `ScreenConfigSemanticsTest`, `PdfViewerInteractionTest`, `StudioGestureInteractionTest`, `PreferencesPersistenceTest`. Uploads `android-smoke.log`, captured logcat, connected instrumentation reports.
 - **NOT RUN / CI PENDING** on this work package. A workflow declaration is not test execution, and software emulator success is not physical-device proof. Record the exact two job URLs and pass/fail/skip counts when they complete.
 - The smoke lane intentionally does not assert full tool end-to-end operation, 5-scan compression fixtures, CameraX capture hardware, DRM/provider availability, 200-page performance, Play signing, or the full `connectedDebugAndroidTest` suite. Those remain separate BLOCKED/NOT VERIFIED release gates, not passes.
