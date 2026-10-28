@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify work package 03 navigation on a real Android test target: four dock cells (Home/Tools/Files/Settings), English and Arabic RTL order, Home Downloads history entry with/without jobs, Back from Downloads and Print, remembered tool/draft state, 200% font scale, and no hidden fifth tab. Run `FourTabNavigationTest` and `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`; keep actual logs and screenshots.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
