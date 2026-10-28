@@ -29,6 +29,15 @@ class JumloUiTest {
         }
     }
 
+    @Test fun downloadHistoryIsReachableFromHomeWithoutAFifthTab() {
+        compose.onNodeWithTag("home.downloads.history").performScrollTo().performClick()
+        compose.onNodeWithTag("route.downloads").assertIsDisplayed()
+        compose.onNodeWithTag("nav.DOWNLOADS").assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.scan_back)).performClick()
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav.HOME").assertIsSelected()
+    }
+
     @Test fun homeDownloadOpensEmptyWorkspaceAndInvalidInputDoesNotCrash() {
         compose.onNodeWithTag("home.action.download").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
