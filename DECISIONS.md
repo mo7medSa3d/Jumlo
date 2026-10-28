@@ -96,3 +96,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## WP02 2026-10-28 — automatic media selection
+
+Default to the actual highest eligible available video quality rather than a fixed 1080p cap; prefer video with audio when possible, and use the best bitrate for audio-only links. Keep explicit user quality overrides, format choice and audio-only mode reachable through Advanced. Preserve direct original files unless the user deliberately selects a conversion. Do not fabricate a format when the extractor gives no usable formats. This is a product choice, not a claim of live-provider qualification.
