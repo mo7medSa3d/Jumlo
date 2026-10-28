@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP08 — standalone pure-core JVM tests
+
+Source: four new JUnit4 core tests and module dependencies; CI calls all four module test tasks. Previous branch Actions [#40644696922](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644696922) **PASS** at SHA `0f71d679`: direct tasks `:core-common:test`, `:downloader-core:test`, `:document-core:test`, `:storage-core:test`, app unit, lintRelease, compact 55,370,647 B and release 55,358,319 B. **This reconciled head is NOT VERIFIED until its own CI completes.** Physical Android/SAF/network/PDF fixtures NOT RUN.
+
+
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
 
 Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
@@ -126,13 +131,12 @@ run here).
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
 
-## 2026-10-28 — WP08 standalone JVM modules
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
 
-| Required CI task | Coverage | Current status |
-|---|---|---|
-| `:core-common:test` | safe output names, unsafe paths, Arabic numeral page parsing | NOT RUN; CI pending |
-| `:downloader-core:test` | HTTP Range parsing, 206 validators/length, restart and first-response contracts | NOT RUN; CI pending |
-| `:document-core:test` | split markers, page counts, Arabic range parity and invalid boundaries | NOT RUN; CI pending |
-| `:storage-core:test` | collision handling, safe keep-both, same-source moves, forbidden unsafe replace | NOT RUN; CI pending |
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
 
-These tests exercise real production Kotlin code on JDK 17 and do not import Android classes into core modules. They are complementary to, not replacements for, Android instrumentation, actual network/resume and real PDF output acceptance. CI reports must be attached before they can be marked PASS.
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.

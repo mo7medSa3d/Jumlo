@@ -1,5 +1,10 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP08 standalone Kotlin core module tests
+
+- Four JVM modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) now provide JUnit4 tests for safe naming, Arabic page ranges, resume validation, PDF split boundaries and collision policies. All module test tasks run as part of required APK/release CI. Earlier branch run [#40644696922](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644696922) passed, including module tasks, 55.37 MB compact / 55.36 MB release, but **current merged-base SHA CI still pending**.
+
+
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
@@ -170,8 +175,6 @@ TEST_REPORT.md.
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
 
-## 2026-10-28 — WP08 core-module JVM verification
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
-- Added dedicated JUnit4 tests to all four Android-import-free modules: core-common (safe names, Arabic page ranges), downloader-core (byte ranges and strong-validator resumptions), document-core (split-boundary/page preservation), storage-core (safe conflict policies).
-- Added JUnit4 test dependencies to each Kotlin/JVM module and wired `:core-common:test`, `:downloader-core:test`, `:document-core:test` and `:storage-core:test` to the mandatory CI gate, alongside existing Android build, unit tests, release lint and 60 MB APK verification.
-- All new tests are source-committed; results NOT VERIFIED until fresh GitHub Actions completes.
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.

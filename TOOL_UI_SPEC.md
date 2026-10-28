@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**2026-10-28 WP08:** Core naming, resumable request, PDF split and storage-collision policies have standalone JUnit4 tests invoked in required CI; they do not replace Pick → Configure → Run → Result or Android/device tests.
+
+
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 
@@ -506,6 +509,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
 
-## 2026-10-28 — WP08 core guarantees, not device qualification
+## 2026-10-28 — WP08 compiler workflow, no UI changes
 
-Standalone JUnit4 modules now exercise the underlying safe-name, byte-range restart, PDF split-plan and storage-collision policy logic, invoked by tool backends. These do not independently establish full Pick → Configure → Run → Result acceptance and do not validate Android-backed PDF rendering or SAF providers.
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.

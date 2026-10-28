@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP08 test gates:** Dedicated Kotlin/JVM modules must execute their own real unit tests as part of release CI, not rely on :app:testDebugUnitTest alone. Preserve JDK17 Android-free module boundaries and run all four core tasks alongside size and lint gates.
+
+
 **2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
 
 
@@ -99,7 +102,3 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
-
-## 2026-10-28 — Dedicated pure-core test gates
-
-All four existing Kotlin/JVM modules must have their own runnable unit suites, rather than relying only on Android app tests. Preserve `core-common`, `downloader-core`, `document-core`, `storage-core` as Android-free main source modules. The unified CI job now executes these suites alongside the app's build, release lint, unit tests and size gates. Test failures must block PR merge; do not hide them by marking SKIPPED.
