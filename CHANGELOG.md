@@ -1,5 +1,6 @@
 # Changelog — current production-hardening candidate
 
+- Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
 ## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
 
 - `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
