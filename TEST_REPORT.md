@@ -101,3 +101,10 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP-03 downloader experience (new branch)
+
+- Branch: `wp/03-downloader-auto-advanced` based on main `d599b8a`. Source introduces opt-in advanced settings and keeps auto-selected media choice available for the primary Download action.
+- Python source contract `scripts/test-media-auto-advanced.py`: **NOT RUN in a local Python environment**; attached to `scripts/verify-host.sh` for future execution. GitHub CI and Android compilation: **PENDING** until the exact PR commit is checked.
+- Live YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive extraction, private/geo failures, audio-only output, foreground operation, and pause/resume across Android 8–15: **NOT VERIFIED** by this UX change.
+- `MediaCatalog.preferred` honors the saved quality ceiling (existing default 1080p), so this change does **not** claim the highest available format irrespective of preference.
