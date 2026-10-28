@@ -5,6 +5,9 @@
 `PrintRoute` retains its typed navigation and existing Android PrintManager handoff. The visual page manager now normalizes stale saved page-order data before drag, move and rotation and keeps selection attached to original source pages. Regressions: `PrintPageSelectionTest` and `PrintViewModelTest`, with pre-fix failures recorded in `TEST_REPORT.md`. Real printer and device Back flow remain NOT_RUN.
 
 
+**WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
+
+
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
