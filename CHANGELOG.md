@@ -7,6 +7,13 @@
 - Add `CapabilityContractTest` (4 JUnit cases) for registry uniqueness/visibility, fail-closed ghost IDs, navigation-only safety and supported real tools. **NOT RUN until GitHub CI executes**; this is a source-level fix, not a device PASS.
 
 
+### 2026-10-28 — wp/01 release gate correction (verification pending)
+
+- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
+- Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
+- These are source changes, **not yet a passing CI result**; capture the work-package run before merging.
+
+
 Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
 changes made in this execution, not a declaration that each feature has passed
 Android qualification. See TEST_REPORT.md for current artifact and test status.

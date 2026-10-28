@@ -9,6 +9,14 @@
 **Required qualification:** `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` on this exact PR SHA. Existing main-green CI does not validate this branch.
 
 
+## 2026-10-28 work-package verification — release quality gates
+
+- `wp/01-release-quality-gates`: **NOT RUN** until the branch GitHub Actions job reports a result. Source now has `check(apk.length() <= 60_000_000L)` for both compact and release full-media artifacts, and normal CI requests `:app:lintRelease`.
+- Baseline `main` Actions run [#40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318): debug build + tests + lintDebug succeeded, compact measured 55,368,299 bytes. It did not run release lint and was not gated by the size maximum.
+- Device runs, release signing, Five-PDF-fixture compression, 200-page memory and live authorized downloader matrix remain **NOT VERIFIED**.
+- Do not replace or overwrite the October 24 report's original session history with new claims.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
