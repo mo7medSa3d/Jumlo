@@ -116,3 +116,11 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP07 Arabic App-color setting
+
+| Evidence | Status | Scope |
+|---|---|---|
+| AccentLabelLocalizationTest savedNamedAccentsFollowExplicitAppLanguage | NOT RUN until CI | Named accent labels in EN/AR |
+| AccentLabelLocalizationTest unknownAccentsUseLocalizedFallbackAndCustomHexIsPreserved | NOT RUN until CI | Unknown accent fallback and exact hex rendering |
+| Android/RTL Settings screenshot and TalkBack | NOT RUN | Requires real Compose rendering |
