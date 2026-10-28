@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP14: The current tool matrix tracks 45 registered IDs, not historical IDs; 5 navigation-only routes are N/A for processing but still require UI smoke. No navigation was pruned.
+
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 

@@ -99,3 +99,5 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+- **WP14 (2026-10-28):** Keep release acceptance matrices generated/validated from active registered IDs and source capability categories. Do not treat absent historical routes as available tools or an enabled Drive operation as N/A. Preserve historical records separately; no CI source-only check can certify Android device behavior.

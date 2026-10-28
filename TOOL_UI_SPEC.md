@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP14: The 45 registered tools each have four current qualification cases. The enabled Google Drive tool must be tested as processing (NOT_RUN until authorized account/device), not mislabeled unavailable. Two unregistered historic IDs remain archived outside the active matrix.
+
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 

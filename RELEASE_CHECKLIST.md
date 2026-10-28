@@ -38,6 +38,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP14: Confirm current tool matrix covers every registered ID × four scenarios (45×4), with 160 processing NOT_RUN and 20 navigation N/A until real evidence. Run authorized Drive transfer cases; never count the archived IDs or N/A cases as PASS.
+
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |

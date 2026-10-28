@@ -1,6 +1,8 @@
 # Tool qualification handoff
 
-This is an execution template, not a release pass. [tool-matrix.template.csv](tool-matrix.template.csv) contains **188 cases: all 47 registry IDs × normal, large, encrypted and corrupt inputs**. The [registry](../../app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt) and [capability policy](../../core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt) classify them as **39 processing, five navigation and three unavailable**. All 156 processing cases start `NOT_RUN`; the remaining 32 are `N/A` with reasons.
+This is an execution template, **not a release pass**. [tool-matrix.template.csv](tool-matrix.template.csv) covers exactly **180 cases: the 45 currently registered tool IDs × normal, large, encrypted and corrupt input**. The [registry](../../app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt) and [capability policy](../../core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt) now classify those IDs as **40 processing, five navigation, zero unavailable**. All **160 processing** cases start `NOT_RUN` and **20 navigation** cases are `N/A` as processing jobs, with separate route acceptance still pending. No case is a device PASS.
+
+The eight historical N/A scenarios for two unregistered IDs (`webpage_pdf`, `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv) rather than being silently counted as current registered capabilities. This does not remove any user-facing registered tool.
 
 ## Evidence checkpoints, separate from matrix results
 
@@ -25,7 +27,11 @@ For **corrupt** cases, parsers/decoders must fail safely. Copy/hash/archive-crea
 
 Use `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, or `N/A`. `PASS` requires all row assertions plus device/output evidence. Record concrete reasons for `BLOCKED`/`N/A`; missing hardware, skipped tests, unsupported providers and timeouts are never passes. Source availability labels such as `HOST_CORE_TESTED` do not set matrix status. `img_compare` is an enabled processing entry exposed by the flat catalogue; its visible input form and shared comparison-component regression do not establish that its full processing workflow passed.
 
-## Navigation and blocked entries
+## Enabled Google Drive processing — not yet account/device qualified
+
+`file_drive` is currently **enabled as a PROCESSING tool**, with four `NOT_RUN` rows in the matrix, not `N/A`. Its Google Drive v3 import/export requires an explicitly authorized account/token and real Android output/hash verification. Never interpret source registration as authentication, privacy approval or an executed provider test.
+
+## Navigation-only entries
 
 Their four input rows are `N/A` because they are not dispatcher processing jobs. Their separate UI/gating checks remain **NOT_RUN** here.
 
@@ -36,7 +42,6 @@ Their four input rows are `N/A` because they are not dispatcher processing jobs.
 | `dl_settings` | Settings route. Persist changes and verify later downloads use them. |
 | `file_02` | Files route. Verify granted/read-only/revoked provider access and actual file actions. |
 | `file_trash` | Files/trash route. Verify recoverable removal and restoration with matching hashes. |
-| `file_drive` | Enabled: real Drive v3 workflow, user token-gated. Verify import/export with a user-supplied OAuth token; device/account/privacy qualification remains outstanding. Public Drive URL downloading is separately covered by `dl_02`. |
 
 ## Existing related tests: scope matters
 

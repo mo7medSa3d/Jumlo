@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP14 tool qualification matrix reconciled
+
+- Correct the release test matrix from 47 stale IDs / 188 rows to **45 active IDs / 180 rows**. Archive eight historical scenarios for two unregistered legacy IDs, preserving provenance.
+- The enabled `file_drive` source operation now has four **NOT_RUN PROCESSING** cases instead of incorrectly being described as unavailable/N/A.
+- A Python matrix-to-registry/policy contract is included in normal CI; no device/Drive account pass is asserted.
+
+
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.

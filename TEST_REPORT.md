@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## WP14 — active 45-tool qualification matrix contract
+
+`docs/testing/tool-matrix.template.csv` now has **180 active cases: 160 processing NOT_RUN, 20 navigation N/A**, with zero false Drive unavailability claims. Two removed legacy IDs and eight N/A scenarios are retained in a separate historical CSV. `scripts/test-tool-matrix-contract.py` checks row coverage and classifies every ID against source registration and policy. **New CI pending; no Android input→output PASS inferred.**
+
+
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
 
 Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
