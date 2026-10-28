@@ -145,3 +145,10 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-00 audit (documentation only)
+
+- Added `docs/AUDIT_2.md` with source-grounded inventory of all **45** currently registered tools, 14 typed destinations, settings, blocker/verification status and ordered release work packages. No tool is described as device-qualified without a current full test.
+- Main's 2026-10-24 GitHub Actions run [40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318) passed the debug build, unit tests, debug lint and compact APK gate; optional device run skipped, and `lintRelease` / `verifyReleaseApkSize` were not part of that CI command.
+- Flagged fixed/light haptic injection in `MainActivity`, ignored legacy reduce-motion writes, the five-tab vs requested four-tab discrepancy, and historical catalogue-count drift. These are audit findings, **not fixes**.
+- GitHub code search was incomplete; full exhaustive TODO / no-op scan remains open. Audit PR does not claim production readiness.
