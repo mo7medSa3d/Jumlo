@@ -1,5 +1,14 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP05 — durable PDF reading position (CI pending)
+
+- Replaced process-only last-page behavior with a DataStore checkpoint keyed by SHA-256 of each document URI. No raw URI, document title or file content is persisted. Positions are bounded to 128 documents with oldest-entry cleanup.
+- Viewer restores the stored page before recording new scroll positions, preserving in-process recent-page behavior. Storage errors go to privacy-safe diagnostics without breaking reading.
+- Added `PdfReaderPositionStoreTest` (3 Robolectric JUnit cases: persistence/isolation, opaque keys, invalid page). **NOT RUN** until CI. Process-death, Android 8–15, 200-page memory and reader UI interaction tests remain NOT VERIFIED.
+
+**WP05 gate:** `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease`, both APK size gates, and a real viewer scroll/restart restoration test on Android. Not yet executed against the updated code.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
