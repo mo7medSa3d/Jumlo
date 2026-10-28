@@ -35,6 +35,10 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP05: Review English and Arabic welcome, file import and Settings privacy wording on a real device; ensure no universal offline/zero-cloud claims remain.
+- [ ] WP05: With an authorized account, verify Drive export uploads only selected files, no URLs/tokens leak into diagnostics and revoked token errors remain actionable. Owner must complete published privacy contact/URL and Play Data Safety questionnaire.
+
+
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |
