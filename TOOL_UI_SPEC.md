@@ -498,3 +498,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP-04 tool-state reset behavior
+
+The shared workspace now scopes preview source selection and batch-rename preview to current `toolId` plus immutable input ID list, while the Advanced expander is scoped to the current tool. This prevents stale modal state when switching tools or changing the input set, without automatically discarding the current tool's configuration on every unrelated state update. A source-contract test is authored; real Compose screen navigation is **NOT VERIFIED**.
