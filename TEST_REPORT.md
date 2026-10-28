@@ -120,3 +120,8 @@ run here).
 | 200% font, TalkBack/real-device AA | NOT RUN | Requires rendered UI and accessibility audit |
 
 This is not a WCAG certification claim. No screenshot was fabricated.
+
+### WP06 KSP2 compilation incident and mitigation
+
+- GitHub Actions [run 40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) first attempt FAILED and second attempt FAILED in `:app:kspDebugKotlin`, `:app:kspCompactKotlin`, `:app:kspReleaseKotlin`: `KaInvalidLifetimeOwnerAccessException: PSI has changed since creation` inside KSP2 analysis. These are genuine failed CI runs, not passes.
+- Commit `f6c8e504f91a10d28c093acf04d94b3332738936` sets `ksp.incremental=false` to test whether a clean KSP analysis removes the stale PSI lifetime. **NOT VERIFIED** until the new workflow succeeds. Unit tests, lint and size checks remain enabled; do not conceal a repeated failure.
