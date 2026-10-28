@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Scan-thumbnail cleanup: run `ScanPreviewBitmapOwnershipTest` on actual Android target and inspect scanner fallback with 100 gallery/camera pages, repeated scroll/reorder/delete, activity recreation and memory profiler. Source registration is not memory/performance acceptance.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
