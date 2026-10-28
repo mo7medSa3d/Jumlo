@@ -165,9 +165,11 @@ class PremiumUxContracts(unittest.TestCase):
         for tag in ('settings.theme','settings.language','settings.videoQuality',
                     'settings.audioQuality','settings.storage','settings.cache','settings.about'):
             self.assertIn(tag,code)
-        for obsolete in ('setHapticIntensity','setRespectReducedMotion','setWifiOnlyDefault',
+        for obsolete in ('setWifiOnlyDefault',
                          'setMaxConcurrentDownloads','mediaServerUrl','allowHttp'):
             self.assertNotIn(obsolete,code)
+        self.assertIn('setHapticIntensity',code)
+        self.assertIn('setRespectReducedMotion',code)
         self.assertIn('viewModel.setDefaultVideoQuality(choices[it])',code)
         self.assertIn('viewModel.setDefaultAudioQuality(choices[it])',code)
         self.assertIn('viewModel.cleanTemporary()',code)
