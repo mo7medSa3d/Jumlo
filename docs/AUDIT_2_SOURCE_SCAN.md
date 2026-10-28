@@ -298,3 +298,13 @@ Files attempted: 14, failures: 0, candidates: 0.
 
 Files attempted: 14, failures: 0, candidates: 0.
 
+
+## Batch 238–243
+
+Files attempted: 6, failures: 0, candidates: 0.
+
+
+## Coverage summary
+
+Completed source-text lexical scan **244/244 production Kotlin/Java files** at the pinned base commit with 0 fetch failures in the final batch; prior batches also recorded zero fetch failures. This does not cover every resource XML, Gradle, shell/Python utility or generated binary. It cannot detect callbacks implemented as semantically dead branches, and it does not prove feature behavior. All candidate locations are retained above with paths and line numbers. Human review must separate theme token definitions, purposefully white document paper/overlays and actual hard-coded presentation styling.
+
