@@ -159,3 +159,8 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-04 isolated tool-local UI state
+
+- Scope workspace preview dialog, source selection and batch-rename preview to the active tool ID **and exact input IDs** using keyed `rememberSaveable`; scope the Advanced panel to tool ID. Replacing inputs or switching tools can no longer silently reuse these former unkeyed modal states.
+- Add a source regression contract in `scripts/test-phase1-to-4-regressions.py` guarding the actual production `rememberSaveable` call sites. It is a source-level check; Android UI interaction and restoration remain NOT VERIFIED pending device tests.
