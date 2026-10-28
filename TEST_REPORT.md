@@ -4,13 +4,21 @@
 
 | Evidence | Status | Notes |
 |---|---|---|
-| `PrivacyDisclosureTest` (Robolectric, EN/AR) | **NOT RUN** until branch CI | Checks that both welcome/settings copy discloses Drive and removes false universal/offline wording |
+| `PrivacyDisclosureTest` (Robolectric, EN/AR) | **PASS** in [PR #28 #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882), source-only UI string contract | Checks that both welcome/settings copy discloses Drive and removes false universal/offline wording |
 | `GoogleDriveClient.kt:68-265`; `FileExtrasHandler.kt:216-275` | SOURCE-INSPECTED | Enabled token-gated Drive v3 import/export; explicit selected files are uploaded/downloaded |
 | Android manifest and Google Drive permissions | SOURCE-INSPECTED only | INTERNET is requested; no new permissions added in WP05 |
 | Live Google Drive account import/export | **BLOCKED** (no authorized account fixture/device) | Requires user-authorized token, actual round trip and provider validation |
 | Play data safety, production privacy URL/contact | **BLOCKED** owner policy details | Existing `PRIVACY_POLICY.md` still needs owner legal identity and public URL |
 
 WP05 does not claim a Play policy approval, an executed Drive integration test or a new Android runtime result.
+
+- Initial PR #28 CI #40640270882 **PASS**: assembleDebug, testDebugUnitTest, lintRelease and full-media compact 55,368,479 bytes. No emulator/Drive account test, release size, or signed build ran in that checkpoint. Branch qualification after integrating newer WP01 release CI remains pending.
+
+## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
+
+- Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
+- Exact prior WP01 branch [Actions run #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934) **PASS** on `9571208894ca0c85d0a6b8740450309f538104f0`: compile, unit tests, lintRelease, compact 55,368,299 bytes, release 55,356,059 bytes. A fresh merged-base CI result is required before integrating this update into main.
+- Device/emulator flows, release keystore, large scanned-PDF fixtures and Play review remain **NOT VERIFIED**.
 
 
 ## 2026-10-28 work-package verification — release quality gates
@@ -101,7 +109,7 @@ run here).
 | Android build (`:app:assembleDebug`) | No JDK/Gradle/Android SDK in sandbox; hosts blocked | **BLOCKED** |
 | `:app:testDebugUnitTest` | Not run | **BLOCKED** |
 | `:app:lintRelease` | Not run | **BLOCKED** |
-| Release APK size (60MB cap removed) | 60,000,000-byte cap lifted in verifyCompactApkSize/verifyReleaseApkSize; ARM64-only + yt-dlp payload checks retained | NOT VERIFIED (no build) |
+| Release/compact APK size | Both enforce 60,000,000 decimal bytes in current source; branch CI #40639445934 measured 55,356,059/55,368,299 bytes | PASS for that exact branch SHA; merged-base run pending |
 | Signed AAB / production signing | Owner credentials absent | BLOCKED |
 | Physical device / emulator | None attached; no KVM | NOT VERIFIED |
 | Cold start / frame benchmarks | No qualifying device | NOT VERIFIED |
