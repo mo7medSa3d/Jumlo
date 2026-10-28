@@ -120,3 +120,5 @@ run here).
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+## WP06 accent localization — CI pending
+- Added 4 JUnit cases covering all 16 bilingual preset labels, invalid-label fallback, and custom hex values (`AccentLocalizationTest`). **NOT RUN** until exact branch CI succeeds. Arabic RTL 200% text-scale, rendered theme contrast and TalkBack still require Android verification.
