@@ -116,3 +116,14 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP08 standalone JVM modules
+
+| Required CI task | Coverage | Current status |
+|---|---|---|
+| `:core-common:test` | safe output names, unsafe paths, Arabic numeral page parsing | NOT RUN; CI pending |
+| `:downloader-core:test` | HTTP Range parsing, 206 validators/length, restart and first-response contracts | NOT RUN; CI pending |
+| `:document-core:test` | split markers, page counts, Arabic range parity and invalid boundaries | NOT RUN; CI pending |
+| `:storage-core:test` | collision handling, safe keep-both, same-source moves, forbidden unsafe replace | NOT RUN; CI pending |
+
+These tests exercise real production Kotlin code on JDK 17 and do not import Android classes into core modules. They are complementary to, not replacements for, Android instrumentation, actual network/resume and real PDF output acceptance. CI reports must be attached before they can be marked PASS.
