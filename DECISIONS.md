@@ -105,4 +105,9 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
-**Core regression gate:** Keep JUnit4 tests in core-common/downloader-core/document-core/storage-core and run all four as required pull-request CI tasks. They guard algorithms without Android runtime; device acceptance remains separate.
+**2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

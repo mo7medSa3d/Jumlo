@@ -72,4 +72,9 @@ No publishing, external messaging, service deployment or signing-key creation fo
 
 PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
 
-- [ ] Confirm exact merged-base SHA green for core-common, downloader-core, document-core and storage-core `test` alongside lintDebug, lintRelease and both 60 MB APK checks; capture Android device qualification separately.
+- [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
