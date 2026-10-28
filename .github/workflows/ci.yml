@@ -65,8 +65,11 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
-          # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
+          # R8 full-media release minification ran out of Java heap at the default
+          # 2560 MB on GitHub runner (run 40644691679). Raise CI-only Gradle heap;
+          # retain R8, resource shrinking, native payload and all 60 MB gates.
+          # Keep max-workers=1 to avoid multiple 4 GB Java workers on 7 GB runners.
+          ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :app:testDebugUnitTest :app:lintRelease \
             --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
 
