@@ -492,3 +492,6 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+## WP-03 downloader default interaction — 2026-10-28
+
+For `dl_media` the initial inspect flow selects the preferred media format in `MediaViewModel` and presents Download without requiring a format picker. The Advanced toggle reveals the existing video/audio choice, audio encoding/bitrate, available quality grid, direct PDF/image transformations, and filename field. The media choice still obeys the saved preferred video-height ceiling. This is source-implemented but needs real Compose/device tests for accessibility, RTL, reentry, audio-only, and output integrity. No extractor/provider qualification is implied.
