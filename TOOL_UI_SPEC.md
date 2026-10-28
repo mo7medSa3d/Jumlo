@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**2026-10-28 WP08 Smart Scan memory safety:** CameraX fallback thumbnails use `DisposeOwnedPreviewBitmap` on each decoded 320-pixel preview in their lazy item. Lifecycle cleanup applies on row deletion, scrolling out of composition and leaving the screen. An Android instrumentation test verifies disposal, but it is NOT RUN on this branch until its exact CI/device result is recorded.
+
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
