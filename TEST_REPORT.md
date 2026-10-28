@@ -140,3 +140,7 @@ run here).
 
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+### OCR bilingual notice compile regression — 2026-10-28
+
+Previous [Actions #40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390), job 122659533094, failed `:app:compileDebugUnitTestKotlin` because `OcrLanguageNoticeTest.kt` invoked `assertExists()` without importing the Compose test extension. Source fix adds `androidx.compose.ui.test.assertExists`. This corrects a verified compilation error, **not yet verified** on the new exact head until CI completes. Arabic OCR model support remains limited and device text-recognition accuracy unverified.

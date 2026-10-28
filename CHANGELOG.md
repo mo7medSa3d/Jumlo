@@ -179,3 +179,5 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+- Fix missing Compose `assertExists` import in bilingual OCR notice test, based on failed GitHub job 122659533094. Repeat complete CI; no test removed or disabled.
