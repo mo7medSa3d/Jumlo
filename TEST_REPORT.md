@@ -1,5 +1,19 @@
 # Jumlo — verification report
 
+## 2026-10-28 — Work package 03: Four-tab navigation (unverified build/runtime)
+
+| Check | Result | Evidence / next action |
+|---|---|---|
+| Source change | CODE WRITTEN | `QuietNavigation.kt` four tabs; `JumloNavHost.kt` preserves Downloads as Back detail; `HomeScreen.kt` always-visible history action |
+| Android UI tests | **NOT RUN** | `FourTabNavigationTest`: four-tab order, Arabic RTL, indicator clipping, absent Downloads/Print tabs |
+| Activity navigation | **NOT RUN** | `JumloUiTest.downloadHistoryIsReachableFromHomeWithoutAFifthTab`: Home → Downloads → Back |
+| Host static contracts | **NOT RUN** | `python3 scripts/test-neon-ui.py` updated to match new nav |
+| Build / release lint / size | **NOT RUN** | Requires successful PR GitHub Actions; other open release-gate PRs must be resolved before full release sign-off |
+| Screenshots / physical devices | **BLOCKED: no device or emulator connected in this GitHub API-only task** | Capture EN/AR/light/dark and 200% font as separate evidence when available |
+
+**This source change is not a production approval.** The report dated 2026-10-24 below documents a different execution environment. Do not reuse its 35/35 Python results or earlier CI result as passing evidence for this new code.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
