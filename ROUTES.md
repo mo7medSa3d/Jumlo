@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP05 2026-10-28:** `ViewerRoute` and `ToolRoute("pdf_01")` still render the shared PDF reader. The page now restores a bounded hashed-URI DataStore checkpoint rather than only process-memory position. No route changes; process-death/RTL device acceptance is NOT VERIFIED.
+
+
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
