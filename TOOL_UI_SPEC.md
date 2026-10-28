@@ -505,3 +505,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## WP11 direct media inspection security
+
+A direct URL may redirect during inspection. Custom user-entered HTTP headers are retained only for the initial scheme, host, and effective port; cross-origin redirects use fresh browser defaults and separate URL-scoped cookies. This prevents leaking user-supplied `Referer`/`Origin` information across hosts without changing the visible downloader interaction. Real redirect/extractor acceptance requires permitted live fixtures and remains NOT VERIFIED.
