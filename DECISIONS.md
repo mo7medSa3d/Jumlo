@@ -1,13 +1,5 @@
 # Decisions — 24 October 2026
 
-## 2026-10-28 — WP07 print selection and saved-order recovery
-
-- **Source-page identity is authoritative for print selection.** A numeric page-range describes positions in the **current visible order**, but after a move the selected physical source pages must not silently change.
-- When persisted `pageOrder` is an invalid permutation, use the currently displayed identity source order (`1..pageCount`) for drag/move/rotate edits. Do not trust malformed stored positions just because their list is nonempty.
-- Move buttons invoke the same `applyPageOrder` path used by drag reordering rather than changing `pageOrder` alone, preventing selected-page mismatch. Existing valid page permutations and non-destructive print preparation remain intact.
-- Android print spool and preview pixel correctness still require device-level execution; do not infer from JVM tests.
-
-
 **2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
 
 
@@ -107,3 +99,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## WP07 stale print-page order
+
+If a persisted permutation has missing or duplicate pages, the editor and renderer must both show/use the original order until the user reorders again. Reorder/rotate never operate on a different invisible sequence; selected source pages remain selected.

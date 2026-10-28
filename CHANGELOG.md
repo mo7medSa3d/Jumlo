@@ -1,14 +1,5 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP07 print-page reorder recovery (tests pending GREEN)
-
-- `PrintPageSelection.normalizedOrder` falls back to the currently rendered source order when a persisted permutation is missing, duplicated or references removed pages, matching `arrange` semantics.
-- `PrintViewModel.movePage` now delegates to `applyPageOrder` rather than editing order alone, so visible page selection follows original source pages through move operations.
-- Drag-permutation and per-page rotation use the same normalized visible source IDs. All edits remain non-destructive until actual printing.
-- Added five JVM regression cases in `PrintPageSelectionTest` and `PrintViewModelTest`.
-- **TDD RED confirmed:** [GitHub Actions #40640984856](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640984856) listed all five new tests as FAILED against previous source; **GREEN pending** final code CI. Android PrintManager/spooler remains device NOT_RUN.
-
-
 ## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
 
 - Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
@@ -173,3 +164,16 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP02a custom accent persistence
+
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
+
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## WP07 print page-order recovery — latest-main integration, 2026-10-28
+
+- Print reorder, per-page rotation and selected page range now normalize invalid/stale saved permutations to the same visible source order before applying changes. Added four ViewModel and one pure-selection regression tests. Exact integrated-head build/size/lint CI pending.

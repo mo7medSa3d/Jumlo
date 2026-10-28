@@ -1,21 +1,5 @@
 # Jumlo — verification report
 
-## 2026-10-28 WP07 — print-page edit regression
-
-| Verification | Observed | Evidence |
-|---|---|---|
-| `PrintPageSelectionTest.staleInvalidOrderIsReplacedByCurrentSourceOrderBeforeDragging` | **RED before patch** | [CI 40640984856](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640984856): `AssertionError` line 69 |
-| `PrintViewModelTest.draggedPageOrderRecoversFromStaleOrDuplicateSavedValues` | **RED before patch** | same run: `AssertionError` line 190 |
-| `PrintViewModelTest.moveButtonRecoversFromStaleSavedPageOrder` | **RED before patch** | same run: `AssertionError` line 201 |
-| `PrintViewModelTest.rotationTargetsTheVisiblePageWhenSavedOrderIsInvalid` | **RED before patch** | same run: `AssertionError` line 210 |
-| `PrintViewModelTest.moveButtonKeepsTheSameSourcePagesSelectedAfterReorder` | **RED before patch** | same run: `ComparisonFailure` line 179 |
-| Same JVM tests after code patch | **NOT RUN at report edit** | Must attach current WP07 head CI with `:app:testDebugUnitTest` exit 0 |
-| Full `assembleDebug/lintRelease/verifyCompactApkSize` | **NOT RUN for WP07 head at report edit** | Pending GitHub Actions |
-| Real Android PrintManager, orientation/copies/duplex, hardware printer | **NOT RUN** | Requires emulator/physical printer/services; no fabricated system-spool evidence |
-
-Work package changes page-editor selection and mapping only. It does not qualify system print dialog, device drivers, or release signing.
-
-
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
 
 Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
@@ -137,3 +121,23 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+## 2026-10-28 — WP02a regression status
+
+- `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
+
+- Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
+- This isolated CI change retains `assembleDebug`, `verifyCompactApkSize`, `verifyReleaseApkSize`, `testDebugUnitTest` and `lintRelease`. The worker workaround is NOT VERIFIED until matching-head Actions complete; it is not device or functionality evidence.
+
+### WP08 measured CI evidence — 2026-10-28
+
+- [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
+- A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+## 2026-10-28 — WP07 print reorder recovery (integrated)
+
+- Source bug: incomplete/duplicate page order could render original pages but update the saved invalid order during moves/rotations, targeting the wrong physical page. `PrintPageSelection.normalizedOrder` now guards those transitions. `PrintViewModelTest` and `PrintPageSelectionTest` cover selected source pages, stale moves, drags and rotation.
+- Previous [run #40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) on older HEAD failed in `:app:minifyReleaseWithR8` with `Java heap space` and an R8 CancellationException. This is a build memory failure, not a confirmed print-function regression. New head includes merged #36 serialized workers; **CI pending** for build/unit/lint and both APK sizes.
+- Physical printer page range/copies/orientation and exact printed output: NOT VERIFIED.

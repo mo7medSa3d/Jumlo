@@ -1,12 +1,5 @@
 # Release checklist
 
-## 2026-10-28 WP07 — print page identity smoke gate
-
-- [ ] From Print, select pages 1 and 3 of a three-page PDF, move page 1 to last, and independently confirm the selected source pages remain 3 and 1 (not 2 and 1).
-- [ ] Reopen an old stored print session with duplicate/missing `pageOrder`; the displayed source order must be authoritative for drag/move/rotate and undo/redo, with no wrong-page output.
-- [ ] On a physical device, verify page range, orientation, copies, native print preview, printer service errors and actual spool output. JVM regressions alone do not satisfy this gate.
-
-
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
@@ -69,3 +62,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## WP07 print selection release gate
+
+- [ ] Test stale/duplicate saved page order with page rotation, moving and selection preservation on a real Android emulator/device. Inspect final printed PDF, preview, orientation and copies; JVM tests do not qualify the OS print dialog.

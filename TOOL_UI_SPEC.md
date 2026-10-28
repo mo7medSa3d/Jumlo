@@ -1,10 +1,5 @@
 # Tool UI specification
 
-## 2026-10-28 WP07 — Print page manager interaction correction
-
-Page thumbnails represent the actual visible order. Invalid cached order mappings (duplicates, missing pages or out-of-range references) must never cause dragging or rotation to affect a different page. Move buttons and drag gestures share the same permutation application; after reordering, page-range selection is remapped to preserve the same original source pages rather than their previous positions. Undo/redo still uses the existing ViewModel options history. Five JVM regressions verified RED before implementation; passing tests and device print/page-preview interaction remain the acceptance gate.
-
-
 **2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
 
 
@@ -506,3 +501,15 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP02a setting behavior
+
+The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+## WP07 print preview fidelity
+
+Moving/reordering pages uses the visible arrangement even after invalid persisted values. Rotation targets the visible page's true source; selections remain associated with the intended pages. Print preview and Android print framework tests still required.
