@@ -13,6 +13,24 @@ class M3ColorFactoryTest {
         assertEquals(1f, M3ColorFactory.contrast(Color.White, Color.White), 0.001f)
     }
 
+    @Test fun `contrast matches a published WCAG reference pair`() {
+        // White against #777777 is about 4.48:1, slightly below normal-text AA.
+        assertEquals(4.48f, M3ColorFactory.contrast(Color.White, Color(0xFF777777)), 0.03f)
+        assertFalse(M3ColorFactory.meetsAA(Color.White, Color(0xFF777777)))
+        assertTrue(M3ColorFactory.meetsAA(Color.White, Color(0xFF767676)))
+    }
+
+    @Test fun `category tile foreground passes AA in both themes`() {
+        for (id in listOf("pdf_03", "img_01", "dl_media", "file_07", "xf_01", "scan_doc")) {
+            for (dark in listOf(false, true)) {
+                val background = ToolPalette.accentFor(id, dark)
+                val foreground = ToolPalette.onAccentFor(id, dark)
+                assertTrue("$id dark=$dark contrast=" + M3ColorFactory.contrast(background, foreground),
+                    M3ColorFactory.contrast(background, foreground) >= 4.5f)
+            }
+        }
+    }
+
     @Test fun `meetsAA checks the 4_5 threshold`() {
         assertTrue(M3ColorFactory.meetsAA(Color.White, Color.Black))
         assertTrue(M3ColorFactory.meetsAA(Color.White, Color(0xFF555555)))
