@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP06 classification: `pdf_compress` reports **UNCHANGED / not compressible** if the measured output is the same size, regardless of skipped images. **Partial compression** warnings are permitted only when the output is actually smaller and some embedded images were skipped. Real quality/size validation against the five scan fixtures remains NOT RUN.
+
 > 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 
