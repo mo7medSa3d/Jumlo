@@ -109,3 +109,8 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+
+## 2026-10-28 — WP-05 design system verification boundary
+
+Source changes: shared saturated color families in `Color.kt`/`ToolPalette.kt`, expressive semantic-color root header, `ThemePreviews.kt` with 4 Compose preview configurations (EN/AR × light/dark), `ToolPaletteContrastTest` checking category icon contrast >=3:1 and M3 foreground-role contrast >=4.5:1. The tests and previews exist as source only: **NOT RUN** until CI/Android Studio renders them. Manual targeted color arithmetic found no obvious low-contrast light/dark category tokens against the tested 20% blend but this does not certify WCAG AA for every screen/control. Real screenshots, 200%-font accessibility, TalkBack and real device RTL layouts **NOT VERIFIED**.
