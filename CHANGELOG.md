@@ -145,3 +145,10 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP03 interaction preferences (CI pending)
+
+- Connected Compose haptics providers to DataStore-backed settings instead of forcing touch feedback on and intensity Light in MainActivity.
+- Read the stored reduce-motion preference; combine it with the Android system reduced-motion setting.
+- Added EN/AR haptics intensity picker (Off/Light/Medium/Strong) and reduce-motion switch; settings use existing ViewModel persistence setters.
+- Extended Android PreferencesPersistenceTest for haptics/reduced motion after repository recreation. Instrumentation execution pending.
