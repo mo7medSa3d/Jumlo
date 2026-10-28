@@ -96,3 +96,8 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+
+## 2026-10-28 — release gate policy
+
+WP-06 only changes Gradle/CI release validation; the 14 typed routes and five-tab shell remain unchanged. Screen/route correctness still requires device tests and is not established by release lint or package-size checks alone.
