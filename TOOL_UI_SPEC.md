@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP05: welcome/offline/privacy-facing strings now distinguish on-device document editing from optional network downloads, remote thumbnails/extraction and Google Drive import/export. The existing `file_drive` tool is enabled in source; its account/device integration is **NOT VERIFIED**, not blocked at registration. No tool UI or processing logic was changed in this package.
+
 > 2026-10-28 release gate correction: compact/release builds enforce 60,000,000 bytes and CI requests `lintRelease`; tool interaction evidence remains unchanged and device-qualification pending.
 
 
