@@ -1,5 +1,8 @@
 # Tool UI specification
 
+**WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
+
+
 ## 2026-10-28 — WP06 quality gate contract (UI unaffected)
 
 The tool registry and screens are unchanged by the CI update. Routine media CI checks the full runtime, both decimal-60MB artifact limits, JVM tests, debug/release lint, and source constraints. KSP2 workers are serialized, not bypassed. Successful compilation does not qualify each tool's Android UI and processing flow.

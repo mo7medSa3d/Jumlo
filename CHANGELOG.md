@@ -1,5 +1,10 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP11 — origin-bound downloader custom headers
+
+Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers are now accepted only on the exact original scheme/host/port. Cross-origin redirects use regular browser headers, while URL-scoped cookie retrieval stays separate. Tests cover normalised default ports, malicious subdomains and real two-hop redirect simulation. Earlier CI passed on older SHA `6c689c2e`; current-head CI pending.
+
+
 ## 2026-10-28 — WP06 CI guard consolidation
 
 - Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
