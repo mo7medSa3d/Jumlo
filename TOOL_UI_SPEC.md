@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP-02 media workspace qualification
+
+`dl_media` now presents an inspected source and one primary download action by default: highest usable media selection (no implicit 1080p cap), with video/audio switch and individual format choices, bitrate and filename behind an optional Advanced expander. Settings may explicitly cap video quality and audio output remains selectable in Advanced. Direct-file mode retains original format unless Advanced overrides it. Current commit is a source candidate, **not** a completed platform/download/notification test; see `TEST_REPORT.md`.
