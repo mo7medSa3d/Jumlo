@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
@@ -35,11 +38,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
-- [ ] WP03: Change Reduce motion with Android animations enabled and disabled; confirm `LocalReducedMotion` honors either source, all transitions stop/reduce as intended, and the preference survives restart.
-- [ ] WP03: Turn haptics off, set Light/Medium/Strong, and verify actual device vibration plus Android's system haptic-off override. Test interface sounds off/on independently.
-- [ ] WP03: Confirm interaction controls are reachable at 200% text and RTL Arabic without clipped switch labels.
-
-
+- [ ] WP03: Verify Interface sounds off/on changes audible UI cues (except when system silent/ringer volume is zero), persists across app relaunch, and remains reachable in Arabic RTL at 200% text.
 
 | Flow | Required observation |
 | --- | --- |

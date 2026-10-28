@@ -1,30 +1,22 @@
 # Jumlo — verification report
 
-## WP03 2026-10-28 — CI qualification checkpoints
+## 2026-10-28 WP03 remaining interface-sounds control
 
-- [PR #18 original CI](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639773046): **PASS** for `assembleDebug`, `testDebugUnitTest`, `lintDebug`, `verifyCompactApkSize` with full media, actual compact APK **55,371,523 bytes**. **No release lint in this checkpoint**; it is not the required merge gate.
-- The branch now carries `main`'s enforced 60,000,000-byte Gradle gates and `:app:lintRelease` CI job. **Updated-run result pending**. Android connected tests and actual haptic vibration checks were not run by the first CI.
-- App/device acceptance and 200% RTL screenshots remain **NOT RUN / BLOCKED**.
-
-## WP03 2026-10-28 interaction preferences — evidence pending
-
-| Check | Expected behavior | Current status |
+| Check | Status | Evidence |
 |---|---|---|
-| `AppFeedbackPolicyTest` (JVM) | System/user motion OR; haptics disabled by OFF or toggle | **NOT RUN** (new branch CI pending) |
-| `PreferencesPersistenceTest` (Android) | DataStore restores reduce-motion, intensity, sound; OFF/ON toggles | **NOT RUN** (instrumentation requires Android) |
-| `InteractionSettingsUiTest` (Android) | Visible switches change real settings and survive recreation | **NOT RUN** (instrumentation requires Android) |
-| Haptic hardware/Android Accessibility | System HAPTIC_FEEDBACK_ENABLED respected; actual vibrator output | **BLOCKED** until device qualification |
-| Reduced-motion across all routes | Existing `LocalReducedMotion` consumers see user OR OS choice | **NOT VERIFIED** without animated UI capture |
-| EN/AR RTL screenshots at 200% | Interaction rows and switches stay visible/touchable | **NOT RUN** |
+| Audio cue UI switch | SOURCE-IMPLEMENTED, **NOT DEVICE VERIFIED** | `SettingsScreen` exposes `settings.sounds` via `PreferenceToggleRow` into `AppViewModel.setSoundsEnabled`; main `MainActivity` already provides `LocalAppSoundsEnabled` |
+| `PreferencesPersistenceTest` (recreation) | **NOT RUN** on Android | Added sound-off/restore checks alongside existing color/haptic/motion regressions |
+| `InteractionSoundSettingsUiTest` | **NOT RUN** on Android | Switch semantics, persisted state and activity recreation |
+| Audio output/silent mode | **BLOCKED** until device | Existing `UiSoundPlayer.play(enabled)` checks setting/ringer/system volume. No actual speaker pass claimed. |
+| Existing PR #20 haptics/reduce motion | Already in main source | This work package preserves those changes; no competing reimplementation. |
 
-Source evidence: `MainActivity.kt`, `model/AppFeedbackPolicy.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt`, `PreferenceComponents.kt`. No previous baseline test claim is reused as a current result.
+Source authoring and GitHub Actions are not equivalent to device qualification.
 
-## 2026-10-28 work-package verification — release quality gates
 
-- `wp/01-release-quality-gates`: **PASS** in GitHub Actions [#40639269251](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639269251) for `assembleDebug`, `testDebugUnitTest` (FROM-CACHE), `lintRelease`, `verifyCompactApkSize` with full media. Compact APK measured **55,368,299 / 60,000,000 bytes**. Main merge push [#40639985876](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639985876) also passed; release signing and device tests were not run.
-- Baseline `main` Actions run [#40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318): debug build + tests + lintDebug succeeded, compact measured 55,368,299 bytes. It did not run release lint and was not gated by the size maximum.
-- Device runs, release signing, Five-PDF-fixture compression, 200-page memory and live authorized downloader matrix remain **NOT VERIFIED**.
-- Do not replace or overwrite the October 24 report's original session history with new claims.
+## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
+
+Source changed: `MainActivity.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt` and bilingual `account_settings.xml`. Haptics intensity and Reduce motion now have user-facing persisted controls. `PreferencesPersistenceTest` extends its Android assertions. Current-head PR CI has **NOT RUN**; physical haptics/RTL/device motion checks are **NOT VERIFIED**. Previous 2026-10-28 PR CI [#40639799895](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639799895) succeeded at baseline head `b0e0ddac`, but was prior to the latest main CI gate and is not acceptance for the merged-base changes.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 

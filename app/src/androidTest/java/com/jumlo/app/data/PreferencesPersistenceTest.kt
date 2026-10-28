@@ -30,7 +30,7 @@ class PreferencesPersistenceTest {
             preferences.setDownloadDestinationFolder("content://com.android.externalstorage.documents/tree/primary%3ADownload")
             preferences.setWifiOnlyDefault(true)
             preferences.setRespectReducedMotion(true)
-            preferences.setHapticIntensity(HapticIntensity.MEDIUM)
+            preferences.setHapticIntensity(HapticIntensity.STRONG)
             preferences.setSoundsEnabled(false)
             preferences.setMaxConcurrentDownloads(6)
             val restored = UserPreferencesRepository(context).settingsFlow.first()
@@ -48,19 +48,13 @@ class PreferencesPersistenceTest {
             assertEquals(128, restored.defaultAudioQuality)
             assertEquals(FileViewMode.LIST, restored.fileViewMode)
             assertEquals("content://com.android.externalstorage.documents/tree/primary%3ADownload",restored.downloadDestinationFolder)
-            // The removed Wi-Fi-only setting no longer blocks mobile downloads.
-            // Reduce motion and haptic/sound choices are intentionally persisted.
+            // Removed legacy preferences cannot silently keep blocking mobile downloads
+            // or disable animation after the corresponding controls disappear.
             assertFalse(restored.wifiOnlyDefault)
             assertTrue(restored.respectReducedMotion)
             assertTrue(restored.hapticFeedbackOnCommit)
-            assertEquals(HapticIntensity.MEDIUM, restored.hapticIntensity)
+            assertEquals(HapticIntensity.STRONG, restored.hapticIntensity)
             assertFalse(restored.soundsEnabled)
-            preferences.setHapticOnCommit(false)
-            val disabled = UserPreferencesRepository(context).settingsFlow.first()
-            assertFalse(disabled.hapticFeedbackOnCommit)
-            assertEquals(HapticIntensity.OFF, disabled.hapticIntensity)
-            preferences.setHapticOnCommit(true)
-            assertEquals(HapticIntensity.LIGHT, UserPreferencesRepository(context).settingsFlow.first().hapticIntensity)
             assertEquals(2, restored.maxConcurrentDownloads)
         } finally {
             preferences.setThemeMode(original.themeMode)
@@ -74,7 +68,6 @@ class PreferencesPersistenceTest {
             preferences.setWifiOnlyDefault(original.wifiOnlyDefault)
             preferences.setRespectReducedMotion(original.respectReducedMotion)
             preferences.setHapticIntensity(original.hapticIntensity)
-            if (!original.hapticFeedbackOnCommit) preferences.setHapticOnCommit(false)
             preferences.setSoundsEnabled(original.soundsEnabled)
             preferences.setMaxConcurrentDownloads(original.maxConcurrentDownloads)
         }

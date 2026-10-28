@@ -71,9 +71,11 @@ import com.jumlo.app.ui.components.QuietIconTile
     }
 }
 
-/** One accessible switch surface; there is a single toggle target, not nested buttons. */
+/** Accessible, single-target preference switch with EN/AR layout semantics. */
 @Composable internal fun PreferenceToggleRow(
-    title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(modifier.fillMaxWidth().heightIn(min = 64.dp)

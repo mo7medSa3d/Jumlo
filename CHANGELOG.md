@@ -1,22 +1,16 @@
 # Changelog — current production-hardening candidate
 
-## 2026-10-28 — WP03 accessibility and tactile feedback (branch; CI pending)
+## 2026-10-28 — WP03 remaining interface-sounds setting (merged haptics preserved)
 
-- Replace the ignored reduce-motion preference with a persisted user choice added to Android's own animation-reduction setting. Route the effective value through `LocalReducedMotion` without overriding system accessibility preferences.
-- Wire the actual persisted haptic enable/strength values into `MainActivity`'s `LocalAppHapticsEnabled`/`LocalHapticIntensity`, replacing hard-coded enabled/LIGHT.
-- Surface reusable single-target Compose switches for Reduce motion, Haptic feedback and Interface sounds; add a Light/Medium/Strong picker and full English/Arabic labels.
-- Add JVM policy tests and Android DataStore-recreation/UI tests. **No device, emulator or CI PASS is asserted until executed.**
-
-### 2026-10-28 — wp/01 release gate correction (verification pending)
-
-- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
-- Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
-- Verified on [PR #11 CI #40639269251](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639269251): assembleDebug, testDebugUnitTest, lintRelease, verifyCompactApkSize passed with a 55,368,299-byte compact APK. Main push CI #40639985876 also succeeded. Emulator/device tests remain outstanding.
+- Main already includes working persistent haptic intensity and system/user reduce-motion preferences from PR #20. This follow-up does **not** duplicate or replace those implementations.
+- Expose the pre-existing `soundsEnabled` DataStore preference through a shared accessible Compose switch. `MainActivity` already provides the preference to `LocalAppSoundsEnabled`; `UiSoundPlayer` honors the enabled flag and system sound/ringer state.
+- Add the missing EN/AR Settings label and persistence/UI instrumentation regressions. **Device test not run** at authoring; current branch CI pending.
 
 
-Date: 2026-10-23. Based on the uploaded Jumlo 1.6-tools source. This describes
-changes made in this execution, not a declaration that each feature has passed
-Android qualification. See TEST_REPORT.md for current artifact and test status.
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
 
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
