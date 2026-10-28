@@ -164,3 +164,6 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP-06 follow-up after merged PRs #11 and #16
 
 - Preserve mandatory release APK size, compact APK size, release lint and unit tests already merged into main. Also run `lintDebug`, and update legacy compact-config test to assert **both** real 60 MB gates rather than contradictory no-size-cap expectations. Documentation/report only otherwise.
+
+
+- Add corrected `test-compact-configuration.py` directly to GitHub Actions artifact-inspection gate so source consistency cannot silently regress.
