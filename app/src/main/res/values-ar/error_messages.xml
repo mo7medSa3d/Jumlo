@@ -27,6 +27,7 @@
     <string name="msg_media_batch_single">روابط صفحات الفيديو تحتاج اختيار الجودة لكل رابط. شارك فيديو واحدًا في المرة؛ التنزيل الجماعي متاح للملفات المباشرة.</string>
     <string name="msg_url">ألصق رابطًا صالحًا أو شاركه. للتنزيل الجماعي، أدخل رابطًا واحدًا في كل سطر.</string>
     <string name="msg_check_settings">تحقق من القيم المدخلة ونطاقات الصفحات، ثم حاول مجددًا.</string>
+    <string name="msg_page_selection_limit">تم تحديد عدد كبير جدًا من الصفحات المكررة. قلّل نطاقات الصفحات أو أزل التكرار ثم حاول مجددًا.</string>
     <string name="msg_unavailable">هذه الأداة غير متاحة في هذا الإصدار. اختر أداة أخرى.</string>
     <string name="msg_login">سجّل الدخول للمتابعة.</string>
     <string name="msg_failed">تعذر إكمال هذا الإجراء. حاول مجددًا.</string>

@@ -184,3 +184,8 @@ TEST_REPORT.md.
 
 - Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.
 - Added CI trigger regression checks run within the existing full build. Android APK size, release lint, JVM tests, artifact integrity and conditional device/lite workflows are not disabled.
+
+## 2026-10-28 — WP13 bounded PDF split page expansion
+
+- Split/extract page-range expansion now enforces a 100,000 selected-page upper bound **before allocating repeated page lists**, protecting against pathological expressions that otherwise could OOM Android. Real 200-page groups and Arabic-Indic digits continue to work. `PAGE_SELECTION_LIMIT` has an actionable bilingual message.
+- Four JVM tests added for standard 200-page ranges, Arabic digits, repeated huge selections and page-count clamping; exact-head CI not yet verified.

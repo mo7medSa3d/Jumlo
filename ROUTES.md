@@ -118,3 +118,7 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 ## 2026-10-28 — WP08 CI compiler gate
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+## WP13 grouped page-range validation
+
+No route changes. PDF page-group entry now detects oversized expanded selections before list allocation and surfaces localized PAGE_SELECTION_LIMIT guidance instead of crashing due to repeated ranges.

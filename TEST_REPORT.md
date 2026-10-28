@@ -150,3 +150,9 @@ run here).
 | Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
 
 The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.
+
+## 2026-10-28 — WP13 page-range memory safety
+
+- Source defect: `PageSelection.groups(value,count)` converted every repeated range directly to a list, permitting tens of millions of duplicated boxed page numbers from a short selection string. Fix counts selected positions before allocation and reports `PAGE_SELECTION_LIMIT` above 100,000; no tool handler disabled.
+- New `PageRangeAllocationBudgetTest`: four pure-JVM methods for 200-page splits, Arabic-Indic digits/comma, duplicate pathological expansion, and clamped last page. Resources `msg_page_selection_limit` EN/AR + `userMessageResource` mapping keep actionable errors. **NOT RUN** on the exact head until GitHub Actions validates `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease :app:verifyCompactApkSize :app:verifyReleaseApkSize`.
+- 200-page physical PDF performance, five scanned compression fixtures and entire tool flows: still NOT VERIFIED.

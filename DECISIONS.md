@@ -104,3 +104,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## WP13 split page-range allocation policy
+
+The explicit PDF grouped-range parser limits its expanded page positions to 100,000 per operation (distinct from actual document page count), preventing unbounded boxed duplicate pages from short repeated inputs. This is a technical memory-safety limit, not feature pruning; regular 200-page selection and Arabic numeral syntax remain supported.
