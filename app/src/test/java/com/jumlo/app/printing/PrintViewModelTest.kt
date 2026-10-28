@@ -196,6 +196,16 @@ class PrintViewModelTest {
         assertEquals(listOf(2,3,1),vm.state.value.orderedPages.map { it.sourcePage })
     }
 
+    @Test fun rotationTargetsTheVisiblePageWhenSavedOrderIsInvalid()=runTest(dispatcher) {
+        val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
+        vm.attach(source);advanceUntilIdle()
+        vm.edit(vm.state.value.options.copy(pageOrder=listOf(3,3,1)));advanceUntilIdle()
+        assertEquals(listOf(1,2,3),vm.state.value.orderedPages.map { it.sourcePage })
+        vm.rotatePage(1);advanceUntilIdle()
+        assertEquals(mapOf(2 to 90),vm.state.value.options.pageRotations)
+        assertEquals(90,vm.state.value.orderedPages[1].rotationDegrees)
+    }
+
     @Test fun rotatingAPageStoresTheRotationAgainstTheSourceOrder()=runTest(dispatcher) {
         val vm=PrintViewModel(Application(),FakeStore(),FakeEngine(),SavedStateHandle(),dispatcher)
         vm.attach(source);advanceUntilIdle()
