@@ -60,6 +60,22 @@ class PrintPageSelectionTest {
         assertEquals(listOf(1, 2, 3), PrintPageSelection.move(listOf(1, 2, 3), 3, 0, 9))
     }
 
+    @Test fun staleInvalidOrderIsReplacedByCurrentSourceOrderBeforeDragging() {
+        // Old saved selections may refer to pages that no longer exist. The UI
+        // renders the source order, so dragging must operate on that same order.
+        val malformedOrders = listOf(listOf(1, 2), listOf(3, 3, 1), listOf(1, 2, 3, 4), listOf(4, 2, 1))
+        for (malformed in malformedOrders) {
+            val moved = PrintPageSelection.move(malformed, size = 3, from = 0, to = 2)
+            assertEquals("drag must commit visible 2,3,1 order for persisted $malformed", listOf(2, 3, 1), moved)
+            assertEquals(listOf(2, 3, 1), PrintPageSelection.arrange(base, moved, emptyMap()).map { it.sourcePage })
+        }
+    }
+
+    @Test fun normalizedOrderProvidesSafeBaseForDragReordering() {
+        assertEquals(listOf(1, 2, 3), PrintPageSelection.normalizedOrder(listOf(3, 1, 1), 3))
+        assertEquals(listOf(3, 1, 2), PrintPageSelection.normalizedOrder(listOf(3, 1, 2), 3))
+    }
+
     @Test fun permutationGuardAcceptsOnlyCompleteUniqueOrders() {
         assertTrue(PrintPageSelection.isPermutation(listOf(2, 1, 3), 3))
         assertFalse(PrintPageSelection.isPermutation(listOf(2, 1), 3))
