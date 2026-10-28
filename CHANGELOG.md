@@ -145,3 +145,10 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-01 accessibility preference wiring (PR candidate)
+
+- Replace `MainActivity`'s unconditional haptics-on/light injected CompositionLocal values with the persisted haptic feedback switch and intensity.
+- Restore the persisted reduce-motion flag in `UserPreferencesRepository`; Compose now honors either the Android system reduce-motion preference **or** the in-app toggle.
+- Expose haptics, haptic intensity, and reduce-motion controls in Settings with English and Arabic strings.
+- Extend `PreferencesPersistenceTest` with enabled-motion and strong-intensity persistence expectations; CI build/unit/lint and device instrumentation outcomes must be recorded separately. **NOT VERIFIED** until current branch CI executes.
