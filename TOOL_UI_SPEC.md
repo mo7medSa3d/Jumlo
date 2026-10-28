@@ -492,3 +492,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP04 downloader default interaction update
+
+The dl_media workspace now uses automatic best-available source selection after inspection, and hides type/quality/audio/filename/PDF-image conversion choices under an optional Advanced toggle. The toggled controls remain functional and there is no quality fabrication. Pure audio-only sources automatically use AUDIO mode, and selecting Audio only remains possible under Advanced for mixed video/audio media. Default direct-file mode remains Original. Test source AutoBestMediaChoiceTest added; real-device behavior is NOT VERIFIED.
