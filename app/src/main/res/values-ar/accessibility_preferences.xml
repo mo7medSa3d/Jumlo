@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_haptics">الاستجابة اللمسية</string>
+    <string name="accessibility_reduce_motion">تقليل الحركة</string>
+    <string name="accessibility_haptic_intensity">قوة الاهتزاز</string>
+    <string name="accessibility_haptic_off">إيقاف</string>
+    <string name="accessibility_haptic_light">خفيف</string>
+    <string name="accessibility_haptic_medium">متوسط</string>
+    <string name="accessibility_haptic_strong">قوي</string>
+</resources>
