@@ -495,3 +495,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP-03 OCR user guidance
+
+The `pdf_ocr` workspace now states before recognition that scanned Arabic is not supported by the installed Latin-script OCR model; pre-existing embedded Arabic text can still be extracted. The notice is localized in EN/AR. Two Robolectric Compose resource/semantics checks were added, but are pending CI. This is a clearer error expectation, **not** recognition of Arabic scans.
