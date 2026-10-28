@@ -495,3 +495,7 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP05 pdf_01 last-read persistence
+
+View PDF now stores a bounded app-private position entry keyed by SHA-256(document URI) and restores it after document open. The first page is not persisted over a previous bookmark before restoration. Thumbnail/jump/search/zoom/night-mode UI remains source-identical. Android DataStore test source added; actual device behavior and large-document performance not yet qualified.
