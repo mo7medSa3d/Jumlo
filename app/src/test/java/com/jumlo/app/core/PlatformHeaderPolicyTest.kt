@@ -20,6 +20,50 @@ class PlatformHeaderPolicyTest {
         assertFalse(insecure.keys.any { it.equals("Cookie", ignoreCase = true) })
     }
 
+    @Test fun customRefererAndOriginDoNotLeakAcrossRedirectOrigins() {
+        val sensitive = mapOf(
+            "Referer" to "https://origin.example.com/download?private_token=keep_here",
+            "Origin" to "https://origin.example.com",
+            "Accept-Language" to "ar-EG"
+        )
+        val original = "https://origin.example.com/path?private_token=keep_here"
+        val sameSite = PlatformHeaderPolicy.headersFor(
+            url = "https://ORIGIN.example.com:443/redirected-file",
+            customHeaders = sensitive,
+            customHeaderOrigin = original
+        )
+        assertEquals(sensitive["Referer"], sameSite["Referer"])
+        assertEquals(sensitive["Origin"], sameSite["Origin"])
+        assertEquals("ar-EG", sameSite["Accept-Language"])
+
+        for (redirected in listOf(
+            "https://attacker.example.net/file",
+            "https://sub.origin.example.com/file",
+            "https://origin.example.com:8443/file",
+            "http://origin.example.com/file",
+            "https://user@origin.example.com/file"
+        )) {
+            val headers = PlatformHeaderPolicy.headersFor(
+                url = redirected,
+                customHeaders = sensitive,
+                customHeaderOrigin = original
+            )
+            assertFalse("$redirected leaked a user Referer", headers.keys.any { it.equals("Referer", true) })
+            assertFalse("$redirected leaked a user Origin", headers.keys.any { it.equals("Origin", true) })
+            assertFalse("$redirected leaked a custom language", headers.keys.any { it.equals("Accept-Language", true) })
+            assertTrue("$redirected must retain normal browser headers", headers.keys.any { it.equals("User-Agent", true) })
+        }
+    }
+
+    @Test fun originMatchingNormalizesPortsAndRejectsMalformedSources() {
+        assertTrue(PlatformHeaderPolicy.sameOrigin("https://example.org/path", "https://EXAMPLE.org:443/other"))
+        assertTrue(PlatformHeaderPolicy.sameOrigin("http://example.org", "http://example.org:80"))
+        assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "https://example.org:444/other"))
+        assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "http://example.org"))
+        assertFalse(PlatformHeaderPolicy.sameOrigin("not-a-url", "https://example.org"))
+        assertFalse(PlatformHeaderPolicy.sameOrigin("https://example.org", "not-a-url"))
+    }
+
     @Test fun preferDesktopSelectsPrimaryUserAgentAndRotatesOnFallback() {
         val desktopFirst = PlatformHeaderPolicy.headersFor("https://downloads.example.org/file", preferDesktop = true, compatibilityAttempt = 0)
         val mobileFirst = PlatformHeaderPolicy.headersFor("https://downloads.example.org/file", preferDesktop = false, compatibilityAttempt = 0)
