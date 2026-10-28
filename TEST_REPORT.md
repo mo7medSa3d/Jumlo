@@ -1,5 +1,20 @@
 # Jumlo — verification report
 
+## WP03 2026-10-28 interaction preferences — evidence pending
+
+| Check | Expected behavior | Current status |
+|---|---|---|
+| `AppFeedbackPolicyTest` (JVM) | System/user motion OR; haptics disabled by OFF or toggle | **NOT RUN** (new branch CI pending) |
+| `PreferencesPersistenceTest` (Android) | DataStore restores reduce-motion, intensity, sound; OFF/ON toggles | **NOT RUN** (instrumentation requires Android) |
+| `InteractionSettingsUiTest` (Android) | Visible switches change real settings and survive recreation | **NOT RUN** (instrumentation requires Android) |
+| Haptic hardware/Android Accessibility | System HAPTIC_FEEDBACK_ENABLED respected; actual vibrator output | **BLOCKED** until device qualification |
+| Reduced-motion across all routes | Existing `LocalReducedMotion` consumers see user OR OS choice | **NOT VERIFIED** without animated UI capture |
+| EN/AR RTL screenshots at 200% | Interaction rows and switches stay visible/touchable | **NOT RUN** |
+
+Source evidence: `MainActivity.kt`, `model/AppFeedbackPolicy.kt`, `UserPreferencesRepository.kt`, `SettingsScreen.kt`, `PreferenceComponents.kt`. No previous baseline test claim is reused as a current result.
+
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
