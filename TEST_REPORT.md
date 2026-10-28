@@ -1,5 +1,14 @@
 # Jumlo — verification report
 
+## 2026-10-28 WP02 — automatic download format selection (CI pending)
+
+- Fresh downloads use best-available video (prefer a voiced stream, or mux eligible extractor video/audio), while audio-only sources auto-select the highest actual bitrate; the default is `BEST` rather than 1080p. Explicit saved user resolution overrides remain available.
+- Link inspection chooses the available format automatically, with video/audio mode, output audio encoding, and quality cards under an optional Advanced expander. PDF/image direct-download conversions are also Advanced; original file is downloaded by default. EN/AR strings are paired.
+- Added `MediaBestSelectionTest` with 6 JUnit checks of best/video/audio/capped/unavailable behavior. **NOT RUN in this source-edit session**; require new GitHub CI result. Live platform extraction, Android notification/resume/pause and foreground-service behavior remain NOT VERIFIED.
+
+**WP02 validation target:** `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintRelease`, plus full-media APK size gates. `MediaBestSelectionTest` is source-present, **NOT RUN** until CI reports PASS. Test must not be cited as device evidence.
+
+
 Date: 2026-10-24. **NOT APPROVED FOR PRODUCTION.**
 
 This report is the current authority. The report recovered inside the supplied
