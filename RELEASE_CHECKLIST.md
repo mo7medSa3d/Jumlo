@@ -59,3 +59,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — Bold palette acceptance
+
+- [ ] Run the precise WCAG ratio test and light/dark token foreground tests in CI.
+- [ ] Capture all supported tool cards, sections and preferences in EN/AR Light/Dark/AMOLED and inspect 200% font clipping/contrast.
+- [ ] Confirm document pages and export output retain true content colors regardless of UI theme.
