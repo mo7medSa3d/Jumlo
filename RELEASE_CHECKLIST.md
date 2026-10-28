@@ -59,3 +59,9 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — WP01 gate revision
+
+- [ ] Confirm new CI runs `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` on PR/head commit.
+- [ ] Confirm `:app:verifyCompactApkSize` and `:app:verifyReleaseApkSize` fail when the full-media ARM64 APK exceeds **60,000,000 decimal bytes**; record exact current artifact sizes and SHA-256 hashes after CI.
+- [ ] Do not merge release-gate changes to `main` until the full required CI checks are green; `connectedDebugAndroidTest` and production signing remain separate acceptance gates.
