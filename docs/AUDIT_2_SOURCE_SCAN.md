@@ -27,3 +27,12 @@ Files attempted: 14, failures: 0, candidates: 0.
 
 Files attempted: 14, failures: 0, candidates: 0.
 
+
+## Batch 70–83
+
+Files attempted: 14, failures: 0, candidates: 4.
+
+- **COLOR** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:526`: `.background(Color.White),`
+- **TEXT** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:538`: `Text("${page.rotationDegrees}°", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)`
+- **COLOR** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:637`: `}},contentAlignment=Alignment.Center) {Box(Modifier.size(12.dp).background(accent,CircleShape).border(2.dp,Color.White,CircleShape))}`
+- **COLOR** `app/src/main/java/com/jumlo/app/printing/PrintScreen.kt:661`: `Box(modifier.background(Color.White),contentAlignment=Alignment.Center) {`
