@@ -16,6 +16,7 @@ import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +56,7 @@ import kotlin.math.roundToInt
     onQueued:(String)->Unit,
     onDirect:(String)->Unit,
     @Suppress("UNUSED_PARAMETER") defaultWifiOnly:Boolean=false,
-    defaultVideoQuality:String="1080",
+    defaultVideoQuality:String="BEST",
     defaultAudioQuality:Int=192,
     viewModel:MediaViewModel=hiltViewModel()
 ) {
@@ -63,6 +64,7 @@ import kotlin.math.roundToInt
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var clipboardEmpty by remember { mutableStateOf(false) }
+    var advancedExpanded by rememberSaveable(sessionEpoch) { mutableStateOf(false) }
     val readClipboard = remember(clipboard) {
         { try { clipboard.getText()?.text?.take(32768) } catch (_:RuntimeException) { null } }
     }
@@ -231,6 +233,12 @@ import kotlin.math.roundToInt
                         }
                     }
                 }
+                item("direct-advanced-toggle") {
+                    TextButton(onClick={haptics.actionClick();advancedExpanded=!advancedExpanded}) {
+                        Text(stringResource(if (advancedExpanded) R.string.media_advanced_hide else R.string.media_advanced_show))
+                    }
+                }
+                if (advancedExpanded) {
                 if (preview.kind == DirectFileKind.PDF) {
                     item("direct-pdf-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -291,6 +299,7 @@ import kotlin.math.roundToInt
                         )
                     }
                 }
+                }
             }
 
             // =========================================================================
@@ -329,7 +338,20 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
+                item("automatic-media-selection") {
+                    state.choices.firstOrNull { it.key==state.selectedKey }?.let { chosen ->
+                        Text(stringResource(R.string.media_selected_quality_summary,MediaCatalog.qualityTitle(chosen)),
+                            style=QuietTheme.typography.metadataStrong,
+                            color=MaterialTheme.colorScheme.primary)
+                    }
+                }
+                item("media-advanced-toggle") {
+                    TextButton(onClick={haptics.actionClick();advancedExpanded=!advancedExpanded}) {
+                        Text(stringResource(if (advancedExpanded) R.string.media_advanced_hide else R.string.media_advanced_show))
+                    }
+                }
+                if (advancedExpanded) {
+                // 1. Choose video vs audio only when Advanced is expanded.
                 item("media-type-selector") {
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
@@ -407,7 +429,7 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 3. Quality & Resolution Grid — Visible directly!
+                // 3. Quality & Resolution Grid — Advanced only.
                 item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -485,6 +507,7 @@ import kotlin.math.roundToInt
                         }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
+                }
                 }
             }
 
