@@ -62,8 +62,8 @@ object MediaCatalog {
                 choice(mode, selected, container)
             }
     }
-    /** One-time preference: balanced caps at 1080p; never picks silent video if a voiced choice exists. */
-    fun preferred(choices:List<MediaChoice>,mode:MediaMode,maxHeight:Int=1080):MediaChoice? {
+    /** Default: choose best verified audio-backed video; an explicit quality cap is an advanced preference. */
+    fun preferred(choices:List<MediaChoice>,mode:MediaMode,maxHeight:Int=0):MediaChoice? {
         if(mode==MediaMode.AUDIO) return choices.firstOrNull()
         val withAudio=choices.filter { it.expectsAudio }.ifEmpty { choices }
         return withAudio.firstOrNull { maxHeight==0 || (qualityHeight(it) ?: Int.MAX_VALUE)<=maxHeight }
