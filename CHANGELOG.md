@@ -1,5 +1,16 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP06 CI guard consolidation
+
+- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
+
+
+## 2026-10-28 — WP03 settings: real haptics and reduce motion (CI rerun pending)
+
+- Surface haptic intensity Off/Light/Medium/Strong and Reduce motion in Settings. Persist in DataStore and pass settings to Activity composition locals. System reduced-motion preference always wins. Add Android persistence regression. Device feedback and animation acceptance remain pending.
+
+
 ## 2026-10-28 WP01 — strict release gates (GitHub CI verified)
 
 - Both compact/release full-feature APKs now enforce 60,000,000 decimal bytes; current `main` already contains that size check from PR #11. The follow-up workflow enables full release-artifact measurement and lintRelease on pull requests, including documentation changes and `wp/**` branches.
@@ -160,10 +171,11 @@ before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
 
+## 2026-10-28 — WP02a custom accent persistence
 
-## 2026-10-28 — WP-06 follow-up after merged PRs #11 and #16
+- Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
+- Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
 
-- Preserve mandatory release APK size, compact APK size, release lint and unit tests already merged into main. Also run `lintDebug`, and update legacy compact-config test to assert **both** real 60 MB gates rather than contradictory no-size-cap expectations. Documentation/report only otherwise.
+## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
-
-- Add corrected `test-compact-configuration.py` directly to GitHub Actions artifact-inspection gate so source consistency cannot silently regress.
+- Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
