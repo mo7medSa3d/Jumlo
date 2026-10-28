@@ -161,6 +161,13 @@
     <string name="settings_appearance_language">المظهر واللغة</string>
     <string name="settings_haptic_feedback">الاستجابة اللمسية (الاهتزاز)</string>
     <string name="settings_reduce_motion">تقليل الحركة والمؤثرات</string>
+    <string name="settings_interaction_heading">التفاعل</string>
+    <string name="settings_haptic_intensity">قوة الاهتزاز</string>
+    <string name="settings_haptic_off">إيقاف</string>
+    <string name="settings_haptic_light">خفيف</string>
+    <string name="settings_haptic_medium">متوسط</string>
+    <string name="settings_haptic_strong">قوي</string>
+    <string name="settings_ui_sounds">أصوات الواجهة</string>
     <string name="settings_tool_defaults">الإعدادات الافتراضية للأدوات</string>
     <string name="settings_download_prefs">تفضيلات التنزيل</string>
     <string name="settings_storage_history_cache">التخزين والسجل وذاكرة التخزين المؤقت</string>
