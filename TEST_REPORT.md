@@ -101,3 +101,8 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+
+## 2026-10-28 — WP-06 release quality gate candidate
+
+The CI workflow now schedules `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:verifyCompactApkSize :app:verifyReleaseApkSize` for full media. Both APK verification tasks enforce **less than 60,000,000 bytes** and the release task still checks ARM64-only content and the yt-dlp payload. **NOT RUN for this PR until GitHub reports a completed check**; passing CI from the prior SHA does not qualify this candidate. The last separately observed main compact APK was **55,368,299 bytes** in [run #40106249318](https://github.com/mo7medSa3d/Jumlo/actions/runs/40106249318); that is not a measurement of this branch's release APK. Signed bundle/device/profiling and Play Console checks remain blocked.
