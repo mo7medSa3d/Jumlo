@@ -14,6 +14,10 @@ PDF/image processing and the default media extractor run on your device. Jumlo d
 
 Files you export to a folder, share with another app or send to a cloud provider are handled by the destination you select. Its own privacy practices apply. Public exports may remain after uninstalling Jumlo. App-private files and app-specific external files are removed when Android clears the app's data or uninstalls it. Backup/device-transfer is disabled for the app's managed data; export any files you want to keep.
 
+## Explicit Google Drive import/export
+
+Jumlo includes an enabled, user-initiated Google Drive v3 transfer tool. When you select a Drive import, Google receives a request for that file and your provided access token; an import copies the selected file to the device. When you select Drive export, Google receives the contents and metadata of the selected files and the provided access token. The token is held through an ephemeral secret handle for the transfer, and the app removes it from the transfer secret store after the operation. Google controls its own retention, access and privacy practices for cloud copies. The presence of this feature is **not** a claim that its account/device integrations have passed final acceptance.
+
 ## Download links and network connections
 
 When you inspect or download a link, the source service, its CDNs and thumbnail hosts receive the network requests required for that action. Those requests disclose the resource URL and connection IP and may include required headers. Providers may have their own accounts, restrictions, logging and terms. Download only material you are authorized to save.
