@@ -1,6 +1,7 @@
 package com.jumlo.app.ui.settings
 
 import androidx.activity.ComponentActivity
+import com.jumlo.app.model.AppLanguage
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -51,4 +52,17 @@ class AppearanceColorPickerTest {
         compose.onAllNodes(hasText("Violet"))[0].performSemanticsAction(SemanticsActions.OnClick)
         assertEquals("#7B4DFF", selected)
     }
+
+    @Test
+    fun `arabic app language displays Arabic accents on an English-device configuration`() {
+        compose.setContent {
+            AppearanceColorPicker(
+                current = "#1E88E5", onDismiss = {}, onSelect = {},
+                language = AppLanguage.ARABIC
+            )
+        }
+        compose.onAllNodes(hasText("أزرق")).assertCountEquals(1)
+        compose.onAllNodes(hasText("أزرق مائيّ")).assertCountEquals(1)
+    }
+
 }
