@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP06: No navigation routes changed. `ToolRoute("pdf_compress")` preserves its import/configure/run/result flow; the job now classifies `UNCHANGED` based on actual bytes even if some embedded images were skipped. Device interaction verification remains pending.
+
 > Release qualification is tracked in TEST_REPORT.md. The 2026-10-28 release gate patch does not add/remove any navigation routes. It does not certify route interactions.
 
 
