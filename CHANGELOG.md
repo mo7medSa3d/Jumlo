@@ -152,3 +152,9 @@ qualification and measured performance/profile acceptance must be completed
 before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
+
+## 2026-10-28 — WP-05 saturated design tokens (candidate, CI pending)
+
+- Centralize saturated category accents for PDF, images, downloads and files in `Color.kt` and reuse them from `ToolPalette.kt`, removing duplicate palette literals in tile code. Strengthen both light and dark tool-tile containers to 20% accent blend and introduce lavender-toned light surface ladder.
+- Give root screen headers a primary-container surface with matching semantic foreground, using existing Material 3 token roles rather than hardcoded text colors.
+- Add four source Compose token previews (light/dark × English/Arabic) and new JUnit token/non-text contrast regression tests; **no preview screenshot or device evaluation was performed**.
