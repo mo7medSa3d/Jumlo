@@ -1,5 +1,8 @@
 # Privacy, permissions and distribution review
 
+**2026-10-28 WP11 redirect hardening:** User-entered custom media HTTP headers may contain account-specific values. Their scope is limited to the origin of the initially requested resource; a redirect changing scheme, hostname or effective port cannot inherit them. Normal browser headers remain; cookie jar queries are scoped to the actual target URL. This is source policy, not a guarantee against malicious servers at the original origin.
+
+
 Review date: 23 October 2026. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
 
 ## Manifest permissions

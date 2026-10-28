@@ -1,8 +1,13 @@
 # Jumlo — verification report
 
-## WP14 — active 45-tool qualification matrix contract
+## 2026-10-28 WP11 downloader cross-origin header policy
 
-`docs/testing/tool-matrix.template.csv` now has **180 active cases: 160 processing NOT_RUN, 20 navigation N/A**, with zero false Drive unavailability claims. Two removed legacy IDs and eight N/A scenarios are retained in a separate historical CSV. `scripts/test-tool-matrix-contract.py` checks row coverage and classifies every ID against source registration and policy. **New CI pending; no Android input→output PASS inferred.**
+**CODE WRITTEN:** `PlatformHeaderPolicy.sameOrigin` checks normalized origin and rejects credentials, with `customHeaderOrigin` passed through stream/probe requests. `PlatformHeaderPolicyTest` covers scheme/host/port changes and an actual mock transport 302-hop chain. Earlier Actions [#40643832677](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643832677) passed for older SHA `6c689c2e`. **Current merged-base SHA CI NOT VERIFIED**, real HTTP/cookie/live media flows NOT RUN.
+
+
+## 2026-10-28 — WP06 lint and size source-guard integration
+
+The older WP06 commit `7fbab51b8e233f38a6a2a7a58120164ef5e12c02` completed both [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746) successfully. This follow-up merges the established KSP2 serialization fix from main, retains full-size checks, adds `:app:lintDebug`, and runs `scripts/test-compact-configuration.py` as a required CI step. **Current combined head: NOT VERIFIED until a fresh run completes.** Device tests, external download integrations, signing and Play Console remain NOT RUN.
 
 
 ## 2026-10-28 — WP03 settings preferences (current-head CI PENDING)
@@ -140,3 +145,21 @@ run here).
 
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+## 2026-10-28 — WP12 CI duplication mitigation
+
+| Check | Status | Evidence |
+|---|---|---|
+| CI event matrix: no duplicate WP push builds | NOT RUN until PR CI | scripts/tests/test-ci-event-matrix.py; PR builds still trigger on all main-targeted pull requests |
+| Full-media assemble/test/lint/size gates | NOT RUN on WP12 yet | Existing mandatory job, same commands and artifacts; no checks waived |
+| Explicit lite and device workflows | Still opt-in | workflow_dispatch preserved; device acceptance remains separate |
+
+The CI efficiency change cannot be considered verified until the PR's own checks run. Other currently queued runs were created before this change and will not be retroactively canceled.
+
+## 2026-10-28 — WP-08 R8 release CI OOM
+
+[PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
+
+## WP14 — active 45-tool qualification matrix contract
+
+`docs/testing/tool-matrix.template.csv` now has **180 active cases: 160 processing NOT_RUN, 20 navigation N/A**, with zero false Drive unavailability claims. Two removed legacy IDs and eight N/A scenarios are retained in a separate historical CSV. `scripts/test-tool-matrix-contract.py` checks row coverage and classifies every ID against source registration and policy. **New CI pending; no Android input→output PASS inferred.**

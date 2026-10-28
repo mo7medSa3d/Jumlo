@@ -2,7 +2,7 @@ name: Android CI & APK
 
 on:
   push:
-    branches: [main, 'arena/**', 'wp/**']
+    branches: [main, 'arena/**']
     tags: ['v*']
   pull_request:
     branches: [main]
@@ -22,6 +22,7 @@ on:
 permissions:
   contents: read
 
+# Work-package branches run once via pull_request; main/tags/arena still run on push.
 # Cancel obsolete commits instead of paying for their builds.
 concurrency:
   group: android-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -66,9 +67,12 @@ jobs:
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
           python3 scripts/test-tool-matrix-contract.py
-          # Serialize KSP2 debug/compact/release worker analysis without dropping gates.
-          ./gradlew -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
-            :app:testDebugUnitTest :app:lintRelease \
+          python3 scripts/tests/test-ci-event-matrix.py
+          # CI-only heap increase: full-media R8 release shrinker ran out of 2560 MB
+          # in run 40644691679. Do not disable minification, tests or 60 MB limits.
+          # --max-workers=1 prevents concurrent multi-GB Gradle workers.
+          ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
+            :app:testDebugUnitTest :app:lintDebug :app:lintRelease \
             --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime
@@ -79,6 +83,7 @@ jobs:
             app/build/outputs/apk/compact/app-compact.apk \
             app/build/outputs/apk/debug/app-debug.apk
           python3 scripts/tests/test-media-artifact.py 2>&1
+          python3 scripts/test-compact-configuration.py 2>&1
           (cd app/build/outputs/apk/compact && sha256sum app-compact.apk > app-compact.apk.sha256)
           (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
 
