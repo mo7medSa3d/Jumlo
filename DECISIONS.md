@@ -1,5 +1,10 @@
 # Decisions — 24 October 2026
 
+## 2026-10-28 — WP06 release gate preservation
+
+Normal Android CI runs both `lintDebug` and `lintRelease`, JVM tests, the full-media compact and release APK 60MB byte-limit checks, and the Python source-contract check. Preserve KSP2 serial worker flags from merged PR #36; never disable the media runtime or skip the size gate to get green CI. No Android UI/route changes.
+
+
 **2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
 
 
@@ -99,6 +104,3 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
-**2026-10-28 WP03 capability contract:** A registry/navigation-only action must never enqueue a processing job. `pdf_compare` and `pdf_redact` are not registered PDF capabilities and must fail closed. `file_trash` is navigation into Files, not a processing operation. Remove only unreachable dead dispatcher code, not any registered feature. Test these invariants before release.
-
-
