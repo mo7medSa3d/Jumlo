@@ -101,3 +101,8 @@ run here).
 - Social extraction cannot establish content authorization; only public,
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
+
+
+## 2026-10-28 — WP-02 downloader default selection
+
+Changes are a source-level candidate only: default is `BEST` for new sessions/preferences, `MediaCatalog.preferred` without cap picks best usable format, and all manual media format/quality/audio pickers are hidden until Advanced is expanded. `MediaAutoSelectionTest` contains four JUnit tests; **NOT RUN** in the authoring environment. Real YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive links, audio-only downloads, native extraction, process restart, pause/resume, notification and network errors are **NOT VERIFIED** by this UI/selection change; do not infer completion. CI for this PR must pass before considering merge.
