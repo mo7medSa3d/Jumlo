@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP03 2026-10-28:** `file_trash` remains a Files navigation alias, not an operation. `pdf_compare` and `pdf_redact` are not registered routes, and cannot enqueue PDF processing. Registered typed route behavior is otherwise unchanged. Device validation remains NOT VERIFIED.
+
+
 This document describes the current source navigation contract. Executed build and device results belong in [TEST_REPORT.md](TEST_REPORT.md). A registered route or a written UI test is not evidence that a physical-device flow passed.
 
 Authoritative implementation: [JumloNavHost.kt](app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt), [QuietNavigation.kt](app/src/main/java/com/jumlo/app/ui/components/QuietNavigation.kt), [MainActivity.kt](app/src/main/java/com/jumlo/app/MainActivity.kt), and [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
