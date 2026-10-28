@@ -311,7 +311,9 @@ afterEvaluate {
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
-// The release distribution ceiling is strict decimal bytes, not MiB.\nval maxReleaseApkBytes = 60_000_000L\ntasks.register("verifyCompactApkSize") {
+// The release distribution ceiling is strict decimal bytes, not MiB.
+val maxReleaseApkBytes = 60_000_000L
+tasks.register("verifyCompactApkSize") {
     group = "verification"
     description = "Require the full-media ARM64 compact APK to fit in 60,000,000 bytes"
     dependsOn("assembleCompact")
