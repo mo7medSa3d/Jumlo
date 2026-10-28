@@ -96,3 +96,8 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+
+## 2026-10-28 — Release gate reinstatement (supersedes item 8)
+
+The owner's current production requirement is an ARM64 complete-media APK **strictly below 60,000,000 decimal bytes**. Both `verifyCompactApkSize` and `verifyReleaseApkSize` now enforce that limit without dropping yt-dlp, FFmpeg or other user-facing features. The prior item 8 decision to lift the cap is historical and no longer the release rule. An oversize artifact is a CI failure that must be fixed, not a reason to bypass checks.
