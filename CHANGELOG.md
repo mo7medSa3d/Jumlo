@@ -202,3 +202,8 @@ CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap`
 ## 2026-10-28 WP03 — remove ghost PDF dispatch routes
 
 Remove unreachable `pdf_compare`/`pdf_redact` dispatcher branches and navigation-only `file_trash` processing branch. Preserve all registered tools, including Files Trash as navigation. Add JVM capability policy regression. Earlier PR head CI passed at `e9c776ba`; post-merge-base SHA CI pending.
+
+
+## PR #24 integration
+
+fix(capabilities): reject ghost PDF handlers and protect navigation-only actions. Implementation and tests transferred from work-package branch; prior matching PR CI succeeded; integrated head requires fresh CI.

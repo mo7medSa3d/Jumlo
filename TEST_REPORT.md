@@ -167,3 +167,8 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 ## 2026-10-28 WP03 capability contract parity
 
 Branch source now fails closed for unregistered ghost PDF IDs and navigation-only trash. `CapabilityContractTest` covers visible/unique registered tools, forbidden ghost process IDs and representative real processing operations. Previous Actions [#40642534733](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642534733) **PASS** on earlier SHA `e9c776ba`, not latest main rebased commit. Exact-head CI and Android interactions remain NOT VERIFIED.
+
+
+## PR #24 integration
+
+fix(capabilities): reject ghost PDF handlers and protect navigation-only actions. Implementation and tests transferred from work-package branch; prior matching PR CI succeeded; integrated head requires fresh CI.

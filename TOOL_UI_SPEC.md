@@ -521,3 +521,8 @@ No interaction contract changes. KSP2 worker serialization does not establish pa
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
 
 **WP03 capability parity:** 45 registered tools remain accessible. Phantom `pdf_compare`/`pdf_redact` dispatch arms removed; Files Trash remains UI navigation, never background processing. JVM tests guard policy; device workflows pending.
+
+
+## PR #24 integration
+
+fix(capabilities): reject ghost PDF handlers and protect navigation-only actions. Implementation and tests transferred from work-package branch; prior matching PR CI succeeded; integrated head requires fresh CI.
