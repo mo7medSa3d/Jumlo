@@ -96,3 +96,7 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+## 2026-10-28 — WP10 Tools catalogue search/visibility consistency
+
+`CapabilityRegistry` and all 45 registered operation/navigation IDs are preserved. On the Tools **default browse grid**, respect `ToolCatalogue.isListed` rather than presenting hidden concepts as tiles. `img_compare` stays available by explicit catalogue search, without a default tile. The redundant `file_02` and `file_trash` navigation aliases are served by Files, and `dl_settings` by Settings; none appears as a duplicate Tools tile or search result. Existing routes, dispatchers and processing behavior are retained. This is product surfacing/pruning, **not a removal or proof that a hidden processing tool works**.
