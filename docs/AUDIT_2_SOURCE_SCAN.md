@@ -56,3 +56,14 @@ Files attempted: 14, failures: 0, candidates: 9.
 Files attempted: 14, failures: 0, candidates: 1.
 
 - **TEXT** `app/src/main/java/com/jumlo/app/ui/downloads/MediaWorkspace.kt:400`: `label={Text("$kbps kbps",style=QuietTheme.typography.metadataStrong)}`
+
+## Batch 112–125
+
+Files attempted: 14, failures: 0, candidates: 6.
+
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/icons/Icons.kt:24`: `fill = SolidColor(Color.Black), fillAlpha = alpha,`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:95`: `Box(Modifier.fillMaxWidth().height(200.dp).clip(QuietTheme.shapes.thumbnail).background(Color(0xFFF4F4F4))) {`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:99`: `if ((row + column) % 2 == 0) drawRect(Color(0xFFE2E2E2), Offset(column * cell, row * cell), androidx.compose.ui.geometry.Size(cell, cell))`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:152`: `listOf(Color.Black, Color(0xFF1746A2), Color(0xFF8E2430), Color(0xFF145D4C)).forEachIndexed { index, ink ->`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:156`: `Box(contentAlignment = Alignment.Center) { if (inkArgb == ink.toArgb()) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(22.dp)) }`
+- **COLOR** `app/src/main/java/com/jumlo/app/ui/scan/ScanScreen.kt:194`: `Surface(onClick = { if (!busy) onSaved(file) }, shape = QuietTheme.shapes.thumbnail, color = Color.White,`
