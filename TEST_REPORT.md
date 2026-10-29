@@ -166,3 +166,16 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 - New JVM methods: `SafeNamesBidiControlTest.unsafeDirectionalFormattingIsRejected`, `.aSpoofMarkerBeyondTheTruncationLimitIsNotSilentlyAccepted`, `.nestedArchiveEntriesCannotIntroduceBidiControlNames`, `.legitimateRtlArabicHebrewAndEmojiNamesRemainValid`. **NOT RUN until GitHub CI on exact PR head**; no production claim before verified build/test/lint and size gates.
 
 - Files rename dialog now shows a bilingual actionable supporting message when the name is invalid; confirmation stays disabled. Android Compose/device appearance remains **NOT VERIFIED** until its CI/device tests run.
+
+## 2026-10-28 WP08 scanner bitmap lifecycle
+
+**CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
+
+## 2026-10-28 WP03 capability contract parity
+
+Branch source now fails closed for unregistered ghost PDF IDs and navigation-only trash. `CapabilityContractTest` covers visible/unique registered tools, forbidden ghost process IDs and representative real processing operations. Previous Actions [#40642534733](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642534733) **PASS** on earlier SHA `e9c776ba`, not latest main rebased commit. Exact-head CI and Android interactions remain NOT VERIFIED.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

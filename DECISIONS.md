@@ -108,3 +108,10 @@ not a current measurement.
 ## WP12 — Unicode filename policy
 
 Bidirectional formatting controls can disguise `.pdf`/other suffixes, so reject U+202A–U+202E, U+2066–U+2069 and U+200E/U+200F/U+061C at filename policy boundaries. Ordinary RTL letters and zero-width non-joiner used in text remain permitted. Preserve all file operations; do not remove tools or force English filenames.
+
+**2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

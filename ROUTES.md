@@ -125,3 +125,12 @@ No navigation, locale, settings, or tool-entry contract changes. Worker serializ
 ## 2026-10-28 — WP12 filename validation
 
 No navigation or route changes. File rename, archive extraction and automatically generated output names continue through `SafeNames`; invisible bidi-spoof formatting is now invalid. Arabic and Hebrew names remain supported.
+
+**2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
+
+**2026-10-28 WP03 capability contract:** `file_trash` stays a Files navigation action and never enters an operation handler; `pdf_compare` and `pdf_redact` ghost IDs are not enabled registered processing routes. No user-facing route deleted.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
