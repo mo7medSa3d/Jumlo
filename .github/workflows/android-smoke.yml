@@ -56,6 +56,20 @@ jobs:
       - name: Validate emulator script shell and real test selection
         shell: bash
         run: python3 scripts/test-emulator-smoke-runner.py
+      # Hosted Linux runners expose /dev/kvm but do not grant the runner user
+      # access by default. Without KVM, API 35/36 are too slow to boot and may
+      # crash, making valid instrumentation tests report false negatives.
+      - name: Enable hardware acceleration for emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -e /dev/kvm ]]; then
+            echo "::error::GitHub runner lacks /dev/kvm; cannot execute real device tests"
+            exit 1
+          fi
+          sudo chmod 0666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          ls -l /dev/kvm
       - name: Execute real Android UI and persistence tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
