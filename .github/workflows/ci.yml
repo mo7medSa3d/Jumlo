@@ -66,6 +66,9 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
+          # The audit scanner itself is tested and scans every production JVM/Android source.
+          python3 -m unittest discover -s scripts/tests -p 'test_audit_source.py' -v
+          python3 scripts/audit_source.py --output build/reports/source-audit.json --markdown build/reports/source-audit.md
           python3 scripts/test-tool-matrix-contract.py
           python3 scripts/test-inert-preferences.py
           python3 scripts/tests/test-ci-event-matrix.py

@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP07: No routes changed. Static source candidate inventory is informational and cannot certify that a button, route or gesture works.
+
 > WP03 adds an accessible Interface sounds switch to the existing Settings screen without changing the navigation graph.
 
 > WP06: The existing `pdf_compress` route preserves the same page-selection and job flow. Only measured result status/warnings change; no navigation or device qualification is claimed.

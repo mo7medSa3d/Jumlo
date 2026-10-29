@@ -153,6 +153,14 @@ No package is marked complete until its branch/PR has cited commands, results an
 
 The follow-up [AUDIT_2_SOURCE_SCAN.md](AUDIT_2_SOURCE_SCAN.md) records **244/244** production Kotlin/Java files read from the audited base GitHub commit with **zero fetch failures**. The reproducible lexical candidate rules located **204 direct raw-color references**, **7 direct UI text literals**, **0 TODO/FIXME/stub markers** and **0 syntactically empty callbacks**. These are **candidates**, not claims that every color is wrong: most are token definitions, document-paper/ink colors or intentional numeric labels. No finding certifies runtime behavior, catches semantically inert *nonempty* callbacks or covers XML/scripts/binary assets. The full file:line inventory is retained in the linked source scan. Original capability/status table above remains authoritative for missing end-to-end evidence.
 
+## 2026-10-28 — automated source inventory and review
+
+- `scripts/audit_source.py` inventories app Kotlin/Java plus the four Android-free modules, recording exact file:line source candidates; it also checks pure module imports. It does not execute UI controls or tool workflows.
+- [GitHub Actions #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606) ran 5 original scanner tests successfully and scanned **244 source files / 27 candidates**: **20 literal-color occurrences** (including branded splash, selectable pen inks, accent swatches and scan preview canvas), **7 inline/dynamic label patterns** (page numbers, rotation, bitrate, zoom and checkmarks). There were no matches in the scanner's limited TODO/empty-callback patterns. These are **review leads**, not 27 proven bugs or 27 resolved findings.
+- The new sixth scanner test requires zero Android imports in pure JVM modules; regular CI now runs all scanner tests before Gradle. The reconciled branch's CI result is pending. Report artifacts are available in [source inventory Actions #40641825217](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641825217).
+- **P0 ABSENT:** Word/Office → PDF is missing entirely from the registry. Tracked in [issue #47](https://github.com/mo7medSa3d/Jumlo/issues/47); PDF → Word/PowerPoint does not satisfy the reverse capability. No acceptance claim is made.
+- Still **NOT VERIFIED:** device execution across all registered tools, true gesture behavior, large/corrupt inputs, OCR language support, real provider downloads, end-to-end signed release.
+
 ## WP07 stale page-order source defect
 
 PrintPageSelection.move and PrintViewModel originally reused malformed saved pageOrder even when the renderer showed the original order; UI manipulation could silently change the wrong pages. Source patch normalizes stale order and preserves selected source pages. Regression tests added; latest-head CI and device print-provider acceptance remain pending.

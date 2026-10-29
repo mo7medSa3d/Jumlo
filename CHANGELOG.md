@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP07 reproducible static audit
+
+- Source scanner `scripts/audit_source.py` reports file:line candidates across app and four pure core modules. Six regression tests cover markers, empty callbacks, UI literals, report determinism and Android-import boundaries.
+- [Initial audit run #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606): 244 files scanned, 27 candidates (20 hardcoded colors, 7 dynamic/inline text patterns; none matched basic TODO or empty-callback patterns). Candidate matches are not validated defects.
+- Test and scan invocation are now included in regular Android CI before Gradle; independent source inventory workflow still uploads report artifacts.
+
+
 ## 2026-10-28 — WP03 interface sound settings
 
 - Add an accessible, persisted `Interface sounds` toggle to Settings, with English/Arabic strings. No duplicate changes to the haptic and reduce-motion settings already merged in PR #20.

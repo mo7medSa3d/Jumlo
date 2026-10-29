@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## WP07 — source audit, 2026-10-28
+
+[CI #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606) **PASS** for five initial scanner unit tests and 244-file source scan: 27 candidates (20 color constants, 7 inline/dynamic text patterns), none from the basic TODO/empty-callback rules. New sixth Android-import contract is added to regular CI but **NOT RUN** on this reconciled branch until its new GitHub run completes. No device/runtime tool pass is inferred from a regex scan.
+
+
 ## WP03 — Interface sounds, Android qualification pending
 
 `settings.sounds` calls existing `setSoundsEnabled`. `MainActivity` supplies `LocalAppSoundsEnabled`; `UiSoundPlayer` respects the switch and system ringer/volume settings. EN/AR switch labels and Android tests exist. First [CI #40643551859](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643551859) failed in `lintAnalyzeRelease` due to an unexpected lint internal failure while analyzing `ImageResultPreview.kt`, not an identified source diagnostic. This branch now integrates the serialized KSP and current CI policy from main; fresh CI **PENDING**. Device sound testing **NOT RUN**.

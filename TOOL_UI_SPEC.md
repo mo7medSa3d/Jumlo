@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP07: The generated source inventory captures file/line candidates but does not replace 45-tool real input→output verification. Twenty literal colors and seven inline-text patterns require design/context triage, not automatic removal.
+
 > WP03 exposes the already persisted `soundsEnabled` preference through a single-toggle Compose row; real speaker, Android sound policy and RTL checks remain NOT RUN.
 
 > WP06: Compression reports `UNCHANGED / PDF_NOT_COMPRESSIBLE` when no bytes are saved, including when re-encoding skipped some image streams. `PDF_IMAGE_COMPRESSION_PARTIAL` requires a genuinely smaller output. Five-scan and 200-page device qualification remain NOT RUN.
