@@ -518,6 +518,12 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+## WP12 filename spoof prevention
+
+Files rename/import and archive entry naming reject invisible bidirectional formatting controls rather than allowing an extension to be visually reversed. Keep readable Arabic/Hebrew/emoji names. `INVALID_FILENAME` is a validation response; tool UI should show a localized actionable message. Error UI has not been re-verified on device.
+
+- The Files rename dialog displays `files_rename_invalid_name` below invalid input, including hidden direction marks; no raw exception or silent red outline is used as the sole guidance. Arabic/English resources updated.
+
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
 
 ## WP13 page selection memory feedback
