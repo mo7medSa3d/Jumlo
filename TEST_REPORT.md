@@ -169,3 +169,12 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 - Source defect: `PageSelection.groups(value,count)` converted every repeated range directly to a list, permitting tens of millions of duplicated boxed page numbers from a short selection string. Fix counts selected positions before allocation and reports `PAGE_SELECTION_LIMIT` above 100,000; no tool handler disabled.
 - New `PageRangeAllocationBudgetTest`: four pure-JVM methods for 200-page splits, Arabic-Indic digits/comma, duplicate pathological expansion, and clamped last page. Resources `msg_page_selection_limit` EN/AR + `userMessageResource` mapping keep actionable errors. **NOT RUN** on the exact head until GitHub Actions validates `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease :app:verifyCompactApkSize :app:verifyReleaseApkSize`.
 - 200-page physical PDF performance, five scanned compression fixtures and entire tool flows: still NOT VERIFIED.
+
+## 2026-10-28 WP03 capability contract parity
+
+Branch source now fails closed for unregistered ghost PDF IDs and navigation-only trash. `CapabilityContractTest` covers visible/unique registered tools, forbidden ghost process IDs and representative real processing operations. Previous Actions [#40642534733](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642534733) **PASS** on earlier SHA `e9c776ba`, not latest main rebased commit. Exact-head CI and Android interactions remain NOT VERIFIED.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

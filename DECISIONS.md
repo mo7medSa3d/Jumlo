@@ -110,3 +110,8 @@ not a current measurement.
 ## WP13 split page-range allocation policy
 
 The explicit PDF grouped-range parser limits its expanded page positions to 100,000 per operation (distinct from actual document page count), preventing unbounded boxed duplicate pages from short repeated inputs. This is a technical memory-safety limit, not feature pruning; regular 200-page selection and Arabic numeral syntax remain supported.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

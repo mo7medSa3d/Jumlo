@@ -523,3 +523,10 @@ No interaction contract changes. KSP2 worker serialization does not establish pa
 ## WP13 page selection memory feedback
 
 Split/extract group entry accepts standard 200-page ranges and Arabic numerals. Extremely repeated ranges exceeding 100,000 expanded page positions are rejected before allocation; localized copy asks users to remove duplicates or shorten ranges. Device presentation still requires instrumentation.
+
+**WP03 capability parity:** 45 registered tools remain accessible. Phantom `pdf_compare`/`pdf_redact` dispatch arms removed; Files Trash remains UI navigation, never background processing. JVM tests guard policy; device workflows pending.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
