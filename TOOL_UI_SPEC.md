@@ -521,3 +521,12 @@ No interaction contract changes. KSP2 worker serialization does not establish pa
 ## 2026-10-28 — WP-04 tool-state reset behavior
 
 The shared workspace now scopes preview source selection and batch-rename preview to current `toolId` plus immutable input ID list, while the Advanced expander is scoped to the current tool. This prevents stale modal state when switching tools or changing the input set, without automatically discarding the current tool's configuration on every unrelated state update. A source-contract test is authored; real Compose screen navigation is **NOT VERIFIED**.
+
+**WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
+
+**WP03 capability parity:** 45 registered tools remain accessible. Phantom `pdf_compare`/`pdf_redact` dispatch arms removed; Files Trash remains UI navigation, never background processing. JVM tests guard policy; device workflows pending.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
