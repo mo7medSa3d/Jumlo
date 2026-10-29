@@ -69,6 +69,16 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                                 }
                             }
                         }
+                        // The transfer manager remains discoverable with zero active jobs.
+                        TextButton(
+                            onClick = onDownloads,
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("home.manageDownloads")
+                        ) {
+                            Icon(painterResource(R.drawable.ic_prism_download), null, Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.home_manage_downloads))
+                        }
                     }
                 }
             }

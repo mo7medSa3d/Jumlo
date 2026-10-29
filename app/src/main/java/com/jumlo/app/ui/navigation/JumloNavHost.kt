@@ -131,7 +131,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         destination?.hasRoute<JobRoute>() == true || destination?.hasRoute<ActivityRoute>() == true -> "activity"
         else -> "home"
     }
-    val rootRoutes = setOf("home", "tools", "downloads", "files", "settings")
+    val rootRoutes = setOf("home", "tools", "files", "settings")
     var lastTab by rememberSaveable { mutableStateOf(DockTab.HOME) }
     val tab = MainDockTabs.firstOrNull { it.route == route } ?: lastTab
     var tabHistory by rememberSaveable { mutableStateOf(listOf<String>()) }
@@ -145,6 +145,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
         DockTab.PRINT -> PrintRoute
     }
     fun switchTab(next: DockTab, recordHistory: Boolean = true) {
+        // Downloads remains reachable, but is no longer a root tab or a saved root stack.
+        if (next == DockTab.DOWNLOADS) {
+            navController.navigate(DownloadsRoute) { launchSingleTop = true }
+            return
+        }
         if (next == DockTab.PRINT) {
             navController.navigate(PrintRoute) { launchSingleTop = true }
             return
@@ -412,7 +417,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools") {
         var scanPublishing by remember(entryId) { mutableStateOf(false) }
         val root = shellRoute in rootRoutes
-        val showDock = root || shellRoute in setOf("workspace", "activity")
+        val showDock = root || shellRoute in setOf("downloads", "workspace", "activity")
         val swipeDistance=with(LocalDensity.current) { 54.dp.toPx() }
         val headerToolId=entryToolId ?: form.toolId
         CompositionLocalProvider(LocalToolTransitionVisibility provides transitionScope,
@@ -439,6 +444,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         title=when(shellRoute) {
                             "workspace" -> CapabilityRegistry.tools.find {it.id==headerToolId}?.let {title(it,settings.language)} ?: stringResource(R.string.workspace_title)
                             "activity" -> stringResource(R.string.activity_title)
+                            "downloads" -> if(settings.language.isRtl) DockTab.DOWNLOADS.labelAr else DockTab.DOWNLOADS.labelEn
                             "scan" -> stringResource(R.string.scan_title)
                             "print" -> stringResource(R.string.upgrade_print)
                             "storage" -> stringResource(R.string.modern_storage_usage)

@@ -27,8 +27,10 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('{navigateTo("scan")}',nav)
         self.assertIn('"scan" -> com.jumlo.app.ui.scan.ScanScreen', nav)
         self.assertIn('onScan: () -> Unit', dock)
-        # The center slot is Home; Scan and Print are explicit actions in Tools.
-        self.assertIn('MainDockTabs = listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)', dock)
+        # Home leads the four-root dock; Scan/Print and Downloads remain accessible outside its cells.
+        self.assertIn('MainDockTabs = listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)', dock)
+        self.assertNotIn('MainDockTabs = listOf(DockTab.TOOLS, DockTab.FILES, DockTab.HOME, DockTab.DOWNLOADS, DockTab.SETTINGS)', dock)
+        self.assertIn('if (next == DockTab.DOWNLOADS)', nav)
         self.assertIn('MainDockTabs.forEach', dock)
         self.assertIn('destination == selectedTab', dock)
         self.assertIn('.testTag("nav.indicator.${tab.name}")', dock)
@@ -51,6 +53,8 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('fileDateLabel(output.createdAtEpochMs)', home)
         self.assertIn('onFiles: () -> Unit', home)
         self.assertIn('onDownloads: () -> Unit', home)
+        self.assertIn('home.manageDownloads', home)
+        self.assertIn('R.string.home_manage_downloads', home)
         self.assertNotIn('Mohamed Saad', home)
         self.assertNotIn('Pro subscription', home)
 
@@ -109,7 +113,10 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('viewModel.cleanTemporary()', settings)
         self.assertIn('onChooseDownloadFolder', settings)
         self.assertIn('SaveFolderCard(', settings)
-        for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp', 'setHapticIntensity', 'respectReducedMotion'):
+        self.assertIn('viewModel.setHapticIntensity', settings)
+        self.assertIn('viewModel.setRespectReducedMotion', settings)
+        self.assertIn('settings.respectReducedMotion', settings)
+        for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp'):
             self.assertNotIn(obsolete, settings)
         self.assertIn('NeonPanel(', downloads)
         self.assertIn('onTool(mediaTool)', downloads)
