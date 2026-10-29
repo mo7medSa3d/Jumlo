@@ -41,6 +41,18 @@ jobs:
           if [[ ! -f "$sdk/platforms/android-36/android.jar" || ! -x "$sdk/build-tools/36.0.0/aapt2" ]]; then
             sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
           fi
+      # Compiling full-media APKs while the virtual Android OS is booting
+      # starves system_server and can kill the package service before tests
+      # start. Compile/debug+instrumentation first, then launch the emulator.
+      - name: Compile real Android test APKs before boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8" -PextendedMedia=true \
+            :app:assembleDebug :app:assembleDebugAndroidTest \
+            --no-parallel --max-workers=1 --no-daemon --console=plain
+
       - name: Validate emulator script shell and real test selection
         shell: bash
         run: python3 scripts/test-emulator-smoke-runner.py

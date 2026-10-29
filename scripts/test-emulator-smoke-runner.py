@@ -11,6 +11,10 @@ class EmulatorSmokeRunnerContract(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/android-smoke.yml").read_text()
         fragment = workflow.split("      - name: Execute real Android UI and persistence tests", 1)[1].split("      - name: Keep reports and logcat even on failure", 1)[0]
         self.assertIn("script: bash scripts/run-emulator-smoke.sh", fragment)
+        self.assertIn("Compile real Android test APKs before boot", workflow)
+        self.assertIn(":app:assembleDebugAndroidTest", workflow)
+        self.assertIn("sys.boot_completed", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
+        self.assertIn("cmd package path com.android.settings", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
         self.assertNotIn("bash <<", fragment)
         script = ROOT / "scripts/run-emulator-smoke.sh"
         body = script.read_text()
