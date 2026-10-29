@@ -200,9 +200,20 @@ TEST_REPORT.md.
 - Scope workspace preview dialog, source selection and batch-rename preview to the active tool ID **and exact input IDs** using keyed `rememberSaveable`; scope the Advanced panel to tool ID. Replacing inputs or switching tools can no longer silently reuse these former unkeyed modal states.
 - Add a source regression contract in `scripts/test-phase1-to-4-regressions.py` guarding the actual production `rememberSaveable` call sites. It is a source-level check; Android UI interaction and restoration remain NOT VERIFIED pending device tests.
 
+- Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
+## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
+
+- `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
+- Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
+
 ## 2026-10-28 WP08 — Scanner thumbnail native Bitmap cleanup
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
+
+## 2026-10-28 — WP-03 bilingual OCR script disclosure
+
+- Show an English/Arabic notice inside the live PDF OCR workspace that the installed ML Kit Latin model cannot recognize Arabic pixels in scanned documents, while already-embedded Arabic PDF text remains extractable.
+- Add two Robolectric Compose notice assertions; remove invalid `androidx.compose.ui.test.assertExists` import after CI compile failure. No external OCR upload or unsupported Arabic scan capability introduced.
 
 ## 2026-10-28 WP03 — remove ghost PDF dispatch routes
 

@@ -126,7 +126,14 @@ No navigation, locale, settings, or tool-entry contract changes. Worker serializ
 
 No typed destinations or navigation contracts change. Within `ToolRoute`, the source preview, selected page source, batch-rename preview and Advanced UI state now have explicit tool/source keys. New input queues should not retain unrelated prior previews; Android UI test evidence is still required to qualify it.
 
+- WP04 download restart now fails safe for compressed/legacy partials; resumes only validator-verified representation bytes. This does not change navigation.
+**WP04 2026-10-28:** route graph unchanged. A durable `dl_02`/`dl_03` transfer may recover transient mid-stream bytes with HTTP Range + validator in `StreamTransfer`; UI job navigation is unchanged. Android pause/retry/notification acceptance remains NOT VERIFIED.
+
 **2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
+
+## 2026-10-28 — WP-03 OCR script compatibility notice
+
+No route changes. The existing `ToolRoute("pdf_ocr")` workspace shows a persistent English/Arabic script-support notice before recognition. This is guidance, not Arabic scanned-text recognition.
 
 **2026-10-28 WP03 capability contract:** `file_trash` stays a Files navigation action and never enters an operation handler; `pdf_compare` and `pdf_redact` ghost IDs are not enabled registered processing routes. No user-facing route deleted.
 
