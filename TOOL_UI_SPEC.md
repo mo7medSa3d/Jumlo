@@ -523,6 +523,10 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+## 2026-10-28 — WP-05 saturated palette and previews
+
+Source palette adds shared `LightToolAccents`/`DarkToolAccents` in `Color.kt`; each section's tile color in `ToolPalette.kt` and pillar primary accent now derive from the same family. Light surface ladder is lavender-neutral, and the root page top bar uses semantic `primaryContainer/onPrimaryContainer`. New `app/src/test/java/com/jumlo/app/ui/theme/ThemePreviews.kt` previews four English/Arabic light/dark combinations; `ToolPaletteContrastTest` asserts icon and main scheme contrast. These are authored source and pending unit/render execution, not certified screenshots or visual QA.
 ## WP09 Compose/device smoke acceptance — 2026-10-28
 
 Added an API26/API35/API36 instrumented smoke workflow exercising existing UI and settings tests. It is scoped to core navigation, shared workspace, tool catalogue, viewer, gestures and persistence; it cannot certify every registered tool pick/run/result. Full device screen matrix and the five PDF compression fixtures remain required before any `works` label.

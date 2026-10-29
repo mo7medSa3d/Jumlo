@@ -204,6 +204,15 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP-05 saturated design tokens (candidate, CI pending)
+
+- Centralize saturated category accents for PDF, images, downloads and files in `Color.kt` and reuse them from `ToolPalette.kt`, removing duplicate palette literals in tile code. Strengthen both light and dark tool-tile containers to 20% accent blend and introduce lavender-toned light surface ladder.
+- Give root screen headers a primary-container surface with matching semantic foreground, using existing Material 3 token roles rather than hardcoded text colors.
+- Add four source Compose token previews (light/dark × English/Arabic) and new JUnit token/non-text contrast regression tests; **no preview screenshot or device evaluation was performed**.
+
+
+- CI-driven fix: corrected WCAG sRGB luminance gamma from cubic approximation to 2.4 and replaced an unreliable fixed-step AA foreground fallback with bounded binary search. Expanded JUnit cases and failure messages; original contrast gate remains enabled. Initial failure: [run #40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377), one contrast test among 522 executed. New CI pending.
 ## 2026-10-28 — WP09 emulator runner Bash invocation repair
 
 - Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.

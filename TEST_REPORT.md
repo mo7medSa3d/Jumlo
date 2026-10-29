@@ -160,6 +160,24 @@ run here).
 
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+## 2026-10-28 — WP-05 design system verification boundary
+
+Source changes: shared saturated color families in `Color.kt`/`ToolPalette.kt`, expressive semantic-color root header, `app/src/test/java/com/jumlo/app/ui/theme/ThemePreviews.kt` with 4 Compose preview configurations (EN/AR × light/dark), `ToolPaletteContrastTest` checking category icon contrast >=3:1 and M3 foreground-role contrast >=4.5:1. The tests and previews exist as source only: **NOT RUN** until CI/Android Studio renders them. Manual targeted color arithmetic found no obvious low-contrast light/dark category tokens against the tested 20% blend but this does not certify WCAG AA for every screen/control. Real screenshots, 200%-font accessibility, TalkBack and real device RTL layouts **NOT VERIFIED**.
+
+
+### WP-05 first CI failure and follow-up
+
+First PR #34 CI attempt [40640945349](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640945349) **FAILED** at KSP debug, compact and release Kotlin symbol-processing tasks with `KaInvalidLifetimeOwnerAccessException` (`PSI has changed since creation`). No Kotlin source-compilation or unit-test PASS may be inferred from that attempt. The design-only Compose preview source was moved from `src/main` to `src/debug` so it no longer enters release/compact runtime sources; this is a candidate isolation, not a proven root-cause fix. Re-run new CI and preserve any continuing failures.
+
+
+### WP-05 second CI failure
+
+Current-head CI [40641343597](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641343597) again **FAILED** at KSP with `KaInvalidLifetimeOwnerAccessException`, despite moving design previews out of the common runtime source set to `src/debug`. That attempt did not complete compilation/tests. The preview-only composables have now been placed in `src/test` so they remain Kotlin-typechecked in unit-test compilation while no longer contributing to KSP processing of any production build variant. This is a further isolation attempt, **not yet proven**; no rule/test or required binary component was disabled.
+
+
+### WP-05 contrast failure diagnosis and fix (2026-10-28)
+CI run [40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377) reached JUnit execution: **522 tests, 1 failed, 6 skipped**. The failure was `ToolPaletteContrastTest.accentForegroundsMeetAaForLightDarkAndAmoled` at line 31; the earlier KSP failures were no longer the terminal cause in this run. Root source issues: `M3ColorFactory.toLinear` approximated WCAG luminance with a cube instead of exponent 2.4, and `ensureContrast` stopped after 24 × 15% interpolation even if the resulting ratio remained below 4.5:1. Changed luminance to WCAG 2.4 and foreground adjustment to bounded binary search with a guaranteed high-contrast endpoint fallback. Expanded assertions to report seed/role/theme/ratio and stress gray thresholds. **New commit NOT RUN until new CI completes**; do not claim resolution from source review alone.
 ## 2026-10-28 — WP09 emulator smoke failure and fix
 
 Observed on [Actions #40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016): API 26 and API 36 emulator instances booted successfully, then their runner exited with `/usr/bin/sh: 1: set: Illegal option -o pipefail` (exit 2). No app instrumentation tests ran in these failed jobs. This is a script interpreter mismatch, **not an Android test assertion failure**.

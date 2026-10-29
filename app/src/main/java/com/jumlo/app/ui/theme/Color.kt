@@ -11,15 +11,15 @@ import androidx.compose.ui.graphics.Color
 // ============================================================================
 
 // Light: neutral porcelain surfaces with strong indigo actions.
-val LightBackground = Color(0xFFF6F6F8)
+val LightBackground = Color(0xFFF7F6FF)
 val LightSurface = Color(0xFFFFFFFF)
-val LightSurfaceDim = Color(0xFFEDEDEF)
+val LightSurfaceDim = Color(0xFFEDEBF7)
 val LightSurfaceBright = Color(0xFFFFFFFF)
 val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
 val LightSurfaceContainerLow = Color(0xFFFFFFFF)
-val LightSurfaceContainer = Color(0xFFF0F0F3)
-val LightSurfaceContainerHigh = Color(0xFFE8E8ED)
-val LightSurfaceContainerHighest = Color(0xFFDFDFE5)
+val LightSurfaceContainer = Color(0xFFF1EFFB)
+val LightSurfaceContainerHigh = Color(0xFFE9E6F7)
+val LightSurfaceContainerHighest = Color(0xFFDFDBF0)
 val LightOnSurface = Color(0xFF202024)
 val LightOnSurfaceVariant = Color(0xFF55555E)
 val LightOutline = Color(0xFF777781)
@@ -84,6 +84,25 @@ val DarkErrorContainer = Color(0xFF72273C)
 val DarkOnErrorContainer = Color(0xFFFFE1E7)
 val DarkCardBorder = Color(0xFF3D3D3D)
 
+/** Saturated family tokens — the single palette shared by tool tiles and workspaces.
+ * Dark partners are brighter to maintain icon visibility on low-light surfaces. */
+val LightToolAccents = listOf(
+    Color(0xFFAD1F58), // PDF · vivid rose
+    Color(0xFFAA4A00), // Images · hot orange
+    Color(0xFF006F73), // Downloads · emerald teal
+    Color(0xFF3B36CD), // Files · electric indigo
+    Color(0xFF692AA3), // Organize · violet
+    Color(0xFF155DA2)  // Utilities · cobalt
+)
+val DarkToolAccents = listOf(
+    Color(0xFFFF8AA8),
+    Color(0xFFFFB26C),
+    Color(0xFF73E2DB),
+    Color(0xFFAAB8FF),
+    Color(0xFFDEAAFF),
+    Color(0xFF8DC9FF)
+)
+
 @Immutable
 data class PillarColors(
     val pdfPrimary: Color,
@@ -123,19 +142,19 @@ data class PillarColors(
  * a category is told apart by its tint, not by its brightness.
  */
 val LightPillarColors = PillarColors(
-    pdfPrimary = Color(0xFFBC3555),
+    pdfPrimary = LightToolAccents[0],
     pdfContainer = Color(0xFFFFE7EC),
     pdfOnContainer = Color(0xFF7E2340),
     pdfSubtitle = Color(0xFF922744),
-    imagesPrimary = Color(0xFFA76218),
+    imagesPrimary = LightToolAccents[1],
     imagesContainer = Color(0xFFFFF1D6),
     imagesOnContainer = Color(0xFF78350F),
     imagesSubtitle = Color(0xFF92400E),
-    downloadsPrimary = Color(0xFF087E77),
+    downloadsPrimary = LightToolAccents[2],
     downloadsContainer = Color(0xFFDDF8F3),
     downloadsOnContainer = Color(0xFF115E59),
     downloadsSubtitle = Color(0xFF087E77),
-    filesPrimary = Color(0xFF2F46C6),
+    filesPrimary = LightToolAccents[3],
     filesContainer = Color(0xFFE5E9FF),
     filesOnContainer = Color(0xFF19266C),
     filesSubtitle = Color(0xFF2F46C6),
@@ -156,19 +175,19 @@ val LightPillarColors = PillarColors(
 )
 
 val DarkPillarColors = PillarColors(
-    pdfPrimary = Color(0xFFFFB5C1),
+    pdfPrimary = DarkToolAccents[0],
     pdfContainer = Color(0xFF4C0519),
     pdfOnContainer = Color(0xFFFFE7EC),
     pdfSubtitle = Color(0xFFFECDD3),
-    imagesPrimary = Color(0xFFFCD34D),
+    imagesPrimary = DarkToolAccents[1],
     imagesContainer = Color(0xFF451A03),
     imagesOnContainer = Color(0xFFFFF1D6),
     imagesSubtitle = Color(0xFFFDE68A),
-    downloadsPrimary = Color(0xFF92DCD8),
+    downloadsPrimary = DarkToolAccents[2],
     downloadsContainer = Color(0xFF042F2E),
     downloadsOnContainer = Color(0xFFDDF8F3),
     downloadsSubtitle = Color(0xFF99F6E4),
-    filesPrimary = Color(0xFF93C5FD),
+    filesPrimary = DarkToolAccents[3],
     filesContainer = Color(0xFF172554),
     filesOnContainer = Color(0xFFE5E9FF),
     filesSubtitle = Color(0xFFBFDBFE),
