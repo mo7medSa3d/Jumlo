@@ -108,6 +108,10 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
+## 2026-10-28 — Downloader default/Advanced contract
+
+User-facing download setup favors a one-tap automatic best-available inspected format, not a mandatory quality chooser. The full source-provided video/audio/bitrate/resolution and PDF/image options stay behind Advanced rather than being removed. Newly installed default quality is BEST; existing explicitly saved limits are retained. Restricted/DRM/private sources never receive fake streams or bypass instructions.
+
 ## WP10 catalogue decisions
 
 Preserve registered 45 capabilities, but show only deliberately listed tools on default Tools grid. Image Comparison specialist remains searchable; `file_02`, `file_trash`, `dl_settings` aliases belong to Files/Settings rather than redundant Tiles. No operations removed.

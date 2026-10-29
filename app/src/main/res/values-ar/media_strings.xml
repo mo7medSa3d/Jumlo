@@ -54,6 +54,9 @@
     <string name="media_platform_matrix_title">حالة تأهيل المنصات</string>
     <string name="media_status_unverified">غير متحقق</string>
     <string name="media_status_host_verified">متحقق محلياً</string>
+    <string name="media_advanced_options">خيارات متقدمة</string>
+    <string name="media_hide_advanced">إخفاء الخيارات المتقدمة</string>
+    <string name="media_auto_best_quality">تم اختيار أفضل صيغة متاحة تلقائيًا. لتنزيل الصوت فقط أو اختيار صيغة أخرى، افتح الخيارات المتقدمة.</string>
     <string name="media_select_type">نوع التنزيل</string>
     <string name="media_select_quality">الجودة والصيغة</string>
     <string name="media_pdf_original" formatted="false">ملف PDF الأصلي</string>

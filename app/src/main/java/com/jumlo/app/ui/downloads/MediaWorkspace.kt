@@ -23,7 +23,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -65,7 +64,7 @@ import kotlin.math.roundToInt
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var clipboardEmpty by remember { mutableStateOf(false) }
-    var advancedExpanded by rememberSaveable(sessionEpoch) { mutableStateOf(false) }
+    var showAdvanced by rememberSaveable(sessionEpoch) { mutableStateOf(false) }
     val readClipboard = remember(clipboard) {
         { try { clipboard.getText()?.text?.take(32768) } catch (_:RuntimeException) { null } }
     }
@@ -193,19 +192,27 @@ import kotlin.math.roundToInt
                 )
             }}
 
+            // Automatic selection is the default. Optional controls stay behind
+            // Advanced so a newly analyzed link is one tap away from downloading.
+            if (state.direct != null || state.asset != null) item("advanced-options") {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (state.asset != null && !showAdvanced) {
+                        Text(stringResource(R.string.media_auto_best_quality),
+                            style = QuietTheme.typography.metadata,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(
+                        onClick = { haptics.actionClick(); showAdvanced = !showAdvanced },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(if (showAdvanced) R.string.media_hide_advanced else R.string.media_advanced_options))
+                    }
+                }
+            }
+
             // =========================================================================
             // CASE 1: DIRECT FILE / PDF / IMAGE / GOOGLE DRIVE LINK
             // =========================================================================
-            if(state.asset != null || state.direct != null) item("advanced-toggle") {
-                TextButton(
-                    onClick={haptics.selectionToggle();advancedExpanded=!advancedExpanded},
-                    modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("media.advanced")
-                ) {
-                    Icon(Icons.Rounded.Tune,null,Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(if(advancedExpanded) R.string.media_hide_advanced else R.string.media_show_advanced))
-                }
-            }
             state.direct?.let { preview ->
                 item("direct-preview") {
                     Surface(
@@ -244,7 +251,7 @@ import kotlin.math.roundToInt
                         }
                     }
                 }
-                if (advancedExpanded && preview.kind == DirectFileKind.PDF) {
+                if (showAdvanced && preview.kind == DirectFileKind.PDF) {
                     item("direct-pdf-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -270,7 +277,7 @@ import kotlin.math.roundToInt
                             }
                         }
                     }
-                } else if (advancedExpanded && preview.kind == DirectFileKind.IMAGE) {
+                } else if (showAdvanced && preview.kind == DirectFileKind.IMAGE) {
                     item("direct-image-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -295,7 +302,7 @@ import kotlin.math.roundToInt
                             }
                         }
                     }
-                } else if (advancedExpanded && preview.kind in setOf(DirectFileKind.VIDEO, DirectFileKind.AUDIO)) {
+                } else if (showAdvanced && preview.kind in setOf(DirectFileKind.VIDEO, DirectFileKind.AUDIO)) {
                     item("direct-media-switch") {
                         QuietTonalButton(
                             text=stringResource(R.string.media_switch_to_extractor),
@@ -342,8 +349,8 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // Automatic best is preselected. Media type is an optional Advanced choice.
-                if (advancedExpanded) item("media-type-selector") {
+                // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
+                if (showAdvanced) item("media-type-selector") {
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
@@ -372,7 +379,7 @@ import kotlin.math.roundToInt
                 }
 
                 // 2. If Audio Mode is active: Audio Format (MP3, M4A, OPUS, ORIGINAL) + Bitrate (320..64 kbps)
-                if (advancedExpanded && state.mode == MediaMode.AUDIO) {
+                if (showAdvanced && state.mode == MediaMode.AUDIO) {
                     item("audio-format-controls") {
                         Surface(
                             shape=RoundedCornerShape(22.dp),
@@ -420,16 +427,15 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // Available formats are optional; the best stream is selected automatically.
-                if (advancedExpanded) {
-                item("media-quality-header") {
+                // 3. Quality & Resolution Grid — Visible directly!
+                if (showAdvanced) item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
                         Text(stringResource(R.string.media_actual_qualities),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
+                if (showAdvanced) items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { choice ->
                             val selected = state.selectedKey == choice.key
@@ -500,7 +506,6 @@ import kotlin.math.roundToInt
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                } // end optional quality grid
             }
 
             if (state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
@@ -511,7 +516,7 @@ import kotlin.math.roundToInt
                 }
             }
 
-            if (advancedExpanded && (state.asset != null || state.direct != null)) item("filename") {
+            if (showAdvanced && (state.asset != null || state.direct != null)) item("filename") {
                 TextField(value=state.name,onValueChange=viewModel::name,
                     singleLine=true,label={Text(stringResource(R.string.media_filename))},
                     modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),
@@ -531,7 +536,7 @@ import kotlin.math.roundToInt
                 Text(
                     text=when {
                         state.submitting -> stringResource(R.string.media_queueing)
-                        state.asset != null -> stringResource(R.string.media_download_selected)
+                        state.asset != null -> stringResource(if (showAdvanced) R.string.media_download_selected else R.string.redesign_download_now)
                         else -> stringResource(R.string.redesign_download_now)
                     },
                     style=QuietTheme.typography.button

@@ -188,3 +188,7 @@ No route changes. The existing `ToolRoute("pdf_ocr")` workspace shows a persiste
 ### Pure Kotlin module gates (PR #41)
 
 The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
+
+## 2026-10-28 — WP04 downloader route stability
+
+Existing ToolRoute(dl_media) and direct/batch download entry routes remain unchanged. Only in-workspace media configuration visibility and the default selection have changed; jobs, ActivityRoute and share-intent routing are not migrated.

@@ -74,6 +74,12 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
 
+## 2026-10-28 — Downloader automatic-selection acceptance
+
+- [ ] Verify source platform and file-type auto-detection on authorized links; correct output extension, selected format, playable audio/video and clean filename.
+- [ ] Verify newly installed BEST default, Advanced expand/collapse, custom limits preserved, and audio-only mode for both mixed and audio-only sources.
+- [ ] Run live/provider failure matrix and Android 8–15 foreground notification/resume/kill tests; record download file SHA-256 and playback.
+
 ## WP09 emulator checks (must be evidenced, not inferred)
 
 - [ ] Record successful `Android UI and persistence smoke` workflow on API 26, API 35 and API 36 at the final release candidate SHA; preserve logcat and actual XML results.
