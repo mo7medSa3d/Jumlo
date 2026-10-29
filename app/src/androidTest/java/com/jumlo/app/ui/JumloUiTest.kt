@@ -135,8 +135,13 @@ class JumloUiTest {
         compose.onNodeWithTag("nav.TOOLS").performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
         mediaLink().assertTextEquals("a draft link")
+        // The edited media link must make the shared workspace dirty before
+        // Back; otherwise the confirmation may be skipped due to a state race.
+        val appVm = ViewModelProvider(compose.activity)[AppViewModel::class.java]
+        compose.waitUntil(15_000) { appVm.hasUnsavedWorkspace.value }
         // Text entry can keep the IME open across restored tabs; this Back tests navigation.
         closeSoftKeyboard()
+        compose.waitForIdle()
         // Back leaves this tool; a new Home action starts a distinct clean session.
         pressBack()
         // A typed but unsent draft is dirty. Back must ask before discarding it;
