@@ -7,7 +7,7 @@ import java.util.zip.GZIPInputStream
 data class TransportResponse(val code:Int,val headers:Map<String,String>,val body:InputStream,val close:()->Unit={})
 fun interface HttpTransport { fun open(url:String,headers:Map<String,String>):TransportResponse }
 data class TransferRequest(val url:String,val partialFile:File,val offset:Long=0,val strongEtag:String?=null,val lastModified:String?=null,val knownTotalBytes:Long?=null,val cleartextConsent:Boolean=false,val maxBytes:Long=8L*1024*1024*1024,val minFreeBytes:Long=64L*1024*1024,val finalUrlSha256:String?=null,val maxRetries:Int=3,val retryBackoffMs:Long=300L)
-data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?,val mimeType:String?=null,val contentDisposition:String?=null)
+data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val lastModified:String?,val totalBytes:Long?,val mimeType:String?=null,val contentDisposition:String?=null,val resumeSafe:Boolean=true)
 data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val finalUrlSha256:String,val mimeType:String?=null,val contentDisposition:String?=null)
 
 class StreamTransfer(private val transport:HttpTransport) {
@@ -15,36 +15,55 @@ class StreamTransfer(private val transport:HttpTransport) {
     private fun isTransientIo(e:IOException):Boolean {
         if(e is InterruptedIOException && e !is java.net.SocketTimeoutException) return false
         val msg=e.message.orEmpty()
-        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","TRUNCATED_HTTP_BODY","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH")) return false
+        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH")) return false
         return true
     }
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferMetadata)->Unit={}):TransferResult {
         require(request.offset>=0 && (request.offset==0L || request.partialFile.length()==request.offset)) { "PARTIAL_OFFSET_MISMATCH" }
-        val resolvedInitialUrl = DownloadLinkPolicy.resolveDirectUrl(request.url)
+        var current=request.copy(url=DownloadLinkPolicy.resolveDirectUrl(request.url))
         var attempt=0
-        val startOffset=request.offset
+        var latestMetadata:TransferMetadata?=null
+        fun retryWithVerifiedRange():Boolean {
+            if(attempt>=request.maxRetries) return false
+            val bytes=request.partialFile.length()
+            // A ranged server can ignore If-Range and force the inner transfer to
+            // restart at zero. Never retain an offset beyond the current file.
+            if(bytes<current.offset) current=current.copy(offset=0,strongEtag=null,lastModified=null,
+                knownTotalBytes=null,finalUrlSha256=null)
+            if(bytes>current.offset) {
+                // Never append after a broken connection without a response
+                // validator. A changing representation would corrupt the output.
+                val metadata=latestMetadata ?: return false
+                // An HTTP range is in encoded representation bytes. If gzip was
+                // transparently decompressed, partial.length() counts decoded
+                // bytes and cannot be used as a Range offset.
+                if(!metadata.resumeSafe) return false
+                val etag=ResumePolicy.strong(metadata.strongEtag)
+                val modified=metadata.lastModified
+                if(etag==null && modified.isNullOrBlank()) return false
+                if(metadata.totalBytes!=null && bytes>=metadata.totalBytes) return false
+                current=current.copy(offset=bytes,strongEtag=etag,lastModified=modified,
+                    knownTotalBytes=metadata.totalBytes,finalUrlSha256=metadata.finalUrlSha256)
+            }
+            attempt++
+            sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1).coerceAtMost(10)),checkCancel)
+            return true
+        }
         while(true) {
             checkCancel()
             try {
-                return executeSingleAttempt(request.copy(url = resolvedInitialUrl),checkCancel,progress,onMetadata)
+                return executeSingleAttempt(current,checkCancel,progress) { metadata ->
+                    latestMetadata=metadata
+                    onMetadata(metadata)
+                }
             } catch(restart:RestartRequired) {
+                // A mismatching ETag, Content-Range, or redirect must not append.
                 throw restart
             } catch(e:IllegalArgumentException) {
-                val code=e.message.orEmpty()
-                val status=code.removePrefix("HTTP_").toIntOrNull()
-                if(status!=null && isTransient(status) && attempt<request.maxRetries && request.partialFile.length()==startOffset) {
-                    attempt++
-                    sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1)),checkCancel)
-                    continue
-                }
-                throw e
+                val status=e.message.orEmpty().removePrefix("HTTP_").toIntOrNull()
+                if(status==null || !isTransient(status) || !retryWithVerifiedRange()) throw e
             } catch(e:IOException) {
-                if(isTransientIo(e) && attempt<request.maxRetries && request.partialFile.length()==startOffset) {
-                    attempt++
-                    sleepBackoff(request.retryBackoffMs*(1L shl (attempt-1)),checkCancel)
-                    continue
-                }
-                throw e
+                if(!isTransientIo(e) || !retryWithVerifiedRange()) throw e
             }
         }
     }
@@ -113,7 +132,8 @@ class StreamTransfer(private val transport:HttpTransport) {
                 request.partialFile.parentFile?.mkdirs()
                 val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
                 val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }
-                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total,mime,disposition))
+                onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total,mime,disposition,
+                    resumeSafe=contentEncoding==null || contentEncoding=="identity"))
                 var written=request.offset
                 val streamToRead: InputStream = if(isGzipped && request.offset==0L) GZIPInputStream(response.body) else response.body
                 FileOutputStream(request.partialFile,request.offset>0).use { out ->
