@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 WP05 — durable PDF reading position (CI pending)
+
+- Replaced process-only last-page behavior with a DataStore checkpoint keyed by SHA-256 of each document URI. No raw URI, document title or file content is persisted. Positions are bounded to 128 documents with oldest-entry cleanup.
+- Viewer restores the stored page before recording new scroll positions, preserving in-process recent-page behavior. Storage errors go to privacy-safe diagnostics without breaking reading.
+- Added `PdfReaderPositionStoreTest` (3 Robolectric JUnit cases: persistence/isolation, opaque keys, invalid page). **NOT RUN** until CI. Process-death, Android 8–15, 200-page memory and reader UI interaction tests remain NOT VERIFIED.
+
+
 ## 2026-10-28 WP11 — origin-bound downloader custom headers
 
 Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers are now accepted only on the exact original scheme/host/port. Cross-origin redirects use regular browser headers, while URL-scoped cookie retrieval stays separate. Tests cover normalised default ports, malicious subdomains and real two-hop redirect simulation. Earlier CI passed on older SHA `6c689c2e`; current-head CI pending.

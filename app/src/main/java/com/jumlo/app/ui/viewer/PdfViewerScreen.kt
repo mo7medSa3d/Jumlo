@@ -57,6 +57,8 @@ import com.jumlo.app.R
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.pdf.PdfPageText
 import com.jumlo.app.data.pdf.PdfReaderSession
+import com.jumlo.app.data.pdf.PdfReaderPositionStore
+import com.jumlo.app.diagnostics.AppDiagnostics
 import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
@@ -71,7 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** In-memory last-read page per document URI; survives leaving and reopening the reader. */
+/** In-memory recent position supplements the persistent, URI-hashed DataStore checkpoint. */
 private val readerLastPage = mutableMapOf<String, Int>()
 
 /**
@@ -110,6 +112,7 @@ private fun PdfViewerContent(
     var session by remember { mutableStateOf<PdfReaderSession?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
+    var positionRestored by remember(uri) { mutableStateOf(false) }
 
     var chromeVisible by remember { mutableStateOf(true) }
     var nightMode by rememberSaveable { mutableStateOf(false) }
@@ -156,8 +159,15 @@ private fun PdfViewerContent(
     }
 
     LaunchedEffect(uri) { wake() }
-    LaunchedEffect(list.firstVisibleItemIndex) {
-        session?.let { readerLastPage[uri] = list.firstVisibleItemIndex }
+    LaunchedEffect(uri, list.firstVisibleItemIndex, positionRestored) {
+        // Never persist page zero before the saved page has been restored.
+        if (positionRestored && session != null) {
+            val currentPage=list.firstVisibleItemIndex
+            readerLastPage[uri]=currentPage
+            try { withContext(Dispatchers.IO) { PdfReaderPositionStore.save(context, uri, currentPage) } }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { AppDiagnostics.report("reader_position_save",error) }
+        }
         wake()
     }
 
@@ -180,10 +190,15 @@ private fun PdfViewerContent(
     }
 
     val document = session
-    LaunchedEffect(document) {
+    LaunchedEffect(uri, document) {
+        positionRestored=false
         document?.let { doc ->
-            val saved = readerLastPage[uri]
-            if (saved != null && saved in 0 until doc.pageCount) list.scrollToItem(saved)
+            val saved=try { withContext(Dispatchers.IO) { PdfReaderPositionStore.load(context,uri) } }
+                catch(cancel:CancellationException) { throw cancel }
+                catch(error:Exception) { AppDiagnostics.report("reader_position_load",error); null }
+            val target=readerLastPage[uri] ?: saved
+            if(target!=null && target in 0 until doc.pageCount) list.scrollToItem(target)
+            positionRestored=true
         }
     }
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {

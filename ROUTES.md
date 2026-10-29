@@ -1,5 +1,8 @@
 # Navigation and route inventory
 
+**WP05 2026-10-28:** `ViewerRoute` and `ToolRoute("pdf_01")` still render the shared PDF reader. The page now restores a bounded hashed-URI DataStore checkpoint rather than only process-memory position. No route changes; process-death/RTL device acceptance is NOT VERIFIED.
+
+
 **2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
 
 
