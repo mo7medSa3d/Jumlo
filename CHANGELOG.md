@@ -266,6 +266,12 @@ TEST_REPORT.md.
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
 
+## 2026-10-28 — WP09 Android fixture preflight restored
+
+- Restore the missing `verification/current/device/preflight-source/README.md` linked from README and RELEASE_CHECKLIST.
+- Provide source-backed fixture generation, per-run SHA-256, Android staging/storage and 200-page memory instructions, without fabricating test results.
+- [CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior branch head: unit tests, release lint, compact 55,367,131 bytes and release 55,354,871 bytes under 60 MB. Actual device benchmark NOT RUN.
+
 ## 2026-10-28 — WP13 bounded PDF split page expansion
 
 - Split/extract page-range expansion now enforces a 100,000 selected-page upper bound **before allocating repeated page lists**, protecting against pathological expressions that otherwise could OOM Android. Real 200-page groups and Arabic-Indic digits continue to work. `PAGE_SELECTION_LIMIT` has an actionable bilingual message.

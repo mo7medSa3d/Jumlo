@@ -232,6 +232,10 @@ Source now uses locale-appropriate labels for preset colors in Settings and App-
 
 **CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
 
+## 2026-10-28 — WP09 device fixture preflight evidence
+
+The previously broken preflight link is restored; source instructions describe five freshly generated scan files and 200-page device testing. No input fixture hashes were supplied in repo, and no Android device runs are claimed. [PR #40 CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior head for assembleDebug, testDebugUnitTest, lintRelease, compact and release size gates. **Device tests NOT RUN**.
+
 ## 2026-10-28 — WP13 page-range memory safety
 
 - Source defect: `PageSelection.groups(value,count)` converted every repeated range directly to a list, permitting tens of millions of duplicated boxed page numbers from a short selection string. Fix counts selected positions before allocation and reports `PAGE_SELECTION_LIMIT` above 100,000; no tool handler disabled.

@@ -155,6 +155,8 @@ No navigation or route changes. File rename, archive extraction and automaticall
 
 **2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
 
+> WP09 restores missing Android compression fixture instructions; navigation unchanged and real 200-page device qualification remains pending.
+
 ## WP13 grouped page-range validation
 
 No route changes. PDF page-group entry now detects oversized expanded selections before list allocation and surfaces localized PAGE_SELECTION_LIMIT guidance instead of crashing due to repeated ranges.
