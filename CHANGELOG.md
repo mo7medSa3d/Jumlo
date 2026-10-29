@@ -198,3 +198,21 @@ TEST_REPORT.md.
 ## 2026-10-28 WP06 — localized accent preset labels
 
 - Accent picker and saved-theme labels now use bilingual EN/AR labels rather than English names while Arabic is active; persisted color keys and custom hex values unchanged. Added JVM localization assertions. Earlier Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at earlier SHA `a82d89fe`; current merged-base CI pending.
+
+## 2026-10-28 WP08 — Scanner thumbnail native Bitmap cleanup
+
+CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
+
+## 2026-10-28 — WP-03 bilingual OCR script disclosure
+
+- Show an English/Arabic notice inside the live PDF OCR workspace that the installed ML Kit Latin model cannot recognize Arabic pixels in scanned documents, while already-embedded Arabic PDF text remains extractable.
+- Add two Robolectric Compose notice assertions; remove invalid `androidx.compose.ui.test.assertExists` import after CI compile failure. No external OCR upload or unsupported Arabic scan capability introduced.
+
+## 2026-10-28 WP03 — remove ghost PDF dispatch routes
+
+Remove unreachable `pdf_compare`/`pdf_redact` dispatcher branches and navigation-only `file_trash` processing branch. Preserve all registered tools, including Files Trash as navigation. Add JVM capability policy regression. Earlier PR head CI passed at `e9c776ba`; post-merge-base SHA CI pending.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

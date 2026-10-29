@@ -163,3 +163,20 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 ## 2026-10-28 WP06 localized accent labels
 
 Source now uses locale-appropriate labels for preset colors in Settings and App-color picker; custom six-digit accents remain valid. New `AccentLocalizationTest` and `AppearanceColorPickerTest` checks. Previous GitHub Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at pre-rebase SHA, but **current-head CI NOT VERIFIED** and Android screenshots NOT RUN.
+
+## 2026-10-28 WP08 scanner bitmap lifecycle
+
+**CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
+
+## 2026-10-28 — WP-03 OCR script compatibility verification
+
+Run [40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390) **FAILED** compiling `OcrLanguageNoticeTest.kt:5` because `assertExists` was imported as a nonexistent top-level symbol. It is a `SemanticsNodeInteraction` member; the erroneous import was deleted without removing either bilingual assertion. Current-head **NOT RUN** until GitHub CI finishes. The model remains Latin-script-only; scanned Arabic OCR, physical device and model download/installation are **NOT VERIFIED**. No service/API receives OCR data from this change.
+
+## 2026-10-28 WP03 capability contract parity
+
+Branch source now fails closed for unregistered ghost PDF IDs and navigation-only trash. `CapabilityContractTest` covers visible/unique registered tools, forbidden ghost process IDs and representative real processing operations. Previous Actions [#40642534733](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642534733) **PASS** on earlier SHA `e9c776ba`, not latest main rebased commit. Exact-head CI and Android interactions remain NOT VERIFIED.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

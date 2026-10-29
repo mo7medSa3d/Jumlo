@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.jumlo.app.R
 import com.jumlo.app.core.ResourceBudgetPolicy
 import com.jumlo.app.data.pdf.SmartScanResultStore
+import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
 import com.jumlo.app.data.processing.BitmapTransforms
 import com.jumlo.app.ui.components.QuietPrimaryButton
 import com.jumlo.app.ui.components.QuietStateCard
@@ -196,6 +197,9 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onBack:()->Unit,exter
                                 }.getOrNull()
                             }
                         }
+                        // This row owns the decoded native preview, not its original source.
+                        // Release it on remove, scroll disposal, rotation and scanner exit.
+                        DisposeOwnedPreviewBitmap(bitmap)
                         Column(Modifier.width(144.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                             Surface(shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {
                                 Box(Modifier.fillMaxWidth().height(150.dp),contentAlignment=Alignment.Center) {
