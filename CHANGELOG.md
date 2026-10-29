@@ -223,6 +223,12 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+## 2026-10-28 — WP13 remove dead global network/concurrency writes
+
+- Delete obsolete DataStore Wi-Fi-only and concurrency keys/setters and their unused ViewModel wrappers. They previously wrote values that settings state deliberately ignored (fixed `false` and `2`).
+- Preserve the actual per-job download Wi-Fi field and the fixed scheduler policy; no new global Wi-Fi-only behavior is exposed.
+- Add a portable source contract and retain Android persistence assertions for fixed settings. Branch CI and device tests are **NOT RUN** at authoring.
+
 - Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
 ## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
 

@@ -872,7 +872,6 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun setFileViewMode(value:FileViewMode) = savePreference { preferences.setFileViewMode(value) }
     fun setAccentColor(value:String) = savePreference { preferences.setAccentColor(value) }
     fun setFontScale(value:String) = savePreference { preferences.setFontScale(value) }
-    fun setMaxConcurrentDownloads(value:Int) = savePreference { preferences.setMaxConcurrentDownloads(value) }
     fun setMediaServiceUrl(url:String) = savePreference { preferences.setMediaServiceUrl(url) }
     fun setMediaServiceToken(token:String) = savePreference { preferences.setMediaServiceToken(token) }
     fun setDownloadDestinationFolder(treeUri:String,flags:Int) { operationScope.launch {
@@ -887,12 +886,6 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         catch(error:Exception) { _message.value=stableError(error) }
     } }
     fun resetDownloadDestinationFolder() = savePreference { preferences.resetDownloadDestinationFolder() }
-    fun setWifiOnlyDefault(enabled:Boolean) = savePreference {
-        preferences.setWifiOnlyDefault(enabled)
-        if(_form.value.toolId.startsWith("dl_")) {
-            _form.update { it.copy(wifiOnly = enabled) }
-        }
-    }
     fun notificationsGranted(granted:Boolean) = savePreference { preferences.setNotificationsGranted(granted) }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }

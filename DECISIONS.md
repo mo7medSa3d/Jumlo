@@ -105,6 +105,8 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
+- **WP13 (2026-10-28):** Remove hidden setters/keys when their values cannot affect scheduler or global network behavior. Keep per-job download policy independently editable. An Android persistence assertion and executable source regression guard prevent reintroduction of misleading no-op settings.
+
 - **WP03 interface audio (2026-10-28):** Keep haptics and motion already merged in PR #20; expose stored `soundsEnabled` with one bilingual, accessible switch, persistent behavior and Android device tests.
 
 ## 2026-10-28 — Privacy-aware reader position
