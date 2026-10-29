@@ -66,3 +66,19 @@ No publishing, external messaging, service deployment or signing-key creation fo
 ## WP07 print selection release gate
 
 - [ ] Test stale/duplicate saved page order with page rotation, moving and selection preservation on a real Android emulator/device. Inspect final printed PDF, preview, orientation and copies; JVM tests do not qualify the OS print dialog.
+
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.
+
+## 2026-10-28 — CI release shrinker memory guard
+
+PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
+
+- [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

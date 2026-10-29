@@ -1,5 +1,13 @@
 # Navigation and route inventory
 
+**2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
+
+
+## 2026-10-28 — WP06 CI contract (no route changes)
+
+Navigation remains unchanged by this CI-only work package. The build adds debug lint and a source-size assertion to existing release/compact artifact checks while retaining serialized KSP2. Device/Back/RTL verification remains separate.
+
+
 **2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
 
 
@@ -117,3 +125,16 @@ No navigation, locale, settings, or tool-entry contract changes. Worker serializ
 ## WP07 print page manager state recovery
 
 The existing `PrintRoute` remains unchanged. PrintPageSelection.normalizedOrder aligns stale persisted permutations with the visible source-page order before drag/reorder/rotation and preserves selected pages. Android print-provider UI still unverified.
+
+**2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
+
+## 2026-10-28 — WP-03 OCR script compatibility notice
+
+No route changes. The existing `ToolRoute("pdf_ocr")` workspace shows a persistent English/Arabic script-support notice before recognition. This is guidance, not Arabic scanned-text recognition.
+
+**2026-10-28 WP03 capability contract:** `file_trash` stays a Files navigation action and never enters an operation handler; `pdf_compare` and `pdf_redact` ghost IDs are not enabled registered processing routes. No user-facing route deleted.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
