@@ -107,6 +107,10 @@ not a current measurement.
 
 **2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
 
+## WP13 split page-range allocation policy
+
+The explicit PDF grouped-range parser limits its expanded page positions to 100,000 per operation (distinct from actual document page count), preventing unbounded boxed duplicate pages from short repeated inputs. This is a technical memory-safety limit, not feature pruning; regular 200-page selection and Arabic numeral syntax remain supported.
+
 
 ### Pure Kotlin module gates (PR #41)
 

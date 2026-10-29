@@ -199,6 +199,11 @@ TEST_REPORT.md.
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
 
+## 2026-10-28 — WP13 bounded PDF split page expansion
+
+- Split/extract page-range expansion now enforces a 100,000 selected-page upper bound **before allocating repeated page lists**, protecting against pathological expressions that otherwise could OOM Android. Real 200-page groups and Arabic-Indic digits continue to work. `PAGE_SELECTION_LIMIT` has an actionable bilingual message.
+- Four JVM tests added for standard 200-page ranges, Arabic digits, repeated huge selections and page-count clamping; exact-head CI not yet verified.
+
 ## 2026-10-28 — WP-03 bilingual OCR script disclosure
 
 - Show an English/Arabic notice inside the live PDF OCR workspace that the installed ML Kit Latin model cannot recognize Arabic pixels in scanned documents, while already-embedded Arabic PDF text remains extractable.

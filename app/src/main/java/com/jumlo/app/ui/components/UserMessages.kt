@@ -113,6 +113,7 @@ code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code.contains("MIME") || code.contains("UNSUPPORTED_FORMAT") || code.contains("UNSUPPORTED_FILE") || code=="UNSAFE_ARCHIVE_PATH" || code=="ARCHIVE_HAS_NO_FILES" -> R.string.msg_file_type
     code=="HTTPS_REQUIRED" || code.contains("CLEARTEXT") || code.contains("HTTP_CONSENT") -> R.string.msg_https
     code.contains("NETWORK") || code.contains("TIMEOUT") || code.startsWith("HTTP_") || code.contains("DOWNLOAD_RESTART") -> R.string.msg_network
+    code=="PAGE_SELECTION_LIMIT" -> R.string.msg_page_selection_limit
     code=="DUPLICATE_PAGE_ORDER" || code=="INVALID_PAGE_ORDER" -> R.string.msg_check_settings
     code=="SPLIT_BOUNDARY_REQUIRED" || code=="INVALID_SPLIT_BOUNDARY" -> R.string.msg_check_settings
     code=="INVALID_URL" || code=="INVALID_DOWNLOAD_LIST" -> R.string.msg_url

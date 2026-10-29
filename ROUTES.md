@@ -124,6 +124,10 @@ No navigation, locale, settings, or tool-entry contract changes. Worker serializ
 
 **2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
 
+## WP13 grouped page-range validation
+
+No route changes. PDF page-group entry now detects oversized expanded selections before list allocation and surfaces localized PAGE_SELECTION_LIMIT guidance instead of crashing due to repeated ranges.
+
 ## 2026-10-28 — WP-03 OCR script compatibility notice
 
 No route changes. The existing `ToolRoute("pdf_ocr")` workspace shows a persistent English/Arabic script-support notice before recognition. This is guidance, not Arabic scanned-text recognition.
