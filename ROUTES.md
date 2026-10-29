@@ -1,5 +1,7 @@
 # Navigation and route inventory
 
+> WP03 adds an accessible Interface sounds switch to the existing Settings screen without changing the navigation graph.
+
 > WP06: The existing `pdf_compress` route preserves the same page-selection and job flow. Only measured result status/warnings change; no navigation or device qualification is claimed.
 
 **2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.

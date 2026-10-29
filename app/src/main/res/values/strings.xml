@@ -385,4 +385,5 @@
     <string name="files_batch_tool_hint">Choose files and create a PDF or ZIP without re-importing.</string>
     <string name="output_saved_location">Saved in %1$s</string>
     <string name="output_saved_privately">Saved inside Jumlo only. Use Share or Export to save a copy outside the app.</string>
+    <string name="settings_ui_sounds">Interface sounds</string>
 </resources>

@@ -90,6 +90,11 @@ fun SettingsScreen(
                 Switch(checked = settings.respectReducedMotion, onCheckedChange = null)
             }
         }
+        item("sounds") {
+            PreferenceToggleRow(stringResource(R.string.settings_ui_sounds),
+                settings.soundsEnabled, viewModel::setSoundsEnabled,
+                Modifier.testTag("settings.sounds"))
+        }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)

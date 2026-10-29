@@ -105,6 +105,8 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
+- **WP03 interface audio (2026-10-28):** Keep haptics and motion already merged in PR #20; expose stored `soundsEnabled` with one bilingual, accessible switch, persistent behavior and Android device tests.
+
 ## 2026-10-28 — Privacy-aware reader position
 
 Use a separate app-private DataStore containing at most 64 document position entries keyed by an opaque SHA-256 digest of the document URI, rather than an unbounded process-static map with raw URIs. No plaintext document name, full path, URL or contents are included in saved entries. Saving last position is optional and cannot block PDF reading if storage becomes unavailable. Runtime/process-death qualification remains required.

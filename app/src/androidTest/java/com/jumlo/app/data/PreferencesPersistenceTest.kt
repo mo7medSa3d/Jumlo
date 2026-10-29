@@ -31,6 +31,7 @@ class PreferencesPersistenceTest {
             preferences.setWifiOnlyDefault(true)
             preferences.setRespectReducedMotion(true)
             preferences.setHapticIntensity(HapticIntensity.STRONG)
+            preferences.setSoundsEnabled(false)
             preferences.setMaxConcurrentDownloads(6)
             val restored = UserPreferencesRepository(context).settingsFlow.first()
             assertTrue(restored.isLoaded)
@@ -53,6 +54,7 @@ class PreferencesPersistenceTest {
             assertTrue(restored.respectReducedMotion)
             assertTrue(restored.hapticFeedbackOnCommit)
             assertEquals(HapticIntensity.STRONG, restored.hapticIntensity)
+            assertFalse(restored.soundsEnabled)
             assertEquals(2, restored.maxConcurrentDownloads)
         } finally {
             preferences.setThemeMode(original.themeMode)
@@ -66,6 +68,7 @@ class PreferencesPersistenceTest {
             preferences.setWifiOnlyDefault(original.wifiOnlyDefault)
             preferences.setRespectReducedMotion(original.respectReducedMotion)
             preferences.setHapticIntensity(original.hapticIntensity)
+            preferences.setSoundsEnabled(original.soundsEnabled)
             preferences.setMaxConcurrentDownloads(original.maxConcurrentDownloads)
         }
     }

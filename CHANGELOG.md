@@ -1,5 +1,11 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP03 interface sound settings
+
+- Add an accessible, persisted `Interface sounds` toggle to Settings, with English/Arabic strings. No duplicate changes to the haptic and reduce-motion settings already merged in PR #20.
+- Reuse `AppViewModel.setSoundsEnabled`, existing stored `soundsEnabled` and audio cue composition. New Android persistence and UI tests are source-added but **not yet device-qualified**.
+
+
 ## 2026-10-28 — WP06 PDF compression result integrity
 
 - Count only measured size reductions as `CREATED`; unchanged outputs now report `PDF_NOT_COMPRESSIBLE`, even when embedded images were skipped.

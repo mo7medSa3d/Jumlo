@@ -1,5 +1,10 @@
 # Jumlo — verification report
 
+## WP03 — Interface sounds, Android qualification pending
+
+`settings.sounds` calls existing `setSoundsEnabled`. `MainActivity` supplies `LocalAppSoundsEnabled`; `UiSoundPlayer` respects the switch and system ringer/volume settings. EN/AR switch labels and Android tests exist. First [CI #40643551859](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643551859) failed in `lintAnalyzeRelease` due to an unexpected lint internal failure while analyzing `ImageResultPreview.kt`, not an identified source diagnostic. This branch now integrates the serialized KSP and current CI policy from main; fresh CI **PENDING**. Device sound testing **NOT RUN**.
+
+
 ## 2026-10-28 — WP06 verified source correction, device qualification pending
 
 [PR #32 CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) **PASS**, exact tested head `3c2cb65c2b21`: assembleDebug, testDebugUnitTest, lintRelease, compact 55,368,267 bytes and release 55,355,939 bytes, each under 60,000,000. New `PdfCompressionResultPolicyTest` has seven cases. Classification uses actual output length; an unchanged file no longer reports partial compression merely because images were skipped. Full Android device corpus/memory tests **NOT RUN**.

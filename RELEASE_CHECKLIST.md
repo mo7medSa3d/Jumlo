@@ -38,6 +38,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
+
 - [ ] WP06: Compress already optimized input and assert unchanged status, with no false partial-savings text.
 - [ ] WP06: Compress a scan with some skipped streams; assert partial warning only alongside verified reduction and preserved pages.
 - [ ] WP06: Run all five scan benchmarks and 200-page memory test with real devices, hashes, storage limits, and outputs.
