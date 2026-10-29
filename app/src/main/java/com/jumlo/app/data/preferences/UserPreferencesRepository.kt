@@ -145,7 +145,7 @@ class UserPreferencesRepository @Inject constructor(
             soundsEnabled = prefs[Keys.UI_SOUNDS] ?: true,
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = 2, // Fixed scheduler policy; legacy preference no longer controls jobs.
-            defaultVideoQuality = (prefs[Keys.DEFAULT_VIDEO_QUALITY] ?: "1080").takeIf { it in setOf("BEST", "1080", "720", "480") } ?: "1080",
+            defaultVideoQuality = (prefs[Keys.DEFAULT_VIDEO_QUALITY] ?: "BEST").takeIf { it in setOf("BEST", "1080", "720", "480") } ?: "BEST",
             defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
             wifiOnlyDefault = false,
             fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),

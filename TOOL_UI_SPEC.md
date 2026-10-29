@@ -519,6 +519,9 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+## 2026-10-28 — WP-02 media workspace qualification
+
+`dl_media` now presents an inspected source and one primary download action by default: highest usable media selection (no implicit 1080p cap), with video/audio switch and individual format choices, bitrate and filename behind an optional Advanced expander. Settings may explicitly cap video quality and audio output remains selectable in Advanced. Direct-file mode retains original format unless Advanced overrides it. Current commit is a source candidate, **not** a completed platform/download/notification test; see `TEST_REPORT.md`.
 
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 

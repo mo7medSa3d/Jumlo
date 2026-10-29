@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_show_advanced">Advanced options · format, quality, and name</string>
+    <string name="media_hide_advanced">Hide advanced options</string>
+</resources>

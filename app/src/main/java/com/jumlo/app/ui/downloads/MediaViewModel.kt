@@ -72,7 +72,7 @@ data class MediaUiState(
     }
     private var analysis: Job?=null
     private var sessionEpoch:Long?=null
-    private var preferredVideoHeight=1080
+    private var preferredVideoHeight=0
     private var generation=0
     private var analyzedUrl: String?=null
     // Debounced URL changes must not restart a probe already requested by Paste,

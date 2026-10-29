@@ -200,6 +200,11 @@ TEST_REPORT.md.
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+## 2026-10-28 — WP-02 single-click media defaults (unverified candidate)
+
+- New downloader first-run defaults to the **best usable** media format instead of applying an invisible 1080p cap; explicit saved quality preferences remain honored.
+- Simplified media/download UI: quality, audio format/bitrate, alternative direct-file transforms and file name editing live behind one accessible **Advanced options** expander. The selected best video/audio format remains available without opening controls; original source filenames are cleaned during publication.
+- Added `MediaAutoSelectionTest` with best 2160p, explicit 1080p cap, highest available audio-only and audio-only source fixtures. No live provider/device claims are made.
 
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 

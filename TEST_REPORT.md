@@ -151,6 +151,10 @@ run here).
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
 
+## 2026-10-28 — WP-02 downloader default selection
+
+Changes are a source-level candidate only: default is `BEST` for new sessions/preferences, `MediaCatalog.preferred` without cap picks best usable format, and all manual media format/quality/audio pickers are hidden until Advanced is expanded. `MediaAutoSelectionTest` contains four JUnit tests; **NOT RUN** in the authoring environment. Real YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive links, audio-only downloads, native extraction, process restart, pause/resume, notification and network errors are **NOT VERIFIED** by this UI/selection change; do not infer completion. CI for this PR must pass before considering merge.
+
 ## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
 
 - Confirmed failed run [#40640893645](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640893645) in PR #33: simultaneous kspDebugKotlin, kspCompactKotlin and kspReleaseKotlin crashed with `KaInvalidLifetimeOwnerAccessException` and `PSI has changed since creation`.
