@@ -523,6 +523,8 @@ No interaction contract changes. KSP2 worker serialization does not establish pa
 
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
 
+> WP09 adds reproducible five-scan and 200-page test setup documentation, not additional PDF compression functionality or a device PASS.
+
 ## 2026-10-28 — WP-03 script limitation notice
 
 In `pdf_ocr`, disclose that Latin-script scanned OCR works with the installed ML Kit model but Arabic scanned image text is unsupported; embedded Arabic text in PDF is a separate extraction path. The guidance is bilingual and tagged `ocr.script-limitation`. Two Robolectric assertions are authored; current-head CI/device acceptance remains pending.

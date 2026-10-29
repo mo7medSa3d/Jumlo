@@ -172,6 +172,10 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 **CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
 
+## 2026-10-28 — WP09 device fixture preflight evidence
+
+The previously broken preflight link is restored; source instructions describe five freshly generated scan files and 200-page device testing. No input fixture hashes were supplied in repo, and no Android device runs are claimed. [PR #40 CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior head for assembleDebug, testDebugUnitTest, lintRelease, compact and release size gates. **Device tests NOT RUN**.
+
 ## 2026-10-28 — WP-03 OCR script compatibility verification
 
 Run [40641202390](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641202390) **FAILED** compiling `OcrLanguageNoticeTest.kt:5` because `assertExists` was imported as a nonexistent top-level symbol. It is a `SemanticsNodeInteraction` member; the erroneous import was deleted without removing either bilingual assertion. Current-head **NOT RUN** until GitHub CI finishes. The model remains Latin-script-only; scanned Arabic OCR, physical device and model download/installation are **NOT VERIFIED**. No service/API receives OCR data from this change.
