@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ocr_scanned_arabic_limit">This OCR model reads Latin-script scans only. Arabic text already embedded in a PDF can be extracted, but Arabic text in a scanned image cannot be recognized here. Use a supported external Arabic OCR service for those scans.</string>
+</resources>
