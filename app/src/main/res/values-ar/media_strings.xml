@@ -80,4 +80,5 @@
     <string name="downloads_live_count">%1$d نشط</string>
     <string name="downloads_completed_count">%1$d مكتمل</string>
     <string name="home_manage_downloads">عرض جميع التنزيلات</string>
+    <string name="media_selected_quality_summary">جاهز للتنزيل: %1$s</string>
 </resources>

@@ -197,9 +197,13 @@ import kotlin.math.roundToInt
             if (state.direct != null || state.asset != null) item("advanced-options") {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (state.asset != null && !showAdvanced) {
-                        Text(stringResource(R.string.media_auto_best_quality),
+                        val selected = state.choices.firstOrNull { it.key == state.selectedKey }
+                        Text(
+                            if (selected != null) stringResource(R.string.media_selected_quality_summary, MediaCatalog.qualityTitle(selected))
+                            else stringResource(R.string.media_auto_best_quality),
                             style = QuietTheme.typography.metadata,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     TextButton(
                         onClick = { haptics.actionClick(); showAdvanced = !showAdvanced },

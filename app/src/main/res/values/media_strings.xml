@@ -80,4 +80,5 @@
     <string name="downloads_live_count">%1$d active</string>
     <string name="downloads_completed_count">%1$d completed</string>
     <string name="home_manage_downloads">View all downloads</string>
+    <string name="media_selected_quality_summary">Ready to download: %1$s</string>
 </resources>
