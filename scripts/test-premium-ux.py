@@ -30,9 +30,10 @@ class PremiumUxContracts(unittest.TestCase):
         return self.tokens[name]
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
-        # Neutral surfaces preserve pure OLED black in every accent mode.
+        # Source-of-truth design tokens: porcelain-lilac light canvas and OLED black.
+        # Text contrast is separately checked against WCAG AA below.
         expected = {
-            'LightBackground': 'F6F6F8', 'LightSurface': 'FFFFFF',
+            'LightBackground': 'F7F6FF', 'LightSurface': 'FFFFFF',
             'LightOnSurface': '202024', 'LightOnSurfaceVariant': '55555E',
             'LightPrimary': '2F46C6', 'LightTertiary': '7050AB',
             'DarkBackground': '000000',
