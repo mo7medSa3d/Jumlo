@@ -12,6 +12,8 @@ class EmulatorSmokeRunnerContract(unittest.TestCase):
         fragment = workflow.split("      - name: Execute real Android UI and persistence tests", 1)[1].split("      - name: Keep reports and logcat even on failure", 1)[0]
         self.assertIn("script: bash scripts/run-emulator-smoke.sh", fragment)
         self.assertIn("Compile real Android test APKs before boot", workflow)
+        self.assertIn("Enable hardware acceleration for emulator", workflow)
+        self.assertIn("sudo chmod 0666 /dev/kvm", workflow)
         self.assertIn(":app:assembleDebugAndroidTest", workflow)
         self.assertIn("sys.boot_completed", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
         self.assertIn("pm path com.android.settings", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
