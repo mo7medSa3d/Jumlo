@@ -128,6 +128,10 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+## WP10 Tools visibility correction
+
+No typed routes were removed. `ToolsCatalogue` default grid, pinned and recent rows honor `isListed`; explicit search may locate `img_compare`. Navigation aliases remain accessible via dedicated tabs.
+
 > WP14: The current tool matrix tracks 45 registered IDs, not historical IDs; 5 navigation-only routes are N/A for processing but still require UI smoke. No navigation was pruned.
 
 **2026-10-28 WP06:** AppearanceColorPicker within Settings renders persisted accent preset names in selected EN/AR locale. No new route, no color key/schema change; device/RTL testing pending.

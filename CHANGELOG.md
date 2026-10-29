@@ -230,6 +230,10 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+## 2026-10-28 — WP10 catalogue visibility, integrated with latest CI
+
+Tools browse/pinned/recent now honor existing `ToolCatalogue.isListed`. Image Comparison remains search-only; Files/Settings navigation aliases no longer clutter the grid. Registry entries/operation handlers are preserved. Added Kotlin and Compose tests; updated-head CI pending.
+
 ## 2026-10-28 — WP14 tool qualification matrix reconciled
 
 - Correct the release test matrix from 47 stale IDs / 188 rows to **45 active IDs / 180 rows**. Archive eight historical scenarios for two unregistered legacy IDs, preserving provenance.

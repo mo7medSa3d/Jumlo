@@ -197,6 +197,10 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 [PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
 
+## 2026-10-28 — WP10 catalogue consistency
+
+- Test additions: `ToolCatalogueTest.searchRetainsSpecialistsButNeverDuplicatesNavigationTabs`, strengthened non-tautological workspace mapping, `ToolCatalogueInteractionTest.defaultGridHidesAliasesButSearchCanOpenImageComparison`. Earlier [GitHub Actions #40642887712](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642887712) PASSED compile, unit, lint and release size on SHA `b7fcaed94d0d`. The new merge-base head is **NOT VERIFIED** until its exact CI run; Compose instrumentation remains NOT RUN.
+
 ## WP14 — active 45-tool qualification matrix contract
 
 `docs/testing/tool-matrix.template.csv` now has **180 active cases: 160 processing NOT_RUN, 20 navigation N/A**, with zero false Drive unavailability claims. Two removed legacy IDs and eight N/A scenarios are retained in a separate historical CSV. `scripts/test-tool-matrix-contract.py` checks row coverage and classifies every ID against source registration and policy. **New CI pending; no Android input→output PASS inferred.**

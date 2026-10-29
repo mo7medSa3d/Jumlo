@@ -123,6 +123,9 @@ object ToolCatalogue {
      * belong inside a bigger tool, and comparisons that most people never want.
      */
     private val hidden = setOf("img_compare", "file_trash", "file_02")
+    // The specialist comparison stays accessible through search, without
+    // cluttering the default grid. Navigation aliases have their own tabs.
+    private val searchOnly = setOf("img_compare")
 
     /** True when the tool should be offered in the catalogue at all. */
     fun isListed(toolId: String): Boolean =
@@ -130,4 +133,8 @@ object ToolCatalogue {
 
     /** The capabilities that are deliberately kept out of the catalogue. */
     fun hiddenTools(): Set<String> = hidden
+
+    /** Search can find specialists, but never duplicate navigation-only aliases. */
+    fun isSearchable(toolId: String): Boolean =
+        isListed(toolId) || toolId in searchOnly
 }
