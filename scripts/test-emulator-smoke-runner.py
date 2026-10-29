@@ -14,7 +14,7 @@ class EmulatorSmokeRunnerContract(unittest.TestCase):
         self.assertIn("Compile real Android test APKs before boot", workflow)
         self.assertIn(":app:assembleDebugAndroidTest", workflow)
         self.assertIn("sys.boot_completed", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
-        self.assertIn("cmd package path com.android.settings", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
+        self.assertIn("pm path com.android.settings", (ROOT / "scripts/run-emulator-smoke.sh").read_text())
         self.assertNotIn("bash <<", fragment)
         script = ROOT / "scripts/run-emulator-smoke.sh"
         body = script.read_text()
