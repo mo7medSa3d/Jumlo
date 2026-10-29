@@ -522,6 +522,8 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+> WP14: The 45 registered tools each have four current qualification cases. The enabled Google Drive tool must be tested as processing (NOT_RUN until authorized account/device), not mislabeled unavailable. Two unregistered historic IDs remain archived outside the active matrix.
+
 **WP06 locale-aware appearance:** Accent picker shows color names in EN/AR based on app locale with persisted stable preset keys; custom hex behavior retained. Device/RTL interaction remains unverified.
 
 > WP13: The obsolete global Wi-Fi and concurrency settings cannot be saved to DataStore anymore. Per-job download Wi-Fi selection and fixed scheduler limit remain intact; no UI tool flow is disabled.

@@ -38,6 +38,8 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP14: Confirm current tool matrix covers every registered ID × four scenarios (45×4), with 160 processing NOT_RUN and 20 navigation N/A until real evidence. Run authorized Drive transfer cases; never count the archived IDs or N/A cases as PASS.
+
 - [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
 
 - [ ] WP06: Compress already optimized input and assert unchanged status, with no false partial-savings text.
