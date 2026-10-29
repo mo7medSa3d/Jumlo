@@ -223,12 +223,6 @@ fun JumloNavHost(viewModel:AppViewModel) {
     var confirmLeave by rememberSaveable { mutableStateOf(false) }
     fun goBack() { if (route == "workspace" && dirty) confirmLeave = true else leaveWorkspace() }
     var backSwipe by remember { mutableFloatStateOf(0f) }
-    PredictiveBackHandler(enabled = route !in rootRoutes || tabHistory.isNotEmpty()) { progress ->
-        try {
-            progress.collect { backSwipe = it.progress.coerceIn(0f, 1f) }
-            goBack()
-        } finally { backSwipe = 0f }
-    }
     // A lambda refreshes the captured tab; local function-reference equality ignores captures.
     val latestOpenWorkspace by rememberUpdatedState { openWorkspace() }
     DisposableEffect(hostActivity, navController) {
@@ -595,6 +589,16 @@ fun JumloNavHost(viewModel:AppViewModel) {
                 transitionOrigin=entry.toRoute<ScanRoute>().transitionOrigin) }
             composable<WorkspaceRoute>(deepLinks = listOf(navDeepLink<WorkspaceRoute>(basePath = "jumlo://workspace"))) { Shell("workspace",transitionScope=this) }
             composable<ActivityRoute> { Shell("activity",transitionScope=this) }
+        }
+        // NavHost registers its own back callback. Register the workspace-aware
+        // handler *after* NavHost in composition order so Android Back reaches
+        // the unsaved-changes guard before Navigation can pop the tool.
+        // Keep this active for both legacy button Back and predictive gestures.
+        PredictiveBackHandler(enabled = route !in rootRoutes || tabHistory.isNotEmpty()) { progress ->
+            try {
+                progress.collect { backSwipe = it.progress.coerceIn(0f, 1f) }
+                goBack()
+            } finally { backSwipe = 0f }
         }
         if (showGuide) OnboardingGuide(
             onImport = {
