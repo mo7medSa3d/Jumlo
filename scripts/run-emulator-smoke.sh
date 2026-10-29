@@ -12,7 +12,7 @@ trap 'adb logcat -d -v time > device-logcat.txt 2>/dev/null || true' EXIT
 # and validate an actual system package rather than merely checking boot flags.
 ready=0
 for attempt in $(seq 1 180); do
-  boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+  boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
   if [[ "$boot" == "1" ]] &&
      adb shell pm path com.android.settings 2>/dev/null | grep -q '^package:'; then
     ready=1
