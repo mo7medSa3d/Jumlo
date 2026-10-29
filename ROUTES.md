@@ -122,6 +122,8 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+**2026-10-28 WP06:** AppearanceColorPicker within Settings renders persisted accent preset names in selected EN/AR locale. No new route, no color key/schema change; device/RTL testing pending.
+
 **2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
 
 ## 2026-10-28 — WP-03 OCR script compatibility notice

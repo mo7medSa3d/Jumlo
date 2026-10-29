@@ -160,6 +160,10 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 [PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
 
+## 2026-10-28 WP06 localized accent labels
+
+Source now uses locale-appropriate labels for preset colors in Settings and App-color picker; custom six-digit accents remain valid. New `AccentLocalizationTest` and `AppearanceColorPickerTest` checks. Previous GitHub Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at pre-rebase SHA, but **current-head CI NOT VERIFIED** and Android screenshots NOT RUN.
+
 ## 2026-10-28 WP08 scanner bitmap lifecycle
 
 **CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.

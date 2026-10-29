@@ -31,13 +31,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
+import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.ui.theme.ColorPresets
 import com.jumlo.app.ui.theme.M3ColorFactory
 import com.jumlo.app.ui.theme.QuietTheme
@@ -48,7 +48,8 @@ import com.jumlo.app.ui.theme.QuietTheme
 fun AppearanceColorPicker(
     current: String,
     onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    language: AppLanguage = AppLanguage.ENGLISH
 ) {
     var hexDraft by remember {
         mutableStateOf(
@@ -87,6 +88,7 @@ fun AppearanceColorPicker(
                 items(ColorPresets.ALL) { preset ->
                     PresetChip(
                         preset = preset,
+                        language = language,
                         selected = preset.hex.equals(hexDraft, ignoreCase = true),
                         onClick = {
                             hexDraft = preset.hex
@@ -161,9 +163,8 @@ private fun SwatchRow(vararg pairs: Pair<Color, Color>) {
 }
 
 @Composable
-private fun PresetChip(preset: com.jumlo.app.ui.theme.ColorPreset, selected: Boolean, onClick: () -> Unit) {
-    val isArabic = LocalContext.current.resources.configuration.locale.language.startsWith("ar")
-    val displayName = if (isArabic) preset.nameAr else preset.nameEn
+private fun PresetChip(preset: com.jumlo.app.ui.theme.ColorPreset, language: AppLanguage, selected: Boolean, onClick: () -> Unit) {
+    val displayName = if (language == AppLanguage.ARABIC) preset.nameAr else preset.nameEn
     val scheme = M3ColorFactory.scheme(M3ColorFactory.hexColor(preset.hex) ?: Color.Gray, dark = false)
     Column(
         Modifier

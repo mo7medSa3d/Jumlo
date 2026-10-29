@@ -67,7 +67,7 @@ fun SettingsScreen(
             }
         }
         item("app-color") { PreferenceRow(stringResource(R.string.pref_app_color),
-            previewAccentLabel(settings.accentColor), Icons.Rounded.Palette, { panel = "app-color" },
+            previewAccentLabel(settings.accentColor, settings.language), Icons.Rounded.Palette, { panel = "app-color" },
             Modifier.testTag("settings.appColor")) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
@@ -124,7 +124,8 @@ fun SettingsScreen(
         "app-color" -> AppearanceColorPicker(
             current = settings.accentColor,
             onDismiss = { panel = null },
-            onSelect = { viewModel.setAccentColor(it); panel = null }
+            onSelect = { viewModel.setAccentColor(it); panel = null },
+            language = settings.language
         )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
@@ -170,11 +171,13 @@ fun SettingsScreen(
     ThemeMode.AMOLED -> R.string.pref_theme_amoled
 })
 
-private fun previewAccentLabel(accent: String): String {
+/** Accent display labels follow the selected in-app language, not device locale. */
+internal fun previewAccentLabel(accent: String, language: AppLanguage): String {
     val preset = ColorPresets.ALL.firstOrNull { it.key == accent }
-    if (preset != null) return preset.nameEn
+    if (preset != null) return if (language == AppLanguage.ARABIC) preset.nameAr else preset.nameEn
     if (M3ColorFactory.hexColor(accent) != null) return accent
-    return "Blue"
+    val default = ColorPresets.ALL.first { it.key == "BLUE" }
+    return if (language == AppLanguage.ARABIC) default.nameAr else default.nameEn
 }
 @Composable private fun hapticLabel(intensity: HapticIntensity): String = stringResource(when (intensity) {
     HapticIntensity.OFF -> R.string.pref_haptic_off
