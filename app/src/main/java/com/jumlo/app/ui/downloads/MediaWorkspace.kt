@@ -58,9 +58,16 @@ import kotlin.math.roundToInt
     @Suppress("UNUSED_PARAMETER") defaultWifiOnly:Boolean=false,
     defaultVideoQuality:String="BEST",
     defaultAudioQuality:Int=192,
+    onEditedUrl:(String)->Unit = {},
     viewModel:MediaViewModel=hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // Keep the parent workspace's draft URL in sync with the media-specific VM.
+    // Navigation's unsaved-changes guard observes the parent URL, not media state.
+    fun editUrl(value:String) {
+        viewModel.editUrl(value)
+        onEditedUrl(value)
+    }
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     var clipboardEmpty by remember { mutableStateOf(false) }
@@ -104,7 +111,7 @@ import kotlin.math.roundToInt
             item("input") {
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     TextField(
-                        value=state.url,onValueChange={clipboardEmpty=false;viewModel.editUrl(it)},singleLine=true,enabled=!state.submitting,
+                        value=state.url,onValueChange={clipboardEmpty=false;editUrl(it)},singleLine=true,enabled=!state.submitting,
                         isError=clipboardEmpty,
                         supportingText=if(clipboardEmpty) ({ Text(stringResource(R.string.studio_clipboard_empty)) }) else null,
                         placeholder={Text(stringResource(R.string.redesign_link_hint))},
@@ -118,7 +125,7 @@ import kotlin.math.roundToInt
                         trailingIcon={
                             Row(verticalAlignment=Alignment.CenterVertically) {
                                 if(state.url.isNotEmpty()) {
-                                    IconButton(onClick={haptics.selectionToggle();viewModel.editUrl("")}) {
+                                    IconButton(onClick={haptics.selectionToggle();editUrl("")}) {
                                         Icon(Icons.Rounded.Close,stringResource(R.string.signature_clear))
                                     }
                                 }
@@ -127,7 +134,7 @@ import kotlin.math.roundToInt
                                     clipboardEmpty=clip==null
                                     if(clip!=null) {
                                         haptics.actionClick()
-                                        viewModel.editUrl(clip)
+                                        editUrl(clip)
                                         viewModel.analyze()
                                     }
                                 }) {
@@ -162,7 +169,7 @@ import kotlin.math.roundToInt
                 }
             }
             if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
-                SuggestionChip(onClick={haptics.actionClick();viewModel.editUrl(clipboardSuggestion);viewModel.analyze()},
+                SuggestionChip(onClick={haptics.actionClick();editUrl(clipboardSuggestion);viewModel.analyze()},
                     label={Text(stringResource(R.string.redesign_paste_suggestion))},icon={Icon(Icons.Rounded.ContentPaste,null)})
             }
             if(state.analyzing) item("loading") {
