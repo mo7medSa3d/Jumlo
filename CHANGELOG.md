@@ -223,6 +223,10 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+## 2026-10-28 WP06 — localized accent preset labels
+
+- Accent picker and saved-theme labels now use bilingual EN/AR labels rather than English names while Arabic is active; persisted color keys and custom hex values unchanged. Added JVM localization assertions. Earlier Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at earlier SHA `a82d89fe`; current merged-base CI pending.
+
 ## 2026-10-28 — WP13 remove dead global network/concurrency writes
 
 - Delete obsolete DataStore Wi-Fi-only and concurrency keys/setters and their unused ViewModel wrappers. They previously wrote values that settings state deliberately ignored (fixed `false` and `2`).

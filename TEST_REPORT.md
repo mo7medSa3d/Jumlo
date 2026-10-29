@@ -192,6 +192,10 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 [PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
 
+## 2026-10-28 WP06 localized accent labels
+
+Source now uses locale-appropriate labels for preset colors in Settings and App-color picker; custom six-digit accents remain valid. New `AccentLocalizationTest` and `AppearanceColorPickerTest` checks. Previous GitHub Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at pre-rebase SHA, but **current-head CI NOT VERIFIED** and Android screenshots NOT RUN.
+
 ## WP13 — no-op global preference cleanup (2026-10-28)
 
 `UserPreferencesRepository` no longer writes `max_concurrent_downloads` or `wifi_only_default`. Settings state continues to report `maxConcurrentDownloads=2` (fixed scheduler) and `wifiOnlyDefault=false` (not globally forced). Per-job `wifiOnly` remains in the workspace model. `PreferencesPersistenceTest` no longer invokes fake setters and still asserts fixed values. Source contract `scripts/test-inert-preferences.py` is CI-gated; latest branch CI **PENDING**, device flow **NOT RUN**.

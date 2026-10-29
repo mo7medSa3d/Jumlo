@@ -126,6 +126,8 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+**2026-10-28 WP06:** AppearanceColorPicker within Settings renders persisted accent preset names in selected EN/AR locale. No new route, no color key/schema change; device/RTL testing pending.
+
 > WP13: No route or visible setting was removed; only obsolete hidden preference write methods were eliminated.
 
 ## 2026-10-28 — WP05 reader lifecycle
