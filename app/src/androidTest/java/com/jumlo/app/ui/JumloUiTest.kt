@@ -29,6 +29,16 @@ class JumloUiTest {
         }
     }
 
+    @Test fun downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome() {
+        compose.onNodeWithTag("home.manageDownloads").performScrollTo().performClick()
+        compose.onNodeWithTag("route.downloads").assertIsDisplayed()
+        compose.onNodeWithTag("nav.DOWNLOADS").assertDoesNotExist()
+        compose.onNodeWithTag("nav.HOME").assertIsSelected()
+        pressBack()
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav.HOME").assertIsSelected()
+    }
+
     @Test fun homeDownloadOpensEmptyWorkspaceAndInvalidInputDoesNotCrash() {
         compose.onNodeWithTag("home.action.download").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
@@ -125,10 +135,25 @@ class JumloUiTest {
         compose.onNodeWithTag("nav.TOOLS").performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
         mediaLink().assertTextEquals("a draft link")
+        // The edited media link must make the shared workspace dirty before
+        // Back; otherwise the confirmation may be skipped due to a state race.
+        val appVm = ViewModelProvider(compose.activity)[AppViewModel::class.java]
+        compose.waitUntil(15_000) { appVm.hasUnsavedWorkspace.value }
         // Text entry can keep the IME open across restored tabs; this Back tests navigation.
         closeSoftKeyboard()
+        compose.waitForIdle()
         // Back leaves this tool; a new Home action starts a distinct clean session.
         pressBack()
+        // A typed but unsent draft is dirty. Back must ask before discarding it;
+        // never silently drop the restored download session.
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(compose.activity.getString(R.string.ui_unsaved_title))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(compose.activity.getString(R.string.ui_discard_leave)).performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithTag("home.screen").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithTag("home.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.HOME").assertIsSelected()
         compose.onNodeWithTag("nav.TOOLS").performClick()

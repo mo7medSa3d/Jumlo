@@ -2,10 +2,10 @@
 <resources>
     <string name="app_name">Jumlo</string>
     <string name="tagline">ملفاتك. أدواتك.</string>
-    <string name="tagline_subtitle">ملفاتك. أدواتك. معالجة محلية 100% بدون سحابة.</string>
-    <string name="offline_pledge_short">معالجة محلية 100%: مزامنة سحابية منعدمة • الملفات لا تغادر جهازك إطلاقاً</string>
-    <string name="offline_badge">الوضع الآمن غير المتصل</string>
-    <string name="local_only_badge">محلي فقط</string>
+    <string name="tagline_subtitle">حرّر ملفات PDF والصور محلياً، مع عمليات نقل عبر الشبكة عند اختيارك.</string>
+    <string name="offline_pledge_short">تحرير المستندات محلياً. تستخدم الميزات المتصلة الشبكة عند اختيارها.</string>
+    <string name="offline_badge">تحرير محلي واتصال اختياري</string>
+    <string name="local_only_badge">تعديل على الجهاز</string>
 
     <!-- Navigation Dock -->
     <string name="nav_home">الرئيسية</string>
@@ -15,10 +15,10 @@
 
     <!-- Welcome Launch -->
     <string name="welcome_title">مرحباً بك في Jumlo</string>
-    <string name="welcome_badge">معالجة محلية آمنة 100% • بيئة معزولة</string>
-    <string name="welcome_card_title">معالجة محلية 100% على الجهاز</string>
-    <string name="welcome_card_body">تتم معالجة جميع الملفات محلياً داخل بيئة الهاتف المعزولة. بدون حسابات سحابية وبدون تتبع.</string>
-    <string name="welcome_sandbox_active">نظام الملفات المحلي غير المتصل نشط</string>
+    <string name="welcome_badge">تحرير محلي • تنزيلات وDrive عند الحاجة</string>
+    <string name="welcome_card_title">عدّل محلياً وشارك باختيارك</string>
+    <string name="welcome_card_body">تُعدَّل ملفات PDF والصور على جهازك. تستخدم التنزيلات ومعاينات الوسائط وخدمات الاستخراج الاختيارية وعمليات Google Drive الشبكة عند اختيارها.</string>
+    <string name="welcome_sandbox_active">التخزين الخاص بالتطبيق جاهز</string>
     <string name="welcome_pillars_header">أقسام الأدوات الرئيسية</string>
     <string name="welcome_ready">جاهز</string>
     <string name="welcome_get_started">ابدأ الآن</string>
@@ -91,7 +91,7 @@
 
     <!-- Choose Source Import -->
     <string name="import_title">استيراد الملفات</string>
-    <string name="import_subtitle">اختر ملفات الإدخال لأدوات PDF والصور. معالجة محلية 100%.</string>
+    <string name="import_subtitle">اختر ملفات PDF والصور. تبقى التعديلات على المستندات على جهازك.</string>
     <string name="import_received_share">تم الاستلام عبر مشاركة أندرويد</string>
     <string name="import_use_shared">استخدام الملفات المشاركة</string>
     <string name="import_photo_gallery">معرض الصور والوسائط</string>
@@ -170,7 +170,7 @@
     <string name="settings_about">حول Jumlo</string>
     <string name="settings_storage_summary">النسخ: %1$s · المخرجات: %2$s · المهملات: %3$s · التنزيلات: %4$s · المؤقتة: %5$s</string>
     <string name="settings_allow_notifications">السماح بإشعارات التقدم في الخلفية</string>
-    <string name="settings_privacy_summary">تجري معالجة المستندات على جهازك. قد تستخدم التنزيلات والصور المصغّرة البعيدة وخدمات الاستخراج الاختيارية وتثبيت النماذج الشبكة. النسخ الاحتياطي للتطبيق معطّل.</string>
+    <string name="settings_privacy_summary">تجري معالجة المستندات على جهازك. قد تستخدم التنزيلات والصور المصغّرة البعيدة وخدمات الاستخراج الاختيارية وعمليات Google Drive وتثبيت نماذج المسح والتعرّف الضوئي الشبكة. النسخ الاحتياطي للتطبيق معطّل.</string>
     <string name="processing_channel">معالجة الملفات</string>
     <string name="processing_title">جاري معالجة الملفات على هذا الجهاز</string>
     <string name="processing_body">افتح التطبيق لرؤية التقدم والنتائج.</string>
@@ -385,4 +385,5 @@
     <string name="files_batch_tool_hint">اختر الملفات وحوّلها إلى PDF أو ZIP بدون إعادة الاستيراد.</string>
     <string name="output_saved_location">محفوظ في %1$s</string>
     <string name="output_saved_privately">محفوظ داخل جملو فقط. استخدم مشاركة أو تصدير لحفظ نسخة خارج التطبيق.</string>
+    <string name="settings_ui_sounds">أصوات الواجهة</string>
 </resources>

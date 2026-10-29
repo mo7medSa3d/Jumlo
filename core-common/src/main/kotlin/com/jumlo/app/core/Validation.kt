@@ -14,6 +14,11 @@ object PageSelection {
         val normalized = normalize(value)
         require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
         val result = mutableListOf<List<Int>>()
+        // A 100 KB range expression can repeat "1-10000" thousands of times.
+        // Avoid allocating millions of duplicated boxed page numbers before
+        // downstream document size limits can reject the request.
+        var expandedPages = 0L
+        val maxExpandedPages = 100_000L
         normalized.split(',').forEach { part ->
             val match = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$").matchEntire(part)
             require(match != null) { "INVALID_PAGE_RANGE" }
@@ -21,7 +26,10 @@ object PageSelection {
             val endpoint = match.groupValues[2]
             val last = if (endpoint.isEmpty()) first else endpoint.toIntOrNull()
             require(first != null && last != null && first in 1..count && last >= first) { "INVALID_PAGE_RANGE" }
-            result += (first..minOf(last, count)).toList()
+            val boundedEnd = minOf(last, count)
+            expandedPages += boundedEnd.toLong() - first + 1L
+            require(expandedPages <= maxExpandedPages) { "PAGE_SELECTION_LIMIT" }
+            result += (first..boundedEnd).toList()
         }
         return result
     }
@@ -57,11 +65,22 @@ object PageSelection {
 }
 
 object SafeNames {
+    /** Prevent invisible bidirectional formatting from disguising file extensions.
+     * Arabic, Hebrew and all ordinary RTL letters are still valid filename text. */
+    private fun hasBidiFormatControl(text: String): Boolean =
+        text.codePoints().anyMatch { code ->
+            code in 0x202A..0x202E || code in 0x2066..0x2069 ||
+                code == 0x200E || code == 0x200F || code == 0x061C
+        }
+
     /** Public provider names have a byte budget, not a UTF-16 character budget.
      * Keep the original suffix and stop at complete Unicode code points. */
     fun fitUtf8(value: String, maxBytes: Int = 200): String {
         require(maxBytes in 1..200) { "INVALID_FILENAME" }
         val normalized = Normalizer.normalize(value, Normalizer.Form.NFC)
+        // Validate before truncating: a dangerous marker must not disappear
+        // beyond the byte budget and make an untrusted name look acceptable.
+        require(!hasBidiFormatControl(normalized)) { "INVALID_FILENAME" }
         val dot = normalized.lastIndexOf('.').takeIf { it > 0 && normalized.length - it <= 16 }
         val suffix = dot?.let { normalized.substring(it) }.orEmpty()
         val budget = maxBytes - suffix.toByteArray(Charsets.UTF_8).size
@@ -92,6 +111,7 @@ object SafeNames {
 
     fun basename(value: String): String {
         val name = Normalizer.normalize(value, Normalizer.Form.NFC)
+        require(!hasBidiFormatControl(name)) { "INVALID_FILENAME" }
         require(name.isNotBlank() && name != "." && name != ".." && name.toByteArray(Charsets.UTF_8).size <= 200) { "INVALID_FILENAME" }
         require(name.codePoints().noneMatch { it in 0xD800..0xDFFF }) { "INVALID_FILENAME" }
         require(name.none { it < ' ' || it == '\u007f' || it in "/\\:" }) { "INVALID_FILENAME" }

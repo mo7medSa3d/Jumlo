@@ -38,6 +38,16 @@ class SourceRegressionContracts(unittest.TestCase):
         handler = read('data/processing/DownloadOperationHandler.kt')
         self.assertIn('unexpectedHtml(result.mimeType,prefix)', handler)
 
+    def test_workspace_preview_and_local_editor_flags_are_scoped_to_tool_and_inputs(self):
+        workspace = read('ui/workspace/WorkspaceScreen.kt')
+        # Source contract: a new tool / replaced input queue must not reopen the prior PDF/image preview.
+        self.assertIn('previewId by rememberSaveable(tool, form.sourceIds)', workspace)
+        self.assertIn('selectedSourceId by rememberSaveable(tool, form.sourceIds)', workspace)
+        self.assertIn('renamePreviewOpen by rememberSaveable(tool, form.sourceIds)', workspace)
+        self.assertIn('advanced by rememberSaveable(tool)', workspace)
+        self.assertNotIn('previewId by rememberSaveable {', workspace)
+        self.assertNotIn('renamePreviewOpen by rememberSaveable {', workspace)
+
     def test_preference_changes_cannot_reuse_media_job_identity(self):
         media = read('ui/downloads/MediaViewModel.kt')
         self.assertIn('MediaSubmissionKey.key(', media)

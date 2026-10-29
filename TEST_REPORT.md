@@ -1,5 +1,15 @@
 # Jumlo — verification report
 
+## WP07 — source audit, 2026-10-28
+
+[CI #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606) **PASS** for five initial scanner unit tests and 244-file source scan: 27 candidates (20 color constants, 7 inline/dynamic text patterns), none from the basic TODO/empty-callback rules. New sixth Android-import contract is added to regular CI but **NOT RUN** on this reconciled branch until its new GitHub run completes. No device/runtime tool pass is inferred from a regex scan.
+
+
+## WP03 — Interface sounds, Android qualification pending
+
+`settings.sounds` calls existing `setSoundsEnabled`. `MainActivity` supplies `LocalAppSoundsEnabled`; `UiSoundPlayer` respects the switch and system ringer/volume settings. EN/AR switch labels and Android tests exist. First [CI #40643551859](https://github.com/mo7medSa3d/Jumlo/actions/runs/40643551859) failed in `lintAnalyzeRelease` due to an unexpected lint internal failure while analyzing `ImageResultPreview.kt`, not an identified source diagnostic. This branch now integrates the serialized KSP and current CI policy from main; fresh CI **PENDING**. Device sound testing **NOT RUN**.
+
+
 ## 2026-10-28 — WP06 verified source correction, device qualification pending
 
 [PR #32 CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) **PASS**, exact tested head `3c2cb65c2b21`: assembleDebug, testDebugUnitTest, lintRelease, compact 55,368,267 bytes and release 55,355,939 bytes, each under 60,000,000. New `PdfCompressionResultPolicyTest` has seven cases. Classification uses actual output length; an unchanged file no longer reports partial compression merely because images were skipped. Full Android device corpus/memory tests **NOT RUN**.
@@ -137,9 +147,25 @@ run here).
   user-initiated downloads are supported, and Play policy risk is documented in
   `PLAY_STORE_LISTING.md` / `PRIVACY_AND_PERMISSIONS.md`.
 
+## 2026-10-28 — WP04 downloader behavior
+
+| Test / evidence | Status | Caveat |
+|---|---|---|
+| AutoBestMediaChoiceTest.bestAutoSelectionUsesHighestAvailableAudibleVideo | NOT RUN | JVM unit test written; CI pending |
+| AutoBestMediaChoiceTest.audioOnlySourcesSelectHighestQualityAudioWithoutVideo | NOT RUN | JVM unit test written; CI pending |
+| Default BEST and Advanced state/preview | NOT RUN | Compose source wired, activity/device interaction not observed |
+| Social YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive and generic live URLs | BLOCKED: authorized URLs and device results not supplied | Existing 288-case plan remains NOT RUN |
+| Android 8–15 foreground download, pause, retry, cancellation, process death | NOT VERIFIED | Requires emulator/physical device |
+
+A green JVM test would not prove that any particular provider currently exposes a public downloadable format, or that an audio-only file played back correctly.
+
 ## 2026-10-28 — WP02a regression status
 
 - `PreferencesPersistenceTest.appearanceFolderQualityAndViewSurviveRepositoryRecreation` now includes a `#7B4DFF` DataStore round trip and invalid-accent rejection. **NOT RUN** on Android against this branch; monitor CI and instrumented job. No UI screenshot accepted for this source fix.
+
+## 2026-10-28 — WP-02 downloader default selection
+
+Changes are a source-level candidate only: default is `BEST` for new sessions/preferences, `MediaCatalog.preferred` without cap picks best usable format, and all manual media format/quality/audio pickers are hidden until Advanced is expanded. `MediaAutoSelectionTest` contains four JUnit tests; **NOT RUN** in the authoring environment. Real YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive links, audio-only downloads, native extraction, process restart, pause/resume, notification and network errors are **NOT VERIFIED** by this UI/selection change; do not infer completion. CI for this PR must pass before considering merge.
 
 ## 2026-10-28 — WP08 KSP2 worker isolation (release-gate-integrated)
 
@@ -150,6 +176,72 @@ run here).
 
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
+
+## 2026-10-28 — WP-05 design system verification boundary
+
+Source changes: shared saturated color families in `Color.kt`/`ToolPalette.kt`, expressive semantic-color root header, `app/src/test/java/com/jumlo/app/ui/theme/ThemePreviews.kt` with 4 Compose preview configurations (EN/AR × light/dark), `ToolPaletteContrastTest` checking category icon contrast >=3:1 and M3 foreground-role contrast >=4.5:1. The tests and previews exist as source only: **NOT RUN** until CI/Android Studio renders them. Manual targeted color arithmetic found no obvious low-contrast light/dark category tokens against the tested 20% blend but this does not certify WCAG AA for every screen/control. Real screenshots, 200%-font accessibility, TalkBack and real device RTL layouts **NOT VERIFIED**.
+
+
+### WP-05 first CI failure and follow-up
+
+First PR #34 CI attempt [40640945349](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640945349) **FAILED** at KSP debug, compact and release Kotlin symbol-processing tasks with `KaInvalidLifetimeOwnerAccessException` (`PSI has changed since creation`). No Kotlin source-compilation or unit-test PASS may be inferred from that attempt. The design-only Compose preview source was moved from `src/main` to `src/debug` so it no longer enters release/compact runtime sources; this is a candidate isolation, not a proven root-cause fix. Re-run new CI and preserve any continuing failures.
+
+
+### WP-05 second CI failure
+
+Current-head CI [40641343597](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641343597) again **FAILED** at KSP with `KaInvalidLifetimeOwnerAccessException`, despite moving design previews out of the common runtime source set to `src/debug`. That attempt did not complete compilation/tests. The preview-only composables have now been placed in `src/test` so they remain Kotlin-typechecked in unit-test compilation while no longer contributing to KSP processing of any production build variant. This is a further isolation attempt, **not yet proven**; no rule/test or required binary component was disabled.
+
+
+### WP-05 contrast failure diagnosis and fix (2026-10-28)
+CI run [40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377) reached JUnit execution: **522 tests, 1 failed, 6 skipped**. The failure was `ToolPaletteContrastTest.accentForegroundsMeetAaForLightDarkAndAmoled` at line 31; the earlier KSP failures were no longer the terminal cause in this run. Root source issues: `M3ColorFactory.toLinear` approximated WCAG luminance with a cube instead of exponent 2.4, and `ensureContrast` stopped after 24 × 15% interpolation even if the resulting ratio remained below 4.5:1. Changed luminance to WCAG 2.4 and foreground adjustment to bounded binary search with a guaranteed high-contrast endpoint fallback. Expanded assertions to report seed/role/theme/ratio and stress gray thresholds. **New commit NOT RUN until new CI completes**; do not claim resolution from source review alone.
+## 2026-10-28 — WP09 emulator smoke failure and fix
+
+Observed on [Actions #40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016): API 26 and API 36 emulator instances booted successfully, then their runner exited with `/usr/bin/sh: 1: set: Illegal option -o pipefail` (exit 2). No app instrumentation tests ran in these failed jobs. This is a script interpreter mismatch, **not an Android test assertion failure**.
+
+The workflow now invokes a dedicated Bash script with one shell command, retains strict `pipefail` for Gradle/`tee`, all API 26/35/36 matrices and artifacts, and runs a host source contract before emulator startup. **GREEN NOT RUN** for this patch at report edit. Real device results and native print/camera behavior still require execution.
+
+
+
+## 2026-10-28 — WP09 Android 8/15 emulator smoke qualification
+
+- Workflow: `.github/workflows/android-smoke.yml`, on PR/main and manual requests. Matrix: API 26, API 35 and API 36 x86_64; selected classes: `JumloUiTest`, `WorkspaceRecoveryInteractionTest`, `ToolCatalogueInteractionTest`, `ScreenConfigSemanticsTest`, `PdfViewerInteractionTest`, `StudioGestureInteractionTest`, `PreferencesPersistenceTest`. Uploads `android-smoke.log`, captured logcat, connected instrumentation reports.
+- **NOT RUN / CI PENDING** on this work package. A workflow declaration is not test execution, and software emulator success is not physical-device proof. Record the exact two job URLs and pass/fail/skip counts when they complete.
+- The smoke lane intentionally does not assert full tool end-to-end operation, 5-scan compression fixtures, CameraX capture hardware, DRM/provider availability, 200-page performance, Play signing, or the full `connectedDebugAndroidTest` suite. Those remain separate BLOCKED/NOT VERIFIED release gates, not passes.
+
+### Expanded device-backed file-output acceptance cases
+
+- Added seven existing instrumentation classes to API 26/35/36 matrix: `PdfHandlerReliabilityTest` (real PDF/signature/annotation/split/image output), `PdfOfficeHandlerTest` (DOCX/PPTX archive contents and selected-page output), `ImageProcessingReliabilityTest` (real pixels and encoding), `ArchiveHandlerTest` (ZIP encryption/recovery), `SourceAndPublicationTest` (real file snapshots/publication), `PdfReaderAndScanStoreTest` (reader/scanner output, with one API29+ test expected to skip on API26), and `JumloPrintAdapterTest` (page range/print output). Fixtures are generated within these tests, not replaced by mocks of resulting files.
+- **NOT RUN at the latest source SHA until its new GitHub Actions matrix completes**. These are backend/device fidelity tests alongside Compose UI checks, not proof of every UI pick→run→result path; external extractor and five benchmark compression fixtures remain excluded from smoke and NOT VERIFIED.
+
+### Follow-up: reproducible `/bin/sh` failure after heredoc
+
+[Run 40642100016](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642100016) shows all three API jobs failed with `set: Illegal option -o pipefail`. In API 36, the emulator reported boot completed before the runner used `/usr/bin/sh -c set -euo pipefail`. Wrapping the script in a multiline heredoc was insufficient. A new dedicated `scripts/run-emulator-smoke.sh` invoked as a **single** action command is committed; full instrumentation is **NOT RUN** for this patch until CI evidence is collected.
+
+### WP09 generated 200-page PDF reader stress (new, not yet executed)
+
+- Added Android instrumentation `PdfReaderAndScanStoreTest.twoHundredPageReaderSupportsRandomAccessWithoutRetainingEveryBitmap`: produces a real 200-page vector PDF fixture, opens with platform PdfRenderer, samples random pages including page 200, tests pixels, evictions, externally retained first bitmap and source preservation. This is **NOT RUN** pending matching emulator CI and does not prove 200-page *scanned-image compression*, frame-time smoothness or physical-device OOM safety.
+
+## 2026-10-28 — WP05 PDF reader position
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| ReaderPositionStoreTest.lastPageSurvivesSeparateReadsAndIsIsolatedPerDocument | NOT RUN | Instrumentation test commits to DataStore read/write and second URI isolation |
+| ReaderPositionStoreTest.opaqueKeyNeverIncludesOriginalUriText | NOT RUN | Keys are SHA-256 of the source URI, not raw paths/URLs |
+| Reopen PDF after process death | NOT RUN | PdfViewerScreen reads persisted saved page before enabling writes |
+| 200-page memory / scroll | NOT RUN | Existing bounded PdfReaderSession retained; physical runtime/performance still unqualified |
+
+Last-page writes are coalesced; very rapid exit before an asynchronous write is committed remains a risk until measured on device. Reader position data is app-private, capped, and not synced.
+
+### WP05 first CI run failure and non-skipping repair
+
+- [run 40640410599](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640410599): **FAILED** `:app:testDebugUnitTest` with 520 completed tests, **7 failed** and 2 skipped. The seven failures were unmodified `ToolScreenshotMatrixTest` (4 modes) and `AppearanceColorPickerTest` (3 methods), each `java.lang.AssertionError at MavenArtifactFetcher.java:129`, caused by `java.io.IOException at HttpURLConnection.java:2059` while downloading Robolectric runtime Maven artifacts. This is a real CI failure, not a bookmark test failure.
+- A follow-up `app/build.gradle.kts` change sets `robolectric.dependency.repo.url=https://repo.maven.apache.org/maven2` for all unit test tasks, preserving every test and rule. **Mitigation NOT VERIFIED** until new CI completes; if it still fails, inspect runtime artifact coordinates/HTTP status and continue debugging.
+
+## 2026-10-28 — WP07 print reorder recovery (integrated)
+
+- Source bug: incomplete/duplicate page order could render original pages but update the saved invalid order during moves/rotations, targeting the wrong physical page. `PrintPageSelection.normalizedOrder` now guards those transitions. `PrintViewModelTest` and `PrintPageSelectionTest` cover selected source pages, stale moves, drags and rotation.
+- Previous [run #40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) on older HEAD failed in `:app:minifyReleaseWithR8` with `Java heap space` and an R8 CancellationException. This is a build memory failure, not a confirmed print-function regression. New head includes merged #36 serialized workers; **CI pending** for build/unit/lint and both APK sizes.
+- Physical printer page range/copies/orientation and exact printed output: NOT VERIFIED.
 
 ## 2026-10-28 — WP12 CI duplication mitigation
 
@@ -165,6 +257,26 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 [PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
 
+## 2026-10-28 WP04 four-tab navigation, updated-base CI pending
+
+Four primary tabs, a retained Downloads detail and Home history, localized EN/AR strings, JVM and Android route tests. Four maintained Python source UI suites are now in required CI ahead of latest KSP/size/lint gates. Prior branch Actions [#40640571141](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640571141) passed only at older SHA; **current merged-head CI pending**. Android instrumentation, Arabic RTL/large-font screenshots and real Back/draft interactions NOT VERIFIED.
+
+## 2026-10-28 — WP10 catalogue consistency
+
+- Test additions: `ToolCatalogueTest.searchRetainsSpecialistsButNeverDuplicatesNavigationTabs`, strengthened non-tautological workspace mapping, `ToolCatalogueInteractionTest.defaultGridHidesAliasesButSearchCanOpenImageComparison`. Earlier [GitHub Actions #40642887712](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642887712) PASSED compile, unit, lint and release size on SHA `b7fcaed94d0d`. The new merge-base head is **NOT VERIFIED** until its exact CI run; Compose instrumentation remains NOT RUN.
+
+## WP14 — active 45-tool qualification matrix contract
+
+`docs/testing/tool-matrix.template.csv` now has **180 active cases: 160 processing NOT_RUN, 20 navigation N/A**, with zero false Drive unavailability claims. Two removed legacy IDs and eight N/A scenarios are retained in a separate historical CSV. `scripts/test-tool-matrix-contract.py` checks row coverage and classifies every ID against source registration and policy. **New CI pending; no Android input→output PASS inferred.**
+
+## 2026-10-28 WP06 localized accent labels
+
+Source now uses locale-appropriate labels for preset colors in Settings and App-color picker; custom six-digit accents remain valid. New `AccentLocalizationTest` and `AppearanceColorPickerTest` checks. Previous GitHub Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at pre-rebase SHA, but **current-head CI NOT VERIFIED** and Android screenshots NOT RUN.
+
+## WP13 — no-op global preference cleanup (2026-10-28)
+
+`UserPreferencesRepository` no longer writes `max_concurrent_downloads` or `wifi_only_default`. Settings state continues to report `maxConcurrentDownloads=2` (fixed scheduler) and `wifiOnlyDefault=false` (not globally forced). Per-job `wifiOnly` remains in the workspace model. `PreferencesPersistenceTest` no longer invokes fake setters and still asserts fixed values. Source contract `scripts/test-inert-preferences.py` is CI-gated; latest branch CI **PENDING**, device flow **NOT RUN**.
+
 - WP04 safety follow-up: add `compressedRepresentationsNeverResumeUsingDecodedByteOffsets` to StreamTransferMidstreamRetryTest; require exact updated branch CI and Android network/restart tests. No runtime success claimed yet.
 ## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
 
@@ -173,9 +285,34 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 **Required CI:** `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease` and full APK size gates, plus Android 8–15 network interruption tests; no device or live-provider PASS claimed.
 
+## 2026-10-28 — WP-04 input-isolated workspace UI state
+
+`WorkspaceScreen.kt` now keys `previewId`, `selectedSourceId` and `renamePreviewOpen` to `tool + form.sourceIds`, and `advanced` to `tool`. This prevents one tool/input queue from reusing another tool's saved modal/selection state in Compose. `scripts/test-phase1-to-4-regressions.py::test_workspace_preview_and_local_editor_flags_are_scoped_to_tool_and_inputs` was added; **NOT RUN in authoring session** and is only a source contract, not an actual Compose/back-stack test. Real navigation, process death and multi-file change acceptance remain **NOT VERIFIED**.
+
+## 2026-10-28 — WP12 Unicode filename security
+
+- Source review: `core-common/Validation.kt` now rejects bidi format controls in both `SafeNames.basename` and `SafeNames.fitUtf8` *before* truncation, protecting rename and archive entry paths. Ordinary RTL script letters, emoji and U+200C (joining orthography) remain valid.
+- New JVM methods: `SafeNamesBidiControlTest.unsafeDirectionalFormattingIsRejected`, `.aSpoofMarkerBeyondTheTruncationLimitIsNotSilentlyAccepted`, `.nestedArchiveEntriesCannotIntroduceBidiControlNames`, `.legitimateRtlArabicHebrewAndEmojiNamesRemainValid`. **NOT RUN until GitHub CI on exact PR head**; no production claim before verified build/test/lint and size gates.
+
+- Files rename dialog now shows a bilingual actionable supporting message when the name is invalid; confirmation stays disabled. Android Compose/device appearance remains **NOT VERIFIED** until its CI/device tests run.
+
 ## 2026-10-28 WP08 scanner bitmap lifecycle
 
 **CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
+
+## WP05 privacy source and test evidence
+
+`PrivacyDisclosureTest` checks that English and Arabic welcome/settings strings disclose Drive and avoid universal offline claims. Original [CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) **PASS** for assembleDebug, unit tests, lintRelease and compact APK size (55,368,479/60,000,000 bytes). Latest integration with main and full release-size check **PENDING**. Real Google Drive account round-trip, production privacy URL and Play Data Safety confirmation **BLOCKED / NOT RUN**.
+
+## 2026-10-28 — WP09 device fixture preflight evidence
+
+The previously broken preflight link is restored; source instructions describe five freshly generated scan files and 200-page device testing. No input fixture hashes were supplied in repo, and no Android device runs are claimed. [PR #40 CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior head for assembleDebug, testDebugUnitTest, lintRelease, compact and release size gates. **Device tests NOT RUN**.
+
+## 2026-10-28 — WP13 page-range memory safety
+
+- Source defect: `PageSelection.groups(value,count)` converted every repeated range directly to a list, permitting tens of millions of duplicated boxed page numbers from a short selection string. Fix counts selected positions before allocation and reports `PAGE_SELECTION_LIMIT` above 100,000; no tool handler disabled.
+- New `PageRangeAllocationBudgetTest`: four pure-JVM methods for 200-page splits, Arabic-Indic digits/comma, duplicate pathological expansion, and clamped last page. Resources `msg_page_selection_limit` EN/AR + `userMessageResource` mapping keep actionable errors. **NOT RUN** on the exact head until GitHub Actions validates `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease :app:verifyCompactApkSize :app:verifyReleaseApkSize`.
+- 200-page physical PDF performance, five scanned compression fixtures and entire tool flows: still NOT VERIFIED.
 
 ## 2026-10-28 — WP-03 OCR script compatibility verification
 

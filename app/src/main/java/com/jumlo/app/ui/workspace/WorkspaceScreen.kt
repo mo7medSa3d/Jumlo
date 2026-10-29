@@ -89,9 +89,9 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     val driveImport=tool=="file_drive" && !form.flag1
     val viewer=tool=="pdf_01"
     val hasAdvanced=!viewer
-    var previewId by rememberSaveable {mutableStateOf<String?>(null)}
-    var advanced by rememberSaveable {mutableStateOf(false)}
-    var renamePreviewOpen by rememberSaveable {mutableStateOf(false)}
+    var previewId by rememberSaveable(tool, form.sourceIds) {mutableStateOf<String?>(null)}
+    var advanced by rememberSaveable(tool) {mutableStateOf(false)}
+    var renamePreviewOpen by rememberSaveable(tool, form.sourceIds) {mutableStateOf(false)}
 
     // Populate smart defaults on tool entry so no manual typing is required on the main workspace.
     val defaultWatermark = stringResource(R.string.watermark_preset_confidential)
@@ -115,7 +115,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         ViewerWorkspace(vm,queue,onImport)
         return
     }
-    var selectedSourceId by rememberSaveable(tool) { mutableStateOf<String?>(null) }
+    var selectedSourceId by rememberSaveable(tool, form.sourceIds) { mutableStateOf<String?>(null) }
     val preview=queue.firstOrNull {it.id==selectedSourceId && (it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf")}
         ?: queue.firstOrNull {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
     var formFieldsReady by remember(tool,form.sourceIds) {mutableStateOf(tool!="pdf_forms")}

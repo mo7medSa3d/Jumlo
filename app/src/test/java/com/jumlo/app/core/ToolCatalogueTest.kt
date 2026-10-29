@@ -59,14 +59,19 @@ class ToolCatalogueTest {
     }
 
     @Test fun theWorkspaceOfAToolIsTheOneThatContainsIt() {
-        ToolCatalogue.primaryTools().forEach { id ->
-            assertEquals(id, ToolCatalogue.workspaceOf(id)?.let { it }?.let { _ -> ToolCatalogue.workspaceOf(id) },
-                ToolCatalogue.workspaceOf(id))
-            assertTrue("$id must be a primary tool", ToolCatalogue.isPrimary(id))
+        // Previously this test compared workspaceOf(id) to itself, so it could
+        // never catch a misrouted tool. Assert against the declared entry instead.
+        ToolCatalogue.all().forEach { entry ->
+            entry.primary.forEach { id ->
+                assertEquals("$id has the wrong workspace", entry.workspace, ToolCatalogue.workspaceOf(id))
+                assertTrue("$id must be a primary tool", ToolCatalogue.isPrimary(id))
+            }
+            entry.merged.forEach { id ->
+                assertEquals("$id has the wrong merged workspace", entry.workspace, ToolCatalogue.workspaceOf(id))
+                assertTrue("$id must not be a primary tool", !ToolCatalogue.isPrimary(id))
+            }
         }
-        ToolCatalogue.mergedTools().forEach { id ->
-            assertTrue("$id must not be a primary tool", !ToolCatalogue.isPrimary(id))
-        }
+        assertEquals(null, ToolCatalogue.workspaceOf("missing_tool"))
     }
 
     @Test fun theSpecialistsAreKeptOutOfTheCatalogue() {
@@ -74,6 +79,20 @@ class ToolCatalogueTest {
         // search, but it does not take a tile.
         assertTrue("the image comparison must not take a tile", !ToolCatalogue.isListed("img_compare"))
         assertTrue("the image comparison must not be a primary", !ToolCatalogue.isPrimary("img_compare"))
+    }
+
+    @Test fun searchRetainsSpecialistsButNeverDuplicatesNavigationTabs() {
+        assertTrue("image comparison remains available from search", ToolCatalogue.isSearchable("img_compare"))
+        assertTrue("image comparison must not occupy a default tile", !ToolCatalogue.isListed("img_compare"))
+        for (alias in listOf("file_02", "file_trash", "dl_settings")) {
+            assertTrue("$alias is still a registered navigation capability", alias in registryIds)
+            assertTrue("$alias must not duplicate Files or Settings", !ToolCatalogue.isListed(alias))
+            assertTrue("$alias should not appear in tool search", !ToolCatalogue.isSearchable(alias))
+        }
+        for (id in listOf("pdf_03", "pdf_ocr", "scan_doc", "dl_media", "img_04", "file_drive", "sha256")) {
+            assertTrue("$id must remain reachable from the Tools grid", ToolCatalogue.isListed(id))
+            assertTrue("$id must remain searchable", ToolCatalogue.isSearchable(id))
+        }
     }
 
     @Test fun theScannerIsItsOwnWorkspace() {

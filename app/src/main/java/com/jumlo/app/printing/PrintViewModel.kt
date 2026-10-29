@@ -244,13 +244,15 @@ data class PrintUiState(
         edit(current.options.copy(range=range))
     }
 
-    /** Move the page at [from] to [to] in the visible order. */
+    /**
+     * Move one visible page. Delegate to the same reorder path as drag gestures
+     * so the selected *source pages* remain selected when their positions change.
+     */
     fun movePage(from:Int,to:Int) {
-        val current=_state.value
-        val size=current.orderedPages.size
-        val next=PrintPageSelection.move(current.options.pageOrder,size,from,to)
-        if(next==current.options.pageOrder) return
-        edit(current.options.copy(pageOrder=next))
+        val size=_state.value.orderedPages.size
+        if(from !in 0 until size || to !in 0 until size || from==to) return
+        val permutation=(0 until size).toMutableList().apply { add(to,removeAt(from)) }
+        applyPageOrder(permutation)
     }
 
     /**
@@ -261,9 +263,9 @@ data class PrintUiState(
         val current=_state.value
         val size=current.orderedPages.size
         if(size==0 || permutation.size!=size || permutation.toSet()!=(0 until size).toSet()) return
-        val base=current.options.pageOrder.ifEmpty { (1..size).toList() }
+        val base=PrintPageSelection.normalizedOrder(current.options.pageOrder,size)
         val nextBase=permutation.map { base[it] }
-        if(nextBase==base && current.options.pageOrder.isNotEmpty()) return
+        if(nextBase==current.options.pageOrder || (current.options.pageOrder.isEmpty() && nextBase==base)) return
         val selected=PrintPageSelection.positions(current.options.range,size).toSet()
         val newSelected=permutation.mapIndexedNotNull { index, old -> if(old in selected) index else null }
         edit(current.options.copy(pageOrder=nextBase,range=PrintPageSelection.rangeText(newSelected,size)))
@@ -273,7 +275,7 @@ data class PrintUiState(
     fun rotatePage(position:Int) {
         val current=_state.value
         val page=current.orderedPages.getOrNull(position) ?: return
-        val order=current.options.pageOrder.ifEmpty { (1..current.orderedPages.size).toList() }
+        val order=PrintPageSelection.normalizedOrder(current.options.pageOrder,current.orderedPages.size)
         val basePosition=order.getOrNull(position) ?: return
         val next=(page.rotationDegrees+90)%360
         edit(current.options.copy(pageRotations=current.options.pageRotations+(basePosition to next)))

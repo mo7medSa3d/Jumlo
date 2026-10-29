@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify exactly four bottom tabs and Home Downloads history in English/Arabic RTL, 200% font, Back, draft preservation and real Android devices. Host Python tests in CI are not device acceptance.
+
+
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
@@ -38,6 +41,10 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP14: Confirm current tool matrix covers every registered ID × four scenarios (45×4), with 160 processing NOT_RUN and 20 navigation N/A until real evidence. Run authorized Drive transfer cases; never count the archived IDs or N/A cases as PASS.
+
+- [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
+
 - [ ] WP06: Compress already optimized input and assert unchanged status, with no false partial-savings text.
 - [ ] WP06: Compress a scan with some skipped streams; assert partial warning only alongside verified reduction and preserved pages.
 - [ ] WP06: Run all five scan benchmarks and 200-page memory test with real devices, hashes, storage limits, and outputs.
@@ -67,6 +74,34 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
 
+## 2026-10-28 — Downloader automatic-selection acceptance
+
+- [ ] Verify source platform and file-type auto-detection on authorized links; correct output extension, selected format, playable audio/video and clean filename.
+- [ ] Verify newly installed BEST default, Advanced expand/collapse, custom limits preserved, and audio-only mode for both mixed and audio-only sources.
+- [ ] Run live/provider failure matrix and Android 8–15 foreground notification/resume/kill tests; record download file SHA-256 and playback.
+
+## WP09 emulator checks (must be evidenced, not inferred)
+
+- [ ] Record successful `Android UI and persistence smoke` workflow on API 26, API 35 and API 36 at the final release candidate SHA; preserve logcat and actual XML results.
+- [ ] Execute the **complete** device test suite with hash-verified five compression fixtures and large-PDF memory checks; smoke is not full qualification.
+- [ ] Validate camera/scanner, print providers, TalkBack and all tool flows on qualifying physical hardware; GitHub software emulator results cannot substitute.
+
+- [ ] Inspect matching API26/API35/API36 XML results for PDF, Office, image, ZIP, scanner, file publication and print-adapter tests. Preserve failures/skips, especially the SDK29+ reader-provider method on API26. Do not mistake this lane for the five compression scan benchmark fixtures or physical hardware acceptance.
+
+- [ ] The API 26, 35 and 36 smoke jobs must run `:app:connectedDebugAndroidTest` to completion using the dedicated Bash file; logcat, XML reports and failure logs remain required artifacts. A successful emulator boot alone is not a PASS.
+
+- [ ] On API26/35/36, record runtime/heap results for `twoHundredPageReaderSupportsRandomAccessWithoutRetainingEveryBitmap` and then independently profile 200-page raster scans on physical device. A generated vector PDF is not a scan fixture.
+
+## 2026-10-28 — Reader position acceptance
+
+- [ ] Verify last page persists after returning from Files, app relaunch and process death; test restored page bounds when the PDF is replaced by a shorter document.
+- [ ] Verify bookmark write/read errors do not crash or prevent PDF opening, with no raw URI in app-private preference file.
+- [ ] Measure 200-page reader scrolling and memory on a mid-range physical Android device.
+
+## WP07 print selection release gate
+
+- [ ] Test stale/duplicate saved page order with page rotation, moving and selection preservation on a real Android emulator/device. Inspect final printed PDF, preview, orientation and copies; JVM tests do not qualify the OS print dialog.
+
 ## 2026-10-28 — CI trigger deduplication
 
 - [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
@@ -76,7 +111,13 @@ No publishing, external messaging, service deployment or signing-key creation fo
 
 PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
 
+- [ ] WP13: Confirm no Settings option suggests global Wi-Fi-only or concurrency customization; verify per-job Wi-Fi flag still reaches a real download job and fixed 2-task scheduler remains enforced.
+
 - [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
+
+- [ ] WP05: Review all EN/AR welcome, privacy, Drive transfer and download disclosures at 200% text and RTL; validate authorized Drive round-trip, token hygiene and publication of current operator privacy URL/Play Data Safety.
+
+- [ ] Before the unfiltered connected run, follow [fixture/storage preflight](verification/current/device/preflight-source/README.md): generate and hash all five scans, stage the verified inputs, and record guest/host disk budget for 200-page testing. Any missing input remains BLOCKED.
 
 
 ### Pure Kotlin module gates (PR #41)

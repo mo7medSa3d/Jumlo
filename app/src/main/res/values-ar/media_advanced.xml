@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_show_advanced">خيارات متقدمة · الصيغة والجودة والاسم</string>
+    <string name="media_hide_advanced">إخفاء الخيارات المتقدمة</string>
+</resources>

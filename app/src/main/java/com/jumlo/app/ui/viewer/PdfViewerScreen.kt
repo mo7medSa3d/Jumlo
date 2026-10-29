@@ -57,6 +57,7 @@ import com.jumlo.app.R
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.pdf.PdfPageText
 import com.jumlo.app.data.pdf.PdfReaderSession
+import com.jumlo.app.data.pdf.ReaderPositionStore
 import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
@@ -68,11 +69,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 import java.io.File
-
-/** In-memory last-read page per document URI; survives leaving and reopening the reader. */
-private val readerLastPage = mutableMapOf<String, Int>()
 
 /**
  * Immersive, content-first reading surface.
@@ -107,6 +106,7 @@ private fun PdfViewerContent(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val list = rememberLazyListState()
+    var restoredPage by remember(uri) { mutableStateOf(false) }
     var session by remember { mutableStateOf<PdfReaderSession?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
@@ -156,10 +156,7 @@ private fun PdfViewerContent(
     }
 
     LaunchedEffect(uri) { wake() }
-    LaunchedEffect(list.firstVisibleItemIndex) {
-        session?.let { readerLastPage[uri] = list.firstVisibleItemIndex }
-        wake()
-    }
+    LaunchedEffect(list.firstVisibleItemIndex) { wake() }
 
     LaunchedEffect(infoOpen, uri) {
         if (infoOpen && info.isEmpty() && !infoError) {
@@ -180,10 +177,19 @@ private fun PdfViewerContent(
     }
 
     val document = session
-    LaunchedEffect(document) {
+    LaunchedEffect(uri, document) {
+        restoredPage = false
         document?.let { doc ->
-            val saved = readerLastPage[uri]
+            val saved = withContext(Dispatchers.IO) { ReaderPositionStore.read(context, uri) }
             if (saved != null && saved in 0 until doc.pageCount) list.scrollToItem(saved)
+            restoredPage = true
+        }
+    }
+    // Never write an initial page-0 position before the saved bookmark was restored.
+    LaunchedEffect(uri, restoredPage) {
+        if (restoredPage) snapshotFlow { list.firstVisibleItemIndex }.collectLatest { page ->
+            delay(350)
+            withContext(Dispatchers.IO) { ReaderPositionStore.save(context, uri, page) }
         }
     }
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {

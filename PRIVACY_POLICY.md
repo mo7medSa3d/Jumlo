@@ -47,3 +47,11 @@ Contact **[privacy contact]** for requests concerning information held by the op
 ## Children and changes
 
 **[Owner: specify the intended audience and any required children's-privacy terms after completing the Play target-audience review.]** Do not publish an unsupported age/audience claim. Material policy changes will be described at **[public policy URL]**, with an updated effective date and any notice required for the release.
+
+## Explicit Google Drive import/export
+
+Jumlo includes an enabled, user-initiated Google Drive v3 transfer tool. When you select a Drive import, Google receives a request for that file and your provided access token; an import copies the selected file to the device. When you select Drive export, Google receives the contents and metadata of the selected files and the provided access token. The token is held through an ephemeral secret handle for the transfer, and the app removes it from the transfer secret store after the operation. Google controls its own retention, access and privacy practices for cloud copies. The presence of this feature is **not** a claim that its account/device integrations have passed final acceptance.
+
+## PDF reading position (2026-10-28 source revision)
+
+Jumlo may remember the last page you viewed in a PDF on this device. It stores a limited number of page positions under hashed document identifiers in app-private storage; it does not upload that reading history. This source text is not a claim that an external policy URL has been published or that Play Console Data safety review is complete.

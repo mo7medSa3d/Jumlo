@@ -77,3 +77,15 @@ Primary policy references, checked on the review date:
 - [ML Kit document scanner](https://developers.google.com/ml-kit/vision/doc-scanner/android)
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
+
+Review date: 28 October 2026. Updated to match the current enabled `file_drive` registry and Drive v3 client instead of the older blocked-Drive description. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
+| Explicit export/share or Drive handoff | Files selected for export/share are transmitted to the chosen provider/application. The registered `file_drive` path is enabled and uses Google Drive v3 with user-supplied, ephemeral access credentials; uploading selected files sends their contents and metadata to Google. This capability remains NOT DEVICE/ACCOUNT QUALIFIED and must not be called verified. |
+| Unqualified/external integrations | Drive import/export is present and enabled (token-gated), while Webpage→PDF and the vault expansion were removed as unimplemented routes in the current registry. | Device/account/authorization and Play policy qualification is still required; enabling source code does not establish provider acceptance. |
+
+## 2026-10-28 — Reader bookmarks
+
+The PDF viewer locally persists a bounded history of at most 64 last-read page indices. Each entry uses a SHA-256 hash of a document URI as its key; the URI itself, file name and contents are not written to this bookmark DataStore. No new Android permissions or network transmission are introduced by reader bookmarking. The history remains in app-private storage and is deleted with the app data.
+
+## WP12 secure output names — 2026-10-28
+
+An imported filename may include invisible Unicode formatting characters that visually reverse its apparent extension. Jumlo now rejects bidi overrides/isolates in stored or extracted entry names while preserving ordinary Arabic/Hebrew Unicode filenames; no new permission is requested. Security regression tests are queued; this does not replace malware scanning or provider validation.

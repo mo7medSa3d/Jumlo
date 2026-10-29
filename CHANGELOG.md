@@ -1,5 +1,18 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP07 reproducible static audit
+
+- Source scanner `scripts/audit_source.py` reports file:line candidates across app and four pure core modules. Six regression tests cover markers, empty callbacks, UI literals, report determinism and Android-import boundaries.
+- [Initial audit run #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606): 244 files scanned, 27 candidates (20 hardcoded colors, 7 dynamic/inline text patterns; none matched basic TODO or empty-callback patterns). Candidate matches are not validated defects.
+- Test and scan invocation are now included in regular Android CI before Gradle; independent source inventory workflow still uploads report artifacts.
+
+
+## 2026-10-28 — WP03 interface sound settings
+
+- Add an accessible, persisted `Interface sounds` toggle to Settings, with English/Arabic strings. No duplicate changes to the haptic and reduce-motion settings already merged in PR #20.
+- Reuse `AppViewModel.setSoundsEnabled`, existing stored `soundsEnabled` and audio cue composition. New Android persistence and UI tests are source-added but **not yet device-qualified**.
+
+
 ## 2026-10-28 — WP06 PDF compression result integrity
 
 - Count only measured size reductions as `CREATED`; unchanged outputs now report `PDF_NOT_COMPRESSIBLE`, even when embedded images were skipped.
@@ -183,14 +196,67 @@ before publication. Exact remaining failures and NOT VERIFIED items belong in
 TEST_REPORT.md.
 
 
+## 2026-10-28 — WP04 downloader automatic defaults (pending CI)
+
+- Default new downloads to the best usable actual source format, preserving existing explicitly saved resolution limits. Set default video quality BEST in settings/MediaViewModel/workspace.
+- The downloader now shows the metadata/preview and one Download action without exposing media-type, quality-grid, PDF/image transforms or filename controls by default. Those controls remain accessible through an Advanced expander; no capability or extraction runtime was removed.
+- Added localized EN/AR copy for Advanced and auto-selection. Added AutoBestMediaChoiceTest covering highest audible video, constrained resolution and audio-only sources.
+- Tests have not run for this branch. Live provider and device media/notification acceptance remain blocked/not verified.
+
 ## 2026-10-28 — WP02a custom accent persistence
 
 - Repair settings repository validation so named accents and validated six-digit hex seeds emitted by the Compose appearance picker are accepted; invalid colors fail without changing the saved preference.
 - Extend `PreferencesPersistenceTest` to verify custom hex survives repository recreation and malformed values are rejected. Test source added; device instrumentation result NOT RUN yet.
+## 2026-10-28 — WP-02 single-click media defaults (unverified candidate)
+
+- New downloader first-run defaults to the **best usable** media format instead of applying an invisible 1080p cap; explicit saved quality preferences remain honored.
+- Simplified media/download UI: quality, audio format/bitrate, alternative direct-file transforms and file name editing live behind one accessible **Advanced options** expander. The selected best video/audio format remains available without opening controls; original source filenames are cleaned during publication.
+- Added `MediaAutoSelectionTest` with best 2160p, explicit 1080p cap, highest available audio-only and audio-only source fixtures. No live provider/device claims are made.
 
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+
+## 2026-10-28 — WP-05 saturated design tokens (candidate, CI pending)
+
+- Centralize saturated category accents for PDF, images, downloads and files in `Color.kt` and reuse them from `ToolPalette.kt`, removing duplicate palette literals in tile code. Strengthen both light and dark tool-tile containers to 20% accent blend and introduce lavender-toned light surface ladder.
+- Give root screen headers a primary-container surface with matching semantic foreground, using existing Material 3 token roles rather than hardcoded text colors.
+- Add four source Compose token previews (light/dark × English/Arabic) and new JUnit token/non-text contrast regression tests; **no preview screenshot or device evaluation was performed**.
+
+
+- CI-driven fix: corrected WCAG sRGB luminance gamma from cubic approximation to 2.4 and replaced an unreliable fixed-step AA foreground fallback with bounded binary search. Expanded JUnit cases and failure messages; original contrast gate remains enabled. Initial failure: [run #40641801377](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641801377), one contrast test among 522 executed. New CI pending.
+## 2026-10-28 — WP09 emulator runner Bash invocation repair
+
+- Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.
+- Run the strict-mode commands in a dedicated Bash file invoked through a single `bash scripts/run-emulator-smoke.sh` command; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
+- Add `scripts/test-emulator-smoke-runner.py` as a required preflight. **Device tests NOT VERIFIED** until fresh emulator runs complete.
+
+
+## 2026-10-28 — WP09 actual Android emulator smoke (verification pending)
+
+- Added a separate Android UI and persistence smoke workflow on GitHub Actions PR/main for API 26, 35 and 36 using `reactivecircus/android-emulator-runner@v2`. It runs selected **existing** Compose UI, viewer, gesture, workspace, catalogue and DataStore instrumentation classes, and retains logcat + test reports on failure.
+- The default workflow's build/unit/release lint/compact+release APK gates remain unchanged. This is an additive lane, not a replacement for the full connected suite or physical-device testing.
+
+### WP09 expanded file-operation qualification
+
+The API26/35/36 emulator smoke now includes generated-fixture real PDF, Office, image, ZIP, file publication, scanner/reader and print-adapter instrumentation classes. No existing tests were disabled. Running them must produce actual job reports before this is called verified.
+
+- Follow-up from the failed API 26/35/36 run: the heredoc is still split by the emulator action's `/bin/sh -c`; it does not protect `set -o pipefail`. The single-command Bash file resolves this interpreter boundary; device CI remains pending.
+
+## 2026-10-28 — WP05 reader position persistence (CI pending)
+
+- Replace a process-local unbounded Map of raw document URIs and last-read pages with an app-private DataStore of at most 64 SHA-256-keyed reader positions.
+- On opening a PDF, load its previous page before allowing new page values to be persisted; coalesce rapid scroll updates. Keep long-page lazy rendering and error UI unchanged.
+- Add ReaderPositionStoreTest Android instrumentation for saved page restoration, per-URI isolation and opaque keys.
+- Real close/reopen and process-death tests are pending; a source regression does not establish device acceptance.
+
+### WP05 CI regression repair
+
+- The first WP05 CI run exposed runtime Robolectric artifact-fetch failures in seven otherwise unchanged screenshot/color-picker tests; pinned test runtime Maven artifact host to the official `repo.maven.apache.org` endpoint rather than disabling the tests. New CI result pending.
+
+## WP07 print page-order recovery — latest-main integration, 2026-10-28
+
+- Print reorder, per-page rotation and selected page range now normalize invalid/stale saved permutations to the same visible source order before applying changes. Added four ViewModel and one pure-selection regression tests. Exact integrated-head build/size/lint CI pending.
 
 ## 2026-10-28 — WP12 single CI execution per pull request
 
@@ -202,15 +268,66 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+## 2026-10-28 WP04 — four primary tabs with retained Downloads
+
+Home, Tools, Files and Settings are the bottom tabs. Downloads stays a Back-navigable manager with a permanent Home history action even with no transfers. Android/JVM navigation tests and four maintained Python UI suites are preserved; CI runs scripts ahead of KSP/size/lint gates. Exact-head CI and device tests remain pending.
+
+## 2026-10-28 — WP10 catalogue visibility, integrated with latest CI
+
+Tools browse/pinned/recent now honor existing `ToolCatalogue.isListed`. Image Comparison remains search-only; Files/Settings navigation aliases no longer clutter the grid. Registry entries/operation handlers are preserved. Added Kotlin and Compose tests; updated-head CI pending.
+
+## 2026-10-28 — WP14 tool qualification matrix reconciled
+
+- Correct the release test matrix from 47 stale IDs / 188 rows to **45 active IDs / 180 rows**. Archive eight historical scenarios for two unregistered legacy IDs, preserving provenance.
+- The enabled `file_drive` source operation now has four **NOT_RUN PROCESSING** cases instead of incorrectly being described as unavailable/N/A.
+- A Python matrix-to-registry/policy contract is included in normal CI; no device/Drive account pass is asserted.
+
+## 2026-10-28 WP06 — localized accent preset labels
+
+- Accent picker and saved-theme labels now use bilingual EN/AR labels rather than English names while Arabic is active; persisted color keys and custom hex values unchanged. Added JVM localization assertions. Earlier Actions [#40644934050](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644934050) PASS at earlier SHA `a82d89fe`; current merged-base CI pending.
+
+## 2026-10-28 — WP13 remove dead global network/concurrency writes
+
+- Delete obsolete DataStore Wi-Fi-only and concurrency keys/setters and their unused ViewModel wrappers. They previously wrote values that settings state deliberately ignored (fixed `false` and `2`).
+- Preserve the actual per-job download Wi-Fi field and the fixed scheduler policy; no new global Wi-Fi-only behavior is exposed.
+- Add a portable source contract and retain Android persistence assertions for fixed settings. Branch CI and device tests are **NOT RUN** at authoring.
+
 - Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
 ## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
 
 - `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
 - Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
 
+## 2026-10-28 — WP-04 isolated tool-local UI state
+
+- Scope workspace preview dialog, source selection and batch-rename preview to the active tool ID **and exact input IDs** using keyed `rememberSaveable`; scope the Advanced panel to tool ID. Replacing inputs or switching tools can no longer silently reuse these former unkeyed modal states.
+- Add a source regression contract in `scripts/test-phase1-to-4-regressions.py` guarding the actual production `rememberSaveable` call sites. It is a source-level check; Android UI interaction and restoration remain NOT VERIFIED pending device tests.
+
+## 2026-10-28 — WP12 document filename bidi-spoof protection
+
+- Reject invisible Unicode bidirectional overrides and isolates (including U+202E) from file and archive entry names without prohibiting ordinary Arabic/Hebrew characters or emoji. Validate before UTF-8 truncation; malformed names return INVALID_FILENAME.
+- Added pure-JVM `SafeNamesBidiControlTest` (4 methods) including rename, archive entry and legitimate RTL examples. CI not yet verified on this SHA.
+
 ## 2026-10-28 WP08 — Scanner thumbnail native Bitmap cleanup
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
+
+## 2026-10-28 — WP05 accurate local/cloud disclosure
+
+- Replace absolute offline/zero-cloud promises with factual bilingual language: file editing is local, while chosen downloads, remote thumbnails, optional extractors, model installation and Drive import/export can transfer data.
+- Document enabled Google Drive v3 import/export and ephemeral transfer credentials, without claiming cloud-account qualification. Robolectric EN/AR string contract is added.
+- [CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) PASSED debug, unit tests, release lint and compact 55,368,479-byte gate on original head; latest full release size gate and device/provider checks pending.
+
+## 2026-10-28 — WP09 Android fixture preflight restored
+
+- Restore the missing `verification/current/device/preflight-source/README.md` linked from README and RELEASE_CHECKLIST.
+- Provide source-backed fixture generation, per-run SHA-256, Android staging/storage and 200-page memory instructions, without fabricating test results.
+- [CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior branch head: unit tests, release lint, compact 55,367,131 bytes and release 55,354,871 bytes under 60 MB. Actual device benchmark NOT RUN.
+
+## 2026-10-28 — WP13 bounded PDF split page expansion
+
+- Split/extract page-range expansion now enforces a 100,000 selected-page upper bound **before allocating repeated page lists**, protecting against pathological expressions that otherwise could OOM Android. Real 200-page groups and Arabic-Indic digits continue to work. `PAGE_SELECTION_LIMIT` has an actionable bilingual message.
+- Four JVM tests added for standard 200-page ranges, Arabic digits, repeated huge selections and page-count clamping; exact-head CI not yet verified.
 
 ## 2026-10-28 — WP-03 bilingual OCR script disclosure
 

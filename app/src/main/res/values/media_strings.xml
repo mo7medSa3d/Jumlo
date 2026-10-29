@@ -54,6 +54,8 @@
     <string name="media_platform_matrix_title">Platform qualification status</string>
     <string name="media_status_unverified">UNVERIFIED</string>
     <string name="media_status_host_verified">HOST_VERIFIED</string>
+    <string name="media_advanced_options">Advanced options</string>
+    <string name="media_auto_best_quality">Best available format selected automatically. To download audio only or choose a format, open Advanced options.</string>
     <string name="media_select_type">Download type</string>
     <string name="media_select_quality">Quality and format</string>
     <string name="media_pdf_original" formatted="false">Original PDF</string>
@@ -76,4 +78,6 @@
     <string name="media_restricted_hint">This link requires a login or its provider has restricted access. Jumlo will not request cookies or bypass protected content. Try an openly downloadable link.</string>
     <string name="downloads_live_count">%1$d active</string>
     <string name="downloads_completed_count">%1$d completed</string>
+    <string name="home_manage_downloads">View all downloads</string>
+    <string name="media_selected_quality_summary">Ready to download: %1$s</string>
 </resources>

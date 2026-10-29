@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP04:** Four primary tabs Home, Tools, Files, Settings; preserve Downloads manager and history as an independently Back-navigable detail. Keep legacy `DockTab.DOWNLOADS` only for call-site compatibility.
+
+
 ## 2026-10-28 — WP06 release gate preservation
 
 Normal Android CI runs both `lintDebug` and `lintRelease`, JVM tests, the full-media compact and release APK 60MB byte-limit checks, and the Python source-contract check. Preserve KSP2 serial worker flags from merged PR #36; never disable the media runtime or skip the size gate to get green CI. No Android UI/route changes.
@@ -105,9 +108,45 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
+## 2026-10-28 — Downloader default/Advanced contract
+
+User-facing download setup favors a one-tap automatic best-available inspected format, not a mandatory quality chooser. The full source-provided video/audio/bitrate/resolution and PDF/image options stay behind Advanced rather than being removed. Newly installed default quality is BEST; existing explicitly saved limits are retained. Restricted/DRM/private sources never receive fake streams or bypass instructions.
+
+## WP10 catalogue decisions
+
+Preserve registered 45 capabilities, but show only deliberately listed tools on default Tools grid. Image Comparison specialist remains searchable; `file_02`, `file_trash`, `dl_settings` aliases belong to Files/Settings rather than redundant Tiles. No operations removed.
+
+- **WP07 audit evidence (2026-10-28):** Run a deterministic Kotlin/Java candidate inventory in CI, including a guard against Android imports in pure JVM modules. Classify each candidate manually; lack of a regex match is not functional proof. Do not delete tools to improve completion percentages.
+
+- **WP14 (2026-10-28):** Keep release acceptance matrices generated/validated from active registered IDs and source capability categories. Do not treat absent historical routes as available tools or an enabled Drive operation as N/A. Preserve historical records separately; no CI source-only check can certify Android device behavior.
+
+- **WP13 (2026-10-28):** Remove hidden setters/keys when their values cannot affect scheduler or global network behavior. Keep per-job download policy independently editable. An Android persistence assertion and executable source regression guard prevent reintroduction of misleading no-op settings.
+
+- **WP03 interface audio (2026-10-28):** Keep haptics and motion already merged in PR #20; expose stored `soundsEnabled` with one bilingual, accessible switch, persistent behavior and Android device tests.
+
+## 2026-10-28 — Privacy-aware reader position
+
+Use a separate app-private DataStore containing at most 64 document position entries keyed by an opaque SHA-256 digest of the document URI, rather than an unbounded process-static map with raw URIs. No plaintext document name, full path, URL or contents are included in saved entries. Saving last position is optional and cannot block PDF reading if storage becomes unavailable. Runtime/process-death qualification remains required.
+
+## WP07 stale print-page order
+
+If a persisted permutation has missing or duplicate pages, the editor and renderer must both show/use the original order until the user reorders again. Reorder/rotate never operate on a different invisible sequence; selected source pages remain selected.
+
 - **WP06 (2026-10-28):** Classify PDF compression from measured original and stage-file byte counts. Report partial skipped-image warning only when output is strictly smaller. New pure-Kotlin regression tests do not substitute for Android fixture qualification.
 
+## WP12 — Unicode filename policy
+
+Bidirectional formatting controls can disguise `.pdf`/other suffixes, so reject U+202A–U+202E, U+2066–U+2069 and U+200E/U+200F/U+061C at filename policy boundaries. Ordinary RTL letters and zero-width non-joiner used in text remain permitted. Preserve all file operations; do not remove tools or force English filenames.
+
 **2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
+
+- **WP05 privacy (2026-10-28):** User-initiated Google Drive v3 import/export and optional online media services preclude universal offline/zero-cloud promises. Explain network recipients accurately in both languages and do not claim provider account/device approval from source checks.
+
+- **WP09 (2026-10-28):** Require per-run source/Android fixture SHA-256, adequate guest/host storage, and real instrumentation logs before qualifying PDF compression. A written preflight is not a device result.
+
+## WP13 split page-range allocation policy
+
+The explicit PDF grouped-range parser limits its expanded page positions to 100,000 per operation (distinct from actual document page count), preventing unbounded boxed duplicate pages from short repeated inputs. This is a technical memory-safety limit, not feature pruning; regular 200-page selection and Arabic numeral syntax remain supported.
 
 
 ### Pure Kotlin module gates (PR #41)

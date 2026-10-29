@@ -1,0 +1,43 @@
+name: Source inventory (informational)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/source-inventory.yml'
+      - 'scripts/audit_source.py'
+      - 'scripts/tests/test_audit_source.py'
+      - 'app/src/**'
+      - 'core-common/src/**'
+      - 'downloader-core/src/**'
+      - 'document-core/src/**'
+      - 'storage-core/src/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test source-audit scanner
+        run: python3 -m unittest discover -s scripts/tests -p 'test_audit_source.py' -v
+      - name: Inventory production code candidates
+        run: |
+          python3 scripts/audit_source.py \
+            --output build/reports/source-audit.json \
+            --markdown build/reports/source-audit.md
+          test -s build/reports/source-audit.json
+          test -s build/reports/source-audit.md
+      - name: Upload source candidate report
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Source-Audit-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            build/reports/source-audit.json
+            build/reports/source-audit.md
+          if-no-files-found: error
+          retention-days: 30

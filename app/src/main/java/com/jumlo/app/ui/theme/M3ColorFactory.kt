@@ -8,6 +8,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.pow
 
 /**
  * Generates a Material 3 color scheme from a single seed color.
@@ -26,6 +27,9 @@ import kotlin.math.roundToInt
 object M3ColorFactory {
 
     private const val AA_NORMAL = 4.5f
+    // Colors are quantized into Compose's packed representation. A small AA
+    // headroom avoids 4.499...:1 contrast after the generated roles round-trip.
+    private const val AA_RENDER_MARGIN = 0.05f
     private const val NEAR_BLACK = 0xFF1A1C1E
     private const val NEAR_WHITE = 0xFFE6E1E5
 
@@ -45,21 +49,36 @@ object M3ColorFactory {
         return 0.2126f * r + 0.7152f * g + 0.0722f * b
     }
 
+    // WCAG 2.x uses the 0.04045 sRGB breakpoint and gamma 2.4 (not a cubic
+    // approximation). All contrast checks, previews and export chrome use this math.
     private fun Float.toLinear(): Float =
-        if (this <= 0.03928f) this / 12.92f else ((this + 0.055f) / 1.055f).let { it * it * it }
+        if (this <= 0.04045f) this / 12.92f
+        else ((this + 0.055f) / 1.055f).toDouble().pow(2.4).toFloat()
 
-    /** Pushes `fg` toward the extreme that maximizes contrast with `bg` until AA passes. */
-    fun ensureContrast(bg: Color, fg: Color, min: Float = AA_NORMAL): Color {
+    /** Find the closest accessible foreground on a given background.
+     * Fixed-step interpolation can finish below AA for near-threshold backgrounds;
+     * binary search converges, with the guaranteed readable endpoint as fallback.
+     */
+    fun ensureContrast(bg: Color, fg: Color, min: Float = AA_NORMAL + AA_RENDER_MARGIN): Color {
         if (contrast(bg, fg) >= min) return fg
-        val towardWhite = contrast(bg, Color.White) >= contrast(bg, Color.Black)
-        val target = if (towardWhite) Color.White else Color.Black
-        var current = fg
-        var step = 0
-        while (contrast(bg, current) < min && step < 24) {
-            current = lerp(current, target, 0.15f)
-            step++
+        val whiteRatio = contrast(bg, Color.White)
+        val blackRatio = contrast(bg, Color.Black)
+        val target = if (whiteRatio >= blackRatio) Color.White else Color.Black
+        if (contrast(bg, target) < min) return target
+        var left = 0f
+        var right = 1f
+        var compliant = target
+        repeat(28) {
+            val mid = (left + right) * 0.5f
+            val candidate = lerp(fg, target, mid)
+            if (contrast(bg, candidate) >= min) {
+                compliant = candidate
+                right = mid
+            } else {
+                left = mid
+            }
         }
-        return current
+        return if (contrast(bg, compliant) >= min) compliant else target
     }
 
     private fun lerp(a: Color, b: Color, t: Float): Color =

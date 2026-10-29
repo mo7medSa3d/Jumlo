@@ -138,6 +138,35 @@ class PdfReaderAndScanStoreTest {
         source.delete()
     }
 
+    /**
+     * Real Android PdfRenderer / 200-page corpus from generated vector PDF.
+     * This tests high-index random access and cache eviction; it is not a
+     * physical-device frame-time benchmark or scanned 200-page compression test.
+     */
+    @Test fun twoHundredPageReaderSupportsRandomAccessWithoutRetainingEveryBitmap() = runBlocking<Unit> {
+        val app = app()
+        val source = fixture(app, 200)
+        val originalLength = source.length()
+        val reader = PdfReaderSession.open(app, uri(app, source).toString())
+        try {
+            assertEquals(200, reader.pageCount)
+            val first = reader.render(0, 768).bitmap
+            assertTrue(first.width > 0 && first.height > 0)
+            val samples = listOf(199, 4, 101, 23, 178, 57, 190, 0, 132, 64, 10, 175, 35, 198, 1, 88, 145, 75, 199)
+            samples.forEach { page ->
+                val frame = reader.render(page, 768)
+                assertTrue("page ${page + 1} must render", frame.bitmap.width > 0 && frame.bitmap.height > 0)
+                assertEquals(0xff000000.toInt(), frame.bitmap.getPixel(frame.bitmap.width / 2, frame.bitmap.height / 2))
+            }
+            assertFalse("A frame still shown by Compose must not be recycled during cache eviction", first.isRecycled)
+            assertEquals(0xff000000.toInt(), first.getPixel(first.width / 2, first.height / 2))
+            assertEquals(originalLength, source.length())
+        } finally {
+            reader.close()
+            source.delete()
+        }
+    }
+
     @Test fun scannerCopyValidatesPageCountAndNeverMutatesTheSource() = runBlocking<Unit> {
         val app = app()
         val source = fixture(app, 3)

@@ -1,5 +1,9 @@
 # Tool UI specification
 
+> WP07: The generated source inventory captures file/line candidates but does not replace 45-tool real input→output verification. Twenty literal colors and seven inline-text patterns require design/context triage, not automatic removal.
+
+> WP03 exposes the already persisted `soundsEnabled` preference through a single-toggle Compose row; real speaker, Android sound policy and RTL checks remain NOT RUN.
+
 > WP06: Compression reports `UNCHANGED / PDF_NOT_COMPRESSIBLE` when no bytes are saved, including when re-encoding skipped some image streams. `PDF_IMAGE_COMPRESSION_PARTIAL` requires a genuinely smaller output. Five-scan and 200-page device qualification remain NOT RUN.
 
 **WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
@@ -512,18 +516,76 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
 
+## 2026-10-28 — WP04 downloader default interaction update
+
+The dl_media workspace now uses automatic best-available source selection after inspection, and hides type/quality/audio/filename/PDF-image conversion choices under an optional Advanced toggle. The toggled controls remain functional and there is no quality fabrication. Pure audio-only sources automatically use AUDIO mode, and selecting Audio only remains possible under Advanced for mixed video/audio media. Default direct-file mode remains Original. Test source AutoBestMediaChoiceTest added; real-device behavior is NOT VERIFIED.
+
 ## 2026-10-28 — WP02a setting behavior
 
 The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+## 2026-10-28 — WP-02 media workspace qualification
+
+`dl_media` now presents an inspected source and one primary download action by default: highest usable media selection (no implicit 1080p cap), with video/audio switch and individual format choices, bitrate and filename behind an optional Advanced expander. Settings may explicitly cap video quality and audio output remains selectable in Advanced. Direct-file mode retains original format unless Advanced overrides it. Current commit is a source candidate, **not** a completed platform/download/notification test; see `TEST_REPORT.md`.
 
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+## 2026-10-28 — WP-05 saturated palette and previews
+
+Source palette adds shared `LightToolAccents`/`DarkToolAccents` in `Color.kt`; each section's tile color in `ToolPalette.kt` and pillar primary accent now derive from the same family. Light surface ladder is lavender-neutral, and the root page top bar uses semantic `primaryContainer/onPrimaryContainer`. New `app/src/test/java/com/jumlo/app/ui/theme/ThemePreviews.kt` previews four English/Arabic light/dark combinations; `ToolPaletteContrastTest` asserts icon and main scheme contrast. These are authored source and pending unit/render execution, not certified screenshots or visual QA.
+## WP09 Compose/device smoke acceptance — 2026-10-28
+
+Added an API26/API35/API36 instrumented smoke workflow exercising existing UI and settings tests. It is scoped to core navigation, shared workspace, tool catalogue, viewer, gestures and persistence; it cannot certify every registered tool pick/run/result. Full device screen matrix and the five PDF compression fixtures remain required before any `works` label.
+
+### WP09 added on-device backend flows
+
+The smoke matrix includes real generated-file tests for PDF editing/Office output, image pixels, ZIP, file publication, reader/scan storage and print adapter in addition to UI tests. These qualify specific output contracts only when executed; they are not equivalent to completing all 45 tool pick/configure/run/result journeys.
+
+- WP09: PdfReaderSession has an instrumented 200-page generated document random-access test covering page 200 and cache eviction. Pending execution and physical-device 200-page scroll/jank/scan-memory acceptance.
+
+**2026-10-28 WP04:** Four roots Home, Tools, Files, Settings. Downloads is not deleted; manager and history remain as Back detail reachable from Home with zero active jobs. CI now runs bilingual UI source contracts; real-device checks remain pending.
+
+## WP10 Tools browse/filter contract
+
+Default view presents registered/visible `ToolCatalogue.isListed` entries. Specialist comparison is searchable but not a default tile. Repeated Files/Settings navigation aliases are hidden from Tools. Kotlin and Compose tests must pass on the merged source before release approval.
+
+> WP14: The 45 registered tools each have four current qualification cases. The enabled Google Drive tool must be tested as processing (NOT_RUN until authorized account/device), not mislabeled unavailable. Two unregistered historic IDs remain archived outside the active matrix.
+
+**WP06 locale-aware appearance:** Accent picker shows color names in EN/AR based on app locale with persisted stable preset keys; custom hex behavior retained. Device/RTL interaction remains unverified.
+
+> WP13: The obsolete global Wi-Fi and concurrency settings cannot be saved to DataStore anymore. Per-job download Wi-Fi selection and fixed scheduler limit remain intact; no UI tool flow is disabled.
+
+## 2026-10-28 — WP05 pdf_01 last-read persistence
+
+View PDF now stores a bounded app-private position entry keyed by SHA-256(document URI) and restores it after document open. The first page is not persisted over a previous bookmark before restoration. Thumbnail/jump/search/zoom/night-mode UI remains source-identical. Android DataStore test source added; actual device behavior and large-document performance not yet qualified.
+
+## WP07 print preview fidelity
+
+Moving/reordering pages uses the visible arrangement even after invalid persisted values. Rotation targets the visible page's true source; selections remain associated with the intended pages. Print preview and Android print framework tests still required.
+
 - WP04 transfer integrity: failed gzip/legacy partials restart cleanly rather than range-appending decoded bytes. User-visible progress/report still requires device validation.
 **WP04 2026-10-28:** direct/batch downloads gain automatic mid-transfer recovery when the source supplies an HTTP validator. The user sees existing WorkManager progress; no new UI is claimed. `StreamTransferMidstreamRetryTest` provides three deterministic regression cases (NOT RUN until CI). Pause/foreground/device matrix remains outstanding.
 
+## 2026-10-28 — WP-04 tool-state reset behavior
+
+The shared workspace now scopes preview source selection and batch-rename preview to current `toolId` plus immutable input ID list, while the Advanced expander is scoped to the current tool. This prevents stale modal state when switching tools or changing the input set, without automatically discarding the current tool's configuration on every unrelated state update. A source-contract test is authored; real Compose screen navigation is **NOT VERIFIED**.
+
+## WP12 filename spoof prevention
+
+Files rename/import and archive entry naming reject invisible bidirectional formatting controls rather than allowing an extension to be visually reversed. Keep readable Arabic/Hebrew/emoji names. `INVALID_FILENAME` is a validation response; tool UI should show a localized actionable message. Error UI has not been re-verified on device.
+
+- The Files rename dialog displays `files_rename_invalid_name` below invalid input, including hidden direction marks; no raw exception or silent red outline is used as the sole guidance. Arabic/English resources updated.
+
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
+
+> WP05: Welcome/settings copy accurately states that editing remains local while selected downloads, remote previews/extractors and Drive transfers require network access; Drive itself is source-implemented, NOT ACCOUNT-QUALIFIED.
+
+> WP09 adds reproducible five-scan and 200-page test setup documentation, not additional PDF compression functionality or a device PASS.
+
+## WP13 page selection memory feedback
+
+Split/extract group entry accepts standard 200-page ranges and Arabic numerals. Extremely repeated ranges exceeding 100,000 expanded page positions are rejected before allocation; localized copy asks users to remove duplicates or shorten ranges. Device presentation still requires instrumentation.
 
 ## 2026-10-28 — WP-03 script limitation notice
 

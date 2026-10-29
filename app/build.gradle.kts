@@ -164,6 +164,12 @@ android {
         // pdfbox-android JVM tests hit android.util.Log inside font parsing.
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
+        // Robolectric loads instrumented framework jars at runtime. GitHub Actions'
+        // default repo1.maven.org fetch failed for seven unmodified tests; keep all
+        // tests enabled and use the official Maven Central host used by Gradle.
+        unitTests.all { test ->
+            test.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+        }
     }
 
     packaging {

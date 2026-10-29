@@ -29,6 +29,14 @@ object PrintPageSelection {
         order.size == size && order.all { it in 1..size } && order.toSet().size == order.size
 
     /**
+     * A stale persisted order is not the visible order: arrange() displays source
+     * order when a permutation is incomplete/duplicated. Editors must use that
+     * same visible fallback before applying drag, move or per-page rotation.
+     */
+    fun normalizedOrder(order: List<Int>, size: Int): List<Int> =
+        if (isPermutation(order, size)) order else (1..size).toList()
+
+    /**
      * Range text for 0-based positions in the arranged document.
      * Empty text means "every page", so a full document is only abbreviated when the
      * caller confirms the document really has that many pages.
@@ -52,7 +60,7 @@ object PrintPageSelection {
      * Returns the new order, or the old one when the move is out of bounds.
      */
     fun move(order: List<Int>, size: Int, from: Int, to: Int): List<Int> {
-        val base = if (order.isEmpty()) (1..size).toList() else order
+        val base = normalizedOrder(order, size)
         if (from !in base.indices || to !in base.indices || from == to) return order
         val next = base.toMutableList()
         next.add(to, next.removeAt(from))

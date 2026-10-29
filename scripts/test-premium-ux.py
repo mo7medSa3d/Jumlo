@@ -30,9 +30,10 @@ class PremiumUxContracts(unittest.TestCase):
         return self.tokens[name]
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
-        # Neutral surfaces preserve pure OLED black in every accent mode.
+        # Source-of-truth design tokens: porcelain-lilac light canvas and OLED black.
+        # Text contrast is separately checked against WCAG AA below.
         expected = {
-            'LightBackground': 'F6F6F8', 'LightSurface': 'FFFFFF',
+            'LightBackground': 'F7F6FF', 'LightSurface': 'FFFFFF',
             'LightOnSurface': '202024', 'LightOnSurfaceVariant': '55555E',
             'LightPrimary': '2F46C6', 'LightTertiary': '7050AB',
             'DarkBackground': '000000',
@@ -165,9 +166,10 @@ class PremiumUxContracts(unittest.TestCase):
         for tag in ('settings.theme','settings.language','settings.videoQuality',
                     'settings.audioQuality','settings.storage','settings.cache','settings.about'):
             self.assertIn(tag,code)
-        for obsolete in ('setHapticIntensity','setRespectReducedMotion','setWifiOnlyDefault',
-                         'setMaxConcurrentDownloads','mediaServerUrl','allowHttp'):
+        for obsolete in ('setWifiOnlyDefault','setMaxConcurrentDownloads','mediaServerUrl','allowHttp'):
             self.assertNotIn(obsolete,code)
+        self.assertIn('viewModel.setHapticIntensity',code)
+        self.assertIn('viewModel.setRespectReducedMotion',code)
         self.assertIn('viewModel.setDefaultVideoQuality(choices[it])',code)
         self.assertIn('viewModel.setDefaultAudioQuality(choices[it])',code)
         self.assertIn('viewModel.cleanTemporary()',code)
