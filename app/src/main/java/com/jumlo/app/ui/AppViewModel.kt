@@ -350,6 +350,9 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         "pdf_stamp" -> draft.copy(flag1 = true)
         "pdf_annotate" -> draft.copy(text1 = "Jumlo", num1 = "1")
         "img_watermark" -> draft.copy(text1 = "Jumlo", num1 = "40")
+        // Defaults are part of the new session baseline, not edits made by UI composition.
+        "img_02" -> if (draft.percentage.isBlank() && draft.longestEdge.isBlank() &&
+            draft.width == "1600" && draft.height == "1600") draft.copy(percentage = "75") else draft
         "file_batch_rename" -> draft.copy(text1 = "{name}_{n}", num1 = "1")
         "pdf_05" -> draft.copy(flag1 = true, num1 = "1", pages = "all")
         else -> draft

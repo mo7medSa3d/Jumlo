@@ -173,6 +173,10 @@ class JumloUiTest {
         // The lazy empty state follows presets and import actions on compact screens.
         workspaceList().performScrollToNode(hasText(importPrompt))
         compose.onNodeWithText(importPrompt).assertIsDisplayed()
+        // Smart defaults must not mark an untouched workspace dirty or block Back.
+        compose.waitForIdle()
+        val appVm = ViewModelProvider(compose.activity)[AppViewModel::class.java]
+        check(!appVm.hasUnsavedWorkspace.value) { "Fresh Resize workspace is unexpectedly dirty" }
         pressBack()
         // Back is delivered asynchronously and NavHost animates the destination.
         // Assert the actual screen becomes VISIBLE, not merely composed, before

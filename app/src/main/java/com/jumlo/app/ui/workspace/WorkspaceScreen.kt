@@ -104,9 +104,6 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 vm.updateForm { it.copy(text1="Jumlo", num1=it.num1.ifBlank{"1"}) }
             "file_batch_rename" -> vm.updateForm { it.copy(text1=it.text1.ifBlank { "{name}_{n}" }, num1=it.num1.ifBlank { "1" },
                 renameDate=it.renameDate.ifBlank { java.time.LocalDate.now().toString() }) }
-            "img_02" -> if(form.percentage.isBlank() && form.longestEdge.isBlank() && form.width=="1600" && form.height=="1600") {
-                vm.updateForm { it.copy(percentage="75") }
-            }
         }
     }
 
