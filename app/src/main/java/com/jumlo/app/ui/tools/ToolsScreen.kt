@@ -191,19 +191,20 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
     val colors = MaterialTheme.colorScheme
     val isDark = colors.background.luminance() < 0.5f
     val tint = ToolPalette.accentFor(tool.id, isDark)
-    val iconSurface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark)
+    val foreground = ToolPalette.onAccentFor(tool.id, isDark)
+    val iconSurface = foreground.copy(alpha = 0.13f)
     val haptics = rememberAppHaptics()
     Surface(onClick = { haptics.actionClick(); onClick() },
         modifier = modifier.fillMaxWidth().heightIn(min = 132.dp).pressFeedback().testTag("tool.${tool.id}"),
-        shape = QuietTheme.shapes.card, color = colors.surfaceContainerLow, shadowElevation = 2.dp) {
+        shape = QuietTheme.shapes.card, color = tint, shadowElevation = 3.dp) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(56.dp).background(iconSurface, RoundedCornerShape(18.dp)),
                 contentAlignment = Alignment.Center) {
-                ToolIcon(tool.id, tint, Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}"))
+                ToolIcon(tool.id, foreground, Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}"))
             }
-            Text(shortToolLabel(tool, language), color = colors.onSurface,
+            Text(shortToolLabel(tool, language), color = foreground,
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)

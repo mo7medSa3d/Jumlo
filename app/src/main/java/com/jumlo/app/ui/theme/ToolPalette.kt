@@ -25,6 +25,10 @@ object ToolPalette {
         return if (dark) darkAccents[index] else lightAccents[index]
     }
 
+    /** WCAG-readable foreground for bold, category-colored tool tiles. */
+    fun onAccentFor(toolId: String, dark: Boolean = false): Color =
+        M3ColorFactory.ensureContrast(accentFor(toolId, dark), if (dark) Color.Black else Color.White)
+
     fun containerFor(toolId: String, surface: Color, dark: Boolean = false): Color =
         mix(surface, accentFor(toolId, dark), if (dark) 0.20f else 0.20f)
 
