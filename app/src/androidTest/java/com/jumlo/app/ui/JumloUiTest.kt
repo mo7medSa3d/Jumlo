@@ -139,6 +139,16 @@ class JumloUiTest {
         closeSoftKeyboard()
         // Back leaves this tool; a new Home action starts a distinct clean session.
         pressBack()
+        // A typed but unsent draft is dirty. Back must ask before discarding it;
+        // never silently drop the restored download session.
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText(compose.activity.getString(R.string.ui_unsaved_title))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(compose.activity.getString(R.string.ui_discard_leave)).performClick()
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithTag("home.screen").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithTag("home.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.HOME").assertIsSelected()
         compose.onNodeWithTag("nav.TOOLS").performClick()

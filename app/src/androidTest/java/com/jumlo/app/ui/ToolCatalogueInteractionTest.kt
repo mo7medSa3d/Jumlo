@@ -37,7 +37,11 @@ class ToolCatalogueInteractionTest {
         }
         val first = compose.onNodeWithTag("tool.img_02").fetchSemanticsNode().boundsInRoot
         val last = compose.onNodeWithTag("tool.img_03").fetchSemanticsNode().boundsInRoot
-        assertTrue(first.top < last.top)
+        // A two-column Arabic (RTL) grid puts the first-ranked tool on the
+        // right of the same row. Rank is row-major, not strictly top-to-bottom.
+        assertTrue("Ranked img_02 must precede img_03 in RTL grid",
+            first.top < last.top - 1f ||
+                (kotlin.math.abs(first.top - last.top) <= 1f && first.left > last.left))
         tools.forEach { compose.onNodeWithTag("tool.${it.id}").assertExists() }
     }
 
