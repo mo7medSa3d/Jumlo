@@ -199,6 +199,11 @@ TEST_REPORT.md.
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
 
+## 2026-10-28 — WP13 bounded PDF split page expansion
+
+- Split/extract page-range expansion now enforces a 100,000 selected-page upper bound **before allocating repeated page lists**, protecting against pathological expressions that otherwise could OOM Android. Real 200-page groups and Arabic-Indic digits continue to work. `PAGE_SELECTION_LIMIT` has an actionable bilingual message.
+- Four JVM tests added for standard 200-page ranges, Arabic digits, repeated huge selections and page-count clamping; exact-head CI not yet verified.
+
 ## 2026-10-28 WP03 — remove ghost PDF dispatch routes
 
 Remove unreachable `pdf_compare`/`pdf_redact` dispatcher branches and navigation-only `file_trash` processing branch. Preserve all registered tools, including Files Trash as navigation. Add JVM capability policy regression. Earlier PR head CI passed at `e9c776ba`; post-merge-base SHA CI pending.

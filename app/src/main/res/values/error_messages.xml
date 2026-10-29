@@ -27,6 +27,7 @@
     <string name="msg_media_batch_single">Video pages need a quality choice for each link. Share one video at a time; bulk downloads support direct files.</string>
     <string name="msg_url">Paste or share a valid link. For batches, enter one link per line.</string>
     <string name="msg_check_settings">Check the entered values and page ranges, then try again.</string>
+    <string name="msg_page_selection_limit">Too many repeated page selections. Choose fewer ranges or remove duplicates, then try again.</string>
     <string name="msg_unavailable">This tool is unavailable in this build. Choose another tool.</string>
     <string name="msg_login">Sign in to continue.</string>
     <string name="msg_failed">Could not complete this action. Please try again.</string>

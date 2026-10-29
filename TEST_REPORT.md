@@ -164,6 +164,12 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 **CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
 
+## 2026-10-28 — WP13 page-range memory safety
+
+- Source defect: `PageSelection.groups(value,count)` converted every repeated range directly to a list, permitting tens of millions of duplicated boxed page numbers from a short selection string. Fix counts selected positions before allocation and reports `PAGE_SELECTION_LIMIT` above 100,000; no tool handler disabled.
+- New `PageRangeAllocationBudgetTest`: four pure-JVM methods for 200-page splits, Arabic-Indic digits/comma, duplicate pathological expansion, and clamped last page. Resources `msg_page_selection_limit` EN/AR + `userMessageResource` mapping keep actionable errors. **NOT RUN** on the exact head until GitHub Actions validates `:app:assembleDebug :app:testDebugUnitTest :app:lintRelease :app:verifyCompactApkSize :app:verifyReleaseApkSize`.
+- 200-page physical PDF performance, five scanned compression fixtures and entire tool flows: still NOT VERIFIED.
+
 ## 2026-10-28 WP03 capability contract parity
 
 Branch source now fails closed for unregistered ghost PDF IDs and navigation-only trash. `CapabilityContractTest` covers visible/unique registered tools, forbidden ghost process IDs and representative real processing operations. Previous Actions [#40642534733](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642534733) **PASS** on earlier SHA `e9c776ba`, not latest main rebased commit. Exact-head CI and Android interactions remain NOT VERIFIED.
