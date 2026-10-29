@@ -518,6 +518,10 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+## 2026-10-28 — WP-04 tool-state reset behavior
+
+The shared workspace now scopes preview source selection and batch-rename preview to current `toolId` plus immutable input ID list, while the Advanced expander is scoped to the current tool. This prevents stale modal state when switching tools or changing the input set, without automatically discarding the current tool's configuration on every unrelated state update. A source-contract test is authored; real Compose screen navigation is **NOT VERIFIED**.
+
 ## WP12 filename spoof prevention
 
 Files rename/import and archive entry naming reject invisible bidirectional formatting controls rather than allowing an extension to be visually reversed. Keep readable Arabic/Hebrew/emoji names. `INVALID_FILENAME` is a validation response; tool UI should show a localized actionable message. Error UI has not been re-verified on device.
