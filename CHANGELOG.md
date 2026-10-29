@@ -192,6 +192,17 @@ TEST_REPORT.md.
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
 
+## 2026-10-28 — WP05 reader position persistence (CI pending)
+
+- Replace a process-local unbounded Map of raw document URIs and last-read pages with an app-private DataStore of at most 64 SHA-256-keyed reader positions.
+- On opening a PDF, load its previous page before allowing new page values to be persisted; coalesce rapid scroll updates. Keep long-page lazy rendering and error UI unchanged.
+- Add ReaderPositionStoreTest Android instrumentation for saved page restoration, per-URI isolation and opaque keys.
+- Real close/reopen and process-death tests are pending; a source regression does not establish device acceptance.
+
+### WP05 CI regression repair
+
+- The first WP05 CI run exposed runtime Robolectric artifact-fetch failures in seven otherwise unchanged screenshot/color-picker tests; pinned test runtime Maven artifact host to the official `repo.maven.apache.org` endpoint rather than disabling the tests. New CI result pending.
+
 ## WP07 print page-order recovery — latest-main integration, 2026-10-28
 
 - Print reorder, per-page rotation and selected page range now normalize invalid/stale saved permutations to the same visible source order before applying changes. Added four ViewModel and one pure-selection regression tests. Exact integrated-head build/size/lint CI pending.

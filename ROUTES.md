@@ -124,6 +124,10 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+## 2026-10-28 — WP05 reader lifecycle
+
+ViewerRoute keeps the same serialized arguments and caller-stack return behavior. On each document open, the viewer restores the last-read page from an app-private SHA-256-keyed DataStore instead of an in-memory map. This does not grant additional filesystem rights or change any route. Device acceptance pending.
+
 ## WP07 print page manager state recovery
 
 The existing `PrintRoute` remains unchanged. PrintPageSelection.normalizedOrder aligns stale persisted permutations with the visible source-page order before drag/reorder/rotation and preserves selected pages. Android print-provider UI still unverified.

@@ -151,6 +151,22 @@ run here).
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
 
+## 2026-10-28 — WP05 PDF reader position
+
+| Scenario | Status | Evidence |
+|---|---|---|
+| ReaderPositionStoreTest.lastPageSurvivesSeparateReadsAndIsIsolatedPerDocument | NOT RUN | Instrumentation test commits to DataStore read/write and second URI isolation |
+| ReaderPositionStoreTest.opaqueKeyNeverIncludesOriginalUriText | NOT RUN | Keys are SHA-256 of the source URI, not raw paths/URLs |
+| Reopen PDF after process death | NOT RUN | PdfViewerScreen reads persisted saved page before enabling writes |
+| 200-page memory / scroll | NOT RUN | Existing bounded PdfReaderSession retained; physical runtime/performance still unqualified |
+
+Last-page writes are coalesced; very rapid exit before an asynchronous write is committed remains a risk until measured on device. Reader position data is app-private, capped, and not synced.
+
+### WP05 first CI run failure and non-skipping repair
+
+- [run 40640410599](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640410599): **FAILED** `:app:testDebugUnitTest` with 520 completed tests, **7 failed** and 2 skipped. The seven failures were unmodified `ToolScreenshotMatrixTest` (4 modes) and `AppearanceColorPickerTest` (3 methods), each `java.lang.AssertionError at MavenArtifactFetcher.java:129`, caused by `java.io.IOException at HttpURLConnection.java:2059` while downloading Robolectric runtime Maven artifacts. This is a real CI failure, not a bookmark test failure.
+- A follow-up `app/build.gradle.kts` change sets `robolectric.dependency.repo.url=https://repo.maven.apache.org/maven2` for all unit test tasks, preserving every test and rule. **Mitigation NOT VERIFIED** until new CI completes; if it still fails, inspect runtime artifact coordinates/HTTP status and continue debugging.
+
 ## 2026-10-28 — WP07 print reorder recovery (integrated)
 
 - Source bug: incomplete/duplicate page order could render original pages but update the saved invalid order during moves/rotations, targeting the wrong physical page. `PrintPageSelection.normalizedOrder` now guards those transitions. `PrintViewModelTest` and `PrintPageSelectionTest` cover selected source pages, stale moves, drags and rotation.

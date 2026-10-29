@@ -520,6 +520,10 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+## 2026-10-28 — WP05 pdf_01 last-read persistence
+
+View PDF now stores a bounded app-private position entry keyed by SHA-256(document URI) and restores it after document open. The first page is not persisted over a previous bookmark before restoration. Thumbnail/jump/search/zoom/night-mode UI remains source-identical. Android DataStore test source added; actual device behavior and large-document performance not yet qualified.
+
 ## WP07 print preview fidelity
 
 Moving/reordering pages uses the visible arrangement even after invalid persisted values. Rotation targets the visible page's true source; selections remain associated with the intended pages. Print preview and Android print framework tests still required.
