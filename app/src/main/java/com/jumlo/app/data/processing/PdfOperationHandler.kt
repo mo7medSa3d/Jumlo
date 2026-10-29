@@ -264,23 +264,17 @@ import kotlin.math.sqrt
                 context.outputs.find(request.id,key)?.let{ return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
                 val ticket=context.outputs.reserve(request.id,key,name("Compressed.pdf"),"application/pdf")
                 var originalSize=0L
-                var compressed=false
                 var skippedImages=0
                 context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
                     originalSize=src.length()
                     skippedImages=compressPdfGuaranteedSmaller(src,ticket.stageFile,s.optInt("maxDpi",150),s.optInt("jpegQuality",80),s.optLong("targetBytes",0L),context)
-                    compressed=ticket.stageFile.length() < originalSize
                 }
+                // Only measured output bytes decide whether compression saved space.
+                // An already-optimal document stays UNCHANGED even when some images
+                // could not be recompressed; never call that a partial reduction.
+                val verdict=PdfCompressionResultPolicy.classify(originalSize,ticket.stageFile.length(),skippedImages)
                 val record=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf",originalSizeBytes=originalSize) }
-                // A copy that could not be made smaller is reported as unchanged, not as a compression.
-                // Pages that could not be re-encoded do not lose the rest of the document:
-                // the file is published and the count is reported.
-                val note = when {
-                    skippedImages>0 -> "PDF_IMAGE_COMPRESSION_PARTIAL"
-                    compressed -> null
-                    else -> "PDF_NOT_COMPRESSIBLE"
-                }
-                listOf(ItemOutcome(key,if(compressed) ItemStatus.CREATED else ItemStatus.UNCHANGED,record.id,note))
+                listOf(ItemOutcome(key,if(verdict.smaller) ItemStatus.CREATED else ItemStatus.UNCHANGED,record.id,verdict.notice))
             }
             "stamp" -> {
                 val text=s.optString("text","")

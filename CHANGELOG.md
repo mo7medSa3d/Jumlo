@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-28 — WP06 PDF compression result integrity
+
+- Count only measured size reductions as `CREATED`; unchanged outputs now report `PDF_NOT_COMPRESSIBLE`, even when embedded images were skipped.
+- Android-free `PdfCompressionResultPolicy` and seven JVM regression cases. [CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) PASSED debug build, unit tests, release lint, compact (55,368,267 bytes) and release (55,355,939 bytes) 60 MB gates on PR #32.
+- Real five-scan and 200-page Android device fixture tests are still NOT RUN.
+
+
 ## 2026-10-28 WP11 — origin-bound downloader custom headers
 
 Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers are now accepted only on the exact original scheme/host/port. Cross-origin redirects use regular browser headers, while URL-scoped cookie retrieval stays separate. Tests cover normalised default ports, malicious subdomains and real two-hop redirect simulation. Earlier CI passed on older SHA `6c689c2e`; current-head CI pending.
