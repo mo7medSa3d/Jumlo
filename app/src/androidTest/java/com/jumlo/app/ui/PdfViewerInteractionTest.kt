@@ -40,7 +40,7 @@ class PdfViewerInteractionTest {
         }
         val uri = FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", file).toString()
         val visible = mutableStateOf(true)
-        compose.setContent { JumloTheme { if (visible.value) PdfViewerScreen(uri, "Three-page fixture") } }
+        compose.setContent { JumloTheme { if (visible.value) PdfViewerScreen(uri, "Three-page fixture", onBack = {}, onOpenFile = {}, onPrint = { _, _ -> }) } }
         compose.waitUntil(30_000) { compose.onAllNodesWithTag("pdf.page.image.0", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("pdf.thumbnail.1").performClick()
         compose.waitUntil(15_000) { compose.onAllNodesWithTag("pdf.page.image.1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
