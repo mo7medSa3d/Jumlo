@@ -199,6 +199,11 @@ TEST_REPORT.md.
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
 
+## 2026-10-28 — WP-03 bilingual OCR script disclosure
+
+- Show an English/Arabic notice inside the live PDF OCR workspace that the installed ML Kit Latin model cannot recognize Arabic pixels in scanned documents, while already-embedded Arabic PDF text remains extractable.
+- Add two Robolectric Compose notice assertions; remove invalid `androidx.compose.ui.test.assertExists` import after CI compile failure. No external OCR upload or unsupported Arabic scan capability introduced.
+
 ## 2026-10-28 WP03 — remove ghost PDF dispatch routes
 
 Remove unreachable `pdf_compare`/`pdf_redact` dispatcher branches and navigation-only `file_trash` processing branch. Preserve all registered tools, including Files Trash as navigation. Add JVM capability policy regression. Earlier PR head CI passed at `e9c776ba`; post-merge-base SHA CI pending.
