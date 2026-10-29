@@ -3,6 +3,17 @@
 **WP05 2026-10-28:** `ViewerRoute` and `ToolRoute("pdf_01")` still render the shared PDF reader. The page now restores a bounded hashed-URI DataStore checkpoint rather than only process-memory position. No route changes; process-death/RTL device acceptance is NOT VERIFIED.
 
 
+**2026-10-28 WP11 downloader redirects:** No route changes; download processing/probe requests now pass initial URL origin to header policy. Cross-origin redirect targets never inherit custom user header values. HTTP/network device qualification pending.
+
+
+## 2026-10-28 — WP06 CI contract (no route changes)
+
+Navigation remains unchanged by this CI-only work package. The build adds debug lint and a source-size assertion to existing release/compact artifact checks while retaining serialized KSP2. Device/Back/RTL verification remains separate.
+
+
+**2026-10-28 WP03 settings controls:** SettingsRoute and SettingsDetailRoute now expose persisted haptic intensity and Reduce motion alongside existing controls. No new navigation route; device acceptance is pending. Back/recreation tests remain required.
+
+
 **WP01 2026-10-28:** Navigation is unchanged. CI release gating was restored (see [Actions #40639445934](https://github.com/mo7medSa3d/Jumlo/actions/runs/40639445934)); full route/device acceptance remains NOT VERIFIED. See [AUDIT_2.md](docs/AUDIT_2.md) for route inventory.
 
 
@@ -105,3 +116,24 @@ Home conversion chooser, onboarding guide, unsaved-workspace confirmation, file 
 ## Navigation verification references
 
 [FiveTabNavigationTest.kt](app/src/androidTest/java/com/jumlo/app/ui/FiveTabNavigationTest.kt) covers tab order, RTL, selection and indicator bounds. [JumloUiTest.kt](app/src/androidTest/java/com/jumlo/app/ui/JumloUiTest.kt) covers actual-activity entry, tab/recreation restoration, Back chains and warm workspace deep-link delivery. [PreferencesPersistenceTest.kt](app/src/androidTest/java/com/jumlo/app/data/PreferencesPersistenceTest.kt) covers real preference storage. The existence of these tests does not imply execution; consult [TEST_REPORT.md](TEST_REPORT.md) for the commands, environment and outcomes.
+
+## 2026-10-28 — WP02a scope note
+
+Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new route). Persisted hex accent acceptance does not alter tab navigation or the route graph. Device/RTL navigation status unchanged.
+
+## 2026-10-28 — WP08 CI compiler gate
+
+No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
+
+**2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
+
+## 2026-10-28 — WP-03 OCR script compatibility notice
+
+No route changes. The existing `ToolRoute("pdf_ocr")` workspace shows a persistent English/Arabic script-support notice before recognition. This is guidance, not Arabic scanned-text recognition.
+
+**2026-10-28 WP03 capability contract:** `file_trash` stays a Files navigation action and never enters an operation handler; `pdf_compare` and `pdf_redact` ghost IDs are not enabled registered processing routes. No user-facing route deleted.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

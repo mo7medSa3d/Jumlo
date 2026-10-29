@@ -1,5 +1,13 @@
 # Decisions — 24 October 2026
 
+## 2026-10-28 — WP06 release gate preservation
+
+Normal Android CI runs both `lintDebug` and `lintRelease`, JVM tests, the full-media compact and release APK 60MB byte-limit checks, and the Python source-contract check. Preserve KSP2 serial worker flags from merged PR #36; never disable the media runtime or skip the size gate to get green CI. No Android UI/route changes.
+
+
+**2026-10-28 WP03 Settings decision:** Persisted haptics (Off/Light/Medium/Strong) and in-app Reduce motion are genuine controls. In Activity, `LocalReducedMotion` combines user setting with system reduced-motion via logical OR; haptic activity locals consume persisted values. Keep Android system motion policy authoritative. Preserve Wi-Fi-only visibility policy independently.
+
+
 1. Use only the uploaded recoverable ZIP as product source. Reuse installed toolchain binaries and dependency cache, never prior build/test claims. The current run may populate the shared installed dependency cache to avoid a duplicate multi-gigabyte cache; source and artifact identities stay isolated.
 2. Execute without further design approval because the supplied brief explicitly delegates decisions and asks not to pause. Preserve current architecture and repair verified gaps.
 3. Keep full on-device media extraction by default while measuring its real APK impact; the optional backend stays behind the existing extractor interface and is not deployed. A network service does not automatically settle content rights or platform terms.
@@ -96,3 +104,10 @@ or size-gate command could run. All evidence produced here is a Python host suit
 or a source/wiring contract; nothing is an Android runtime PASS. The last measured
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
+
+**2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

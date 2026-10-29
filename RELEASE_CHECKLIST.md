@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
+
+
 This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
@@ -59,3 +62,19 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run Play internal testing/pre-launch report on the signed AAB, resolve crashes/ANRs/accessibility findings, and review staged rollout/rollback procedures.
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
+
+## 2026-10-28 — CI trigger deduplication
+
+- [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.
+- [ ] Confirm the `test-ci-event-matrix.py` regression and existing KSP serialization test execute before Gradle without bypassing any assemble, unit, lint or size gate.
+
+## 2026-10-28 — CI release shrinker memory guard
+
+PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
+
+- [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

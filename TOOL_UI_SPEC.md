@@ -3,6 +3,17 @@
 **WP05 2026-10-28 — View PDF (`pdf_01`):** last-read page is stored in app-private DataStore by an opaque SHA-256 document fingerprint, restored before scroll writes, bounded to 128 recent documents. `PdfReaderPositionStoreTest` includes 3 real DataStore Robolectric JUnit cases, NOT RUN until CI. Real device process death/200-page jank and memory remains a release gate.
 
 
+**WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
+
+
+## 2026-10-28 — WP06 quality gate contract (UI unaffected)
+
+The tool registry and screens are unchanged by the CI update. Routine media CI checks the full runtime, both decimal-60MB artifact limits, JVM tests, debug/release lint, and source constraints. KSP2 workers are serialized, not bypassed. Successful compilation does not qualify each tool's Android UI and processing flow.
+
+
+**2026-10-28 WP03 Settings UI:** Users can set haptics Off/Light/Medium/Strong and Reduce motion, each wired to persisted DataStore through `AppViewModel`; Activity provides these to the existing Compose interaction effects. Arabic and English resources exist. Actual device haptics/motion checks remain unverified; see `TEST_REPORT.md`.
+
+
 **WP01 2026-10-28:** No tool UI changed in this release-gate work package. Full-menu device operation is still NOT VERIFIED; source and APK size verification are separate. `docs/AUDIT_2.md` is the current 45-capability audit.
 
 
@@ -501,3 +512,24 @@ The requested complete tool x empty/loaded x light/dark x English/Arabic matrix 
 - **Empty state:** File icon and Import files action.
 - **Limits and remaining acceptance:** Digest correctness, large-file streaming and malformed expected values require executed tests.
 
+
+## 2026-10-28 — WP02a setting behavior
+
+The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes DataStore acceptance by reusing repository hex validation, and adds a persistence regression. This changes no tool workspace flow; device/visual theme acceptance still requires execution.
+
+## 2026-10-28 — WP08 compiler workflow, no UI changes
+
+No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+
+**WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
+
+## 2026-10-28 — WP-03 script limitation notice
+
+In `pdf_ocr`, disclose that Latin-script scanned OCR works with the installed ML Kit model but Arabic scanned image text is unsupported; embedded Arabic text in PDF is a separate extraction path. The guidance is bilingual and tagged `ocr.script-limitation`. Two Robolectric assertions are authored; current-head CI/device acceptance remains pending.
+
+**WP03 capability parity:** 45 registered tools remain accessible. Phantom `pdf_compare`/`pdf_redact` dispatch arms removed; Files Trash remains UI navigation, never background processing. JVM tests guard policy; device workflows pending.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
