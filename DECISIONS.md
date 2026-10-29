@@ -129,6 +129,8 @@ Bidirectional formatting controls can disguise `.pdf`/other suffixes, so reject 
 
 **2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
 
+- **WP05 privacy (2026-10-28):** User-initiated Google Drive v3 import/export and optional online media services preclude universal offline/zero-cloud promises. Explain network recipients accurately in both languages and do not claim provider account/device approval from source checks.
+
 - **WP09 (2026-10-28):** Require per-run source/Android fixture SHA-256, adequate guest/host storage, and real instrumentation logs before qualifying PDF compression. A written preflight is not a device result.
 
 ## WP13 split page-range allocation policy

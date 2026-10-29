@@ -94,6 +94,8 @@ PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max he
 
 - [ ] Execute `ScanPreviewBitmapOwnershipTest` on actual Android emulator/device; 100-page capture/gallery scroll, reorder and remove, repeatedly rotate/recreate and inspect memory/heap for native Bitmap leaks.
 
+- [ ] WP05: Review all EN/AR welcome, privacy, Drive transfer and download disclosures at 200% text and RTL; validate authorized Drive round-trip, token hygiene and publication of current operator privacy URL/Play Data Safety.
+
 - [ ] Before the unfiltered connected run, follow [fixture/storage preflight](verification/current/device/preflight-source/README.md): generate and hash all five scans, stage the verified inputs, and record guest/host disk budget for 200-page testing. Any missing input remains BLOCKED.
 
 

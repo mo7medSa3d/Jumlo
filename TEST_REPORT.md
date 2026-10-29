@@ -232,6 +232,10 @@ Source now uses locale-appropriate labels for preset colors in Settings and App-
 
 **CODE WRITTEN:** `CameraXScanFallback.kt` disposes owned decoded thumbnail previews, with `ScanPreviewBitmapOwnershipTest` Android instrumentation source. **NOT RUN:** instrumentation, 100-page memory stress, camera/gallery API26–36 on the current commit. Old Actions [#40642356611](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642356611) failed in `:app:packageCompact` during concurrent build; later CI must verify the current serialized KSP/size gates. No physical-device PASS claimed.
 
+## WP05 privacy source and test evidence
+
+`PrivacyDisclosureTest` checks that English and Arabic welcome/settings strings disclose Drive and avoid universal offline claims. Original [CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) **PASS** for assembleDebug, unit tests, lintRelease and compact APK size (55,368,479/60,000,000 bytes). Latest integration with main and full release-size check **PENDING**. Real Google Drive account round-trip, production privacy URL and Play Data Safety confirmation **BLOCKED / NOT RUN**.
+
 ## 2026-10-28 — WP09 device fixture preflight evidence
 
 The previously broken preflight link is restored; source instructions describe five freshly generated scan files and 200-page device testing. No input fixture hashes were supplied in repo, and no Android device runs are claimed. [PR #40 CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior head for assembleDebug, testDebugUnitTest, lintRelease, compact and release size gates. **Device tests NOT RUN**.

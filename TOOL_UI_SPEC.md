@@ -553,6 +553,8 @@ Files rename/import and archive entry naming reject invisible bidirectional form
 
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
 
+> WP05: Welcome/settings copy accurately states that editing remains local while selected downloads, remote previews/extractors and Drive transfers require network access; Drive itself is source-implemented, NOT ACCOUNT-QUALIFIED.
+
 > WP09 adds reproducible five-scan and 200-page test setup documentation, not additional PDF compression functionality or a device PASS.
 
 ## WP13 page selection memory feedback

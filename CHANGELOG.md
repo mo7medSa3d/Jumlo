@@ -266,6 +266,12 @@ TEST_REPORT.md.
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
 
+## 2026-10-28 — WP05 accurate local/cloud disclosure
+
+- Replace absolute offline/zero-cloud promises with factual bilingual language: file editing is local, while chosen downloads, remote thumbnails, optional extractors, model installation and Drive import/export can transfer data.
+- Document enabled Google Drive v3 import/export and ephemeral transfer credentials, without claiming cloud-account qualification. Robolectric EN/AR string contract is added.
+- [CI #40640270882](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640270882) PASSED debug, unit tests, release lint and compact 55,368,479-byte gate on original head; latest full release size gate and device/provider checks pending.
+
 ## 2026-10-28 — WP09 Android fixture preflight restored
 
 - Restore the missing `verification/current/device/preflight-source/README.md` linked from README and RELEASE_CHECKLIST.
