@@ -38,6 +38,10 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
+- [ ] WP06: Compress already optimized input and assert unchanged status, with no false partial-savings text.
+- [ ] WP06: Compress a scan with some skipped streams; assert partial warning only alongside verified reduction and preserved pages.
+- [ ] WP06: Run all five scan benchmarks and 200-page memory test with real devices, hashes, storage limits, and outputs.
+
 | Flow | Required observation |
 | --- | --- |
 | Fresh launch | Nonblocking splash, usable Home, clear onboarding dismissal, no crash/ANR. |

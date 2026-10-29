@@ -1,5 +1,7 @@
 # Tool UI specification
 
+> WP06: Compression reports `UNCHANGED / PDF_NOT_COMPRESSIBLE` when no bytes are saved, including when re-encoding skipped some image streams. `PDF_IMAGE_COMPRESSION_PARTIAL` requires a genuinely smaller output. Five-scan and 200-page device qualification remain NOT RUN.
+
 **WP11 custom-header security:** Download media UI and worker retain advanced custom headers but bind them to the user's original URL origin; redirects across origins cannot receive them. Existing downloader workflows retained. End-to-end network/device evidence pending.
 
 
