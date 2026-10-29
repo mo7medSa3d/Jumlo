@@ -90,16 +90,24 @@ jobs:
             exit 1
           fi
           for attempt in 1 2 3; do
-            if "$manager" --install emulator --channel=0 &&
-               "$sdk/emulator/emulator" -version >/dev/null 2>&1; then
-              echo "Android emulator package verified"
-              break
+            # A graphical emulator binary can exit nonzero for '-version' on a
+            # headless hosted runner even after successful installation. Do not
+            # confuse that with an invalid or incomplete SDK package.
+            if "$manager" --sdk_root="$sdk" --install emulator --channel=0; then
+              if [[ -x "$sdk/emulator/emulator" && -s "$sdk/emulator/package.xml" ]]; then
+                echo "Android emulator SDK package and executable verified"
+                break
+              fi
+              echo "::warning::Emulator package metadata or executable missing"
+              ls -la "$sdk/emulator" || true
+            else
+              echo "::warning::sdkmanager reported installation failure"
             fi
             if (( attempt == 3 )); then
               echo "::error::Android emulator SDK package failed after three attempts"
               exit 1
             fi
-            echo "::warning::Retrying invalid/truncated emulator SDK package ($attempt/3)"
+            echo "::warning::Retrying incomplete emulator SDK package ($attempt/3)"
             sleep $((attempt * 15))
           done
       - name: Execute real Android UI and persistence tests
