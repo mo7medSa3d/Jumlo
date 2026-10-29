@@ -79,8 +79,18 @@ jobs:
           set -euo pipefail
           sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
           test -n "$sdk"
+          # The emulator action configures its own PATH for sdkmanager; normal
+          # workflow Bash steps must resolve the installed SDK command-line tool.
+          manager="$sdk/cmdline-tools/latest/bin/sdkmanager"
+          if [[ ! -x "$manager" ]]; then
+            manager="$(find "$sdk/cmdline-tools" "$sdk/tools" -type f -name sdkmanager 2>/dev/null | head -n 1 || true)"
+          fi
+          if [[ -z "$manager" || ! -x "$manager" ]]; then
+            echo "::error::Android SDK manager was not found under $sdk"
+            exit 1
+          fi
           for attempt in 1 2 3; do
-            if sdkmanager --install emulator --channel=0 &&
+            if "$manager" --install emulator --channel=0 &&
                "$sdk/emulator/emulator" -version >/dev/null 2>&1; then
               echo "Android emulator package verified"
               break
