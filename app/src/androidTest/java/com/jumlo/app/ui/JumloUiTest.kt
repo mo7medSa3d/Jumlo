@@ -174,6 +174,12 @@ class JumloUiTest {
         workspaceList().performScrollToNode(hasText(importPrompt))
         compose.onNodeWithText(importPrompt).assertIsDisplayed()
         pressBack()
+        // Back is delivered asynchronously and NavHost animates the destination.
+        // Assert the actual screen becomes VISIBLE, not merely composed, before
+        // checking the selected tab (important on API 26 and API 35 devices).
+        compose.waitUntil(15_000) {
+            runCatching { compose.onNodeWithTag("tools.screen").assertIsDisplayed() }.isSuccess
+        }
         compose.onNodeWithTag("tools.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
     }
