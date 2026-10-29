@@ -70,6 +70,28 @@ jobs:
           sudo chmod 0666 /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           ls -l /dev/kvm
+      # sdkmanager sometimes receives a truncated emulator ZIP on hosted runners.
+      # Preinstall and validate it with bounded retries before the runner action,
+      # which otherwise attempts just one download and aborts before tests run.
+      - name: Install emulator package with retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk"
+          for attempt in 1 2 3; do
+            if sdkmanager --install emulator --channel=0 &&
+               "$sdk/emulator/emulator" -version >/dev/null 2>&1; then
+              echo "Android emulator package verified"
+              break
+            fi
+            if (( attempt == 3 )); then
+              echo "::error::Android emulator SDK package failed after three attempts"
+              exit 1
+            fi
+            echo "::warning::Retrying invalid/truncated emulator SDK package ($attempt/3)"
+            sleep $((attempt * 15))
+          done
       - name: Execute real Android UI and persistence tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
