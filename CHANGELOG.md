@@ -195,6 +195,12 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+- Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
+## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
+
+- `StreamTransfer` now retries a transient network interruption **after bytes have been written** by resuming from the current verified offset, using a strong ETag or Last-Modified and the original final-URL fingerprint. Truncated known-length bodies can resume too; streams without safe validators never append across attempts. Existing exponential backoff and cancellation checks are retained. This is backend behavior; actual Android network/WorkManager pause/resume remains NOT VERIFIED.
+- Added `StreamTransferMidstreamRetryTest`: 3 deterministic JUnit tests for injected I/O disconnect, known-length truncation and weak/missing validator refusal. **Tests NOT RUN until exact branch CI.**
+
 ## 2026-10-28 WP08 — Scanner thumbnail native Bitmap cleanup
 
 CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap` for each decoded preview, releasing native memory after row disposal. Added Android lifecycle regression test; old branch Actions #40642335828 passed initial tests, while #40642356611 failed at `:app:packageCompact` without Kotlin source errors. Current KSP-serialized CI head still **NOT VERIFIED**.
@@ -204,3 +210,17 @@ CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap`
 - Restore the missing `verification/current/device/preflight-source/README.md` linked from README and RELEASE_CHECKLIST.
 - Provide source-backed fixture generation, per-run SHA-256, Android staging/storage and 200-page memory instructions, without fabricating test results.
 - [CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior branch head: unit tests, release lint, compact 55,367,131 bytes and release 55,354,871 bytes under 60 MB. Actual device benchmark NOT RUN.
+
+## 2026-10-28 — WP-03 bilingual OCR script disclosure
+
+- Show an English/Arabic notice inside the live PDF OCR workspace that the installed ML Kit Latin model cannot recognize Arabic pixels in scanned documents, while already-embedded Arabic PDF text remains extractable.
+- Add two Robolectric Compose notice assertions; remove invalid `androidx.compose.ui.test.assertExists` import after CI compile failure. No external OCR upload or unsupported Arabic scan capability introduced.
+
+## 2026-10-28 WP03 — remove ghost PDF dispatch routes
+
+Remove unreachable `pdf_compare`/`pdf_redact` dispatcher branches and navigation-only `file_trash` processing branch. Preserve all registered tools, including Files Trash as navigation. Add JVM capability policy regression. Earlier PR head CI passed at `e9c776ba`; post-merge-base SHA CI pending.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.

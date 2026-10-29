@@ -43,6 +43,7 @@ internal fun OcrWorkspacePanel(vm:AppViewModel,sourceId:String,onExport:()->Unit
     }
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.studio_ocr_hint),style=QuietTheme.typography.metadata)
+        OcrLanguageNotice()
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             @Composable fun Page(modifier:Modifier) {
                 Surface(modifier,shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {
@@ -80,4 +81,15 @@ internal fun OcrWorkspacePanel(vm:AppViewModel,sourceId:String,onExport:()->Unit
             }
         }
     }
+}
+
+/** Explain the installed model's exact script limit without guessing the language from an empty scan. */
+@Composable
+internal fun OcrLanguageNotice() {
+    Text(
+        text = stringResource(R.string.ocr_scanned_arabic_limit),
+        modifier = Modifier.fillMaxWidth().testTag("ocr.script-limitation"),
+        style = QuietTheme.typography.metadataStrong,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
