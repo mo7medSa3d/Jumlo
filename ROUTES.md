@@ -124,6 +124,10 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+## WP07 print page manager state recovery
+
+The existing `PrintRoute` remains unchanged. PrintPageSelection.normalizedOrder aligns stale persisted permutations with the visible source-page order before drag/reorder/rotation and preserves selected pages. Android print-provider UI still unverified.
+
 - WP04 download restart now fails safe for compressed/legacy partials; resumes only validator-verified representation bytes. This does not change navigation.
 **WP04 2026-10-28:** route graph unchanged. A durable `dl_02`/`dl_03` transfer may recover transient mid-stream bytes with HTTP Range + validator in `StreamTransfer`; UI job navigation is unchanged. Android pause/retry/notification acceptance remains NOT VERIFIED.
 

@@ -105,6 +105,10 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
+## WP07 stale print-page order
+
+If a persisted permutation has missing or duplicate pages, the editor and renderer must both show/use the original order until the user reorders again. Reorder/rotate never operate on a different invisible sequence; selected source pages remain selected.
+
 - **WP06 (2026-10-28):** Classify PDF compression from measured original and stage-file byte counts. Report partial skipped-image warning only when output is strictly smaller. New pure-Kotlin regression tests do not substitute for Android fixture qualification.
 
 ## WP12 — Unicode filename policy
