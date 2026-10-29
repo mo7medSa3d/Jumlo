@@ -127,3 +127,10 @@ No navigation, locale, settings, or tool-entry contract changes. Worker serializ
 ## 2026-10-28 — WP-03 OCR script compatibility notice
 
 No route changes. The existing `ToolRoute("pdf_ocr")` workspace shows a persistent English/Arabic script-support notice before recognition. This is guidance, not Arabic scanned-text recognition.
+
+**2026-10-28 WP03 capability contract:** `file_trash` stays a Files navigation action and never enters an operation handler; `pdf_compare` and `pdf_redact` ghost IDs are not enabled registered processing routes. No user-facing route deleted.
+
+
+### Pure Kotlin module gates (PR #41)
+
+The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
