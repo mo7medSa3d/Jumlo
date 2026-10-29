@@ -195,6 +195,11 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+## 2026-10-28 — WP-04 isolated tool-local UI state
+
+- Scope workspace preview dialog, source selection and batch-rename preview to the active tool ID **and exact input IDs** using keyed `rememberSaveable`; scope the Advanced panel to tool ID. Replacing inputs or switching tools can no longer silently reuse these former unkeyed modal states.
+- Add a source regression contract in `scripts/test-phase1-to-4-regressions.py` guarding the actual production `rememberSaveable` call sites. It is a source-level check; Android UI interaction and restoration remain NOT VERIFIED pending device tests.
+
 - Midstream resume safety: gzip-encoded responses are explicitly non-resumable by Range from decoded-file offsets. Durable transfer journals record `resumeSafe`; old or gzip partials are restarted from byte zero rather than appended. Added a truncated-gzip JUnit regression (NOT RUN until exact PR CI).
 ## 2026-10-28 WP04 — verified mid-transfer resume (CI pending)
 

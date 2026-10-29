@@ -122,6 +122,10 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+## 2026-10-28 — WP-04 ephemeral workspace state isolation
+
+No typed destinations or navigation contracts change. Within `ToolRoute`, the source preview, selected page source, batch-rename preview and Advanced UI state now have explicit tool/source keys. New input queues should not retain unrelated prior previews; Android UI test evidence is still required to qualify it.
+
 - WP04 download restart now fails safe for compressed/legacy partials; resumes only validator-verified representation bytes. This does not change navigation.
 **WP04 2026-10-28:** route graph unchanged. A durable `dl_02`/`dl_03` transfer may recover transient mid-stream bytes with HTTP Range + validator in `StreamTransfer`; UI job navigation is unchanged. Android pause/retry/notification acceptance remains NOT VERIFIED.
 

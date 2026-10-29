@@ -518,6 +518,10 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+## 2026-10-28 — WP-04 tool-state reset behavior
+
+The shared workspace now scopes preview source selection and batch-rename preview to current `toolId` plus immutable input ID list, while the Advanced expander is scoped to the current tool. This prevents stale modal state when switching tools or changing the input set, without automatically discarding the current tool's configuration on every unrelated state update. A source-contract test is authored; real Compose screen navigation is **NOT VERIFIED**.
+
 - WP04 transfer integrity: failed gzip/legacy partials restart cleanly rather than range-appending decoded bytes. User-visible progress/report still requires device validation.
 **WP04 2026-10-28:** direct/batch downloads gain automatic mid-transfer recovery when the source supplies an HTTP validator. The user sees existing WorkManager progress; no new UI is claimed. `StreamTransferMidstreamRetryTest` provides three deterministic regression cases (NOT RUN until CI). Pause/foreground/device matrix remains outstanding.
 
