@@ -55,7 +55,6 @@
     <string name="media_status_unverified">UNVERIFIED</string>
     <string name="media_status_host_verified">HOST_VERIFIED</string>
     <string name="media_advanced_options">Advanced options</string>
-    <string name="media_hide_advanced">Hide advanced options</string>
     <string name="media_auto_best_quality">Best available format selected automatically. To download audio only or choose a format, open Advanced options.</string>
     <string name="media_select_type">Download type</string>
     <string name="media_select_quality">Quality and format</string>
