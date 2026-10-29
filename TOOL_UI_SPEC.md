@@ -523,6 +523,15 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 ## 2026-10-28 — WP08 compiler workflow, no UI changes
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
+## WP09 Compose/device smoke acceptance — 2026-10-28
+
+Added an API26/API35/API36 instrumented smoke workflow exercising existing UI and settings tests. It is scoped to core navigation, shared workspace, tool catalogue, viewer, gestures and persistence; it cannot certify every registered tool pick/run/result. Full device screen matrix and the five PDF compression fixtures remain required before any `works` label.
+
+### WP09 added on-device backend flows
+
+The smoke matrix includes real generated-file tests for PDF editing/Office output, image pixels, ZIP, file publication, reader/scan storage and print adapter in addition to UI tests. These qualify specific output contracts only when executed; they are not equivalent to completing all 45 tool pick/configure/run/result journeys.
+
+- WP09: PdfReaderSession has an instrumented 200-page generated document random-access test covering page 200 and cache eviction. Pending execution and physical-device 200-page scroll/jank/scan-memory acceptance.
 
 **2026-10-28 WP04:** Four roots Home, Tools, Files, Settings. Downloads is not deleted; manager and history remain as Back detail reachable from Home with zero active jobs. CI now runs bilingual UI source contracts; real-device checks remain pending.
 

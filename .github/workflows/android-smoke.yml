@@ -1,0 +1,67 @@
+name: Android UI and persistence smoke (API 26, 35 and 36)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jumlo-device-smoke-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  emulator-smoke:
+    name: Emulator smoke API ${{ matrix.api }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 35, 36]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+      - name: Ensure Android build SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk"
+          if [[ ! -f "$sdk/platforms/android-36/android.jar" || ! -x "$sdk/build-tools/36.0.0/aapt2" ]]; then
+            sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          fi
+      - name: Validate emulator script shell and real test selection
+        shell: bash
+        run: python3 scripts/test-emulator-smoke-runner.py
+      - name: Execute real Android UI and persistence tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: default
+          arch: x86_64
+          disable-animations: true
+          script: bash scripts/run-emulator-smoke.sh
+      - name: Keep reports and logcat even on failure
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Android-Smoke-API-${{ matrix.api }}-${{ github.run_id }}
+          path: |
+            android-smoke.log
+            device-logcat.txt
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
+            app/build/test-results/
+          if-no-files-found: warn
+          retention-days: 14

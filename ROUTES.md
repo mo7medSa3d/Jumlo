@@ -127,6 +127,10 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+## WP09 automatic emulator route smoke — 2026-10-28
+
+An additive GitHub Actions UI matrix now targets API 26, API 35 and API 36 for real `JumloUiTest`, workspace recovery, catalogue, viewer, gesture, localized component semantics and persisted preferences. No route code changed; test results must come from matching Actions jobs, not this declaration. Full scanner and external provider journeys remain unverified.
+
 ## WP10 Tools visibility correction
 
 No typed routes were removed. `ToolsCatalogue` default grid, pinned and recent rows honor `isListed`; explicit search may locate `img_compare`. Navigation aliases remain accessible via dedicated tabs.

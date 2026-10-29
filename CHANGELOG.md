@@ -204,6 +204,23 @@ TEST_REPORT.md.
 ## 2026-10-28 — WP08 KSP2 compiler isolation (rebased on release gate)
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
+## 2026-10-28 — WP09 emulator runner Bash invocation repair
+
+- Real API 26 and 36 emulator CI jobs failed before any instrumentation executed: `reactivecircus/android-emulator-runner@v2` invokes its `script` with `/usr/bin/sh -c`, and its first command `set -euo pipefail` is invalid under Ubuntu dash.
+- Run the strict-mode commands in a dedicated Bash file invoked through a single `bash scripts/run-emulator-smoke.sh` command; retain `set -euo pipefail`, Gradle instrumentation selection, per-API matrix, artifact collection and logcat trap.
+- Add `scripts/test-emulator-smoke-runner.py` as a required preflight. **Device tests NOT VERIFIED** until fresh emulator runs complete.
+
+
+## 2026-10-28 — WP09 actual Android emulator smoke (verification pending)
+
+- Added a separate Android UI and persistence smoke workflow on GitHub Actions PR/main for API 26, 35 and 36 using `reactivecircus/android-emulator-runner@v2`. It runs selected **existing** Compose UI, viewer, gesture, workspace, catalogue and DataStore instrumentation classes, and retains logcat + test reports on failure.
+- The default workflow's build/unit/release lint/compact+release APK gates remain unchanged. This is an additive lane, not a replacement for the full connected suite or physical-device testing.
+
+### WP09 expanded file-operation qualification
+
+The API26/35/36 emulator smoke now includes generated-fixture real PDF, Office, image, ZIP, file publication, scanner/reader and print-adapter instrumentation classes. No existing tests were disabled. Running them must produce actual job reports before this is called verified.
+
+- Follow-up from the failed API 26/35/36 run: the heredoc is still split by the emulator action's `/bin/sh -c`; it does not protect `set -o pipefail`. The single-command Bash file resolves this interpreter boundary; device CI remains pending.
 
 ## 2026-10-28 — WP05 reader position persistence (CI pending)
 
