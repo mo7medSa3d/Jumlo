@@ -105,6 +105,10 @@ or a source/wiring contract; nothing is an Android runtime PASS. The last measur
 release-APK size (54,878,634 bytes) is inherited from the supplied baseline and is
 not a current measurement.
 
+## WP07 stale print-page order
+
+If a persisted permutation has missing or duplicate pages, the editor and renderer must both show/use the original order until the user reorders again. Reorder/rotate never operate on a different invisible sequence; selected source pages remain selected.
+
 **2026-10-28 WP08 scanner:** Only decoded thumbnail Bitmaps belong to their Compose rows; release on removal/scroll/dismissal using `DisposeOwnedPreviewBitmap`. Never recycle input originals or active processing outputs. Android device/heap behavior remains a separate test gate.
 
 

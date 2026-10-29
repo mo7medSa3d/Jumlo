@@ -63,6 +63,10 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 No publishing, external messaging, service deployment or signing-key creation for production was requested or performed.
 
+## WP07 print selection release gate
+
+- [ ] Test stale/duplicate saved page order with page rotation, moving and selection preservation on a real Android emulator/device. Inspect final printed PDF, preview, orientation and copies; JVM tests do not qualify the OS print dialog.
+
 ## 2026-10-28 — CI trigger deduplication
 
 - [ ] Confirm exactly one full Android build per new WP pull-request synchronization, plus normal main/tag/manual triggers; verify no required status context disappeared.

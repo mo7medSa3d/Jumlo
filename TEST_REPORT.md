@@ -146,6 +146,12 @@ run here).
 - [GitHub Actions run #40641460117](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641460117), exact source SHA `7de0eeeb2ae68c8eba3ebc8b283f9e9ec561eabd`: **PASS** — `scripts/test-ksp-ci-serialization.py` 2/2, `:app:assembleDebug`, `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `:app:testDebugUnitTest`, `:app:lintRelease`, media runtime inspection. `BUILD SUCCESSFUL in 3m 17s`. Compact ARM64 APK **55,368,299 bytes** / 60,000,000; release ARM64 APK **55,356,059 bytes** / 60,000,000. This is a GitHub CI result for that exact SHA, not an emulator or device test.
 - A separate run for the same SHA was still in progress at the time of this documentation update. The commit containing this paragraph itself requires new CI checks before merge; never transfer PASS to a different SHA without inspecting it.
 
+## 2026-10-28 — WP07 print reorder recovery (integrated)
+
+- Source bug: incomplete/duplicate page order could render original pages but update the saved invalid order during moves/rotations, targeting the wrong physical page. `PrintPageSelection.normalizedOrder` now guards those transitions. `PrintViewModelTest` and `PrintPageSelectionTest` cover selected source pages, stale moves, drags and rotation.
+- Previous [run #40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) on older HEAD failed in `:app:minifyReleaseWithR8` with `Java heap space` and an R8 CancellationException. This is a build memory failure, not a confirmed print-function regression. New head includes merged #36 serialized workers; **CI pending** for build/unit/lint and both APK sizes.
+- Physical printer page range/copies/orientation and exact printed output: NOT VERIFIED.
+
 ## 2026-10-28 — WP12 CI duplication mitigation
 
 | Check | Status | Evidence |

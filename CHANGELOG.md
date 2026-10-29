@@ -185,6 +185,10 @@ TEST_REPORT.md.
 
 - Full-media CI retains debug build, compact/release APK size checks, testDebugUnitTest and lintRelease, now running `--no-parallel --max-workers=1` while investigating concurrent KSP2 Analysis API lifetime failures. No tests or processors are disabled. Source-guard test runs as an early CI step. Outcome is pending on the exact merge commit.
 
+## WP07 print page-order recovery — latest-main integration, 2026-10-28
+
+- Print reorder, per-page rotation and selected page range now normalize invalid/stale saved permutations to the same visible source order before applying changes. Added four ViewModel and one pure-selection regression tests. Exact integrated-head build/size/lint CI pending.
+
 ## 2026-10-28 — WP12 single CI execution per pull request
 
 - Removed redundant `wp/**` push-triggered full Android builds. All work packages continue to be gated by `pull_request` to main; pushes to main, arena branches, release tags and explicit workflow_dispatch remain supported.

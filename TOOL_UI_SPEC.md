@@ -518,6 +518,10 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+## WP07 print preview fidelity
+
+Moving/reordering pages uses the visible arrangement even after invalid persisted values. Rotation targets the visible page's true source; selections remain associated with the intended pages. Print preview and Android print framework tests still required.
+
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
 
 ## 2026-10-28 — WP-03 script limitation notice
