@@ -1,5 +1,8 @@
 # Release checklist
 
+- [ ] Verify exactly four bottom tabs and Home Downloads history in English/Arabic RTL, 200% font, Back, draft preservation and real Android devices. Host Python tests in CI are not device acceptance.
+
+
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 

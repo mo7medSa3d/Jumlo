@@ -197,6 +197,10 @@ The CI efficiency change cannot be considered verified until the PR's own checks
 
 [PR #31 run 40644691679](https://github.com/mo7medSa3d/Jumlo/actions/runs/40644691679) **FAILED** at `:app:minifyReleaseWithR8` with `Java heap space` while parsing a dependency class signature. Current `gradle.properties` declares `org.gradle.jvmargs=-Xmx2560m`. Full-media release CI now explicitly passes `-Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8"` and maintains `--no-parallel --max-workers=1`. This does not weaken R8, byte-size gates or compilation; the new branch and previously failed PR must receive completed green results to qualify. **New run NOT YET VERIFIED** and this does not replace emulator/device testing.
 
+## 2026-10-28 WP04 four-tab navigation, updated-base CI pending
+
+Four primary tabs, a retained Downloads detail and Home history, localized EN/AR strings, JVM and Android route tests. Four maintained Python source UI suites are now in required CI ahead of latest KSP/size/lint gates. Prior branch Actions [#40640571141](https://github.com/mo7medSa3d/Jumlo/actions/runs/40640571141) passed only at older SHA; **current merged-head CI pending**. Android instrumentation, Arabic RTL/large-font screenshots and real Back/draft interactions NOT VERIFIED.
+
 ## 2026-10-28 — WP10 catalogue consistency
 
 - Test additions: `ToolCatalogueTest.searchRetainsSpecialistsButNeverDuplicatesNavigationTabs`, strengthened non-tautological workspace mapping, `ToolCatalogueInteractionTest.defaultGridHidesAliasesButSearchCanOpenImageComparison`. Earlier [GitHub Actions #40642887712](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642887712) PASSED compile, unit, lint and release size on SHA `b7fcaed94d0d`. The new merge-base head is **NOT VERIFIED** until its exact CI run; Compose instrumentation remains NOT RUN.

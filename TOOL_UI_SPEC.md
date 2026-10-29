@@ -524,6 +524,8 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+**2026-10-28 WP04:** Four roots Home, Tools, Files, Settings. Downloads is not deleted; manager and history remain as Back detail reachable from Home with zero active jobs. CI now runs bilingual UI source contracts; real-device checks remain pending.
+
 ## WP10 Tools browse/filter contract
 
 Default view presents registered/visible `ToolCatalogue.isListed` entries. Specialist comparison is searchable but not a default tile. Repeated Files/Settings navigation aliases are hidden from Tools. Kotlin and Compose tests must pass on the merged source before release approval.

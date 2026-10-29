@@ -230,6 +230,10 @@ TEST_REPORT.md.
 - Full-media release verification failed on PR #31 during `:app:minifyReleaseWithR8` with `Java heap space` and a cancelled R8 analysis task. Raise **CI-only** Gradle daemon max heap from the default 2560 MB to 4096 MB on serialized PR/main full-media builds, retaining KSP2, R8/minify, `--max-workers=1`, release lint and both 60 MB APK gates. No runtime features or production shrinking are removed.
 - Source contract now verifies the CI heap override is actually present in the required command. New branch CI **PENDING**; the increase is a proposed resource fix, not a guaranteed outcome.
 
+## 2026-10-28 WP04 — four primary tabs with retained Downloads
+
+Home, Tools, Files and Settings are the bottom tabs. Downloads stays a Back-navigable manager with a permanent Home history action even with no transfers. Android/JVM navigation tests and four maintained Python UI suites are preserved; CI runs scripts ahead of KSP/size/lint gates. Exact-head CI and device tests remain pending.
+
 ## 2026-10-28 — WP10 catalogue visibility, integrated with latest CI
 
 Tools browse/pinned/recent now honor existing `ToolCatalogue.isListed`. Image Comparison remains search-only; Files/Settings navigation aliases no longer clutter the grid. Registry entries/operation handlers are preserved. Added Kotlin and Compose tests; updated-head CI pending.

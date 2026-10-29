@@ -1,5 +1,8 @@
 # Decisions — 24 October 2026
 
+**2026-10-28 WP04:** Four primary tabs Home, Tools, Files, Settings; preserve Downloads manager and history as an independently Back-navigable detail. Keep legacy `DockTab.DOWNLOADS` only for call-site compatibility.
+
+
 ## 2026-10-28 — WP06 release gate preservation
 
 Normal Android CI runs both `lintDebug` and `lintRelease`, JVM tests, the full-media compact and release APK 60MB byte-limit checks, and the Python source-contract check. Preserve KSP2 serial worker flags from merged PR #36; never disable the media runtime or skip the size gate to get green CI. No Android UI/route changes.

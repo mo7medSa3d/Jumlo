@@ -29,6 +29,16 @@ class JumloUiTest {
         }
     }
 
+    @Test fun downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome() {
+        compose.onNodeWithTag("home.manageDownloads").performScrollTo().performClick()
+        compose.onNodeWithTag("route.downloads").assertIsDisplayed()
+        compose.onNodeWithTag("nav.DOWNLOADS").assertDoesNotExist()
+        compose.onNodeWithTag("nav.HOME").assertIsSelected()
+        pressBack()
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav.HOME").assertIsSelected()
+    }
+
     @Test fun homeDownloadOpensEmptyWorkspaceAndInvalidInputDoesNotCrash() {
         compose.onNodeWithTag("home.action.download").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
