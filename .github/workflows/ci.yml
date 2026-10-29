@@ -66,6 +66,7 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           python3 scripts/test-ksp-ci-serialization.py
+          python3 scripts/test-tool-matrix-contract.py
           python3 scripts/tests/test-ci-event-matrix.py
           # CI-only heap increase: full-media R8 release shrinker ran out of 2560 MB
           # in run 40644691679. Do not disable minification, tests or 60 MB limits.

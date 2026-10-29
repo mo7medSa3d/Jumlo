@@ -518,6 +518,8 @@ The Appearance App-color picker returns six-digit hex color seeds. WP02a fixes D
 
 No interaction contract changes. KSP2 worker serialization does not establish passing pick/configure/run/result flows. Consult TEST_REPORT.md for exact build evidence.
 
+> WP14: The 45 registered tools each have four current qualification cases. The enabled Google Drive tool must be tested as processing (NOT_RUN until authorized account/device), not mislabeled unavailable. Two unregistered historic IDs remain archived outside the active matrix.
+
 **WP08 scanner resource ownership:** Compose lazy CameraX thumbnail items now own and recycle decoded previews via shared `DisposeOwnedPreviewBitmap`, not source/captured images. Real Android instrumentation and heavy-page memory profiling pending.
 
 ## 2026-10-28 — WP-03 script limitation notice

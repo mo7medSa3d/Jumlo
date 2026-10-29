@@ -122,6 +122,8 @@ Appearance picker remains within `SettingsRoute`/`SettingsDetailRoute` (no new r
 
 No navigation, locale, settings, or tool-entry contract changes. Worker serialization only affects the CI build used to qualify routes; runtime UI acceptance remains NOT VERIFIED.
 
+> WP14: The current tool matrix tracks 45 registered IDs, not historical IDs; 5 navigation-only routes are N/A for processing but still require UI smoke. No navigation was pruned.
+
 **2026-10-28 WP08 scanner ownership:** `ScanRoute` unchanged; CameraX fallback thumbnail rows dispose native preview Bitmap on removal/off-screen disposal. Android camera and gallery operations are not qualified by this source change.
 
 ## 2026-10-28 — WP-03 OCR script compatibility notice
