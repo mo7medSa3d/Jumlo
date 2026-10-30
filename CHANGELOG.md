@@ -1,5 +1,15 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-30 — Downloadable optimized APK and conditional owner-signed Release
+
+- GitHub Actions now uploads **Jumlo-Optimized-Installable-ARM64** as a standalone download instead of bundling the compact installer inside the large Debug ZIP.
+- The APK is copied from the existing full-media, R8-minified, resource-shrunk and size-gated `compact` variant; `apksigner verify` validates installability, and the artifact includes a SHA-256 checksum plus installation/signing disclosure.
+- The Debug build is kept as a separate artifact; workflow summary links to the optimized download.
+- When the repository owner provides all four release signing secrets on trusted main/tag/manual runs, CI optionally builds `:app:verifyPublishableRelease`, verifies the actual release signature and uploads a **separate owner-signed Release APK** with its checksum and certificate report. No unsigned Release APK is presented as installable.
+- Added `scripts/tests/test-release-apk-artifacts.py` to enforce the packaging contract in mandatory CI. **The new branch's build, APK and artifact output are NOT VERIFIED until its exact-head GitHub Actions run completes.**
+
+
+
 ## 2026-10-28 — WP07 reproducible static audit
 
 - Source scanner `scripts/audit_source.py` reports file:line candidates across app and four pure core modules. Six regression tests cover markers, empty callbacks, UI literals, report determinism and Android-import boundaries.
