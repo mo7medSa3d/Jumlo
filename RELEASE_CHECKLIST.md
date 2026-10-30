@@ -1,5 +1,15 @@
 # Release checklist
 
+## Optimized APK artifact and owner-signed Release gate
+
+- [ ] Exact-head Actions run uploads `Jumlo-Optimized-Installable-ARM64-…` separately from `Jumlo-Debug-APK-…`; verify ZIP contains the optimized APK, its SHA-256 and `INSTALLATION.txt`. Follow the download URL in the run summary.
+- [ ] Confirm `apksigner verify --verbose --print-certs` succeeds on the optimized APK, size is at most 60,000,000 bytes, complete media runtime remains included, and an ARM64 Android 8+ device installs/launches it. This artifact is explicitly **test-signed**.
+- [ ] For a production installer, configure `JUMLO_KEYSTORE_BASE64`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD` securely in Actions and run trusted main/tag/manual CI. Require a successful `:app:verifyPublishableRelease` and `Jumlo-Owner-Signed-Release-ARM64` artifact.
+- [ ] Compare owner-signed APK certificate SHA-256 to the established release signing lineage before distribution; independently verify installation, upgrade and app-data preservation.
+- [ ] Do not publish unsigned release files or a debug-key-signed compact APK as a Play production release; test binaries are for personal installation only.
+
+
+
 - [ ] Verify exactly four bottom tabs and Home Downloads history in English/Arabic RTL, 200% font, Back, draft preservation and real Android devices. Host Python tests in CI are not device acceptance.
 
 
