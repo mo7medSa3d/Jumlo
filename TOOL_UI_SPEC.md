@@ -1,5 +1,9 @@
 # Tool UI specification
 
+**2026-10-30 installable APK artifact:** CI packages the full-media, release-optimized ARM64 `compact` build independently from Debug, plus an install/checksum disclosure. Owner-signed `release` requires configured signing keys. No on-device tool UX has changed; download/install tests remain to be executed.
+
+
+
 > WP07: The generated source inventory captures file/line candidates but does not replace 45-tool real input→output verification. Twenty literal colors and seven inline-text patterns require design/context triage, not automatic removal.
 
 > WP03 exposes the already persisted `soundsEnabled` preference through a single-toggle Compose row; real speaker, Android sound policy and RTL checks remain NOT RUN.
