@@ -1,5 +1,21 @@
 # Jumlo — verification report
 
+## 2026-10-30 — Standalone installable optimized APK artifacts
+
+| Qualification | Status | Evidence / next action |
+| --- | --- | --- |
+| Workflow implementation | SOURCE UPDATED | `.github/workflows/ci.yml` separates a named optimized ARM64 installer from the development APK and provides an artifact URL in the run summary |
+| Full-media APK minification/size | EXISTING GATE | `:app:verifyCompactApkSize`, `:app:verifyReleaseApkSize`, `lintRelease` remain mandatory; previous runs measured ~55.37 MB compact, but these are **not** results for this branch |
+| Installer cryptographic integrity | NOT RUN at new head | CI must run Android `apksigner verify`, bundle `.sha256` plus `INSTALLATION.txt` |
+| Contract regression | NOT RUN at new head | `python3 scripts/tests/test-release-apk-artifacts.py` added to required workflow |
+| Owner-signed Release APK | BLOCKED unless signing secrets configured | Four owner-managed Actions secrets required. Conditional `:app:verifyPublishableRelease` performs actual release-key signing and APK verification on main/tag/manual events |
+| Download via Actions Artifacts | NOT VERIFIED | Confirm fresh successful run exposes `Jumlo-Optimized-Installable-ARM64` separately and ZIP contains expected APK and checksum |
+| Installation on ARM64 Android 8–15 | NOT VERIFIED | Manually install the optimized APK and verify launch, downloads/PDF and certificate lineage on a physical device/emulator |
+
+The default smaller artifact is **test-signed** and is not a substitute for the owner's signed production release. No signing credentials are generated, committed or uploaded in the artifact.
+
+
+
 ## WP07 — source audit, 2026-10-28
 
 [CI #40641786606](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641786606) **PASS** for five initial scanner unit tests and 244-file source scan: 27 candidates (20 color constants, 7 inline/dynamic text patterns), none from the basic TODO/empty-callback rules. New sixth Android-import contract is added to regular CI but **NOT RUN** on this reconciled branch until its new GitHub run completes. No device/runtime tool pass is inferred from a regex scan.
