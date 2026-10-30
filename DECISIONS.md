@@ -1,5 +1,9 @@
 # Decisions — 24 October 2026
 
+**2026-10-30 — CI APK distribution:** An optimized, separately downloadable ARM64 installer must always be available from successful Actions runs, because a Debug APK includes additional tooling and architectures. Reuse `compact` (full-media, release-style minification and resource shrinking, test key) rather than misrepresenting an unsigned production `release` APK. Optional owner-signed production Release artifacts require four Actions secrets, a trusted main/tag/manual run, `:app:verifyPublishableRelease`, signature check and an independent artifact. Keep Debug available in its own ZIP; never ship a keystore or publish unsigned binaries as installable.
+
+
+
 **2026-10-28 WP04:** Four primary tabs Home, Tools, Files, Settings; preserve Downloads manager and history as an independently Back-navigable detail. Keep legacy `DockTab.DOWNLOADS` only for call-site compatibility.
 
 
