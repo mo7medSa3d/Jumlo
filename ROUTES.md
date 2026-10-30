@@ -1,5 +1,9 @@
 # Navigation and route inventory
 
+**2026-10-30 APK packaging:** GitHub Actions now publishes an optimized ARM64 test installer separately from Debug, optionally publishing an owner-signed Release when credentials exist. This changes only artifact distribution; no Android navigation route or feature was removed. APK installability and device tests remain documented in `TEST_REPORT.md`.
+
+
+
 > WP07: No routes changed. Static source candidate inventory is informational and cannot certify that a button, route or gesture works.
 
 > WP03 adds an accessible Interface sounds switch to the existing Settings screen without changing the navigation graph.
