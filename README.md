@@ -30,6 +30,14 @@ Common extractor, pins, licenses and ARM64 repair assets live in `app/src/media/
 
 For production signing, set `JUMLO_KEYSTORE_PATH`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`, or create an untracked `keystore.properties` with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. Environment values take precedence. `verifyPublishableRelease` requires the complete optimized release, signing configuration, size and lint gates. Supply your own key securely. No production signing key is included. Release version values come from `gradle.properties`, and may be overridden with `-PversionCode=... -PversionName=...`.
 
+## Download a smaller installable APK from GitHub Actions
+
+Open **[Actions → Android CI & APK](https://github.com/mo7medSa3d/Jumlo/actions/workflows/ci.yml)**, select a successful `main` run, and open **Artifacts → Jumlo-Optimized-Installable-ARM64-…**. Download and extract its ZIP, then install **`Jumlo-Optimized-ARM64.apk`**. Its checksum and `INSTALLATION.txt` are bundled with it. The successful run's summary also links directly to that artifact.
+
+The optimized APK uses the complete local media engine, release-style R8 minification and resource shrinking, ARM64-only libraries, Android 8+, and the hard 60,000,000-byte gate. **It is signed with the Android testing key**, so this is an installable testing build, **not an owner-signed production release**. Its certificate may differ from an already installed production build; do not uninstall an existing app without safeguarding its data. The larger Debug APK stays in a different artifact.
+
+For an **owner-signed production Release APK**, configure these GitHub repository Actions secrets: `JUMLO_KEYSTORE_BASE64` (base64 of the binary owner keystore), `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, and `JUMLO_KEY_PASSWORD`. On a `main` push, version tag or manual workflow run, CI will verify `:app:verifyPublishableRelease` and the APK signature, then upload **Jumlo-Owner-Signed-Release-ARM64-…** only when all four secrets exist. The owner keystore never goes into the artifact or repository. If these secrets are absent, no unsigned APK is advertised as installable; only the compact testing installer is published. Confirm the signer fingerprint against your known key before distributing an official release.
+
 ## Architecture
 
 The existing Compose / Material 3 / typed Navigation / Hilt / Room / DataStore / WorkManager architecture is retained. WorkManager foreground work declares `dataSync`. Download and file jobs keep their durable ownership in Room; publication uses verified private files plus a MediaStore or persisted SAF destination.
