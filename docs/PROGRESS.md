@@ -1,5 +1,14 @@
 # Jumlo production readiness — progress ledger
 
+## 2026-10-31 — Main CI confirmation + Phases 1–4 verification roadmap
+
+- **Completed:** Verified both GitHub workflows finished successful for 91253f59b0967b4989c05d91bf46c5b472ea87ae; downloaded and independently parsed three Android JUnit XML artifacts (72/73/73 executions, 0 failed/errored/skipped; 14 selected classes). Reviewed the 27 source-scan UI literal candidates with file/line evidence. Superseded obsolete historical plan with `docs/superpowers/plans/2026-10-31-jumlo-release-qualification.md`.
+- **Verified how:** [CI #41144898783](https://github.com/mo7medSa3d/Jumlo/actions/runs/41144898783), [emulator #41144898786](https://github.com/mo7medSa3d/Jumlo/actions/runs/41144898786); exact per-API test/result totals extracted from official Actions artifacts, not guessed. This package changes **documentation only**.
+- **Not verified:** 45 complete tool flows, 160 processing matrix items, unfiltered connected suite, five compression fixtures, live providers, 200-page scanned memory, hardware print/camera, physical Android 8–16, production owner signing, Play review.
+- **Current blocker:** no local GitHub network DNS / Android SDK / Gradle environment for required pre-push code gate. No unverified Kotlin/Java code was pushed.
+- **Next:** establish pre-push Gradle environment, execute plan Task 0 and first failing app/tool tests before product edits; after each push wait for exact-head Android CI and emulator green.
+
+
 ## 2026-10-31 — Phase 0 current-main revalidation
 
 - **Package:** source-based audit refresh only; no product source edits.

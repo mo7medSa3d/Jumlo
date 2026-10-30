@@ -1,5 +1,8 @@
 # Jumlo Android Utilities App — Audit & Rebuild Implementation Plan
 
+> **HISTORICAL — DO NOT EXECUTE AS THE CURRENT WORK PLAN.** Superseded by [2026-10-31-jumlo-release-qualification.md](2026-10-31-jumlo-release-qualification.md). This 2026-10-23 snapshot contains old paths, proposes five bottom tabs instead of the accepted four, and removes haptics/reduce-motion while the current product explicitly keeps working settings. Retain it solely for provenance.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task.
 
 **Goal:** Audit and rebuild the Jumlo Kotlin Android utilities app (PDF tools + internet downloader) to fix critical crashes, modernize the UI to 2026 Material 3 OLED standards, streamline tools/settings, add PDF → Word (`.docx`), PDF → PowerPoint (`.pptx`), and unbundled ML Kit OCR, and optimize APK size under 60 MB while keeping core modules portable for iOS.

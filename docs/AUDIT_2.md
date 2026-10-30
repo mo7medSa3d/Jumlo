@@ -1,5 +1,20 @@
 # Jumlo — AUDIT_2 (source evidence and release gap register)
 
+### 2026-10-31 — review of latest source-scan candidates
+
+Exact-code CI log #41144898783 ran `scripts/audit_source.py`, which reports **246 production sources and 27 lexical candidates**; the prior green code-head job #40982142929 printed the individual file/line matches. The 27 are **20 hardcoded colors and seven dynamic text expressions**, **zero basic TODO/empty-callback lexical matches**; this last zero is not proof that every click path has a real effect.
+
+| Locations | Candidate count | Contextual triage | Release action |
+| --- | ---: | --- | --- |
+| `ui/components/JumloSplash.kt:98-166` | 10 colors | Fixed brand splash gradients/text, not user-selected semantic UI. User's one-token-system requirement still argues for named `SplashTokens` rather than inline constants | Centralize brand-only tokens and test light/dark/high-contrast splash; retain identical visual output until screenshots |
+| `ui/scan/ScanScreen.kt:95,99,152` | 5 colors | Signature canvas checkerboard plus deliberate ink swatches; these represent **document pixels**, not app chrome | Preserve exact exported ink/paper semantics; verify contrast and TalkBack selection on both themes |
+| `ui/settings/AccentPickerDialog.kt:40-43` | 4 colors | Legacy four-color preview literals differ from `ui/theme/ColorPresets.kt` seeds; current `SettingsScreen.kt:135+` opens `AppearanceColorPicker` | Trace all remaining callers; remove unused dialog only with regression proof, or source preview values from `ColorPresets` |
+| `ui/settings/AppearanceColorPicker.kt:69` | 1 color | Hardcoded blue fallback matches `ColorPresets.BLUE` but can drift | Use canonical token seed and preserve invalid input handling |
+| `PrintScreen`, `MediaWorkspace`, `PdfViewerScreen`, `AnnotationToolbar`, `SourceOrderStrip`, `VisualWatermarkEditor` | 7 text patterns | Dynamic numbers, angles, file names, keyboard-visible units and a selected-symbol checkmark; not necessarily untranslated sentences | Review Arabic/RTL and screen-reader semantic formatting; keep numeric values dynamic and use localized accessible descriptions |
+
+**No line is called broken solely from this regular-expression scan.** The remaining semantic no-op/dead-button/contrast audit is still pending physical interaction and screenshot qualification.
+
+
 ## 2026-10-31 — current-main revalidation (supersedes historical defect statuses below)
 
 **Pinned code commit:** `89cdb51db7199741925f6bf908a9704a740b6eff`. **Method:** read the 10 prerequisite root documents, current registry/catalogue/dispatcher/settings/theme/Gradle and the exact-head GitHub Actions job logs through GitHub API. No code was modified or local Gradle command run. This remains a **SOURCE AUDIT, NOT A RELEASE PASS**; the 2026-10-28 baseline findings below are preserved as historical records and must not be interpreted as defects confirmed at this newer commit.

@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-31 — Verified main emulator XML and release-qualification plan
+
+- Exact-head [CI #41144898783](https://github.com/mo7medSa3d/Jumlo/actions/runs/41144898783) and [emulator #41144898786](https://github.com/mo7medSa3d/Jumlo/actions/runs/41144898786) succeeded. Reviewed published JUnit XML: API26 **72/72**, API35 **73/73**, API36 **73/73**; **218** selected executions, **0** failed/errored/skipped.
+- Reconciled 27 lexical UI candidates with actual source context and authored a current Phase1–4 TDD/device acceptance plan. Marked the October 23 plan historical because its five-tab/removal decisions and file paths are outdated.
+- **Docs-only** verification and planning; no product source changed, no claim that tool matrix, owner signing or physical-device qualification is complete.
+
+
 ## 2026-10-31 — Source audit revalidated against latest main
 
 - Updated `docs/AUDIT_2.md` against commit `89cdb51db7199741925f6bf908a9704a740b6eff`, the exact-head Gradle, source scan and API 26/35/36 emulator job logs. Reclassified stale Oct 28 source findings rather than claiming missing device evidence was completed.

@@ -1,5 +1,24 @@
 # Jumlo — verification report
 
+## 2026-10-31 — exact-head emulator XML verification for audit commit
+
+Pinned **main**: `91253f59b0967b4989c05d91bf46c5b472ea87ae`. Both [Android CI & APK #41144898783](https://github.com/mo7medSa3d/Jumlo/actions/runs/41144898783) and [Emulator Smoke #41144898786](https://github.com/mo7medSa3d/Jumlo/actions/runs/41144898786) completed **success**. Downloaded all three smoke artifacts and parsed their `TEST-emulator-...xml` reports, rather than relying on workflow status alone.
+
+| API | JUnit testcase elements | Failures | Errors | Skips | Distinct test classes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 26 | 72 | 0 | 0 | 0 | 14 |
+| 35 | 73 | 0 | 0 | 0 | 14 |
+| 36 | 73 | 0 | 0 | 0 | 14 |
+| **Total executions** | **218** | **0** | **0** | **0** | 14 classes shared across APIs |
+
+The extra API35/36 case is in `PdfReaderAndScanStoreTest` (8 versus 7 on API26). These are **selected emulator smoke tests** from `scripts/run-emulator-smoke.sh`, including `JumloUiTest`, PDF/Office/Image/Archive handlers, persistence, gesture/viewport and print adapters; not the complete `:app:connectedDebugAndroidTest` suite or the 160 processing tool-matrix executions.
+
+- **Verified:** existing code can compile, package, pass required JVM/lint/size gates, and selected Android UI/handler instrumentation passes on three emulators at this commit.
+- **Not verified:** any full 45-tool pick→configure→run→result completion, five external scan fixtures, live downloads on owner-authorized links, real camera/print provider, physical-device performance/memory, release-owner signing, Play policy.
+- **Execution boundary:** local container has GitHub API access and JDK21 but no resolvable GitHub/Google DNS, no Android SDK or Gradle dependencies. It cannot execute the required pre-push Gradle command for a new product-code change. **No product-code changes are pushed in this documentation-only work package.**
+
+---
+
 ## 2026-10-31 — exact-main CI evidence update
 
 Pinned commit: `89cdb51db7199741925f6bf908a9704a740b6eff`. **Android CI & APK [#40982142929](https://github.com/mo7medSa3d/Jumlo/actions/runs/40982142929)** completed successfully on 2026-10-30 UTC. The job log records `:app:assembleDebug`, `:app:testDebugUnitTest FROM-CACHE`, `:app:lintDebug`, `:app:lintRelease`, core test tasks, and both size gates. Measured full-media compact **55,378,831** and full-media release **55,366,447** bytes (60,000,000-byte maximum). Optimized ARM64 compact APK and separate Debug artifact uploaded. Optional owner-signed Release steps **SKIPPED** (signing prerequisites not satisfied). Static lexical scan: **246 production files / 27 review candidates**.
