@@ -1,5 +1,12 @@
 # Changelog — current production-hardening candidate
 
+## 2026-10-31 — Source audit revalidated against latest main
+
+- Updated `docs/AUDIT_2.md` against commit `89cdb51db7199741925f6bf908a9704a740b6eff`, the exact-head Gradle, source scan and API 26/35/36 emulator job logs. Reclassified stale Oct 28 source findings rather than claiming missing device evidence was completed.
+- Added `docs/PROGRESS.md` with explicit proof, unverified gates and next work packages; synchronized `TEST_REPORT.md` with the 30 October successful CI runs.
+- **Documentation only; no production source modification.** The remaining tool matrix, real provider/device scenarios and owner-signed release gates remain open.
+
+
 ## 2026-10-30 — Downloadable optimized APK and conditional owner-signed Release
 
 - GitHub Actions now uploads **Jumlo-Optimized-Installable-ARM64** as a standalone download instead of bundling the compact installer inside the large Debug ZIP.

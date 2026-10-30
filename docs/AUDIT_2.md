@@ -1,5 +1,42 @@
 # Jumlo — AUDIT_2 (source evidence and release gap register)
 
+## 2026-10-31 — current-main revalidation (supersedes historical defect statuses below)
+
+**Pinned code commit:** `89cdb51db7199741925f6bf908a9704a740b6eff`. **Method:** read the 10 prerequisite root documents, current registry/catalogue/dispatcher/settings/theme/Gradle and the exact-head GitHub Actions job logs through GitHub API. No code was modified or local Gradle command run. This remains a **SOURCE AUDIT, NOT A RELEASE PASS**; the 2026-10-28 baseline findings below are preserved as historical records and must not be interpreted as defects confirmed at this newer commit.
+
+### Current evidence and limits
+
+| Gate | Exact-head evidence | Disposition |
+| --- | --- | --- |
+| Compilation, JVM tests, lint | [Android CI & APK #40982142929](https://github.com/mo7medSa3d/Jumlo/actions/runs/40982142929): `:app:assembleDebug`, `:app:testDebugUnitTest` (Gradle reported `FROM-CACHE`), `:app:lintDebug`, `:app:lintRelease`, pure core-module test gates; overall `BUILD SUCCESSFUL` | **PASS on pinned SHA**, not an independent local run |
+| Full-media size gates | Same run: `:app:verifyCompactApkSize` **55,378,831 / 60,000,000 bytes** and `:app:verifyReleaseApkSize` **55,366,447 / 60,000,000 bytes**; verified the expected bundled media payload | **PASS on pinned SHA**; compact is test-signed, not an owner-signed release |
+| Android emulator smoke | [Android UI and persistence smoke #40982142945](https://github.com/mo7medSa3d/Jumlo/actions/runs/40982142945): three successful `:app:connectedDebugAndroidTest` jobs (API 26, 35, 36) | **PASS for the selected smoke suite only**, not the complete device matrix |
+| Source lexical scan | Same main CI log: **246 files, 27 candidates**; see `scripts/audit_source.py` for the exact lexical rules | **REVIEW REQUIRED**. Not a Kotlin AST sweep, interaction audit or proof of zero dead callbacks |
+| Full tool qualification | `CapabilityRegistry.kt:8-65` registers **45 IDs**: `CapabilityPolicy.kt:13-47` classifies 40 processing and five navigation; `docs/testing/tool-matrix.template.csv` has 160 processing cases `NOT_RUN` and 20 navigation cases `N/A` as processing, each requiring separate navigation evidence | **NOT VERIFIED** for 45 complete user-facing flows |
+| Production release | Owner signing secrets, actual production certificate lineage, physical device, five scanned-PDF corpus, live authorized downloader providers, 200-page RAM/frame benchmarks and Play policy qualification | **BLOCKED / NOT VERIFIED** as applicable; see `RELEASE_CHECKLIST.md` |
+
+### Reclassification of stale 2026-10-28 source findings
+
+| Historical concern | Pinned-source evidence | Current judgement / remaining proof |
+| --- | --- | --- |
+| Broken APK size cap | `app/build.gradle.kts:318-365` enforces the decimal 60MB limit for both full-media APKs; corresponding CI tasks passed | **Source-resolved; CI verified** |
+| CI skipped release lint | `.github/workflows/ci.yml:88-90` invokes `:app:lintRelease`; passed in latest job | **Source-resolved; CI verified** |
+| Reduce motion hardcoded false | `UserPreferencesRepository.kt:142,220-222` reads/writes real DataStore preference; `SettingsScreen.kt:80-97` exposes the toggle | **Source-resolved; device animation and system-policy checks pending** |
+| Wi-Fi-only and concurrency dead setters | `UserPreferencesRepository.kt:148-150` retains non-editable compatibility defaults; old persisted setter methods are absent; visible `SettingsScreen` has no such switches | **Removed as visible options**; inspect migration/old-data handling on device |
+| Catalogue ignored hidden policy | `ToolsScreen.kt:98-120` uses `ToolCatalogue.isListed` for ordinary results and `isSearchable` for search, with pinned/recent filters | **Source-resolved**; touch/search/UI RTL still need full-flow testing |
+| Ghost `pdf_redact`/`pdf_compare` dispatch routes | `OperationDispatcher.kt:34-50` no longer routes either ID | **Source-resolved**; test registry/dispatch exhaustiveness on device |
+| Incomplete hardcoded colors/strings review | `scripts/audit_source.py` identifies lexical candidates (latest 27), most centralized tokens. Inline ink/paper pixels may be intentional representations rather than UI chrome | **Not exhaustively validated**; context review and light/dark WCAG AA + RTL needed |
+
+### Source-backed scope of Phase 0
+
+The existing **45 tool rows** in section 1, **16 route/overlay rows** in section 2, and visible + hidden settings rows in section 3 remain the itemized inventory. All 45 tools are **partial pending full pick → configure → run → result device/output evidence**, including the five navigation aliases requiring route-based proof instead of jobs. These conservative labels reflect missing acceptance evidence, not a conclusion that all 45 implementations are broken. Existing local/host tests prove only their asserted contracts.
+
+**Priority P0 acceptance blockers:** complete the 160 processing matrix on controlled normal/large/encrypted/corrupt fixtures; stage/verify all five scan PDFs; test real live downloader sources with rights and audio-only outcomes; test pause/retry/background across API 26–36; test large PDFs and printing on a physical device; verify owner-signed install/update and privacy/Play Console review. Do not turn `NOT_RUN` into `PASS` from compilation or source inspection.
+
+**Local execution blocker (this audit):** this conversation runtime has GitHub API access but no downloadable git checkout (GitHub DNS cannot resolve), no configured Android SDK and no Gradle cache. The latest remote Actions are the only fresh build evidence here. Consequently **no Android product code was changed or pushed**; future code changes require their own test-before-push verification gate.
+
+---
+
 ## 2026-10-28 origin-scoping follow-up
 
 User-provided downloader custom headers were at risk of being reused on redirected hosts. The pending WP11 branch adds exact scheme/host/effective-port matching, disabled cross-origin custom headers, and JVM redirect tests. Do not close the P0 risk or call it production verified until latest CI and actual redirect testing pass.
@@ -104,9 +141,9 @@ Every registered entry has a row. Backend identifiers, source files and plans ar
 | Clear cache | partial | `SettingsScreen.kt:96-97,135-140` | Verify removal, progress/errors and retained outputs |
 | About/version/privacy/guide/logs | partial | `SettingsScreen.kt:98,126-133` | Verify every action is navigable and accurate |
 | Haptics intensity/enable (not visible) | partial | `UserPreferencesRepository.kt:144-146,226-235` | Expose and test actual effect; honor OFF and settings |
-| Reduce motion (latent no-op) | broken | `UserPreferencesRepository.kt:143,222-224` | Restore user preference and wire to all transitions |
-| Wi-Fi only (legacy hidden) | stub | `UserPreferencesRepository.kt:152,274-275` | Remove dead persisted setter/key or implement a real user option |
-| Concurrency count (legacy hidden) | stub | `UserPreferencesRepository.kt:149,270-272` | Remove redundant persisted setter/key, retain fixed scheduler policy |
+| Reduce motion (persistent; device proof pending) | partial | `SettingsScreen.kt:80-97; UserPreferencesRepository.kt:142,220-222` | Device-verify persisted motion, system policy and transition coverage |
+| Wi-Fi only (hidden compatibility state) | partial | `UserPreferencesRepository.kt:150` | No visible control or setter; verify legacy migration/compatibility behavior |
+| Concurrency count (fixed scheduler compatibility state) | partial | `UserPreferencesRepository.kt:148` | No visible control or setter; confirm fixed scheduler behavior under stress |
 | Media service URL/token (not visible) | partial | `UserPreferencesRepository.kt:278-283` | Verify explicit privacy/HTTPS policy and secure token handling |
 
 ## 4. Source-confirmed defects, dead paths and literal-style risks

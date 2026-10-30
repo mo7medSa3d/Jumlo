@@ -1,5 +1,16 @@
 # Jumlo — verification report
 
+## 2026-10-31 — exact-main CI evidence update
+
+Pinned commit: `89cdb51db7199741925f6bf908a9704a740b6eff`. **Android CI & APK [#40982142929](https://github.com/mo7medSa3d/Jumlo/actions/runs/40982142929)** completed successfully on 2026-10-30 UTC. The job log records `:app:assembleDebug`, `:app:testDebugUnitTest FROM-CACHE`, `:app:lintDebug`, `:app:lintRelease`, core test tasks, and both size gates. Measured full-media compact **55,378,831** and full-media release **55,366,447** bytes (60,000,000-byte maximum). Optimized ARM64 compact APK and separate Debug artifact uploaded. Optional owner-signed Release steps **SKIPPED** (signing prerequisites not satisfied). Static lexical scan: **246 production files / 27 review candidates**.
+
+**Emulator smoke [#40982142945](https://github.com/mo7medSa3d/Jumlo/actions/runs/40982142945)** completed successfully on API **26, 35, 36** with `:app:connectedDebugAndroidTest` in each job. This is the configured **selected smoke suite**, not the unfiltered instrumentation suite, five-scan benchmark, 45-tool pick-to-result qualification, owner-authorized social downloader matrix, physical-device test, performance benchmark, or signed production publication.
+
+**This documentation-only audit update did not execute local Gradle.** The exact pinned product code was already green before the documentation change. Remaining `NOT_RUN`, `BLOCKED`, and `NOT VERIFIED` requirements retain their statuses. See `docs/AUDIT_2.md` and `docs/PROGRESS.md`.
+
+---
+
+
 ## 2026-10-30 — Standalone installable optimized APK artifacts
 
 | Qualification | Status | Evidence / next action |
