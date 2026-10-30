@@ -101,18 +101,157 @@ jobs:
           (cd app/build/outputs/apk/compact && sha256sum app-compact.apk > app-compact.apk.sha256)
           (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
 
-      - name: Upload installable media debug APK
+      # Always publish the compact *installable* variant separately. It uses
+      # release minification, resource shrinking and ARM64 only, but is signed
+      # with the Android testing key. Never advertise it as an owner-signed release.
+      - name: Verify and prepare optimized ARM64 installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/compact/app-compact.apk
+          test -s "$apk"
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          signer="$sdk/build-tools/36.0.0/apksigner"
+          test -x "$signer"
+          "$signer" verify --verbose --print-certs "$apk"
+          mkdir -p build/optimized-installer
+          cp "$apk" build/optimized-installer/Jumlo-Optimized-ARM64.apk
+          (cd build/optimized-installer && sha256sum Jumlo-Optimized-ARM64.apk > Jumlo-Optimized-ARM64.apk.sha256)
+          cat > build/optimized-installer/INSTALLATION.txt <<EOF
+          Jumlo optimized ARM64 installer
+          Source commit: $GITHUB_SHA
+          Actions run: $GITHUB_RUN_ID (attempt $GITHUB_RUN_ATTEMPT)
+
+          Extract the Actions artifact ZIP, then install Jumlo-Optimized-ARM64.apk.
+          Requires an ARM64 Android 8.0+ device. Full local media engine included.
+          Minified and resource-shrunk; capped at 60,000,000 bytes by the build gate.
+          APK signature has been verified with Android apksigner.
+
+          SIGNING: Android development key. This is an installable TEST build, NOT
+          an owner-signed production release. It cannot update an existing app
+          installed with another signing certificate. Do not remove an existing
+          production installation without first backing up its app data.
+          For a production-signed release, configure the four GitHub Actions
+          release signing secrets documented in README.md.
+          EOF
+
+      - name: Upload optimized installable APK (ARM64)
+        id: optimized_installer
         uses: actions/upload-artifact@v7
         with:
-          name: Jumlo-Media-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
+          name: Jumlo-Optimized-Installable-ARM64-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            build/optimized-installer/Jumlo-Optimized-ARM64.apk
+            build/optimized-installer/Jumlo-Optimized-ARM64.apk.sha256
+            build/optimized-installer/INSTALLATION.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Show optimized APK download link
+        shell: bash
+        env:
+          OPTIMIZED_ARTIFACT_URL: ${{ steps.optimized_installer.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          echo "### Download the optimized Jumlo APK (ARM64)" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download installable APK artifact]($OPTIMIZED_ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Extract the ZIP and install **Jumlo-Optimized-ARM64.apk**." >> "$GITHUB_STEP_SUMMARY"
+          echo "Release-optimized, signed with a **testing key**; not a production-signed release." >> "$GITHUB_STEP_SUMMARY"
+
+      # Keep the larger development build available, but never mix it into
+      # the optimized download (otherwise users fetch both APKs at once).
+      - name: Upload media debug APK separately
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/app-debug.apk.sha256
-            app/build/outputs/apk/compact/app-compact.apk
-            app/build/outputs/apk/compact/app-compact.apk.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+
+      # Real production signing is opt-in and never uses the Android debug key.
+      # Secrets are absent on pull requests, and the keystore never leaves the runner.
+      - name: Prepare owner release signing when configured
+        id: owner_signing
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        env:
+          OWNER_KEYSTORE_BASE64: ${{ secrets.JUMLO_KEYSTORE_BASE64 }}
+          OWNER_STORE_PASSWORD: ${{ secrets.JUMLO_STORE_PASSWORD }}
+          OWNER_KEY_ALIAS: ${{ secrets.JUMLO_KEY_ALIAS }}
+          OWNER_KEY_PASSWORD: ${{ secrets.JUMLO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$OWNER_KEYSTORE_BASE64" || -z "$OWNER_STORE_PASSWORD" || -z "$OWNER_KEY_ALIAS" || -z "$OWNER_KEY_PASSWORD" ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Owner signing not configured: optimized testing installer is available." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          umask 077
+          keystore="$RUNNER_TEMP/jumlo-owner-release.jks"
+          printf '%s' "$OWNER_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          test -s "$keystore"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "keystore=$keystore" >> "$GITHUB_OUTPUT"
+
+      - name: Build and verify owner-signed Release APK
+        if: ${{ steps.owner_signing.outputs.enabled == 'true' }}
+        shell: bash
+        env:
+          JUMLO_KEYSTORE_PATH: ${{ steps.owner_signing.outputs.keystore }}
+          JUMLO_STORE_PASSWORD: ${{ secrets.JUMLO_STORE_PASSWORD }}
+          JUMLO_KEY_ALIAS: ${{ secrets.JUMLO_KEY_ALIAS }}
+          JUMLO_KEY_PASSWORD: ${{ secrets.JUMLO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true \
+            :app:verifyPublishableRelease --no-parallel --max-workers=1 \
+            --no-daemon --console=plain 2>&1 | tee gradle-owner-release.log
+          apk=app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          mkdir -p build/owner-release-installer
+          "$sdk/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" \
+            > build/owner-release-installer/SIGNATURE.txt
+          cp "$apk" build/owner-release-installer/Jumlo-Owner-Signed-Release-ARM64.apk
+          (cd build/owner-release-installer && sha256sum Jumlo-Owner-Signed-Release-ARM64.apk > Jumlo-Owner-Signed-Release-ARM64.apk.sha256)
+          echo "Owner-signed release generated from $GITHUB_SHA. Verify the certificate fingerprint against your known release key before distribution." \
+            > build/owner-release-installer/INSTALLATION.txt
+
+      - name: Upload owner-signed Release APK
+        id: owner_release_artifact
+        if: ${{ steps.owner_signing.outputs.enabled == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Jumlo-Owner-Signed-Release-ARM64-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            build/owner-release-installer/Jumlo-Owner-Signed-Release-ARM64.apk
+            build/owner-release-installer/Jumlo-Owner-Signed-Release-ARM64.apk.sha256
+            build/owner-release-installer/SIGNATURE.txt
+            build/owner-release-installer/INSTALLATION.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Link owner-signed release artifact
+        if: ${{ steps.owner_signing.outputs.enabled == 'true' }}
+        shell: bash
+        env:
+          RELEASE_ARTIFACT_URL: ${{ steps.owner_release_artifact.outputs.artifact-url }}
+        run: |
+          echo "### Owner-signed Jumlo Release APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download owner-signed ARM64 Release APK]($RELEASE_ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Confirm the SHA-256 and signer fingerprint before distributing." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove temporary owner signing keystore
+        if: ${{ always() && steps.owner_signing.outputs.enabled == 'true' }}
+        shell: bash
+        env:
+          OWNER_KEYSTORE_PATH: ${{ steps.owner_signing.outputs.keystore }}
+        run: rm -f -- "$OWNER_KEYSTORE_PATH"
 
       - name: Upload logs on failure
         if: failure()
