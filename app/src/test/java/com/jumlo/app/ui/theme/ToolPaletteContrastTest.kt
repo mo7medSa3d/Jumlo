@@ -36,6 +36,27 @@ class ToolPaletteContrastTest {
             }
         }
     }
+    @Test fun accentTextRolesMeetAaAgainstTheActualScreenSurface() {
+        for (seed in listOf("BLUE", "TEAL", "CORAL", "VIOLET", "INDIGO", "GREEN",
+            "PINK", "ORANGE", "AMBER", "RED", "CYAN", "MAGENTA", "PURPLE",
+            "BROWN", "SAGE", "INKWELL", "#808080", "#808020", "#00B000", "#CCCCCC")) {
+            for ((dark, amoled) in listOf(false to false, true to false, true to true)) {
+                val scheme = M3ColorFactory.scheme(M3ColorFactory.seedFor(seed), dark, amoled)
+                val surface = scheme.surface
+                val foregroundRoles = listOf(
+                    "primary" to scheme.primary,
+                    "secondary" to scheme.secondary,
+                    "tertiary" to scheme.tertiary,
+                    "error" to scheme.error
+                )
+                for ((role, foreground) in foregroundRoles) {
+                    val ratio = M3ColorFactory.contrast(surface, foreground)
+                    assertTrue("$role on surface for $seed dark=$dark amoled=$amoled ratio=$ratio", ratio >= 4.5f)
+                }
+            }
+        }
+    }
+
     @Test fun borderlineBackgroundsAlwaysReachAaWithWorstInitialForegrounds() {
         for (shade in 0..255 step 3) {
             val value = shade / 255f
