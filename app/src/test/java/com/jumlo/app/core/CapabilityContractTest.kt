@@ -19,10 +19,15 @@ class CapabilityContractTest {
         }
     }
 
-    @Test fun noGhostPdfRoutesCanEnqueueUnavailableOperations() {
-        listOf("pdf_compare", "pdf_redact", "missing_tool").forEach { id ->
-            assertEquals("$id is not a registry operation", CapabilityKind.UNAVAILABLE, CapabilityRegistry.availability(id).kind)
-            assertFalse("$id may not enqueue work", CapabilityRegistry.canProcess(id))
+    @Test fun unknownOperationsCannotBeEnqueued() {
+        assertEquals(CapabilityKind.UNAVAILABLE, CapabilityRegistry.availability("missing_tool").kind)
+        assertFalse("unknown operations must fail closed", CapabilityRegistry.canProcess("missing_tool"))
+    }
+
+    @Test fun implementedPdfSpecialistsAreRegisteredAsProcessingCapabilities() {
+        listOf("pdf_compare", "pdf_redact", "office_to_pdf").forEach { id ->
+            assertEquals("$id must expose its implemented processing capability", CapabilityKind.PROCESSING, CapabilityRegistry.availability(id).kind)
+            assertTrue("$id must be executable", CapabilityRegistry.canProcess(id))
         }
     }
 
