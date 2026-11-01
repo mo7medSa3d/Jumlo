@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="quick_start_title">مرحباً بك في Jumlo</string>
+    <string name="quick_start_title">مرحباً بك في جملو</string>
     <string name="quick_start_subtitle">ابدأ باستيراد مستند أو مسح صفحة بالكاميرا أو استكشاف أدوات PDF والصور والتحميل.</string>
     <string name="quick_start_import">استيراد الملفات</string>
     <string name="quick_start_import_desc">اختر مستند PDF أو صورة من ذاكرة الهاتف.</string>

@@ -1,11 +1,11 @@
 <resources>
-    <string name="redesign_download_hero">Download anything useful.</string>
-    <string name="redesign_download_subtitle">Direct file links and Google Drive links, saved cleanly on your device.</string>
-    <string name="redesign_link_hint">Paste a direct file or Google Drive link</string>
+    <string name="redesign_download_hero">Download Any Media &amp; Files</string>
+    <string name="redesign_download_subtitle">Fast video and audio from TikTok, YouTube, Instagram, Facebook, LinkedIn, X, and direct links.</string>
+    <string name="redesign_link_hint">Paste link (TikTok, YouTube, Instagram, Facebook, LinkedIn, direct)...</string>
     <string name="redesign_paste_suggestion">Paste copied link</string>
     <string name="redesign_ready_file">Ready to save</string>
     <string name="redesign_download_retry_hint">Check the link and try again.</string>
-    <string name="redesign_download_now">Download</string>
+    <string name="redesign_download_now">Start download</string>
     <string name="redesign_download_not_file">This link leads to a web page, not a file.</string>
     <string name="redesign_download_quality">Default video quality</string>
     <string name="redesign_audio_only">Download audio by default</string>

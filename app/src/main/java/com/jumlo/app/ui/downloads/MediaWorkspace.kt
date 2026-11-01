@@ -11,6 +11,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
@@ -99,70 +106,163 @@ import kotlin.math.roundToInt
             verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
             item("hero") {
-                Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.redesign_download_hero),style=QuietTheme.typography.screenTitle,fontWeight=FontWeight.Bold)
-                    Text(
-                        stringResource(if (BuildConfig.EXTENDED_MEDIA) R.string.media_supported_platforms_extended else R.string.media_supported_platforms),
-                        color=MaterialTheme.colorScheme.onSurfaceVariant,
-                        style=QuietTheme.typography.metadata
-                    )
-                }
-            }
-            item("input") {
-                Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    TextField(
-                        value=state.url,onValueChange={clipboardEmpty=false;editUrl(it)},singleLine=true,enabled=!state.submitting,
-                        isError=clipboardEmpty,
-                        supportingText=if(clipboardEmpty) ({ Text(stringResource(R.string.studio_clipboard_empty)) }) else null,
-                        placeholder={Text(stringResource(R.string.redesign_link_hint))},
-                        label={Text(stringResource(R.string.media_link))},
-                        modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp),
-                        colors=TextFieldDefaults.colors(focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent,disabledIndicatorColor=Color.Transparent),
-                        keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Uri,imeAction=ImeAction.Go),
-                        keyboardActions=KeyboardActions(onGo={viewModel.analyze()}),
-                        textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),
-                        leadingIcon={Icon(Icons.Rounded.Link,null)},
-                        trailingIcon={
-                            Row(verticalAlignment=Alignment.CenterVertically) {
-                                if(state.url.isNotEmpty()) {
-                                    IconButton(onClick={haptics.selectionToggle();editUrl("")}) {
-                                        Icon(Icons.Rounded.Close,stringResource(R.string.signature_clear))
-                                    }
-                                }
-                                IconButton(onClick={
-                                    val clip=readClipboard()?.takeIf { it.isNotBlank() }
-                                    clipboardEmpty=clip==null
-                                    if(clip!=null) {
-                                        haptics.actionClick()
-                                        editUrl(clip)
-                                        viewModel.analyze()
-                                    }
-                                }) {
-                                    Icon(Icons.Rounded.ContentPaste,stringResource(R.string.action_paste))
-                                }
-                            }
-                        }
-                    )
-                    Row(
-                        modifier=Modifier.fillMaxWidth(),
-                        verticalAlignment=Alignment.CenterVertically,
-                        horizontalArrangement=Arrangement.SpaceBetween
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+                    modifier = Modifier.fillMaxWidth().animateContentSize()
+                ) {
+                    Column(
+                        Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            state.platformBadge?.let { badge ->
-                                QuietBadge(
-                                    text=badge,
-                                    containerColor=MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor=MaterialTheme.colorScheme.onPrimaryContainer,
-                                    leadingIcon=Icons.Rounded.AutoAwesome
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Download,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.redesign_download_hero),
+                                    style = QuietTheme.typography.screenTitle,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
-                        if(state.url.isNotBlank() && !state.analyzing) {
-                            TextButton(onClick={haptics.actionClick();viewModel.analyze()}) {
-                                Icon(Icons.Rounded.Refresh,null,Modifier.size(18.dp))
+                        Text(
+                            stringResource(R.string.redesign_download_subtitle),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f),
+                            style = QuietTheme.typography.bodyMedium
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(top = 2.dp)
+                        ) {
+                            items(listOf(
+                                "TikTok", "YouTube", "Instagram", "Facebook",
+                                "LinkedIn", "X (Twitter)", "Pinterest", "Google Drive"
+                            )) { platform ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                                ) {
+                                    Row(
+                                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            Modifier.size(7.dp).background(
+                                                MaterialTheme.colorScheme.primary,
+                                                CircleShape
+                                            )
+                                        )
+                                        Text(
+                                            platform,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item("input") {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        border = BorderStroke(1.dp, if (state.platformBadge != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)),
+                        modifier = Modifier.fillMaxWidth().animateContentSize()
+                    ) {
+                        Column(Modifier.padding(6.dp)) {
+                            TextField(
+                                value = state.url,
+                                onValueChange = { clipboardEmpty = false; editUrl(it) },
+                                singleLine = true,
+                                enabled = !state.submitting,
+                                isError = clipboardEmpty,
+                                supportingText = if (clipboardEmpty) ({ Text(stringResource(R.string.studio_clipboard_empty)) }) else null,
+                                placeholder = { Text(stringResource(R.string.redesign_link_hint), style = QuietTheme.typography.metadata) },
+                                label = { Text(stringResource(R.string.media_link)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    disabledIndicatorColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent
+                                ),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                                keyboardActions = KeyboardActions(onGo = { viewModel.analyze() }),
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
+                                leadingIcon = { Icon(Icons.Rounded.Link, null, tint = MaterialTheme.colorScheme.primary) },
+                                trailingIcon = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (state.url.isNotEmpty()) {
+                                            IconButton(onClick = { haptics.selectionToggle(); editUrl("") }) {
+                                                Icon(Icons.Rounded.Close, stringResource(R.string.signature_clear))
+                                            }
+                                        }
+                                        FilledTonalIconButton(
+                                            onClick = {
+                                                val clip = readClipboard()?.takeIf { it.isNotBlank() }
+                                                clipboardEmpty = clip == null
+                                                if (clip != null) {
+                                                    haptics.actionClick()
+                                                    editUrl(clip)
+                                                    viewModel.analyze()
+                                                }
+                                            },
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Icon(Icons.Rounded.ContentPaste, stringResource(R.string.action_paste), Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        AnimatedVisibility(visible = state.platformBadge != null, enter = fadeIn(), exit = fadeOut()) {
+                            state.platformBadge?.let { badge ->
+                                QuietBadge(
+                                    text = badge,
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    leadingIcon = Icons.Rounded.AutoAwesome
+                                )
+                            }
+                        }
+                        if (state.url.isNotBlank() && !state.analyzing) {
+                            FilledTonalButton(
+                                onClick = { haptics.actionClick(); viewModel.analyze() },
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.media_analyze),style=QuietTheme.typography.metadataStrong)
+                                Text(stringResource(R.string.media_analyze), style = QuietTheme.typography.metadataStrong)
                             }
                         }
                     }
@@ -199,27 +299,6 @@ import kotlin.math.roundToInt
                 )
             }}
 
-            // Automatic selection is the default. Optional controls stay behind
-            // Advanced so a newly analyzed link is one tap away from downloading.
-            if (state.direct != null || state.asset != null) item("advanced-options") {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (state.asset != null && !showAdvanced) {
-                        val selected = state.choices.firstOrNull { it.key == state.selectedKey }
-                        Text(
-                            if (selected != null) stringResource(R.string.media_selected_quality_summary, MediaCatalog.qualityTitle(selected))
-                            else stringResource(R.string.media_auto_best_quality),
-                            style = QuietTheme.typography.metadata,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    TextButton(
-                        onClick = { haptics.actionClick(); showAdvanced = !showAdvanced },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(if (showAdvanced) R.string.media_hide_advanced else R.string.media_advanced_options))
-                    }
-                }
-            }
 
             // =========================================================================
             // CASE 1: DIRECT FILE / PDF / IMAGE / GOOGLE DRIVE LINK
@@ -361,7 +440,7 @@ import kotlin.math.roundToInt
                 }
 
                 // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
-                if (showAdvanced) item("media-type-selector") {
+                item("media-type-selector") {
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
@@ -390,7 +469,7 @@ import kotlin.math.roundToInt
                 }
 
                 // 2. If Audio Mode is active: Audio Format (MP3, M4A, OPUS, ORIGINAL) + Bitrate (320..64 kbps)
-                if (showAdvanced && state.mode == MediaMode.AUDIO) {
+                if (state.mode == MediaMode.AUDIO) {
                     item("audio-format-controls") {
                         Surface(
                             shape=RoundedCornerShape(22.dp),
@@ -439,14 +518,14 @@ import kotlin.math.roundToInt
                 }
 
                 // 3. Quality & Resolution Grid — Visible directly!
-                if (showAdvanced) item("media-quality-header") {
+                item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
                         Text(stringResource(R.string.media_actual_qualities),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                if (showAdvanced) items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
+                items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { choice ->
                             val selected = state.selectedKey == choice.key
@@ -527,6 +606,17 @@ import kotlin.math.roundToInt
                 }
             }
 
+            if (state.asset != null || state.direct != null) {
+                item("advanced-options-toggle") {
+                    TextButton(
+                        onClick = { haptics.actionClick(); showAdvanced = !showAdvanced },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        Text(stringResource(if (showAdvanced) R.string.media_hide_advanced else R.string.media_advanced_options))
+                    }
+                }
+            }
+
             if (showAdvanced && (state.asset != null || state.direct != null)) item("filename") {
                 TextField(value=state.name,onValueChange=viewModel::name,
                     singleLine=true,label={Text(stringResource(R.string.media_filename))},
@@ -537,6 +627,16 @@ import kotlin.math.roundToInt
         }
         Surface(tonalElevation=2.dp) {
             Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
+            val selectedChoice = state.choices.firstOrNull { it.key == state.selectedKey }
+            val downloadButtonLabel = when {
+                state.submitting -> stringResource(R.string.media_queueing)
+                selectedChoice != null -> {
+                    val qTitle = MediaCatalog.qualityTitle(selectedChoice)
+                    stringResource(R.string.media_download_with_quality, qTitle)
+                }
+                state.asset != null -> stringResource(R.string.media_download_selected)
+                else -> stringResource(R.string.redesign_download_now)
+            }
             Button(
                 onClick={haptics.toolExecute();viewModel.submit(onQueued)},
                 enabled=!state.analyzing && !state.submitting && (state.direct!=null || state.selectedKey!=null),
@@ -545,11 +645,7 @@ import kotlin.math.roundToInt
             ) {
                 Icon(Icons.Rounded.Download,null);Spacer(Modifier.width(8.dp))
                 Text(
-                    text=when {
-                        state.submitting -> stringResource(R.string.media_queueing)
-                        state.asset != null -> stringResource(if (showAdvanced) R.string.media_download_selected else R.string.redesign_download_now)
-                        else -> stringResource(R.string.redesign_download_now)
-                    },
+                    text=downloadButtonLabel,
                     style=QuietTheme.typography.button
                 )
             }

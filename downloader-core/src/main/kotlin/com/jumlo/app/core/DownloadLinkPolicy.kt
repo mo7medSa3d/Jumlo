@@ -18,11 +18,11 @@ object DownloadLinkPolicy {
     )
     private val extractorDomains = setOf(
         "youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com", "youtube-nocookie.com",
-        "tiktok.com", "vm.tiktok.com", "vt.tiktok.com", "tiktokv.com",
-        "instagram.com", "instagr.am", "ig.me",
-        "facebook.com", "fb.watch", "fb.com", "fb.gg", "m.facebook.com",
+        "tiktok.com", "vm.tiktok.com", "vt.tiktok.com", "tiktokv.com", "douyin.com", "v.douyin.com",
+        "instagram.com", "instagr.am", "ig.me", "threads.net",
+        "facebook.com", "fb.watch", "fb.com", "fb.gg", "m.facebook.com", "web.facebook.com", "mbasic.facebook.com",
         "linkedin.com", "lnkd.in",
-        "twitter.com", "x.com", "t.co", "fxtwitter.com", "vxtwitter.com",
+        "twitter.com", "x.com", "t.co", "fxtwitter.com", "vxtwitter.com", "fixupx.com",
         "vimeo.com", "player.vimeo.com",
         "dailymotion.com", "dai.ly",
         "soundcloud.com", "on.soundcloud.com",
@@ -30,7 +30,9 @@ object DownloadLinkPolicy {
         "twitch.tv", "clips.twitch.tv",
         "pinterest.com", "pin.it",
         "bilibili.com", "b23.tv",
-        "threads.net", "snapchat.com",
+        "snapchat.com",
+        "kwai.com", "kwai-video.com",
+        "t.me",
         "drive.google.com", "docs.google.com", "drive.usercontent.google.com"
     )
 
@@ -41,10 +43,10 @@ object DownloadLinkPolicy {
         fun matches(vararg domains: String) = domains.any { host == it || host.endsWith(".$it") }
         return when {
             matches("youtube.com", "youtu.be", "youtube-nocookie.com") -> "YouTube"
-            matches("tiktok.com", "tiktokv.com") -> "TikTok"
+            matches("tiktok.com", "tiktokv.com", "douyin.com") -> "TikTok"
             matches("instagram.com", "instagr.am", "ig.me") -> "Instagram"
             matches("facebook.com", "fb.watch", "fb.com", "fb.gg") -> "Facebook"
-            matches("twitter.com", "x.com", "t.co", "fxtwitter.com", "vxtwitter.com") -> "X (Twitter)"
+            matches("twitter.com", "x.com", "t.co", "fxtwitter.com", "vxtwitter.com", "fixupx.com") -> "X (Twitter)"
             matches("linkedin.com", "lnkd.in") -> "LinkedIn"
             matches("soundcloud.com") -> "SoundCloud"
             matches("vimeo.com") -> "Vimeo"
@@ -55,6 +57,8 @@ object DownloadLinkPolicy {
             matches("bilibili.com", "b23.tv") -> "Bilibili"
             matches("threads.net") -> "Threads"
             matches("snapchat.com") -> "Snapchat"
+            matches("kwai.com", "kwai-video.com") -> "Kwai"
+            matches("t.me") -> "Telegram"
             matches("drive.google.com", "docs.google.com", "drive.usercontent.google.com") -> "Google Drive"
             else -> null
         }

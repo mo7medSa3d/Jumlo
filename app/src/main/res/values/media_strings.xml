@@ -66,8 +66,8 @@
     <string name="media_img_compressed">Smaller image</string>
     <string name="media_img_to_pdf">Image as PDF</string>
     <string name="media_switch_to_extractor">Inspect original audio/video file</string>
-    <string name="media_supported_platforms">Direct files and HTML5 media sources. Downloading depends on source permission and accessibility.</string>
-    <string name="media_supported_platforms_extended">Public media pages and direct files. Available formats depend on the source and access permissions.</string>
+    <string name="media_supported_platforms">TikTok, YouTube, Instagram, Facebook, LinkedIn, X, and direct files.</string>
+    <string name="media_supported_platforms_extended">TikTok, YouTube, Instagram, Facebook, LinkedIn, X, and direct links in high quality.</string>
     <string name="media_with_audio">With Audio</string>
     <string name="media_without_audio">No audio</string>
     <string name="media_video_only">Video</string>
@@ -80,4 +80,5 @@
     <string name="downloads_completed_count">%1$d completed</string>
     <string name="home_manage_downloads">View all downloads</string>
     <string name="media_selected_quality_summary">Ready to download: %1$s</string>
+    <string name="media_download_with_quality">Download (%s)</string>
 </resources>

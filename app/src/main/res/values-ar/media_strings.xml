@@ -32,7 +32,7 @@
     <string name="media_no_upscale">ترميز المصدر الأصلي يحافظ على الجودة الصوتية بدون إعادة ترميز إضافية.</string>
     <string name="media_limits">حد المساحة المؤقتة: 8 GiB حسب المساحة المتاحة. إعادة المحاولة تستكمل التنزيل.</string>
     <string name="media_rights_title">قبل التنزيل</string>
-    <string name="media_rights_body">نزّل فقط المحتوى الذي تملكه أو لديك إذن بتنزيله، واتبع شروط استخدام الموقع. لا يتجاوز Jumlo حماية DRM أو المدفوعات أو قيود الوصول؛ وإذا كان الموقع يتطلب حسابًا فسيظهر ذلك ويتوقف التنزيل.</string>
+    <string name="media_rights_body">نزّل فقط المحتوى الذي تملكه أو لديك إذن بتنزيله، واتبع شروط استخدام الموقع. لا يتجاوز جملو حماية DRM أو المدفوعات أو قيود الوصول؛ وإذا كان الموقع يتطلب حسابًا فسيظهر ذلك ويتوقف التنزيل.</string>
     <string name="media_rights_confirm">لديّ حقوق الاستخدام</string>
     <string name="media_error_service">خدمة الاستخراج غير مُعدّة في هذا الإصدار. جرّب رابط ملف مباشر.</string>
     <string name="media_error_site">لم نعثر على وسائط قابلة للتنزيل. تأكد أن الرابط عام وحاول مجددًا.</string>
@@ -44,7 +44,7 @@
     <string name="media_error_rate">المصدر يحد من عدد الطلبات. حاول لاحقًا؛ تكرار تغيير المتصفح لن يمنح صلاحيات وصول.</string>
     <string name="media_error_network">تعذر الاتصال بالمصدر بسبب خطأ في الشبكة. تحقق من الاتصال وحاول مجدداً.</string>
     <string name="media_error_format">الجودة المختارة تغيرت أو غير متاحة. حلل الرابط من جديد.</string>
-    <string name="media_error_runtime">تعذر تشغيل محرك الوسائط. حدّث Jumlo أو أعد تثبيته ثم حاول مجددًا.</string>
+    <string name="media_error_runtime">تعذر تشغيل محرك الوسائط. حدّث جملو أو أعد تثبيته ثم حاول مجددًا.</string>
     <string name="media_error_generic">تعذر تنزيل الوسائط. تحقق من الرابط والاتصال وحاول مجددًا.</string>
     <string name="media_candidates_note">حلل الرابط لعرض جميع جوداته المتاحة.</string>
     <string name="media_no_candidates">لم يتم اكتشاف رابط وسائط بعد.</string>
@@ -66,8 +66,8 @@
     <string name="media_img_compressed">صورة أصغر</string>
     <string name="media_img_to_pdf">الصورة بصيغة PDF</string>
     <string name="media_switch_to_extractor">فحص ملف الفيديو أو الصوت الأصلي</string>
-    <string name="media_supported_platforms">ملفات مباشرة ومصادر HTML5 المرخص بها، حسب إتاحة المصدر وصلاحيات الوصول.</string>
-    <string name="media_supported_platforms_extended">صفحات الوسائط العامة والملفات المباشرة. تتوقف الصيغ المتاحة على المصدر وصلاحيات الوصول.</string>
+    <string name="media_supported_platforms">تيك توك، يوتيوب، انستجرام، فيسبوك، لينكد إن، إكس، والملفات المباشرة.</string>
+    <string name="media_supported_platforms_extended">تيك توك، يوتيوب، انستجرام، فيسبوك، لينكد إن، إكس، والملفات المباشرة بأعلى جودة.</string>
     <string name="media_with_audio">مع الصوت</string>
     <string name="media_without_audio">بدون صوت</string>
     <string name="media_video_only">فيديو</string>
@@ -75,9 +75,10 @@
     <string name="media_error_conversion">لا يمكن تحويل هذا المصدر إلى صيغة الصوت المطلوبة. جرّب صيغة الصوت الأصلية.</string>
     <string name="media_direct_url_hint">جرّب رابط وسائط مباشرًا أو صفحة تسمح بتنزيل ملفات فيديو أو صوت HTML5.</string>
     <string name="media_audio_not_probed">يتم التحقق من مسارات الصوت بعد التنزيل</string>
-    <string name="media_restricted_hint">الرابط يحتاج تسجيل دخول أو المصدر يمنع الوصول إليه. لا يطلب Jumlo كوكيز ولا يتجاوز المحتوى المحمي؛ استخدم رابط تحميل عام ومتاح.</string>
+    <string name="media_restricted_hint">الرابط يحتاج تسجيل دخول أو المصدر يمنع الوصول إليه. لا يطلب جملو كوكيز ولا يتجاوز المحتوى المحمي؛ استخدم رابط تحميل عام ومتاح.</string>
     <string name="downloads_live_count">%1$d نشط</string>
     <string name="downloads_completed_count">%1$d مكتمل</string>
     <string name="home_manage_downloads">عرض جميع التنزيلات</string>
     <string name="media_selected_quality_summary">جاهز للتنزيل: %1$s</string>
+    <string name="media_download_with_quality">تنزيل (%s)</string>
 </resources>

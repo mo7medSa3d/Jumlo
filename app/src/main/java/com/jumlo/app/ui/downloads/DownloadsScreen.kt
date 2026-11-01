@@ -152,7 +152,12 @@ import com.jumlo.app.core.StoragePaths
         }
         if(jobLoad!=com.jumlo.app.ui.DataLoadStatus.READY) item("load-state") {DocumentLoadState(jobLoad,vm::reloadSavedData)}
         if(jobLoad==com.jumlo.app.ui.DataLoadStatus.READY && downloads.isEmpty()) item("empty") {
-            QuietStateCard(stringResource(R.string.downloads_empty_title),stringResource(R.string.premium_download_empty))
+            QuietStateCard(
+                title=stringResource(R.string.downloads_empty_title),
+                subtitle=stringResource(R.string.premium_download_empty),
+                actionLabel=if (mediaTool!=null) stringResource(R.string.ui_new_download) else null,
+                onAction=if (mediaTool!=null) ({ onTool(mediaTool) }) else null
+            )
         }
     }
 }

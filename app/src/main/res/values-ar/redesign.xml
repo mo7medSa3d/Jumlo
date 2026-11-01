@@ -1,11 +1,11 @@
 <resources>
-    <string name="redesign_download_hero">نزّل ما تحتاجه.</string>
-    <string name="redesign_download_subtitle">روابط الملفات المباشرة وروابط Google Drive تُحفظ مباشرة على جهازك.</string>
-    <string name="redesign_link_hint">الصق رابط ملف مباشر أو رابط Google Drive</string>
+    <string name="redesign_download_hero">نزّل من أي منصة أو رابط</string>
+    <string name="redesign_download_subtitle">تنزيل الفيديوهات والصوتيات من تيك توك، يوتيوب، انستجرام، فيسبوك، لينكد إن، إكس والروابط المباشرة بجودة فائقة.</string>
+    <string name="redesign_link_hint">الصق رابط فيديو (تيك توك، يوتيوب، انستجرام، فيسبوك...) أو ملف</string>
     <string name="redesign_paste_suggestion">لصق الرابط المنسوخ</string>
     <string name="redesign_ready_file">جاهز للحفظ</string>
     <string name="redesign_download_retry_hint">تحقق من الرابط وحاول مجددًا.</string>
-    <string name="redesign_download_now">تنزيل</string>
+    <string name="redesign_download_now">بدء التنزيل</string>
     <string name="redesign_download_not_file">هذا الرابط يفتح صفحة ويب، وليس ملفًا.</string>
     <string name="redesign_download_quality">جودة الفيديو الافتراضية</string>
     <string name="redesign_audio_only">تنزيل الصوت افتراضيًا</string>

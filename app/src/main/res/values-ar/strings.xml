@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Jumlo</string>
+    <string name="app_name">جملو</string>
     <string name="tagline">ملفاتك. أدواتك.</string>
     <string name="tagline_subtitle">حرّر ملفات PDF والصور محلياً، مع عمليات نقل عبر الشبكة عند اختيارك.</string>
     <string name="offline_pledge_short">تحرير المستندات محلياً. تستخدم الميزات المتصلة الشبكة عند اختيارها.</string>
@@ -14,7 +14,7 @@
     <string name="nav_files">الملفات</string>
 
     <!-- Welcome Launch -->
-    <string name="welcome_title">مرحباً بك في Jumlo</string>
+    <string name="welcome_title">مرحباً بك في جملو</string>
     <string name="welcome_badge">تحرير محلي • تنزيلات وDrive عند الحاجة</string>
     <string name="welcome_card_title">عدّل محلياً وشارك باختيارك</string>
     <string name="welcome_card_body">تُعدَّل ملفات PDF والصور على جهازك. تستخدم التنزيلات ومعاينات الوسائط وخدمات الاستخراج الاختيارية وعمليات Google Drive الشبكة عند اختيارها.</string>
@@ -167,7 +167,7 @@
     <string name="settings_privacy_permissions">الخصوصية والأذونات</string>
     <string name="settings_offline_help">الدليل والمساعدة بدون اتصال</string>
     <string name="settings_diagnostic_report">تقرير التشخيص الآمن</string>
-    <string name="settings_about">حول Jumlo</string>
+    <string name="settings_about">حول جملو</string>
     <string name="settings_storage_summary">النسخ: %1$s · المخرجات: %2$s · المهملات: %3$s · التنزيلات: %4$s · المؤقتة: %5$s</string>
     <string name="settings_allow_notifications">السماح بإشعارات التقدم في الخلفية</string>
     <string name="settings_privacy_summary">تجري معالجة المستندات على جهازك. قد تستخدم التنزيلات والصور المصغّرة البعيدة وخدمات الاستخراج الاختيارية وعمليات Google Drive وتثبيت نماذج المسح والتعرّف الضوئي الشبكة. النسخ الاحتياطي للتطبيق معطّل.</string>
