@@ -1,12 +1,18 @@
 package com.jumlo.app.core.office
 
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FilterInputStream
 import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import javax.xml.parsers.SAXParserFactory
 import org.xml.sax.Attributes
+import org.xml.sax.EntityResolver
+import org.xml.sax.InputSource
+import org.xml.sax.SAXException
 import org.xml.sax.helpers.DefaultHandler
+import org.xml.sax.ext.LexicalHandler
 
 /**
  * Streaming OOXML reader (docx, xlsx, pptx) built on java.util.zip + SAX.
@@ -24,19 +30,85 @@ object OfficeDocumentReader {
     const val MAX_BLOCKS = 50_000
     const val MAX_TOTAL_CHARS = 10_000_000L
     const val MAX_IMAGE_BYTES = 256L * 1024 * 1024
+    const val MAX_EXPANDED_PACKAGE_BYTES = 512L * 1024 * 1024
+
+    private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
+    private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
+    private const val DISALLOW_DOCTYPE = "http://apache.org/xml/features/disallow-doctype-decl"
+    private const val LOAD_EXTERNAL_DTD = "http://apache.org/xml/features/nonvalidating/load-external-dtd"
+    private const val LEXICAL_HANDLER = "http://xml.org/sax/properties/lexical-handler"
 
     // ---- generic SAX helpers -------------------------------------------------
 
-    private fun saxParser(): SAXParserFactory = SAXParserFactory.newInstance().apply {
-        isNamespaceAware = true
-        isXIncludeAware = false
-        try { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) } catch (_: Exception) { }
-        try { setFeature("http://xml.org/sax/features/external-general-entities", false) } catch (_: Exception) { }
-        try { setFeature("http://xml.org/sax/features/external-parameter-entities", false) } catch (_: Exception) { }
+    private fun parseXml(stream: InputStream, handler: DefaultHandler) {
+        val factory = SAXParserFactory.newInstance().apply {
+            isNamespaceAware = true
+            isXIncludeAware = false
+        }
+        val reader = factory.newSAXParser().xmlReader
+
+        // These two SAX controls are mandatory. Android's Expat reader explicitly
+        // supports both as read-only false features; Xerces supports setting them.
+        reader.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
+        reader.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
+        require(!reader.getFeature(EXTERNAL_GENERAL_ENTITIES) &&
+            !reader.getFeature(EXTERNAL_PARAMETER_ENTITIES)) { "OFFICE_XML_SECURITY_UNAVAILABLE" }
+
+        // These provider-specific controls add defense in depth where available.
+        // The mandatory portable DOCTYPE rejection below does not depend on them.
+        runCatching { reader.setFeature(DISALLOW_DOCTYPE, true) }
+        runCatching { reader.setFeature(LOAD_EXTERNAL_DTD, false) }
+        runCatching { reader.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true) }
+
+        reader.entityResolver = EntityResolver { _, _ ->
+            throw SAXException("OFFICE_EXTERNAL_ENTITY_BLOCKED")
+        }
+        reader.setProperty(LEXICAL_HANDLER, object : LexicalHandler {
+            override fun startDTD(name: String?, publicId: String?, systemId: String?) {
+                throw SAXException("OFFICE_DTD_NOT_ALLOWED")
+            }
+            override fun endDTD() = Unit
+            override fun startEntity(name: String?) = Unit
+            override fun endEntity(name: String?) = Unit
+            override fun startCDATA() = Unit
+            override fun endCDATA() = Unit
+            override fun comment(ch: CharArray, start: Int, length: Int) = Unit
+        })
+        reader.contentHandler = handler
+        reader.errorHandler = handler
+        // Parse through the configured XMLReader directly. SAXParser.parse(...,
+        // DefaultHandler) replaces the reader's resolver with the handler's default.
+        reader.parse(InputSource(stream))
     }
 
-    private fun parseXml(stream: InputStream, handler: DefaultHandler) {
-        saxParser().newSAXParser().parse(stream, handler)
+    private fun packageByteLimit(requested: Long): Long {
+        require(requested > 0L) { "OFFICE_SIZE_LIMIT" }
+        return minOf(requested, MAX_EXPANDED_PACKAGE_BYTES)
+    }
+
+    private class BoundedEntryInputStream(input: InputStream, private val limit: Long) :
+        FilterInputStream(input) {
+        private var consumed = 0L
+
+        override fun read(): Int {
+            val value = super.read()
+            if (value >= 0) {
+                consumed++
+                require(consumed <= limit) { "OFFICE_SIZE_LIMIT" }
+            }
+            return value
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (length == 0) return 0
+            val remaining = limit - consumed
+            if (remaining <= 0L) {
+                return if (super.read() == -1) -1 else throw IllegalArgumentException("OFFICE_SIZE_LIMIT")
+            }
+            val count = super.read(buffer, offset, minOf(length.toLong(), remaining).toInt())
+            if (count > 0) consumed += count
+            return count
+        }
     }
 
     /** Attribute by local name, tolerant of prefix differences (val vs w:val). */
@@ -49,15 +121,31 @@ object OfficeDocumentReader {
         return null
     }
 
-    private fun entries(zip: ZipFile): Map<String, ZipEntry> {
+    private fun entries(zip: ZipFile, maxExpandedBytes: Long): Map<String, ZipEntry> {
         require(zip.size() <= MAX_ENTRIES) { "OFFICE_SIZE_LIMIT" }
-        val map = LinkedHashMap<String, ZipEntry>()
-        zip.entries().toList().forEach { map[it.name] = it }
+        val map = LinkedHashMap<String, ZipEntry>(zip.size())
+        var totalExpandedBytes = 0L
+        val enumeration = zip.entries()
+        while (enumeration.hasMoreElements()) {
+            val entry = enumeration.nextElement()
+            val name = entry.name
+            require(name.isNotEmpty() && !name.startsWith("/") && '\\\\' !in name &&
+                '\\u0000' !in name && name.split('/').none { it == ".." }) { "OFFICE_INVALID" }
+            require(!map.containsKey(name)) { "OFFICE_INVALID" }
+            val declaredSize = entry.size
+            require(declaredSize >= 0L && declaredSize <= maxExpandedBytes - totalExpandedBytes) {
+                "OFFICE_SIZE_LIMIT"
+            }
+            totalExpandedBytes += declaredSize
+            map[name] = entry
+        }
         return map
     }
 
     private fun open(zip: ZipFile, map: Map<String, ZipEntry>, name: String): InputStream? =
-        map[name]?.let { zip.getInputStream(it) }
+        map[name]?.let { entry ->
+            BoundedEntryInputStream(zip.getInputStream(entry), entry.size)
+        }
 
     /** Resolve a relationship target against the part that owns the rels file. */
     private fun resolve(basePart: String, target: String): String {
@@ -108,10 +196,16 @@ object OfficeDocumentReader {
 
     // ---- detection -----------------------------------------------------------
 
-    fun detect(file: File, displayName: String): OfficeKind {
+    fun detect(
+        file: File,
+        displayName: String,
+        maxBytes: Long = MAX_EXPANDED_PACKAGE_BYTES
+    ): OfficeKind {
+        val packageLimit = packageByteLimit(maxBytes)
+        require(file.length() <= packageLimit) { "OFFICE_SIZE_LIMIT" }
         try {
             ZipFile(file).use { zip ->
-                val map = entries(zip)
+                val map = entries(zip, packageLimit)
                 open(zip, map, "[Content_Types].xml")?.use { stream ->
                     var found: OfficeKind? = null
                     var mainPart: String? = null
@@ -145,10 +239,11 @@ object OfficeDocumentReader {
     // ---- entry point ---------------------------------------------------------
 
     fun read(file: File, kind: OfficeKind, maxBytes: Long, checkCancel: () -> Unit = {}): OfficeDocument {
-        require(maxBytes > 0) { "OFFICE_SIZE_LIMIT" }
+        val packageLimit = packageByteLimit(maxBytes)
+        require(file.length() <= packageLimit) { "OFFICE_SIZE_LIMIT" }
         try {
             ZipFile(file).use { zip ->
-                val map = entries(zip)
+                val map = entries(zip, packageLimit)
                 return when (kind) {
                     OfficeKind.DOCX -> readDocx(zip, map, checkCancel)
                     OfficeKind.XLSX -> readXlsx(zip, map, checkCancel)
@@ -169,16 +264,35 @@ object OfficeDocumentReader {
         var imageBytes = 0L
         fun add(block: OfficeBlock) {
             require(blocks.size < MAX_BLOCKS) { "OFFICE_SIZE_LIMIT" }
-            if (block is OfficeBlock.ParagraphBlock) {
-                totalChars += block.paragraph.text.length
-                require(totalChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
+            val addedChars = when (block) {
+                is OfficeBlock.ParagraphBlock -> block.paragraph.text.length.toLong()
+                is OfficeBlock.TableBlock -> block.rows.sumOf { row ->
+                    row.sumOf { cell -> cell.text.length.toLong() }
+                }
+                else -> 0L
             }
+            require(addedChars <= MAX_TOTAL_CHARS - totalChars) { "OFFICE_SIZE_LIMIT" }
+            totalChars += addedChars
             blocks += block
         }
         fun addImage(bytes: ByteArray, extension: String) {
+            require(bytes.size.toLong() <= MAX_IMAGE_BYTES - imageBytes) { "OFFICE_SIZE_LIMIT" }
             imageBytes += bytes.size
-            require(imageBytes <= MAX_IMAGE_BYTES) { "OFFICE_SIZE_LIMIT" }
             add(OfficeBlock.ImageBlock(bytes, extension))
+        }
+        fun readImage(input: InputStream, extension: String, checkCancel: () -> Unit) {
+            val remaining = MAX_IMAGE_BYTES - imageBytes
+            require(remaining > 0L) { "OFFICE_SIZE_LIMIT" }
+            val output = ByteArrayOutputStream(minOf(remaining, 64L * 1024L).toInt())
+            val buffer = ByteArray(16 * 1024)
+            while (true) {
+                checkCancel()
+                val count = input.read(buffer)
+                if (count < 0) break
+                require(count.toLong() <= remaining - output.size().toLong()) { "OFFICE_SIZE_LIMIT" }
+                output.write(buffer, 0, count)
+            }
+            addImage(output.toByteArray(), extension)
         }
     }
 
@@ -361,7 +475,7 @@ object OfficeDocumentReader {
                                 val ext = imageExtension(target)
                                 if (isRasterImage(ext)) {
                                     open(zip, map, target)?.use { bytes ->
-                                        acc.addImage(bytes.readBytes(), ext)
+                                        acc.readImage(bytes, ext, checkCancel)
                                     }
                                 } else {
                                     acc.unsupported += "UNSUPPORTED_IMAGE"
@@ -725,7 +839,7 @@ object OfficeDocumentReader {
                                 val ext = imageExtension(target)
                                 if (isRasterImage(ext)) {
                                     open(zip, map, target)?.use { bytes ->
-                                        acc.addImage(bytes.readBytes(), ext)
+                                        acc.readImage(bytes, ext, checkCancel)
                                     }
                                 } else {
                                     acc.unsupported += "UNSUPPORTED_IMAGE"
