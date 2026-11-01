@@ -99,7 +99,7 @@ private val QuietDarkColorScheme = darkColorScheme(
 fun JumloTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     language: AppLanguage = AppLanguage.ENGLISH,
-    accentColor: String = "BLUE",
+    accentColor: String = "CLAY",
     fontScale: String = "NORMAL",
     content: @Composable () -> Unit
 ) {

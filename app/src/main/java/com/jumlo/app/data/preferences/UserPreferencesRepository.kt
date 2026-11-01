@@ -149,7 +149,7 @@ class UserPreferencesRepository @Inject constructor(
             defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
             wifiOnlyDefault = false,
             fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),
-            accentColor = (prefs[Keys.ACCENT_COLOR] ?: "BLUE").takeIf { isValidAccent(it) } ?: "BLUE",
+            accentColor = (prefs[Keys.ACCENT_COLOR] ?: "CLAY").takeIf { isValidAccent(it) } ?: "CLAY",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
@@ -278,6 +278,6 @@ class UserPreferencesRepository @Inject constructor(
 
     /** Accent is either a named preset or a #RRGGBB hex seed. */
     private fun isValidAccent(value: String): Boolean =
-        value in setOf("VIOLET", "BLUE", "TEAL", "CORAL", "DYNAMIC") ||
+        value in setOf("CLAY", "PLUM", "OLIVE", "ROSE", "VIOLET", "BLUE", "TEAL", "CORAL", "DYNAMIC") ||
             (value.removePrefix("#").let { it.length == 6 && it.all { c -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' } })
 }

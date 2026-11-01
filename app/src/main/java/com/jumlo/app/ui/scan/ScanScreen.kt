@@ -116,11 +116,14 @@ fun SignaturePad(onSaved: (File) -> Unit) {
     val padDescription = stringResource(R.string.studio_signature_pad)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.signature_title), style = QuietTheme.typography.sectionTitle)
-        Box(Modifier.fillMaxWidth().height(200.dp).clip(QuietTheme.shapes.thumbnail).background(Color(0xFFF4F4F4))) {
+        // Signature-pad checkerboard follows the theme instead of fixed light
+        // grays, so it stays readable in dark mode too.
+        val padScheme = MaterialTheme.colorScheme
+        Box(Modifier.fillMaxWidth().height(200.dp).clip(QuietTheme.shapes.thumbnail).background(padScheme.surfaceContainerHigh)) {
             Canvas(Modifier.fillMaxSize()) {
                 val cell = 14.dp.toPx()
                 for (row in 0..(size.height / cell).toInt()) for (column in 0..(size.width / cell).toInt()) {
-                    if ((row + column) % 2 == 0) drawRect(Color(0xFFE2E2E2), Offset(column * cell, row * cell), androidx.compose.ui.geometry.Size(cell, cell))
+                    if ((row + column) % 2 == 0) drawRect(padScheme.surfaceContainerHighest, Offset(column * cell, row * cell), androidx.compose.ui.geometry.Size(cell, cell))
                 }
             }
             Canvas(Modifier.fillMaxSize().testTag("signature.pad").semantics { contentDescription = padDescription }

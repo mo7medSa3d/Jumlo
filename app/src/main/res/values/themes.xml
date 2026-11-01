@@ -5,7 +5,7 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
-    <color name="jumlo_launch_background">#F8F9FC</color>
+    <color name="jumlo_launch_background">#FBF7F0</color>
     <style name="Theme.Jumlo.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/jumlo_launch_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>

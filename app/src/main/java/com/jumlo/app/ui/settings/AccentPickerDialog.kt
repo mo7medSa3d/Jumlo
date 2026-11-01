@@ -36,11 +36,13 @@ import com.jumlo.app.R
 @Composable
 internal fun AccentPickerDialog(selected: String, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    // Preview dots are exactly the ColorPresets seeds (each passes WCAG AA
+    // against white), so the picker can never drift from the preset list again.
     val accents = listOf(
-        Triple("BLUE", R.string.redesign_accent_blue, Color(0xFF2F46C6)),
-        Triple("VIOLET", R.string.redesign_accent_violet, Color(0xFF6942B0)),
-        Triple("TEAL", R.string.redesign_accent_teal, Color(0xFF086F6B)),
-        Triple("CORAL", R.string.redesign_accent_coral, Color(0xFFB63E54)),
+        Triple("CLAY", R.string.redesign_accent_clay, Color(0xFFC2410C)),
+        Triple("PLUM", R.string.redesign_accent_plum, Color(0xFF7C3AED)),
+        Triple("OLIVE", R.string.redesign_accent_olive, Color(0xFF4D7C0F)),
+        Triple("ROSE", R.string.redesign_accent_rose, Color(0xFFB4232F)),
         Triple("DYNAMIC", R.string.redesign_accent_dynamic, colors.primary)
     )
     AlertDialog(

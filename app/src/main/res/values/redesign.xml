@@ -37,6 +37,10 @@
     <string name="redesign_accent_blue">Blue</string>
     <string name="redesign_accent_teal">Teal</string>
     <string name="redesign_accent_coral">Coral</string>
+    <string name="redesign_accent_clay">Clay</string>
+    <string name="redesign_accent_plum">Plum</string>
+    <string name="redesign_accent_olive">Olive</string>
+    <string name="redesign_accent_rose">Rose</string>
     <string name="redesign_accent_dynamic">System Dynamic (Material You)</string>
     <string name="redesign_scale_small">Compact</string>
     <string name="redesign_scale_normal">Standard</string>

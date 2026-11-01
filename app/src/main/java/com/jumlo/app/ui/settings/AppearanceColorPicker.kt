@@ -42,7 +42,7 @@ import com.jumlo.app.ui.theme.ColorPresets
 import com.jumlo.app.ui.theme.M3ColorFactory
 import com.jumlo.app.ui.theme.QuietTheme
 
-/** Appearance > App color picker: live preview, 16 presets, HSV sliders and a
+/** Appearance > App color picker: live preview, 20 presets, HSV sliders and a
  *  hex field. Confirming emits the chosen hex seed. */
 @Composable
 fun AppearanceColorPicker(

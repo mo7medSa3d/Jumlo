@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Source contracts + behavioral port for the Phase 4 Appearance color picker.
 
-Static: M3ColorFactory hex/HSV helpers, 16 bilingual presets, the picker
+Static: M3ColorFactory hex/HSV helpers, 20 bilingual presets, the picker
 component, its SettingsScreen wiring, and repository hex-accent acceptance.
 Behavioral: a Python mirror validates hex parsing/formatting and accent validation.
 """
@@ -60,10 +60,10 @@ class ColorPickerStatic(unittest.TestCase):
                     'fun isValidAccent(accent: String): Boolean'):
             self.assertIn(sig, self.factory, f'missing: {sig}')
 
-    def test_sixteen_bilingual_presets(self):
-        # 16 ColorPreset entries, each with EN/AR names and a hex.
+    def test_twenty_bilingual_presets(self):
+        # 20 ColorPreset entries, each with EN/AR names and a hex.
         entries = re.findall(r'ColorPreset\("([^"]+)",\s*"([^"]*)",\s*"([^"]*)",\s*"(#[0-9A-Fa-f]{6})"\)', self.presets)
-        self.assertEqual(len(entries), 16, f'expected 16 presets, found {len(entries)}')
+        self.assertEqual(len(entries), 20, f'expected 20 presets, found {len(entries)}')
         for key, en, ar, hexv in entries:
             self.assertTrue(en, f'preset {key} missing EN name')
             self.assertTrue(ar, f'preset {key} missing AR name')

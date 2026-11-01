@@ -42,23 +42,25 @@ class PrismSourceContracts(unittest.TestCase):
                         4.5, f'{mode}{fg} on {mode}{bg}')
 
     def test_all_four_selected_accents_have_readable_action_text(self):
-        light = ['2F46C6','6942B0','086F6B','B63E54']
-        dark = [('A9B7FF','13205A'),('D3B7FC','361D65'),
-                ('92DCD8','083C41'),('FFB5C1','690D26')]
+        light = ['C2410C','7C3AED','4D7C0F','B4232F']
+        dark = [('F0A882','3D1603'),('F2A8C0','4A1226'),
+                ('E4C07A','3A2600'),('FFB4A6','5E0E08')]
         for hex_rgb in light:
             self.assertGreaterEqual(contrast(hex_rgb,'FFFFFF'), 4.5, hex_rgb)
         for accent,on in dark:
             self.assertGreaterEqual(contrast(accent,on), 4.5, accent)
         theme = read('ui/theme/Theme.kt')
         self.assertIn('useDynamicColor = accentColor == "DYNAMIC"',theme)
-        self.assertIn('onPrimaryContainer = selectedOnContainer',theme)
+        self.assertIn('onPrimaryContainer = seeded.onPrimaryContainer',theme)
 
     def test_dark_and_light_tool_icon_on_tile_contrast(self):
-        src = read('ui/theme/ToolPalette.kt')
+        # ToolPalette delegates to the Color.kt lists, so read them there.
+        src = read('ui/theme/Color.kt')
         arrays = {}
-        for mode in ('lightAccents','darkAccents'):
-            block = src.split(f'private val {mode} = listOf(',1)[1].split('\n    )',1)[0]
-            arrays[mode] = re.findall(r'Color\(0xFF([0-9A-Fa-f]{6})\)',block)
+        for mode in ('LightToolAccents','DarkToolAccents'):
+            block = src.split(f'val {mode} = listOf(',1)[1].split('\n)',1)[0]
+            key = 'lightAccents' if mode.startswith('Light') else 'darkAccents'
+            arrays[key] = re.findall(r'Color\(0xFF([0-9A-Fa-f]{6})\)',block)
         self.assertEqual(len(arrays['lightAccents']),6)
         self.assertEqual(len(arrays['darkAccents']),6)
         for name,surface,mix_amount in [('lightAccents','FFFFFF',.12),('darkAccents','151515',.17)]:

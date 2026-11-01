@@ -161,16 +161,16 @@ object M3ColorFactory {
                 onErrorContainer = ensureContrast(errorContainer, Color(NEAR_BLACK)),
                 background = Color.White,
                 onBackground = Color(NEAR_BLACK),
-                surface = Color(0xFFFCFCFD),
+                surface = Color(0xFFFFFBF5),
                 onSurface = Color(NEAR_BLACK),
-                surfaceVariant = Color(0xFFE0E2EC),
-                onSurfaceVariant = Color(0xFF44474F),
-                outline = Color(0xFF74777F),
-                outlineVariant = Color(0xFFC4C6D0),
+                surfaceVariant = Color(0xFFE9DFD2),
+                onSurfaceVariant = Color(0xFF4A4038),
+                outline = Color(0xFF8A7B6C),
+                outlineVariant = Color(0xFFD8CBB8),
                 surfaceTint = Color.Transparent
             )
         }
-        val surface = if (amoled) Color.Black else Color(0xFF121316)
+        val surface = if (amoled) Color.Black else Color(0xFF171009)
         // Dark-theme accents must remain legible on the near-black canvas;
         // button/container foregrounds are paired separately below.
         val primary = ensureContrast(surface, tone(0f, 0.45f))
@@ -202,10 +202,10 @@ object M3ColorFactory {
             onBackground = Color(NEAR_WHITE),
             surface = surface,
             onSurface = Color(NEAR_WHITE),
-            surfaceVariant = Color(0xFF49454F),
-            onSurfaceVariant = Color(0xFFCAC4D0),
-            outline = Color(0xFF938F99),
-            outlineVariant = Color(0xFF63606A),
+            surfaceVariant = Color(0xFF3B2F26),
+            onSurfaceVariant = Color(0xFFCBBFAE),
+            outline = Color(0xFF8F8172),
+            outlineVariant = Color(0xFF4A3B2E),
             surfaceTint = Color.Transparent
         )
     }

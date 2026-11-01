@@ -51,16 +51,16 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
  *  light and dark mode, and centralising them here stops the values drifting
  *  apart across the file. */
 object SplashTokens {
-    val BackgroundStart = Color(0xFF0C1231)
-    val BackgroundMid = Color(0xFF231D66)
-    val BackgroundEnd = Color(0xFF4434A9)
-    val GlowViolet = Color(0xFF6B61EB)
-    val GlowCyan = Color(0xFF3EABD0)
-    val OrbitMint = Color(0xFF88F5D1)
-    val LogoStart = Color(0xFF6452E8)
-    val LogoEnd = Color(0xFF8F68F4)
-    val DotMint = Color(0xFF81F2CE)
-    val Tagline = Color(0xFFE0E5FF)
+    val BackgroundStart = Color(0xFF1E0F06)
+    val BackgroundMid = Color(0xFF4A1E0B)
+    val BackgroundEnd = Color(0xFF8A3B12)
+    val GlowAmber = Color(0xFFF59E0B)
+    val GlowEmber = Color(0xFFE2603C)
+    val OrbitCream = Color(0xFFFFE7C2)
+    val LogoStart = Color(0xFFC2410C)
+    val LogoEnd = Color(0xFFE8930C)
+    val DotAmber = Color(0xFFFBBF24)
+    val Tagline = Color(0xFFFFEEDD)
 }
 
 /**
@@ -120,14 +120,14 @@ fun JumloSplash(modifier: Modifier = Modifier) {
         Box(
             Modifier.align(Alignment.TopEnd).offset(x = 158.dp, y = (-205).dp)
                 .size(400.dp).background(
-                    Brush.radialGradient(listOf(SplashTokens.GlowViolet.copy(alpha = .37f), Color.Transparent)),
+                    Brush.radialGradient(listOf(SplashTokens.GlowAmber.copy(alpha = .37f), Color.Transparent)),
                     CircleShape
                 )
         )
         Box(
             Modifier.align(Alignment.BottomStart).offset(x = (-180).dp, y = 180.dp)
                 .size(410.dp).background(
-                    Brush.radialGradient(listOf(SplashTokens.GlowCyan.copy(alpha = .16f), Color.Transparent)),
+                    Brush.radialGradient(listOf(SplashTokens.GlowEmber.copy(alpha = .16f), Color.Transparent)),
                     CircleShape
                 )
         )
@@ -138,7 +138,7 @@ fun JumloSplash(modifier: Modifier = Modifier) {
         ) {
             Box(
                 Modifier.align(Alignment.TopCenter).size(8.dp)
-                    .background(SplashTokens.OrbitMint.copy(alpha = breath + .37f), CircleShape)
+                    .background(SplashTokens.OrbitCream.copy(alpha = breath + .37f), CircleShape)
             )
             Box(
                 Modifier.align(Alignment.BottomEnd).offset(x = (-25).dp, y = (-25).dp)
@@ -174,7 +174,7 @@ fun JumloSplash(modifier: Modifier = Modifier) {
                 )
                 Box(
                     Modifier.padding(start = 3.dp, top = 23.dp).size(8.dp)
-                        .background(SplashTokens.DotMint, CircleShape)
+                        .background(SplashTokens.DotAmber, CircleShape)
                 )
             }
             Text(

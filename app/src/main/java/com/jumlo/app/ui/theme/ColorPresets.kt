@@ -8,10 +8,15 @@ data class ColorPreset(
     val hex: String
 )
 
-/** 16 curated accents. The first four are the legacy named presets; the rest
- *  round out a coherent Material palette. Names are bilingual (EN/AR). */
+/** 20 curated accents. CLAY is the default accent (warm terracotta, the Clay
+ *  identity); the legacy named presets follow, including the classic BLUE.
+ *  Names are bilingual (EN/AR). */
 object ColorPresets {
     val ALL: List<ColorPreset> = listOf(
+        ColorPreset("CLAY", "Clay", "طيني", "#C2410C"),
+        ColorPreset("PLUM", "Plum", "برقوقي", "#7C3AED"),
+        ColorPreset("OLIVE", "Olive", "زيتوني", "#4D7C0F"),
+        ColorPreset("ROSE", "Rose", "وردي غامق", "#B4232F"),
         ColorPreset("BLUE", "Blue", "أزرق", "#1E88E5"),
         ColorPreset("TEAL", "Teal", "أزرق مائيّ", "#00897B"),
         ColorPreset("CORAL", "Coral", "مرجان", "#E64A3A"),

@@ -30,15 +30,15 @@ class PremiumUxContracts(unittest.TestCase):
         return self.tokens[name]
 
     def test_brand_palette_is_consistent_across_light_and_dark(self):
-        # Source-of-truth design tokens: porcelain-lilac light canvas and OLED black.
+        # Source-of-truth design tokens: warm-cream light canvas and espresso dark.
         # Text contrast is separately checked against WCAG AA below.
         expected = {
-            'LightBackground': 'F7F6FF', 'LightSurface': 'FFFFFF',
-            'LightOnSurface': '202024', 'LightOnSurfaceVariant': '55555E',
-            'LightPrimary': '2F46C6', 'LightTertiary': '7050AB',
-            'DarkBackground': '000000',
-            'DarkSurface': '101010', 'DarkOnSurface': 'F5F5F5',
-            'DarkPrimary': 'A9B7FF', 'DarkTertiary': 'D3B7FC',
+            'LightBackground': 'FBF7F0', 'LightSurface': 'FFFFFF',
+            'LightOnSurface': '241B12', 'LightOnSurfaceVariant': '6E6155',
+            'LightPrimary': '9C3D1E', 'LightTertiary': '8E2B4B',
+            'DarkBackground': '150E09',
+            'DarkSurface': '1F1712', 'DarkOnSurface': 'F7F0E6',
+            'DarkPrimary': 'F0A882', 'DarkTertiary': 'F2A8C0',
         }
         for key, value in expected.items():
             with self.subTest(key=key):
@@ -70,9 +70,9 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_splash_uses_cohesive_palette_family(self):
         splash = source('components/JumloSplash.kt')
-        self.assertIn('Color(0xFF0C1231)', splash)
-        self.assertIn('Color(0xFF4434A9)', splash)
-        self.assertIn('Color(0xFFE0E5FF)', splash)
+        self.assertIn('Color(0xFF1E0F06)', splash)
+        self.assertIn('Color(0xFF8A3B12)', splash)
+        self.assertIn('Color(0xFFFFEEDD)', splash)
         self.assertNotIn('Color(0xFF2221A1)', splash)
 
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):

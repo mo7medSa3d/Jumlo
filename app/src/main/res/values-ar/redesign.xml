@@ -37,6 +37,10 @@
     <string name="redesign_accent_blue">أزرق</string>
     <string name="redesign_accent_teal">تركوازي</string>
     <string name="redesign_accent_coral">مرجاني</string>
+    <string name="redesign_accent_clay">طيني</string>
+    <string name="redesign_accent_plum">برقوقي</string>
+    <string name="redesign_accent_olive">زيتوني</string>
+    <string name="redesign_accent_rose">وردي غامق</string>
     <string name="redesign_accent_dynamic">ألوان النظام الديناميكية (Material You)</string>
     <string name="redesign_scale_small">صغير</string>
     <string name="redesign_scale_normal">قياسي</string>
