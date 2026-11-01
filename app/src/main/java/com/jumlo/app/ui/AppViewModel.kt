@@ -922,7 +922,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun setHapticIntensity(intensity:com.jumlo.app.model.HapticIntensity) = savePreference { preferences.setHapticIntensity(intensity) }
     fun setSoundsEnabled(enabled:Boolean) = savePreference { preferences.setSoundsEnabled(enabled) }
     fun setFileViewMode(value:FileViewMode) = savePreference { preferences.setFileViewMode(value) }
-    fun setAccentColor(value:String) = savePreference { preferences.setAccentColor(value) }
+    fun setColorSystem(value:String) = savePreference { preferences.setColorSystem(value) }
     fun setFontScale(value:String) = savePreference { preferences.setFontScale(value) }
     fun setMediaServiceUrl(url:String) = savePreference { preferences.setMediaServiceUrl(url) }
     fun setMediaServiceToken(token:String) = savePreference { preferences.setMediaServiceToken(token) }

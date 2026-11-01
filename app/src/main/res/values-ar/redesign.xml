@@ -11,7 +11,6 @@
     <string name="redesign_audio_only">تنزيل الصوت افتراضيًا</string>
     <string name="redesign_concurrent">عدد التنزيلات المتزامنة</string>
     <string name="redesign_file_view">طريقة عرض الملفات</string>
-    <string name="redesign_accent">اللون الرئيسي</string>
     <string name="redesign_font_scale">حجم النص</string>
     <string name="redesign_storage_folder">محفوظ في Jumlo / فيديو، صوت، PDF، صور، مستندات</string>
     <string name="redesign_open_folder">فتح المجلد المحفوظ</string>
@@ -33,15 +32,6 @@
     <string name="redesign_quality_balanced">متوازن · حتى 1080p</string>
     <string name="redesign_quality_best">أفضل جودة متاحة</string>
     <string name="redesign_quality_saver">توفير البيانات · حتى 480p</string>
-    <string name="redesign_accent_violet">بنفسجي</string>
-    <string name="redesign_accent_blue">أزرق</string>
-    <string name="redesign_accent_teal">تركوازي</string>
-    <string name="redesign_accent_coral">مرجاني</string>
-    <string name="redesign_accent_clay">طيني</string>
-    <string name="redesign_accent_plum">برقوقي</string>
-    <string name="redesign_accent_olive">زيتوني</string>
-    <string name="redesign_accent_rose">وردي غامق</string>
-    <string name="redesign_accent_dynamic">ألوان النظام الديناميكية (Material You)</string>
     <string name="redesign_scale_small">صغير</string>
     <string name="redesign_scale_normal">قياسي</string>
     <string name="redesign_scale_large">كبير</string>

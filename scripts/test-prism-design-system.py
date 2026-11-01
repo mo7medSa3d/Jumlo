@@ -23,60 +23,95 @@ def mix(a,b,amount):
     components = [round(int(a[i:i+2],16)*(1-amount)+int(b[i:i+2],16)*amount) for i in (0,2,4)]
     return ''.join(f'{v:02X}' for v in components)
 
+def extract_call(text, marker):
+    i = text.index(marker)
+    j = text.index('(', i)
+    depth = 0
+    k = j
+    while True:
+        ch = text[k]
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    return text[j + 1:k]
+
+
+def parse_systems(text):
+    constants = {k: v.upper() for k, v in
+                 re.findall(r'private val (\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)', text)}
+    systems = {}
+    for key in ('LUIGI', 'AURORA', 'VIOLA', 'SUNSET'):
+        start = text.index(f'val {key} = ColorSystem(')
+        nxt = re.search(r'\n    val [A-Z]+ = ColorSystem\(', text[start + 10:])
+        block = text[start:start + 10 + nxt.start()] if nxt else text[start:]
+        modes = {}
+        for mode in ('light', 'dark'):
+            scheme = extract_call(block, f'{mode} = SystemScheme')
+            roles = {}
+            for name, val in re.findall(r'(\w+) = (Color\(0xFF[0-9A-Fa-f]{6}\)|[A-Za-z]+)', scheme):
+                roles[name] = val[10:16].upper() if val.startswith('Color') else constants[val]
+            modes[mode] = roles
+        for tools_mode in ('lightTools', 'darkTools'):
+            modes[tools_mode] = [h.upper() for h in
+                                 re.findall(r'Color\(0xFF([0-9A-Fa-f]{6})\)',
+                                            extract_call(block, f'{tools_mode} = listOf'))]
+        systems[key] = modes
+    return systems
+
+
 class PrismSourceContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.palette = dict(re.findall(r'^val (\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)',
-            read('ui/theme/Color.kt'), re.M))
+        cls.systems = parse_systems(read('ui/theme/ColorSystems.kt'))
 
     def test_wcag_aa_material_semantic_text_pairs(self):
-        for mode in ('Light','Dark'):
-            for fg,bg in [('OnSurface','Background'),('OnSurface','Surface'),
-                          ('OnSurfaceVariant','Surface'),('OnPrimary','Primary'),
-                          ('OnPrimaryContainer','PrimaryContainer'),
-                          ('OnSecondary','Secondary'),('OnSecondaryContainer','SecondaryContainer'),
-                          ('OnTertiary','Tertiary'),('OnTertiaryContainer','TertiaryContainer'),
-                          ('OnError','Error'),('OnErrorContainer','ErrorContainer')]:
-                with self.subTest(mode=mode,fg=fg,bg=bg):
-                    self.assertGreaterEqual(contrast(self.palette[mode+fg], self.palette[mode+bg]),
-                        4.5, f'{mode}{fg} on {mode}{bg}')
+        for key, modes in self.systems.items():
+            for mode in ('light', 'dark'):
+                roles = modes[mode]
+                for fg,bg in [('onSurface','background'),('onSurface','surface'),
+                              ('onSurfaceVariant','surface'),('onPrimary','primary'),
+                              ('onPrimaryContainer','primaryContainer'),
+                              ('onSecondary','secondary'),('onSecondaryContainer','secondaryContainer'),
+                              ('onTertiary','tertiary'),('onTertiaryContainer','tertiaryContainer'),
+                              ('onError','error'),('onErrorContainer','errorContainer')]:
+                    with self.subTest(system=key,mode=mode,fg=fg,bg=bg):
+                        self.assertGreaterEqual(contrast(roles[fg], roles[bg]),
+                            4.5, f'{key} {mode} {fg} on {bg}')
 
-    def test_all_four_selected_accents_have_readable_action_text(self):
-        light = ['C2410C','7C3AED','4D7C0F','B4232F']
-        dark = [('F0A882','3D1603'),('F2A8C0','4A1226'),
-                ('E4C07A','3A2600'),('FFB4A6','5E0E08')]
-        for hex_rgb in light:
-            self.assertGreaterEqual(contrast(hex_rgb,'FFFFFF'), 4.5, hex_rgb)
-        for accent,on in dark:
-            self.assertGreaterEqual(contrast(accent,on), 4.5, accent)
+    def test_all_four_systems_have_readable_action_text(self):
+        for key, modes in self.systems.items():
+            with self.subTest(system=key):
+                self.assertGreaterEqual(contrast(modes['light']['primary'],'FFFFFF'), 4.5, key)
+                self.assertGreaterEqual(
+                    contrast(modes['dark']['primary'], modes['dark']['onPrimary']), 4.5, key)
         theme = read('ui/theme/Theme.kt')
-        self.assertIn('useDynamicColor = accentColor == "DYNAMIC"',theme)
-        self.assertIn('onPrimaryContainer = seeded.onPrimaryContainer',theme)
+        self.assertIn('colorSystem: String = "SUNSET"',theme)
+        self.assertNotIn('useDynamicColor',theme)
+        self.assertNotIn('seeded',theme)
 
     def test_dark_and_light_tool_icon_on_tile_contrast(self):
-        # ToolPalette delegates to the Color.kt lists, so read them there.
-        src = read('ui/theme/Color.kt')
-        arrays = {}
-        for mode in ('LightToolAccents','DarkToolAccents'):
-            block = src.split(f'val {mode} = listOf(',1)[1].split('\n)',1)[0]
-            key = 'lightAccents' if mode.startswith('Light') else 'darkAccents'
-            arrays[key] = re.findall(r'Color\(0xFF([0-9A-Fa-f]{6})\)',block)
-        self.assertEqual(len(arrays['lightAccents']),6)
-        self.assertEqual(len(arrays['darkAccents']),6)
-        for name,surface,mix_amount in [('lightAccents','FFFFFF',.12),('darkAccents','151515',.17)]:
-            for accent in arrays[name]:
-                container = mix(surface,accent,mix_amount)
-                self.assertGreaterEqual(contrast(accent,container), 3.0,(name,accent,container))
+        # ToolPalette delegates to the per-system tool lists in ColorSystems.kt.
+        for key, modes in self.systems.items():
+            self.assertEqual(len(modes['lightTools']),6)
+            self.assertEqual(len(modes['darkTools']),6)
+            for name,surface,mix_amount in [('lightTools','FFFFFF',.12),('darkTools','151515',.17)]:
+                for accent in modes[name]:
+                    container = mix(surface,accent,mix_amount)
+                    self.assertGreaterEqual(contrast(accent,container), 3.0,(key,name,accent,container))
 
     def test_single_48dp_plus_hit_targets_and_longer_labels(self):
         neon = read('ui/components/NeonUi.kt')
         tools = read('ui/tools/ToolsScreen.kt')
-        picker = read('ui/settings/AccentPickerDialog.kt')
+        picker = read('ui/settings/AppearanceColorPicker.kt')
         self.assertIn('heightIn(min = if (compact) 116.dp else 126.dp)',neon)
         self.assertIn('heightIn(min = 122.dp)',tools)
         self.assertIn('maxLines = 2',neon)
         self.assertIn('maxLines = 2',tools)
-        self.assertIn('onClick = { onSelect(id) }',picker)
+        self.assertIn('onSelect(system.key)',picker)
 
     def test_navigation_and_direct_mlkit_scan_leave_actions_wired(self):
         nav = read('ui/components/QuietNavigation.kt')

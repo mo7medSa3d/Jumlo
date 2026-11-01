@@ -44,6 +44,7 @@ import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.theme.QuietTheme
 import androidx.compose.ui.semantics.Role
 
+import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
 import kotlinx.coroutines.Dispatchers
@@ -166,8 +167,9 @@ fun NeonToolTile(
 ) {
     val colors = MaterialTheme.colorScheme
     val isDark = colors.background.luminance() < 0.5f
-    val tint = ToolPalette.accentFor(tool.id, isDark)
-    val iconSurface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark)
+    val system = LocalColorSystem.current
+    val tint = ToolPalette.accentFor(tool.id, isDark, system)
+    val iconSurface = ToolPalette.containerFor(tool.id, colors.surfaceContainerLow, isDark, system)
     val haptics = rememberAppHaptics()
     Surface(
         onClick = { haptics.actionClick(); onClick() },

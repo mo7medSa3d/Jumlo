@@ -84,22 +84,19 @@ object M3ColorFactory {
     private fun lerp(a: Color, b: Color, t: Float): Color =
         Color(a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t, a.alpha)
 
-    /** Seed color for a named accent preset or a hex accent ("#RRGGBB" /
-     *  "RRGGBB" / "#AARRGGBB"). Unknown names fall back to BLUE. */
+    /** Seed color for a hex accent ("#RRGGBB" / "RRGGBB" / "#AARRGGBB").
+     *  Named presets no longer exist (the four color systems replaced them);
+     *  anything that is not a hex falls back to BLUE. Kept for the contrast
+     *  utility's tests; no UI code seeds a theme from here anymore. */
     fun seedFor(accent: String): Color {
-        val normalized = accent.trim().uppercase()
-        val directHex = hexColor(normalized)
+        val directHex = hexColor(accent.trim().uppercase())
         if (directHex != null) return directHex
-        val presetHex = ColorPresets.hexFor(normalized)?.let(::hexColor)
-        if (presetHex != null) return presetHex
         return Color(0xFF1E88E5)
     }
 
-    /** True when [accent] is a recognized preset name or a valid hex color. */
+    /** True only for a valid hex color; preset names and DYNAMIC are gone. */
     fun isValidAccent(accent: String): Boolean =
-        hexColor(accent) != null ||
-            accent.trim().uppercase() == "DYNAMIC" ||
-            ColorPresets.ALL.any { it.key == accent.trim().uppercase() }
+        hexColor(accent) != null
 
     /** Parses "#RRGGBB", "RRGGBB", or "#AARRGGBB" into a fully-opaque Color. */
     fun hexColor(accent: String): Color? {

@@ -61,7 +61,7 @@ class UserPreferencesRepository @Inject constructor(
         val DEFAULT_VIDEO_QUALITY = stringPreferencesKey("default_video_quality")
         val DEFAULT_AUDIO_QUALITY = intPreferencesKey("default_audio_quality")
         val FILE_VIEW_MODE = stringPreferencesKey("file_view_mode")
-        val ACCENT_COLOR = stringPreferencesKey("accent_color")
+        val COLOR_SYSTEM = stringPreferencesKey("color_system")
         val FONT_SCALE = stringPreferencesKey("font_scale")
         val NOTIFICATIONS_GRANTED = booleanPreferencesKey("notifications_granted")
         val MEDIA_RIGHTS_ACCEPTED = booleanPreferencesKey("media_rights_accepted")
@@ -149,7 +149,7 @@ class UserPreferencesRepository @Inject constructor(
             defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
             wifiOnlyDefault = false,
             fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),
-            accentColor = (prefs[Keys.ACCENT_COLOR] ?: "CLAY").takeIf { isValidAccent(it) } ?: "CLAY",
+            colorSystem = (prefs[Keys.COLOR_SYSTEM] ?: "SUNSET").takeIf { isValidColorSystem(it) } ?: "SUNSET",
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
@@ -257,9 +257,9 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setFileViewMode(value: FileViewMode) { context.dataStore.edit { it[Keys.FILE_VIEW_MODE] = value.name } }
-    suspend fun setAccentColor(value: String) {
-        require(isValidAccent(value)) { "INVALID_ACCENT_COLOR" }
-        context.dataStore.edit { it[Keys.ACCENT_COLOR] = value }
+    suspend fun setColorSystem(value: String) {
+        require(isValidColorSystem(value)) { "INVALID_COLOR_SYSTEM" }
+        context.dataStore.edit { it[Keys.COLOR_SYSTEM] = value }
     }
     suspend fun setFontScale(value: String) {
         require(value in setOf("SMALL","NORMAL","LARGE"))
@@ -276,8 +276,7 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.NOTIFICATIONS_GRANTED] = granted }
     }
 
-    /** Accent is either a named preset or a #RRGGBB hex seed. */
-    private fun isValidAccent(value: String): Boolean =
-        value in setOf("CLAY", "PLUM", "OLIVE", "ROSE", "VIOLET", "BLUE", "TEAL", "CORAL", "DYNAMIC") ||
-            (value.removePrefix("#").let { it.length == 6 && it.all { c -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' } })
+    /** Exactly four color systems exist; anything else falls back to SUNSET. */
+    private fun isValidColorSystem(value: String): Boolean =
+        value in setOf("LUIGI", "AURORA", "VIOLA", "SUNSET")
 }

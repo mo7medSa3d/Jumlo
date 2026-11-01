@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="modern_dynamic_color">Use wallpaper colors</string>
     <string name="modern_reset_save_folder">Use Download/Jumlo</string>
     <string name="modern_download_defaults">Download defaults</string>
     <string name="modern_video_quality">Video quality</string>

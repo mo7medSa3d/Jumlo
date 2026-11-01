@@ -24,6 +24,7 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.model.WorkspaceDraft
+import com.jumlo.app.ui.theme.ColorSystems
 import com.jumlo.app.ui.theme.JumloTheme
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.tools.ToolsCatalogue
@@ -95,14 +96,14 @@ class StudioAccessibilityTest {
         compose.runOnIdle {assertEquals(65,opacity);assertTrue(enabled)}
     }
 
-    @Test fun semanticTextAndToolIconsMeetContrastAcrossAllFixedAccents() {
-        val schemes=linkedMapOf<Pair<ThemeMode,String>,ColorScheme>()
+    @Test fun semanticTextAndToolIconsMeetContrastAcrossAllColorSystems() {
+        val schemes=linkedMapOf<Triple<ThemeMode,String,com.jumlo.app.ui.theme.ColorSystem>,ColorScheme>()
         compose.setContent {
             listOf(ThemeMode.LIGHT,ThemeMode.DARK).forEach {mode ->
-                listOf("BLUE","TEAL","CORAL","VIOLET").forEach {accent ->
-                    key(mode,accent) {JumloTheme(mode,AppLanguage.ENGLISH,accent) {
+                ColorSystems.ALL.forEach {system ->
+                    key(mode,system.key) {JumloTheme(mode,AppLanguage.ENGLISH,system.key) {
                         val colors=MaterialTheme.colorScheme
-                        SideEffect {schemes[mode to accent]=colors}
+                        SideEffect {schemes[Triple(mode,system.key,system)]=colors}
                     }}
                 }
             }
@@ -110,6 +111,7 @@ class StudioAccessibilityTest {
         compose.runOnIdle {
             assertEquals(8,schemes.size)
             schemes.forEach {(configuration,colors) ->
+                val (mode,_,system)=configuration
                 val textPairs=listOf(
                     colors.onSurface to colors.background,
                     colors.onSurface to colors.surfaceContainerLow,
@@ -122,11 +124,14 @@ class StudioAccessibilityTest {
                 textPairs.forEach {(foreground,background) ->
                     assertTrue("Text contrast for $configuration: ${contrast(foreground,background)}",contrast(foreground,background)>=4.5f)
                 }
-                val dark=configuration.first==ThemeMode.DARK
-                if(dark) assertEquals(Color.Black,colors.background)
+                val dark=mode==ThemeMode.DARK
+                // The theme must apply the chosen system, not a fixed palette:
+                // dark mode keeps the system's tinted background (pure black is
+                // reserved for the AMOLED mode, which this test does not cover).
+                assertEquals(system.scheme(dark).background,colors.background)
                 CapabilityRegistry.tools.forEach {tool ->
-                    val tint=ToolPalette.accentFor(tool.id,dark)
-                    val container=ToolPalette.containerFor(tool.id,colors.surfaceContainerLow,dark)
+                    val tint=ToolPalette.accentFor(tool.id,dark,system)
+                    val container=ToolPalette.containerFor(tool.id,colors.surfaceContainerLow,dark,system)
                     assertTrue("Icon contrast for ${tool.id} $configuration",contrast(tint,container)>=3f)
                 }
             }

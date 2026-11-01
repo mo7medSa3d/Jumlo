@@ -11,7 +11,6 @@
     <string name="redesign_audio_only">Download audio by default</string>
     <string name="redesign_concurrent">Simultaneous downloads</string>
     <string name="redesign_file_view">Default file view</string>
-    <string name="redesign_accent">Accent color</string>
     <string name="redesign_font_scale">Text size</string>
     <string name="redesign_storage_folder">Saved in Jumlo / Video, Audio, PDF, Images, Documents</string>
     <string name="redesign_open_folder">Open saved folder</string>
@@ -33,15 +32,6 @@
     <string name="redesign_quality_balanced">Balanced · up to 1080p</string>
     <string name="redesign_quality_best">Best available</string>
     <string name="redesign_quality_saver">Save data · up to 480p</string>
-    <string name="redesign_accent_violet">Violet</string>
-    <string name="redesign_accent_blue">Blue</string>
-    <string name="redesign_accent_teal">Teal</string>
-    <string name="redesign_accent_coral">Coral</string>
-    <string name="redesign_accent_clay">Clay</string>
-    <string name="redesign_accent_plum">Plum</string>
-    <string name="redesign_accent_olive">Olive</string>
-    <string name="redesign_accent_rose">Rose</string>
-    <string name="redesign_accent_dynamic">System Dynamic (Material You)</string>
     <string name="redesign_scale_small">Compact</string>
     <string name="redesign_scale_normal">Standard</string>
     <string name="redesign_scale_large">Large</string>

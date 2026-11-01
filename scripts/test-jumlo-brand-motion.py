@@ -153,11 +153,29 @@ class JumloBrandMotionChecks(unittest.TestCase):
             self.assertIn(token,code('ui/files/FilesScreen.kt'))
         self.assertIn('FileViewMode.LIST',code('ui/files/FilesScreen.kt'))
     def test_semantic_color_pairs_meet_aa_text_contrast(self):
-        colors=code('ui/theme/Color.kt')
-        tokens={k:v for k,v in re.findall(r'val (\w+) = Color\(0xFF([A-Fa-f0-9]{6})\)',colors)}
-        pairs=[('LightPrimary','LightOnPrimary'),('DarkPrimary','DarkOnPrimary'),('LightBackground','LightOnSurface'),('DarkBackground','DarkOnSurface'),('LightOnSurfaceVariant','LightBackground'),('DarkOnSurfaceVariant','DarkBackground'),('LightPrimaryContainer','LightOnPrimaryContainer'),('DarkPrimaryContainer','DarkOnPrimaryContainer'),('LightError','LightOnError'),('DarkError','DarkOnError')]
-        for left,right in pairs:
-            with self.subTest(tokens=(left,right)):
-                self.assertGreaterEqual(ratio(tokens[left],tokens[right]),4.5)
+        text=code('ui/theme/ColorSystems.kt')
+        constants={k:v.upper() for k,v in re.findall(r'private val (\w+) = Color\(0xFF([A-Fa-f0-9]{6})\)',text)}
+        for key in ('LUIGI','AURORA','VIOLA','SUNSET'):
+            start=text.index(f'val {key} = ColorSystem(')
+            nxt=re.search(r'\n    val [A-Z]+ = ColorSystem\(',text[start+10:])
+            block=text[start:start+10+nxt.start()] if nxt else text[start:]
+            for mode in ('light','dark'):
+                i=block.index(f'{mode} = SystemScheme')
+                j=block.index('(',i); depth=0; k=j
+                while True:
+                    ch=block[k]
+                    if ch=='(': depth+=1
+                    elif ch==')':
+                        depth-=1
+                        if depth==0: break
+                    k+=1
+                scheme=block[j+1:k]
+                roles={}
+                for name,val in re.findall(r'(\w+) = (Color\(0xFF[A-Fa-f0-9]{6}\)|[A-Za-z]+)',scheme):
+                    roles[name]=val[10:16].upper() if val.startswith('Color') else constants[val]
+                pairs=[('primary','onPrimary'),('background','onSurface'),('onSurfaceVariant','background'),('primaryContainer','onPrimaryContainer'),('error','onError')]
+                for left,right in pairs:
+                    with self.subTest(system=key,mode=mode,tokens=(left,right)):
+                        self.assertGreaterEqual(ratio(roles[left],roles[right]),4.5)
 
 if __name__=='__main__': unittest.main(verbosity=2)

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="modern_dynamic_color">استخدام ألوان الخلفية</string>
     <string name="modern_reset_save_folder">استخدام Download/Jumlo</string>
     <string name="modern_download_defaults">إعدادات التنزيل الافتراضية</string>
     <string name="modern_video_quality">جودة الفيديو</string>

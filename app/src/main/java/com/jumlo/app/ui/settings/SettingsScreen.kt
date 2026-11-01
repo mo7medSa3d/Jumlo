@@ -1,6 +1,5 @@
 package com.jumlo.app.ui.settings
 
-import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -25,8 +24,7 @@ import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
-import com.jumlo.app.ui.theme.ColorPresets
-import com.jumlo.app.ui.theme.M3ColorFactory
+import com.jumlo.app.ui.theme.ColorSystems
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.settingsIconStyleFor
 
@@ -58,17 +56,8 @@ fun SettingsScreen(
         item("theme") { PreferenceRow(stringResource(R.string.pref_theme), themeLabel(settings.themeMode),
             Icons.Rounded.DarkMode, { panel = "theme" }, Modifier.testTag("settings.theme"),
             iconStyle = settingsIconStyleFor("theme", dark)) }
-        if (Build.VERSION.SDK_INT >= 31) item("dynamic-color") {
-            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
-                .toggleable(settings.accentColor == "DYNAMIC", role = Role.Switch,
-                    onValueChange = { viewModel.setAccentColor(if (it) "DYNAMIC" else "BLUE") })
-                .padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.modern_dynamic_color), Modifier.weight(1f), style = QuietTheme.typography.body)
-                Switch(settings.accentColor == "DYNAMIC", onCheckedChange = null)
-            }
-        }
         item("app-color") { PreferenceRow(stringResource(R.string.pref_app_color),
-            previewAccentLabel(settings.accentColor, settings.language), Icons.Rounded.Palette, { panel = "app-color" },
+            colorSystemLabel(settings.colorSystem, settings.language), Icons.Rounded.Palette, { panel = "app-color" },
             Modifier.testTag("settings.appColor"), iconStyle = settingsIconStyleFor("app-color", dark)) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language"),
@@ -139,9 +128,9 @@ fun SettingsScreen(
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },
             settings.themeMode.ordinal, { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
         "app-color" -> AppearanceColorPicker(
-            current = settings.accentColor,
+            current = settings.colorSystem,
             onDismiss = { panel = null },
-            onSelect = { viewModel.setAccentColor(it); panel = null },
+            onSelect = { viewModel.setColorSystem(it); panel = null },
             language = settings.language
         )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
@@ -195,13 +184,10 @@ fun SettingsScreen(
     ThemeMode.AMOLED -> R.string.pref_theme_amoled
 })
 
-/** Accent display labels follow the selected in-app language, not device locale. */
-internal fun previewAccentLabel(accent: String, language: AppLanguage): String {
-    val preset = ColorPresets.ALL.firstOrNull { it.key == accent }
-    if (preset != null) return if (language == AppLanguage.ARABIC) preset.nameAr else preset.nameEn
-    if (M3ColorFactory.hexColor(accent) != null) return accent
-    val default = ColorPresets.ALL.first { it.key == "BLUE" }
-    return if (language == AppLanguage.ARABIC) default.nameAr else default.nameEn
+/** Color system display labels follow the selected in-app language, not device locale. */
+internal fun colorSystemLabel(system: String, language: AppLanguage): String {
+    val found = ColorSystems.systemFor(system)
+    return if (language == AppLanguage.ARABIC) found.nameAr else found.nameEn
 }
 @Composable private fun textSizeLabel(scale: String): String = stringResource(when (scale) {
     "SMALL" -> R.string.pref_text_size_small

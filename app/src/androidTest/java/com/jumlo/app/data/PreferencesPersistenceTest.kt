@@ -23,7 +23,7 @@ class PreferencesPersistenceTest {
         try {
             preferences.setThemeMode(ThemeMode.DARK)
             preferences.setLanguage(AppLanguage.ARABIC)
-            preferences.setAccentColor("#7B4DFF")
+            preferences.setColorSystem("VIOLA")
             preferences.setDefaultVideoQuality("720")
             preferences.setDefaultAudioQuality(128)
             preferences.setFileViewMode(FileViewMode.LIST)
@@ -35,12 +35,12 @@ class PreferencesPersistenceTest {
             assertTrue(restored.isLoaded)
             assertEquals(ThemeMode.DARK, restored.themeMode)
             assertEquals(AppLanguage.ARABIC, restored.language)
-            assertEquals("#7B4DFF", restored.accentColor)
+            assertEquals("VIOLA", restored.colorSystem)
             try {
-                preferences.setAccentColor("not-a-color")
-                fail("Invalid accent must fail")
+                preferences.setColorSystem("NOT-A-SYSTEM")
+                fail("Invalid color system must fail")
             } catch (_: IllegalArgumentException) {
-                assertEquals("#7B4DFF", UserPreferencesRepository(context).settingsFlow.first().accentColor)
+                assertEquals("VIOLA", UserPreferencesRepository(context).settingsFlow.first().colorSystem)
             }
             assertEquals("720", restored.defaultVideoQuality)
             assertEquals(128, restored.defaultAudioQuality)
@@ -57,7 +57,7 @@ class PreferencesPersistenceTest {
         } finally {
             preferences.setThemeMode(original.themeMode)
             preferences.setLanguage(original.language)
-            preferences.setAccentColor(original.accentColor)
+            preferences.setColorSystem(original.colorSystem)
             preferences.setDefaultVideoQuality(original.defaultVideoQuality)
             preferences.setDefaultAudioQuality(original.defaultAudioQuality)
             preferences.setFileViewMode(original.fileViewMode)

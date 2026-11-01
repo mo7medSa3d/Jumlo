@@ -3,16 +3,16 @@ package com.jumlo.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Curated, limited tool accents. Colors are not used as status indicators.
- * Each real workspace uses a stable family color, while labels/icons identify the action.
- * Unclassified tools use a deterministic fallback, never a random color at launch.
- * Every family has a brighter dark-mode partner to keep the icon discernible.
+ * Tool accents follow the user's chosen color system, never a fixed palette.
+ * Each system carries six accents (PDF, Images, Downloads, Files, Organize,
+ * Utilities); every accent passes 3.0 against its tile in both modes, and
+ * onAccentFor keeps the icon readable through the WCAG contrast guard.
+ * Colors are not used as status indicators. Unclassified tools use a
+ * deterministic fallback, never a random color at launch.
  */
 object ToolPalette {
-    private val lightAccents = LightToolAccents
-    private val darkAccents = DarkToolAccents
-
-    fun accentFor(toolId: String, dark: Boolean = false): Color {
+    fun accentFor(toolId: String, dark: Boolean = false, system: ColorSystem = ColorSystems.DEFAULT): Color {
+        val accents = system.tools(dark)
         val index = when {
             toolId == "scan_doc" -> 3
             toolId.startsWith("pdf_") -> 0
@@ -20,20 +20,20 @@ object ToolPalette {
             toolId.startsWith("dl_") -> 2
             toolId.startsWith("file_") || toolId == "sha256" -> 3
             toolId.startsWith("xf_") -> 4
-            else -> (toolId.hashCode() and Int.MAX_VALUE) % lightAccents.size
+            else -> (toolId.hashCode() and Int.MAX_VALUE) % accents.size
         }
-        return if (dark) darkAccents[index] else lightAccents[index]
+        return accents[index]
     }
 
     /** WCAG-readable foreground for bold, category-colored tool tiles. */
-    fun onAccentFor(toolId: String, dark: Boolean = false): Color =
-        M3ColorFactory.ensureContrast(accentFor(toolId, dark), if (dark) Color.Black else Color.White)
+    fun onAccentFor(toolId: String, dark: Boolean = false, system: ColorSystem = ColorSystems.DEFAULT): Color =
+        M3ColorFactory.ensureContrast(accentFor(toolId, dark, system), if (dark) Color.Black else Color.White)
 
-    fun containerFor(toolId: String, surface: Color, dark: Boolean = false): Color =
-        mix(surface, accentFor(toolId, dark), if (dark) 0.20f else 0.20f)
+    fun containerFor(toolId: String, surface: Color, dark: Boolean = false, system: ColorSystem = ColorSystems.DEFAULT): Color =
+        mix(surface, accentFor(toolId, dark, system), 0.20f)
 
-    fun onContainerFor(toolId: String, surface: Color, dark: Boolean = false): Color =
-        accentFor(toolId, dark)
+    fun onContainerFor(toolId: String, surface: Color, dark: Boolean = false, system: ColorSystem = ColorSystems.DEFAULT): Color =
+        accentFor(toolId, dark, system)
 
     fun mix(a: Color, b: Color, amount: Float): Color {
         val t = amount.coerceIn(0f, 1f)

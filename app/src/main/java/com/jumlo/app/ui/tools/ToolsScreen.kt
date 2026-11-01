@@ -27,6 +27,7 @@ import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
+import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
@@ -232,8 +233,9 @@ internal fun ToolsCatalogue(
 internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val isDark = colors.background.luminance() < 0.5f
-    val accent = ToolPalette.accentFor(tool.id, isDark)
-    val iconForeground = ToolPalette.onAccentFor(tool.id, isDark)
+    val system = LocalColorSystem.current
+    val accent = ToolPalette.accentFor(tool.id, isDark, system)
+    val iconForeground = ToolPalette.onAccentFor(tool.id, isDark, system)
     val tileColor = colors.surfaceContainerLow
     val borderColor = ToolPalette.mix(tileColor, accent, if (isDark) 0.34f else 0.24f)
     val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn

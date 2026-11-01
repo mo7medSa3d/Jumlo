@@ -114,7 +114,7 @@ data class AppSettingsState(
     val defaultVideoQuality: String = "BEST",
     val defaultAudioQuality: Int = 192,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
-    val accentColor: String = "CLAY",
+    val colorSystem: String = "SUNSET",
     val fontScale: String = "NORMAL",
     val wifiOnlyDefault: Boolean = false,
     val notificationsGranted: Boolean = false,

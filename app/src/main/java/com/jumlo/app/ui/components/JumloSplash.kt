@@ -44,24 +44,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
+import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.LocalReducedMotion
 
-/** Named brand colors for the splash screen. These are fixed brand artwork, not
- *  user-selected theme tokens: the splash keeps the same deep-indigo identity in
- *  light and dark mode, and centralising them here stops the values drifting
- *  apart across the file. */
-object SplashTokens {
-    val BackgroundStart = Color(0xFF1E0F06)
-    val BackgroundMid = Color(0xFF4A1E0B)
-    val BackgroundEnd = Color(0xFF8A3B12)
-    val GlowAmber = Color(0xFFF59E0B)
-    val GlowEmber = Color(0xFFE2603C)
-    val OrbitCream = Color(0xFFFFE7C2)
-    val LogoStart = Color(0xFFC2410C)
-    val LogoEnd = Color(0xFFE8930C)
-    val DotAmber = Color(0xFFFBBF24)
-    val Tagline = Color(0xFFFFEEDD)
-}
+/** The splash follows the chosen color system (ColorSystems.kt): a dark,
+ *  luxurious gradient from the system's own ramp, so the first screen already
+ *  wears the system the user picked. Outside JumloTheme this reads the
+ *  default system (Sunset). */
+
 
 /**
  * Branded start screen drawn entirely by Compose using a vector mark.
@@ -70,6 +60,7 @@ object SplashTokens {
  */
 @Composable
 fun JumloSplash(modifier: Modifier = Modifier) {
+    val system = LocalColorSystem.current
     val reduced = LocalReducedMotion.current
     var revealed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { revealed = true }
@@ -112,7 +103,7 @@ fun JumloSplash(modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxSize().background(
             Brush.linearGradient(listOf(
-                SplashTokens.BackgroundStart, SplashTokens.BackgroundMid, SplashTokens.BackgroundEnd
+                system.splashStart, system.splashMid, system.splashEnd
             ))
         ),
         contentAlignment = Alignment.Center
@@ -120,14 +111,14 @@ fun JumloSplash(modifier: Modifier = Modifier) {
         Box(
             Modifier.align(Alignment.TopEnd).offset(x = 158.dp, y = (-205).dp)
                 .size(400.dp).background(
-                    Brush.radialGradient(listOf(SplashTokens.GlowAmber.copy(alpha = .37f), Color.Transparent)),
+                    Brush.radialGradient(listOf(system.splashGlow1.copy(alpha = .37f), Color.Transparent)),
                     CircleShape
                 )
         )
         Box(
             Modifier.align(Alignment.BottomStart).offset(x = (-180).dp, y = 180.dp)
                 .size(410.dp).background(
-                    Brush.radialGradient(listOf(SplashTokens.GlowEmber.copy(alpha = .16f), Color.Transparent)),
+                    Brush.radialGradient(listOf(system.splashGlow2.copy(alpha = .16f), Color.Transparent)),
                     CircleShape
                 )
         )
@@ -138,7 +129,7 @@ fun JumloSplash(modifier: Modifier = Modifier) {
         ) {
             Box(
                 Modifier.align(Alignment.TopCenter).size(8.dp)
-                    .background(SplashTokens.OrbitCream.copy(alpha = breath + .37f), CircleShape)
+                    .background(system.splashOrbit.copy(alpha = breath + .37f), CircleShape)
             )
             Box(
                 Modifier.align(Alignment.BottomEnd).offset(x = (-25).dp, y = (-25).dp)
@@ -156,7 +147,7 @@ fun JumloSplash(modifier: Modifier = Modifier) {
             Box(
                 Modifier.size(128.dp).graphicsLayer { scaleX = logoScale; scaleY = logoScale }
                     .clip(RoundedCornerShape(38.dp))
-                    .background(Brush.linearGradient(listOf(SplashTokens.LogoStart, SplashTokens.LogoEnd))),
+                    .background(Brush.linearGradient(listOf(system.splashLogoStart, system.splashLogoEnd))),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -174,13 +165,13 @@ fun JumloSplash(modifier: Modifier = Modifier) {
                 )
                 Box(
                     Modifier.padding(start = 3.dp, top = 23.dp).size(8.dp)
-                        .background(SplashTokens.DotAmber, CircleShape)
+                        .background(system.splashGlow1, CircleShape)
                 )
             }
             Text(
                 stringResource(R.string.brand_splash_tagline),
                 fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium,
-                color = SplashTokens.Tagline, textAlign = TextAlign.Center
+                color = system.splashTag, textAlign = TextAlign.Center
             )
         }
     }

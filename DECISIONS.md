@@ -181,3 +181,30 @@ UI or backend already anticipated them:
   through Android's text stack so shaping stays correct. Legacy .doc files
   fail closed. `file_trash` stays a Files navigation entry and `dl_settings`
   stays a Settings entry; neither is a missing processing tool.
+
+## 2026-11-01 — Four color systems replace the accent system
+
+The old color system is removed from Settings entirely: the 20 accent
+presets, the seed-generated theme, the hex/HSV editor, the dynamic-color
+switch and the legacy accent dialog are gone. The user now picks exactly
+one of four systems — Luigi, Aurora, Viola, Sunset — and it drives the
+whole app: light and dark schemes, tool tiles, workspace pillars and the
+splash gradient. Each system carries its own palette (verified WCAG AA
+for text pairs and 3.0+ for tool icons by scripts/test-color-systems.py);
+the ramps are the reference artworks' own swatches. Viola's printed hex
+labels repeat Luigi's, so its ramp was measured from the artwork's
+swatches (780E94, CD4FBA, FFC57B, FFE1C0) instead of trusting the labels.
+Default is Sunset: closest to the previous warm Clay identity.
+
+Deliberately kept, not themed: error/success/warning stay semantic
+constants (they mean something, they are not brand colors); settings and
+account row icons keep their fixed per-row colors by the earlier explicit
+request and never follow the chosen system; document ink and paper colors
+are untouched. The static launch-window background cannot follow a
+runtime choice, so it is a neutral warm light (#FFF6E8); the in-app
+splash follows the system. M3ColorFactory survives only as the WCAG
+contrast utility (ensureContrast, used by ToolPalette); its seed and
+preset helpers no longer resolve preset names. ColorPresets.kt and
+AccentPickerDialog.kt are stubs: the push path cannot delete files, so a
+future git-native cleanup may delete them. Legacy stored accents fall
+back to Sunset; the old DataStore key is abandoned, not migrated.

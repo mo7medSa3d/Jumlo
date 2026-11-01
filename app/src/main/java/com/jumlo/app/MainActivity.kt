@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
             val systemReduced = rememberSystemReducedMotion()
             val sound = remember { UiSoundPlayer(applicationContext) }
             DisposableEffect(sound) { onDispose { sound.release() } }
-            JumloTheme(settings.themeMode, settings.language, settings.accentColor, settings.fontScale) {
+            JumloTheme(settings.themeMode, settings.language, settings.colorSystem, settings.fontScale) {
                 CompositionLocalProvider(
                     LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit,
                     LocalHapticIntensity provides settings.hapticIntensity,

@@ -1,18 +1,22 @@
 package com.jumlo.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Color tokens must pass WCAG contrast before an icon or control is shipped. */
 class ToolPaletteContrastTest {
     @Test fun everyToolCategoryIconExceedsNonTextContrastInBothThemes() {
-        for ((dark, surface) in listOf(false to Color.White, true to Color(0xFF151515))) {
-            for (tool in listOf("pdf_03", "img_02", "dl_media", "file_07", "xf_test", "unknown")) {
-                val foreground = ToolPalette.accentFor(tool, dark)
-                val container = ToolPalette.containerFor(tool, surface, dark)
-                assertTrue("$tool dark=$dark insufficient icon contrast: ${M3ColorFactory.contrast(container, foreground)}",
-                    M3ColorFactory.contrast(container, foreground) >= 3f)
+        for (system in ColorSystems.ALL) {
+            for (dark in listOf(false, true)) {
+                val scheme = system.scheme(dark)
+                for (tool in listOf("pdf_03", "img_02", "dl_media", "file_07", "xf_test", "unknown")) {
+                    val foreground = ToolPalette.accentFor(tool, dark, system)
+                    val container = ToolPalette.containerFor(tool, scheme.surfaceLow, dark, system)
+                    assertTrue("${system.key} $tool dark=$dark insufficient icon contrast: ${M3ColorFactory.contrast(container, foreground)}",
+                        M3ColorFactory.contrast(container, foreground) >= 3f)
+                }
             }
         }
     }
@@ -36,13 +40,18 @@ class ToolPaletteContrastTest {
             }
         }
     }
-    @Test fun everyCuratedAccentPresetResolvesToItsOwnColor() {
-        for (preset in ColorPresets.ALL) {
-            val expected = M3ColorFactory.hexColor(preset.hex)
-            val actual = M3ColorFactory.seedFor(preset.key)
-            assertTrue("${preset.key} must be a recognized accent", M3ColorFactory.isValidAccent(preset.key))
-            assertTrue("${preset.key} must resolve to its configured hex", expected == actual)
+    @Test fun everyColorSystemResolvesWithBilingualNamesAndFullPalettes() {
+        assertEquals(4, ColorSystems.ALL.size)
+        for (system in ColorSystems.ALL) {
+            assertEquals(system, ColorSystems.systemFor(system.key))
+            assertTrue("${system.key} needs bilingual names", system.nameEn.isNotBlank() && system.nameAr.isNotBlank())
+            assertEquals("${system.key} ramp", 4, system.ramp.size)
+            assertEquals("${system.key} light tools", 6, system.lightTools.size)
+            assertEquals("${system.key} dark tools", 6, system.darkTools.size)
         }
+        assertEquals(ColorSystems.DEFAULT, ColorSystems.systemFor("CLAY"))
+        assertEquals(ColorSystems.DEFAULT, ColorSystems.systemFor("BLUE"))
+        assertEquals(ColorSystems.DEFAULT, ColorSystems.systemFor("not-a-system"))
     }
 
     @Test fun accentTextRolesMeetAaAgainstTheActualScreenSurface() {

@@ -20,60 +20,92 @@ def ratio(a, b):
     light, dark = sorted((luminance(a), luminance(b)), reverse=True)
     return (light + .05) / (dark + .05)
 
+def extract_call(text, marker):
+    i = text.index(marker)
+    j = text.index('(', i)
+    depth = 0
+    k = j
+    while True:
+        ch = text[k]
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    return text[j + 1:k]
+
+
+def parse_systems(text):
+    constants = {k: v.upper() for k, v in
+                 re.findall(r'private val (\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)', text)}
+    systems = {}
+    for key in ('LUIGI', 'AURORA', 'VIOLA', 'SUNSET'):
+        start = text.index(f'val {key} = ColorSystem(')
+        nxt = re.search(r'\n    val [A-Z]+ = ColorSystem\(', text[start + 10:])
+        block = text[start:start + 10 + nxt.start()] if nxt else text[start:]
+        modes = {}
+        for mode in ('light', 'dark'):
+            scheme = extract_call(block, f'{mode} = SystemScheme')
+            roles = {}
+            for name, val in re.findall(r'(\w+) = (Color\(0xFF[0-9A-Fa-f]{6}\)|[A-Za-z]+)', scheme):
+                roles[name] = val[10:16].upper() if val.startswith('Color') else constants[val]
+            modes[mode] = roles
+        systems[key] = modes
+    return systems
+
+
 class PremiumUxContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tokens = dict(re.findall(r'^val (\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)', source('theme/Color.kt'), flags=re.M))
+        cls.systems = parse_systems(source('theme/ColorSystems.kt'))
 
-    def color(self, name):
-        self.assertIn(name, self.tokens)
-        return self.tokens[name]
-
-    def test_brand_palette_is_consistent_across_light_and_dark(self):
-        # Source-of-truth design tokens: warm-cream light canvas and espresso dark.
-        # Text contrast is separately checked against WCAG AA below.
+    def test_brand_palette_is_four_systems_with_reference_ramps(self):
+        # Source-of-truth design tokens: the four reference artworks' ramps.
         expected = {
-            'LightBackground': 'FBF7F0', 'LightSurface': 'FFFFFF',
-            'LightOnSurface': '241B12', 'LightOnSurfaceVariant': '6E6155',
-            'LightPrimary': '9C3D1E', 'LightTertiary': '8E2B4B',
-            'DarkBackground': '150E09',
-            'DarkSurface': '1F1712', 'DarkOnSurface': 'F7F0E6',
-            'DarkPrimary': 'F0A882', 'DarkTertiary': 'F2A8C0',
+            'LUIGI': ['FFE3B3', 'C2DD6C', '79CE67', '30B155'],
+            'AURORA': ['FBCFE8', 'A78BFA', '60A5FA', '3B82F6'],
+            'VIOLA': ['FFE1C0', 'FFC57B', 'CD4FBA', '780E94'],
+            'SUNSET': ['FFE3B3', 'FBB931', 'F88F22', 'EA6113'],
         }
-        for key, value in expected.items():
-            with self.subTest(key=key):
-                self.assertEqual(self.color(key).upper(), value)
+        systems_text = source('theme/ColorSystems.kt')
+        self.assertIn('val DEFAULT: ColorSystem = SUNSET', systems_text)
+        for key, ramp in expected.items():
+            with self.subTest(system=key):
+                block = systems_text.split(f'val {key} = ColorSystem(')[1]
+                found = re.findall(r'Color\(0xFF([0-9A-Fa-f]{6})\)',
+                                   extract_call(block, 'ramp = listOf'))
+                self.assertEqual([h.upper() for h in found], ramp)
 
     def test_semantic_text_pairs_have_wcag_aa_contrast(self):
         pairs = (
-            ('LightOnSurface', 'LightBackground'),
-            ('LightOnSurface', 'LightSurface'),
-            ('LightOnSurfaceVariant', 'LightSurface'),
-            ('LightOnPrimary', 'LightPrimary'),
-            ('LightOnPrimaryContainer', 'LightPrimaryContainer'),
-            ('LightOnSecondary', 'LightSecondary'),
-            ('LightOnTertiary', 'LightTertiary'),
-            ('LightOnError', 'LightError'),
-            ('DarkOnSurface', 'DarkBackground'),
-            ('DarkOnSurface', 'DarkSurface'),
-            ('DarkOnSurfaceVariant', 'DarkSurface'),
-            ('DarkOnPrimary', 'DarkPrimary'),
-            ('DarkOnPrimaryContainer', 'DarkPrimaryContainer'),
-            ('DarkOnSecondary', 'DarkSecondary'),
-            ('DarkOnTertiary', 'DarkTertiary'),
-            ('DarkOnError', 'DarkError'),
+            ('onSurface', 'background'),
+            ('onSurface', 'surface'),
+            ('onSurfaceVariant', 'surface'),
+            ('onPrimary', 'primary'),
+            ('onPrimaryContainer', 'primaryContainer'),
+            ('onSecondary', 'secondary'),
+            ('onTertiary', 'tertiary'),
+            ('onError', 'error'),
         )
-        for foreground, background in pairs:
-            with self.subTest(foreground=foreground, background=background):
-                contrast = ratio(self.color(foreground), self.color(background))
-                self.assertGreaterEqual(contrast, 4.5, f'{foreground} / {background}: {contrast:.2f}')
+        for key, modes in self.systems.items():
+            for mode, roles in modes.items():
+                for foreground, background in pairs:
+                    with self.subTest(system=key, mode=mode,
+                                      foreground=foreground, background=background):
+                        contrast = ratio(roles[foreground], roles[background])
+                        self.assertGreaterEqual(contrast, 4.5,
+                                                f'{key} {mode} {foreground} / {background}: {contrast:.2f}')
 
     def test_splash_uses_cohesive_palette_family(self):
         splash = source('components/JumloSplash.kt')
-        self.assertIn('Color(0xFF1E0F06)', splash)
-        self.assertIn('Color(0xFF8A3B12)', splash)
-        self.assertIn('Color(0xFFFFEEDD)', splash)
-        self.assertNotIn('Color(0xFF2221A1)', splash)
+        self.assertIn('system.splashStart', splash)
+        self.assertIn('system.splashMid', splash)
+        self.assertIn('system.splashEnd', splash)
+        self.assertIn('system.splashTag', splash)
+        self.assertIn('LocalColorSystem.current', splash)
+        self.assertNotIn('SplashTokens', splash)
 
     def test_tool_catalog_adapts_to_tablet_and_fold_safe_width(self):
         code = source('tools/ToolsScreen.kt')
@@ -106,15 +138,15 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('maxLines = 2',code)
         self.assertNotIn('QuietSearchBar(',code)
 
-    def test_dynamic_color_persists_and_preserves_neutral_surfaces(self):
+    def test_old_color_system_is_gone_and_transparency_kept(self):
         settings = source('settings/SettingsScreen.kt')
         theme = source('theme/Theme.kt')
-        self.assertIn('settings.accentColor == "DYNAMIC"',settings)
-        self.assertIn('viewModel.setAccentColor(if (it) "DYNAMIC" else "BLUE")',settings)
-        self.assertIn('Build.VERSION.SDK_INT >= 31',settings)
-        self.assertIn('background = neutral.background',theme)
-        self.assertIn('surface = neutral.surface',theme)
-        self.assertIn('surfaceTint = Color.Transparent',theme)
+        for gone in ('accentColor', 'setAccentColor', 'DYNAMIC', 'ColorPresets'):
+            self.assertNotIn(gone, settings, f'old wiring remains: {gone}')
+        for gone in ('useDynamicColor', 'seeded', 'accentColor'):
+            self.assertNotIn(gone, theme, f'old theme wiring remains: {gone}')
+        self.assertIn('colorSystem: String = "SUNSET"', theme)
+        self.assertIn('surfaceTint = Color.Transparent', theme)
 
     def test_direct_mlkit_scan_returns_a_validated_pdf(self):
         scanner = source('scan/SmartDocumentScanButton.kt')
@@ -136,7 +168,8 @@ class PremiumUxContracts(unittest.TestCase):
     def test_tab_indicator_is_cell_local_and_honors_system_motion(self):
         palette = source('theme/ToolPalette.kt')
         dock = source('components/QuietNavigation.kt')
-        self.assertIn('private val darkAccents',palette)
+        self.assertIn('system: ColorSystem',palette)
+        self.assertIn('LocalColorSystem.current', source('tools/ToolsScreen.kt'))
         self.assertIn('colors.background.luminance()', source('tools/ToolsScreen.kt'))
         self.assertIn('LocalReducedMotion.current',dock)
         self.assertIn('if (reduced) snap()',dock)

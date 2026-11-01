@@ -48,10 +48,10 @@ class M3ColorFactoryTest {
         assertEquals(mid, kept)
     }
 
-    @Test fun `seedFor maps named presets to their seed`() {
-        assertEquals(Color(0xFF00897B), M3ColorFactory.seedFor("TEAL"))
-        assertEquals(Color(0xFFE64A3A), M3ColorFactory.seedFor("CORAL"))
-        assertEquals(Color(0xFF7B4DFF), M3ColorFactory.seedFor("VIOLET"))
+    @Test fun `seedFor falls back to blue for names now that presets are gone`() {
+        assertEquals(Color(0xFF1E88E5), M3ColorFactory.seedFor("TEAL"))
+        assertEquals(Color(0xFF1E88E5), M3ColorFactory.seedFor("CORAL"))
+        assertEquals(Color(0xFF1E88E5), M3ColorFactory.seedFor("VIOLET"))
         assertEquals(Color(0xFF1E88E5), M3ColorFactory.seedFor("BLUE"))
     }
 
@@ -72,9 +72,9 @@ class M3ColorFactoryTest {
         assertNull(M3ColorFactory.hexColor("#12"))
     }
 
-    @Test fun `isValidAccent accepts presets and hex`() {
-        assertTrue(M3ColorFactory.isValidAccent("TEAL"))
-        assertTrue(M3ColorFactory.isValidAccent("DYNAMIC"))
+    @Test fun `isValidAccent accepts hex only now that presets are gone`() {
+        assertFalse(M3ColorFactory.isValidAccent("TEAL"))
+        assertFalse(M3ColorFactory.isValidAccent("DYNAMIC"))
         assertTrue(M3ColorFactory.isValidAccent("#1E88E5"))
         assertFalse(M3ColorFactory.isValidAccent("not-a-color"))
     }
