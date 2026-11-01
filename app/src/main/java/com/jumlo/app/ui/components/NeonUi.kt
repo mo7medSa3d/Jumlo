@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -65,7 +66,8 @@ fun NeonPanel(
         shape = QuietTheme.shapes.card,
         color = accent?.let { ToolPalette.mix(colors.surfaceContainerLow, it, .04f) }
             ?: colors.surfaceContainerLow,
-        shadowElevation = 2.dp
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.58f)),
+        shadowElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(QuietTheme.spacing.cardInteriorPadding),

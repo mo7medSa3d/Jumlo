@@ -4,6 +4,7 @@ import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -217,7 +218,12 @@ import com.jumlo.app.model.*
                                         .semantics { if(selecting) { this.selected=output.id in selected; role=Role.Checkbox } },
                                     shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
                                     color=if(selecting && output.id in selected) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surfaceContainerLow
+                                        else MaterialTheme.colorScheme.surfaceContainerLow,
+                                    border=BorderStroke(
+                                        1.dp,
+                                        if(selecting && output.id in selected) MaterialTheme.colorScheme.primary.copy(alpha=0.46f)
+                                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.58f)
+                                    )
                                 ) {
                                     Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                         Box(Modifier.fillMaxWidth()

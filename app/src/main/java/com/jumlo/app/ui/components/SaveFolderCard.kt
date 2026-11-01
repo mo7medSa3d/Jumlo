@@ -1,6 +1,7 @@
 package com.jumlo.app.ui.components
 
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,8 +36,12 @@ import kotlinx.coroutines.withContext
 @Composable fun SaveFolderCard(destination: String, onChoose: () -> Unit, onOpen: () -> Unit,
     modifier: Modifier = Modifier) {
     val folder = rememberSaveFolderLabel(destination)
-    Surface(modifier.fillMaxWidth().testTag("saveFolder.card"), shape = QuietTheme.shapes.card,
-        color = MaterialTheme.colorScheme.surfaceContainerLow) {
+    Surface(
+        modifier.fillMaxWidth().testTag("saveFolder.card"),
+        shape = QuietTheme.shapes.card,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.58f))
+    ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(painterResource(R.drawable.ic_prism_folder), null, Modifier.size(28.dp),

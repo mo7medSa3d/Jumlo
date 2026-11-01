@@ -2,6 +2,7 @@ package com.jumlo.app.ui.downloads
 
 import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.theme.QuietTheme
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
@@ -81,23 +82,30 @@ import com.jumlo.app.core.StoragePaths
         }
         item("download-stats") {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                Surface(shape=RoundedCornerShape(20.dp),
+                Surface(
+                    shape=RoundedCornerShape(20.dp),
                     color=MaterialTheme.colorScheme.primaryContainer,
-                    modifier=Modifier.weight(1f)) {
+                    modifier=Modifier.weight(1f),
+                    border=BorderStroke(1.dp,MaterialTheme.colorScheme.primary.copy(alpha=0.18f))
+                ) {
                     Column(Modifier.padding(16.dp),
                         verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Rounded.Bolt,null,Modifier.size(22.dp),
                             tint=MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(activeDownloads.size.toString(),
-                            style=MaterialTheme.typography.headlineSmall)
+                            style=MaterialTheme.typography.headlineSmall,
+                            color=MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(stringResource(R.string.ui_active_tasks),
                             style=QuietTheme.typography.metadata,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            color=MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha=0.86f))
                     }
                 }
-                Surface(shape=RoundedCornerShape(20.dp),
+                Surface(
+                    shape=RoundedCornerShape(20.dp),
                     color=MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier=Modifier.weight(1f)) {
+                    modifier=Modifier.weight(1f),
+                    border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.58f))
+                ) {
                     Column(Modifier.padding(16.dp),
                         verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Rounded.CheckCircle,null,Modifier.size(22.dp),
