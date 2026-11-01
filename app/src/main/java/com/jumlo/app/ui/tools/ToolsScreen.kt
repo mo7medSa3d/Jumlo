@@ -1,5 +1,6 @@
 package com.jumlo.app.ui.tools
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -73,10 +74,25 @@ private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
     if (language.isRtl) section.titleAr else section.titleEn
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(title, color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+private fun SectionHeader(title: String, count: Int? = null) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            title,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.weight(1f)
+        )
+        count?.let {
+            Text(
+                it.toString(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    }
 }
 
 /** Stateless UI boundary lets interaction tests exercise the real catalogue without a database. */
@@ -100,8 +116,11 @@ internal fun ToolsCatalogue(
                 ToolCatalogue.isListed(tool.id)
             } else {
                 ToolCatalogue.isSearchable(tool.id) &&
-                    listOf(tool.titleEn, tool.titleAr, tool.subtitleEn, tool.subtitleAr)
-                        .any { it.contains(query, ignoreCase = true) }
+                    listOf(
+                        tool.id, tool.titleEn, tool.titleAr, tool.subtitleEn, tool.subtitleAr,
+                        shortToolLabel(tool, AppLanguage.ENGLISH),
+                        shortToolLabel(tool, AppLanguage.ARABIC)
+                    ).any { it.contains(query, ignoreCase = true) }
             }
         }.sortedWith(compareBy<IndexedValue<UtilityTool>> { ranks[it.value.id] ?: Int.MAX_VALUE }
             .thenBy { it.index }).map { it.value }
@@ -117,8 +136,9 @@ internal fun ToolsCatalogue(
     val largeText = LocalDensity.current.fontScale >= 1.6f
     BoxWithConstraints(Modifier.fillMaxSize().testTag("tools.screen")) {
         val columns = when {
-            maxWidth >= 900.dp -> if (largeText) 3 else 5
-            maxWidth >= 600.dp -> if (largeText) 2 else 4
+            maxWidth >= 1200.dp -> if (largeText) 3 else 5
+            maxWidth >= 900.dp -> if (largeText) 2 else 4
+            maxWidth >= 640.dp -> if (largeText) 2 else 3
             largeText -> 1
             else -> 2
         }
@@ -130,11 +150,33 @@ internal fun ToolsCatalogue(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item("catalogue-intro", span = { GridItemSpan(maxLineSpan) }) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        if (language.isRtl) "اكتشف أدواتك" else "Explore your tools",
+                        style = QuietTheme.typography.screenTitle,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        if (language.isRtl) "ابحث بالاسم أو الوصف أو رمز الأداة، واختر المهمة المناسبة." else "Search by name, description or tool ID, then open the workflow you need.",
+                        style = QuietTheme.typography.metadata,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             item("search", span = { GridItemSpan(maxLineSpan) }) {
                 QuietSearchBar(search, stringResource(R.string.neon_tools_search),
                     onSearch, { onSearch("") }, modifier=Modifier.testTag("tools.search"))
             }
             if (search.isNotBlank()) {
+                item("search-count", span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        if (language.isRtl) "${filtered.size} نتائج" else "${filtered.size} results",
+                        style = QuietTheme.typography.metadataStrong,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
                 if (filtered.isEmpty()) item("empty", span = { GridItemSpan(maxLineSpan) }) {
                     QuietStateCard(stringResource(R.string.tools_no_matching),
                         stringResource(R.string.tools_no_matching_sub),
@@ -146,7 +188,7 @@ internal fun ToolsCatalogue(
             } else {
                 if (pinned.isNotEmpty()) {
                     item("pinned", span = { GridItemSpan(maxLineSpan) }) {
-                        SectionHeader(stringResource(R.string.tools_section_pinned))
+                        SectionHeader(stringResource(R.string.tools_section_pinned), pinned.size)
                     }
                     items(pinned, key = { "pinned:" + it.id }, contentType = { "tool" }) { tool ->
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
@@ -154,7 +196,7 @@ internal fun ToolsCatalogue(
                 }
                 if (recent.isNotEmpty()) {
                     item("recent", span = { GridItemSpan(maxLineSpan) }) {
-                        SectionHeader(stringResource(R.string.tools_section_recent))
+                        SectionHeader(stringResource(R.string.tools_section_recent), recent.size)
                     }
                     items(recent, key = { "recent:" + it.id }, contentType = { "tool" }) { tool ->
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
@@ -165,7 +207,7 @@ internal fun ToolsCatalogue(
                     val sectionTools = remaining.filter { it.id in section.ids }
                     if (sectionTools.isEmpty()) continue
                     item("section:" + section.key, span = { GridItemSpan(maxLineSpan) }) {
-                        SectionHeader(sectionTitle(section, language))
+                        SectionHeader(sectionTitle(section, language), sectionTools.size)
                     }
                     items(sectionTools, key = { it.id }, contentType = { "tool" }) { tool ->
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
@@ -174,7 +216,7 @@ internal fun ToolsCatalogue(
                 val ungrouped = remaining.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
                 if (ungrouped.isNotEmpty()) {
                     item("section:all", span = { GridItemSpan(maxLineSpan) }) {
-                        SectionHeader(stringResource(R.string.tools_section_all))
+                        SectionHeader(stringResource(R.string.tools_section_all), ungrouped.size)
                     }
                     items(ungrouped, key = { it.id }, contentType = { "tool" }) { tool ->
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
@@ -185,31 +227,78 @@ internal fun ToolsCatalogue(
     }
 }
 
-/** One click target with an icon and an unclipped name; no categories or text-only shortcuts. */
+/** Category-accented, surface-first tile: readable text stays neutral in every theme. */
 @Composable
 internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
-    val isDark = colors.background.luminance() < 0.5f
-    val tint = ToolPalette.accentFor(tool.id, isDark)
-    val foreground = ToolPalette.onAccentFor(tool.id, isDark)
-    val iconSurface = foreground.copy(alpha = 0.13f)
+    val isDark = colors.surface.luminance() < 0.5f
+    val accent = ToolPalette.accentFor(tool.id, isDark)
+    val iconForeground = ToolPalette.onAccentFor(tool.id, isDark)
+    val tileColor = colors.surfaceContainerLow
+    val borderColor = ToolPalette.mix(tileColor, accent, if (isDark) 0.34f else 0.24f)
+    val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn
     val haptics = rememberAppHaptics()
-    Surface(onClick = { haptics.actionClick(); onClick() },
-        modifier = modifier.fillMaxWidth().heightIn(min = 132.dp).pressFeedback().testTag("tool.${tool.id}"),
-        shape = QuietTheme.shapes.card, color = tint, shadowElevation = 3.dp) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(56.dp).background(iconSurface, RoundedCornerShape(18.dp)),
-                contentAlignment = Alignment.Center) {
-                ToolIcon(tool.id, foreground, Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}"))
+    Surface(
+        onClick = { haptics.actionClick(); onClick() },
+        modifier = modifier.fillMaxWidth().heightIn(min = 176.dp).pressFeedback().testTag("tool.${tool.id}"),
+        shape = QuietTheme.shapes.card,
+        color = tileColor,
+        contentColor = colors.onSurface,
+        border = BorderStroke(1.dp, borderColor.copy(alpha = 0.72f)),
+        shadowElevation = if (isDark) 0.dp else 1.dp
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    Modifier.size(48.dp).background(accent, RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ToolIcon(
+                        tool.id, iconForeground,
+                        Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
+                    )
+                }
+                Text(
+                    toolCategoryLabel(tool.id, language),
+                    color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
             }
-            Text(shortToolLabel(tool, language), color = foreground,
+            Text(
+                shortToolLabel(tool, language),
+                color = colors.onSurface,
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                maxLines = 2,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                subtitle,
+                color = colors.onSurfaceVariant,
+                style = QuietTheme.typography.metadata,
+                maxLines = 2,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
+}
+
+private fun toolCategoryLabel(toolId: String, language: AppLanguage): String {
+    val labels = when {
+        toolId == "scan_doc" -> "Scan" to "مسح"
+        toolId.startsWith("pdf_") -> "PDF" to "PDF"
+        toolId.startsWith("img_") -> "Images" to "صور"
+        toolId.startsWith("dl_") -> "Downloads" to "تنزيلات"
+        else -> "Files" to "ملفات"
+    }
+    return if (language.isRtl) labels.second else labels.first
 }
 
 /** Concise task labels; full catalogue titles still support search and workspace headings. */

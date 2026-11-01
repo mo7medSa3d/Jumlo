@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,17 +60,29 @@ fun QuietRootTopBar(
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
-    Surface(color = colors.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().padding(top = statusTop + 8.dp, bottom = 8.dp)
-            .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = QuietTheme.typography.screenTitle,
-                color = colors.onPrimaryContainer, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f))
-            badgeText?.let { QuietBadge(it, colors.primary, colors.onPrimary) }
-            if (showSettings) QuietTonalIconButton(Icons.Rounded.Settings,
-                stringResource(R.string.settings_title), onSettingsClick)
+    Surface(color = colors.surface, modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth()
+                    .padding(top = statusTop + 8.dp, bottom = 10.dp)
+                    .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    title,
+                    style = QuietTheme.typography.screenTitle,
+                    color = colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                badgeText?.let { QuietBadge(it, colors.primaryContainer, colors.onPrimaryContainer) }
+                if (showSettings) QuietTonalIconButton(
+                    Icons.Rounded.Settings, stringResource(R.string.settings_title), onSettingsClick
+                )
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.outlineVariant.copy(alpha = 0.58f)))
         }
     }
 }

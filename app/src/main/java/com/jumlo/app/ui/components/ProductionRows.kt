@@ -75,10 +75,20 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 @Composable fun FileMenuRow(name:String,metadata:String,onOpen:(()->Unit)?,icon:ImageVector=Icons.Rounded.InsertDriveFile,selection:Boolean?=null,onSelect:(()->Unit)?=null,showOverflow:Boolean=true,onLongClick:(()->Unit)?=null,leadingPreview:(@Composable ()->Unit)?=null,menu:@Composable ColumnScope.(()->Unit)->Unit) {
     var expanded by remember {mutableStateOf(false)}
     val haptics=rememberAppHaptics()
-    Surface(modifier=if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
-        onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
-        onLongClick=onLongClick
-    ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,shape=QuietTheme.shapes.card,color=if(selection==true) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow) {
+    val rowColors = MaterialTheme.colorScheme
+    Surface(
+        modifier = if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
+            onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
+            onLongClick=onLongClick
+        ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,
+        shape = QuietTheme.shapes.card,
+        color = if(selection==true) rowColors.primaryContainer else rowColors.surfaceContainerLow,
+        border = BorderStroke(
+            1.dp,
+            if(selection==true) rowColors.primary.copy(alpha = 0.42f)
+            else rowColors.outlineVariant.copy(alpha = 0.54f)
+        )
+    ) {
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             if(selection!=null) Checkbox(selection,onCheckedChange=null)
             else if(leadingPreview!=null) leadingPreview()

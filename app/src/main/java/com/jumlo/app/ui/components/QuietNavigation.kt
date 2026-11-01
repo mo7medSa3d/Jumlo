@@ -1,6 +1,7 @@
 package com.jumlo.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -57,7 +58,8 @@ fun QuietFloatingDock(
     Surface(
         modifier = modifier.fillMaxWidth().testTag("navigation.bar"),
         color = colors.surfaceContainerLow,
-        shadowElevation = 6.dp,
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.56f)),
+        shadowElevation = 4.dp,
         tonalElevation = 0.dp
     ) {
         Row(
@@ -100,7 +102,7 @@ private fun DockDestination(
     val haptics = rememberAppHaptics()
     val reduced = LocalReducedMotion.current
     val indicatorColor by animateColorAsState(
-        if (active) colors.primary else Color.Transparent,
+        if (active) colors.primaryContainer else Color.Transparent,
         animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium), label = "tab-container"
     )
     val scale by animateFloatAsState(
@@ -125,11 +127,11 @@ private fun DockDestination(
         ) {
             Icon(painterResource(icon(tab)), null,
                 Modifier.size(24.dp).graphicsLayer { scaleX = scale; scaleY = scale },
-                tint = if (active) colors.onPrimary else colors.onSurfaceVariant)
+                tint = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant)
         }
         if (showLabel) Text(label,
             style = QuietTheme.typography.navigation.copy(fontWeight = if (active) FontWeight.Bold else FontWeight.Medium),
-            color = if (active) colors.onSurface else colors.onSurfaceVariant,
+            color = if (active) colors.primary else colors.onSurfaceVariant,
             maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.clearAndSetSemantics {})
     }

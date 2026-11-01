@@ -1,5 +1,7 @@
 package com.jumlo.app.ui.home
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -43,7 +45,11 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
             verticalArrangement = Arrangement.spacedBy(24.dp)) {
             item("hero") {
-                Surface(shape = QuietTheme.shapes.card, color = MaterialTheme.colorScheme.primaryContainer) {
+                Surface(
+                    shape = QuietTheme.shapes.card,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                ) {
                     Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         Text(stringResource(R.string.modern_home_title), style = QuietTheme.typography.display,
                             color = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -128,8 +134,13 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                         stringResource(R.string.modern_recent_empty_body), stringResource(R.string.modern_scan), onScan)
                     else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(outputs.take(8), key = { it.id }) { output ->
-                            Surface(onClick = { onOutput(output) }, modifier = Modifier.width(176.dp).pressFeedback(),
-                                shape = QuietTheme.shapes.card, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                            Surface(
+                                onClick = { onOutput(output) },
+                                modifier = Modifier.width(184.dp).pressFeedback(),
+                                shape = QuietTheme.shapes.card,
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.58f))
+                            ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     NeonOutputPreview(output, Modifier.fillMaxWidth().height(140.dp))
                                     Text(output.displayName, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -164,12 +175,33 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
 }
 
 @Composable private fun HomeQuickAction(label: String, icon: Int, onClick: () -> Unit, modifier: Modifier) {
-    Surface(onClick = onClick, modifier = modifier.heightIn(min = 92.dp).pressFeedback(),
-        shape = QuietTheme.shapes.inputField, color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(painterResource(icon), null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(label, style = QuietTheme.typography.bodyMedium, maxLines = 2)
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 104.dp).pressFeedback(),
+        shape = QuietTheme.shapes.inputField,
+        color = colors.surfaceContainerLow,
+        contentColor = colors.onSurface,
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.62f)),
+        shadowElevation = 1.dp
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                Modifier.size(44.dp).background(colors.primaryContainer, QuietTheme.shapes.thumbnail),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(painterResource(icon), null, Modifier.size(24.dp), tint = colors.onPrimaryContainer)
+            }
+            Text(
+                label,
+                style = QuietTheme.typography.bodyMedium,
+                color = colors.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

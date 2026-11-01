@@ -7,6 +7,7 @@ import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.theme.JumloTheme
 import com.jumlo.app.ui.tools.ToolsCatalogue
+import com.jumlo.app.ui.tools.shortToolLabel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -24,6 +25,8 @@ class ToolCatalogueInteractionTest {
             }
         }
         compose.onNodeWithTag("tool.icon.pdf_crop", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText(shortToolLabel(tool, AppLanguage.ENGLISH)).assertExists()
+        compose.onNodeWithText(tool.subtitleEn).assertExists()
         compose.onNodeWithTag("tool.pdf_crop").assertHasClickAction().performClick()
         compose.runOnIdle { assertEquals("pdf_crop", selected) }
     }
