@@ -24,7 +24,9 @@ object PureDomainAlgorithms {
 
     /**
      * Parses a page-range expression like "1-3, 7, 10-12" against [maxPages] (1-indexed)
-     * and returns a sorted list of distinct valid page numbers.
+     * and returns the distinct valid page numbers in the user's order: ranges expand
+     * in place and duplicates are removed, but the result is NOT sorted. Use
+     * [formatPagesToRangeSyntax] for canonical sorted output.
      */
     fun parsePageRangeSyntax(input:String,maxPages:Int):Result<List<Int>> =
         runCatching { com.jumlo.app.core.PageSelection.parse(input,maxPages) }
@@ -182,6 +184,10 @@ object PureDomainAlgorithms {
         val mb = kb / 1024.0
         if (mb < 1024.0) return String.format(Locale.US, "%.1f MB", mb)
         val gb = mb / 1024.0
-        return String.format(Locale.US, "%.2f GB", gb)
+        if (gb < 1024.0) return String.format(Locale.US, "%.2f GB", gb)
+        val tb = gb / 1024.0
+        if (tb < 1024.0) return String.format(Locale.US, "%.2f TB", tb)
+        val pb = tb / 1024.0
+        return String.format(Locale.US, "%.2f PB", pb)
     }
 }

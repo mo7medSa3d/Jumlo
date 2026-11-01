@@ -316,7 +316,11 @@ import kotlin.math.sqrt
                 }
             }
             "annotate" -> singleDoc(request,context,s,name("Annotated.pdf")){ doc,out ->
-                val page=s.optInt("page",1).coerceIn(1,doc.numberOfPages.coerceAtLeast(1))
+                // Never silently annotate another page: an out-of-range request
+                // must fail with INVALID_PAGE_INDEX instead of landing on the
+                // last page, matching stampImage/pageText/signature placement.
+                val page=s.optInt("page",1)
+                require(page in 1..doc.numberOfPages) { "INVALID_PAGE_INDEX" }
                 val kind=com.jumlo.app.core.PdfAnnotationKind.from(s.optString("kind","text"))
                 val text=s.optString("text","").ifBlank { if(kind==com.jumlo.app.core.PdfAnnotationKind.NOTE) "Note" else "" }
                 if(kind==com.jumlo.app.core.PdfAnnotationKind.INK) {
@@ -372,8 +376,10 @@ import kotlin.math.sqrt
                 publishOne("document",name("ImageOverlay.pdf")) { out ->
                     seekAll(context,request,ordered) { files ->
                         openUnencrypted(files[0]).use { doc ->
-                            val target = (s.optInt("page",1)-1)
-                                .coerceIn(0,(doc.numberOfPages-1).coerceAtLeast(0))
+                            // Never silently overlay another page: fail instead
+                            // of stamping the image on the last page.
+                            val target = s.optInt("page",1)-1
+                            require(target in 0 until doc.numberOfPages) { "INVALID_PAGE_INDEX" }
                             val upright=uprightImage(files[1],context)
                             try {
                                 PdfBoxBackend.stampImage(doc,target,upright,

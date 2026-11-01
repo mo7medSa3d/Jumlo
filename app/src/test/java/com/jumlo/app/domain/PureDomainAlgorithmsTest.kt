@@ -46,6 +46,28 @@ class PureDomainAlgorithmsTest {
     }
 
     @Test
+    fun `parsePageRangeSyntax preserves user order instead of sorting`() {
+        // The KDoc used to claim sorted output; PageSelection.parse deliberately
+        // preserves insertion order, so "7,1-3" must stay [7,1,2,3].
+        val result = PureDomainAlgorithms.parsePageRangeSyntax("7,1-3", maxPages = 24)
+        assertTrue(result.isSuccess)
+        assertEquals(listOf(7, 1, 2, 3), result.getOrThrow())
+        val deduped = PureDomainAlgorithms.parsePageRangeSyntax("3,3,1", maxPages = 24)
+        assertEquals(listOf(3, 1), deduped.getOrThrow())
+    }
+
+    @Test
+    fun `formatBytes covers terabytes and petabytes instead of stopping at GB`() {
+        assertEquals("0 B", PureDomainAlgorithms.formatBytes(0L))
+        assertEquals("1 KB", PureDomainAlgorithms.formatBytes(1024L))
+        assertEquals("1.0 MB", PureDomainAlgorithms.formatBytes(1024L * 1024L))
+        assertEquals("1.00 GB", PureDomainAlgorithms.formatBytes(1024L * 1024L * 1024L))
+        assertEquals("1.00 TB", PureDomainAlgorithms.formatBytes(1024L * 1024L * 1024L * 1024L))
+        assertEquals("2.00 TB", PureDomainAlgorithms.formatBytes(2L * 1024L * 1024L * 1024L * 1024L))
+        assertEquals("1.00 PB", PureDomainAlgorithms.formatBytes(1024L * 1024L * 1024L * 1024L * 1024L))
+    }
+
+    @Test
     fun `parseBatchUrls identifies valid links, duplicates, and unsupported ftp protocol`() {
         val input = """
             https://data.research.org/datasets/climate_2024_q1.csv

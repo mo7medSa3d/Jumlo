@@ -97,7 +97,7 @@ import kotlinx.serialization.json.Json
             "pdf_annotate" -> {
                 // Only the text-carrying kinds need a body; a highlight is a region.
                 val kind=com.jumlo.app.core.PdfAnnotationKind.from(text2)
-                val body=if(kind.carriesText) text1 else text1
+                val body=text1
                 if(kind.carriesText) require(body.isNotBlank()) { "INVALID_ANNOTATION" }
                 if(kind.isFreehand) com.jumlo.app.core.PdfInkDrawing.requireValid(effectiveInkStrokes())
                 com.jumlo.app.core.OverlayStylePolicy.requireColor(annotationColorHex)

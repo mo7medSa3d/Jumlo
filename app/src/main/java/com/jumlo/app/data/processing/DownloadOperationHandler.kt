@@ -100,10 +100,14 @@ class DownloadOperationHandler @Inject constructor(
 
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> = withContext(Dispatchers.IO) {
         val workerContext=currentCoroutineContext()
-        // Retired UI controls must not strand requests restored from earlier versions.
-        val settings=Json.decodeFromString<DownloadSettings>(request.settingsJson).copy(
-            wifiOnly=false, unmeteredOnly=false, cleartextConsent=true
-        )
+        // Honor the submitted network policy. The media screen offers Wi-Fi-only,
+        // unmetered-only and HTTP consent as Advanced options, and networkPolicy()
+        // below enforces them; forcing them off here made those switches no-ops
+        // and allowed mobile-data and plain-HTTP downloads the user never
+        // approved. Workspace submissions already hardcode (false, false, true),
+        // so they are unaffected; jobs restored from earlier versions enforce the
+        // values they were submitted with.
+        val settings=Json.decodeFromString<DownloadSettings>(request.settingsJson)
         val secret=secrets.copy(settings.urlSecretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
         try {
             val urls=String(secret).lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
