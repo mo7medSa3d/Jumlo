@@ -36,6 +36,10 @@
     <string name="pref_app_color_hex">القيمة السداسية</string>
     <string name="pref_app_color_reset">إعادة تعيين</string>
     <string name="pref_language">اللغة</string>
+    <string name="pref_text_size">حجم النص</string>
+    <string name="pref_text_size_small">صغير</string>
+    <string name="pref_text_size_normal">عادي</string>
+    <string name="pref_text_size_large">كبير</string>
     <string name="pref_reduce_motion">تقليل الحركة</string>
     <string name="pref_reduce_motion_summary">تُحترم إعدادات الحركة في النظام دائمًا.</string>
     <string name="pref_haptics">استجابة اللمس</string>

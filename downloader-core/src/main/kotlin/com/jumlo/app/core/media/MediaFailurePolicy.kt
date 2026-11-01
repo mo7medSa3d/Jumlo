@@ -10,7 +10,8 @@ object MediaFailurePolicy {
         "MEDIA_GEO_BLOCKED", "MEDIA_REMOVED", "MEDIA_ENCRYPTED_SOURCE", "MEDIA_RATE_LIMITED",
         "MEDIA_NETWORK_ERROR", "MEDIA_TLS_FAILED", "MEDIA_SOURCE_REJECTED",
         "MEDIA_EXTRACTION_FAILED", "MEDIA_STORAGE_FULL", "MEDIA_OUTPUT_LIMIT",
-        "MEDIA_CONVERSION_UNAVAILABLE", "MEDIA_RUNTIME_UNAVAILABLE"
+        "MEDIA_CONVERSION_UNAVAILABLE", "MEDIA_RUNTIME_UNAVAILABLE",
+        "MEDIA_LINK_EXPIRED", "MEDIA_EXTRACTOR_CHANGED"
     )
 
     fun serviceCode(raw: String): String = raw.takeIf { it in serviceCodes } ?: "MEDIA_EXTRACTION_FAILED"
@@ -39,6 +40,8 @@ object MediaFailurePolicy {
             contains("private video", "this video is private", "members-only", "private content") -> "MEDIA_PRIVATE_CONTENT"
             contains("not available in your country", "geo-restricted", "geo restricted") -> "MEDIA_GEO_BLOCKED"
             contains("video unavailable", "has been removed", "does not exist", "404", "410 gone") -> "MEDIA_REMOVED"
+            contains("link has expired", "link expired", "url has expired", "this link is no longer valid", "expired link", "signature has expired") -> "MEDIA_LINK_EXPIRED"
+            contains("extractor error", "extractor failed", "unable to extract", "yt-dlp error", "extraction failed", "player response", "signature extraction") -> "MEDIA_EXTRACTOR_CHANGED"
             contains("drm", "encrypted") -> "MEDIA_ENCRYPTED_SOURCE"
             contains("sign in", "login", "log in", "logged-in", "cookies", "not a bot", "authentication is required") -> "MEDIA_SESSION_REQUIRED"
             contains("timed out", "connection reset", "network is unreachable", "unable to download webpage", "name or service not known") -> "MEDIA_NETWORK_ERROR"

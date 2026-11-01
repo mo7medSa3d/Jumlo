@@ -492,6 +492,55 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         }
     }
 
+    /** Publish scanned JPEG pages as individual outputs. Mirrors publishScannedPdf:
+     *  only owned cache files (jumlo-scan-*) are accepted, each page is verified
+     *  on publish, and owned files are deleted afterwards. Partial success keeps
+     *  the pages that did publish; the caller receives exactly those records. */
+    fun publishScannedImages(files: List<File>, onFinished: () -> Unit = {}, onPublished: (List<OutputRecord>) -> Unit = {}) {
+        operationScope.launch {
+            val owned = files.filter {
+                runCatching { it.canonicalFile.parentFile == app.cacheDir.canonicalFile && it.name.startsWith("jumlo-scan-") }.getOrDefault(false)
+            }
+            val published = mutableListOf<OutputRecord>()
+            beginBusy()
+            try {
+                require(owned.size == files.size && owned.isNotEmpty()) { "SCAN_IMAGE_UNREADABLE" }
+                initialized.await()
+                val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.ROOT).format(java.util.Date())
+                owned.forEachIndexed { index, file ->
+                    val jobId = UUID.randomUUID().toString()
+                    try {
+                        val ticket = outputStore.reserve(jobId, "scan", "Scan-$stamp-p${index + 1}.jpg", "image/jpeg")
+                        withContext(Dispatchers.IO) {
+                            val coroutine = currentCoroutineContext()
+                            file.inputStream().use { input -> ticket.stageFile.outputStream().use { output ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    coroutine.ensureActive()
+                                    val read = input.read(buffer)
+                                    if (read < 0) break
+                                    output.write(buffer, 0, read)
+                                }
+                            } }
+                        }
+                        val record = outputStore.publish(ticket) { outputStore.inspect(it, "image/jpeg") }
+                        if (record.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED") else published += record
+                    } finally {
+                        withContext(NonCancellable + Dispatchers.IO) { runCatching { outputStore.discardIncomplete(jobId) } }
+                    }
+                }
+                refreshStorage()
+                onPublished(published)
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (error: Exception) { notifyMessage(stableError(error)) }
+            finally {
+                withContext(NonCancellable + Dispatchers.IO) { owned.forEach { it.delete() } }
+                endBusy()
+                onFinished()
+            }
+        }
+    }
+
     /** A viewer receives the immutable imported bytes, never an expired original provider URI. */
     suspend fun viewerUri(sourceId:String):String=withContext(Dispatchers.IO) {
         val source=sources.get(sourceId)

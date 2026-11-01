@@ -75,13 +75,13 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     vm:AppViewModel,form:WorkspaceDraft,imported:List<SourceRef>,busy:Boolean,urls:String,reduceMotion:Boolean,
     onImport:()->Unit,onPhotos:()->Unit,onGoogleSignIn:()->Unit,onExecute:()->Unit
 ) = WorkspaceScreen(vm,form,imported,busy,urls,reduceMotion,onImport,onPhotos,onGoogleSignIn,
-    onPrintPages=null,onExecute=onExecute)
+    onPrintPages=null,onBack={},onExecute=onExecute)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkspaceScreen(
     vm:AppViewModel,form:WorkspaceDraft,imported:List<SourceRef>,busy:Boolean,urls:String,reduceMotion:Boolean,
     onImport:()->Unit,onPhotos:()->Unit,onGoogleSignIn:()->Unit,
-    onPrintPages:((String,List<Pair<Int,Int>>)->Unit)?,onExecute:()->Unit
+    onPrintPages:((String,List<Pair<Int,Int>>)->Unit)?,onBack:()->Unit = {},onExecute:()->Unit
 ) {
     val tool=form.toolId
     val processingPresets by vm.processingPresets.collectAsStateWithLifecycle()
@@ -109,7 +109,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
 
     val queue=remember(form.sourceIds,imported) {val indexed=imported.associateBy {it.id};form.sourceIds.mapNotNull(indexed::get)}
     if(viewer) {
-        ViewerWorkspace(vm,queue,onImport)
+        ViewerWorkspace(vm,queue,onImport,onBack=onBack)
         return
     }
     var selectedSourceId by rememberSaveable(tool, form.sourceIds) { mutableStateOf<String?>(null) }

@@ -31,6 +31,15 @@ class MediaFailurePolicyTest {
         assertEquals("MEDIA_NETWORK_ERROR", MediaFailurePolicy.httpStatus(503))
     }
 
+    @Test fun expiredLinksAndChangedExtractorsGetTheirOwnCodes() {
+        assertEquals("MEDIA_LINK_EXPIRED", MediaFailurePolicy.extractorMessage("This link has expired, please request a new one"))
+        assertEquals("MEDIA_LINK_EXPIRED", MediaFailurePolicy.serviceCode("MEDIA_LINK_EXPIRED"))
+        assertEquals("MEDIA_EXTRACTOR_CHANGED", MediaFailurePolicy.extractorMessage("yt-dlp error: unable to extract player response"))
+        assertEquals("MEDIA_EXTRACTOR_CHANGED", MediaFailurePolicy.serviceCode("MEDIA_EXTRACTOR_CHANGED"))
+        // A removed video must still map to MEDIA_REMOVED, not to the new codes.
+        assertEquals("MEDIA_REMOVED", MediaFailurePolicy.extractorMessage("Video has been removed"))
+    }
+
     @Test fun untrustedDiagnosticsNeverBecomePublicErrorCodes() {
         assertEquals("MEDIA_EXTRACTION_FAILED", MediaFailurePolicy.serviceCode("ACCESS_TOKEN_SECRET"))
         assertEquals("MEDIA_EXTRACTION_FAILED", MediaFailurePolicy.serviceCode("https://example.org/?token=secret"))

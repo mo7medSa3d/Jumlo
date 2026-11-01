@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="media_intro">Paste a file link or publicly downloadable media page. Content stays on your device.</string>
+    <string name="media_intro">Download the media you own, in the quality you choose. Everything stays on your device.</string>
     <string name="media_link">Video, audio, document or media-page link</string>
     <string name="media_analyze">Analyze link</string>
     <string name="media_update_extractor">Update extractor</string>
@@ -33,10 +33,12 @@
     <string name="media_rights_body">Only download content you own or have permission to download, and follow the terms of the site you are downloading from. Jumlo does not bypass DRM, paywalls or access controls; a site that requires an account will say so and the download will stop.</string>
     <string name="media_rights_confirm">I have the rights</string>
     <string name="media_error_service">This build has no configured extraction service. Try an original direct file link.</string>
-    <string name="media_error_site">No downloadable media was found. Check that the link is public and try again.</string>
+    <string name="media_error_site">No downloadable file was found on this page. If the site offers a direct file link, paste that instead — DRM, private, and login-only content can't be downloaded.</string>
     <string name="media_error_private">This resource requires sign-in or private access. Use an authorized direct download provided by the source.</string>
     <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>
     <string name="media_error_removed">This media has been removed or is no longer available at the source URL.</string>
+    <string name="media_error_link_expired">This link has expired. Ask the source for a fresh link and try again.</string>
+    <string name="media_error_extractor_changed">The source changed how it serves media, so the extractor could not read it. Update the extractor and analyze the link again.</string>
     <string name="media_error_drm">This media uses DRM protection and cannot be downloaded.</string>
     <string name="media_error_session">The source requires authentication. This downloader does not ask for passwords or import browser cookies.</string>
     <string name="media_error_rate">The source is limiting requests. Try again later; repeated browser retries will not restore access.</string>

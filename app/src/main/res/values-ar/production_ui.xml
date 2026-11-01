@@ -31,7 +31,7 @@
     <string name="ui_keep_editing">متابعة التحرير</string>
     <string name="ui_discard_leave">تجاهل التغييرات</string>
     <string name="ui_choose_inputs">اختر ملفاتك</string>
-    <string name="ui_choose_inputs_body">استورد الملفات لمعاينتها وترتيب معالجتها.</string>
+    <string name="ui_choose_inputs_body">استورد الملفات وعاينها ورتّبها — ثم دع جملو ينجز المهمة.</string>
     <string name="ui_destination">الوجهة: نتائج التطبيق. يمكنك حفظ نسخة في مجلد الجهاز بعد المعالجة.</string>
     <string name="ui_advanced">إعدادات متقدمة</string>
     <string name="ui_merge_minimum">اختر ملفي PDF على الأقل للدمج.</string>

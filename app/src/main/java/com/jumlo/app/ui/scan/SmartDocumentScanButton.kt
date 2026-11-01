@@ -31,9 +31,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** No app camera permission or intermediate capture screen is needed for the Play-services scanner. */
+/** No app camera permission or intermediate capture screen is needed for the Play-services scanner.
+ *  jpegOutput=true delivers the scanner's JPEG pages via onScannedJpegs instead of
+ *  the PDF; when the scanner returns no pages, the PDF path is used as a fallback
+ *  so a scan never fails solely because of the requested format. */
 @Composable
-internal fun SmartDocumentScanLauncher(onScannedPdf: (File) -> Unit, onBack: () -> Unit, externalBusy: Boolean = false) {
+internal fun SmartDocumentScanLauncher(
+    onScannedPdf: (File) -> Unit, onBack: () -> Unit, externalBusy: Boolean = false,
+    jpegOutput: Boolean = false, onScannedJpegs: (List<File>) -> Unit = {}
+) {
     val context = LocalContext.current
     val activity = remember(context) {
         generateSequence<Context>(context) { (it as? ContextWrapper)?.baseContext }
@@ -46,6 +52,7 @@ internal fun SmartDocumentScanLauncher(onScannedPdf: (File) -> Unit, onBack: () 
     var fallback by rememberSaveable { mutableStateOf(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)!=ConnectionResult.SUCCESS) }
     var active by remember { mutableStateOf(true) }
     val latestResult by rememberUpdatedState(onScannedPdf)
+    val latestJpegs by rememberUpdatedState(onScannedJpegs)
     val latestBack by rememberUpdatedState(onBack)
     val latestExternalBusy by rememberUpdatedState(externalBusy)
     DisposableEffect(Unit) { active = true; onDispose { active = false } }
@@ -56,8 +63,23 @@ internal fun SmartDocumentScanLauncher(onScannedPdf: (File) -> Unit, onBack: () 
         if (activityResult.resultCode != Activity.RESULT_OK) {
             latestBack()
         } else {
-            val pdf = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)?.pdf
-            if (pdf == null || pdf.pageCount <= 0) error = true
+            val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+            val pdf = scanResult?.pdf
+            val jpegUris = scanResult?.pages?.mapNotNull { it.imageUri }.orEmpty()
+            if (jpegOutput && jpegUris.isNotEmpty()) {
+                busy = true
+                scope.launch {
+                    var owned: List<File>? = null
+                    try {
+                        owned = SmartScanResultStore.copyJpegPages(context, jpegUris)
+                        latestJpegs(requireNotNull(owned))
+                        owned = null // The ViewModel now owns publication and cleanup.
+                    } catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) { error = true }
+                    catch (_: OutOfMemoryError) { error = true }
+                    finally { owned?.forEach { it.delete() }; busy = false }
+                }
+            } else if (pdf == null || pdf.pageCount <= 0) error = true
             else {
                 busy = true
                 scope.launch {
@@ -98,7 +120,7 @@ internal fun SmartDocumentScanLauncher(onScannedPdf: (File) -> Unit, onBack: () 
         } catch (_: Exception) { busy=false;error=true;fallback=true }
     }
     if(fallback) {
-        CameraXScanFallback(onScannedPdf=onScannedPdf,onBack=onBack,externalBusy=externalBusy)
+        CameraXScanFallback(onScannedPdf=onScannedPdf,onScannedJpegs=onScannedJpegs,jpegOutput=jpegOutput,onBack=onBack,externalBusy=externalBusy)
         return
     }
     LaunchedEffect(Unit) { if (!launched && !externalBusy) startScan() }

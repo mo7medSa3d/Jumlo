@@ -1,18 +1,18 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="quick_start_title">Get started with Jumlo</string>
-    <string name="quick_start_subtitle">Scan, import, print and edit documents on your device. Start with one action below.</string>
+    <string name="quick_start_title">Welcome to Jumlo — let's get you going</string>
+    <string name="quick_start_subtitle">Scan, import, print, and edit documents on your device. Pick one action below and you're done in minutes.</string>
     <string name="quick_start_import">Import a document</string>
-    <string name="quick_start_import_desc">Choose a PDF or image from your device.</string>
+    <string name="quick_start_import_desc">Pick a PDF or image — we'll take it from there.</string>
     <string name="quick_start_scan">Scan a page</string>
-    <string name="quick_start_scan_desc">Capture pages, straighten edges and save locally.</string>
+    <string name="quick_start_scan_desc">Capture pages, straighten edges, and save a perfect PDF.</string>
     <string name="quick_start_explore">Explore tools</string>
-    <string name="quick_start_explore_desc">Browse PDF, image and download utilities.</string>
+    <string name="quick_start_explore_desc">Explore every PDF, image, and download tool in one place.</string>
     <string name="quick_start_privacy">Your files are processed on your device; no account is required.</string>
     <string name="quick_start_skip">Not now</string>
     <string name="quick_start_replay">Quick-start guide</string>
     <string name="quick_start_replay_detail">See the Import, Scan and Tools walkthrough again.</string>
-    <string name="quick_start_done">Start using Jumlo</string>
+    <string name="quick_start_done">Start creating</string>
     <string name="quick_start_section">First steps</string>
     <string name="quick_start_print">Print from your files</string>
     <string name="quick_start_print_desc">Use Android print services to select an installed printer.</string>

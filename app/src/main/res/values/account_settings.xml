@@ -36,6 +36,10 @@
     <string name="pref_app_color_hex">Hex</string>
     <string name="pref_app_color_reset">Reset</string>
     <string name="pref_language">Language</string>
+    <string name="pref_text_size">Text size</string>
+    <string name="pref_text_size_small">Small</string>
+    <string name="pref_text_size_normal">Normal</string>
+    <string name="pref_text_size_large">Large</string>
     <string name="pref_reduce_motion">Reduce motion</string>
     <string name="pref_reduce_motion_summary">System motion preferences are always respected.</string>
     <string name="pref_haptics">Touch feedback</string>

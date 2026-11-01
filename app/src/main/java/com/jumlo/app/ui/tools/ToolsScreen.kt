@@ -153,12 +153,12 @@ internal fun ToolsCatalogue(
             item("catalogue-intro", span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        if (language.isRtl) "اكتشف أدواتك" else "Explore your tools",
+                        if (language.isRtl) "كل ما تحتاجه، بلمسة واحدة" else "Everything you need, one tap away",
                         style = QuietTheme.typography.screenTitle,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        if (language.isRtl) "ابحث بالاسم أو الوصف أو رمز الأداة، واختر المهمة المناسبة." else "Search by name, description or tool ID, then open the workflow you need.",
+                        if (language.isRtl) "ابحث بالاسم أو المهمة وأنجزها فورًا — دون تعقيد." else "Search by name or task, then get it done — no learning curve.",
                         style = QuietTheme.typography.metadata,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

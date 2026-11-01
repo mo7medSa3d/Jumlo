@@ -57,6 +57,8 @@ import com.jumlo.app.R
     code=="MEDIA_PRIVATE_CONTENT" -> R.string.media_error_private
     code=="MEDIA_GEO_BLOCKED" -> R.string.media_error_geoblocked
     code=="MEDIA_REMOVED" -> R.string.media_error_removed
+    code=="MEDIA_LINK_EXPIRED" -> R.string.media_error_link_expired
+    code=="MEDIA_EXTRACTOR_CHANGED" -> R.string.media_error_extractor_changed
     code=="MEDIA_ENCRYPTED_SOURCE" -> R.string.media_error_drm
     code=="MEDIA_RATE_LIMITED" -> R.string.media_error_rate
     code in setOf("MEDIA_NETWORK_ERROR","MEDIA_TLS_FAILED") -> R.string.media_error_network

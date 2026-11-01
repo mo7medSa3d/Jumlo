@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.ui.components.QuietPrimaryButton
+import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.theme.QuietTheme
@@ -47,10 +48,33 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
-/** The document scanner opens directly; ML Kit owns capture, crop, filters and page ordering. */
+/** The scanner first asks for the output format, because the Play-services result
+ *  carries both a PDF and JPEG pages and the old code silently discarded the JPEGs.
+ *  ML Kit owns capture, crop, filters and page ordering. */
 @Composable
-fun ScanScreen(onScannedPdf: (File) -> Unit, onBack: () -> Unit, externalBusy: Boolean = false) {
-    SmartDocumentScanLauncher(onScannedPdf = onScannedPdf, onBack = onBack, externalBusy = externalBusy)
+fun ScanScreen(
+    onScannedPdf: (File) -> Unit, onScannedJpegs: (List<File>) -> Unit = {},
+    onBack: () -> Unit, externalBusy: Boolean = false
+) {
+    var format by rememberSaveable { mutableStateOf<String?>(null) }
+    if (format == null) {
+        Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+            Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle)
+            Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { format = "pdf" },
+                modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
+            QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { format = "jpg" },
+                modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_close)) }
+        }
+    } else {
+        SmartDocumentScanLauncher(
+            onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,
+            jpegOutput = format == "jpg", onBack = onBack, externalBusy = externalBusy
+        )
+    }
 }
 
 private val signatureSaver = listSaver<List<SignatureStroke>, String>(

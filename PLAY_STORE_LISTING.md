@@ -6,11 +6,11 @@ These are review drafts, not published listing assets. Remove or qualify any fea
 
 **App name:** Jumlo: PDF, Images & Files
 
-**Short description:** Scan, organize and convert files, with tools for authorized downloads.
+**Short description:** Scan, edit, convert, and download — beautifully, on your device.
 
 **Full description:**
 
-Jumlo brings document, image and file tasks into one workspace.
+Every file task, in one place. Jumlo brings document, image and file work into a single workspace — no accounts, no learning curve, and your files stay on your device.
 
 Choose a PDF or image, review the actual page, adjust the available controls and save a validated result. Organize PDF pages, combine documents, split selected ranges, crop pages, compress embedded images, add watermarks or signatures, work with supported form fields, and protect a document with a password and permissions.
 
@@ -32,11 +32,11 @@ Most document work is local. Some scanner/OCR components require an initial Play
 
 **اسم التطبيق:** Jumlo: أدوات PDF والصور
 
-**الوصف المختصر:** امسح المستندات ونظّم الملفات وحوّلها، مع تنزيل المحتوى المسموح لك بحفظه.
+**الوصف المختصر:** امسح وحرّر وحوّل ونزّل — باحتراف، على جهازك.
 
 **الوصف الكامل:**
 
-يجمع Jumlo أدوات المستندات والصور والملفات في مساحة عمل واحدة.
+كل مهام ملفاتك في مكان واحد. يجمع Jumlo أعمال المستندات والصور والملفات في مساحة عمل واحدة — دون حسابات ودون تعقيد، وملفاتك تبقى على جهازك.
 
 اختر ملف PDF أو صورة، وراجع الصفحة الفعلية، واضبط الخيارات المتاحة، ثم احفظ الناتج. يمكنك ترتيب صفحات PDF ودمج المستندات وتقسيم الصفحات المحددة وقصّها وضغط الصور داخل الملف، وإضافة العلامات المائية والتوقيعات، وتعبئة حقول النماذج المدعومة، وحماية المستند بكلمة مرور وأذونات.
 

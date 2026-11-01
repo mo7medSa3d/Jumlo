@@ -8,12 +8,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Shared physical sizes. Document coordinates deliberately do not use these UI tokens. */
+/** Shared physical sizes. Document coordinates deliberately do not use these UI tokens.
+ *  2026-11-01 refresh: softer, larger radii across every screen — cards, fields and
+ *  thumbnails all read from here, so this single change restyles Home, Tools, Files,
+ *  Settings, workspaces, viewer and print together. */
 object JumloRadii {
-    val thumbnail = 12.dp
-    val field = 18.dp
-    val card = 24.dp
-    val sheet = 30.dp
+    val thumbnail = 16.dp
+    val field = 20.dp
+    val card = 28.dp
+    val sheet = 32.dp
     val indicator = 21.dp
 }
 
@@ -29,12 +32,12 @@ data class QuietPrecisionElevation(
  * Jumlo 2026 shape language: expressive controls without oversized stacked cards.
  * Field names remain stable so all routes share the same hierarchy.
  *
- * - Thumbnails and tags: 12dp
- * - Inputs and search: 18dp
- * - Buttons: 18dp
- * - Cards and tiles: 22dp
- * - Sheets and overlays: 28dp top radius
- * - Floating navigation: 28dp pill
+ * - Thumbnails and tags: 16dp
+ * - Inputs and search: 20dp
+ * - Buttons: 20dp
+ * - Cards and tiles: 28dp
+ * - Sheets and overlays: 32dp top radius
+ * - Floating navigation: 32dp pill
  */
 @Immutable
 data class QuietPrecisionShapes(
@@ -56,9 +59,9 @@ data class QuietPrecisionSpacing(
     val xl: Dp = 28.dp,
     val canvasGutterCompact: Dp = 20.dp,
     val canvasGutterMedium: Dp = 28.dp,
-    val cardInteriorPadding: Dp = 18.dp,
-    val interCardGap: Dp = 12.dp,
-    val sectionGap: Dp = 28.dp,
+    val cardInteriorPadding: Dp = 20.dp,
+    val interCardGap: Dp = 14.dp,
+    val sectionGap: Dp = 32.dp,
     val dockWidth: Dp = 400.dp,
     val dockHeight: Dp = 72.dp,
     val dockBottomOffset: Dp = 14.dp,

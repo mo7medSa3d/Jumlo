@@ -31,7 +31,7 @@
     <string name="ui_keep_editing">Keep editing</string>
     <string name="ui_discard_leave">Discard changes</string>
     <string name="ui_choose_inputs">Choose your files</string>
-    <string name="ui_choose_inputs_body">Import files to preview them and arrange their processing order.</string>
+    <string name="ui_choose_inputs_body">Import files, preview them, and arrange them — then let Jumlo do the work.</string>
     <string name="ui_destination">Destination: app results. Save a copy to a device folder after processing.</string>
     <string name="ui_advanced">Advanced settings</string>
     <string name="ui_merge_minimum">Choose at least two PDF files to merge.</string>

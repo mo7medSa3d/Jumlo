@@ -1,5 +1,251 @@
 # Jumlo — AUDIT_2 (source evidence and release gap register)
 
+## 2026-11-01 — Phase 0 audit (new; supersedes nothing, adds code-traced findings)
+
+**Pinned live main:** `82c22c6fcf76232d7f07a28934dc6513836c1703` (2026-11-01 07:07 UTC, verified
+via the GitHub API; the uploaded zip snapshot matches this head for the docs read here).
+**Method:** read all 10 prerequisite root documents, the 45-tool registry, catalogue,
+dispatcher, handlers, settings/theme, navigation and Gradle/CI files; ran
+`python3 scripts/audit_source.py` locally; personally re-verified every headline gap below
+with grep/sed before writing it. **No Gradle build was run yet for this section and no
+device was used, so this is a SOURCE AUDIT, NOT A RELEASE PASS.** Status key:
+`partial` = screen renders and dispatches to a real handler in code, but pick → run → result
+has **not** been verified on a device/emulator in this audit; `nav` = navigation/viewer-only,
+not a processing job; `missing` / `broken` = the code path itself is absent or a no-op.
+Nothing in this section is labelled `works` on code reading alone.
+
+**Reproduced locally, 2026-11-01:** `scripts/audit_source.py` → 246 production files,
+27 lexical candidates (20 hardcoded colors, 7 dynamic text expressions), **0 TODO / FIXME /
+XXX / NotImplementedError and 0 empty `onClick` in production Kotlin**. That zero is not
+proof that every click has an effect — the semantic findings below are exactly the cases
+a lexical scan cannot see.
+
+### Corrections to the brief's premises (verified, not assumed)
+
+- **Bottom tabs already exist.** `ui/components/QuietNavigation.kt:43`
+  `MainDockTabs = [HOME, TOOLS, FILES, SETTINGS]`; `ui/navigation/JumloNavHost.kt:422`
+  renders `QuietFloatingDock` as the Scaffold bottom bar. Phase 3's requested tab structure
+  is already the structure; Downloads and Print are detail routes, not dock tabs.
+- **Tool sections already exist.** `ui/tools/ToolsScreen.kt:52-72` groups into Scan & Capture,
+  Organize PDF, Convert, Edit & Sign, Optimize, Protect, Download, Files. The brief's six
+  sections are close to, but not identical to, the shipped eight.
+- **Every row visible in Settings works** (table below). The dead weight is the reverse:
+  real preferences with no UI, and enforcement code with no reachable toggle.
+- **The 60 MB cap was NOT lifted.** `app/build.gradle.kts:318-365` still enforces
+  `verifyCompactApkSize` and `verifyReleaseApkSize` at 60,000,000 bytes. `DECISIONS.md`
+  item 8 (24 Oct, "lift the cap") is stale and is contradicted by current code.
+- **Tool count is 45, not 47.** `CapabilityRegistry.kt:8-65`: 44 entries in `allTools` +
+  `sha256` appended via `tools` = 45 (40 processing + 5 navigation in
+  `core-common/.../CapabilityPolicy.kt:13-47`). Older "47" references are superseded.
+- **Wi-Fi-only is not a "pointless toggle to remove" — it is not a toggle at all.**
+  Enforcement exists (`data/processing/DownloadOperationHandler.kt:400`,
+  `data/media/MediaOperationHandler.kt:65`, `WIFI_REQUIRED`) but the per-download setter
+  (`ui/downloads/MediaViewModel.kt:193` `wifi()`) has zero callers and no UI switch, and
+  the global default is hardcoded false (`data/preferences/UserPreferencesRepository.kt:150`).
+  The same shape holds for HTTP/HTTPS cleartext (`MediaViewModel.kt:192` `allowHttp()`,
+  zero callers; `MediaWorkspace.kt:87` normalises with `allowHttp=true` hardcoded) and
+  `unmeteredOnly` (`MediaViewModel.kt:194`, zero callers). Deleting the enforcement would
+  remove real behaviour; the fix is to expose it in the Advanced panel or document it as
+  intentionally fixed — a decision, recorded in `DECISIONS.md`, not a silent deletion.
+
+### Every tool — status, evidence, fix plan
+
+Shared processing screen is `ui/workspace/WorkspaceScreen.kt:81`; shared execute is
+`WorkspaceScreen.kt:394` → `AppViewModel.kt:750 submit`. Handlers: P = `PdfOperationHandler`,
+O = `PdfOfficeOperationHandler`, I = `ImageOperationHandler`, A = `ArchiveOperationHandler`,
+D = `DownloadOperationHandler`, F = `FileExtrasHandler`, M = `MediaOperationHandler`.
+
+| Tool (id) | Status | Evidence (file:line) | Fix plan |
+| --- | --- | --- | --- |
+| Smart Scan (`scan_doc`) | nav / partial | `ui/scan/ScanScreen.kt:52` → Play-services `GmsDocumentScannerOptions` FULL, page limit 100 (`ui/scan/SmartDocumentScanButton.kt:83-87`); fallback `CameraXScanFallback.kt:60,101` | Device-verify capture; edge/perspective/filters are inside closed Play services and cannot be judged from this repo — do not claim them as app code |
+| Smart Scan → JPG export | **broken** | JPEG is requested (`SmartDocumentScanButton.kt:86` `RESULT_FORMAT_JPEG`) but the result handler reads only `pdf` (`:59-66`) and ignores page image URIs; fallback returns PDF only via `onScannedPdf` | P0: consume `pages[].imageUri` and offer JPG export, or stop requesting JPEG; add a test for the chosen path |
+| View PDF (`pdf_01`) | nav | `ui/workspace/DocumentWorkspace.kt:38` `ViewerWorkspace` → `ui/viewer/PdfViewerScreen.kt:85` | See broken back button below |
+| View PDF back button | **broken** | `PdfViewerScreen.kt:203` `testTag="pdf.back"` calls `onBack`, but `DocumentWorkspace.kt:38` defaults `onBack = {}` and the sole call site `WorkspaceScreen.kt:112` does not pass it (the Shell top bar above still goes back; the viewer's own back does nothing in this flow; `ViewerRoute` flow at `JumloNavHost.kt:494` passes `onBack=::goBack` and works) | P0: pass a real back action at `WorkspaceScreen.kt:112`; add a UI test asserting it |
+| Merge PDF (`pdf_03`) | partial | P `structural(merge)`; min-2 rule `WorkspaceScreen.kt:124,163` | P1: dedicated merge pick→result test (none traced) |
+| Organize Pages (`pdf_04`) | partial | P `structural(organize)`; visual page grid `WorkspaceScreen.kt:119`; rotate/reorder/delete live here, not as separate ids | P1: dedicated organize test; rotate is 90° steps only — document that limit |
+| Split PDF (`pdf_05`) | partial | P `structural(split)`; controls `WorkspaceScreen.kt:819` | P1: dedicated split test |
+| Extract Pages (`pdf_06`) | partial | P `structural(extract)` | P1: dedicated extract test |
+| Crop PDF Pages (`pdf_crop`) | partial | P `structural(crop)`; visual selection `WorkspaceScreen.kt:119` | P1: dedicated crop test |
+| PDF to Word (`pdf_to_docx`) | partial | O; paragraphs + headings + page breaks only, no complex tables/layout (README states this) | Keep the documented fidelity limit; device-verify one real document |
+| PDF to PowerPoint (`pdf_to_pptx`) | partial | O; one slide per page, page image + editable text layer, not reconstructed shapes | Keep the documented limit; device-verify |
+| Images to PDF (`pdf_02`) | partial | P `imagesToPdf` (A4/Letter/Custom/Auto, margins, per-image budget) | P1: dedicated test |
+| PDF to Images (`pdf_07`) | partial | P `pagesToImages` (DPI 36–600, JPEG/PNG, one bitmap at a time, budget-checked) | P1: dedicated test |
+| Extract Text / OCR (`pdf_ocr`) | partial | `OcrWebHandler.kt:25` → ML Kit Latin-only recogniser; unsupported-language notice exists in EN and AR (`values/ocr_language_disclosure.xml:3`, `values-ar/...:3`: "Latin-script scans only… Arabic text in a scanned image cannot be recognized here") | Scanned Arabic OCR is an explicit, documented limitation of the chosen recogniser, not a silent failure — do not mark it "fixed" without a new recogniser |
+| Convert Images (`img_01`) | partial | I `img_01` conversion branch | P1: dedicated test |
+| Annotate PDF (`pdf_annotate`) | partial | P `structural(annotate)` | P1: dedicated test |
+| Sign PDF (`pdf_signature`) | partial | P `structural(signature)`; placement editor gated on non-empty placements `WorkspaceScreen.kt:191`; signature pad in `ScanScreen.kt:70+` | P1: dedicated test incl. drag/resize handles |
+| Watermark & Page Numbers (`pdf_stamp`) | partial | P `structural(stamp)`; default text preset `WorkspaceScreen.kt:100` | P1: dedicated test |
+| Add Image to PDF (`pdf_image`) | partial | P `structural(overlayImage)`; requires exactly 1 PDF + 1 image `WorkspaceScreen.kt:129,164` | P1: dedicated test |
+| Fill PDF Form (`pdf_forms`) | partial | P `structural(forms)`; form-ready gate `WorkspaceScreen.kt:118` | P1: dedicated test |
+| PDF Metadata (`pdf_metadata`) | partial | P `structural(metadata)`; fields `WorkspaceScreen.kt:881+` | P1: dedicated test |
+| Clean Metadata (`pdf_clean`) | partial | P `structural(clean)` | P1: dedicated test |
+| Compress PDF (`pdf_compress`) | partial | **4 presets, not the brief's 3:** BEST_QUALITY 240 dpi/90, BALANCED 180/75, SMALL_FILE 135/58, STRONG 108/45 (`document-core/.../PdfPageGeometry.kt:137-145`); ladder keeps strictly-smaller-or-original only (`PdfCompressionRunner.kt:52-120`); before/after bytes exist via `AppViewModel.kt:1082` `measuredCompression()` | P1: confirm the compress UI actually displays both sizes (measure API exists; the UI label was not traced); run the 5-scan-fixture device benchmark — still blocked on fixtures, see below |
+| Resize Images (`img_02`) | partial | I `img_02` | P1: dedicated test |
+| Crop, Rotate & Flip (`img_03`) | partial | I `img_03` | P1: dedicated test |
+| Compress Images (`img_04`) | partial | I `img_04`; `IMAGE_NOT_SMALLER` unchanged outcome `ImageOperationHandler.kt:89` | P1: dedicated test |
+| Adjust & Pad (`img_adjust`) | partial | I extras `img_adjust` (`ImageOperationHandler.kt:40,260`) | P1: dedicated test |
+| Target Size (`img_target`) | partial | I extras `img_target` (`:280`) | P1: dedicated test |
+| Join / Collage (`img_join`) | partial | I extras `img_join` (`:209`); min-2 `WorkspaceScreen.kt:124` | P1: dedicated test |
+| Stitch Screenshots (`img_stitch`) | partial | I extras `img_stitch` (`:209,245`) | P1: dedicated test |
+| Compare Images (`img_compare`) | partial, search-only | I extras `img_compare` (`:306`); report-only; excluded from the default grid by `ToolCatalogue.isListed`/`searchOnly` | Document as search-only; do not silently delete |
+| EXIF Inspector (`img_exif`) | partial | I extras `img_exif` (`:114`); no full tag table per `TOOL_UI_SPEC.md` | P2: decide full-table scope or document the limit |
+| Watermark Images (`img_watermark`) | partial | I extras `img_watermark` (`:174`) | P1: dedicated test |
+| Password Protect PDF (`pdf_protect`) | partial | P `structural(protect)`; protect **and** unprotect via `field_remove_protection` toggle `WorkspaceScreen.kt:881-887`; AES-128 | P1: dedicated test |
+| Video/Audio/Media Downloader (`dl_media`) | partial | M; auto best-selection exists (`downloader-core/.../MediaPolicies.kt:65-69`, `MediaBestSelectionTest`) **but the quality grid is NOT behind Advanced**: `MediaWorkspace.kt:521-545` renders it directly (comment: "Visible directly!") and the Advanced expander (`:610-620`) contains only a filename field | P0: gate the quality picker behind Advanced (auto-best by default) or amend the brief; add a UI test for the default state. Audio-only exists (`MediaPolicies.kt:35-50`, `MediaWorkspace.kt:442-502`) but MP3/M4A/OPUS conversion is build-gated: non-`EXTENDED_MEDIA` builds offer ORIGINAL only (`MediaWorkspace.kt:482-490`) |
+| New Direct Download (`dl_02`) | partial | D; direct/Drive intake; link detection covers YouTube/TikTok/Instagram/Facebook/LinkedIn/Drive/direct (`downloader-core/.../DownloadLinkPolicy.kt:40-97,106-143` auto filename) | P1: device-verify one authorised link per platform; live providers remain unqualified |
+| Batch URL Intake (`dl_03`) | partial | D; ≤100 URLs; single-URL rule for non-batch `AppViewModel.kt:775+` | P1: dedicated test |
+| Download Settings (`dl_settings`) | nav, misleading | Routes to the main Settings screen (`JumloNavHost.kt:405`); hidden from the Tools grid and from search (`ToolCatalogue.kt:124-132`) | P2: rename or remove the entry; it is not a download-settings page |
+| Browse Storage (`file_02`) | nav | `openTool` → Files tab (`JumloNavHost.kt:403-407`); hidden from the default grid by `isListed` despite being in the Files section set (`ToolsScreen.kt:70-72`) | P2: fix the section/filter contradiction or document it |
+| Create ZIP (`file_07`) / Extract ZIP (`file_08`) | partial | A `create` / `extract` | P1: dedicated tests |
+| Encrypted ZIP (`file_encrypted_zip`) | partial | F `encryptedZip`; appears in only 1 test file (catalogue-level) | P1: dedicated test |
+| Batch Rename (`file_batch_rename`) | partial | F `rename`; live preview `WorkspaceScreen.kt:105,171`; appears in only 1 test file | P1: dedicated test |
+| Duplicate Finder (`file_duplicates`) | partial | F `duplicatesAndTrash` (duplicates branch) | P1: dedicated test |
+| Managed Trash Info (`file_trash`) | nav, dead branch | Files tab route; `FileExtrasHandler.kt:39,94,98,104` contains a `file_trash` report branch that is **unreachable** because `OperationDispatcher.kt:27` throws `CAPABILITY_UNAVAILABLE` for non-processing ids first | P1: delete the unreachable branch or make the tool processing — do not leave both |
+| Google Drive Import/Export (`file_drive`) | partial | F `googleDrive` (`FileExtrasHandler.kt:216-221`): real Drive v3 client, but a user-supplied OAuth token is required (`LOGIN_REQUIRED` if blank, `AppViewModel.kt:768-772`) | P1: document the token flow honestly; no Drive flow works without it |
+| SHA-256 verification (`sha256`) | partial | A `hashes`; expected-digest field `WorkspaceScreen.kt:818` | P1: dedicated test |
+| Word / Office → PDF | **missing** | No tool id, no registry entry, no dispatch branch: `OperationDispatcher.kt:35-48` routes only `pdf_to_docx`/`pdf_to_pptx` (PDF→Office), never the reverse | P0 decision: implement it (new tool + handler + tests) or remove it from the Phase 1 list and record why in `DECISIONS.md`. It must not be reported as present in the meantime |
+| Downloader pause/resume/retry | partial | Job-level pause (`data/jobs/JobStore.kt:80-85`) and retry (`:106-125`); stream resume via Range/ETag with backoff `300ms·2^(attempt-1)`, max 3 (`downloader-core/.../StreamTransfer.kt:9,49`, `ResumePolicy.kt:7-18`); foreground service + `dataSync` (`worker/EngineOperationWorker.kt:24`, `ProcessingNotification.kt:49`, manifest) | No traced user-visible pause→resume path for an in-progress *media* download in `MediaViewModel.kt` (only analysis cancel `:147,190`) — P1: trace or add it; Android 8–15 behaviour is not device-verified |
+| Downloader error messages | partial | Fixed codes `MEDIA_PRIVATE_CONTENT`, `MEDIA_GEO_BLOCKED`, `MEDIA_REMOVED` (404/410), `MEDIA_RATE_LIMITED`, `MEDIA_SESSION_REQUIRED` (`downloader-core/.../MediaFailurePolicy.kt:7-45`) | No distinct expired-link code (falls back to generic `MEDIA_REMOVED`/`MEDIA_EXTRACTION_FAILED`) and no extractor-changed code — P1: add both codes + messages + tests |
+| PDF viewer | partial | Zoom 1–5×, double-tap 2.5×, continuous scroll (`PdfViewerScreen.kt:240-242,377-390`); thumbnails (`:280-289`); jump-to-page (`:296-309`); search (`:254-269,494-502`, no dedicated search test traced); night mode is **session-only** (`:115` `rememberSaveable`, not persisted); last position remembered via hashed per-URI DataStore key (`ReaderPositionStore.kt:25,38-42`) | P1: persist night mode or document session-only; add a search test |
+| Files page | partial | Save folder `Download/Jumlo/<Video|Audio|PDF|Images|Documents>` (`storage-core/.../StoragePaths.kt:15,23`); sort/filter/search (`FilesScreen.kt:74-103,136,149`); multi-select (`:79-82,160-167`); delete/delete-all moves to trash (`AppViewModel.kt:683-694`), no traced permanent empty-trash path; storage usage refreshed on launch and after trash/rename/cleanup (`AppViewModel.kt:971-984`, `FilesScreen.kt:62,127`); rename with undo (`AppViewModel.kt:567-576`) | P1: trace share/open end-to-end (row callbacks traced, concrete intent path not traced in this pass); add multi-select, delete-all and storage-usage tests; clarify trash vs permanent delete in UI copy |
+| Printing | partial | System flow via `PrintManager.print` (`PrintViewModel.kt:323-335`); adapter range handling (`JumloPrintAdapter.kt:37-78`); preview reusing the real render pipeline (`PrintScreen.kt:591-664`); page range (`PrintScreen.kt:235-236`); orientation chips (`:246`) | **No app-level copies control exists** (zero `copies` hits in `printing/` + `Models.kt`) — copies, if any, come only from the Android system print dialog after `print()` is called. Do not add a fake copies field; verify on device and document that the system dialog owns copies, or implement a real one through the adapter |
+| Dead code, not buttons | — | `WorkspaceScreen.kt:124,164,222,233` reference `pdf_compare`/`pdf_redact`, which are in no registry, policy or dispatcher and can never be reached via `chooseTool` (`AppViewModel.kt:362` requires `enabled`) | P2: remove the dead branches |
+| Dead dock parameter | — | `QuietNavigation.kt:47-57` `QuietFloatingDock(..., onScan = {})`; the dock renders only `MainDockTabs` and never invokes `onScan`; NavHost does not pass it | P2: remove the parameter |
+
+### Settings — every option, traced to its effect
+
+Settings UI = `ui/settings/SettingsScreen.kt` (210 lines); store =
+`data/preferences/UserPreferencesRepository.kt` (DataStore `universal_utilities_prefs`).
+
+| Setting | Effect | Verdict |
+| --- | --- | --- |
+| Theme System/Light/Dark/AMOLED | `MainActivity.kt:61` → `ui/theme/Theme.kt:106-112` | REAL |
+| Dynamic color (SDK≥31) | `Theme.kt:115-122` dynamic schemes, Quiet neutrals pinned | REAL, gated |
+| App color: 16 presets + custom hex | `Theme.kt:140` `M3ColorFactory.scheme(seedFor(accent))` | REAL |
+| Language EN/AR | `MainActivity.kt:50-56` locales + `Theme.kt:173,175` RTL/font switch | REAL |
+| Haptics OFF/LIGHT/MEDIUM/STRONG | `MainActivity.kt:63-64` → `ui/util/AppHaptics.kt:91-98` level-gated | REAL |
+| Reduce motion | `MainActivity.kt:67` → `LocalReducedMotion`, consumed in `JumloMotion.kt:44,68`, `ProductionRows.kt:171,214`, `QuietButtons.kt:252`, `JumloNavHost.kt:110`, `ZoomPan.kt:179,199`, `PrintScreen.kt:594` | REAL |
+| UI sounds | `MainActivity.kt:65` → `AppHaptics.kt:65` | REAL |
+| Save folder + Reset | `AppViewModel.kt:880-890` persistable URI → `data/output/PublicOutputStore.kt:45,79-90` (SAF `Jumlo/<category>/`, else MediaStore/legacy); default `Download/Jumlo` | REAL |
+| Default video quality BEST/1080/720/480; default audio quality 320/192/128 | `JumloNavHost.kt:515` → `MediaWorkspace.kt:91` → `MediaViewModel.kt:160-165` | REAL |
+| Storage usage row; Clear cache; About actions | `StorageScreen.kt`, `AppViewModel.kt:958,971`, `JumloNavHost.kt:490-492` | REAL |
+| Font scale SMALL/NORMAL/LARGE | Applied (`Theme.kt:177-178`, 0.91/1.0/1.15) via `AppViewModel.kt:877`, but **no UI row anywhere** | REAL behaviour, missing UI — P1: add a Settings picker or document it as developer-only |
+| File view LIST/GRID; quick actions; favourites/recents | Applied in Files/Tools/Home, not in Settings | REAL, correctly placed outside Settings |
+| Media-service URL/token (Keystore-ciphered) | `di/AppModule.kt:32` backend selection; empty = on-device only; setters `AppViewModel.kt:878-879` | REAL behaviour, **no UI screen exposes them** — P1: add a guarded advanced screen or remove the setters |
+| `notificationsGranted` flag | Written (`AppViewModel.kt:892`, `JumloNavHost.kt:321` launcher) but **never read** anywhere; the OS permission is the real gate. `SettingsScreen.kt:37,39-40` also takes `onRequestNotifications`/`onOpenFiles`/`onChooseFolder` that its body never invokes (file carries `@Suppress("UNUSED_PARAMETER")` at `:34`) | DEAD — P1: remove the flag and the dead parameters, or wire them |
+| `maxConcurrentDownloads` (= 2), `wifiOnlyDefault` (= false) | Hardcoded in `settingsFlow` with "fixed scheduler policy" comments | Dead as settings by design — document, do not pretend they are user options |
+
+### Design system, icons, RTL, hygiene
+
+- **Tokens:** one system with a two-layer caveat — `ui/theme/Color.kt` + `Theme.kt` +
+  `M3ColorFactory.kt` + `ColorPresets.kt` + `ToolPalette.kt` + `QuietTheme` locals; the final
+  scheme is Quiet neutrals + seed-generated primary/secondary/tertiary/error
+  (`Theme.kt:140-159`), not a single static palette table. Light primary indigo `#2F46C6`,
+  dark primary `#A9B7FF`, AMOLED background pure black. The brief's "hot accent"
+  (coral/magenta) exists only as a user-selectable preset, not the default.
+- **Per-category colors** (`Color.kt` Light/DarkToolAccents, `ToolPalette.accentFor`): PDF
+  rose `#AD1F58`, Images orange `#AA4A00`, Downloads teal `#006F73`, Files indigo `#3B36CD`,
+  Organize violet `#692AA3`, Utilities cobalt `#155DA2` (brighter dark partners). Quirk:
+  `scan_doc` maps to Files indigo; unknown ids fall back to a hash.
+- **Hardcoded colors outside `ui/theme/`:** 240 `Color(`/`0xFF` matches in `app/src/main`,
+  171 inside `ui/theme/` (token definitions by design). Remaining pockets, all previously
+  triaged in the 2026-10-31 section and still open: splash gradients
+  (`JumloSplash.kt:98-166`, ignore light/dark + accent), scan placeholder checkerboard
+  (`ScanScreen.kt:95,99`, ignores dark theme), legacy `AccentPickerDialog.kt:40-43`
+  swatches that **diverge from `ColorPresets`** (TEAL `#086F6B` vs `#00897B`, CORAL
+  `#B63E54` vs `#E64A3A` — a second, inconsistent accent source; trace callers, then
+  delete or source it from `ColorPresets`), `AppearanceColorPicker.kt:69` fallback
+  `#1E88E5`. Most other matches are document pixels (PDF stamp/render colors, image
+  processing), not app chrome.
+- **WCAG AA:** tested for generated schemes and tool accents only —
+  `M3ColorFactory.kt:29,36-81` (`AA_NORMAL = 4.5f`), `M3ColorFactoryTest.kt` (all seeded
+  roles ≥ 4.5 light/dark/AMOLED) and `ToolPaletteContrastTest.kt` (icon contrast ≥ 3:1).
+  **Not covered:** splash, scan placeholder, non-seeded colors. **No tokens-preview screen
+  exists** in `ui/theme/` — Phase 3 must add one (or Compose previews) for light/dark/RTL.
+- **Typography:** "Jumlo Sans" is a rebrand of bundled IBM Plex Sans (variable font) +
+  IBM Plex Sans Arabic Regular (`res/font/ibm_plex_sans*.ttf`, `Type.kt:15,19-23,114-117`).
+  Scale: display 40, screenTitle 26, sectionTitle 20, body 16, metadata 13, navigation 12,
+  badge 11; Arabic gets 0 letter-spacing, 1.42× line height. **Gap:** Arabic has a single
+  Regular weight — no bold hierarchy in Arabic by design.
+- **Icons — the messiest area:** `ICON_MAP.md` documents only the `ic_tool_*` Material
+  Symbols vectors (`ToolIcons.kt:13-59` maps exactly 45 ids; 146 drawables in `res/drawable/`).
+  In practice the app primarily uses hand-embedded curated vectors (`ui/icons/Icons.kt`,
+  `ui/icons/rounded/Rounded.kt` 89 refs, `automirrored` 9 refs; 273× `Icons.Rounded`,
+  33× `Icons.AutoMirrored` across the app, no provenance in `ICON_MAP.md`) **and** a second
+  `ic_prism_*` set (`ModernToolIcons.kt:13-56`, used by `NeonUi.kt` tiles while
+  `ToolsScreen.kt:263` tiles use `ToolIcon`). The same tool tiles can render from two
+  different icon sets depending on screen. Phase 3 must pick one family per surface and
+  record provenance for all three, or consolidate.
+- **RTL:** first-class, not perfect. Manifest `supportsRtl="true"` + locale config;
+  `Theme.kt:173` forces layout direction from the in-app language; `values-ar/` mirrors
+  `values/` 1:1 on string counts for all 29 string files (e.g. `strings.xml` 359/359).
+  Legitimate LTR exceptions: print preview (`PrintScreen.kt:600`), URL fields
+  (`MediaWorkspace.kt:215`, `WorkspaceScreen.kt:320,691`), file-size text. **One suspect:**
+  `VisualDocumentEditor.kt:281` uses `AbsoluteAlignment.TopLeft` (non-mirrored) in a
+  drag/resize editor — needs a visual RTL check. No `padding(left/right)` found.
+- **Hygiene:** zero TODO/FIXME in production; hardcoded UI strings are numbers/symbols
+  only (7 literals: degrees, kbps, %, page numbers, ✓, index + file name, angle).
+  One i18n smell: `ui/components/QuietFileRows.kt:64-65` hardcodes `"$it صفحة"` /
+  `"$it pages"` plurals in code instead of quantity strings.
+
+### Build, CI, tests — what the gates actually cover
+
+- Modules: `:app`, `:benchmark`, `:core-common`, `:downloader-core`, `:document-core`,
+  `:storage-core` (`settings.gradle.kts:22-24`); Gradle 8.14, AGP 8.10.1, Kotlin 2.0.21;
+  `compileSdk = 36`, `minSdk = 26`, `targetSdk = 36` (`app/build.gradle.kts:44-48`).
+  Core modules are JVM-only with no Android imports (enforced by `audit_source.py`).
+- `ci.yml` ("Android CI & APK") runs the full required set on main pushes:
+  `:app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize`
+  `:core-common:test :downloader-core:test :document-core:test :storage-core:test`
+  `:app:testDebugUnitTest :app:lintDebug :app:lintRelease`, plus Python source-contract
+  scripts. Owner-signed `verifyPublishableRelease` runs only when the 4 signing secrets
+  exist, otherwise skipped. `android-smoke.yml` runs `:app:assembleDebugAndroidTest` +
+  `scripts/run-emulator-smoke.sh` filtered to **14 classes only** — not the full
+  instrumentation suite, and it runs no unit tests or lint.
+- Test files: `:app` 99 unit + 46 androidTest; each core module 1–2 unit files;
+  total 104 unit + 46 androidTest files. Handler-level gap: `ImageOperationHandler`,
+  `MediaOperationHandler`, `DownloadOperationHandler` appear in **zero** test files
+  (covered only via policy/catalogue/matrix/contract tests); `img_exif`,
+  `file_encrypted_zip`, `file_batch_rename` appear in only 1 test file each.
+- **No dedicated pick → run → result test for any single tool** is evidenced:
+  `docs/testing/tool-matrix.template.csv` marks all 160 processing cases `NOT_RUN`
+  and 20 navigation cases `N/A`. That, not code absence, is why most rows above are
+  `partial` rather than `works`.
+- Prior exact-head evidence (for context, not this audit's run): CI #40982142929 —
+  compact 55,378,831 B, release 55,366,447 B, both < 60,000,000; emulator smoke
+  #41144898786 — API 26: 72/72, API 35: 73/73, API 36: 73/73, selected suite only.
+
+### Priority fix order (Phase 1 → 4)
+
+- **P0 (broken / missing / brief-non-compliant):** pdf_01 viewer back button; scanner JPG
+  export (or stop requesting JPEG); Office → PDF decision (implement or formally remove
+  from scope in `DECISIONS.md`); downloader quality picker behind Advanced; expired-link
+  and extractor-changed error codes.
+- **P1 (verify or wire):** one dedicated pick → run → result test per tool, starting with
+  merge/split/organize/compress/downloader/print/files; media pause→resume path; night-mode
+  persistence decision; share/open end-to-end trace; empty-trash path; font-scale picker;
+  media-service advanced screen or setter removal; `notificationsGranted` + dead
+  `SettingsScreen` parameters; unreachable `file_trash` branch; 5-scan-fixture compression
+  benchmark; live authorised downloader matrix.
+- **P2 (design/hygiene):** splash tokens; scan placeholder dark-theme colors; legacy
+  `AccentPickerDialog` consolidation; icon-family consolidation + `ICON_MAP.md`
+  provenance for curated and Prism sets; tokens-preview screen (light/dark/RTL);
+  `VisualDocumentEditor` RTL visual check; `QuietFileRows` quantity strings; dead
+  `pdf_compare`/`pdf_redact` branches; dead `onScan` dock parameter; Arabic bold weight
+  decision; `DECISIONS.md` stale items (60 MB cap, 5-tab navigation) corrected.
+- **Still blocked / not verified (do not claim):** physical-device testing of any kind;
+  camera/scanner hardware; real print output; TalkBack / 200% font / RTL screenshot grid;
+  cold-start and frame benchmarks; 200-page scanned-PDF memory; owner production signing
+  (4 Actions secrets absent — compact APK remains test-signed); Play Console review,
+  privacy-policy URL publication, Data Safety form; full `connectedDebugAndroidTest`
+  (unfiltered); scanned Arabic OCR (limitation, see above).
+
+**Completion-criterion status after Phase 0:** criterion 1 (zero broken/stub/partial rows)
+is **NOT met** — this audit adds 3 broken items (viewer back, scan JPG, and, as a menu
+promise, Office → PDF missing), several brief-non-compliant items, and 40+ `partial`
+rows whose only missing piece is device pick → result evidence. Criteria 2–7 are
+therefore also not met. The next commit must be a fix, not another audit.
+
 ### 2026-10-31 — review of latest source-scan candidates
 
 Exact-code CI log #41144898783 ran `scripts/audit_source.py`, which reports **246 production sources and 27 lexical candidates**; the prior green code-head job #40982142929 printed the individual file/line matches. The 27 are **20 hardcoded colors and seven dynamic text expressions**, **zero basic TODO/empty-callback lexical matches**; this last zero is not proof that every click path has a real effect.

@@ -487,13 +487,18 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             "settings", "settings_detail" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
                                 onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
                                 onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
-                                onOpenFiles={navigateTab(DockTab.FILES)},onChooseFolder={pickFolder()},
                                 onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()},
                                 onShowGuide={showGuide=true},onOpenStorage={navigateTo("storage")})
                             "storage" -> com.jumlo.app.ui.settings.StorageScreen(viewModel,::pickDownloadDestination,::openSavedFolder)
                             "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title,onBack=::goBack,onOpenFile={navigateTab(DockTab.FILES)},onPrint={u,_->viewModel.importForPrint(Intake(listOf(u),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))}) }
                             "scan" -> com.jumlo.app.ui.scan.ScanScreen(
                                 externalBusy=scanPublishing,
+                                onScannedJpegs={files -> scanPublishing=true; viewModel.publishScannedImages(files,onFinished={scanPublishing=false}) {
+                                    if(navController.currentBackStackEntry?.id==entryId && navController.currentDestination?.hasRoute<ScanRoute>()==true) {
+                                        navController.popBackStack()
+                                        navigateTab(DockTab.FILES)
+                                    }
+                                } },
                                 onScannedPdf={file -> scanPublishing=true; viewModel.publishScannedPdf(file,onFinished={scanPublishing=false}) { output ->
                                     // Publication may finish after the user has already left Scan.
                                     if(navController.currentBackStackEntry?.id==entryId && navController.currentDestination?.hasRoute<ScanRoute>()==true) {
@@ -513,7 +518,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
                                 ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
-                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn,onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)}) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
+                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn,onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,jobId,{openOutput(it)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
                         }

@@ -31,13 +31,10 @@ import com.jumlo.app.ui.theme.QuietTheme
 
 /** Preferences that change an everyday action. Platform and scheduler policy stay out of this page. */
 @Composable
-@Suppress("UNUSED_PARAMETER")
 fun SettingsScreen(
     viewModel: AppViewModel,
     onRequestNotifications: () -> Unit,
     onExportLogs: () -> Unit,
-    onOpenFiles: () -> Unit,
-    onChooseFolder: () -> Unit,
     onChooseDownloadFolder: () -> Unit,
     onOpenSavedFolder: () -> Unit,
     onShowGuide: () -> Unit = {},
@@ -95,6 +92,12 @@ fun SettingsScreen(
                 settings.soundsEnabled, viewModel::setSoundsEnabled,
                 Modifier.testTag("settings.sounds"))
         }
+        item("text-size") { PreferenceRow(stringResource(R.string.pref_text_size),
+            textSizeLabel(settings.fontScale), Icons.Rounded.FormatSize, { panel = "text-size" },
+            Modifier.testTag("settings.textSize")) }
+        item("notifications") { PreferenceRow(stringResource(R.string.settings_allow_notifications),
+            null, Icons.Rounded.Notifications, onRequestNotifications,
+            Modifier.testTag("settings.notifications")) }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
@@ -136,6 +139,13 @@ fun SettingsScreen(
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
         "haptics" -> ChoiceDialog(stringResource(R.string.pref_haptics), HapticIntensity.entries.map { hapticLabel(it) },
             settings.hapticIntensity.ordinal, { viewModel.setHapticIntensity(HapticIntensity.entries[it]); panel = null }, { panel = null })
+        "text-size" -> {
+            val choices = listOf("SMALL", "NORMAL", "LARGE")
+            ChoiceDialog(stringResource(R.string.pref_text_size),
+                choices.map { textSizeLabel(it) },
+                choices.indexOf(settings.fontScale).takeIf { it >= 0 } ?: 1,
+                { viewModel.setFontScale(choices[it]); panel = null }, { panel = null })
+        }
         "video" -> {
             val choices = listOf("BEST", "1080", "720", "480")
             ChoiceDialog(stringResource(R.string.modern_video_quality),
@@ -184,6 +194,12 @@ internal fun previewAccentLabel(accent: String, language: AppLanguage): String {
     val default = ColorPresets.ALL.first { it.key == "BLUE" }
     return if (language == AppLanguage.ARABIC) default.nameAr else default.nameEn
 }
+@Composable private fun textSizeLabel(scale: String): String = stringResource(when (scale) {
+    "SMALL" -> R.string.pref_text_size_small
+    "LARGE" -> R.string.pref_text_size_large
+    else -> R.string.pref_text_size_normal
+})
+
 @Composable private fun hapticLabel(intensity: HapticIntensity): String = stringResource(when (intensity) {
     HapticIntensity.OFF -> R.string.pref_haptic_off
     HapticIntensity.LIGHT -> R.string.pref_haptic_light

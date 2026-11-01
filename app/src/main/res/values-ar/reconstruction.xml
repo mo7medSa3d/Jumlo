@@ -1,18 +1,18 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="quick_start_title">مرحباً بك في جملو</string>
-    <string name="quick_start_subtitle">ابدأ باستيراد مستند أو مسح صفحة بالكاميرا أو استكشاف أدوات PDF والصور والتحميل.</string>
+    <string name="quick_start_title">مرحبًا بك في جملو — لنبدأ معًا</string>
+    <string name="quick_start_subtitle">امسح أو استورد أو اطبع أو حرّر مستنداتك على جهازك. اختر إجراءً واحدًا أدناه وستنجز مهمتك في دقائق.</string>
     <string name="quick_start_import">استيراد الملفات</string>
-    <string name="quick_start_import_desc">اختر مستند PDF أو صورة من ذاكرة الهاتف.</string>
+    <string name="quick_start_import_desc">اختر ملف PDF أو صورة — وسنتولى الباقي.</string>
     <string name="quick_start_scan">ابدأ المسح</string>
-    <string name="quick_start_scan_desc">التقط الصفحات، واضبط الحواف، واحفظ الصور على جهازك.</string>
+    <string name="quick_start_scan_desc">التقط الصفحات واضبط الحواف واحفظ PDF مثاليًا.</string>
     <string name="quick_start_explore">استكشف الأدوات</string>
-    <string name="quick_start_explore_desc">حرّر ملفاتك وصورك على جهازك.</string>
+    <string name="quick_start_explore_desc">استكشف كل أدوات PDF والصور والتنزيل في مكان واحد.</string>
     <string name="quick_start_privacy">تتم معالجة المستندات محليًا على جهازك دون الحاجة إلى حساب.</string>
     <string name="quick_start_skip">إغلاق</string>
     <string name="quick_start_replay">إعادة عرض دليل البداية</string>
     <string name="quick_start_replay_detail">عرض خيارات الاستيراد والمسح والأدوات مرة أخرى.</string>
-    <string name="quick_start_done">ابدأ الآن</string>
+    <string name="quick_start_done">ابدأ الإبداع</string>
     <string name="quick_start_section">المساعدة والبدء</string>
     <string name="quick_start_print">الطباعة</string>
     <string name="quick_start_print_desc">يكتشف Android وخدمات الطباعة المثبتة الطابعات. إذا لم تظهر طابعة، فعّل خدمتها أو ثبّتها في إعدادات النظام، وتحقق من اتصالها ثم أعد المحاولة.</string>

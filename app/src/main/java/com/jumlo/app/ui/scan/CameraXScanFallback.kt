@@ -55,9 +55,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
-/** Lifecycle-bound camera is created only after the primary Play-services scanner is unavailable. */
+/** Lifecycle-bound camera is created only after the primary Play-services scanner is unavailable.
+ *  jpegOutput only adds a JPG save button; the PDF button always stays available. */
 @Composable
-internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onBack:()->Unit,externalBusy:Boolean) {
+internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<File>)->Unit={},jpegOutput:Boolean=false,onBack:()->Unit,externalBusy:Boolean) {
     val context=LocalContext.current
     val lifecycleOwner=LocalLifecycleOwner.current
     val scope=rememberCoroutineScope()
@@ -71,6 +72,7 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onBack:()->Unit,exter
     var error by rememberSaveable {mutableStateOf(false)}
     var active by remember {mutableStateOf(true)}
     val latestResult by rememberUpdatedState(onScannedPdf)
+    val latestJpegs by rememberUpdatedState(onScannedJpegs)
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> permitted=granted }
     val previewView=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FIT_CENTER}}
     @Suppress("DEPRECATION")
@@ -242,6 +244,22 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onBack:()->Unit,exter
                     catch(_:Exception) {error=true}
                     finally {
                         withContext(kotlinx.coroutines.NonCancellable+Dispatchers.IO) {owned?.delete()}
+                        busy=false
+                    }
+                }
+            })
+            if(jpegOutput) QuietTonalButton(stringResource(R.string.scan_save_jpg),enabled=pagePaths.isNotEmpty() && !busy && !externalBusy,modifier=Modifier.fillMaxWidth(),onClick={
+                val pages=pagePaths.map(::File)
+                busy=true;error=false
+                scope.launch {
+                    var owned:List<File>?=null
+                    try {
+                        owned=SmartScanResultStore.copyImagesToCache(context,pages)
+                        if(active) {latestJpegs(requireNotNull(owned));owned=null}
+                    } catch(cancel:CancellationException) {throw cancel}
+                    catch(_:Exception) {error=true}
+                    finally {
+                        withContext(kotlinx.coroutines.NonCancellable+Dispatchers.IO) {owned?.forEach {it.delete()}}
                         busy=false
                     }
                 }

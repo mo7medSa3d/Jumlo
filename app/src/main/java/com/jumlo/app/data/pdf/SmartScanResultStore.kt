@@ -20,6 +20,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
 
 /** Takes ownership of a scanner result URI by making a validated, cancellation-safe private copy. */
 object SmartScanResultStore {
@@ -76,6 +77,72 @@ object SmartScanResultStore {
             return file
         } catch (_: OutOfMemoryError) { throw OperationFailure("LOW_MEMORY") }
         finally { pending?.delete() }
+    }
+
+    /** Play-services scanner: copy each scanned page image to a private cache file.
+     *  The scanner previously requested JPEG pages and then discarded them; this
+     *  is the missing JPG export path. Mirrors copyPdf's budget and cleanup rules. */
+    suspend fun copyJpegPages(context: Context, uris: List<Uri>): List<File> {
+        return withContext(Dispatchers.IO) {
+            require(uris.size in 1..100) { "SCAN_PAGE_LIMIT" }
+            val coroutine = currentCoroutineContext()
+            val targets = mutableListOf<File>()
+            try {
+                uris.forEachIndexed { index, uri ->
+                    coroutine.ensureActive()
+                    require(context.cacheDir.usableSpace >= ResourceBudgetPolicy.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                    val target = File(context.cacheDir, "jumlo-scan-${UUID.randomUUID()}-p${index + 1}.jpg").also { targets += it }
+                    val input = context.contentResolver.openInputStream(uri) ?: error("SCAN_IMAGE_UNREADABLE")
+                    input.use { source -> FileOutputStream(target).use { output ->
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            coroutine.ensureActive()
+                            val read = source.read(buffer)
+                            if (read < 0) break
+                            if (read > 0) output.write(buffer, 0, read)
+                        }
+                        output.fd.sync()
+                    } }
+                    require(target.isFile && target.length() > 0) { "SCAN_IMAGE_UNREADABLE" }
+                }
+                targets.toList()
+            } catch (error: Throwable) {
+                targets.forEach { it.delete() }
+                throw error
+            }
+        }
+    }
+
+    /** CameraX fallback: copy already-captured page JPEGs into owned cache files
+     *  so the publisher can treat them exactly like primary-scanner pages. */
+    suspend fun copyImagesToCache(context: Context, pages: List<File>): List<File> {
+        return withContext(Dispatchers.IO) {
+            require(pages.size in 1..100) { "SCAN_PAGE_LIMIT" }
+            val coroutine = currentCoroutineContext()
+            val targets = mutableListOf<File>()
+            try {
+                pages.forEachIndexed { index, page ->
+                    coroutine.ensureActive()
+                    require(page.isFile) { "SCAN_IMAGE_UNREADABLE" }
+                    require(context.cacheDir.usableSpace >= ResourceBudgetPolicy.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                    val target = File(context.cacheDir, "jumlo-scan-${UUID.randomUUID()}-p${index + 1}.jpg").also { targets += it }
+                    page.inputStream().use { input -> FileOutputStream(target).use { output ->
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            coroutine.ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            if (read > 0) output.write(buffer, 0, read)
+                        }
+                        output.fd.sync()
+                    } }
+                }
+                targets.toList()
+            } catch (error: Throwable) {
+                targets.forEach { it.delete() }
+                throw error
+            }
+        }
     }
 
     suspend fun copyPdf(context: Context, uri: Uri, expectedPages: Int): File {

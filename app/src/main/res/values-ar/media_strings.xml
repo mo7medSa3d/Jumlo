@@ -26,7 +26,7 @@
     <string name="media_download_selected">تنزيل بالجودة المختارة</string>
     <string name="media_found">الروابط (%1$d)</string>
     <string name="media_error_url">أدخل رابط HTTP أو HTTPS كاملًا وواحدًا.</string>
-    <string name="media_intro">الصق رابط ملف أو صفحة فيديو عامة تسمح بالتنزيل، وسيبقى المحتوى على جهازك.</string>
+    <string name="media_intro">نزّل الوسائط التي تملكها بالجودة التي تختارها. كل شيء يبقى على جهازك.</string>
     <string name="media_actual_qualities">الصيغ المتاحة من هذا المصدر.</string>
     <string name="media_no_choices">لا يوجد مسار متاح لهذا الوضع. جرب الوضع الآخر أو التنزيل المباشر.</string>
     <string name="media_no_upscale">ترميز المصدر الأصلي يحافظ على الجودة الصوتية بدون إعادة ترميز إضافية.</string>
@@ -35,10 +35,12 @@
     <string name="media_rights_body">نزّل فقط المحتوى الذي تملكه أو لديك إذن بتنزيله، واتبع شروط استخدام الموقع. لا يتجاوز جملو حماية DRM أو المدفوعات أو قيود الوصول؛ وإذا كان الموقع يتطلب حسابًا فسيظهر ذلك ويتوقف التنزيل.</string>
     <string name="media_rights_confirm">لديّ حقوق الاستخدام</string>
     <string name="media_error_service">خدمة الاستخراج غير مُعدّة في هذا الإصدار. جرّب رابط ملف مباشر.</string>
-    <string name="media_error_site">لم نعثر على وسائط قابلة للتنزيل. تأكد أن الرابط عام وحاول مجددًا.</string>
+    <string name="media_error_site">لم نعثر على ملف قابل للتنزيل في هذه الصفحة. إذا كان الموقع يوفّر رابط ملف مباشر، الصقه بدلًا من ذلك — فالمحتوى المحمي أو الخاص أو الذي يتطلب تسجيل دخول لا يمكن تنزيله.</string>
     <string name="media_error_private">المحتوى يتطلب تسجيل دخول أو وصولًا خاصًا. استخدم رابط تنزيل مباشرًا مصرحًا به من المصدر.</string>
     <string name="media_error_geoblocked">هذا المحتوى محجوب جغرافيًا في منطقتك من قِبل المنصة المصدر.</string>
     <string name="media_error_removed">تمت إزالة هذا المحتوى أو لم يعد متاحًا على الرابط المصدر.</string>
+    <string name="media_error_link_expired">انتهت صلاحية هذا الرابط. اطلب رابطًا جديدًا من المصدر وحاول مجددًا.</string>
+    <string name="media_error_extractor_changed">غيّر المصدر طريقة تقديم الوسائط، فتعذّر على المحرك قراءتها. حدّث المحرك وحلّل الرابط من جديد.</string>
     <string name="media_error_drm">هذا المحتوى محمي بتشفير إدارة الحقوق الرقمية (DRM).</string>
     <string name="media_error_session">المصدر يتطلب التوثيق. هذه الصفحة لا تطلب كلمات مرور أو استيراد كوكيز من المتصفح.</string>
     <string name="media_error_rate">المصدر يحد من عدد الطلبات. حاول لاحقًا؛ تكرار تغيير المتصفح لن يمنح صلاحيات وصول.</string>

@@ -2,6 +2,7 @@ package com.jumlo.app.ui.downloads
 
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -517,15 +518,17 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 3. Quality & Resolution Grid — Visible directly!
-                item("media-quality-header") {
+                // 3. Quality & Resolution Grid — Advanced only. By default the
+                // ViewModel already auto-selects the best format (see
+                // MediaViewModel analyze/mode), so most users never need this grid.
+                if (showAdvanced) item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
                         Text(stringResource(R.string.media_actual_qualities),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
+                if (showAdvanced) items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { choice ->
                             val selected = state.selectedKey == choice.key
@@ -598,7 +601,20 @@ import kotlin.math.roundToInt
                 }
             }
 
-            if (state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
+            if (!showAdvanced && state.asset != null && state.selectedKey != null) {
+                item("auto-quality-summary") {
+                    val selectedChoice = state.choices.firstOrNull { it.key == state.selectedKey }
+                    if (selectedChoice != null) Text(
+                        stringResource(R.string.media_selected_quality_summary, MediaCatalog.qualityTitle(selectedChoice)),
+                        style=QuietTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    else Text(stringResource(R.string.media_auto_best_quality),
+                        style=QuietTheme.typography.bodyMedium,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            if (showAdvanced && state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
                 item("choose-quality-hint") {
                     Text(stringResource(R.string.media_choose_quality_hint),
                         style=QuietTheme.typography.bodyMedium,
@@ -623,6 +639,38 @@ import kotlin.math.roundToInt
                     modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),
                     colors=TextFieldDefaults.colors(focusedIndicatorColor=Color.Transparent,
                         unfocusedIndicatorColor=Color.Transparent,disabledIndicatorColor=Color.Transparent))
+            }
+
+            // Network policy for this job. These setters existed in MediaViewModel
+            // but had no UI callers, so the enforcement in the download handlers
+            // was unreachable from the app. They are now Advanced options.
+            if (showAdvanced && (state.asset != null || state.direct != null)) item("network-wifi") {
+                Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
+                    .toggleable(value=state.wifiOnly, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.wifi(it)})
+                    .padding(horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
+                    Text(stringResource(R.string.media_wifi), Modifier.weight(1f), style=QuietTheme.typography.body)
+                    Switch(checked=state.wifiOnly, onCheckedChange=null)
+                }
+            }
+            if (showAdvanced && (state.asset != null || state.direct != null)) item("network-unmetered") {
+                Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
+                    .toggleable(value=state.unmetered, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.unmetered(it)})
+                    .padding(horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
+                    Text(stringResource(R.string.media_unmetered), Modifier.weight(1f), style=QuietTheme.typography.body)
+                    Switch(checked=state.unmetered, onCheckedChange=null)
+                }
+            }
+            if (showAdvanced && (state.asset != null || state.direct != null)) item("network-http") {
+                Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
+                        .toggleable(value=state.allowHttp, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.allowHttp(it)})
+                        .padding(horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(stringResource(R.string.media_http), Modifier.weight(1f), style=QuietTheme.typography.body)
+                        Switch(checked=state.allowHttp, onCheckedChange=null)
+                    }
+                    if (state.allowHttp) Text(stringResource(R.string.field_http_warning),
+                        style=QuietTheme.typography.metadata, color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         Surface(tonalElevation=2.dp) {

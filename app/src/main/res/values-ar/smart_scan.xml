@@ -1,6 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="scan_smart_action">مسح ذكي متعدد الصفحات</string>
-    <string name="scan_smart_hint">امسح عدة صفحات أو استورد الصور، ثم راجع الصفحات واقصصها ورتبها قبل حفظ ملف PDF واحد.</string>
+    <string name="scan_choose_format">كيف تريد حفظ المسح؟</string>
+    <string name="scan_save_pdf">حفظ كملف PDF</string>
+    <string name="scan_save_jpg">حفظ كصور JPG</string>
+    <string name="scan_smart_hint">امسح الصفحات أو استورد الصور، ثم راجع واقصص ورتّب قبل حفظ PDF مثالي واحد.</string>
     <string name="scan_error_smart">يتطلب المسح الذكي خدمات Google Play. اتصل بالإنترنت للإعداد الأول ثم أعد المحاولة.</string>
 </resources>

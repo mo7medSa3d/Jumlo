@@ -1,6 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="scan_smart_action">Smart multi-page scan</string>
-    <string name="scan_smart_hint">Scan multiple pages or import photos. Review, crop and reorder pages before saving one PDF.</string>
+    <string name="scan_choose_format">How would you like your scan saved?</string>
+    <string name="scan_save_pdf">Save as PDF</string>
+    <string name="scan_save_jpg">Save as JPG images</string>
+    <string name="scan_smart_hint">Scan pages or import photos, then review, crop, and reorder before saving one perfect PDF.</string>
     <string name="scan_error_smart">Smart Scan needs Google Play services. Connect to the internet for the first setup, then try again.</string>
 </resources>
