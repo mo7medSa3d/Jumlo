@@ -6,6 +6,7 @@ import com.jumlo.app.core.office.OfficeSlide
 import com.jumlo.app.core.office.DocumentRenderPolicy
 import com.jumlo.app.core.office.OfficeParagraph
 import com.jumlo.app.core.office.OfficeTextPage
+import com.jumlo.app.core.office.OfficeTextParagraph
 import com.jumlo.app.core.office.OfficeTextSpan
 import com.jumlo.app.core.office.OfficeTextLayout
 import java.io.File
@@ -112,7 +113,7 @@ fun main(args:Array<String>) {
     verify("structured DOCX uses real heading styles and Arabic paragraph direction") {
         val target=File(dir,"headings.docx")
         OfficePackageWriter.writeStructuredDocx(target,1,{OfficeTextPage(listOf(
-            OfficeParagraph("عنوان المستند",1),OfficeParagraph("This is the body."),OfficeParagraph("Second section",2)))})
+            OfficeTextParagraph("عنوان المستند",1),OfficeTextParagraph("This is the body."),OfficeTextParagraph("Second section",2)))})
         val parsed=xml(target,"word/document.xml")
         val ns="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
         val styles=parsed.getElementsByTagNameNS(ns,"pStyle")
