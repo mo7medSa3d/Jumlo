@@ -36,6 +36,15 @@ class ToolPaletteContrastTest {
             }
         }
     }
+    @Test fun everyCuratedAccentPresetResolvesToItsOwnColor() {
+        for (preset in ColorPresets.ALL) {
+            val expected = M3ColorFactory.hexColor(preset.hex)
+            val actual = M3ColorFactory.seedFor(preset.key)
+            assertTrue("${preset.key} must be a recognized accent", M3ColorFactory.isValidAccent(preset.key))
+            assertTrue("${preset.key} must resolve to its configured hex", expected == actual)
+        }
+    }
+
     @Test fun accentTextRolesMeetAaAgainstTheActualScreenSurface() {
         for (seed in listOf("BLUE", "TEAL", "CORAL", "VIOLET", "INDIGO", "GREEN",
             "PINK", "ORANGE", "AMBER", "RED", "CYAN", "MAGENTA", "PURPLE",
