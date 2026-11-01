@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="quick_start_title">Welcome to Jumlo — let's get you going</string>
+    <string name="quick_start_title">Welcome to Jumlo — let\'s get you going</string>
     <string name="quick_start_subtitle">Scan, import, print, and edit documents on your device. Pick one action below and you're done in minutes.</string>
     <string name="quick_start_import">Import a document</string>
-    <string name="quick_start_import_desc">Pick a PDF or image — we'll take it from there.</string>
+    <string name="quick_start_import_desc">Pick a PDF or image — we\'ll take it from there.</string>
     <string name="quick_start_scan">Scan a page</string>
     <string name="quick_start_scan_desc">Capture pages, straighten edges, and save a perfect PDF.</string>
     <string name="quick_start_explore">Explore tools</string>
