@@ -320,8 +320,7 @@ fun pillarColors(system: ColorSystem, dark: Boolean): PillarColors {
     // Per-system family primaries, containers, on-containers and subtitles
     // (all pairs verified 4.5+ by scripts/test-color-systems.py). Each family
     // contributes exactly four entries, in that order.
-    val (pdfP, pdfC, pdfOn, pdfSub, imgP, imgC, imgOn, imgSub, dlP, dlC, dlOn, dlSub,
-        filP, filC, filOn, filSub, vltP, vltC, vltOn, vltSub) =
+    val familyColors =
         if (!dark) when (system.key) {
             "LUIGI" -> listOf(
                 tools[0], Color(0xFFE5F1E8), Color(0xFF21793A), Color(0xFF248540),
@@ -373,6 +372,15 @@ fun pillarColors(system: ColorSystem, dark: Boolean): PillarColors {
                 tools[3], Color(0xFF733F19), Color(0xFFFAAE60), Color(0xFFFAAB59),
                 tools[4], Color(0xFF74451B), Color(0xFFFCCA64), Color(0xFFFCCA64))
         }
+    // List destructuring in Kotlin supports only component1 through component5.
+    // Split each four-slot family before destructuring to preserve the exact
+    // PDF, Images, Downloads, Files and Vault color ordering.
+    val (pdfP, pdfC, pdfOn, pdfSub) = familyColors.subList(0, 4)
+    val (imgP, imgC, imgOn, imgSub) = familyColors.subList(4, 8)
+    val (dlP, dlC, dlOn, dlSub) = familyColors.subList(8, 12)
+    val (filP, filC, filOn, filSub) = familyColors.subList(12, 16)
+    val (vltP, vltC, _, _) = familyColors.subList(16, 20)
+
     val (successPrimary, successContainer, warningPrimary, warningContainer) = if (!dark)
         listOf(Color(0xFF15803D), Color(0xFFDCFCE7), Color(0xFF92400E), Color(0xFFFEF3C7))
     else
