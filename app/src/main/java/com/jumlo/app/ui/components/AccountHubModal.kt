@@ -20,6 +20,7 @@ import com.jumlo.app.R
 import com.jumlo.app.model.AppSettingsState
 import com.jumlo.app.ui.StorageUsage
 import com.jumlo.app.ui.settings.*
+import com.jumlo.app.ui.theme.settingsIconStyleFor
 
 /** Local data hub; no invented identity, membership tier or connected account. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +30,8 @@ fun AccountHubModal(settings: AppSettingsState, storage: StorageUsage, outputsCo
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val total = storage.sources + storage.outputs + storage.partials + storage.temporary + storage.trash
+    // Hub icons use the same fixed per-row colors as Settings, never the accent.
+    val dark = isDarkTheme(settings.themeMode)
     ModalBottomSheet(onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = MaterialTheme.colorScheme.surface, modifier = Modifier.testTag("account.hub")) {
@@ -41,16 +44,21 @@ fun AccountHubModal(settings: AppSettingsState, storage: StorageUsage, outputsCo
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             PreferenceRow(stringResource(R.string.account_my_files), stringResource(R.string.account_result_count, outputsCount),
-                Icons.Rounded.FolderOpen, { onDismiss(); onOpenFiles() }, Modifier.testTag("account.files"))
+                Icons.Rounded.FolderOpen, { onDismiss(); onOpenFiles() }, Modifier.testTag("account.files"),
+                iconStyle = settingsIconStyleFor("my-files", dark))
             PreferenceRow(stringResource(R.string.account_storage), Formatter.formatFileSize(context, total),
-                Icons.Rounded.Storage, { panel = "storage" }, Modifier.testTag("account.storage"))
+                Icons.Rounded.Storage, { panel = "storage" }, Modifier.testTag("account.storage"),
+                iconStyle = settingsIconStyleFor("storage", dark))
             PreferenceRow(stringResource(R.string.settings_title),
                 stringResource(if (settings.language.isRtl) R.string.account_language_ar else R.string.account_language_en),
-                Icons.Rounded.Settings, { onDismiss(); onOpenSettings() }, Modifier.testTag("account.settings"))
+                Icons.Rounded.Settings, { onDismiss(); onOpenSettings() }, Modifier.testTag("account.settings"),
+                iconStyle = settingsIconStyleFor("settings", dark))
             PreferenceRow(stringResource(R.string.account_privacy), null, Icons.Rounded.PrivacyTip,
-                { panel = "privacy" }, Modifier.testTag("account.privacy"))
+                { panel = "privacy" }, Modifier.testTag("account.privacy"),
+                iconStyle = settingsIconStyleFor("privacy", dark))
             PreferenceRow(stringResource(R.string.account_help_about), null, Icons.Rounded.HelpOutline,
-                { panel = "about" }, Modifier.testTag("account.about"))
+                { panel = "about" }, Modifier.testTag("account.about"),
+                iconStyle = settingsIconStyleFor("about", dark))
         }
     }
     when (panel) {

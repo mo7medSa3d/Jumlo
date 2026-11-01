@@ -67,6 +67,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
 private fun title(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) tool.titleAr else tool.titleEn
+private fun subtitle(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) tool.subtitleAr else tool.subtitleEn
 
 /** Serializable route arguments survive recreation; readable names are documented in ROUTES.md. */
 @Serializable @SerialName("home") object HomeRoute
@@ -444,7 +445,13 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             "storage" -> stringResource(R.string.modern_storage_usage)
                             "viewer" -> viewer?.title.orEmpty()
                             else -> stringResource(R.string.settings_title)
-                        }, onBack=::goBack,
+                        },
+                        // Every tool screen shows its benefit subtitle and its own
+                        // pillar family color; previously the subtitle was dropped
+                        // and every tool inherited the PDF pillar colors.
+                        subtitle=if(shellRoute=="workspace") CapabilityRegistry.tools.find {it.id==headerToolId}?.let {subtitle(it,settings.language)} else null,
+                        pillar=if(shellRoute=="workspace") CapabilityRegistry.tools.find {it.id==headerToolId}?.pillar ?: com.jumlo.app.model.PillarCategory.PDF else com.jumlo.app.model.PillarCategory.PDF,
+                        onBack=::goBack,
                         toolId=when(shellRoute) { "workspace" -> headerToolId; "scan" -> "scan_doc"; else -> null }
                     )
                     DropFilesTarget(enabled=shellRoute in setOf("files","workspace"),

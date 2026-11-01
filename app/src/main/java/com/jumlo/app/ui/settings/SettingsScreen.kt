@@ -28,6 +28,7 @@ import com.jumlo.app.ui.components.formatBytes
 import com.jumlo.app.ui.theme.ColorPresets
 import com.jumlo.app.ui.theme.M3ColorFactory
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.theme.settingsIconStyleFor
 
 /** Preferences that change an everyday action. Platform and scheduler policy stay out of this page. */
 @Composable
@@ -44,6 +45,8 @@ fun SettingsScreen(
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val outputs by viewModel.outputs.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
+    // Row icons use fixed per-row colors, never the user accent.
+    val dark = isDarkTheme(settings.themeMode)
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
     LazyColumn(
@@ -53,7 +56,8 @@ fun SettingsScreen(
     ) {
         item("appearance-heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
         item("theme") { PreferenceRow(stringResource(R.string.pref_theme), themeLabel(settings.themeMode),
-            Icons.Rounded.Palette, { panel = "theme" }, Modifier.testTag("settings.theme")) }
+            Icons.Rounded.DarkMode, { panel = "theme" }, Modifier.testTag("settings.theme"),
+            iconStyle = settingsIconStyleFor("theme", dark)) }
         if (Build.VERSION.SDK_INT >= 31) item("dynamic-color") {
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
                 .toggleable(settings.accentColor == "DYNAMIC", role = Role.Switch,
@@ -65,12 +69,14 @@ fun SettingsScreen(
         }
         item("app-color") { PreferenceRow(stringResource(R.string.pref_app_color),
             previewAccentLabel(settings.accentColor, settings.language), Icons.Rounded.Palette, { panel = "app-color" },
-            Modifier.testTag("settings.appColor")) }
+            Modifier.testTag("settings.appColor"), iconStyle = settingsIconStyleFor("app-color", dark)) }
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
-            Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language")) }
+            Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language"),
+            iconStyle = settingsIconStyleFor("language", dark)) }
         item("haptics") { PreferenceRow(stringResource(R.string.pref_haptics),
             hapticLabel(settings.hapticIntensity), Icons.Rounded.Vibration,
-            { panel = "haptics" }, Modifier.testTag("settings.haptics")) }
+            { panel = "haptics" }, Modifier.testTag("settings.haptics"),
+            iconStyle = settingsIconStyleFor("haptics", dark)) }
         item("reduce-motion") {
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
                 .testTag("settings.reduceMotion")
@@ -94,10 +100,10 @@ fun SettingsScreen(
         }
         item("text-size") { PreferenceRow(stringResource(R.string.pref_text_size),
             textSizeLabel(settings.fontScale), Icons.Rounded.FormatSize, { panel = "text-size" },
-            Modifier.testTag("settings.textSize")) }
+            Modifier.testTag("settings.textSize"), iconStyle = settingsIconStyleFor("text-size", dark)) }
         item("notifications") { PreferenceRow(stringResource(R.string.settings_allow_notifications),
             null, Icons.Rounded.Notifications, onRequestNotifications,
-            Modifier.testTag("settings.notifications")) }
+            Modifier.testTag("settings.notifications"), iconStyle = settingsIconStyleFor("notifications", dark)) }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
@@ -110,21 +116,24 @@ fun SettingsScreen(
         item("defaults-heading") { PreferenceHeading(stringResource(R.string.modern_download_defaults)) }
         item("video-quality") { PreferenceRow(stringResource(R.string.modern_video_quality),
             if (settings.defaultVideoQuality == "BEST") stringResource(R.string.modern_best_available)
-            else "${settings.defaultVideoQuality}p", Icons.Rounded.Movie, { panel = "video" }, Modifier.testTag("settings.videoQuality")) }
+            else "${settings.defaultVideoQuality}p", Icons.Rounded.Movie, { panel = "video" }, Modifier.testTag("settings.videoQuality"),
+            iconStyle = settingsIconStyleFor("video-quality", dark)) }
         item("audio-quality") { PreferenceRow(stringResource(R.string.modern_audio_quality),
             stringResource(R.string.modern_audio_bitrate, settings.defaultAudioQuality), Icons.Rounded.Audiotrack,
-            { panel = "audio" }, Modifier.testTag("settings.audioQuality")) }
+            { panel = "audio" }, Modifier.testTag("settings.audioQuality"),
+            iconStyle = settingsIconStyleFor("audio-quality", dark)) }
         item("defaults-note") { Text(stringResource(R.string.modern_quality_defaults_note),
             style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item("storage-heading") { PreferenceHeading(stringResource(R.string.account_storage)) }
         item("storage") { PreferenceRow(stringResource(R.string.modern_storage_usage),
             formatBytes(storage.sources + storage.outputs + storage.partials + storage.temporary + storage.trash),
             Icons.Rounded.Storage, { viewModel.refreshStorage(); onOpenStorage?.invoke() ?: run { panel = "storage" } },
-            Modifier.testTag("settings.storage")) }
+            Modifier.testTag("settings.storage"), iconStyle = settingsIconStyleFor("storage", dark)) }
         item("cache") { PreferenceRow(stringResource(R.string.modern_clear_cache), formatBytes(storage.temporary),
-            Icons.Rounded.CleaningServices, { panel = "cache" }, Modifier.testTag("settings.cache"), enabled = !busy) }
+            Icons.Rounded.CleaningServices, { panel = "cache" }, Modifier.testTag("settings.cache"), enabled = !busy,
+            iconStyle = settingsIconStyleFor("cache", dark)) }
         item("about") { PreferenceRow(stringResource(R.string.modern_about), null, Icons.Rounded.Info,
-            { panel = "about" }, Modifier.testTag("settings.about")) }
+            { panel = "about" }, Modifier.testTag("settings.about"), iconStyle = settingsIconStyleFor("about", dark)) }
     }
     when (panel) {
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },

@@ -46,8 +46,22 @@ import com.jumlo.app.ui.components.QuietIconTile
     }
 }
 
+/** Dark-mode resolution shared by settings surfaces: AMOLED counts as dark. */
+@Composable internal fun isDarkTheme(themeMode: com.jumlo.app.model.ThemeMode): Boolean =
+    when (themeMode) {
+        com.jumlo.app.model.ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+        com.jumlo.app.model.ThemeMode.LIGHT -> false
+        else -> true
+    }
+
+/**
+ * A settings/account row. Its icon never follows the user accent: callers pass
+ * a fixed [iconStyle] from [com.jumlo.app.ui.theme.settingsIconStyleFor].
+ * Destructive rows keep the error treatment regardless of the style.
+ */
 @Composable fun PreferenceRow(title: String, summary: String?, icon: ImageVector, onClick: () -> Unit,
-    modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false) {
+    modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false,
+    iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle) {
     val colors = MaterialTheme.colorScheme
     val titleColor = if (destructive) colors.error else colors.onSurface
     val haptics = rememberAppHaptics()
@@ -73,8 +87,8 @@ import com.jumlo.app.ui.components.QuietIconTile
         ) {
             QuietIconTile(
                 icon,
-                tint = if (destructive) colors.error else colors.primary,
-                container = if (destructive) colors.errorContainer else colors.primaryContainer,
+                tint = if (destructive) colors.error else iconStyle.tint,
+                container = if (destructive) colors.errorContainer else iconStyle.container,
                 size = 44.dp
             )
             Spacer(Modifier.width(14.dp))

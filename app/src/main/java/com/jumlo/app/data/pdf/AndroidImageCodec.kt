@@ -50,7 +50,9 @@ class AndroidImageCodec(private val maxBitmapBytes: Long) : PdfImageCodec {
             }
             try {
                 val out = ByteArrayOutputStream()
-                if (!work.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(10, 95), out)) return null
+                // Honor the caller's quality up to 100: the old 95 cap silently
+                // downgraded an explicit maximum-quality choice.
+                if (!work.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(10, 100), out)) return null
                 if (out.size() <= 0) return null
                 return RecodedImage(targetWidth, targetHeight, out.toByteArray())
             } finally {
