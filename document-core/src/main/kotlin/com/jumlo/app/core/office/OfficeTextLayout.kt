@@ -1,13 +1,13 @@
 package com.jumlo.app.core.office
 
-data class OfficeParagraph(val text: String, val headingLevel: Int = 0)
-data class OfficeTextPage(val paragraphs: List<OfficeParagraph>) {
+data class OfficeTextParagraph(val text: String, val headingLevel: Int = 0)
+data class OfficeTextPage(val paragraphs: List<OfficeTextParagraph>) {
     val isBlank: Boolean get() = paragraphs.all { it.text.isBlank() }
 
     companion object {
         fun fromPlainText(text: String): OfficeTextPage = OfficeTextPage(
             text.replace("\r\n", "\n").replace('\r', '\n').trim('\n')
-                .split(Regex("\n[\\t ]*\n+")).map { OfficeParagraph(it) })
+                .split(Regex("\n[\\t ]*\n+")).map { OfficeTextParagraph(it) })
     }
 }
 
@@ -27,13 +27,13 @@ object OfficeTextLayout {
         if (valid.isEmpty()) return OfficeTextPage.fromPlainText(text)
         require(valid.zipWithNext().all { (a, b) -> a.end <= b.start }) { "OFFICE_VERIFY_FAILED" }
         val bodySize = median(valid.map { it.fontSizePt to (it.end - it.start).toLong() })
-        val paragraphs = mutableListOf<OfficeParagraph>()
+        val paragraphs = mutableListOf<OfficeTextParagraph>()
         val current = StringBuilder()
         var currentHeading = 0
         var offset = 0
         var spanIndex = 0
         fun flush() {
-            if (current.isNotEmpty()) paragraphs += OfficeParagraph(current.toString(), currentHeading)
+            if (current.isNotEmpty()) paragraphs += OfficeTextParagraph(current.toString(), currentHeading)
             current.setLength(0)
         }
         for (line in text.split('\n')) {
