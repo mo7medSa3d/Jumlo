@@ -131,13 +131,16 @@ object M3ColorFactory {
         fun tone(deg: Float, v: Float) = hsv(normalize(h + deg), sat, v)
 
         if (!dark) {
-            val primary = tone(0f, 0.70f)
+            // Accent roles are used as foregrounds on app surfaces as well as
+            // filled controls. Keep them vivid, but never sacrifice readable text.
+            val surface = Color(0xFFFCFCFD)
+            val primary = ensureContrast(surface, tone(0f, 0.70f))
             val primaryContainer = tone(0f, 0.90f)
-            val secondary = tone(30f, 0.70f)
+            val secondary = ensureContrast(surface, tone(30f, 0.70f))
             val secondaryContainer = tone(30f, 0.90f)
-            val tertiary = tone(-30f, 0.70f)
+            val tertiary = ensureContrast(surface, tone(-30f, 0.70f))
             val tertiaryContainer = tone(-30f, 0.90f)
-            val error = hsv(0f, 1f, 0.70f)
+            val error = ensureContrast(surface, hsv(0f, 1f, 0.70f))
             val errorContainer = hsv(0f, 1f, 0.90f)
             return lightColorScheme(
                 primary = primary,
@@ -168,13 +171,15 @@ object M3ColorFactory {
             )
         }
         val surface = if (amoled) Color.Black else Color(0xFF121316)
-        val primary = tone(0f, 0.45f)
+        // Dark-theme accents must remain legible on the near-black canvas;
+        // button/container foregrounds are paired separately below.
+        val primary = ensureContrast(surface, tone(0f, 0.45f))
         val primaryContainer = tone(0f, 0.62f)
-        val secondary = tone(30f, 0.45f)
+        val secondary = ensureContrast(surface, tone(30f, 0.45f))
         val secondaryContainer = tone(30f, 0.62f)
-        val tertiary = tone(-30f, 0.45f)
+        val tertiary = ensureContrast(surface, tone(-30f, 0.45f))
         val tertiaryContainer = tone(-30f, 0.62f)
-        val error = hsv(0f, 1f, 0.55f)
+        val error = ensureContrast(surface, hsv(0f, 1f, 0.55f))
         val errorContainer = hsv(0f, 1f, 0.35f)
         return darkColorScheme(
             primary = primary,
