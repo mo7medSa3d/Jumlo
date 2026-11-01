@@ -5,6 +5,11 @@
     <string name="rebuild_word_note">Keeps paragraphs and page breaks. Complex layouts and tables may change. Scanned text uses Latin OCR; Arabic scans are not supported.</string>
     <string name="rebuild_slides_note">One slide per page, with the page image and an editable text layer when available. Objects are not reconstructed.</string>
     <string name="rebuild_ocr_note">Choose a PDF or image. Scanned text uses Latin OCR and may need an initial model download. Arabic scans are not supported.</string>
+    <string name="rebuild_office_note">Keeps text, headings, lists, tables and pictures. Complex layouts may change; headers, footers and charts are dropped. Non-Latin paragraphs render as images so shaping stays correct.</string>
+    <string name="rebuild_office_invalid">This Office file could not be read. Legacy .doc files and damaged packages are not supported.</string>
+    <string name="rebuild_office_empty">This Office file has no readable text, tables or pictures to convert.</string>
+    <string name="rebuild_office_raster">Some paragraphs were rendered as images because their script cannot be drawn as PDF text. The wording is unchanged.</string>
+    <string name="rebuild_office_unsupported">Some content was dropped: headers, footers, charts or pictures the converter cannot render. Check the result before sharing.</string>
     <string name="rebuild_compression_before">Original: %1$s</string>
     <string name="rebuild_download_privacy">Pending download links are encrypted on this device and removed after completion or cancellation.</string>
     <string name="rebuild_clipboard_unavailable">The clipboard is unavailable. Paste into the link field or share the link to Jumlo.</string>

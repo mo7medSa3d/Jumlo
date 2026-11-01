@@ -54,6 +54,8 @@
     <string name="msg_owner_password_required">Enter the PDF password in Advanced settings to continue.</string>
     <string name="msg_zip_password_required">Enter the ZIP archive password in Advanced settings to continue.</string>
     <string name="msg_sha256_mismatch">File SHA-256 digest does not match the expected checksum.</string>
+    <string name="pdf_compare_different">The two PDFs differ. Open the comparison report for the first differing page.</string>
+    <string name="redact_partial">Some redacted words still appear in the extracted text. Re-check those pages before sharing.</string>
     <string name="msg_no_acroform">This PDF does not contain interactive form fields.</string>
     <string name="msg_animated_image_unsupported">Animated images are not supported by this tool. Choose a static JPG, PNG, or WebP image.</string>
     <string name="msg_image_corrupt">This image could not be decoded or verified. Try another image file.</string>

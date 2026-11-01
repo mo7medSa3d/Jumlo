@@ -15,6 +15,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private val images:com.jumlo.app.data.processing.ImageOperationHandler,
     private val pdf:com.jumlo.app.data.processing.PdfOperationHandler,
     private val office:com.jumlo.app.data.processing.PdfOfficeOperationHandler,
+    private val officeToPdf:com.jumlo.app.data.processing.OfficeToPdfOperationHandler,
     private val archives:com.jumlo.app.data.processing.ArchiveOperationHandler,
     private val downloads:com.jumlo.app.data.processing.DownloadOperationHandler,
     private val media:com.jumlo.app.data.media.MediaOperationHandler,
@@ -34,7 +35,8 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
         if(request.schemaVersion!=1) throw OperationFailure("UNSUPPORTED_SETTINGS_VERSION")
         return when(request.toolId) {
             "pdf_to_docx","pdf_to_pptx" -> office.execute(request,context)
-            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_protect","pdf_forms","pdf_clean" -> pdf.execute(request,context)
+            "office_to_pdf" -> officeToPdf.execute(request,context)
+            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_protect","pdf_forms","pdf_clean","pdf_compare","pdf_redact" -> pdf.execute(request,context)
             "pdf_ocr" -> ocrWeb.execute(request,context)
             "file_encrypted_zip","file_batch_rename","file_duplicates","file_drive" -> fileExtras.execute(request,context)
             "img_01","img_02","img_03","img_04","img_exif","img_watermark","img_join","img_adjust","img_target","img_compare","img_stitch" -> images.execute(request,context)

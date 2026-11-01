@@ -38,6 +38,11 @@ import kotlinx.serialization.Serializable
     val allowAnnotations:Boolean=true, val allowForms:Boolean=true
 )
 @Serializable data class PdfFormSettings(val displayName:String="Form.pdf", val fieldsJson:String="{}", val flatten:Boolean=false)
+@Serializable data class PdfCompareSettings(val displayName:String="Comparison.txt")
+/** One redact region: a 1-based page plus a normalized visible top-left rectangle. */
+@Serializable data class PdfRedactRegion(val page:Int, val left:Double, val top:Double, val right:Double, val bottom:Double)
+@Serializable data class PdfRedactSettings(val displayName:String="Redacted.pdf", val regions:List<PdfRedactRegion> = emptyList())
+@Serializable data class OfficeToPdfSettings(val displayName:String="Document.pdf")
 @Serializable data class ImageExifSettings(val removeLocation:Boolean=true, val removeAll:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="exif_"))
 @Serializable data class ImageWatermarkSettings(val text:String="", val opacityPercent:Int=40, val useLogo:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="watermarked_"), val centerX:Double=0.5, val centerY:Double=0.5, val scale:Double=1.0, val rotationDegrees:Int=0, val tiled:Boolean=false, val colorHex:String="#FFFFFF", val fontFamily:String="sans")
 @Serializable data class ImageJoinSettings(val layout:String="GRID2", val gapPx:Int=8, val overlapPx:Int=0, val output:ImageConversionSettings=ImageConversionSettings(format="PNG", namePrefix="joined_"))

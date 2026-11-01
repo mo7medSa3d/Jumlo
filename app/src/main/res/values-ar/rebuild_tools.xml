@@ -5,6 +5,11 @@
     <string name="rebuild_word_note">يحافظ على الفقرات وفواصل الصفحات. قد يتغير تنسيق الجداول والصفحات المعقدة. التعرّف على النصوص المصوّرة يدعم الحروف اللاتينية فقط، ولا يدعم العربية.</string>
     <string name="rebuild_slides_note">شريحة لكل صفحة، تضم صورة الصفحة وطبقة نص قابلة للتعديل إن توفرت. لا يعيد إنشاء عناصر التصميم.</string>
     <string name="rebuild_ocr_note">اختر ملف PDF أو صورة. التعرّف على النص المصوّر يدعم الحروف اللاتينية فقط وقد يحتاج لتنزيل النموذج أول مرة. الصور العربية غير مدعومة.</string>
+    <string name="rebuild_office_note">يحافظ على النصوص والعناوين والقوائم والجداول والصور. قد تتغير التخطيطات المعقدة، وتُحذف الترويسات والتذييلات والمخططات. الفقرات غير اللاتينية تُعرض كصور ليبقى تشكيل الحروف صحيحًا.</string>
+    <string name="rebuild_office_invalid">تعذّرت قراءة ملف Office هذا. ملفات .doc القديمة والحزم التالفة غير مدعومة.</string>
+    <string name="rebuild_office_empty">ملف Office هذا لا يحتوي على نصوص أو جداول أو صور قابلة للتحويل.</string>
+    <string name="rebuild_office_raster">عُرضت بعض الفقرات كصور لأن حروفها لا يمكن رسمها كنص PDF. الصياغة لم تتغير.</string>
+    <string name="rebuild_office_unsupported">تم حذف بعض المحتوى: ترويسات أو تذييلات أو مخططات أو صور لا يستطيع المحوّل عرضها. راجع النتيجة قبل المشاركة.</string>
     <string name="rebuild_compression_before">الحجم الأصلي: %1$s</string>
     <string name="rebuild_download_privacy">تُحفظ روابط التنزيل المعلّقة مشفّرة على جهازك، وتُحذف بعد اكتمال التنزيل أو إلغائه.</string>
     <string name="rebuild_clipboard_unavailable">الحافظة غير متاحة. الصق في حقل الرابط أو شارك الرابط مع Jumlo.</string>

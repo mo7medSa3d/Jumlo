@@ -25,6 +25,9 @@ object CapabilityRegistry {
         UtilityTool("pdf_metadata", "pdf_metadata", PillarCategory.PDF, "PDF Metadata", "بيانات PDF", "Make your PDFs polished and searchable", "اجعل ملفات PDF أنيقة وقابلة للبحث", "info"),
         UtilityTool("pdf_clean", "pdf_clean", PillarCategory.PDF, "Clean Metadata", "تنظيف البيانات", "Share PDFs without the hidden trail", "شارك PDF دون أثر خفي", "shield_lock"),
         UtilityTool("pdf_forms", "pdf_forms", PillarCategory.PDF, "Fill PDF Form", "تعبئة نموذج PDF", "Fill forms fast, then flatten to share", "املأ النماذج بسرعة ثم ثبّتها للمشاركة", "assignment"),
+        UtilityTool("pdf_compare", "pdf_compare", PillarCategory.PDF, "Compare PDFs", "مقارنة ملفات PDF", "See whether two PDFs match, page by page", "اعرف إن كان ملفا PDF متطابقين صفحة صفحة", "compare"),
+        UtilityTool("pdf_redact", "pdf_redact", PillarCategory.PDF, "Redact PDF", "حجب محتوى PDF", "Permanently black out text, images and notes", "احجب النصوص والصور والملاحظات نهائيًا", "shield"),
+        UtilityTool("office_to_pdf", "office_to_pdf", PillarCategory.PDF, "Office to PDF", "Office إلى PDF", "Turn Word, Excel and slides into a clean PDF", "حوّل Word وExcel والشرائح إلى PDF نظيف", "description"),
         UtilityTool("pdf_ocr", "tools/pdf/ocr", PillarCategory.PDF, "Extract Text", "استخراج النص", "Turn scans into copyable Latin text", "حوّل المسح إلى نص لاتيني قابل للنسخ", "text_fields"),
         UtilityTool("scan_doc", "tools/scan", PillarCategory.PDF, "Smart Scan", "المسح الذكي", "Scan a stack of pages into one PDF", "امسح عدة صفحات في PDF واحد", "document_scanner"),
         // Image Tools

@@ -29,6 +29,8 @@ internal val toolIconResources: Map<String, Int> = linkedMapOf(
     "pdf_metadata" to R.drawable.ic_tool_pdf_metadata,
     "pdf_clean" to R.drawable.ic_tool_pdf_clean,
     "pdf_forms" to R.drawable.ic_tool_pdf_forms,
+    "pdf_compare" to R.drawable.ic_tool_img_compare,
+    "pdf_redact" to R.drawable.ic_prism_shield,
     "pdf_ocr" to R.drawable.ic_tool_pdf_ocr,
     "scan_doc" to R.drawable.ic_tool_scan_doc,
     "img_01" to R.drawable.ic_tool_img_01,

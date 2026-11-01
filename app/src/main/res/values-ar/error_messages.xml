@@ -54,6 +54,8 @@
     <string name="msg_owner_password_required">أدخل كلمة مرور ملف PDF في الإعدادات المتقدمة للمتابعة.</string>
     <string name="msg_zip_password_required">أدخل كلمة مرور أرشيف ZIP في الإعدادات المتقدمة للمتابعة.</string>
     <string name="msg_sha256_mismatch">بصمة SHA-256 للملف لا تطابق القيمة المتوقعة.</string>
+    <string name="pdf_compare_different">ملفا PDF مختلفان. افتح تقرير المقارنة لمعرفة أول صفحة مختلفة.</string>
+    <string name="redact_partial">بعض الكلمات المحجوبة ما زالت تظهر في النص المستخرج. راجع تلك الصفحات قبل المشاركة.</string>
     <string name="msg_no_acroform">لا يحتوي ملف PDF هذا على حقول نماذج تفاعلية قابلة للتعبئة.</string>
     <string name="msg_animated_image_unsupported">الصور المتحركة غير مدعومة في هذه الأداة. اختر صورة ثابتة بصيغة JPG أو PNG أو WebP.</string>
     <string name="msg_image_corrupt">تعذرت قراءة هذه الصورة أو التحقق منها. جرّب ملف صورة آخر.</string>

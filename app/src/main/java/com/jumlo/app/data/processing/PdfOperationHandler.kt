@@ -14,6 +14,7 @@ import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
+import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
@@ -45,6 +46,8 @@ import kotlin.math.sqrt
         "pdf_clean" -> structural(request,context,"clean")
         "pdf_protect" -> structural(request,context,"protect")
         "pdf_forms" -> structural(request,context,"forms")
+        "pdf_compare" -> compare(request,context)
+        "pdf_redact" -> redact(request,context)
         else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
     }
 
@@ -545,6 +548,148 @@ import kotlin.math.sqrt
         }
         val record=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf",originalSizeBytes=originalSize) }
         return listOf(ItemOutcome(key,ItemStatus.CREATED,record.id))
+    }
+
+    /** Text comparison only: identical extracted text means SAME even if images differ. */
+    private suspend fun compare(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
+        require(request.sourceIds.size==2) { "TWO_PDFS_REQUIRED" }
+        val settings=Json.decodeFromString<PdfCompareSettings>(request.settingsJson)
+        val key="compare-report"
+        context.outputs.find(request.id,key)?.let { return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
+        val names=request.sourceIds.map { context.sources.get(it).displayName }
+        var compared:CompareResult? = null
+        seekAll(context,request,request.sourceIds) { files ->
+            openUnencrypted(files[0]).use { a -> openUnencrypted(files[1]).use { b ->
+                compared = PdfBoxBackend.compare(a,b)
+            } }
+        }
+        val result=requireNotNull(compared) { "PDF_COMPARE_FAILED" }
+        val different=result.verdict==CompareVerdict.DIFFERENT
+        val reportName=SafeNames.basename(
+            settings.displayName.trim().takeUnless { it.isEmpty() || it=="download.bin" }
+                ?.let { if(it.endsWith(".txt",true)) it else "$it.txt" } ?: "Comparison.txt")
+        val ticket=context.outputs.reserve(request.id,key,reportName,"text/plain")
+        ticket.stageFile.writeText(buildString {
+            append("documentA=${names[0]}\n")
+            append("documentB=${names[1]}\n")
+            append("pagesA=${result.pageCountA}\n")
+            append("pagesB=${result.pageCountB}\n")
+            append("verdict=${result.verdict}\n")
+            append("firstDifferentPage=${result.firstDifferentPage ?: "none"}\n")
+            if(result.pageCountA!=result.pageCountB) append("note=Page counts differ, so the documents cannot have identical text.\n")
+            else if(!different) append("note=Extracted text matches on every page. Images and layout are not compared.\n")
+        })
+        val record=context.outputs.publish(ticket) { OutputMetadata() }
+        return listOf(ItemOutcome(key,ItemStatus.CREATED,record.id,
+            if(different) "PDF_COMPARE_DIFFERENT" else null))
+    }
+
+    /**
+     * Permanent redaction. Operator-level removal first; pages the operator pass
+     * cannot handle (several content streams, no contents, or nothing removed)
+     * are rasterized whole, so no covered byte survives underneath. Rasterized
+     * pages lose selectable text and live annotations on that page; the report
+     * says exactly which pages those are.
+     */
+    private suspend fun redact(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
+        require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
+        val settings=Json.decodeFromString<PdfRedactSettings>(request.settingsJson)
+        require(settings.regions.isNotEmpty() && settings.regions.size<=1000) { "INVALID_REDACT_REGION" }
+        val pdfKey="document"; val reportKey="redact-report"
+        val existingPdf=context.outputs.find(request.id,pdfKey)
+        val existingReport=context.outputs.find(request.id,reportKey)
+        if(existingPdf!=null && existingReport!=null) return listOf(
+            ItemOutcome(pdfKey,ItemStatus.CREATED,existingPdf.id),
+            ItemOutcome(reportKey,ItemStatus.CREATED,existingReport.id))
+        val displayName=SafeNames.basename(
+            settings.displayName.trim().takeUnless { it.isEmpty() || it=="download.bin" }
+                ?.let { if(it.endsWith(".pdf",true)) it else "$it.pdf" } ?: "Redacted.pdf")
+        val pdfTicket=context.outputs.reserve(request.id,pdfKey,displayName,"application/pdf")
+        var pageCount=0; var originalBytes=0L; var result:RedactResult? = null
+        context.sources.withSeekable(request.sourceIds.single(),request.id) { source ->
+            originalBytes=source.length()
+            openUnencrypted(source).use { doc ->
+                pageCount=doc.numberOfPages
+                val byPage=settings.regions.groupBy { it.page - 1 }
+                byPage.keys.forEach { require(it in 0 until pageCount) { "INVALID_PAGE_INDEX" } }
+                val regionsByPage=byPage.mapValues { (_, regions) -> regions.map { r ->
+                    com.jumlo.app.core.Box(r.left,r.top,r.right,r.bottom).normalized()
+                    RedactRegion(r.left,r.top,r.right,r.bottom)
+                } }
+                val redacted=PdfBoxBackend.redact(doc,regionsByPage)
+                result=redacted
+                if(redacted.pageFallbacks.isEmpty()) {
+                    doc.save(pdfTicket.stageFile)
+                } else {
+                    val fallbackSet=redacted.pageFallbacks.toSet()
+                    PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { out ->
+                        ParcelFileDescriptor.open(source,ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                            PdfRendererFactory.open(fd,requireNotNull(source.parentFile),context.checkCancellation).use { renderer ->
+                                for(index in 0 until pageCount) {
+                                    context.checkCancellation()
+                                    if(index in fallbackSet) {
+                                        renderer.openPage(index).use { page ->
+                                            val w=(page.width*144/72.0).roundToInt().coerceAtLeast(1)
+                                            val h=(page.height*144/72.0).roundToInt().coerceAtLeast(1)
+                                            ImageWorkPolicy.requireFits(w,h,0L,context.budget.maxBitmapBytes)
+                                            val bitmap=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888)
+                                            try {
+                                                bitmap.eraseColor(Color.WHITE)
+                                                page.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                                // The editor's normalized rectangles share
+                                                // the rendered page's visible top-left frame.
+                                                val canvas=Canvas(bitmap)
+                                                val paint=Paint().apply { color=Color.BLACK; style=Paint.Style.FILL }
+                                                for(region in regionsByPage[index].orEmpty()) {
+                                                    canvas.drawRect((region.left*w).toFloat(),(region.top*h).toFloat(),
+                                                        (region.right*w).toFloat(),(region.bottom*h).toFloat(),paint)
+                                                }
+                                                val imagePage=PDPage(PDRectangle(w/2f,h/2f))
+                                                out.addPage(imagePage)
+                                                val image=LosslessFactory.createFromImage(out,bitmap)
+                                                PDPageContentStream(out,imagePage).use { cs ->
+                                                    cs.drawImage(image,0f,0f,w/2f,h/2f)
+                                                }
+                                            } finally { bitmap.recycle() }
+                                        }
+                                    } else {
+                                        out.importPage(doc.getPage(index))
+                                    }
+                                    context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pageCount.toLong()))
+                                }
+                            }
+                        }
+                        out.save(pdfTicket.stageFile)
+                    }
+                }
+            }
+        }
+        val redacted=requireNotNull(result) { "PDF_REDACT_FAILED" }
+        val pdfRecord=context.outputs.publish(pdfTicket) { file ->
+            PdfBoxBackend.open(file,null).use { check(it.numberOfPages==pageCount) { "PDF_VERIFY_FAILED" } }
+            context.outputs.inspect(file,"application/pdf",originalSizeBytes=originalBytes)
+        }
+        val outcomes=mutableListOf(ItemOutcome(pdfKey,ItemStatus.CREATED,pdfRecord.id,
+            if(redacted.leftoverText.isNotEmpty()) "REDACT_PARTIAL" else null))
+        val reportName=SafeNames.basename(displayName.substringBeforeLast('.') + " - report.txt")
+        val reportTicket=context.outputs.reserve(request.id,reportKey,reportName,"text/plain")
+        reportTicket.stageFile.writeText(buildString {
+            append("regions=${settings.regions.size}\n")
+            append("removedTextChunks=${redacted.removedTextChunks}\n")
+            append("removedImages=${redacted.removedImages}\n")
+            append("removedAnnotations=${redacted.removedAnnotations}\n")
+            append("rasterizedPages=${redacted.pageFallbacks.sorted().joinToString(",") { (it+1).toString() }}\n")
+            if(redacted.pageFallbacks.isNotEmpty())
+                append("note=Rasterized pages are images now: their text is no longer selectable and their annotations are flattened. Nothing under a black rectangle survives.\n")
+            redacted.leftoverText.toSortedMap().forEach { (page, words) ->
+                append("leftoverPage${page+1}=${words.joinToString(";")}\n")
+            }
+            if(redacted.leftoverText.isNotEmpty())
+                append("warning=Some redacted words still appear in the extracted text. Re-check those pages before sharing.\n")
+        })
+        val reportRecord=context.outputs.publish(reportTicket) { OutputMetadata() }
+        outcomes+=ItemOutcome(reportKey,ItemStatus.CREATED,reportRecord.id)
+        return outcomes
     }
 
     private suspend fun imagesToPdf(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {

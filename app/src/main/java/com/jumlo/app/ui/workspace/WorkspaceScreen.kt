@@ -160,7 +160,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     }
     val countValid=when(tool) {
         "pdf_07","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
-        "pdf_compress","pdf_annotate","pdf_forms","pdf_clean","pdf_protect","pdf_ocr","pdf_to_docx","pdf_to_pptx" -> queue.size==1
+        "pdf_compress","pdf_annotate","pdf_forms","pdf_clean","pdf_protect","pdf_ocr","pdf_to_docx","pdf_to_pptx","pdf_redact" -> queue.size==1
         "pdf_image","pdf_signature","pdf_compare","img_compare" -> queue.size==2
         "pdf_stamp" -> queue.size==if(form.watermarkUseImage) 2 else 1
         "pdf_metadata" -> queue.size in 1..2
@@ -209,8 +209,8 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
                 if(queue.isEmpty()) item {QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body),stringResource(R.string.import_device_files),onImport)}
-                if(tool in setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr")) item("conversion-scope") {
-                    Text(stringResource(when(tool) { "pdf_to_docx" -> R.string.rebuild_word_note; "pdf_to_pptx" -> R.string.rebuild_slides_note; else -> R.string.rebuild_ocr_note }),
+                if(tool in setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")) item("conversion-scope") {
+                    Text(stringResource(when(tool) { "pdf_to_docx" -> R.string.rebuild_word_note; "pdf_to_pptx" -> R.string.rebuild_slides_note; "office_to_pdf" -> R.string.rebuild_office_note; else -> R.string.rebuild_ocr_note }),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if(queue.size>1) item("visual-source-order") {

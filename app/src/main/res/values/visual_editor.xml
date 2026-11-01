@@ -17,6 +17,11 @@
     <string name="visual_signature_required">Add a signature image to continue</string>
 
     <string name="visual_redact_warning">Redaction is permanent. Check carefully before saving.</string>
+    <string name="visual_redact_add_region">Add this region</string>
+    <string name="visual_redact_region_count">Regions to redact: %1$d</string>
+    <string name="visual_redact_remove_region">Remove</string>
+    <string name="visual_redact_clear_regions">Clear regions</string>
+    <string name="visual_redact_need_region">Draw a rectangle, add it as a region, then run. Nothing is redacted until you add at least one region.</string>
     <string name="visual_resize">Size</string>
     <string name="visual_quality">Quality</string>
     <string name="visual_padding">Padding</string>

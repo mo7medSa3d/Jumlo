@@ -17,6 +17,11 @@
     <string name="visual_signature_required">أضف صورة التوقيع للمتابعة</string>
 
     <string name="visual_redact_warning">الإزالة نهائية. راجع المنطقة المحددة قبل الحفظ.</string>
+    <string name="visual_redact_add_region">أضف هذه المنطقة</string>
+    <string name="visual_redact_region_count">المناطق المراد حجبها: %1$d</string>
+    <string name="visual_redact_remove_region">إزالة</string>
+    <string name="visual_redact_clear_regions">مسح المناطق</string>
+    <string name="visual_redact_need_region">ارسم مستطيلًا وأضفه كمنطقة ثم شغّل. لن يُحجب شيء حتى تضيف منطقة واحدة على الأقل.</string>
     <string name="visual_resize">الحجم</string>
     <string name="visual_quality">الجودة</string>
     <string name="visual_padding">هوامش الصورة</string>

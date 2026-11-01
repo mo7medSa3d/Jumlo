@@ -32,6 +32,7 @@ object ToolCatalogue {
             primary = listOf(
                 "pdf_to_docx",  // editable paragraphs
                 "pdf_to_pptx",  // slide per page
+                "office_to_pdf",// Word, Excel and slides to PDF
                 "pdf_ocr",      // text extraction
                 "pdf_02",       // images to PDF
                 "pdf_03",       // merge
@@ -51,6 +52,8 @@ object ToolCatalogue {
                 "pdf_stamp",    // watermark and page numbers
                 "pdf_metadata", // document properties
                 "pdf_protect",  // password
+                "pdf_compare",  // compare two PDFs
+                "pdf_redact",   // permanently black out regions
                 "pdf_01"        // view
             )
         ),

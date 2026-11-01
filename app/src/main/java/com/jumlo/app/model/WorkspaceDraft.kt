@@ -34,6 +34,7 @@ import kotlinx.serialization.json.Json
     val signaturePlacements:List<PdfSignaturePlacement> = emptyList(),val signatureRotationDegrees:Float=0f,
     val annotationColorHex:String="#FFEB3B",val annotationThicknessPt:Float=2f,
     val cropOverrides:List<PdfCropOverride> = emptyList(),
+    val redactRegions:List<com.jumlo.app.data.processing.PdfRedactRegion> = emptyList(),
     val pageEdits:List<com.jumlo.app.data.processing.PdfPageEdit> = emptyList(),
     // Kept for older saved workspaces; new drawings keep each pen gesture separate.
     val inkPoints:List<Float> = emptyList(),
@@ -122,6 +123,22 @@ import kotlinx.serialization.json.Json
                 SafeNames.basename(outputName),downloadHandle ?: "",flag1,
                 allowPrinting,allowCopy,allowModify,allowAnnotations,allowForms))
             "pdf_forms" -> Json.encodeToString(com.jumlo.app.data.processing.PdfFormSettings(SafeNames.basename(outputName),text1.ifBlank{"{}"},flag1))
+            "pdf_compare" -> Json.encodeToString(com.jumlo.app.data.processing.PdfCompareSettings(SafeNames.basename(outputName)))
+            "pdf_redact" -> {
+                // Regions are explicit only: an untouched draft still carries
+                // the full-page crop default (0,0,1,1), and silently redacting
+                // a whole page from that default would be a destructive
+                // surprise. The editor's "add region" action appends to
+                // redactRegions, so an empty list means "nothing chosen yet".
+                val regions = redactRegions
+                require(regions.isNotEmpty() && regions.size<=1000) { "INVALID_REDACT_REGION" }
+                regions.forEach { region ->
+                    require(region.page in 1..100000) { "INVALID_PAGE_INDEX" }
+                    com.jumlo.app.core.Box(region.left,region.top,region.right,region.bottom).normalized()
+                }
+                Json.encodeToString(com.jumlo.app.data.processing.PdfRedactSettings(SafeNames.basename(outputName),regions))
+            }
+            "office_to_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.OfficeToPdfSettings(SafeNames.basename(outputName)))
             "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf")))
             "img_exif" -> Json.encodeToString(com.jumlo.app.data.processing.ImageExifSettings(flag2,flag1,
                 if(flag1) converted else ImageConversionSettings("JPEG",number(quality,1,100),-1,true,prefix,customImgName)))
@@ -152,7 +169,7 @@ import kotlinx.serialization.json.Json
     }
     companion object {
         fun normalizeDigits(text:String):String=text.trim().map { c -> when(c) { in '\u0660'..'\u0669' -> '0'+(c-'\u0660');in '\u06f0'..'\u06f9' -> '0'+(c-'\u06f0');'\u066b' -> '.';else->c } }.joinToString("")
-        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_to_docx"->"Document.docx";"pdf_to_pptx"->"Document.pptx";"pdf_ocr"->"Extracted.txt";"pdf_02"->"Images.pdf";"pdf_03"->"Merged.pdf";"pdf_04"->"Organized.pdf";"pdf_05"->"Split.pdf";"pdf_06"->"Extracted.pdf";"pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_forms","pdf_protect","pdf_redact"->"Document.pdf";"pdf_clean"->"Cleaned.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },quality=if(id=="img_04") "75" else "85").let { initial ->
+        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_to_docx"->"Document.docx";"pdf_to_pptx"->"Document.pptx";"pdf_ocr"->"Extracted.txt";"pdf_02"->"Images.pdf";"pdf_03"->"Merged.pdf";"pdf_04"->"Organized.pdf";"pdf_05"->"Split.pdf";"pdf_06"->"Extracted.pdf";"pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_image","pdf_metadata","pdf_forms","pdf_protect","pdf_redact","office_to_pdf"->"Document.pdf";"pdf_compare"->"Comparison.txt";"pdf_clean"->"Cleaned.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },quality=if(id=="img_04") "75" else "85").let { initial ->
             when(id) {
                 "pdf_signature" -> initial.copy(cropLeft="0.6",cropTop="0.75",cropRight="0.95",cropBottom="0.95")
                 "pdf_image" -> initial.copy(cropLeft="0.18",cropTop="0.22",cropRight="0.82",cropBottom="0.78")

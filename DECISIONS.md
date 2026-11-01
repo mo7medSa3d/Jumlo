@@ -156,3 +156,28 @@ The explicit PDF grouped-range parser limits its expanded page positions to 100,
 ### Pure Kotlin module gates (PR #41)
 
 The four core modules have dedicated JVM test suites included with the full media CI gate. Post-integration CI remains required.
+
+## 2026-11-01 — Missing tools: implement, do not descope
+
+The audit's open implement-or-descope question for Office → PDF is decided:
+implement. The catalogue grows from 45 to 48 tools with three additions whose
+UI or backend already anticipated them:
+
+- **pdf_compare** — the workspace already required exactly two PDFs for this
+  id, and the backend already compared extracted text. The tool publishes a
+  report (page counts, SAME/DIFFERENT, first differing page). It compares
+  text only; images and layout are not compared, and the report says so.
+- **pdf_redact** — the visual editor already drew redact rectangles and the
+  backend already removed text, images and annotations at operator level.
+  The tool adds explicit multi-region selection, a report, and rasterization
+  for pages the operator pass cannot handle (several content streams, no
+  contents, nothing removed), so nothing survives under a black rectangle.
+  Rasterized pages lose selectable text and live annotations; the report
+  names them, and leftover words that still extract are flagged.
+- **office_to_pdf** — new: a streaming OOXML reader (docx, xlsx, pptx) plus a
+  PDF renderer. The conversion is structural, not pixel-perfect: text,
+  headings, lists, tables and pictures survive; headers, footers, footnotes
+  and charts are dropped and reported; non-Latin paragraphs are rasterized
+  through Android's text stack so shaping stays correct. Legacy .doc files
+  fail closed. `file_trash` stays a Files navigation entry and `dl_settings`
+  stays a Settings entry; neither is a missing processing tool.

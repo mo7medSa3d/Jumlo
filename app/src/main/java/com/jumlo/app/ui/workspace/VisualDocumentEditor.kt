@@ -484,6 +484,30 @@ internal fun VisualDocumentEditor(
                     Text(stringResource(R.string.studio_crop_clear_overrides))
                 }
             }
+            if(tool=="pdf_redact") {
+                FilledTonalButton(onClick={
+                    recordSnapshot()
+                    val safe=rect.valid()
+                    latestEdit { it.copy(redactRegions=it.redactRegions +
+                        com.jumlo.app.data.processing.PdfRedactRegion(currentPage,
+                            safe.left.toDouble(),safe.top.toDouble(),safe.right.toDouble(),safe.bottom.toDouble())) }
+                }) {
+                    Text(stringResource(R.string.visual_redact_add_region))
+                }
+                Text(stringResource(R.string.visual_redact_region_count,draft.redactRegions.size),style=QuietTheme.typography.metadata)
+                draft.redactRegions.forEachIndexed { index, region ->
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Text("p. ${region.page} · ${(region.left*100).toInt()}%, ${(region.top*100).toInt()}% – ${(region.right*100).toInt()}%, ${(region.bottom*100).toInt()}%",
+                            Modifier.weight(1f),style=QuietTheme.typography.metadata)
+                        TextButton(onClick={latestEdit { it.copy(redactRegions=it.redactRegions.filterIndexed { i, _ -> i!=index }) }}) {
+                            Text(stringResource(R.string.visual_redact_remove_region))
+                        }
+                    }
+                }
+                if(draft.redactRegions.isNotEmpty()) TextButton(onClick={recordSnapshot();latestEdit {it.copy(redactRegions=emptyList())}}) {
+                    Text(stringResource(R.string.visual_redact_clear_regions))
+                }
+            }
             if(cropTool) {
                 Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     listOf(
