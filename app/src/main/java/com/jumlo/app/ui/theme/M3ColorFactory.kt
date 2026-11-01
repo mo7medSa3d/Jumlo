@@ -87,19 +87,19 @@ object M3ColorFactory {
     /** Seed color for a named accent preset or a hex accent ("#RRGGBB" /
      *  "RRGGBB" / "#AARRGGBB"). Unknown names fall back to BLUE. */
     fun seedFor(accent: String): Color {
-        val hex = hexColor(accent)
-        if (hex != null) return hex
-        return when (accent.uppercase()) {
-            "TEAL" -> Color(0xFF00897B)
-            "CORAL" -> Color(0xFFE64A3A)
-            "VIOLET" -> Color(0xFF7B4DFF)
-            else -> Color(0xFF1E88E5)
-        }
+        val normalized = accent.trim().uppercase()
+        val directHex = hexColor(normalized)
+        if (directHex != null) return directHex
+        val presetHex = ColorPresets.hexFor(normalized)?.let(::hexColor)
+        if (presetHex != null) return presetHex
+        return Color(0xFF1E88E5)
     }
 
     /** True when [accent] is a recognized preset name or a valid hex color. */
     fun isValidAccent(accent: String): Boolean =
-        hexColor(accent) != null || accent.uppercase() in setOf("TEAL", "CORAL", "VIOLET", "DYNAMIC", "BLUE")
+        hexColor(accent) != null ||
+            accent.trim().uppercase() == "DYNAMIC" ||
+            ColorPresets.ALL.any { it.key == accent.trim().uppercase() }
 
     /** Parses "#RRGGBB", "RRGGBB", or "#AARRGGBB" into a fully-opaque Color. */
     fun hexColor(accent: String): Color? {
