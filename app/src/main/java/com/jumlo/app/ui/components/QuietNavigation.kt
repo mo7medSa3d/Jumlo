@@ -1,7 +1,6 @@
 package com.jumlo.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -58,7 +57,6 @@ fun QuietFloatingDock(
     Surface(
         modifier = modifier.fillMaxWidth().testTag("navigation.bar"),
         color = colors.surfaceContainerLow,
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.56f)),
         shadowElevation = 4.dp,
         tonalElevation = 0.dp
     ) {

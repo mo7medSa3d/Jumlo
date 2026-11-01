@@ -138,7 +138,7 @@ internal fun ToolsCatalogue(
         val columns = when {
             maxWidth >= 1200.dp -> if (largeText) 3 else 5
             maxWidth >= 900.dp -> if (largeText) 2 else 4
-            maxWidth >= 640.dp -> if (largeText) 2 else 3
+            maxWidth >= 600.dp -> if (largeText) 2 else 3
             largeText -> 1
             else -> 2
         }
@@ -231,7 +231,7 @@ internal fun ToolsCatalogue(
 @Composable
 internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
-    val isDark = colors.surface.luminance() < 0.5f
+    val isDark = colors.background.luminance() < 0.5f
     val accent = ToolPalette.accentFor(tool.id, isDark)
     val iconForeground = ToolPalette.onAccentFor(tool.id, isDark)
     val tileColor = colors.surfaceContainerLow

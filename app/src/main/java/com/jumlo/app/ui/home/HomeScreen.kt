@@ -178,7 +178,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 104.dp).pressFeedback(),
+        modifier = modifier.heightIn(min = 92.dp).pressFeedback(),
         shape = QuietTheme.shapes.inputField,
         color = colors.surfaceContainerLow,
         contentColor = colors.onSurface,
