@@ -5,7 +5,6 @@ import com.jumlo.app.model.AppLanguage
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import org.junit.Assert.assertEquals
@@ -15,8 +14,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Phase 5 Compose UI test for the Appearance App-color picker. Runs on JVM via
- *  Robolectric. Verifies the sheet renders presets and emits the chosen hex. */
+/** Robolectric coverage for the four-system Appearance color picker. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w411dp-h891dp-mdpi")
 class AppearanceColorPickerTest {
@@ -24,45 +22,44 @@ class AppearanceColorPickerTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun `picker renders the title and preset chips`() {
+    fun `picker renders all four color systems`() {
         compose.setContent {
-            AppearanceColorPicker(current = "#1E88E5", onDismiss = {}, onSelect = {})
+            AppearanceColorPicker(current = "SUNSET", onDismiss = {}, onSelect = {})
         }
-        compose.onAllNodes(hasText("App color")).assertCountEquals(1)
-        compose.onAllNodes(hasText("Blue")).assertCountEquals(1)
+        listOf("Luigi", "Aurora", "Viola", "Sunset").forEach { name ->
+            compose.onAllNodes(hasText(name)).assertCountEquals(1)
+        }
     }
 
     @Test
-    fun `clicking a preset chip emits its hex seed`() {
+    fun `selecting a color system emits its stable key`() {
         var selected: String? = null
         compose.setContent {
-            AppearanceColorPicker(current = "#1E88E5", onDismiss = {}, onSelect = { selected = it })
+            AppearanceColorPicker(current = "SUNSET", onDismiss = {}, onSelect = { selected = it })
         }
-        compose.onAllNodes(hasText("Teal"))[0].performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals("#00897B", selected)
+        compose.onAllNodes(hasText("Aurora"))[0].performSemanticsAction(SemanticsActions.OnClick)
+        assertEquals("AURORA", selected)
     }
 
     @Test
-    fun `applying the hex field emits the parsed color`() {
+    fun `selecting the default system emits its stable key`() {
         var selected: String? = null
         compose.setContent {
-            AppearanceColorPicker(current = "#1E88E5", onDismiss = {}, onSelect = { selected = it })
+            AppearanceColorPicker(current = "AURORA", onDismiss = {}, onSelect = { selected = it })
         }
-        // The teal preset confirms the onSelect path with a canonical hex.
-        compose.onAllNodes(hasText("Violet"))[0].performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals("#7B4DFF", selected)
+        compose.onAllNodes(hasText("Sunset"))[0].performSemanticsAction(SemanticsActions.OnClick)
+        assertEquals("SUNSET", selected)
     }
 
     @Test
-    fun `arabic app language displays Arabic accents on an English-device configuration`() {
+    fun `arabic app language displays Arabic system names on an English device`() {
         compose.setContent {
             AppearanceColorPicker(
-                current = "#1E88E5", onDismiss = {}, onSelect = {},
+                current = "SUNSET", onDismiss = {}, onSelect = {},
                 language = AppLanguage.ARABIC
             )
         }
-        compose.onAllNodes(hasText("أزرق")).assertCountEquals(1)
-        compose.onAllNodes(hasText("أزرق مائيّ")).assertCountEquals(1)
+        compose.onAllNodes(hasText("لويجي")).assertCountEquals(1)
+        compose.onAllNodes(hasText("أخضر منعش")).assertCountEquals(1)
     }
-
 }
