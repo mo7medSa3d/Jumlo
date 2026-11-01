@@ -26,6 +26,16 @@ class MediaMetadataTest {
         MediaMetadata.parse("""{"id":"a","is_live":true}""")
     }
 
+    @Test(expected=IllegalArgumentException::class) fun upcomingLiveOutputIsNotPresentedAsFiniteFile() {
+        MediaMetadata.parse("""{"id":"a","live_status":"is_upcoming"}""")
+    }
+
+    @Test fun finishedLiveStreamsAreFiniteFiles() {
+        val asset=MediaMetadata.parse("""{"id":"a","live_status":"post_live","extractor":"generic","format_id":"source","url":"https://media.example/file","ext":"mp4"}""")
+        assertEquals(1,asset.formats.size)
+        assertEquals("mp4",asset.formats.single().extension)
+    }
+
     @Test fun instagramProgressiveAudioIsAvailableWithoutInventingItsCodec() {
         // Instagram's extractor leaves acodec unset when has_audio is true. Only
         // has_audio=false is represented by the explicit acodec="none" marker.

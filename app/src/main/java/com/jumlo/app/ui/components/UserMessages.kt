@@ -63,8 +63,10 @@ import com.jumlo.app.R
     code=="MEDIA_RATE_LIMITED" -> R.string.media_error_rate
     code in setOf("MEDIA_NETWORK_ERROR","MEDIA_TLS_FAILED") -> R.string.media_error_network
     code in setOf("MEDIA_REANALYSIS_REQUIRED","MEDIA_SELECTION_REQUIRED","MEDIA_NO_USABLE_FORMAT","AUDIO_TRACK_UNAVAILABLE") -> R.string.media_error_format
-    code in setOf("MEDIA_NATIVE_ABI_UNAVAILABLE","MEDIA_RUNTIME_INITIALIZATION_FAILED","MEDIA_BUILD_NOT_ENABLED") -> R.string.media_error_runtime
-    code in setOf("PLAYLIST_REQUIRES_ITEM_SELECTION","LIVE_MEDIA_NOT_FINITE","MULTIPLE_MEDIA_LINKS") -> R.string.media_error_url
+    code=="MEDIA_NATIVE_ABI_UNAVAILABLE" -> R.string.media_error_abi
+    code in setOf("MEDIA_RUNTIME_INITIALIZATION_FAILED","MEDIA_BUILD_NOT_ENABLED") -> R.string.media_error_runtime
+    code=="LIVE_MEDIA_NOT_FINITE" -> R.string.media_error_live
+    code in setOf("PLAYLIST_REQUIRES_ITEM_SELECTION","MULTIPLE_MEDIA_LINKS") -> R.string.media_error_url
     code in setOf("MEDIA_EXTRACTION_FAILED","MEDIA_AUDIO_EXTRACTION_FAILED","MEDIA_AUDIO_MISSING","MEDIA_VIDEO_MISSING","MEDIA_EMPTY_TRACK","MEDIA_QUALITY_MISMATCH") -> R.string.media_error_generic
     code=="SECRET_EXPIRED" -> R.string.ui_sensitive_draft_note
     code=="HTTP_401" || code=="LOGIN_REQUIRED" || code=="GOOGLE_DRIVE_TOKEN_REQUIRED" -> R.string.msg_http_401

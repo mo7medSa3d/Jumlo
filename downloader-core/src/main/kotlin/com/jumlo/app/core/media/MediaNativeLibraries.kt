@@ -21,10 +21,19 @@ object MediaNativeLibraries {
         val root = packages.canonicalFile.toPath()
         for (runtime in listOf("python", "ffmpeg")) {
             var directory = root
+            var missing = false
             for (part in listOf(runtime, "usr", "lib")) {
                 directory = directory.resolve(part)
-                require(Files.isDirectory(directory, NOFOLLOW_LINKS)) { "MEDIA_RUNTIME_INITIALIZATION_FAILED" }
+                if (!Files.exists(directory, NOFOLLOW_LINKS)) { missing = true; break }
             }
+            // An absent runtime directory holds no alias to remove. Failing here
+            // used to kill the whole media engine (MEDIA_RUNTIME_INITIALIZATION_FAILED)
+            // whenever an APK update or an interrupted first extraction left the
+            // layout incomplete, even though there was nothing to clean. A
+            // redirected (symlinked) directory is still rejected below, and a
+            // non-symlink alias is still never deleted.
+            if (missing) continue
+            require(Files.isDirectory(directory, NOFOLLOW_LINKS)) { "MEDIA_RUNTIME_INITIALIZATION_FAILED" }
             val alias = directory.resolve("liblzma.so")
             if (Files.exists(alias, NOFOLLOW_LINKS)) {
                 require(Files.isSymbolicLink(alias)) { "MEDIA_RUNTIME_INITIALIZATION_FAILED" }

@@ -28,7 +28,10 @@ object MediaMetadata {
         val value = json.parseToJsonElement(text).jsonObject
         val kind = value.string("_type")
         require(kind !in setOf("playlist", "multi_video") && value["entries"] == null) { "PLAYLIST_REQUIRES_ITEM_SELECTION" }
-        val live = value.bool("is_live") || value.string("live_status") in setOf("is_live", "is_upcoming", "post_live")
+        // Only streams with no end yet are non-finite. A finished stream
+        // (live_status "post_live") is a normal finite recording and must stay
+        // downloadable; rejecting it made every past YouTube live link fail.
+        val live = value.bool("is_live") || value.string("live_status") in setOf("is_live", "is_upcoming")
         require(!live) { "LIVE_MEDIA_NOT_FINITE" }
         val extractorName = value.string("extractor_key").ifBlank { value.string("extractor") }
         val isGeneric = extractorName.equals("generic", ignoreCase = true)

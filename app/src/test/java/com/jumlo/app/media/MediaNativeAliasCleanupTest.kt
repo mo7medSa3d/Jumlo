@@ -44,6 +44,17 @@ class MediaNativeAliasCleanupTest {
         }
     }
 
+    @Test fun absentRuntimeDirectoriesAreSkippedInsteadOfFailingInitialization() {
+        val root = temporary.newFolder("packages")
+        MediaNativeLibraries.removePlatformLzmaAliases(root)
+        assertFalse(root.toPath().resolve("python").toFile().exists())
+        val partial = temporary.newFolder("partial-packages")
+        val directory = File(partial, "python/usr/lib").apply { mkdirs() }.toPath()
+        Files.createSymbolicLink(directory.resolve("liblzma.so"), Path.of("liblzma.so.5.8.1"))
+        MediaNativeLibraries.removePlatformLzmaAliases(partial)
+        assertFalse(Files.exists(directory.resolve("liblzma.so"), NOFOLLOW_LINKS))
+    }
+
     @Test fun alreadyCleanAndRepeatedInitializationLeavePrivateFilesUnchanged() {
         val root = packages()
         repeat(2) { MediaNativeLibraries.removePlatformLzmaAliases(root) }

@@ -46,6 +46,8 @@
     <string name="media_error_format">The selected format changed or is unavailable. Analyze the link again.</string>
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
     <string name="media_error_runtime">The media engine could not start. Update or reinstall Jumlo, then retry.</string>
+    <string name="media_error_abi">The bundled media engine is not available for this processor.</string>
+    <string name="media_error_live">Live streams cannot be downloaded because they have no end yet. Try again after the stream ends, or use a finished video.</string>
     <string name="media_error_generic">Could not download this media. Check the link and connection, then retry.</string>
     <string name="media_found">Found (%1$d)</string>
     <string name="media_candidates_note">Analyze a detected stream to inspect actual formats.</string>
