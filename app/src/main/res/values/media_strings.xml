@@ -33,7 +33,7 @@
     <string name="media_rights_body">Only download content you own or have permission to download, and follow the terms of the site you are downloading from. Jumlo does not bypass DRM, paywalls or access controls; a site that requires an account will say so and the download will stop.</string>
     <string name="media_rights_confirm">I have the rights</string>
     <string name="media_error_service">This build has no configured extraction service. Try an original direct file link.</string>
-    <string name="media_error_site">No downloadable file was found on this page. If the site offers a direct file link, paste that instead — DRM, private, and login-only content can't be downloaded.</string>
+    <string name="media_error_site">No downloadable file was found on this page. If the site offers a direct file link, paste that instead — DRM, private, and login-only content can\'t be downloaded.</string>
     <string name="media_error_private">This resource requires sign-in or private access. Use an authorized direct download provided by the source.</string>
     <string name="media_error_geoblocked">This media is geo-blocked in your region by the source platform.</string>
     <string name="media_error_removed">This media has been removed or is no longer available at the source URL.</string>
