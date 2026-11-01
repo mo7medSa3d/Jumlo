@@ -28,4 +28,6 @@
     <string name="watermark_color_red">Red</string>
     <string name="watermark_color_dark">Dark gray</string>
     <string name="watermark_correct_source_count">Check the number of selected files for this tool.</string>
+    <string name="watermark_preset_draft">Draft</string>
+    <string name="watermark_preset_sample">Sample</string>
 </resources>

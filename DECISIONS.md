@@ -208,3 +208,42 @@ preset helpers no longer resolve preset names. ColorPresets.kt and
 AccentPickerDialog.kt are stubs: the push path cannot delete files, so a
 future git-native cleanup may delete them. Legacy stored accents fall
 back to Sunset; the old DataStore key is abandoned, not migrated.
+
+## 2026-11-02 — Tap, drag, done: no-typing tool workspaces
+
+Principle: every tool flow must complete with zero required keystrokes.
+Text fields remain ONLY where the text IS the payload, and even there a
+one-tap alternative covers the common case:
+- Visual editors are the primary path: page strip (tap-select, drag-reorder,
+  drag-select), geometry editor, signature/watermark placement, source tray
+  (long-press drag reorder), file drop into Files/workspace routes. These
+  already existed; this round makes them the ONLY path where they cover a
+  tool, instead of leaving a typed fallback beside them.
+- Removed from WorkspaceFields: typed page specs for pdf_05/06/07/crop/stamp/
+  to_docx/to_pptx/ocr (replaced by PageSelectionSummary reading the same
+  form.pages the strip writes) and typed organize-order/rotate-pages for
+  pdf_04 (the strip owns order/rotation now; rotate-degree chips stay).
+- New ui/workspace/NoTypingControls.kt: PresetChipsRow (watermark wording,
+  output prefixes, full rename patterns), GeneratePasswordButton (16-char,
+  four-class, SecureRandom; creation only: pdf_protect !flag1, encrypted-zip
+  !flag1), PasteButton (SHA-256 expected hash), PageSelectionSummary +
+  countSelectedPages (pure, "all"/blank -> all, "1-3,5" -> 4).
+- Output name was already optional (sentinel "Images.pdf"/"download.bin"
+  means auto); the field now carries an explicit auto-name hint.
+- Honest limits (typed-by-nature, kept): password UNLOCK, URLs (paste button
+  exists on media + workspace), Drive file/folder IDs + token, metadata
+  content, custom watermark/rename wording. The field stays editable for
+  those; presets/generate/paste remove typing from the common case only.
+- Legacy interaction kept: pdf_04 rotate-degree chips still clear pageEdits
+  (rotate-all conflicts with per-page arrangement); changing them after
+  arranging pages discards the arrangement. Not changed in this round.
+- Accuracy round 2 (static, same turn): placement indices fail fast
+  (INVALID_PAGE_INDEX, verified at 5 handler sites); rename preview and
+  execution share batchRenamePreview; no handler overrides UI network
+  settings anymore (round-1 fix holds); compression slider is nearest-step
+  round-trip consistent. Page-range overflow CLIPS to existing pages in
+  PageSelection.parse/groups — deliberately kept: it is tested twice
+  (PageOperationsTest, PageRangeAllocationBudgetTest) and the visual editor
+  only ever writes valid specs, so the clip path now serves old drafts
+  only. Not a silent error introduced by this change; overturning tested
+  behavior without a device run would be the riskier move.

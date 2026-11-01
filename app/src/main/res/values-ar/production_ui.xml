@@ -81,4 +81,9 @@
     <string name="ui_preview_zoom_hint">اسحب للتنقل بين الصفحات · قرّب بإصبعين أو انقر مرتين للتكبير</string>
     <string name="ui_preview_reset_zoom">إعادة ضبط التكبير</string>
     <string name="ui_page_indicator">صفحة %1$d من %2$d</string>
+    <string name="ui_output_name_auto">اتركه كما هو لاسم تلقائي</string>
+    <string name="ui_pages_selection_title">الصفحات المحددة</string>
+    <string name="ui_pages_all">كل الصفحات</string>
+    <string name="ui_pages_selected_count">الصفحات المحددة: %1$d</string>
+    <string name="ui_pages_edit_visual">عدّل التحديد من شريط الصفحات بالأعلى</string>
 </resources>

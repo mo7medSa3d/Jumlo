@@ -103,4 +103,5 @@
     <string name="studio_crop_override_count">Pages with their own crop: %1$d</string>
     <string name="studio_crop_clear_overrides">Clear per-page crops</string>
     <string name="studio_watermark_tile_hint">Tiles stay on a fixed grid. Change their size and rotation here; use Single to move a watermark.</string>
+    <string name="studio_password_generate">Generate a strong password</string>
 </resources>

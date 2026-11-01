@@ -28,4 +28,6 @@
     <string name="watermark_color_red">أحمر</string>
     <string name="watermark_color_dark">رمادي داكن</string>
     <string name="watermark_correct_source_count">تأكد من عدد الملفات المحددة لهذه الأداة.</string>
+    <string name="watermark_preset_draft">مسودة</string>
+    <string name="watermark_preset_sample">نموذج</string>
 </resources>

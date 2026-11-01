@@ -103,4 +103,5 @@
     <string name="studio_crop_override_count">صفحات لها قص خاص: %1$d</string>
     <string name="studio_crop_clear_overrides">مسح إعدادات القص لكل صفحة</string>
     <string name="studio_watermark_tile_hint">تبقى النسخ المكررة على شبكة ثابتة. غيّر حجمها وزاويتها هنا، أو اختر «مفردة» لتحريك العلامة المائية.</string>
+    <string name="studio_password_generate">إنشاء كلمة مرور قوية</string>
 </resources>

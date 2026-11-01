@@ -654,6 +654,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.ui_target_jpeg_policy),style=QuietTheme.typography.metadata)
         ImageTargetControls(form,edit)
+        PresetChipsRow(listOf("converted_","IMG_","Photo_"),form.prefix,{v->edit {it.copy(prefix=v)}})
         Field(stringResource(R.string.field_output_prefix),form.prefix,{v->edit {it.copy(prefix=v)}})
     }
 }
@@ -665,9 +666,13 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             "img_watermark" -> {
                 Toggle(stringResource(R.string.field_use_second_logo),form.flag1) {v->edit {it.copy(flag1=v)}}
                 if(form.flag1) Text(stringResource(R.string.ui_watermark_logo_required),style=QuietTheme.typography.metadata)
-                else Field(stringResource(R.string.field_watermark_text),form.text1,{v->edit {it.copy(text1=v)}})
+                else {
+                    PresetChipsRow(listOf("Jumlo",stringResource(R.string.watermark_preset_confidential),stringResource(R.string.watermark_preset_draft)),form.text1,{v->edit {it.copy(text1=v)}})
+                    Field(stringResource(R.string.field_watermark_text),form.text1,{v->edit {it.copy(text1=v)}})
+                }
             }
             "pdf_stamp" -> {
+                PresetChipsRow(listOf(stringResource(R.string.watermark_preset_confidential),stringResource(R.string.watermark_preset_draft),stringResource(R.string.watermark_preset_sample)),form.text1,{v->edit {it.copy(text1=v)}})
                 Field(stringResource(R.string.field_watermark_text),form.text1,{v->edit {it.copy(text1=v)}})
                 Toggle(stringResource(R.string.field_add_page_numbers),form.flag1) {v->edit {it.copy(flag1=v)}}
             }
@@ -740,12 +745,14 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
         Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
             if(f.toolId !in setOf("file_duplicates","file_trash","sha256")) {
                 Field(stringResource(R.string.ui_custom_output_name),f.outputName,{value->edit {it.copy(outputName=value)}})
+                Text(stringResource(R.string.ui_output_name_auto),style=QuietTheme.typography.metadata)
             }
             val image=f.toolId.startsWith("img_") && f.toolId !in setOf("img_compare","img_target")
             if(image) {
                 if(f.toolId=="img_exif" && !f.flag1) Text(stringResource(R.string.ui_exif_jpeg_policy),style=QuietTheme.typography.metadata)
                 else Options(stringResource(R.string.field_output_format),listOf("JPEG","PNG","WEBP"),f.format) { value->edit {it.copy(format=value)} }
                 if(f.format!="PNG" || (f.toolId=="img_exif" && !f.flag1)) InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(f.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
+                PresetChipsRow(listOf("converted_","IMG_","Photo_"),f.prefix,{value->edit {it.copy(prefix=value)}})
                 Field(stringResource(R.string.field_output_prefix),f.prefix,{value->edit {it.copy(prefix=value)}})
                 Text(stringResource(R.string.field_image_policy_note),style=QuietTheme.typography.metadata)
             }
@@ -800,7 +807,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                     Toggle(stringResource(R.string.field_fill_page),f.fill) {v->edit {it.copy(fill=v)}}
                 }
                 "pdf_07" -> {
-                    Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}})
+                    PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
                     InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(f.dpi,144),36,600,144) {v->edit {it.copy(dpi=v.toString())}}
                     Options(stringResource(R.string.field_output_format),listOf("PNG","JPEG"),f.format) {v->edit {it.copy(format=v)}}
                     if(f.format=="JPEG") InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(f.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
@@ -815,12 +822,12 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                     Text(stringResource(R.string.interactive_zip_note),style=QuietTheme.typography.metadata)
                 }
                 "file_08" -> Text(stringResource(R.string.field_zip_extract_note),style=QuietTheme.typography.metadata)
-                "sha256" -> Field(stringResource(R.string.field_expected_sha256),f.expectedHash,{v->edit {it.copy(expectedHash=v)}})
+                "sha256" -> { Field(stringResource(R.string.field_expected_sha256),f.expectedHash,{v->edit {it.copy(expectedHash=v)}}); PasteButton {v->edit {it.copy(expectedHash=v)}} }
                 "pdf_03" -> { Text(stringResource(R.string.field_merge_note),style=QuietTheme.typography.metadata) }
-                "pdf_05" -> { Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) InteractiveIntSlider(stringResource(R.string.field_pages_per_part),draftNumber(f.num1,1),1,1000,1) {v->edit {it.copy(num1=v.toString())}} else Field(stringResource(if(f.flag2) R.string.jumlo_split_markers else R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
-                "pdf_06" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}) }
-                "pdf_04" -> { Field(stringResource(R.string.field_organize_order),f.text1,{v->edit {it.copy(text1=v,pageEdits=emptyList())}}); Field(stringResource(R.string.field_rotate_pages),f.text2,{v->edit {it.copy(text2=v,pageEdits=emptyList())}}); Options(stringResource(R.string.field_rotate_degrees),listOf("0","90","180","270"),f.num1) {v->edit {it.copy(num1=v,pageEdits=emptyList())}} }
-                "pdf_crop" -> { Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}}); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }
+                "pdf_05" -> { Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) InteractiveIntSlider(stringResource(R.string.field_pages_per_part),draftNumber(f.num1,1),1,1000,1) {v->edit {it.copy(num1=v.toString())}} else PageSelectionSummary(f.pages,if(f.flag2) R.string.jumlo_split_markers else R.string.ui_pages_selection_title,!f.flag2) }
+                "pdf_06" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true) }
+                "pdf_04" -> { Text(stringResource(R.string.ui_pages_edit_visual),style=QuietTheme.typography.metadata); Options(stringResource(R.string.field_rotate_degrees),listOf("0","90","180","270"),f.num1) {v->edit {it.copy(num1=v,pageEdits=emptyList())}} }
+                "pdf_crop" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }
                 "pdf_compress" -> {
                     // Presets are the primary control; DPI and quality stay as the
                     // advanced inputs underneath them.
@@ -862,7 +869,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                 }
                 "pdf_stamp" -> {
                     ContentToolSettings(f,edit)
-                    Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}})
+                    PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
                 }
                 "pdf_annotate" -> {
                     ContentToolSettings(f,edit)
@@ -881,6 +888,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                 "pdf_protect" -> {
                     Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}
                     Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true)
+                    if(!f.flag1) GeneratePasswordButton {v->edit {it.copy(secret1=v)}}
                     if(!f.flag1) {
                         Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}},secret=true)
                         Text(stringResource(R.string.studio_permissions),style=QuietTheme.typography.sectionTitle)
@@ -894,7 +902,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                     Text(stringResource(R.string.field_protect_note),style=QuietTheme.typography.metadata)
                 }
                 "pdf_forms" -> Toggle(stringResource(R.string.field_flatten_form),f.flag1) {v->edit {it.copy(flag1=v)}}
-                "pdf_to_docx","pdf_to_pptx","pdf_ocr" -> Field(stringResource(R.string.field_pages_spec),f.pages,{v->edit {it.copy(pages=v)}})
+                "pdf_to_docx","pdf_to_pptx","pdf_ocr" -> PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
                 "img_exif" -> { Toggle(stringResource(R.string.field_exif_remove_all),f.flag1) {v->edit {it.copy(flag1=v)}}; Toggle(stringResource(R.string.field_exif_remove_location),f.flag2) {v->edit {it.copy(flag2=v)}}; Text(stringResource(R.string.field_exif_note),style=QuietTheme.typography.metadata) }
                 "img_watermark" -> {
                     ContentToolSettings(f,edit)
@@ -923,6 +931,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                 "img_compare" -> Text(stringResource(R.string.field_compare_img_note),style=QuietTheme.typography.metadata)
                 "file_batch_rename" -> {
                     Field(stringResource(R.string.field_rename_pattern),f.text1,{v->edit {it.copy(text1=v)}},ltrValue=true)
+                    PresetChipsRow(listOf("{name}_{n}","{date}_{name}","{name}"),f.text1,{v->edit {it.copy(text1=v)}})
                     Text(stringResource(R.string.studio_rename_patterns),style=QuietTheme.typography.metadataStrong)
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         items(listOf("{name}","{n}","{date}")) { token ->
@@ -935,7 +944,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                 }
                 "file_duplicates" -> Text(stringResource(R.string.field_duplicates_note),style=QuietTheme.typography.metadata)
                 "file_trash" -> Text(stringResource(R.string.field_trash_note),style=QuietTheme.typography.metadata)
-                "file_encrypted_zip" -> { Toggle(stringResource(R.string.tool_extract_zip),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true); Text(stringResource(R.string.field_encrypted_zip_note),style=QuietTheme.typography.metadata) }
+                "file_encrypted_zip" -> { Toggle(stringResource(R.string.tool_extract_zip),f.flag1) {v->edit {it.copy(flag1=v)}}; Field(stringResource(R.string.field_zip_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true); if(!f.flag1) GeneratePasswordButton {v->edit {it.copy(secret1=v)}}; Text(stringResource(R.string.field_encrypted_zip_note),style=QuietTheme.typography.metadata) }
                 "file_drive" -> {
                     Toggle(stringResource(R.string.field_drive_export_mode),f.flag1) {v->edit {it.copy(flag1=v)}}
                     if(!f.flag1) Field(stringResource(R.string.field_drive_file_id),f.text1,{v->edit {it.copy(text1=v)}})
