@@ -343,9 +343,13 @@ class GoogleDriveClientTest {
             val uploaded = client.uploadFile(toUpload, "notes.txt", "text/plain", null, "valid-session-token".toCharArray())
             assertEquals("uploadedId12345", uploaded.id)
 
-            // Error category mapping
+            // Error category mapping: an API 401 means the supplied token expired;
+            // a missing/empty token is a separate local precondition failure.
             val unauth = runCatching { client.fetchMetadata("goodFileId12345", "wrong-token".toCharArray()) }
-            assertEquals("LOGIN_REQUIRED", (unauth.exceptionOrNull() as? OperationFailure)?.code)
+            assertEquals("DRIVE_TOKEN_EXPIRED", (unauth.exceptionOrNull() as? OperationFailure)?.code)
+
+            val missingToken = runCatching { client.fetchMetadata("goodFileId12345", charArrayOf()) }
+            assertEquals("DRIVE_TOKEN_MISSING", missingToken.exceptionOrNull()?.message)
 
             val priv = runCatching { client.fetchMetadata("privateFileId123", "valid-session-token".toCharArray()) }
             assertEquals("PRIVATE_CONTENT", (priv.exceptionOrNull() as? OperationFailure)?.code)
