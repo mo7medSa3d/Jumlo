@@ -134,6 +134,20 @@ class PdfHandlerReliabilityTest {
                     assertTrue(extracted.contains("KEEP_PUBLIC"))
                 }
             }
+            app.contentResolver.openFileDescriptor(android.net.Uri.parse(record.uri),"r")!!.use { fd ->
+                com.jumlo.app.data.pdf.PdfRendererFactory.open(fd,app.cacheDir).use { renderer ->
+                    renderer.openPage(0).use { page ->
+                        val bitmap=android.graphics.Bitmap.createBitmap(
+                            page.width,page.height,android.graphics.Bitmap.Config.ARGB_8888
+                        )
+                        try {
+                            bitmap.eraseColor(Color.WHITE)
+                            page.render(bitmap,null,null,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                            assertEquals(Color.BLACK,bitmap.getPixel(page.width/2,(page.height*0.25f).toInt()))
+                        } finally { bitmap.recycle() }
+                    }
+                }
+            }
             val report=outputs.find(job.id,"redact-report")!!
             val reportText=app.contentResolver.openInputStream(android.net.Uri.parse(report.uri))!!.bufferedReader().use { it.readText() }
             assertTrue(reportText.contains("rasterizedPages=1"))
