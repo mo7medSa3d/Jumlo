@@ -103,6 +103,83 @@ class PdfOfficeHandlerTest {
         assertArrayEquals(original,source.readBytes())
     }
 
+    @Test fun officeToPdfConvertsRealXlsxAndPptxPackagesToVerifiedReadablePdfs() = withFixture {
+        val xlsx = File(folder, "report.xlsx")
+        writeOfficePackage(xlsx, linkedMapOf(
+            "[Content_Types].xml" to """<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+</Types>""",
+            "xl/workbook.xml" to """<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Summary" sheetId="1" r:id="rId1"/></sheets>
+</workbook>""",
+            "xl/_rels/workbook.xml.rels" to """<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>""",
+            "xl/worksheets/sheet1.xml" to """<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>XLSX_OFFICE_TO_PDF_TEXT</t></is></c></row></sheetData>
+</worksheet>"""
+        ))
+        val pptx = File(folder, "slides.pptx")
+        writeOfficePackage(pptx, linkedMapOf(
+            "[Content_Types].xml" to """<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+</Types>""",
+            "ppt/presentation.xml" to """<?xml version="1.0" encoding="UTF-8"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:sldSz cx="12192000" cy="6858000"/>
+  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+</p:presentation>""",
+            "ppt/_rels/presentation.xml.rels" to """<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>""",
+            "ppt/slides/slide1.xml" to """<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>PPTX_OFFICE_TO_PDF_TEXT</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld>
+</p:sld>"""
+        ))
+
+        for ((source, expectedText) in listOf(
+            xlsx to "XLSX_OFFICE_TO_PDF_TEXT",
+            pptx to "PPTX_OFFICE_TO_PDF_TEXT"
+        )) {
+            val original = source.readBytes()
+            val request = request("office_to_pdf", inspect(source))
+            val outcomes = OfficeToPdfOperationHandler().execute(request, execution())
+            assertEquals(source.name, ItemStatus.CREATED, outcomes.single().status)
+            val record = outputs.find(request.id, "document")!!
+            assertEquals(source.name, "application/pdf", record.mimeType)
+            published(record.uri) { file ->
+                PDDocument.load(file).use { output ->
+                    assertTrue("$source must produce at least one page", output.numberOfPages >= 1)
+                    assertTrue(
+                        "$source text must survive conversion",
+                        PDFTextStripper().getText(output).contains(expectedText)
+                    )
+                }
+            }
+            assertArrayEquals("$source must remain unchanged", original, source.readBytes())
+        }
+    }
+
+    private fun writeOfficePackage(file: File, entries: Map<String, String>) {
+        ZipOutputStream(file.outputStream()).use { zip ->
+            entries.forEach { (name, value) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(value.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+        }
+    }
+
     @Test fun officeToPdfRejectsDoctypeAndExternalEntitiesOnAndroidSax() = withFixture {
         val secret=File(folder,"external-secret.txt").apply { writeText("OFFICE_ANDROID_XXE_SECRET") }
         val source=File(folder,"xxe.docx")
