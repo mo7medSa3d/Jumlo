@@ -45,6 +45,7 @@ object OfficeToPdfRenderer {
     private const val SCALE = 2.0f // raster pixels per point (144 dpi)
     private const val MAX_RASTER_TABLE_COLUMNS = 512
     private const val MAX_RASTER_CELL_CHARS = 100_000
+    private const val MAX_RASTER_ROW_CHARS = 250_000
 
     fun render(doc: OfficeDocument, maxBitmapBytes: Long, checkCancel: () -> Unit): RenderedOfficePdf {
         val document = PDDocument(MemoryUsageSetting.setupTempFileOnly())
@@ -451,11 +452,14 @@ object OfficeToPdfRenderer {
 
             fun layoutRow(row: List<OfficeCell>): RasterRowLayout {
                 var col = 0
+                var rowChars = 0L
                 val cells = ArrayList<RasterCellLayout>(row.size)
                 var rowHeight = 1
                 for (cell in row) {
                     checkCancel()
-                    require(cell.text.length <= MAX_RASTER_CELL_CHARS) { "OFFICE_SIZE_LIMIT" }
+                    rowChars += cell.text.length.toLong()
+                    require(cell.text.length <= MAX_RASTER_CELL_CHARS &&
+                        rowChars <= MAX_RASTER_ROW_CHARS) { "OFFICE_SIZE_LIMIT" }
                     require(cell.colSpan in 1..MAX_RASTER_TABLE_COLUMNS &&
                         col + cell.colSpan <= MAX_RASTER_TABLE_COLUMNS) { "OFFICE_SIZE_LIMIT" }
                     val cellWidth = (colWidthPx * cell.colSpan - 16).coerceAtLeast(16)
