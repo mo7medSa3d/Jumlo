@@ -48,6 +48,8 @@
     <string name="media_error_format">الجودة المختارة تغيرت أو غير متاحة. حلل الرابط من جديد.</string>
     <string name="media_error_runtime">تعذر تشغيل محرك الوسائط. حدّث جملو أو أعد تثبيته ثم حاول مجددًا.</string>
     <string name="media_error_abi">محرك الوسائط المدمج غير متاح لمعالج هذا الجهاز.</string>
+    <string name="media_error_native_repair">إصلاح الوسائط المدمج لا يطابق هذا الإصدار. حدّث جملو ثم حاول مجددًا.</string>
+    <string name="media_error_native_repair_unavailable">إصلاح الوسائط المدمج لمعالج هذا الجهاز غير موجود. حدّث جملو ثم حاول مجددًا.</string>
     <string name="media_error_live">لا يمكن تنزيل البث المباشر لأنه بلا نهاية بعد. حاول بعد انتهاء البث أو استخدم فيديو مكتملًا.</string>
     <string name="media_error_generic">تعذر تنزيل الوسائط. تحقق من الرابط والاتصال وحاول مجددًا.</string>
     <string name="media_candidates_note">حلل الرابط لعرض جميع جوداته المتاحة.</string>

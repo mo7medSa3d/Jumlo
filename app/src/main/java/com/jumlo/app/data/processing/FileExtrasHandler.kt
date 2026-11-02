@@ -215,9 +215,9 @@ import javax.inject.Singleton
 
     private suspend fun googleDrive(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         val settings = Json.decodeFromString<GoogleDriveSettings>(request.settingsJson)
-        val tokenChars = secrets.copy(settings.tokenSecretHandle) ?: throw OperationFailure("LOGIN_REQUIRED")
+        val tokenChars = secrets.copy(settings.tokenSecretHandle) ?: throw OperationFailure("DRIVE_TOKEN_MISSING")
         try {
-            require(tokenChars.isNotEmpty()) { "LOGIN_REQUIRED" }
+            require(tokenChars.isNotEmpty()) { "DRIVE_TOKEN_MISSING" }
             val client = GoogleDriveClient(OkHttpTransport(okHttpClient), okHttpClient)
             return if (!settings.exportMode) {
                 val itemKey = "drive-import"

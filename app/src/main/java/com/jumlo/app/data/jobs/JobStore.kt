@@ -207,7 +207,7 @@ import javax.inject.Singleton
             true
         } catch(e:Exception) {
             val code=stableError(e)
-            val state=if(code in setOf("ACCESS_LOST","SECRET_EXPIRED","LOGIN_REQUIRED","WIFI_REQUIRED","UNMETERED_NETWORK_REQUIRED","DOWNLOAD_RESTART_REQUIRED","MEDIA_REANALYSIS_REQUIRED","NETWORK_UNAVAILABLE","CLEARTEXT_CONSENT_REQUIRED")) JobStage.WAITING_FOR_INPUT else JobStage.FAILED
+            val state=if(code in setOf("ACCESS_LOST","SECRET_EXPIRED","LOGIN_REQUIRED","DRIVE_TOKEN_MISSING","DRIVE_TOKEN_EXPIRED","WIFI_REQUIRED","UNMETERED_NETWORK_REQUIRED","DOWNLOAD_RESTART_REQUIRED","MEDIA_REANALYSIS_REQUIRED","NETWORK_UNAVAILABLE","CLEARTEXT_CONSENT_REQUIRED")) JobStage.WAITING_FOR_INPUT else JobStage.FAILED
             save(JobProgress(state,snapshot.progress.completedUnits,snapshot.progress.totalUnits),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode=code))
             true
         } finally {

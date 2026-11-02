@@ -119,6 +119,12 @@ object ArchiveCore {
         // Validate the central directory, including paths, before creating anything.
         val planned=linkedMapOf<String,Triple<Long,Long,Boolean>>(); val folded=HashSet<String>()
         var declaredBytes=0L
+        // JDK zip errors carry free-text messages that the job error
+        // normalizer would erase into PROCESSING_FAILED. Map each phase
+        // to a stable code first, so the card can name the real cause.
+        // (Only zip/IO failures are mapped: require() codes, cancellation
+        // via checkCancel, and validation failures pass through untouched.)
+        try {
         ZipFile(input).use { zip ->
             require(zip.size()<=limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
             val entries=zip.entries()
@@ -133,10 +139,21 @@ object ArchiveCore {
                 declaredBytes+=e.size
                 planned[e.name]=Triple(e.size,e.crc,e.isDirectory)
             }
+            }
+        } catch (e: ZipException) {
+            // A central-directory failure means the file cannot even be
+            // recognized as an archive; stream failures below mean it broke
+            // mid-read. Encrypted entries fail in either phase.
+            throw IllegalArgumentException(if (e.message?.contains("encrypted", ignoreCase = true) == true) "ARCHIVE_ENCRYPTED" else "ARCHIVE_NOT_A_ZIP")
+        } catch (e: IOException) {
+            throw IllegalArgumentException("ARCHIVE_READ_FAILED")
         }
         val files=mutableListOf<File>(); var total=0L; var count=0
         try {
             require(out.mkdirs()) { "OUTPUT_CREATE_FAILED" }
+            // Map JDK stream failures to stable codes before the outer
+            // catch deletes the partial output and rethrows.
+            try {
             ZipInputStream(BufferedInputStream(input.inputStream())).use { zip ->
                 while(true) {
                     checkCancel(); val e=zip.nextEntry ?: break
@@ -169,6 +186,11 @@ object ArchiveCore {
                     // disagree about their size or checksum.
                     require(entryBytes==expected.first && checksum.value==expected.second) { "ARCHIVE_VERIFICATION_FAILED" }
                 }
+            }
+            } catch (e: ZipException) {
+                throw IllegalArgumentException(if (e.message?.contains("encrypted", ignoreCase = true) == true) "ARCHIVE_ENCRYPTED" else "ARCHIVE_CORRUPT")
+            } catch (e: IOException) {
+                throw IllegalArgumentException("ARCHIVE_READ_FAILED")
             }
             require(planned.isEmpty()) { "ARCHIVE_DIRECTORY_MISMATCH" }
             return files

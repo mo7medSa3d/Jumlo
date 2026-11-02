@@ -36,6 +36,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
     val jobs by vm.jobs.collectAsStateWithLifecycle()
+    val sources by vm.imported.collectAsStateWithLifecycle()
     val form by vm.form.collectAsStateWithLifecycle()
     var showConvert by rememberSaveable { mutableStateOf(false) }
     fun open(id: String) { CapabilityRegistry.tools.firstOrNull { it.id == id }?.let(onTool) }
@@ -122,7 +123,8 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                     action = stringResource(R.string.neon_show_all), onAction = onDownloads) }
                 items(active, key = { "job-${it.request.id}" }) { job ->
                     TransferRow(job, settings.language, { onJob(job.request.id) },
-                        { vm.pause(job.request.id) }, { vm.cancel(job.request.id) }, { vm.retry(job) })
+                        { vm.pause(job.request.id) }, { vm.cancel(job.request.id) }, { vm.retry(job) },
+                        sourceName = job.request.sourceIds.singleOrNull()?.let { id -> sources.firstOrNull { it.id == id }?.displayName })
                 }
             }
             item("recent-heading") { NeonSectionHeader(stringResource(R.string.neon_recent),

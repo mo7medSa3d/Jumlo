@@ -37,8 +37,10 @@ data class DriveFileMetadata(
  * Security invariants:
  * - Access tokens are passed as CharArray from EphemeralSecretStore and never logged or persisted.
  * - Only HTTPS endpoints on www.googleapis.com are contacted.
- * - Errors map to stable user-facing error categories: LOGIN_REQUIRED, PRIVATE_CONTENT,
- *   REMOVED, RATE_LIMITED, UNSUPPORTED, NETWORK_ERROR.
+ * - Errors map to stable user-facing error categories: DRIVE_TOKEN_MISSING,
+ *   DRIVE_TOKEN_EXPIRED, PRIVATE_CONTENT, REMOVED, RATE_LIMITED, UNSUPPORTED,
+ *   NETWORK_ERROR. (A real API 401 is an expired token, not a missing one;
+ *   the two cases get different guidance.)
  */
 class GoogleDriveClient(
     private val transport: HttpTransport,
@@ -54,7 +56,7 @@ class GoogleDriveClient(
         fun extractFileId(rawInput: String): String = com.jumlo.app.core.DriveLink.fileId(rawInput)
 
         fun classifyStatus(code: Int, bodySnippet: String = ""): String = when (code) {
-            401 -> "LOGIN_REQUIRED"
+            401 -> "DRIVE_TOKEN_EXPIRED"
             403 -> if (bodySnippet.contains("rateLimitExceeded", ignoreCase = true) ||
                 bodySnippet.contains("userRateLimitExceeded", ignoreCase = true)
             ) "RATE_LIMITED" else "PRIVATE_CONTENT"
@@ -66,7 +68,7 @@ class GoogleDriveClient(
     }
 
     fun fetchMetadata(fileIdOrUrl: String, accessToken: CharArray): DriveFileMetadata {
-        require(accessToken.isNotEmpty()) { "LOGIN_REQUIRED" }
+        require(accessToken.isNotEmpty()) { "DRIVE_TOKEN_MISSING" }
         val fileId = extractFileId(fileIdOrUrl)
         val url = "https://www.googleapis.com/drive/v3/files/$fileId?fields=id,name,mimeType,size&supportsAllDrives=false"
         val authHeader = "Bearer " + String(accessToken)
@@ -98,7 +100,7 @@ class GoogleDriveClient(
         minFreeBytes: Long,
         checkCancel: () -> Unit = {}
     ): DriveFileMetadata {
-        require(accessToken.isNotEmpty()) { "LOGIN_REQUIRED" }
+        require(accessToken.isNotEmpty()) { "DRIVE_TOKEN_MISSING" }
         // The API writes a new staged file only. Refusing existing destinations
         // avoids truncating (and then deleting) a caller's preexisting file.
         require(!targetFile.exists()) { "OUTPUT_ALREADY_EXISTS" }
@@ -174,7 +176,7 @@ class GoogleDriveClient(
         accessToken: CharArray,
         checkCancel: () -> Unit = {}
     ): DriveFileMetadata {
-        require(accessToken.isNotEmpty()) { "LOGIN_REQUIRED" }
+        require(accessToken.isNotEmpty()) { "DRIVE_TOKEN_MISSING" }
         require(sourceFile.isFile) { "SOURCE_NOT_FOUND" }
         checkCancel()
         val safeName = SafeNames.fromDisplayName(displayName, sourceFile.name)

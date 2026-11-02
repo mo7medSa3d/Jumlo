@@ -146,7 +146,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
 fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALIDATING,JobStage.RUNNING,JobStage.FINALIZING)
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun TransferRow(job:JobSnapshot,language:AppLanguage,onOpen:(()->Unit)?,onPause:()->Unit,onCancel:()->Unit,onRetry:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null) {
+@Composable fun TransferRow(job:JobSnapshot,language:AppLanguage,onOpen:(()->Unit)?,onPause:()->Unit,onCancel:()->Unit,onRetry:()->Unit,selection:Boolean?=null,onSelect:(()->Unit)?=null,sourceName:String?=null) {
     val haptics=rememberAppHaptics()
     val tool=CapabilityRegistry.tools.find {it.id==job.request.toolId}
     val name=tool?.let {if(language.isRtl) it.titleAr else it.titleEn} ?: job.request.toolId
@@ -227,6 +227,10 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
             Text(stringResource(R.string.job_outcomes_summary,published,notPublished),style=QuietTheme.typography.metadata)
             // Say why an item produced no file instead of leaving the user guessing.
             job.outcomes.firstOrNull { it.status!=ItemStatus.CREATED && it.errorCode!=null }?.errorCode?.let { code ->
+                // Name the failed input when the caller resolved it, so a
+                // failed card is never just a tool title plus a generic line.
+                if (sourceName != null && job.progress.stage in setOf(JobStage.FAILED, JobStage.PARTIAL))
+                    Text(sourceName,style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(stringResource(userMessageResource(code)),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error)
             }
         }

@@ -347,6 +347,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     )
                 }
             }
+        } else {
+            // A cancelled picker used to leave the token field blank with
+            // no message at all, so the next submit failed with a 401 toast
+            // that looked like the link itself had failed.
+            viewModel.notifyMessage("DRIVE_SIGNIN_CANCELLED")
         }
     }
     fun launchGoogleSignIn() {

@@ -63,8 +63,36 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         Os.kill(-pid, if (force) OsConstants.SIGKILL else OsConstants.SIGTERM)
     }
 
+    /**
+     * A stale or damaged extracted tree is the most common init failure: an
+     * APK update or an interrupted first extraction can leave a regular-file
+     * liblzma alias, a symlinked runtime dir, or a cache-skipped FFmpeg tree
+     * behind. Those failures are self-healing: wipe the extracted trees and
+     * retry once, so the upstream inits re-extract fresh. Diagnostic codes
+     * (repair mismatch, missing repair asset, unavailable ABI) are NOT
+     * retried — the same APK assets would fail identically — and neither
+     * are cancellation or memory exhaustion.
+     */
     @Synchronized private fun initialize() {
         if (initialized) return
+        try {
+            initializeOnce()
+        } catch (error: Throwable) {
+            if (error is OperationFailure && error.code in setOf(
+                    "MEDIA_NATIVE_REPAIR_INVALID", "MEDIA_NATIVE_REPAIR_UNAVAILABLE",
+                    "MEDIA_NATIVE_ABI_UNAVAILABLE")) throw error
+            if (error is java.util.concurrent.CancellationException || error is OutOfMemoryError) throw error
+            resetExtractedTree()
+            initializeOnce()
+        }
+    }
+
+    private fun resetExtractedTree() {
+        runCatching { File(context.noBackupFilesDir, "youtubedl-android").deleteRecursively() }
+        runCatching { launcher.deleteRecursively() }
+    }
+
+    private fun initializeOnce() {
         try {
             YoutubeDL.getInstance().init(context)
             FFmpeg.getInstance().init(context)
@@ -87,7 +115,8 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
             for (name in listOf("libpython.so", "libffmpeg.so", "libffprobe.so", "libqjs.so"))
                 if (!File(nativeDir, name).canExecute()) throw OperationFailure("MEDIA_NATIVE_ABI_UNAVAILABLE")
             initialized = true
-        } catch (error: OperationFailure) { throw error }
+        } catch (cancel: java.util.concurrent.CancellationException) { throw cancel }
+        catch (error: OperationFailure) { throw error }
         catch (_: Exception) { throw OperationFailure("MEDIA_RUNTIME_INITIALIZATION_FAILED") }
     }
 

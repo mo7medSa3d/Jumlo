@@ -30,6 +30,7 @@ import com.jumlo.app.core.StoragePaths
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val jobLoad by vm.jobLoad.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val sources by vm.imported.collectAsStateWithLifecycle()
     var selecting by remember {mutableStateOf(false)}
     var selected by remember {mutableStateOf(setOf<String>())}
     val (downloads, activeDownloads, previousDownloads) = remember(jobs) {
@@ -140,14 +141,16 @@ import com.jumlo.app.core.StoragePaths
                 TransferRow(job,settings.language,{onJob(job.request.id)},{vm.pause(job.request.id)},
                     {vm.cancel(job.request.id)},{vm.retry(job)},
                     selection=if(selecting) job.request.id in selected else null,
-                    onSelect={haptics.selectionToggle();selected=if(job.request.id in selected) selected-job.request.id else selected+job.request.id})
+                    onSelect={haptics.selectionToggle();selected=if(job.request.id in selected) selected-job.request.id else selected+job.request.id},
+                    sourceName=job.request.sourceIds.singleOrNull()?.let { id -> sources.firstOrNull { it.id == id }?.displayName })
             }
         }
         if(previousDownloads.isNotEmpty()) {
             item("previous-title") {QuietSectionTitle(stringResource(R.string.jumlo_activity_history))}
             items(previousDownloads,key={it.request.id},contentType={"past-transfer"}) {job->
                 TransferRow(job,settings.language,{onJob(job.request.id)},{vm.pause(job.request.id)},
-                    {vm.cancel(job.request.id)},{vm.retry(job)})
+                    {vm.cancel(job.request.id)},{vm.retry(job)},
+                    sourceName=job.request.sourceIds.singleOrNull()?.let { id -> sources.firstOrNull { it.id == id }?.displayName })
             }
         }
         if(jobLoad!=com.jumlo.app.ui.DataLoadStatus.READY) item("load-state") {DocumentLoadState(jobLoad,vm::reloadSavedData)}
@@ -251,7 +254,9 @@ import com.jumlo.app.core.StoragePaths
 }
 
 @Composable private fun ActivityJobRow(vm:AppViewModel,job:JobSnapshot,language:AppLanguage) {
-    TransferRow(job,language,null,{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)})
+    val sources by vm.imported.collectAsStateWithLifecycle()
+    TransferRow(job,language,null,{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)},
+        sourceName=job.request.sourceIds.singleOrNull()?.let { id -> sources.firstOrNull { it.id == id }?.displayName })
     if(job.progress.stage==JobStage.WAITING_FOR_INPUT && job.request.toolId.startsWith("dl_") &&
         job.outcomes.lastOrNull {it.errorCode!=null}?.errorCode in setOf("SECRET_EXPIRED","DOWNLOAD_RESTART_REQUIRED")) {
         var replacement by remember(job.request.id) { mutableStateOf("") }

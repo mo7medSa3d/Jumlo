@@ -280,7 +280,67 @@ one-tap alternative covers the common case:
   premium-ux assert the rows are absent; premium-ux's ToolsScreen
   assertion now expects ToolIconColors instead of LocalColorSystem.
 - Deliberately NOT in this push: media-engine / ZIP-unzip / Drive-401
-  fixes (diagnosis running in parallel; follow-up push), tool removals
-  (no usage data — the catalogue is already curated to 23 primary tiles
-  + 21 folded specialists + 3 hidden entries, so the removal list needs
-  the user's pick), and any "100%" claim (needs device runs).
+  fixes (diagnosis completed 2026-11-02; fixed in the failure-fixes push
+  below), tool removals (no usage data — the catalogue is already
+  curated to 23 primary tiles + 21 folded specialists + 3 hidden
+  entries, so the removal list needs the user's pick), and any "100%"
+  claim (needs device runs).
+
+## 2026-11-02: failure fixes — media init self-heal, unzip error detail, Drive 401 split
+
+- Media engine: the youtu.be banner was an init failure, not a link
+  problem (init runs before any URL work; yt-dlp resolves youtu.be
+  natively). PackagedMediaRuntime.initialize() now retries once after
+  wiping the extracted trees (noBackupFilesDir/youtubedl-android +
+  media-launcher), which self-heals every stale-tree variant (regular-
+  file liblzma alias, symlinked runtime dir, cache-skipped FFmpeg
+  extraction). Diagnostic codes are NOT retried and now propagate with
+  their own strings instead of collapsing into the generic runtime
+  banner: BundledFfmpegLibraries.install() throws
+  MEDIA_NATIVE_REPAIR_INVALID for pin/ELF/alignment mismatches and
+  MEDIA_NATIVE_REPAIR_UNAVAILABLE for a missing repair asset (the
+  x86_64 release case — repair .so files are debug-only), and a
+  missing libffmpeg.so maps to the existing ABI code. Cancellation is
+  rethrown through init instead of collapsing. The RoutingMediaRuntime
+  allowlist needs no change: the new codes are not in it, so they
+  propagate to the banner.
+- Unzip: ArchiveCore.extract maps JDK failures per phase to stable
+  codes (central-directory ZipException -> ARCHIVE_NOT_A_ZIP, stream
+  ZipException -> ARCHIVE_CORRUPT, "encrypted" message in either phase
+  -> ARCHIVE_ENCRYPTED, IOException -> ARCHIVE_READ_FAILED) as
+  IllegalArgumentException messages — the file's existing code style,
+  which survives the job error normalizer (core-common cannot depend
+  on the app module's OperationFailure). All ARCHIVE_* codes plus the
+  two archive budget codes now have UserMessages branches and EN+AR
+  strings, so the card names the cause and says whether retrying the
+  same file can help. Failed cards also show the source file name when
+  resolvable: TransferRow takes an optional sourceName, resolved by
+  Downloads/Home/Activity rows from vm.imported (absent when the
+  source row is gone). ARCHIVE_ENCRYPTED deliberately does not reuse
+  ZIP_PASSWORD_REQUIRED — file_08 has no password input; the string
+  points to the encrypted-ZIP tool.
+- Drive 401 split: the single 401 toast was four failures. Now
+  DRIVE_TOKEN_MISSING (blank token at submit, lost session handle,
+  empty token in the client), DRIVE_TOKEN_EXPIRED (a real API 401),
+  each with its own EN+AR string; the missing-token string also notes
+  that a public "Anyone with the link" file can be downloaded with the
+  Downloads tool. Both new job codes stay in JobStore's
+  WAITING_FOR_INPUT set, preserving the retryable stage token failures
+  already had. LOGIN_REQUIRED is kept only for the sign-in picker
+  failure/launch, and a cancelled picker now shows
+  DRIVE_SIGNIN_CANCELLED instead of silently leaving a blank token
+  field for the next submit to fail on.
+- Deliberately NOT in this push: the token-free public-link fallback
+  for file_drive. The generic downloader already handles public Drive
+  links token-free, but wiring its full machinery (header-derived
+  naming, budgets, large-file confirmation pages) into file_drive
+  needs a device run to prove it never publishes a warning page as a
+  file — a half-fallback would be a worse bug than a clear error.
+  Also not in this push: a drive.file scope change (needs a user
+  decision) and token refresh (a larger auth feature).
+- Gate: scripts/test-failure-fixes.py asserts every ARCHIVE_*/
+  DRIVE_*/MEDIA_NATIVE_REPAIR_* code has a UserMessages branch + EN +
+  AR string, the media retry + repair-code propagation, the
+  TransferRow sourceName wiring, the Drive split sites, and no
+  duplicate string names in any values file (the watermark-duplicate
+  lesson: gates used to check key presence, not uniqueness).

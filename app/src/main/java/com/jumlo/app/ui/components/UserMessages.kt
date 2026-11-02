@@ -71,12 +71,17 @@ import com.jumlo.app.R
     code in setOf("MEDIA_NETWORK_ERROR","MEDIA_TLS_FAILED") -> R.string.media_error_network
     code in setOf("MEDIA_REANALYSIS_REQUIRED","MEDIA_SELECTION_REQUIRED","MEDIA_NO_USABLE_FORMAT","AUDIO_TRACK_UNAVAILABLE") -> R.string.media_error_format
     code=="MEDIA_NATIVE_ABI_UNAVAILABLE" -> R.string.media_error_abi
+    code=="MEDIA_NATIVE_REPAIR_INVALID" -> R.string.media_error_native_repair
+    code=="MEDIA_NATIVE_REPAIR_UNAVAILABLE" -> R.string.media_error_native_repair_unavailable
     code in setOf("MEDIA_RUNTIME_INITIALIZATION_FAILED","MEDIA_BUILD_NOT_ENABLED") -> R.string.media_error_runtime
     code=="LIVE_MEDIA_NOT_FINITE" -> R.string.media_error_live
     code in setOf("PLAYLIST_REQUIRES_ITEM_SELECTION","MULTIPLE_MEDIA_LINKS") -> R.string.media_error_url
     code in setOf("MEDIA_EXTRACTION_FAILED","MEDIA_AUDIO_EXTRACTION_FAILED","MEDIA_AUDIO_MISSING","MEDIA_VIDEO_MISSING","MEDIA_EMPTY_TRACK","MEDIA_QUALITY_MISMATCH") -> R.string.media_error_generic
     code=="SECRET_EXPIRED" -> R.string.ui_sensitive_draft_note
     code=="HTTP_401" || code=="LOGIN_REQUIRED" || code=="GOOGLE_DRIVE_TOKEN_REQUIRED" -> R.string.msg_http_401
+    code=="DRIVE_TOKEN_MISSING" -> R.string.msg_drive_token_missing
+    code=="DRIVE_TOKEN_EXPIRED" -> R.string.msg_drive_token_expired
+    code=="DRIVE_SIGNIN_CANCELLED" -> R.string.msg_drive_signin_cancelled
     code=="HTTP_403" || code=="PRIVATE_CONTENT" || code=="MEDIA_SOURCE_REJECTED" -> R.string.msg_http_403
     code=="HTTP_404" || code=="REMOVED" -> R.string.msg_http_404
     code=="HTTP_429" || code=="RATE_LIMITED" -> R.string.msg_http_429
@@ -107,6 +112,18 @@ import com.jumlo.app.R
 code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="OWNER_PASSWORD_REQUIRED" -> R.string.msg_owner_password_required
     code=="ZIP_PASSWORD_REQUIRED" -> R.string.msg_zip_password_required
+    code=="ARCHIVE_NOT_A_ZIP" -> R.string.msg_archive_not_a_zip
+    code=="ARCHIVE_CORRUPT" -> R.string.msg_archive_corrupt
+    code=="ARCHIVE_ENCRYPTED" -> R.string.msg_archive_encrypted
+    code=="ARCHIVE_READ_FAILED" -> R.string.msg_archive_read_failed
+    code=="ARCHIVE_VERIFICATION_FAILED" -> R.string.msg_archive_verification_failed
+    code=="ARCHIVE_DIRECTORY_MISMATCH" -> R.string.msg_archive_directory_mismatch
+    code=="ARCHIVE_DIRECTORY_PAYLOAD" -> R.string.msg_archive_directory_payload
+    code=="DUPLICATE_ARCHIVE_ENTRY" -> R.string.msg_archive_duplicate_entry
+    code=="ARCHIVE_COLLISION" -> R.string.msg_archive_collision
+    code=="OUTPUT_CREATE_FAILED" -> R.string.msg_archive_output_failed
+    code=="ARCHIVE_ENTRY_BUDGET_EXCEEDED" -> R.string.msg_archive_entry_budget
+    code=="ARCHIVE_BYTE_BUDGET_EXCEEDED" -> R.string.msg_archive_byte_budget
     code=="SHA256_MISMATCH" -> R.string.msg_sha256_mismatch
     code in setOf("NO_ACROFORM","FORM_FIELD_NOT_FOUND","FORM_FIELD_TYPE_MISMATCH") -> R.string.msg_no_acroform
     code=="ANIMATED_IMAGE_UNSUPPORTED" -> R.string.msg_animated_image_unsupported
