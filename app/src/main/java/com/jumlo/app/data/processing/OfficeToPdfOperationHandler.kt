@@ -50,7 +50,7 @@ import javax.inject.Singleton
             var unsupported: List<String> = emptyList()
             context.sources.withSeekable(request.sourceIds.single(), request.id) { input ->
                 originalBytes = input.length()
-                val kind = OfficeDocumentReader.detect(input, sourceName)
+                val kind = OfficeDocumentReader.detect(input, sourceName, context.budget.maxTemporaryBytes)
                 val document = OfficeDocumentReader.read(input, kind, context.budget.maxTemporaryBytes) {
                     context.checkCancellation()
                 }
