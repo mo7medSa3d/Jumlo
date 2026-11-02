@@ -98,6 +98,7 @@ class OfficeDocumentReaderTest {
 <row><c r="A2"><v>42</v></c><c r="B2" s="1"><v>44927</v></c></row>
 <row><c r="A3" t="b"><v>1</v></c></row>
 <row><c r="A4" t="inlineStr"><is><t>Left</t></is></c><c r="C4" t="inlineStr"><is><t>Right</t></is></c></row>
+<row><c t="inlineStr"><is><t>Implicit A</t></is></c><c t="inlineStr"><is><t>Implicit B</t></is></c></row>
 </sheetData></worksheet>"""
         val types = """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
@@ -122,6 +123,8 @@ class OfficeDocumentReaderTest {
         assertEquals("Left", table.rows[3][0].text)
         assertEquals("", table.rows[3][1].text)
         assertEquals("Right", table.rows[3][2].text)
+        assertEquals("Implicit A", table.rows[4][0].text)
+        assertEquals("Implicit B", table.rows[4][1].text)
     }
 
     @Test fun xlsxRejectsColumnsBeyondRendererLimit() {

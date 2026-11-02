@@ -811,6 +811,7 @@ object OfficeDocumentReader {
             var inInlineText = false
             var inCell = false
             var cellCol = 0
+            var nextCellCol = 0
             var sheetXmlChars = 0L
             var sheetOutputChars = 0L
             sheetStream.use { parseXml(it, object : DefaultHandler() {
@@ -819,11 +820,14 @@ object OfficeDocumentReader {
                         "row" -> {
                             acc.reserveTableRow()
                             currentCells = sortedMapOf()
+                            nextCellCol = 0
                         }
                         "c" -> {
                             acc.reserveTableCell()
                             inCell = true
-                            cellCol = attr(attrs, "r")?.let { colIndex(it) } ?: 0
+                            // Cell references are optional in OOXML; infer omitted ones from row order.
+                            cellCol = attr(attrs, "r")?.let { colIndex(it) } ?: nextCellCol
+                            require(cellCol in 0 until MAX_TABLE_COLUMNS) { "OFFICE_SIZE_LIMIT" }
                             cellType = attr(attrs, "t")
                             cellStyle = attr(attrs, "s")?.toIntOrNull() ?: 0
                             cellValue = StringBuilder(); inlineText = StringBuilder()
@@ -860,6 +864,7 @@ object OfficeDocumentReader {
                                 require(sheetOutputChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
                                 require(!currentCells.containsKey(cellCol)) { "OFFICE_INVALID" }
                                 currentCells[cellCol] = OfficeCell(text)
+                                nextCellCol = maxOf(nextCellCol, cellCol + 1)
                             }
                             inCell = false
                         }
