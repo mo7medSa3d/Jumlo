@@ -129,8 +129,8 @@ object OfficeDocumentReader {
         while (enumeration.hasMoreElements()) {
             val entry = enumeration.nextElement()
             val name = entry.name
-            require(name.isNotEmpty() && !name.startsWith("/") && '\\\\' !in name &&
-                '\\u0000' !in name && name.split('/').none { it == ".." }) { "OFFICE_INVALID" }
+            require(name.isNotEmpty() && !name.startsWith("/") && !name.contains(92.toChar()) &&
+                name.none { it == 0.toChar() } && name.split('/').none { it == ".." }) { "OFFICE_INVALID" }
             require(!map.containsKey(name)) { "OFFICE_INVALID" }
             val declaredSize = entry.size
             require(declaredSize >= 0L && declaredSize <= maxExpandedBytes - totalExpandedBytes) {
