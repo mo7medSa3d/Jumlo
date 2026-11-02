@@ -174,6 +174,23 @@ class OfficeDocumentReaderTest {
         }
     }
 
+    @Test fun docxRejectsUnboundedTableColumnSpansBeforeLayout() {
+        val document = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:tbl><w:tr><w:tc><w:tcPr><w:gridSpan w:val="513"/></w:tcPr>
+    <w:p><w:r><w:t>Oversized span</w:t></w:r></w:p>
+  </w:tc></w:tr></w:tbl></w:body>
+</w:document>"""
+        val file = packageFile(mapOf("word/document.xml" to document.toByteArray()))
+        try {
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000)
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", failure.message)
+        } finally {
+            file.delete()
+        }
+    }
+
     @Test fun officeImageBytesHonorTheCallerMemoryBudget() {
         val file = docxFile()
         try {

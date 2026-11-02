@@ -32,7 +32,8 @@ object OfficeDocumentReader {
     const val MAX_IMAGE_BYTES = 256L * 1024 * 1024
     const val MAX_EXPANDED_PACKAGE_BYTES = 512L * 1024 * 1024
     const val MAX_TABLE_ROWS = 50_000
-    const val MAX_TABLE_CELLS = 1_000_000
+    const val MAX_TABLE_CELLS = 100_000
+    const val MAX_TABLE_COLUMNS = 512
     const val MAX_SHARED_STRINGS = 50_000
 
     private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
@@ -499,7 +500,12 @@ object OfficeDocumentReader {
                             cellSpan = 1
                         }
                         "tcPr" -> inTcPr = true
-                        "gridSpan" -> if (inTcPr) cellSpan = attr(attrs, "val")?.toIntOrNull() ?: 1
+                        "gridSpan" -> if (inTcPr) {
+                            val span = attr(attrs, "val")?.toIntOrNull()
+                                ?: throw IllegalArgumentException("OFFICE_INVALID")
+                            require(span in 1..MAX_TABLE_COLUMNS) { "OFFICE_SIZE_LIMIT" }
+                            cellSpan = span
+                        }
                         "sectPr" -> inSectPr = true
                         "pgSz" -> if (inSectPr) {
                             attr(attrs, "w")?.toDoubleOrNull()?.let { pageWidthPt = it / 20.0 }
