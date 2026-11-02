@@ -89,7 +89,10 @@ object OfficeDocumentReader {
     private fun parseXml(stream: InputStream, handler: DefaultHandler) {
         val factory = SAXParserFactory.newInstance().apply {
             isNamespaceAware = true
-            isXIncludeAware = false
+            // Android's Expat SAXParserFactory throws UnsupportedOperationException
+            // from setXIncludeAware(). XInclude is disabled by default by JAXP;
+            // explicitly disable it on providers that implement the setter.
+            runCatching { isXIncludeAware = false }
         }
         val reader = factory.newSAXParser().xmlReader
 
