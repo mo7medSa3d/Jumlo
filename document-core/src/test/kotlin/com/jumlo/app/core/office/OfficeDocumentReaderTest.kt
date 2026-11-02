@@ -97,6 +97,7 @@ class OfficeDocumentReaderTest {
 <row><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row>
 <row><c r="A2"><v>42</v></c><c r="B2" s="1"><v>44927</v></c></row>
 <row><c r="A3" t="b"><v>1</v></c></row>
+<row><c r="A4" t="inlineStr"><is><t>Left</t></is></c><c r="C4" t="inlineStr"><is><t>Right</t></is></c></row>
 </sheetData></worksheet>"""
         val types = """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
@@ -118,6 +119,37 @@ class OfficeDocumentReaderTest {
         assertEquals("42", table.rows[1][0].text)
         assertEquals("2023-01-01", table.rows[1][1].text)
         assertEquals("TRUE", table.rows[2][0].text)
+        assertEquals("Left", table.rows[3][0].text)
+        assertEquals("", table.rows[3][1].text)
+        assertEquals("Right", table.rows[3][2].text)
+    }
+
+    @Test fun xlsxRejectsColumnsBeyondRendererLimit() {
+        val workbook = """<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></workbook>"""
+        val workbookRels = """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>"""
+        val sheet = """<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+<row><c r="SS1" t="inlineStr"><is><t>Beyond renderer limit</t></is></c></row>
+</sheetData></worksheet>"""
+        val types = """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+</Types>"""
+        val file = packageFile(mapOf(
+            "[Content_Types].xml" to types.toByteArray(),
+            "xl/workbook.xml" to workbook.toByteArray(),
+            "xl/_rels/workbook.xml.rels" to workbookRels.toByteArray(),
+            "xl/worksheets/sheet1.xml" to sheet.toByteArray()
+        ))
+        try {
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.XLSX, 10_000_000)
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", failure.message)
+        } finally {
+            file.delete()
+        }
     }
 
     @Test fun pptxKeepsSlideOrderTitlesAndPictures() {

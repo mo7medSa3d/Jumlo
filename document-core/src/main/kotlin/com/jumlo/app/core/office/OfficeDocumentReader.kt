@@ -755,7 +755,7 @@ object OfficeDocumentReader {
         for (ch in letters) {
             index = index * 26 + (ch.uppercaseChar() - 'A' + 1)
         }
-        require(index in 1..16_384) { "OFFICE_SIZE_LIMIT" }
+        require(index in 1..MAX_TABLE_COLUMNS) { "OFFICE_SIZE_LIMIT" }
         return index - 1
     }
 
@@ -858,14 +858,29 @@ object OfficeDocumentReader {
                                 }
                                 sheetOutputChars += text.length.toLong()
                                 require(sheetOutputChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
+                                require(!currentCells.containsKey(cellCol)) { "OFFICE_INVALID" }
                                 currentCells[cellCol] = OfficeCell(text)
                             }
                             inCell = false
                         }
                         "row" -> {
-                            val cells = currentCells.values.toList()
-                            val trimmed = cells.dropLastWhile { it.text.isBlank() }
-                            if (trimmed.isNotEmpty()) rows += ArrayList(trimmed)
+                            // OOXML omits empty cells. Restore their positions so a value in
+                            // column C does not silently shift into column B in the PDF table.
+                            val lastColumn = currentCells.keys.lastOrNull()
+                            if (lastColumn != null) {
+                                val cells = ArrayList<OfficeCell>(lastColumn + 1)
+                                for (column in 0..lastColumn) {
+                                    val cell = currentCells[column]
+                                    if (cell == null) {
+                                        acc.reserveTableCell()
+                                        cells += OfficeCell("")
+                                    } else {
+                                        cells += cell
+                                    }
+                                }
+                                val trimmed = cells.dropLastWhile { it.text.isBlank() }
+                                if (trimmed.isNotEmpty()) rows += ArrayList(trimmed)
+                            }
                         }
                     }
                 }
