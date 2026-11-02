@@ -29,7 +29,9 @@ def contrast(a, b):
     return (hi + .05) / (lo + .05)
 
 
-SETTINGS_ROWS = ['theme', 'app-color', 'language', 'haptics', 'text-size',
+# 'haptics' was removed from the Settings page 2026-11-02 (user request);
+# the Color.kt map may still carry its entry, but no row renders it.
+SETTINGS_ROWS = ['theme', 'app-color', 'language', 'text-size',
                  'notifications', 'video-quality', 'audio-quality',
                  'storage', 'cache', 'about']
 HUB_ROWS = ['my-files', 'storage', 'settings', 'privacy', 'about']

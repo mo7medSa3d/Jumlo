@@ -247,3 +247,40 @@ one-tap alternative covers the common case:
   only ever writes valid specs, so the clip path now serves old drafts
   only. Not a silent error introduced by this change; overturning tested
   behavior without a device run would be the riskier move.
+
+## 2026-11-02: dark backgrounds, fixed tool-icon colors, wordmark, settings trim
+
+- Dark mode (user: night backgrounds were bad): all four systems' dark
+  surfaces moved to deeper, desaturated tones — near-black with only a
+  faint system hue — and tile steps were clarified (background darkest,
+  tiles clearly lighter). Light schemes untouched; all text pairs still
+  pass WCAG AA (scripts/test-color-systems.py).
+- Tool icon colors are now fixed per tool (ui/theme/ToolIconColors.kt),
+  deliberately NOT the chosen color system: in a warm system every tile
+  used to read as the same orange. Family hue centers (PDF red-orange,
+  scanner teal, images green, files violet, downloads blue, organize
+  amber, other magenta) plus a 37-degree step inside a 90-degree window
+  give all 47 catalogue tools distinct hues; glyphs pick black/white by
+  contrast (worst pair 4.82). ToolsScreen tiles and NeonToolTile use
+  them; tile borders echo the icon color. ToolPalette accents stay for
+  pillar containers and workspace badges, unchanged.
+- Wordmark: home top bar now renders JumloWordmark (gradient ember J
+  tile + extra-bold "umlo", always left-to-right) via a new optional
+  QuietRootTopBar.titleContent slot; other tabs keep plain titles and
+  the splash is untouched. The brand gradient is fixed across systems
+  so the mark never dissolves into the theme.
+- Settings trim (user request): the haptics row + dialog and the
+  reduce-motion toggle were removed from SettingsScreen. The stored
+  preferences, repository keys, ViewModel setters and MainActivity
+  wiring stay untouched, so behavior keeps its defaults and motion now
+  follows the system setting. The sounds row was KEPT: it is a real
+  functional toggle with an androidTest and gate wiring, not a dead row.
+  Gates were updated to guard the removal (not weakened): settings-icons
+  drops 'haptics' from its row list; brand-motion, neon-ui and
+  premium-ux assert the rows are absent; premium-ux's ToolsScreen
+  assertion now expects ToolIconColors instead of LocalColorSystem.
+- Deliberately NOT in this push: media-engine / ZIP-unzip / Drive-401
+  fixes (diagnosis running in parallel; follow-up push), tool removals
+  (no usage data — the catalogue is already curated to 23 primary tiles
+  + 21 folded specialists + 3 hidden entries, so the removal list needs
+  the user's pick), and any "100%" claim (needs device runs).

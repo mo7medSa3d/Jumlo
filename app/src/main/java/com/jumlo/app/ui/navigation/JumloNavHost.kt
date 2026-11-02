@@ -434,6 +434,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     if(root) QuietRootTopBar(
                         title=if(shellRoute=="home") stringResource(R.string.app_name)
                             else if(settings.language.isRtl) tab.labelAr else tab.labelEn,
+                        titleContent=if(shellRoute=="home") {{ JumloWordmark() }} else null,
                         onSettingsClick={navigateTo("settings")},showSettings=shellRoute!="settings"
                     ) else if(shellRoute!="viewer") QuietWorkspaceTopBar(
                         title=when(shellRoute) {

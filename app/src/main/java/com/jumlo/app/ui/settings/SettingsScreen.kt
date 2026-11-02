@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.selection.toggleable
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
@@ -19,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
-import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.SaveFolderCard
@@ -62,26 +60,6 @@ fun SettingsScreen(
         item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language"),
             iconStyle = settingsIconStyleFor("language", dark)) }
-        item("haptics") { PreferenceRow(stringResource(R.string.pref_haptics),
-            hapticLabel(settings.hapticIntensity), Icons.Rounded.Vibration,
-            { panel = "haptics" }, Modifier.testTag("settings.haptics"),
-            iconStyle = settingsIconStyleFor("haptics", dark)) }
-        item("reduce-motion") {
-            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
-                .testTag("settings.reduceMotion")
-                .toggleable(value = settings.respectReducedMotion, role = Role.Switch,
-                    onValueChange = { viewModel.setRespectReducedMotion(it) })
-                .padding(horizontal = 4.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.pref_reduce_motion), style = QuietTheme.typography.body)
-                    Text(stringResource(R.string.pref_reduce_motion_summary),
-                        style = QuietTheme.typography.metadata,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = settings.respectReducedMotion, onCheckedChange = null)
-            }
-        }
         item("sounds") {
             PreferenceToggleRow(stringResource(R.string.settings_ui_sounds),
                 settings.soundsEnabled, viewModel::setSoundsEnabled,
@@ -135,8 +113,6 @@ fun SettingsScreen(
         )
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
-        "haptics" -> ChoiceDialog(stringResource(R.string.pref_haptics), HapticIntensity.entries.map { hapticLabel(it) },
-            settings.hapticIntensity.ordinal, { viewModel.setHapticIntensity(HapticIntensity.entries[it]); panel = null }, { panel = null })
         "text-size" -> {
             val choices = listOf("SMALL", "NORMAL", "LARGE")
             ChoiceDialog(stringResource(R.string.pref_text_size),
@@ -195,12 +171,6 @@ internal fun colorSystemLabel(system: String, language: AppLanguage): String {
     else -> R.string.pref_text_size_normal
 })
 
-@Composable private fun hapticLabel(intensity: HapticIntensity): String = stringResource(when (intensity) {
-    HapticIntensity.OFF -> R.string.pref_haptic_off
-    HapticIntensity.LIGHT -> R.string.pref_haptic_light
-    HapticIntensity.MEDIUM -> R.string.pref_haptic_medium
-    HapticIntensity.STRONG -> R.string.pref_haptic_strong
-})
 @Composable private fun languageLabel(language: AppLanguage): String = stringResource(
     if (language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
 

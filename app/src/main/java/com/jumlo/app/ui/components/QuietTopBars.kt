@@ -51,6 +51,7 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 @Suppress("UNUSED_PARAMETER")
 fun QuietRootTopBar(
     title: String,
+    titleContent: (@Composable () -> Unit)? = null,
     badgeText: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onSettingsClick: () -> Unit,
@@ -69,14 +70,18 @@ fun QuietRootTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    title,
-                    style = QuietTheme.typography.screenTitle,
-                    color = colors.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                if (titleContent != null) {
+                    Box(Modifier.weight(1f)) { titleContent() }
+                } else {
+                    Text(
+                        title,
+                        style = QuietTheme.typography.screenTitle,
+                        color = colors.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 badgeText?.let { QuietBadge(it, colors.primaryContainer, colors.onPrimaryContainer) }
                 if (showSettings) QuietTonalIconButton(
                     Icons.Rounded.Settings, stringResource(R.string.settings_title), onSettingsClick

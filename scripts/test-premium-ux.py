@@ -169,7 +169,11 @@ class PremiumUxContracts(unittest.TestCase):
         palette = source('theme/ToolPalette.kt')
         dock = source('components/QuietNavigation.kt')
         self.assertIn('system: ColorSystem',palette)
-        self.assertIn('LocalColorSystem.current', source('tools/ToolsScreen.kt'))
+        # Tiles no longer read the color system for icons (2026-11-02):
+        # icon colors are fixed per tool in ToolIconColors, while tiles
+        # still detect dark mode from the theme background below.
+        self.assertNotIn('LocalColorSystem.current', source('tools/ToolsScreen.kt'))
+        self.assertIn('ToolIconColors.iconColorFor(tool.id)', source('tools/ToolsScreen.kt'))
         self.assertIn('colors.background.luminance()', source('tools/ToolsScreen.kt'))
         self.assertIn('LocalReducedMotion.current',dock)
         self.assertIn('if (reduced) snap()',dock)
@@ -201,8 +205,10 @@ class PremiumUxContracts(unittest.TestCase):
             self.assertIn(tag,code)
         for obsolete in ('setWifiOnlyDefault','setMaxConcurrentDownloads','mediaServerUrl','allowHttp'):
             self.assertNotIn(obsolete,code)
-        self.assertIn('viewModel.setHapticIntensity',code)
-        self.assertIn('viewModel.setRespectReducedMotion',code)
+        # Removed from Settings 2026-11-02 (user request): haptics and
+        # reduce-motion rows are gone; the stored preferences stay.
+        self.assertNotIn('viewModel.setHapticIntensity',code)
+        self.assertNotIn('viewModel.setRespectReducedMotion',code)
         self.assertIn('viewModel.setDefaultVideoQuality(choices[it])',code)
         self.assertIn('viewModel.setDefaultAudioQuality(choices[it])',code)
         self.assertIn('viewModel.cleanTemporary()',code)

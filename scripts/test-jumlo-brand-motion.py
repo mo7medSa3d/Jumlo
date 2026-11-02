@@ -113,8 +113,11 @@ class JumloBrandMotionChecks(unittest.TestCase):
         main=code('MainActivity.kt')
         for key in ('setHapticIntensity','HAPTIC_INTENSITY','HAPTIC_ON_COMMIT','setRespectReducedMotion','RESPECT_REDUCED_MOTION','setSoundsEnabled'):
             self.assertIn(key,repo)
+        # User-directed removal 2026-11-02: the haptics and reduce-motion
+        # rows are gone from the Settings page (the stored preferences and
+        # the MainActivity wiring above stay, so behavior keeps its defaults).
         for key in ('viewModel.setHapticIntensity','viewModel.setRespectReducedMotion','settings.hapticIntensity','settings.respectReducedMotion','settings.haptics','settings.reduceMotion'):
-            self.assertIn(key,settings)
+            self.assertNotIn(key,settings)
         self.assertIn('LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit',main)
         self.assertIn('LocalHapticIntensity provides settings.hapticIntensity',main)
         self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',main)
@@ -133,7 +136,10 @@ class JumloBrandMotionChecks(unittest.TestCase):
         settings=code('ui/settings/SettingsScreen.kt')
         self.assertIn('ANIMATOR_DURATION_SCALE',system)
         self.assertIn('LocalReducedMotion provides (systemReduced || settings.respectReducedMotion)',main)
-        self.assertIn('viewModel.setRespectReducedMotion',settings)
+        # User-directed removal 2026-11-02: the in-app reduce-motion toggle
+        # is gone from SettingsScreen, so motion now follows the system
+        # setting (plus the stored preference, which keeps its default).
+        self.assertNotIn('viewModel.setRespectReducedMotion',settings)
         self.assertIn('LocalReducedMotion.current',code('ui/theme/JumloMotion.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/ProductionRows.kt'))
     def test_predictive_back_follows_gesture_and_respects_dirty_state(self):

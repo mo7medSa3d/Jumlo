@@ -113,9 +113,11 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('viewModel.cleanTemporary()', settings)
         self.assertIn('onChooseDownloadFolder', settings)
         self.assertIn('SaveFolderCard(', settings)
-        self.assertIn('viewModel.setHapticIntensity', settings)
-        self.assertIn('viewModel.setRespectReducedMotion', settings)
-        self.assertIn('settings.respectReducedMotion', settings)
+        # Removed from Settings 2026-11-02 (user request): haptics and
+        # reduce-motion rows are gone; the stored preferences stay.
+        self.assertNotIn('viewModel.setHapticIntensity', settings)
+        self.assertNotIn('viewModel.setRespectReducedMotion', settings)
+        self.assertNotIn('settings.respectReducedMotion', settings)
         for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp'):
             self.assertNotIn(obsolete, settings)
         self.assertIn('NeonPanel(', downloads)
