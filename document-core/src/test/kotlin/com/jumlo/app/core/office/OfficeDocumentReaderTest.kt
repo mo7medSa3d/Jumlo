@@ -174,6 +174,21 @@ class OfficeDocumentReaderTest {
         }
     }
 
+    @Test fun officeImageBytesHonorTheCallerMemoryBudget() {
+        val file = docxFile()
+        try {
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(
+                    file, OfficeKind.DOCX, 10_000_000,
+                    maxImageBytes = png.size.toLong() - 1L
+                )
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", failure.message)
+        } finally {
+            file.delete()
+        }
+    }
+
     @Test fun officeXmlRejectsDoctypeAndExternalEntities() {
         val secret = File.createTempFile("office-xxe-", ".txt")
         secret.writeText("OFFICE_XXE_SECRET_SHOULD_NEVER_BE_READ")

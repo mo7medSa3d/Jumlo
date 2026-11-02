@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.StaticLayout
 import android.text.TextPaint
+import com.jumlo.app.core.ImageWorkPolicy
 import com.jumlo.app.core.office.OfficeBlock
 import com.jumlo.app.core.office.OfficeCell
 import com.jumlo.app.core.office.OfficeDocument
@@ -495,14 +496,48 @@ object OfficeToPdfRenderer {
 
         // ---- images ---------------------------------------------------------------
 
+        /**
+         * Decode embedded raster images only after a bounds-only pass proves the
+         * allocation fits. LosslessFactory may hold both the bitmap and encoded
+         * image data at once, so reserve half the caller's bitmap budget.
+         */
+        private fun decodeEmbeddedRaster(bytes: ByteArray): Bitmap {
+            val decodeBudget = maxBitmapBytes / 2L
+            val bounds = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+                inScaled = false
+            }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            require(bounds.outWidth > 0 && bounds.outHeight > 0) { "IMAGE_DECODE_FAILED" }
+            ImageWorkPolicy.requireFits(bounds.outWidth, bounds.outHeight, 0L, decodeBudget)
+            val bitmap = BitmapFactory.decodeByteArray(
+                bytes, 0, bytes.size,
+                BitmapFactory.Options().apply {
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                    inScaled = false
+                }
+            ) ?: throw IllegalArgumentException("IMAGE_DECODE_FAILED")
+            try {
+                require(bitmap.width == bounds.outWidth && bitmap.height == bounds.outHeight) {
+                    "IMAGE_DECODE_DIMENSIONS_CHANGED"
+                }
+                require(bitmap.allocationByteCount.toLong() <= decodeBudget) {
+                    "IMAGE_MEMORY_BUDGET_EXCEEDED"
+                }
+                return bitmap
+            } catch (failure: Throwable) {
+                bitmap.recycle()
+                throw failure
+            }
+        }
+
         private fun drawImage(block: OfficeBlock.ImageBlock) {
             checkCancel()
             try {
                 val image = if (block.extension == "jpg" || block.extension == "jpeg") {
                     JPEGFactory.createFromByteArray(document, block.bytes)
                 } else {
-                    val bitmap = BitmapFactory.decodeByteArray(block.bytes, 0, block.bytes.size)
-                        ?: throw IllegalArgumentException("IMAGE_DECODE_FAILED")
+                    val bitmap = decodeEmbeddedRaster(block.bytes)
                     try {
                         LosslessFactory.createFromImage(document, bitmap)
                     } finally {
@@ -517,8 +552,11 @@ object OfficeToPdfRenderer {
                 stream!!.drawImage(image, margin + (availWidth - w) / 2f, cursorY - h, w, h)
                 cursorY -= h + 4f
                 hasContent = true
+            } catch (failure: IllegalArgumentException) {
+                if (failure.message == "IMAGE_MEMORY_BUDGET_EXCEEDED" ||
+                    failure.message == "IMAGE_DIMENSIONS_UNREPRESENTABLE") throw failure
+                dropped++
             } catch (_: Exception) {
-                // One bad picture must not kill the whole document.
                 dropped++
             }
         }

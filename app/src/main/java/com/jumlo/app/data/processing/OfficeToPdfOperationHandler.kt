@@ -51,7 +51,14 @@ import javax.inject.Singleton
             context.sources.withSeekable(request.sourceIds.single(), request.id) { input ->
                 originalBytes = input.length()
                 val kind = OfficeDocumentReader.detect(input, sourceName, context.budget.maxTemporaryBytes)
-                val document = OfficeDocumentReader.read(input, kind, context.budget.maxTemporaryBytes) {
+                val imageBudget = minOf(
+                    OfficeDocumentReader.MAX_IMAGE_BYTES,
+                    context.budget.maxTemporaryBytes,
+                    context.budget.maxBitmapBytes / 4L
+                )
+                val document = OfficeDocumentReader.read(
+                    input, kind, context.budget.maxTemporaryBytes, imageBudget
+                ) {
                     context.checkCancellation()
                 }
                 val renderable = document.blocks.any { block ->

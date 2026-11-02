@@ -248,16 +248,23 @@ object OfficeDocumentReader {
 
     // ---- entry point ---------------------------------------------------------
 
-    fun read(file: File, kind: OfficeKind, maxBytes: Long, checkCancel: () -> Unit = {}): OfficeDocument {
+    fun read(
+        file: File,
+        kind: OfficeKind,
+        maxBytes: Long,
+        maxImageBytes: Long = MAX_IMAGE_BYTES,
+        checkCancel: () -> Unit = {}
+    ): OfficeDocument {
         val packageLimit = packageByteLimit(maxBytes)
+        require(maxImageBytes in 0L..MAX_IMAGE_BYTES) { "OFFICE_SIZE_LIMIT" }
         require(file.length() <= packageLimit) { "OFFICE_SIZE_LIMIT" }
         try {
             ZipFile(file).use { zip ->
                 val map = entries(zip, packageLimit)
                 return when (kind) {
-                    OfficeKind.DOCX -> readDocx(zip, map, checkCancel)
-                    OfficeKind.XLSX -> readXlsx(zip, map, checkCancel)
-                    OfficeKind.PPTX -> readPptx(zip, map, checkCancel)
+                    OfficeKind.DOCX -> readDocx(zip, map, maxImageBytes, checkCancel)
+                    OfficeKind.XLSX -> readXlsx(zip, map, maxImageBytes, checkCancel)
+                    OfficeKind.PPTX -> readPptx(zip, map, maxImageBytes, checkCancel)
                 }
             }
         } catch (e: IllegalArgumentException) { throw e } catch (_: Exception) {
@@ -267,7 +274,7 @@ object OfficeDocumentReader {
 
     // ---- shared accumulation ---------------------------------------------------
 
-    private class Accumulator {
+    private class Accumulator(private val maxImageBytes: Long) {
         val blocks = ArrayList<OfficeBlock>()
         val unsupported = LinkedHashSet<String>()
         var totalChars = 0L
@@ -299,12 +306,12 @@ object OfficeDocumentReader {
             blocks += block
         }
         fun addImage(bytes: ByteArray, extension: String) {
-            require(bytes.size.toLong() <= MAX_IMAGE_BYTES - imageBytes) { "OFFICE_SIZE_LIMIT" }
+            require(bytes.size.toLong() <= maxImageBytes - imageBytes) { "OFFICE_SIZE_LIMIT" }
             imageBytes += bytes.size
             add(OfficeBlock.ImageBlock(bytes, extension))
         }
         fun readImage(input: InputStream, extension: String, checkCancel: () -> Unit) {
-            val remaining = MAX_IMAGE_BYTES - imageBytes
+            val remaining = maxImageBytes - imageBytes
             require(remaining > 0L) { "OFFICE_SIZE_LIMIT" }
             val output = ByteArrayOutputStream(minOf(remaining, 64L * 1024L).toInt())
             val buffer = ByteArray(16 * 1024)
@@ -327,7 +334,7 @@ object OfficeDocumentReader {
 
     // ---- docx ------------------------------------------------------------------
 
-    private fun readDocx(zip: ZipFile, map: Map<String, ZipEntry>, checkCancel: () -> Unit): OfficeDocument {
+    private fun readDocx(zip: ZipFile, map: Map<String, ZipEntry>, maxImageBytes: Long, checkCancel: () -> Unit): OfficeDocument {
         val main = "word/document.xml"
         require(map.containsKey(main)) { "OFFICE_INVALID" }
         val relsList = relsWithTypes(zip, map, "word/_rels/document.xml.rels")
@@ -337,7 +344,7 @@ object OfficeDocumentReader {
         val hasFootnotes = map.keys.any { it == "word/footnotes.xml" || it == "word/endnotes.xml" }
         // Numbering: numId -> (ilvl -> format), plus abstract fallback.
         val numbering = loadNumbering(zip, map)
-        val acc = Accumulator()
+        val acc = Accumulator(maxImageBytes)
         if (hasHeaders) acc.unsupported += "HEADER_FOOTER"
         if (hasFootnotes) acc.unsupported += "FOOTNOTE"
 
@@ -700,12 +707,12 @@ object OfficeDocumentReader {
         }
     }
 
-    private fun readXlsx(zip: ZipFile, map: Map<String, ZipEntry>, checkCancel: () -> Unit): OfficeDocument {
+    private fun readXlsx(zip: ZipFile, map: Map<String, ZipEntry>, maxImageBytes: Long, checkCancel: () -> Unit): OfficeDocument {
         val workbook = "xl/workbook.xml"
         require(map.containsKey(workbook)) { "OFFICE_INVALID" }
         val shared = loadSharedStrings(zip, map)
         val dateStyles = loadDateFormats(zip, map)
-        val acc = Accumulator()
+        val acc = Accumulator(maxImageBytes)
         // Sheet order from workbook.xml, resolved through workbook rels.
         val sheets = ArrayList<Pair<String, String>>()
         open(zip, map, workbook)!!.use { stream ->
@@ -803,7 +810,7 @@ object OfficeDocumentReader {
 
     // ---- pptx ------------------------------------------------------------------
 
-    private fun readPptx(zip: ZipFile, map: Map<String, ZipEntry>, checkCancel: () -> Unit): OfficeDocument {
+    private fun readPptx(zip: ZipFile, map: Map<String, ZipEntry>, maxImageBytes: Long, checkCancel: () -> Unit): OfficeDocument {
         val presentation = "ppt/presentation.xml"
         require(map.containsKey(presentation)) { "OFFICE_INVALID" }
         var slideWidthPt = 960.0
@@ -823,7 +830,7 @@ object OfficeDocumentReader {
             })
         }
         val presRels = rels(zip, map, "ppt/_rels/presentation.xml.rels")
-        val acc = Accumulator()
+        val acc = Accumulator(maxImageBytes)
         slideIds.forEachIndexed { slideIndex, rid ->
             checkCancel()
             val target = presRels[rid]?.let { resolve(presentation, it) } ?: return@forEachIndexed
