@@ -10,6 +10,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.jumlo.app.core.office.OfficePackageValidator
 import com.jumlo.app.core.office.OfficePackageWriter
+import com.jumlo.app.core.office.OfficeBlock
+import com.jumlo.app.core.office.OfficeCell
+import com.jumlo.app.core.office.OfficeDocument
+import com.jumlo.app.core.office.OfficeKind
 import com.jumlo.app.data.jobs.ExecutionContext
 import com.jumlo.app.data.jobs.WorkBudget
 import com.jumlo.app.data.local.AppDatabase
@@ -55,6 +59,28 @@ import javax.xml.parsers.DocumentBuilderFactory
 /** Uses real PDFBox input, Android rasterization and durable publication. No OCR model is needed. */
 @RunWith(AndroidJUnit4::class)
 class PdfOfficeHandlerTest {
+    @Test fun largeNonLatinOfficeTableRendersInBoundedPageChunks() = withFixture {
+        val rows = (0 until 800).map { index ->
+            listOf(
+                OfficeCell("الاسم رقم $index", bold = index == 0),
+                OfficeCell("قيمة عربية قابلة للبحث $index")
+            )
+        }
+        val document = OfficeDocument(
+            kind = OfficeKind.DOCX,
+            pageWidthPt = 595.0,
+            pageHeightPt = 842.0,
+            marginPt = 56.0,
+            blocks = listOf(OfficeBlock.TableBlock(rows, headerRow = true)),
+            unsupported = emptyList()
+        )
+        OfficeToPdfRenderer.render(document, 16L * 1024 * 1024) {}.use { rendered ->
+            assertTrue("A long table must continue onto later pages", rendered.document.numberOfPages > 1)
+            assertEquals(1, rendered.stats.rasterizedBlocks)
+            assertEquals(0, rendered.stats.droppedImages)
+        }
+    }
+
     @Test fun officeToPdfUsesAndroidSaxAndPublishesReadableContent() = withFixture {
         val source=File(folder,"android-parser.docx")
         val documentXml="""<?xml version="1.0" encoding="UTF-8"?>
