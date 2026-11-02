@@ -24,6 +24,7 @@ import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.OcrWebHandler
 import com.jumlo.app.data.processing.PdfOfficeOperationHandler
 import com.jumlo.app.data.processing.OfficeToPdfOperationHandler
+import com.jumlo.app.data.processing.OfficeToPdfRenderer
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.model.ItemStatus
 import com.jumlo.app.model.JobRequest
