@@ -272,6 +272,19 @@ object OfficeDocumentReader {
         val unsupported = LinkedHashSet<String>()
         var totalChars = 0L
         var imageBytes = 0L
+        private var tableRows = 0
+        private var tableCells = 0
+
+        fun reserveTableRow() {
+            require(tableRows < MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+            tableRows++
+        }
+
+        fun reserveTableCell() {
+            require(tableCells < MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
+            tableCells++
+        }
+
         fun add(block: OfficeBlock) {
             require(blocks.size < MAX_BLOCKS) { "OFFICE_SIZE_LIMIT" }
             val addedChars = when (block) {
@@ -365,7 +378,6 @@ object OfficeDocumentReader {
                 var inTrPr = false
                 var inSectPr = false
                 var documentTextChars = 0L
-                var documentTableCells = 0
 
                 fun flushRun() {
                     if (!inRun) return
@@ -466,15 +478,14 @@ object OfficeDocumentReader {
                         // Nested tables (depth > 1) only contribute their text
                         // to the outer cell; their rows never reach the grid.
                         "tr" -> if (inTable == 1) {
-                            require(rows.size < MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+                            acc.reserveTableRow()
                             currentRow = ArrayList()
                             rowHasHeader = false
                         }
                         "trPr" -> inTrPr = true
                         "tblHeader" -> if (inTrPr) rowHasHeader = true
                         "tc" -> if (inTable == 1) {
-                            documentTableCells++
-                            require(documentTableCells <= MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
+                            acc.reserveTableCell()
                             inCell = true
                             cellParagraphs = ArrayList()
                             cellBold = false
@@ -725,21 +736,17 @@ object OfficeDocumentReader {
             var inInlineText = false
             var inCell = false
             var cellCol = 0
-            var sheetRows = 0
-            var sheetCells = 0
             var sheetXmlChars = 0L
             var sheetOutputChars = 0L
             sheetStream.use { parseXml(it, object : DefaultHandler() {
                 override fun startElement(uri: String?, local: String, qName: String, attrs: Attributes) {
                     when (local) {
                         "row" -> {
-                            sheetRows++
-                            require(sheetRows <= MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+                            acc.reserveTableRow()
                             currentCells = sortedMapOf()
                         }
                         "c" -> {
-                            sheetCells++
-                            require(sheetCells <= MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
+                            acc.reserveTableCell()
                             inCell = true
                             cellCol = attr(attrs, "r")?.let { colIndex(it) } ?: 0
                             cellType = attr(attrs, "t")
@@ -843,8 +850,6 @@ object OfficeDocumentReader {
                 var inTblPr = false
                 var tableHeader = false
                 var slideTextChars = 0L
-                var slideTableRows = 0
-                var slideTableCells = 0
 
                 fun flushRun() {
                     if (!inRun) return
@@ -888,13 +893,11 @@ object OfficeDocumentReader {
                             tableHeader = attr(attrs, "firstRow") == "1"
                         }
                         "tr" -> if (inTable) {
-                            slideTableRows++
-                            require(slideTableRows <= MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+                            acc.reserveTableRow()
                             currentRow = ArrayList()
                         }
                         "tc" -> if (inTable) {
-                            slideTableCells++
-                            require(slideTableCells <= MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
+                            acc.reserveTableCell()
                             inCell = true
                             cellText = StringBuilder()
                         }

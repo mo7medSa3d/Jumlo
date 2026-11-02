@@ -19,6 +19,7 @@ import com.jumlo.app.data.output.PublicOutputStore
 import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.OcrWebHandler
 import com.jumlo.app.data.processing.PdfOfficeOperationHandler
+import com.jumlo.app.data.processing.OfficeToPdfOperationHandler
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.model.ItemStatus
 import com.jumlo.app.model.JobRequest
@@ -30,6 +31,7 @@ import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,11 +48,67 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.util.UUID
 import java.util.zip.ZipFile
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.xml.parsers.DocumentBuilderFactory
 
 /** Uses real PDFBox input, Android rasterization and durable publication. No OCR model is needed. */
 @RunWith(AndroidJUnit4::class)
 class PdfOfficeHandlerTest {
+    @Test fun officeToPdfUsesAndroidSaxAndPublishesReadableContent() = withFixture {
+        val source=File(folder,"android-parser.docx")
+        val documentXml="""<?xml version="1.0" encoding="UTF-8"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>ANDROID_OFFICE_XML_SAFE_CONTENT</w:t></w:r></w:p></w:body>
+</w:document>"""
+        writeDocx(source,documentXml)
+        val original=source.readBytes()
+        val request=request("office_to_pdf",inspect(source))
+        val outcomes=OfficeToPdfOperationHandler().execute(request,execution())
+        assertEquals(ItemStatus.CREATED,outcomes.single().status)
+        val record=outputs.find(request.id,"document")!!
+        published(record.uri) { file ->
+            PDDocument.load(file).use { output ->
+                assertEquals(1,output.numberOfPages)
+                assertTrue(PDFTextStripper().getText(output).contains("ANDROID_OFFICE_XML_SAFE_CONTENT"))
+            }
+        }
+        assertArrayEquals(original,source.readBytes())
+    }
+
+    @Test fun officeToPdfRejectsDoctypeAndExternalEntitiesOnAndroidSax() = withFixture {
+        val secret=File(folder,"external-secret.txt").apply { writeText("OFFICE_ANDROID_XXE_SECRET") }
+        val source=File(folder,"xxe.docx")
+        val documentXml="""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE w:document [<!ENTITY xxe SYSTEM "${secret.toURI()}">]>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>&xxe;</w:t></w:r></w:p></w:body>
+</w:document>"""
+        writeDocx(source,documentXml)
+        val original=source.readBytes()
+        val request=request("office_to_pdf",inspect(source))
+        val failure=runCatching { OfficeToPdfOperationHandler().execute(request,execution()) }.exceptionOrNull()
+        assertNotNull(failure)
+        assertEquals("OFFICE_INVALID",failure!!.message)
+        assertNull(outputs.find(request.id,"document"))
+        assertArrayEquals(original,source.readBytes())
+        assertEquals("OFFICE_ANDROID_XXE_SECRET",secret.readText())
+    }
+
+    private fun writeDocx(file:File,documentXml:String) {
+        val contentTypes="""<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>"""
+        ZipOutputStream(file.outputStream()).use { zip ->
+            listOf("[Content_Types].xml" to contentTypes,"word/document.xml" to documentXml).forEach { (name,content) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+        }
+    }
+
     @Test fun digitalPdfFontEvidenceBecomesARealWordHeading() = withFixture {
         val source=File(folder,"heading.pdf")
         PDDocument().use { document ->
