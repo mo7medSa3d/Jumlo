@@ -162,6 +162,19 @@ object OfficeDocumentReader {
         }
     }
 
+    private const val OFFICE_RELATIONSHIPS_NS =
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+    /** Relationship references such as r:id must not be confused with numeric id attributes. */
+    private fun relationshipId(attrs: Attributes): String? {
+        for (i in 0 until attrs.length) {
+            if (attrs.getLocalName(i) == "id" && attrs.getURI(i) == OFFICE_RELATIONSHIPS_NS) {
+                return attrs.getValue(i)
+            }
+        }
+        return null
+    }
+
     /** Attribute by local name, tolerant of prefix differences (val vs w:val). */
     private fun attr(attrs: Attributes, name: String): String? {
         for (i in 0 until attrs.length) {
@@ -879,7 +892,9 @@ object OfficeDocumentReader {
                             attr(attrs, "cx")?.toDoubleOrNull()?.let { slideWidthPt = it / 12700.0 }
                             attr(attrs, "cy")?.toDoubleOrNull()?.let { slideHeightPt = it / 12700.0 }
                         }
-                        "sldId" -> attr(attrs, "id")?.let { slideIds += it }
+                        // The required numeric id and r:id both have local name "id".
+                        // Only the relationship namespace contains the slide target id.
+                        "sldId" -> relationshipId(attrs)?.let { slideIds += it }
                     }
                 }
             })
