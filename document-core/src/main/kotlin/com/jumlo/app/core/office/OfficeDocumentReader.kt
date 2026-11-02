@@ -31,6 +31,9 @@ object OfficeDocumentReader {
     const val MAX_TOTAL_CHARS = 10_000_000L
     const val MAX_IMAGE_BYTES = 256L * 1024 * 1024
     const val MAX_EXPANDED_PACKAGE_BYTES = 512L * 1024 * 1024
+    const val MAX_TABLE_ROWS = 50_000
+    const val MAX_TABLE_CELLS = 1_000_000
+    const val MAX_SHARED_STRINGS = 50_000
 
     private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
     private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
@@ -361,6 +364,8 @@ object OfficeDocumentReader {
                 var inTcPr = false
                 var inTrPr = false
                 var inSectPr = false
+                var documentTextChars = 0L
+                var documentTableCells = 0
 
                 fun flushRun() {
                     if (!inRun) return
@@ -460,10 +465,21 @@ object OfficeDocumentReader {
                         }
                         // Nested tables (depth > 1) only contribute their text
                         // to the outer cell; their rows never reach the grid.
-                        "tr" -> if (inTable == 1) { currentRow = ArrayList(); rowHasHeader = false }
+                        "tr" -> if (inTable == 1) {
+                            require(rows.size < MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+                            currentRow = ArrayList()
+                            rowHasHeader = false
+                        }
                         "trPr" -> inTrPr = true
                         "tblHeader" -> if (inTrPr) rowHasHeader = true
-                        "tc" -> if (inTable == 1) { inCell = true; cellParagraphs = ArrayList(); cellBold = false; cellSpan = 1 }
+                        "tc" -> if (inTable == 1) {
+                            documentTableCells++
+                            require(documentTableCells <= MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
+                            inCell = true
+                            cellParagraphs = ArrayList()
+                            cellBold = false
+                            cellSpan = 1
+                        }
                         "tcPr" -> inTcPr = true
                         "gridSpan" -> if (inTcPr) cellSpan = attr(attrs, "val")?.toIntOrNull() ?: 1
                         "sectPr" -> inSectPr = true
@@ -495,6 +511,8 @@ object OfficeDocumentReader {
 
                 override fun characters(ch: CharArray, start: Int, length: Int) {
                     if (inRun && inText && inInstr == 0 && inDel == 0) {
+                        documentTextChars += length.toLong()
+                        require(documentTextChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
                         runText.append(ch, start, length)
                     }
                 }
@@ -576,16 +594,24 @@ object OfficeDocumentReader {
         val stream = open(zip, map, "xl/sharedStrings.xml") ?: return emptyList()
         val out = ArrayList<String>()
         var current: StringBuilder? = null
+        var totalChars = 0L
         var inText = false
         stream.use { parseXml(it, object : DefaultHandler() {
             override fun startElement(uri: String?, local: String, qName: String, attrs: Attributes) {
                 when (local) {
-                    "si" -> current = StringBuilder()
+                    "si" -> {
+                        require(out.size < MAX_SHARED_STRINGS) { "OFFICE_SIZE_LIMIT" }
+                        current = StringBuilder()
+                    }
                     "t" -> inText = true
                 }
             }
             override fun characters(ch: CharArray, start: Int, length: Int) {
-                if (inText) current?.append(ch, start, length)
+                if (inText) {
+                    totalChars += length.toLong()
+                    require(totalChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
+                    current?.append(ch, start, length)
+                }
             }
             override fun endElement(uri: String?, local: String, qName: String) {
                 when (local) {
@@ -635,10 +661,15 @@ object OfficeDocumentReader {
     }
 
     private fun colIndex(ref: String): Int {
+        val letters = ref.takeWhile { it.isLetter() }
+        require(letters.length in 1..3 && letters.all { it.uppercaseChar() in 'A'..'Z' }) {
+            "OFFICE_INVALID"
+        }
         var index = 0
-        for (ch in ref.takeWhile { it.isLetter() }) {
+        for (ch in letters) {
             index = index * 26 + (ch.uppercaseChar() - 'A' + 1)
         }
+        require(index in 1..16_384) { "OFFICE_SIZE_LIMIT" }
         return index - 1
     }
 
@@ -694,11 +725,21 @@ object OfficeDocumentReader {
             var inInlineText = false
             var inCell = false
             var cellCol = 0
+            var sheetRows = 0
+            var sheetCells = 0
+            var sheetXmlChars = 0L
+            var sheetOutputChars = 0L
             sheetStream.use { parseXml(it, object : DefaultHandler() {
                 override fun startElement(uri: String?, local: String, qName: String, attrs: Attributes) {
                     when (local) {
-                        "row" -> { currentCells = sortedMapOf() }
+                        "row" -> {
+                            sheetRows++
+                            require(sheetRows <= MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+                            currentCells = sortedMapOf()
+                        }
                         "c" -> {
+                            sheetCells++
+                            require(sheetCells <= MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
                             inCell = true
                             cellCol = attr(attrs, "r")?.let { colIndex(it) } ?: 0
                             cellType = attr(attrs, "t")
@@ -711,6 +752,10 @@ object OfficeDocumentReader {
                     }
                 }
                 override fun characters(ch: CharArray, start: Int, length: Int) {
+                    if (inValue || inInlineText) {
+                        sheetXmlChars += length.toLong()
+                        require(sheetXmlChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
+                    }
                     if (inValue) cellValue.append(ch, start, length)
                     else if (inInlineText) inlineText.append(ch, start, length)
                 }
@@ -729,6 +774,8 @@ object OfficeDocumentReader {
                                     "inlineStr" -> inlineText.toString()
                                     else -> raw.toDoubleOrNull()?.let { formatExcelNumber(it, cellStyle in dateStyles) } ?: raw
                                 }
+                                sheetOutputChars += text.length.toLong()
+                                require(sheetOutputChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
                                 currentCells[cellCol] = OfficeCell(text)
                             }
                             inCell = false
@@ -795,6 +842,9 @@ object OfficeDocumentReader {
                 var cellText = StringBuilder()
                 var inTblPr = false
                 var tableHeader = false
+                var slideTextChars = 0L
+                var slideTableRows = 0
+                var slideTableCells = 0
 
                 fun flushRun() {
                     if (!inRun) return
@@ -837,8 +887,17 @@ object OfficeDocumentReader {
                             // firstRow is an attribute of tblPr, not an element.
                             tableHeader = attr(attrs, "firstRow") == "1"
                         }
-                        "tr" -> if (inTable) currentRow = ArrayList()
-                        "tc" -> if (inTable) { inCell = true; cellText = StringBuilder() }
+                        "tr" -> if (inTable) {
+                            slideTableRows++
+                            require(slideTableRows <= MAX_TABLE_ROWS) { "OFFICE_SIZE_LIMIT" }
+                            currentRow = ArrayList()
+                        }
+                        "tc" -> if (inTable) {
+                            slideTableCells++
+                            require(slideTableCells <= MAX_TABLE_CELLS) { "OFFICE_SIZE_LIMIT" }
+                            inCell = true
+                            cellText = StringBuilder()
+                        }
                         "blip" -> {
                             val embed = attr(attrs, "embed")
                             val target = embed?.let { slideRelTargets[it] }
@@ -857,7 +916,11 @@ object OfficeDocumentReader {
                     }
                 }
                 override fun characters(ch: CharArray, start: Int, length: Int) {
-                    if (inRun && inText) runText.append(ch, start, length)
+                    if (inRun && inText) {
+                        slideTextChars += length.toLong()
+                        require(slideTextChars <= MAX_TOTAL_CHARS) { "OFFICE_SIZE_LIMIT" }
+                        runText.append(ch, start, length)
+                    }
                 }
                 override fun endElement(uri: String?, local: String, qName: String) {
                     when (local) {
