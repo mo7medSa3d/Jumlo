@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.io.IOException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import javax.xml.parsers.SAXParserFactory
@@ -42,6 +43,47 @@ object OfficeDocumentReader {
     private const val LOAD_EXTERNAL_DTD = "http://apache.org/xml/features/nonvalidating/load-external-dtd"
     private const val LEXICAL_HANDLER = "http://xml.org/sax/properties/lexical-handler"
 
+    /**
+     * Android's Expat XMLReader does not expose LexicalHandler on every API
+     * level. Keep a streaming DOCTYPE guard in front of SAX so parser-provider
+     * differences can never turn that unsupported property into either a
+     * broken valid-document path or an XXE bypass.
+     */
+    private class DoctypeRejectingInputStream(input: InputStream) : FilterInputStream(input) {
+        private val patterns = arrayOf(
+            "<!DOCTYPE".toByteArray(Charsets.US_ASCII),
+            "<!DOCTYPE".toByteArray(Charsets.UTF_16LE),
+            "<!DOCTYPE".toByteArray(Charsets.UTF_16BE)
+        )
+        private val matched = IntArray(patterns.size)
+
+        private fun scan(value: Int) {
+            if (value < 0) return
+            for (index in patterns.indices) {
+                val pattern = patterns[index]
+                val next = value.toByte()
+                matched[index] = when {
+                    next == pattern[matched[index]] -> matched[index] + 1
+                    next == pattern[0] -> 1
+                    else -> 0
+                }
+                if (matched[index] == pattern.size) throw IOException("OFFICE_DTD_NOT_ALLOWED")
+            }
+        }
+
+        override fun read(): Int {
+            val value = super.read()
+            scan(value)
+            return value
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val count = super.read(buffer, offset, length)
+            if (count > 0) for (index in offset until offset + count) scan(buffer[index].toInt() and 0xff)
+            return count
+        }
+    }
+
     // ---- generic SAX helpers -------------------------------------------------
 
     private fun parseXml(stream: InputStream, handler: DefaultHandler) {
@@ -67,22 +109,24 @@ object OfficeDocumentReader {
         reader.entityResolver = EntityResolver { _, _ ->
             throw SAXException("OFFICE_EXTERNAL_ENTITY_BLOCKED")
         }
-        reader.setProperty(LEXICAL_HANDLER, object : LexicalHandler {
-            override fun startDTD(name: String?, publicId: String?, systemId: String?) {
-                throw SAXException("OFFICE_DTD_NOT_ALLOWED")
-            }
-            override fun endDTD() = Unit
-            override fun startEntity(name: String?) = Unit
-            override fun endEntity(name: String?) = Unit
-            override fun startCDATA() = Unit
-            override fun endCDATA() = Unit
-            override fun comment(ch: CharArray, start: Int, length: Int) = Unit
-        })
+        runCatching {
+            reader.setProperty(LEXICAL_HANDLER, object : LexicalHandler {
+                override fun startDTD(name: String?, publicId: String?, systemId: String?) {
+                    throw SAXException("OFFICE_DTD_NOT_ALLOWED")
+                }
+                override fun endDTD() = Unit
+                override fun startEntity(name: String?) = Unit
+                override fun endEntity(name: String?) = Unit
+                override fun startCDATA() = Unit
+                override fun endCDATA() = Unit
+                override fun comment(ch: CharArray, start: Int, length: Int) = Unit
+            })
+        }
         reader.contentHandler = handler
         reader.errorHandler = handler
         // Parse through the configured XMLReader directly. SAXParser.parse(...,
         // DefaultHandler) replaces the reader's resolver with the handler's default.
-        reader.parse(InputSource(stream))
+        reader.parse(InputSource(DoctypeRejectingInputStream(stream)))
     }
 
     private fun packageByteLimit(requested: Long): Long {
@@ -268,8 +312,10 @@ object OfficeDocumentReader {
                     OfficeKind.PPTX -> readPptx(zip, map, maxImageBytes, checkCancel)
                 }
             }
-        } catch (e: IllegalArgumentException) { throw e } catch (_: Exception) {
-            throw IllegalArgumentException("OFFICE_INVALID")
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: Exception) {
+            throw IllegalArgumentException("OFFICE_INVALID", e)
         }
     }
 
