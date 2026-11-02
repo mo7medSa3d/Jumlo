@@ -173,4 +173,46 @@ class OfficeDocumentReaderTest {
             OfficeDocumentReader.read(empty, OfficeKind.DOCX, 10_000_000)
         }
     }
+
+    @Test fun officeXmlRejectsDoctypeAndExternalEntities() {
+        val secret = File.createTempFile("office-xxe-", ".txt")
+        secret.writeText("OFFICE_XXE_SECRET_SHOULD_NEVER_BE_READ")
+        val document = """<?xml version="1.0"?>
+<!DOCTYPE w:document [<!ENTITY xxe SYSTEM "${secret.toURI()}">]>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>&xxe;</w:t></w:r></w:p></w:body>
+</w:document>"""
+        val file = packageFile(mapOf("word/document.xml" to document.toByteArray()))
+        try {
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000)
+            }
+            assertEquals("OFFICE_INVALID", failure.message)
+        } finally {
+            secret.delete()
+            file.delete()
+        }
+    }
+
+    @Test fun officePackageHonorsCompressedAndExpandedByteBudgets() {
+        val largeText = "office package budget test ".repeat(4_000)
+        val document = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>$largeText</w:t></w:r></w:p></w:body>
+</w:document>"""
+        val file = packageFile(mapOf("word/document.xml" to document.toByteArray()))
+        try {
+            val compressedBudget = file.length() + 32L
+            val readFailure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, compressedBudget)
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", readFailure.message)
+
+            val detectFailure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.detect(file, "large.docx", compressedBudget)
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", detectFailure.message)
+        } finally {
+            file.delete()
+        }
+    }
 }
