@@ -7,22 +7,15 @@ import com.jumlo.app.core.PdfDisplayCoordinates
 import com.jumlo.app.core.PdfDisplayFrame
 import com.jumlo.app.core.PdfWatermarkStyle
 import com.jumlo.app.core.OverlayStylePolicy
-import com.tom_roush.pdfbox.contentstream.operator.Operator
 import com.tom_roush.pdfbox.cos.COSArray
 import com.tom_roush.pdfbox.cos.COSDictionary
 import com.tom_roush.pdfbox.cos.COSName
-import com.tom_roush.pdfbox.cos.COSNumber
-import com.tom_roush.pdfbox.cos.COSString
-import com.tom_roush.pdfbox.cos.COSStream
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
-import com.tom_roush.pdfbox.pdfparser.PDFStreamParser
-import com.tom_roush.pdfbox.pdfwriter.ContentStreamWriter
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
-import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
@@ -40,8 +33,6 @@ import com.tom_roush.pdfbox.pdmodel.interactive.form.PDTextField
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDTerminalField
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.io.File
-import kotlin.math.abs
-import kotlin.math.sqrt
 
 /** Box coordinates are [x0, y0, x1, y1] in PDF user space (y grows upward). */
 data class PageBox(val media: List<Float>, val crop: List<Float>, val rotationDegrees: Int)
@@ -107,7 +98,7 @@ object PdfCapabilityPolicy {
     val capabilities: Set<String> = setOf(
         "MERGE", "SPLIT", "EXTRACT", "REORDER", "ROTATE", "DELETE", "INSERT",
         "CROP_BOX", "METADATA", "PROTECT_STANDARD", "REMOVE_PROTECTION",
-        "COMPRESS_IMAGE_DOWNSCALE", "COMPARE_TEXT", "REDACT_OPERATOR_LEVEL",
+        "COMPRESS_IMAGE_DOWNSCALE", "COMPARE_TEXT", "REDACT_FULL_PAGE_RASTER",
         "FORM_FILL_TEXT_CHECKBOX_RADIO", "FORM_FLATTEN", "FORM_LIST",
         "STAMP_TEXT", "STAMP_IMAGE", "ANNOTATION_TEXT", "OCR_INVISIBLE_TEXT"
     )
@@ -730,249 +721,32 @@ object PdfBoxBackend {
     }
 
     /**
-     * Operator-level redaction: removes text-showing operands, fully-covered images and
-     * annotations inside each region. Pages too complex for a pure pass are returned in
-     * [pageFallbacks] and must be rasterized by the Android handler before publication.
+     * Security-first redaction: every page containing a redaction region is returned
+     * for full-page rasterization by the Android handler. The prior operator parser
+     * estimated glyph bounds and could miss content emitted by unsupported PDF
+     * operators. Never publish that partially inspected content stream.
+     *
+     * A fresh image-only page is the only output for each touched page. Unmasked
+     * pages remain eligible for structural import by the handler.
      */
     fun redact(doc: PDDocument, regionsByPage: Map<Int, List<RedactRegion>>): RedactResult {
-        var removedChunks = 0
-        var removedImages = 0
-        val fallbacks = mutableListOf<Int>()
-        val fragments = mutableMapOf<Int, Set<String>>()
-        doc.pages.forEachIndexed { pageIndex, page ->
-            val regions = regionsByPage[pageIndex].orEmpty()
-            if (regions.isEmpty()) return@forEachIndexed
-            val media = page.mediaBox
-            val areas = regions.map { r -> Geo.Area(
-                (r.left * media.width).toFloat(),
-                ((1.0 - r.bottom) * media.height).toFloat(),
-                (r.right * media.width).toFloat(),
-                ((1.0 - r.top) * media.height).toFloat()
-            ) }
-            var streamCount = 0
-            page.getContentStreams().let { streams ->
-                while (streams.hasNext()) { ++streamCount; streams.next(); if (streamCount > 1) break }
-            }
-            if (streamCount > 1 || !page.hasContents()) { fallbacks.add(pageIndex); return@forEachIndexed }
-            val plan = ContentRedactor(doc, page, areas)
-            val removed = plan.execute()
-            removedChunks += removed.removedChunks
-            removedImages += removed.images
-            if (removed.complex || removed.removedChunks == 0) fallbacks.add(pageIndex)
-            plan.paintOver(areas)
-            fragments[pageIndex] = plan.removedWordFragments.toSet()
+        val targets = regionsByPage.filterValues { it.isNotEmpty() }
+        val regionCount = targets.values.sumOf { it.size }
+        require(regionCount in 1..1_000) { "INVALID_REDACT_REGION" }
+        targets.keys.forEach { pageIndex ->
+            require(pageIndex in 0 until doc.numberOfPages) { "INVALID_PAGE_INDEX" }
         }
-        val removedAnnotations = stripAnnotations(doc, regionsByPage)
-        val leftover = leftoverAfterRedact(doc, fragments)
-        return RedactResult(removedChunks, removedImages, removedAnnotations, fallbacks.distinct(), leftover)
+        val flattenedAnnotations = targets.keys.sumOf { pageIndex ->
+            runCatching { doc.getPage(pageIndex).annotations.size }.getOrDefault(0)
+        }
+        return RedactResult(
+            removedTextChunks = 0,
+            removedImages = 0,
+            removedAnnotations = flattenedAnnotations,
+            pageFallbacks = targets.keys.sorted(),
+            leftoverText = emptyMap()
+        )
     }
-
-    private fun leftoverAfterRedact(doc: PDDocument, fragments: Map<Int, Set<String>>): Map<Int, List<String>> {
-        if (fragments.isEmpty()) return emptyMap()
-        val leftover = mutableMapOf<Int, List<String>>()
-        fragments.forEach { (page, words) ->
-            if (page !in 0 until doc.numberOfPages) return@forEach
-            val text = pageText(doc,page)
-            val stuck = words.filter { it.isNotBlank() && text.contains(it) }
-            if (stuck.isNotEmpty()) leftover[page] = stuck
-        }
-        return leftover
-    }
-
-    private class Geo private constructor() {
-        data class Area(val x0: Float, val y0: Float, val x1: Float, val y1: Float) {
-            val w: Float get() = x1 - x0
-            val h: Float get() = y1 - y0
-            fun intersects(o: Area): Boolean = x0 < o.x1 && o.x0 < x1 && y0 < o.y1 && o.y0 < y1
-            fun contains(o: Area): Boolean = o.x0 >= x0 && o.y0 >= y0 && o.x1 <= x1 && o.y1 <= y1
-        }
-        /** PDF affine matrix (a b c d e f). */
-        data class Mat(val a: Float, val b: Float, val c: Float, val d: Float, val e: Float, val f: Float) {
-            operator fun times(m: Mat): Mat = Mat(
-                a * m.a + b * m.c, a * m.b + b * m.d,
-                c * m.a + d * m.c, c * m.b + d * m.d,
-                e * m.a + f * m.c + m.e, e * m.b + f * m.d + m.f
-            )
-            fun apply(x: Float, y: Float): Pair<Float, Float> = Pair(a * x + c * y + e, b * x + d * y + f)
-            val scale: Float get() = sqrt(abs((a * d - b * c).toDouble())).toFloat().coerceAtLeast(0.05f)
-            companion object {
-                val IDENTITY = Mat(1f, 0f, 0f, 1f, 0f, 0f)
-                val TRANSLATE = { dx: Float, dy: Float -> Mat(1f, 0f, 0f, 1f, dx, dy) }
-            }
-        }
-    }
-
-    private class ContentRedactor(private val doc: PDDocument, private val page: PDPage, private val areas: List<Geo.Area>) {
-        val removedWordFragments = mutableSetOf<String>()
-        private val tokens = mutableListOf<Any>()
-        private val removeIdx = mutableSetOf<Int>()
-        private var ctm = Geo.Mat.IDENTITY
-        private var tlm = Geo.Mat.IDENTITY
-        private var fontSize = 0f
-        private var leading = 0f
-        private var mutated = false
-        var removedChunks = 0; private set
-        var images = 0; private set
-        var complex = false; private set
-
-        data class Outcome(val removedChunks: Int, val images: Int, val complex: Boolean)
-
-        private fun bounds() = Geo.Area(areas.minOf { it.x0 }, areas.minOf { it.y0 }, areas.maxOf { it.x1 }, areas.maxOf { it.y1 })
-
-        fun execute(): Outcome {
-            try {
-                val parser = PDFStreamParser(page)
-                parser.parse()
-                parser.tokens.forEach { tokens.add(it) }
-            } catch (_: Exception) { complex = true; return Outcome(0, 0, true) }
-            val graphicsStack = mutableListOf<Geo.Mat>()
-            var i = 0
-            while (i < tokens.size) {
-                val operator = tokens[i] as? Operator
-                if (operator == null) { i++; continue }
-                when (operator.getName()) {
-                    "q" -> graphicsStack.add(ctm)
-                    "Q" -> ctm = if (graphicsStack.isNotEmpty()) graphicsStack.removeAt(graphicsStack.lastIndex) else Geo.Mat.IDENTITY
-                    "cm" -> { val m = operandMatrix(i); if (m != null) ctm = m * ctm else complex = true }
-                    "Tf" -> fontSize = (tokens.getOrNull(i - 1) as? COSNumber)?.floatValue() ?: 0f
-                    "Tm" -> { val m = operandMatrix(i); if (m != null) tlm = m else complex = true }
-                    "Td" -> {
-                        val dx = (tokens.getOrNull(i - 2) as? COSNumber)?.floatValue() ?: 0f
-                        val dy = (tokens.getOrNull(i - 1) as? COSNumber)?.floatValue() ?: 0f
-                        tlm = Geo.Mat.TRANSLATE(dx, dy) * tlm
-                    }
-                    "TD" -> {
-                        val dx = (tokens.getOrNull(i - 2) as? COSNumber)?.floatValue() ?: 0f
-                        val dy = (tokens.getOrNull(i - 1) as? COSNumber)?.floatValue() ?: 0f
-                        leading = -dy
-                        tlm = Geo.Mat.TRANSLATE(dx, dy) * tlm
-                    }
-                    "TL" -> leading = (tokens.getOrNull(i - 1) as? COSNumber)?.floatValue() ?: 0f
-                    "T*" -> tlm = Geo.Mat.TRANSLATE(0f, -leading) * tlm
-                    "Tj" -> {
-                        val text = (tokens.getOrNull(i - 1) as? COSString)?.string ?: ""
-                        if (mutateText(i, text)) removedChunks++
-                        i++; continue
-                    }
-                    "TJ" -> {
-                        val text = (tokens.getOrNull(i - 1) as? COSArray)?.let { array ->
-                            (0 until array.size()).map { (array.getObject(it) as? COSString)?.string ?: "" }.joinToString("")
-                        } ?: ""
-                        if (mutateText(i, text)) removedChunks++
-                        i++; continue
-                    }
-                    "'" -> {
-                        tlm = Geo.Mat.TRANSLATE(0f, -leading) * tlm
-                        val text = (tokens.getOrNull(i - 1) as? COSString)?.string ?: ""
-                        if (mutateText(i, text)) removedChunks++
-                        i++; continue
-                    }
-                    "\"" -> {
-                        tlm = Geo.Mat.TRANSLATE((tokens.getOrNull(i - 2) as? COSNumber)?.floatValue() ?: 0f, -leading) * tlm
-                        val text = (tokens.getOrNull(i - 1) as? COSString)?.string ?: ""
-                        if (mutateText(i, text)) removedChunks++
-                        i++; continue
-                    }
-                    "Do" -> {
-                        val name = tokens.getOrNull(i - 1) as? COSName
-                        val xobject = name?.let { page.resources?.getXObject(it) }
-                        val image = xobject as? PDImageXObject
-                        if (name == null || image == null) return Outcome(removedChunks, images, true)
-                        val w = image.width.toFloat(); val h = image.height.toFloat()
-                        val corners = listOf(0f to 0f, w to 0f, w to h, 0f to h).map { (x, y) -> ctm.apply(x, y) }
-                        val rect = Geo.Area(
-                            corners.minOf { it.first }, corners.minOf { it.second },
-                            corners.maxOf { it.first }, corners.maxOf { it.second }
-                        )
-                        when {
-                            rect.intersects(bounds()) && areas.any { it.contains(rect) } -> {
-                                removeIdx.add(i - 1); removeIdx.add(i)
-                                (page.resources?.cosObject?.getDictionaryObject(COSName.XOBJECT) as? COSDictionary)?.removeItem(name)
-                                page.resources?.cosObject?.removeItem(name)
-                                images++
-                            }
-                            rect.intersects(bounds()) -> complex = true
-                        }
-                    }
-                    "re", "W", "Wn", "gs", "sc", "scn", "rg" -> { /* benign */ }
-                    "BT" -> { tlm = Geo.Mat.IDENTITY; leading = 0f }
-                    "ET", "Tc", "Tw", "Tz", "Ts", "Tr" -> { /* benign */ }
-                    "f", "S", "m", "l", "c", "h", "B", "Bs", "b", "b*", "B*" -> { /* draw pass-through */ }
-                    "sh", "fs", "BI", "DI", "EI" -> complex = true
-                    else -> { /* unknown operators leave removal intact; kept as-is */ }
-                }
-                i++
-            }
-            if (removeIdx.isNotEmpty() || mutated) replaceContent(page, tokens.filterIndexed { index, _ -> index !in removeIdx })
-            return Outcome(removedChunks, images, complex)
-        }
-
-        private fun operandMatrix(index: Int): Geo.Mat? {
-            fun num(delta: Int, fallback: Float): Float = (tokens.getOrNull(index - delta) as? COSNumber)?.floatValue() ?: fallback
-            return Geo.Mat(num(6, 1f), num(5, 0f), num(4, 0f), num(3, 1f), num(2, 0f), num(1, 0f))
-        }
-
-        private fun mutateText(operatorIndex: Int, chars: String): Boolean {
-            val point = ctm.apply(tlm.e, tlm.f)
-            val size = (fontSize * ctm.scale * tlm.scale).coerceAtLeast(0.5f)
-            val width = (maxOf(chars.length, 1) * size * 0.65f).coerceAtLeast(size)
-            val run = Geo.Area(point.first - size * 0.3f, point.second - size, point.first + width, point.second + size * 1.2f)
-            if (areas.none { it.intersects(run) }) return false
-            if (chars.length in 1..40) removedWordFragments.add(chars)
-            when ((tokens[operatorIndex] as Operator).getName()) {
-                "Tj", "'", "\"" -> tokens[operatorIndex - 1] = COSString("")
-                "TJ" -> {
-                    val array = COSArray()
-                    array.add(COSString(""))
-                    tokens[operatorIndex - 1] = array
-                }
-            }
-            mutated = true
-            return true
-        }
-
-        /** Paints opaque bars over each region so nothing visual remains. */
-        fun paintOver(paintAreas: List<Geo.Area>) {
-            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-                cs.setNonStrokingColor(0, 0, 0)
-                paintAreas.forEach { area -> cs.addRect(area.x0, area.y0, area.w, area.h); cs.fill() }
-            }
-        }
-    }
-
-    private fun stripAnnotations(doc: PDDocument, regionsByPage: Map<Int, List<RedactRegion>>): Int {
-        var removed = 0
-        doc.pages.forEachIndexed { pageIndex, page ->
-            val regions = regionsByPage[pageIndex].orEmpty()
-            if (regions.isEmpty()) return@forEachIndexed
-            val media = page.mediaBox
-            val areas = regions.map { r -> Geo.Area(
-                (r.left * media.width).toFloat(), ((1.0 - r.bottom) * media.height).toFloat(),
-                (r.right * media.width).toFloat(), ((1.0 - r.top) * media.height).toFloat()
-            ) }
-            val survivors = mutableListOf<PDAnnotation>()
-            try {
-                page.annotations.forEach { annotation ->
-                    if (annotation == null) return@forEach
-                    val rect = annotation.rectangle ?: return@forEach
-                    val area = Geo.Area(rect.lowerLeftX, rect.lowerLeftY, rect.upperRightX, rect.upperRightY)
-                    if (!area.containsAll(areas)) survivors.add(annotation) else removed++
-                }
-            } catch (_: Exception) { return@forEachIndexed }
-            page.setAnnotations(survivors)
-        }
-        return removed
-    }
-
-    private fun Geo.Area.containsAll(areas: List<Geo.Area>): Boolean = areas.any { it.contains(this) || it.intersects(this) }
-
-    private fun replaceContent(page: PDPage, tokens: List<Any>) {
-        val stream = COSStream()
-        stream.setItem(COSName.FILTER, COSName.FLATE_DECODE)
-        stream.createOutputStream().use { output -> ContentStreamWriter(output).writeTokens(tokens) }
-        page.setContents(PDStream(stream))
-    }
-
 
     fun embeddedImageSummary(doc: PDDocument): Pair<Long, Long> {
         var bytes = 0L

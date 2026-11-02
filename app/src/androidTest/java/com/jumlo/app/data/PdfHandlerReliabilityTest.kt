@@ -16,6 +16,8 @@ import com.jumlo.app.data.output.PublicOutputStore
 import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.data.processing.PdfAnnotateSettings
 import com.jumlo.app.data.processing.PdfImagesSettings
+import com.jumlo.app.data.processing.PdfRedactRegion
+import com.jumlo.app.data.processing.PdfRedactSettings
 import com.jumlo.app.data.processing.PdfOperationHandler
 import com.jumlo.app.data.processing.PdfSplitSettings
 import com.jumlo.app.data.processing.PdfSignatureSettings
@@ -27,7 +29,10 @@ import com.jumlo.app.model.ItemStatus
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -81,6 +86,65 @@ class PdfHandlerReliabilityTest {
             assertArrayEquals(original,source.readBytes());assertArrayEquals(originalInk,signature.readBytes())
         } finally {db.close();folder.deleteRecursively()}
     }
+    @Test fun redactionRasterizesMaskedPagesAndRemovesTheirExtractableText()=runBlocking {
+        val app=ApplicationProvider.getApplicationContext<Context>()
+        PDFBoxResourceLoader.init(app)
+        val db=Room.inMemoryDatabaseBuilder(app,AppDatabase::class.java).build()
+        val folder=File(app.filesDir,"processing/results/fixture/redaction-${UUID.randomUUID()}").apply { mkdirs() }
+        val source=File(folder,"source.pdf")
+        try {
+            PDDocument().use { doc ->
+                repeat(2) { index ->
+                    val page=PDPage(PDRectangle(200f,300f))
+                    doc.addPage(page)
+                    PDPageContentStream(doc,page).use { stream ->
+                        stream.beginText()
+                        stream.setFont(PDType1Font.HELVETICA,12f)
+                        stream.newLineAtOffset(20f,220f)
+                        stream.showText(if(index==0) "REDACT_SECRET" else "KEEP_PUBLIC")
+                        stream.endText()
+                    }
+                }
+                doc.save(source)
+            }
+            val original=source.readBytes()
+            val budget=WorkBudget()
+            val sources=SourceStore(app,db,budget)
+            val outputs=OutputStore(app,db,PublicOutputStore(app,UserPreferencesRepository(app)))
+            val ref=sources.inspect(
+                FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",source).toString(),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            val settings=PdfRedactSettings(regions=listOf(
+                PdfRedactRegion(page=1,left=.05,top=.20,right=.80,bottom=.32)
+            ))
+            val job=JobRequest(UUID.randomUUID().toString(),"pdf_redact",listOf(ref.id),1,
+                Json.encodeToString(settings),System.currentTimeMillis())
+            val outcomes=PdfOperationHandler(EphemeralSecretStore()).execute(
+                job,ExecutionContext(sources,outputs,budget,{}, {})
+            )
+            assertEquals(2,outcomes.size)
+            assertTrue(outcomes.all { it.status==ItemStatus.CREATED })
+            val record=outputs.find(job.id,"document")!!
+            app.contentResolver.openInputStream(android.net.Uri.parse(record.uri))!!.use { input ->
+                PDDocument.load(input).use { output ->
+                    assertEquals(2,output.numberOfPages)
+                    val extracted=PDFTextStripper().getText(output)
+                    assertFalse(extracted.contains("REDACT_SECRET"))
+                    assertTrue(extracted.contains("KEEP_PUBLIC"))
+                }
+            }
+            val report=outputs.find(job.id,"redact-report")!!
+            val reportText=app.contentResolver.openInputStream(android.net.Uri.parse(report.uri))!!.bufferedReader().use { it.readText() }
+            assertTrue(reportText.contains("rasterizedPages=1"))
+            assertTrue(reportText.contains("Nothing under a black rectangle survives."))
+            assertArrayEquals(original,source.readBytes())
+        } finally {
+            db.close()
+            folder.deleteRecursively()
+        }
+    }
+
     @Test fun corruptStructuralPdfReportsTheDocumentErrorWithoutPublishing()=runBlocking<Unit> {
         val app=ApplicationProvider.getApplicationContext<Context>()
         PDFBoxResourceLoader.init(app)

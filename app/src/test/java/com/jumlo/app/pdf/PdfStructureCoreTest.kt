@@ -4,6 +4,7 @@ import com.jumlo.app.data.pdf.FormEntry
 import com.jumlo.app.data.pdf.OrganizeOp
 import com.jumlo.app.data.pdf.PageGroup
 import com.jumlo.app.data.pdf.PdfBoxBackend
+import com.jumlo.app.data.pdf.RedactRegion
 import com.jumlo.app.data.pdf.PdfInput
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.junit.Assert.assertEquals
@@ -285,6 +286,21 @@ class PdfStructureCoreTest {
             assertEquals(2,acro.fields.size)
             assertEquals(before,doc.getPage(0).annotations.size)
             assertFalse(flat.exists())
+        }
+    }
+
+    @Test fun redactRoutesEveryTouchedPageThroughFullPageRasterization() {
+        PdfBoxBackend.open(docFile("redact", 3), null).use { doc ->
+            val result = PdfBoxBackend.redact(
+                doc,
+                mapOf(
+                    0 to listOf(RedactRegion(0.05, 0.10, 0.45, 0.25)),
+                    2 to listOf(RedactRegion(0.50, 0.70, 0.90, 0.90))
+                )
+            )
+            assertEquals(listOf(0, 2), result.pageFallbacks)
+            assertTrue(result.leftoverText.isEmpty())
+            assertEquals("redact page 1", PdfBoxBackend.pageTexts(doc)[0])
         }
     }
 

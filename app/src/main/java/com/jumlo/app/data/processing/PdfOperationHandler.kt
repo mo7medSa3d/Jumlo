@@ -585,11 +585,10 @@ import kotlin.math.sqrt
     }
 
     /**
-     * Permanent redaction. Operator-level removal first; pages the operator pass
-     * cannot handle (several content streams, no contents, or nothing removed)
-     * are rasterized whole, so no covered byte survives underneath. Rasterized
-     * pages lose selectable text and live annotations on that page; the report
-     * says exactly which pages those are.
+     * Permanent redaction. Every page with a mask is rendered to a fresh page image
+     * with opaque masks; no original text, image or annotation objects from that
+     * page are copied into the output. Unmasked pages remain structurally preserved.
+     * Rasterized pages lose selectable text; the report identifies every such page.
      */
     private suspend fun redact(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
