@@ -227,7 +227,14 @@ object OfficeDocumentReader {
                     }
                 }
             }
-        } catch (e: IllegalArgumentException) { throw e } catch (_: Exception) { /* fall through to extension */ }
+        } catch (e: IllegalArgumentException) {
+            throw e
+        } catch (e: SAXException) {
+            throw IllegalArgumentException("OFFICE_INVALID", e)
+        } catch (_: Exception) {
+            // A non-OOXML file may still be identified by its extension, but
+            // malformed XML inside an OOXML package must never use that fallback.
+        }
         return when (displayName.substringAfterLast('.', "").lowercase()) {
             "docx" -> OfficeKind.DOCX
             "xlsx" -> OfficeKind.XLSX
