@@ -69,7 +69,7 @@ fun SettingsScreen(
             textSizeLabel(settings.fontScale), Icons.Rounded.FormatSize, { panel = "text-size" },
             Modifier.testTag("settings.textSize"), iconStyle = settingsIconStyleFor("text-size", dark)) }
         item("notifications") { PreferenceRow(stringResource(R.string.settings_allow_notifications),
-            null, Icons.Rounded.Notifications, onRequestNotifications,
+            stringResource(R.string.settings_notifications_summary), Icons.Rounded.Notifications, onRequestNotifications,
             Modifier.testTag("settings.notifications"), iconStyle = settingsIconStyleFor("notifications", dark)) }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
@@ -99,7 +99,7 @@ fun SettingsScreen(
         item("cache") { PreferenceRow(stringResource(R.string.modern_clear_cache), formatBytes(storage.temporary),
             Icons.Rounded.CleaningServices, { panel = "cache" }, Modifier.testTag("settings.cache"), enabled = !busy,
             iconStyle = settingsIconStyleFor("cache", dark)) }
-        item("about") { PreferenceRow(stringResource(R.string.modern_about), null, Icons.Rounded.Info,
+        item("about") { PreferenceRow(stringResource(R.string.modern_about), stringResource(R.string.settings_about_summary), Icons.Rounded.Info,
             { panel = "about" }, Modifier.testTag("settings.about"), iconStyle = settingsIconStyleFor("about", dark)) }
     }
     when (panel) {

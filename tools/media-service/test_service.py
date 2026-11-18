@@ -370,5 +370,50 @@ class MaterializedRangeTest(unittest.TestCase):
         self.assertEqual('10', result['headers']['Content-Length'])
 
 
+
+
+    def test_dash_container_extensions_are_normalized(self):
+        self.assertEqual("mp4", service.to_format({"format_id": "137", "ext": "mp4_dash", "vcodec": "avc1", "acodec": "none"})["ext"])
+        self.assertEqual("m4a", service.to_format({"format_id": "140", "ext": "m4a_dash", "vcodec": "none", "acodec": "mp4a"})["ext"])
+
+class RequestValidationTest(unittest.TestCase):
+    def test_extract_rejects_credentials_and_separates_url_with_double_dash(self):
+        self.assertEqual({"error": "MEDIA_SITE_UNSUPPORTED"}, service.extract("https://user:pass@example.org/watch"))
+        seen = []
+        def fake_run(args, timeout=120):
+            seen.append(args)
+            return _completed(args, 0, json.dumps({"id": "1", "formats": [{"format_id": "18", "ext": "mp4", "url": "https://cdn.example.org/v.mp4"}]}))
+        with patch.object(service, "run_ytdlp", side_effect=fake_run):
+            result = service.extract("https://example.org/watch")
+        self.assertIn("formats", result)
+        self.assertEqual(["-J", "--", "https://example.org/watch"], seen[0])
+
+    def test_post_extract_rejects_invalid_or_oversized_content_length(self):
+        for body in (b"[]", b"123", b"null"):
+            handler = service.Handler.__new__(service.Handler)
+            handler.path = "/extract"
+            handler.headers = {"Content-Length": str(len(body))}
+            handler.rfile = io.BytesIO(body)
+            handler.wfile = io.BytesIO()
+            captured = {}
+            handler.send_response = lambda code: captured.update(status=code)
+            handler.send_header = lambda name, value: None
+            handler.end_headers = lambda: None
+            handler.do_POST()
+            self.assertEqual(400, captured["status"])
+        for raw_len, expected_status in (("abc", 400), ("-5", 400), ("65537", 413)):
+            handler = service.Handler.__new__(service.Handler)
+            handler.path = "/extract"
+            handler.headers = {"Content-Length": raw_len}
+            handler.rfile = io.BytesIO(b"{}")
+            handler.wfile = io.BytesIO()
+            captured = {}
+            handler.send_response = lambda code: captured.update(status=code)
+            handler.send_header = lambda name, value: None
+            handler.end_headers = lambda: None
+            handler.do_POST()
+            self.assertEqual(expected_status, captured["status"])
+
+
 if __name__ == "__main__":
     unittest.main()

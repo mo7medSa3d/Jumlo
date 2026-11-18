@@ -12,7 +12,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.*
@@ -21,7 +21,7 @@ import java.io.IOException
 
 /** Tests persistence failure/migration policy; Keystore itself is exercised by instrumentation. */
 class MediaServiceSettingsStoreTest {
-    @Test fun credentialsStayWithTheirOriginAndAreClearedWhenItChanges() = runBlocking {
+    @Test fun credentialsStayWithTheirOriginAndAreClearedWhenItChanges() = runTest {
         val prefs = MemoryPreferences()
         val store = store(prefs)
         store.setEndpoint("https://media.example.com/v1")
@@ -37,7 +37,7 @@ class MediaServiceSettingsStoreTest {
         assertEquals("", store.state.value.token)
     }
 
-    @Test fun legacyTokenIsRemovedBeforeItBecomesAvailableAndOtherPreferencesRemain() = runBlocking {
+    @Test fun legacyTokenIsRemovedBeforeItBecomesAvailableAndOtherPreferencesRemain() = runTest {
         val prefs = MemoryPreferences()
         val theme = stringPreferencesKey("theme_mode")
         prefs.edit {
@@ -59,7 +59,7 @@ class MediaServiceSettingsStoreTest {
         assertEquals("old-token", store(prefs, cipher).refresh().token)
     }
 
-    @Test fun unreadableCiphertextNeverFallsBackToPlaintextAndIsCleared() = runBlocking {
+    @Test fun unreadableCiphertextNeverFallsBackToPlaintextAndIsCleared() = runTest {
         val prefs = MemoryPreferences()
         val errors = mutableListOf<String>()
         prefs.edit {
@@ -73,7 +73,7 @@ class MediaServiceSettingsStoreTest {
         assertEquals(listOf("media_token_unreadable"), errors)
     }
 
-    @Test fun unavailableEncryptionClearsTheLegacyTokenWithoutPlaintextFallback() = runBlocking {
+    @Test fun unavailableEncryptionClearsTheLegacyTokenWithoutPlaintextFallback() = runTest {
         val prefs = MemoryPreferences()
         prefs.edit { it[MediaServiceSettingsStore.LEGACY_TOKEN] = "legacy" }
         val cipher = FixtureCipher().apply { failEncryption = true }
@@ -87,7 +87,7 @@ class MediaServiceSettingsStoreTest {
         assertEquals("", store.state.value.token)
     }
 
-    @Test fun aFailedPersistenceCommitCannotExposeAnUncommittedToken() = runBlocking {
+    @Test fun aFailedPersistenceCommitCannotExposeAnUncommittedToken() = runTest {
         val prefs = MemoryPreferences()
         val store = store(prefs)
         store.setEndpoint("https://media.example.com")
@@ -100,7 +100,7 @@ class MediaServiceSettingsStoreTest {
         assertNull(prefs.value[MediaServiceSettingsStore.LEGACY_TOKEN])
     }
 
-    @Test fun clearingATokenRemovesBothPersistedRepresentations() = runBlocking {
+    @Test fun clearingATokenRemovesBothPersistedRepresentations() = runTest {
         val prefs = MemoryPreferences()
         val store = store(prefs)
         store.setToken("first")
@@ -110,7 +110,7 @@ class MediaServiceSettingsStoreTest {
         assertNull(prefs.value[MediaServiceSettingsStore.ENCRYPTED_TOKEN])
     }
 
-    @Test fun invalidSavedEndpointIsDisabledAndInvalidNewEndpointDoesNotReplaceAValidOne() = runBlocking {
+    @Test fun invalidSavedEndpointIsDisabledAndInvalidNewEndpointDoesNotReplaceAValidOne() = runTest {
         val prefs = MemoryPreferences()
         prefs.edit { it[MediaServiceSettingsStore.URL] = "http://untrusted.example.com?token=private" }
         val store = store(prefs)
@@ -122,7 +122,7 @@ class MediaServiceSettingsStoreTest {
         assertEquals("https://media.example.com", store.state.value.url)
     }
 
-    @Test fun snapshotReadFailureClearsBothValuesAndReportsOnlyItsScope() = runBlocking {
+    @Test fun snapshotReadFailureClearsBothValuesAndReportsOnlyItsScope() = runTest {
         val prefs = MemoryPreferences()
         val errors = mutableListOf<String>()
         val store = store(prefs, errors = errors)
@@ -135,7 +135,7 @@ class MediaServiceSettingsStoreTest {
         assertEquals(listOf("media_settings_snapshot"), errors)
     }
 
-    @Test fun cancellationIsNeverReportedAsASettingsFailure() = runBlocking {
+    @Test fun cancellationIsNeverReportedAsASettingsFailure() = runTest {
         val prefs = MemoryPreferences()
         val errors = mutableListOf<String>()
         prefs.readFailure = CancellationException("fixture cancelled")
@@ -144,7 +144,7 @@ class MediaServiceSettingsStoreTest {
         assertTrue(errors.isEmpty())
     }
 
-    @Test fun invalidAuthorizationHeaderValuesAreRejectedBeforePersistence() = runBlocking {
+    @Test fun invalidAuthorizationHeaderValuesAreRejectedBeforePersistence() = runTest {
         val prefs = MemoryPreferences()
         val store = store(prefs)
         for (token in listOf("one\ntwo", "one two", "one\u0000two", "a".repeat(301))) {

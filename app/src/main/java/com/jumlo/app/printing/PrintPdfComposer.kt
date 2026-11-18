@@ -40,14 +40,14 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
     override fun inspect(source:PrintSource,options:PrintOptions,check:()->Unit):PrintDocumentInfo {
         options.validate();check()
         val file=repository.resolve(source)
-        return if(source.mimeType=="application/pdf") {
+        return if(source.mimeType.equals("application/pdf", ignoreCase = true)) {
             PDDocument.load(file,memory()).use { doc ->
                 require(doc.currentAccessPermission.canPrint()) { "PRINT_PERMISSION" }
                 require(doc.numberOfPages in 1..PrintRanges.MAX_PAGES) { "PRINT_PAGE_COUNT" }
                 PrintDocumentInfo((0 until doc.numberOfPages).map { i -> check(); info(doc.getPage(i)) })
             }
         } else {
-            require(source.mimeType.startsWith("image/")) { "PRINT_UNSUPPORTED" }
+            require(source.mimeType.startsWith("image/", ignoreCase = true)) { "PRINT_UNSUPPORTED" }
             val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true}
             BitmapFactory.decodeFile(file.path,bounds)
             require(bounds.outMimeType in setOf("image/jpeg","image/png","image/webp","image/heic","image/heif") && bounds.outWidth>0 && bounds.outHeight>0) { "PRINT_UNSUPPORTED" }
@@ -80,7 +80,7 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
         val vector=if(layout.grayscale) File.createTempFile("print-vector-",".pdf",context.cacheDir) else destination
         try {
             progress(0,pages.size)
-            if(source.mimeType=="application/pdf") {
+            if(source.mimeType.equals("application/pdf", ignoreCase = true)) {
                 PDDocument.load(file,memory()).use { original ->
                     require(original.currentAccessPermission.canPrint()) { "PRINT_PERMISSION" }
                     val ordered=PrintRanges.sourcePages(pages,original.numberOfPages)

@@ -2,12 +2,14 @@ package com.jumlo.app.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.io.InputStream
 
 /** Resume behaviour against a scripted HTTP transport. */
 class StreamTransferResumeTest {
+    @get:Rule val temporary = TemporaryFolder()
 
     private class ScriptedTransport(private val responses: List<Triple<Int, Map<String, String>, ByteArray>>) : HttpTransport {
         var calls = 0
@@ -70,5 +72,5 @@ class StreamTransferResumeTest {
         assertTrue("a resume without a validator must restart", failed)
     }
 
-    private fun createTempDir(): File = java.nio.file.Files.createTempDirectory("transfer-test").toFile().also { it.deleteOnExit() }
+    private fun createTempDir(): File = temporary.newFolder()
 }

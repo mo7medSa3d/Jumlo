@@ -44,7 +44,7 @@ object MediaCatalog {
                 val preferred = audioOnly.filter { audio ->
                     when (video.extension) {
                         "mp4", "m4v", "mov" -> audio.extension in setOf("m4a", "mp4")
-                        "webm" -> audio.extension in setOf("webm", "opus", "ogg") && (audio.audioCodec.contains("opus") || audio.audioCodec.contains("vorbis"))
+                        "webm" -> audio.extension in setOf("webm", "opus", "ogg") && (audio.audioCodec.contains("opus", ignoreCase = true) || audio.audioCodec.contains("vorbis", ignoreCase = true))
                         else -> false
                     }
                 }.ifEmpty { audioOnly }
@@ -188,17 +188,17 @@ object MediaLinks {
 }
 
 object MediaArguments {
-    private fun common() = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--socket-timeout", "20", "--retries", "2", "--extractor-retries", "2", "--fragment-retries", "2", "--abort-on-error", "--no-check-formats")
+    private fun common() = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--geo-bypass", "--socket-timeout", "20", "--retries", "2", "--extractor-retries", "2", "--fragment-retries", "2", "--abort-on-error", "--no-check-formats")
     fun probe(url: String, allowHttp: Boolean = false): List<String> = common() + listOf(
         "--skip-download", "--dump-single-json", "--no-warnings", "--flat-playlist",
         "--compat-options", "no-youtube-unavailable-videos",
-        "--extractor-args", "youtube:player_client=android",
+        "--extractor-args", "youtube:player_client=android_vr,android,web",
         "--", MediaLinks.normalize(url, allowHttp)
     )
     fun download(url: String, choice: MediaChoice, audio: AudioOutput = AudioOutput.ORIGINAL, bitrate: Int = 192, allowHttp: Boolean = false): List<String> {
         require(bitrate in setOf(64, 96, 128, 160, 192, 256, 320)) { "INVALID_AUDIO_BITRATE" }
         val args = common().toMutableList()
-        args += listOf("--extractor-args", "youtube:player_client=android", "--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
+        args += listOf("--extractor-args", "youtube:player_client=android_vr,android,web", "--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
         if (choice.mode == MediaMode.AUDIO) {
             args += listOf("--extract-audio", "--audio-format", if (audio == AudioOutput.ORIGINAL) "best" else audio.name.lowercase(Locale.ROOT))
             if (audio != AudioOutput.ORIGINAL) args += listOf("--audio-quality", "${bitrate}K")

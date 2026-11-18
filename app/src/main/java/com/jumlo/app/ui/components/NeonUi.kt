@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -39,10 +38,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.OutputRecord
-import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.theme.QuietTheme
-import androidx.compose.ui.semantics.Role
 
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.ToolPalette

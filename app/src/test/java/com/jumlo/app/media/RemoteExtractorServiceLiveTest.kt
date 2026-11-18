@@ -2,14 +2,14 @@ package com.jumlo.app.media
 
 import com.jumlo.app.core.media.AudioOutput
 import com.jumlo.app.core.media.MediaChoice
-import com.jumlo.app.core.media.MediaFormat
 import com.jumlo.app.core.media.MediaMode
 import com.jumlo.app.data.media.RemoteExtractorRuntime
 import okhttp3.OkHttpClient
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.File
 
 /**
@@ -24,6 +24,7 @@ import java.io.File
  *         --tests com.jumlo.app.media.RemoteExtractorServiceLiveTest
  */
 class RemoteExtractorServiceLiveTest {
+    @get:Rule val temporary = TemporaryFolder()
     private val serviceUrl: String? = System.getenv("JUMLO_MEDIA_SERVICE")
 
     private fun runtime() = RemoteExtractorRuntime(
@@ -38,19 +39,15 @@ class RemoteExtractorServiceLiveTest {
         val asset = runtime().inspect(url, allowHttp = false)
         assertTrue("the service must offer a format", asset.formats.isNotEmpty())
         val format = asset.formats.first()
-        val dir = File(System.getProperty("java.io.tmpdir"), "live-${System.nanoTime()}").apply { mkdirs() }
-        try {
-            val choice = MediaChoice(key = "video:${format.id}", mode = MediaMode.VIDEO, formats = listOf(format),
-                container = format.extension, requiresMux = false, expectedHeight = format.height,
-                estimatedBytes = format.bytes, sizeIsApproximate = format.bytes == null)
-            // This explicit test-only loopback allowance does not enable cleartext release backends.
-            runtime().download(url, choice, AudioOutput.ORIGINAL, 0, true, dir, {}, {})
-            val file = File(dir, "media.${format.extension}")
-            assertTrue("the file must exist", file.exists())
-            assertTrue("the file must have content", file.length() > 0L)
-        } finally {
-            dir.deleteRecursively()
-        }
+        val dir = temporary.newFolder()
+        val choice = MediaChoice(key = "video:${format.id}", mode = MediaMode.VIDEO, formats = listOf(format),
+            container = format.extension, requiresMux = false, expectedHeight = format.height,
+            estimatedBytes = format.bytes, sizeIsApproximate = format.bytes == null)
+        // This explicit test-only loopback allowance does not enable cleartext release backends.
+        runtime().download(url, choice, AudioOutput.ORIGINAL, 0, true, dir, {}, {})
+        val file = File(dir, "media.${format.extension}")
+        assertTrue("the file must exist", file.exists())
+        assertTrue("the file must have content", file.length() > 0L)
     }
 
     @Test fun theServiceReportsItsExtractorVersion() {

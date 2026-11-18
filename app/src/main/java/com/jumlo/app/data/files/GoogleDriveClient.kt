@@ -4,6 +4,7 @@ import com.jumlo.app.core.HttpTransport
 import com.jumlo.app.core.SafeNames
 import com.jumlo.app.core.TransportResponse
 import com.jumlo.app.data.jobs.OperationFailure
+import com.jumlo.app.data.media.executeCancellable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -11,6 +12,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.longOrNull
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -193,7 +195,7 @@ class GoogleDriveClient(
             val multipart = MultipartBody.Builder()
                 .setType("multipart/related".toMediaType())
                 .addPart(metaJson.toRequestBody("application/json; charset=utf-8".toMediaType()))
-                .addPart(sourceFile.asRequestBody(mimeType.toMediaType()))
+                .addPart(sourceFile.asRequestBody(mimeType.toMediaTypeOrNull() ?: "application/octet-stream".toMediaType()))
                 .build()
             val req = Request.Builder()
                 .url(uploadUrl)
@@ -201,7 +203,7 @@ class GoogleDriveClient(
                 .post(multipart)
                 .build()
             try {
-                client.newCall(req).execute().use { resp ->
+                client.executeCancellable(req, checkCancel).use { resp ->
                     val bodyText = resp.body?.charStream()?.use { it.readTextBounded() }.orEmpty()
                     if (resp.code !in 200..201) {
                         throw OperationFailure(classifyStatus(resp.code, bodyText))

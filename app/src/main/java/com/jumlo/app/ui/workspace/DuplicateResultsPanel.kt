@@ -47,6 +47,7 @@ internal fun DuplicateResultsPanel(vm:AppViewModel,sources:List<SourceRef>,onImp
                         val frame by produceState<PreviewFrame?>(null,source.id) {
                             value=try {vm.thumbnail(source.id,1)} catch(cancel:CancellationException) {throw cancel} catch(_:Exception) {null}
                         }
+                        DisposeOwnedPreviewBitmap(frame?.bitmap)
                         Surface(shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.surfaceContainerLow) {
                             Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.size(68.dp),contentAlignment=Alignment.Center) {

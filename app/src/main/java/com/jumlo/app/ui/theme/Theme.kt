@@ -1,6 +1,8 @@
 package com.jumlo.app.ui.theme
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -146,7 +148,7 @@ fun JumloTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as? Activity)?.window
+            val window = view.context.findActivity()?.window
             if (window != null) {
                 val controller = WindowCompat.getInsetsController(window, view)
                 controller.isAppearanceLightStatusBars = !darkTheme
@@ -199,6 +201,12 @@ object QuietTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalQuietSpacing.current
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> if (baseContext === this) null else baseContext.findActivity()
+    else -> null
 }
 
 /** All motion-related components use this local rather than assuming motion is enabled. */

@@ -17,7 +17,9 @@ import com.jumlo.app.model.UrlValidationStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.Random
@@ -25,6 +27,8 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 class PureDomainAlgorithmsTest {
+
+    @get:Rule val temporary = TemporaryFolder()
 
     @Test
     fun `parsePageRangeSyntax parses inclusive ranges and single pages accurately`() {
@@ -86,13 +90,13 @@ class PureDomainAlgorithmsTest {
 
     @Test(expected = SecurityException::class)
     fun `validateZipEntryPath blocks Zip-Slip directory traversal attack`() {
-        val sandboxDir = File("/tmp/universal_utilities_test_sandbox").apply { mkdirs() }
+        val sandboxDir = temporary.newFolder("sandbox")
         PureDomainAlgorithms.validateZipEntryPath(sandboxDir, "../../etc/passwd")
     }
 
     @Test
     fun `validateZipEntryPath allows clean relative paths inside sandbox`() {
-        val sandboxDir = File("/tmp/universal_utilities_test_sandbox").apply { mkdirs() }
+        val sandboxDir = temporary.newFolder("sandbox")
         val resolved = PureDomainAlgorithms.validateZipEntryPath(sandboxDir, "Photos_Compressed_Batch/landscape_01.webp")
         assertTrue(resolved.canonicalPath.startsWith(sandboxDir.canonicalPath))
     }
@@ -146,13 +150,17 @@ class ExpansionLogicTest {
 class ZipSlipTest {
     @Test fun malicious_entry_names_are_rejected() {
         val root = java.nio.file.Files.createTempDirectory("zipslip").toFile()
-        for (bad in listOf("../evil.txt", "..\\evil.txt", "/abs.txt", "a/../../evil.txt", "a//b.txt", "C:/evil.txt")) {
-            var rejected = false
-            try { PureDomainAlgorithms.validateZipEntryPath(root, bad) } catch (e: Exception) { rejected = true }
-            assertTrue("must reject: $bad", rejected)
+        try {
+            for (bad in listOf("../evil.txt", "..\\evil.txt", "/abs.txt", "a/../../evil.txt", "a//b.txt", "C:/evil.txt")) {
+                var rejected = false
+                try { PureDomainAlgorithms.validateZipEntryPath(root, bad) } catch (e: Exception) { rejected = true }
+                assertTrue("must reject: $bad", rejected)
+            }
+            val ok = PureDomainAlgorithms.validateZipEntryPath(root, "docs/readme.txt")
+            assertTrue(ok.path.startsWith(root.canonicalPath))
+        } finally {
+            root.deleteRecursively()
         }
-        val ok = PureDomainAlgorithms.validateZipEntryPath(root, "docs/readme.txt")
-        assertTrue(ok.path.startsWith(root.canonicalPath))
     }
 
     @Test fun page_range_fuzzish_inputs_never_throw_unexpectedly() {

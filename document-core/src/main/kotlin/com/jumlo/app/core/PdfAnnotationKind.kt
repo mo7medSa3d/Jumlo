@@ -1,5 +1,7 @@
 package com.jumlo.app.core
 
+import java.util.Locale
+
 /**
  * The annotations a page can carry.
  *
@@ -30,7 +32,7 @@ enum class PdfAnnotationKind(val id: String) {
 
     companion object {
         fun from(id: String?): PdfAnnotationKind =
-            entries.firstOrNull { it.id == id?.trim()?.lowercase() } ?: TEXT
+            entries.firstOrNull { it.id == id?.trim()?.lowercase(Locale.ROOT) } ?: TEXT
     }
 }
 

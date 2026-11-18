@@ -1,5 +1,7 @@
 package com.jumlo.app.core
 
+import java.util.Locale
+
 /** Filename is derived from the first source; users never need a naming prompt. */
 object AutoOutputName {
     private val operations = mapOf(
@@ -31,7 +33,7 @@ object AutoOutputName {
     fun pageImageName(baseName:String, pageNumber:Int, extension:String):String {
         val cleanBase=cleanBaseName(baseName,"Document")
         val padded=pageNumber.coerceAtLeast(1).toString().padStart(3,'0')
-        val cleanExt=extension.trimStart('.').lowercase().ifBlank { "png" }
+        val cleanExt=extension.trimStart('.').lowercase(Locale.ROOT).ifBlank { "png" }
         // Language-neutral: the same file name is used in English and Arabic.
         return SafeNames.basename("$cleanBase - $padded.$cleanExt")
     }

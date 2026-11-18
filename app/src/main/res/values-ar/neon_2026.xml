@@ -17,7 +17,7 @@
     <string name="neon_tools_download">تنزيل</string>
     <string name="neon_tools_manage">إدارة الملفات</string>
     <string name="neon_tools_other">أدوات أخرى</string>
-    <string name="home_search_hint">ابحث عن أداة، مثل "دمج"</string>
+    <string name="home_search_hint">ابحث عن أداة، مثل \"دمج\"</string>
 
     <string name="neon_tools_search">ابحث عن أداة</string>
     <string name="neon_files_subtitle">كل ملفاتك في مكان واحد</string>
@@ -41,4 +41,29 @@
     <string name="neon_batch_actions">إجراءات جماعية</string>
     <string name="neon_tool_description">اختر أداة للبدء</string>
     <string name="neon_scan_action">مسح مستند</string>
+    <string name="tools_catalogue_title">أدواتك اليومية جاهزة للبدء</string>
+    <string name="tools_catalogue_subtitle">اختر أداة أو ابحث بالمهمة — الأدوات المتخصصة تبقى مخفية لسهولة التصفح.</string>
+    <string name="tools_search_results_count">%1$d نتائج</string>
+    <string name="tools_show_more">عرض %1$d أداة إضافية</string>
+    <string name="tools_show_essential">عرض الأدوات الأساسية فقط</string>
+    <string name="workspace_step_pick_file">الخطوة ١: أضف ملفًا بالأسفل ثم اضغط زر التنفيذ.</string>
+    <string name="settings_notifications_summary">تنبيهك عند اكتمال التنزيلات أو المهام</string>
+    <string name="settings_about_summary">الإصدار، الدليل السريع، التشخيص والخصوصية</string>
+    <string name="workspace_action_compress_pdf">ضغط PDF</string>
+    <string name="workspace_action_split_pdf">تقسيم PDF</string>
+    <string name="workspace_action_save_order">حفظ الترتيب</string>
+    <string name="workspace_action_extract_pages">استخراج الصفحات</string>
+    <string name="workspace_action_export_images">تصدير كصور</string>
+    <string name="workspace_action_sign_pdf">توقيع PDF</string>
+    <string name="workspace_action_protect_pdf">حماية PDF</string>
+    <string name="workspace_action_crop_pdf">قص PDF</string>
+    <string name="workspace_action_convert_images">تحويل الصور</string>
+    <string name="workspace_action_resize_images">تغيير الأبعاد</string>
+    <string name="workspace_action_crop_images">قص وتدوير</string>
+    <string name="workspace_action_compress_images">ضغط الصور</string>
+    <string name="workspace_action_create_zip">إنشاء ZIP</string>
+    <string name="workspace_action_extract_zip">فك ضغط ZIP</string>
+    <string name="workspace_step_1">١. الملفات</string>
+    <string name="workspace_step_2">٢. التعديل</string>
+    <string name="workspace_step_3">٣. التصدير</string>
 </resources>

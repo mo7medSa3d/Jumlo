@@ -3,8 +3,8 @@ package com.jumlo.app.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -34,9 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
-import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.LocalReducedMotion
-import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 /** Four primary tabs. Downloads remains a dedicated detail route opened from Home. */
@@ -54,24 +53,40 @@ fun QuietFloatingDock(
 ) {
     val colors = MaterialTheme.colorScheme
     val showLabels = LocalDensity.current.fontScale < 1.6f
-    Surface(
-        modifier = modifier.fillMaxWidth().testTag("navigation.bar"),
-        color = colors.surfaceContainerLow,
-        shadowElevation = 4.dp,
-        tonalElevation = 0.dp
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            Modifier.fillMaxWidth().widthIn(max = 720.dp)
-                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-                .selectableGroup(),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 680.dp)
+                .testTag("navigation.bar"),
+            shape = RoundedCornerShape(26.dp),
+            color = colors.surfaceContainer,
+            shadowElevation = 6.dp,
+            tonalElevation = 0.dp
         ) {
-            MainDockTabs.forEach { destination ->
-                DockDestination(destination,
-                    if (language.isRtl) destination.labelAr else destination.labelEn,
-                    destination == selectedTab, showLabels, Modifier.weight(1f)) {
-                    onSelectTab(destination)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .selectableGroup(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MainDockTabs.forEach { destination ->
+                    DockDestination(
+                        destination,
+                        if (language.isRtl) destination.labelAr else destination.labelEn,
+                        destination == selectedTab,
+                        showLabels,
+                        Modifier.weight(1f)
+                    ) {
+                        onSelectTab(destination)
+                    }
                 }
             }
         }
@@ -101,7 +116,8 @@ private fun DockDestination(
     val reduced = LocalReducedMotion.current
     val indicatorColor by animateColorAsState(
         if (active) colors.primaryContainer else Color.Transparent,
-        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium), label = "tab-container"
+        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium),
+        label = "tab-container"
     )
     val scale by animateFloatAsState(
         if (active) 1f else .92f,
@@ -109,13 +125,17 @@ private fun DockDestination(
         label = "tab-icon-scale"
     )
     Column(
-        modifier.heightIn(min = 64.dp).clip(QuietTheme.shapes.inputField)
+        modifier
+            .heightIn(min = 64.dp)
+            .clip(RoundedCornerShape(20.dp))
             .selectable(selected = active, role = Role.Tab, onClick = {
                 haptics.navigationTab()
                 if (!active) onClick()
-            }).testTag("nav.${tab.name}").semantics { contentDescription = label },
+            })
+            .testTag("nav.${tab.name}")
+            .semantics { contentDescription = label },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically)
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)
     ) {
         Box(
             Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp).height(34.dp)
@@ -123,14 +143,20 @@ private fun DockDestination(
                 .testTag("nav.indicator.${tab.name}"),
             contentAlignment = Alignment.Center
         ) {
-            Icon(painterResource(icon(tab)), null,
-                Modifier.size(24.dp).graphicsLayer { scaleX = scale; scaleY = scale },
-                tint = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant)
+            Icon(
+                painterResource(icon(tab)),
+                null,
+                Modifier.size(22.dp).graphicsLayer { scaleX = scale; scaleY = scale },
+                tint = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant
+            )
         }
-        if (showLabel) Text(label,
+        if (showLabel) Text(
+            label,
             style = QuietTheme.typography.navigation.copy(fontWeight = if (active) FontWeight.Bold else FontWeight.Medium),
             color = if (active) colors.primary else colors.onSurfaceVariant,
-            maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.clearAndSetSemantics {})
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.clearAndSetSemantics {}
+        )
     }
 }

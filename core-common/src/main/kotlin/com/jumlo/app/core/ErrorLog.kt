@@ -1,6 +1,7 @@
 package com.jumlo.app.core
 
 import java.io.File
+import java.util.Locale
 
 /**
  * Local-only error log. Entries are stable error CODES plus a timestamp and an
@@ -58,7 +59,7 @@ class ErrorLog(private val file: File, private val maxBytes: Long = 256L * 1024)
 
         /** Accepts only stable SNAKE_CASE codes; anything carrying data is dropped. */
         fun sanitize(raw: String?): String? {
-            val candidate = raw?.trim()?.uppercase() ?: return null
+            val candidate = raw?.trim()?.uppercase(Locale.ROOT) ?: return null
             if (!CODE.matches(candidate)) return null
             // Defense in depth: reject anything that looks like a URL or key=value payload.
             if (candidate.contains("HTTP") && candidate.contains("://")) return null

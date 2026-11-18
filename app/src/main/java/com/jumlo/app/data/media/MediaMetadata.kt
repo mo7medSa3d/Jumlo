@@ -34,14 +34,13 @@ object MediaMetadata {
         val live = value.bool("is_live") || value.string("live_status") in setOf("is_live", "is_upcoming")
         require(!live) { "LIVE_MEDIA_NOT_FINITE" }
         val extractorName = value.string("extractor_key").ifBlank { value.string("extractor") }
-        val isGeneric = extractorName.equals("generic", ignoreCase = true)
         val rawEntries=value["formats"] as? JsonArray
         require(rawEntries==null || rawEntries.size<=2000) { "TOO_MANY_MEDIA_FORMATS" }
         val entries = rawEntries?.mapNotNull { it as? JsonObject } ?: listOf(value)
         require(entries.size <= 2000) { "TOO_MANY_MEDIA_FORMATS" }
         val formats = entries.mapNotNull { f ->
             if (f.string("url").isBlank()) return@mapNotNull null
-            val ext = f.string("ext").lowercase()
+            val ext = when (val rawExt = f.string("ext").lowercase()) { "mp4_dash" -> "mp4"; "m4a_dash" -> "m4a"; else -> rawExt }
             val width = f.int("width")
             val height = f.int("height")
             val rawVcodec = f.string("vcodec")
@@ -52,13 +51,13 @@ object MediaMetadata {
             // and omits it for ordinary progressive videos with audio.
             val vcodec = when {
                 rawVcodec.isNotBlank() -> rawVcodec
-                !isGeneric && (height != null || width != null) && ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
+                (height != null || width != null) && ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
                 else -> "none"
             }
             val acodec = when {
                 rawAcodec.isNotBlank() -> rawAcodec
-                !isGeneric && (f.double("abr") != null || ext in setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")) -> "unknown"
-                !isGeneric && vcodec != "none" && protocol in setOf("http", "https") &&
+                (f.double("abr") != null || ext in setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")) -> "unknown"
+                vcodec != "none" && protocol in setOf("http", "https") &&
                     ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
                 else -> "none"
             }

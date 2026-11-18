@@ -124,6 +124,7 @@ class ZoomPanState internal constructor(
 
     fun reset() {
         flingJob?.cancel()
+        rotation = 0f
         animateScaleTo(minScale)
     }
 

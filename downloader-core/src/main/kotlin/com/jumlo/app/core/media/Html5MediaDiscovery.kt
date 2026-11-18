@@ -48,7 +48,7 @@ object Html5MediaDiscovery {
             val kind = match.groupValues[1].lowercase(Locale.ROOT)
             val attributes = attributes(match.value)
             val candidate = when (kind) {
-                "video", "audio", "source" -> attributes["src"]
+                "video", "audio", "source" -> attributes["src"] ?: attributes["data-src"]
                 "a" -> attributes["href"]?.takeIf { Regex("""\bdownload(?:\s|=|>)""", RegexOption.IGNORE_CASE).containsMatchIn(match.value) }
                 "meta" -> attributes["content"]?.takeIf {
                     attributes["property"]?.lowercase(Locale.ROOT) in metaTypes || attributes["name"]?.lowercase(Locale.ROOT) in metaTypes
@@ -123,7 +123,7 @@ object Html5MediaDiscovery {
     }
 
     private fun attributes(tag: String): Map<String,String> {
-        val start = tag.indexOf(' ')
+        val start = tag.indexOfFirst { it.isWhitespace() }
         if (start == -1) return emptyMap()
         return attr.findAll(tag.substring(start)).take(32).associate { match ->
             match.groupValues[1].lowercase(Locale.ROOT) to (match.groupValues.drop(2).firstOrNull { it.isNotEmpty() } ?: "")

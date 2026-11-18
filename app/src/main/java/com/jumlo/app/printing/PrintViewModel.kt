@@ -332,7 +332,8 @@ data class PrintUiState(
                 val adapter=JumloPrintAdapter(getApplication(),owned,current.options,info,composer,
                     progress={done,total ->_state.update {it.copy(spoolingPages=done,spoolingTotal=total)}},
                     finished={_state.update {it.copy(spoolingPages=0,spoolingTotal=0)}})
-                val job=manager.print(source.name,adapter,PrintAndroidAttributes.initial(layout,current.options))
+                val jobName=source.name.ifBlank { getApplication<Application>().getString(com.jumlo.app.R.string.print_document) }
+                val job=manager.print(jobName,adapter,PrintAndroidAttributes.initial(layout,current.options))
                     ?: throw IllegalStateException("PRINT_UNAVAILABLE")
                 submitted=true;activeJob=job
                 repository.record(PrintHistoryEntry(job.id.toString(),owned,current.options,job.info.state.toPrintState(),System.currentTimeMillis()))

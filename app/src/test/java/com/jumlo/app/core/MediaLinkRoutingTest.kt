@@ -37,6 +37,27 @@ class MediaLinkRoutingTest {
         )
     }
 
+    @Test fun newlyAddedMediaPlatformsRouteToExtractorAndReportNames() {
+        val cases = listOf(
+            "https://vk.com/video-1_2" to "VK",
+            "https://vkvideo.ru/video-1_2" to "VK",
+            "https://ok.ru/video/123" to "OK.ru",
+            "https://rumble.com/v123-clip.html" to "Rumble",
+            "https://odysee.com/@ch/clip" to "Odysee",
+            "https://kick.com/channel/clips/1" to "Kick",
+            "https://streamable.com/abc" to "Streamable",
+            "https://www.loom.com/share/abc" to "Loom",
+            "https://artist.bandcamp.com/track/song" to "Bandcamp",
+            "https://www.mixcloud.com/user/mix/" to "Mixcloud",
+            "https://www.ted.com/talks/example" to "TED",
+            "https://archive.org/details/example" to "Internet Archive"
+        )
+        for ((url, expectedName) in cases) {
+            assertTrue(url, DownloadLinkPolicy.requiresMediaExtractor(url))
+            assertEquals(url, expectedName, DownloadLinkPolicy.detectPlatformName(url))
+        }
+    }
+
     @Test fun resourceKeysRemainOpaqueAndCannotInjectAnotherParameter() {
         assertEquals(
             "https://drive.usercontent.google.com/download?id=1abcDE_fgHiJ23KLmno&export=download&confirm=t&resourcekey=opaque%26confirm%3Dsecret",

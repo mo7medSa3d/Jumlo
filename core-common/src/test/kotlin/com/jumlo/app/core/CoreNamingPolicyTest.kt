@@ -19,6 +19,9 @@ class CoreNamingPolicyTest {
     @Test fun arabicNumeralsAndSeparatorsAreValidPageRanges() {
         assertEquals(listOf(1, 2, 3, 5), PageSelection.parse("١-٣،٥", 5))
         assertEquals(listOf(1, 2, 3, 5), PageSelection.parse("1-3,5", 5))
+        assertThrows(IllegalArgumentException::class.java) {
+            PageSelection.parse("1-100001", 200000)
+        }
     }
 
     @Test fun filenameCollisionIsCaseInsensitiveAndDeterministic() {

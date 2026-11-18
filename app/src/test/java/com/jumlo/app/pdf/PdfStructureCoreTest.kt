@@ -10,6 +10,7 @@ import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 import java.io.File
 
@@ -17,7 +18,9 @@ import java.io.File
 class PdfStructureCoreTest {
     private val dir: File = createTmp()
 
-    private fun createTmp(): File = java.nio.file.Files.createTempDirectory("pdfcore-test").toFile().also { it.deleteOnExit() }
+    private fun createTmp(): File = java.nio.file.Files.createTempDirectory("pdfcore-test").toFile()
+
+    @After fun teardown() { dir.deleteRecursively() }
 
     private fun docFile(marker: String, pages: Int): File = PdfFixtures.simpleDoc(File(dir, "$marker$pages.pdf"), List(pages) { i -> "$marker page ${i + 1}" })
 

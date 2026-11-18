@@ -79,12 +79,14 @@ class StreamTransfer(private val transport:HttpTransport) {
 
     private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferMetadata)->Unit):TransferResult {
         var current=HttpPolicy.url(request.url,request.cleartextConsent)
-        val cookieJar=mutableMapOf<String,String>()
+        val cookieJar=mutableMapOf<String,MutableMap<String,String>>()
         repeat(11) { redirects ->
             checkCancel()
+            val hostKey=current.host?.lowercase(Locale.ROOT).orEmpty()
+            val hostCookies=cookieJar[hostKey]
             val headers=mutableMapOf("Accept-Encoding" to "identity")
-            if(cookieJar.isNotEmpty()) {
-                headers["Cookie"]=cookieJar.entries.joinToString("; ") { "${it.key}=${it.value}" }
+            if(!hostCookies.isNullOrEmpty()) {
+                headers["Cookie"]=hostCookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
             }
             if(request.offset>0) {
                 headers["Range"]="bytes=${request.offset}-"
@@ -95,13 +97,14 @@ class StreamTransfer(private val transport:HttpTransport) {
             val response=transport.open(current.toString(),headers)
             try {
                 response.headers["set-cookie"]?.let { cookieHeader ->
-                    cookieHeader.split(',').forEach { entry ->
+                    val jar = cookieJar.getOrPut(hostKey) { mutableMapOf() }
+                    cookieHeader.split(Regex(",(?=\\s*[!#$%&'*+.^_`|~0-9A-Za-z-]+\\s*=)")).forEach { entry ->
                         val pair = entry.substringBefore(';').trim()
                         val eq = pair.indexOf('=')
                         if (eq > 0) {
                             val name = pair.substring(0, eq).trim()
                             val value = pair.substring(eq + 1).trim()
-                            if (name.isNotEmpty() && value.isNotEmpty()) cookieJar[name] = value
+                            if (name.isNotEmpty() && value.isNotEmpty()) jar[name] = value
                         }
                     }
                 }
@@ -113,16 +116,24 @@ class StreamTransfer(private val transport:HttpTransport) {
                     current=next; return@repeat
                 }
                 val mimeType=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
-                val isGoogleHost=current.host?.let { it.endsWith("google.com") || it.endsWith("googleusercontent.com") } == true
+                val isGoogleHost=hostKey=="google.com" || hostKey.endsWith(".google.com") || hostKey=="googleusercontent.com" || hostKey.endsWith(".googleusercontent.com")
                 if(response.code==200 && request.offset==0L && mimeType in setOf("text/html","application/xhtml+xml") && isGoogleHost) {
                     val sample=ByteArray(32768)
-                    val read=response.body.read(sample)
+                    var read=0
+                    while(read<sample.size) {
+                        checkCancel()
+                        val n=response.body.read(sample,read,sample.size-read)
+                        if(n<0) break
+                        read+=n
+                    }
                     response.close()
                     if(read>0) {
                         val html=String(sample,0,read,Charsets.UTF_8)
                         val confirmed=DriveLink.parseConfirmationUrl(html,current)
                         if(confirmed!=null) {
-                            current=HttpPolicy.url(confirmed,request.cleartextConsent)
+                            val next=HttpPolicy.url(confirmed,request.cleartextConsent)
+                            require(current.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
+                            current=next
                             return@repeat
                         }
                     }
@@ -148,13 +159,13 @@ class StreamTransfer(private val transport:HttpTransport) {
                 val declared=if(isGzipped) null else response.headers["content-length"]?.let { value -> value.toLongOrNull()?.takeIf { it>=0 } ?: throw IOException("INVALID_CONTENT_LENGTH") }
                 val total=if(request.offset>0) {
                     ResumePolicy.validate(request.offset,request.strongEtag,request.lastModified,request.knownTotalBytes,response.code,response.headers)
-                    val end=response.headers.getValue("content-range").substringAfter("bytes ").substringBefore('/').substringAfter('-').toLong()
-                    val expectedSlice=end-request.offset+1
+                    val range=requireNotNull(ResumePolicy.range(response.headers["content-range"])) { "MISSING_RESUME_TOTAL" }
+                    val expectedSlice=range.end-request.offset+1
                     if(declared!=null && declared!=expectedSlice) throw IOException("HTTP_CONTENT_LENGTH_MISMATCH")
                     // The end of this 206 range may be just an intermediate chunk.
                     // Completion is defined by Content-Range's representation total,
                     // never by the end index of the returned slice.
-                    request.knownTotalBytes ?: requireNotNull(ResumePolicy.range(response.headers["content-range"])?.total) { "MISSING_RESUME_TOTAL" }
+                    request.knownTotalBytes ?: requireNotNull(range.total) { "MISSING_RESUME_TOTAL" }
                 } else {
                     require(response.code==200) { "HTTP_${response.code}" }
                     declared
@@ -167,17 +178,21 @@ class StreamTransfer(private val transport:HttpTransport) {
                     resumeSafe=contentEncoding==null || contentEncoding=="identity"))
                 var written=request.offset
                 val streamToRead: InputStream = if(isGzipped && request.offset==0L) GZIPInputStream(response.body) else response.body
-                FileOutputStream(request.partialFile,request.offset>0).use { out ->
-                    val buf=ByteArray(64*1024)
-                    while(true) {
-                        checkCancel()
-                        val read=streamToRead.read(buf); if(read<0) break
-                        written+=read
-                        if(written>request.maxBytes) throw IllegalArgumentException("DISK_BUDGET_EXCEEDED")
-                        if((request.partialFile.parentFile?.usableSpace ?: Long.MAX_VALUE)<request.minFreeBytes) throw IOException("INSUFFICIENT_STORAGE")
-                        out.write(buf,0,read); progress(written,total)
+                try {
+                    FileOutputStream(request.partialFile,request.offset>0).use { out ->
+                        val buf=ByteArray(64*1024)
+                        while(true) {
+                            checkCancel()
+                            val read=streamToRead.read(buf); if(read<0) break
+                            written+=read
+                            if(written>request.maxBytes) throw IllegalArgumentException("DISK_BUDGET_EXCEEDED")
+                            if((request.partialFile.parentFile?.usableSpace ?: Long.MAX_VALUE)<request.minFreeBytes) throw IOException("INSUFFICIENT_STORAGE")
+                            out.write(buf,0,read); progress(written,total)
+                        }
+                        out.fd.sync()
                     }
-                    out.fd.sync()
+                } finally {
+                    if(streamToRead!==response.body) runCatching { streamToRead.close() }
                 }
                 checkCancel()
                 if(written==0L) throw IOException("EMPTY_HTTP_BODY")

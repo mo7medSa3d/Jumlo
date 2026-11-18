@@ -9,7 +9,7 @@ import com.jumlo.app.R
 /** Preloaded tiny self-generated WAVs: no streaming, network, media-session, or UI thread decoding. */
 class UiSoundPlayer(private val context: Context) {
     enum class Cue { TAP, TOGGLE, START, SUCCESS, ERROR, DELETE }
-    private val audio=context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audio=context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private val pool=SoundPool.Builder().setMaxStreams(2).setAudioAttributes(
         AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build()
@@ -29,7 +29,8 @@ class UiSoundPlayer(private val context: Context) {
         )
     }
     fun play(cue:Cue, enabled:Boolean) {
-        if(!enabled || audio.ringerMode!=AudioManager.RINGER_MODE_NORMAL || audio.getStreamVolume(AudioManager.STREAM_SYSTEM)==0) return
+        val manager=audio ?: return
+        if(!enabled || manager.ringerMode!=AudioManager.RINGER_MODE_NORMAL || manager.getStreamVolume(AudioManager.STREAM_SYSTEM)==0) return
         val sample=soundIds[cue] ?: return
         if(synchronized(loaded) {sample in loaded}) pool.play(sample,.22f,.22f,1,0,1f)
     }

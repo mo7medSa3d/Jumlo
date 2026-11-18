@@ -41,6 +41,7 @@ import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -132,17 +133,17 @@ fun SignaturePad(onSaved: (File) -> Unit) {
                     if (!busy) detectDragGestures(
                         onDragStart = { point ->
                             activePoints.clear()
-                            if (strokes.size < 300 && strokes.sumOf { it.points.size } < 59_800)
+                            if (size.width > 0 && size.height > 0 && strokes.size < 300 && strokes.sumOf { it.points.size } < 59_800)
                                 activePoints.add(Offset((point.x / size.width).coerceIn(0f, 1f), (point.y / size.height).coerceIn(0f, 1f)))
                         },
                         onDrag = { change, _ ->
-                            if (activePoints.isNotEmpty() && activePoints.size < 200) {
+                            if (size.width > 0 && size.height > 0 && activePoints.isNotEmpty() && activePoints.size < 200) {
                                 change.consume()
                                 activePoints.add(Offset((change.position.x / size.width).coerceIn(0f, 1f), (change.position.y / size.height).coerceIn(0f, 1f)))
                             }
                         },
                         onDragEnd = {
-                            if (activePoints.size >= 2) {
+                            if (size.width > 0 && activePoints.size >= 2) {
                                 strokes = strokes + SignatureStroke(activePoints.toList(), latestInk, latestPen / size.width)
                                 undone = emptyList()
                             }
@@ -164,9 +165,9 @@ fun SignaturePad(onSaved: (File) -> Unit) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconButton(onClick = { undone = undone + strokes.last(); strokes = strokes.dropLast(1) }, enabled = strokes.isNotEmpty() && !busy,
+            IconButton(onClick = { strokes.lastOrNull()?.let { last -> undone = undone + last; strokes = strokes.dropLast(1) } }, enabled = strokes.isNotEmpty() && !busy,
                 modifier = Modifier.testTag("signature.undo")) { Icon(Icons.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
-            IconButton(onClick = { strokes = strokes + undone.last(); undone = undone.dropLast(1) }, enabled = undone.isNotEmpty() && !busy,
+            IconButton(onClick = { undone.lastOrNull()?.let { last -> strokes = strokes + last; undone = undone.dropLast(1) } }, enabled = undone.isNotEmpty() && !busy,
                 modifier = Modifier.testTag("signature.redo")) { Icon(Icons.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
             TextButton(onClick = { strokes = emptyList(); undone = emptyList(); activePoints.clear() }, enabled = !busy && hasInk) {
                 Text(stringResource(R.string.signature_clear))
@@ -217,6 +218,7 @@ fun SignaturePad(onSaved: (File) -> Unit) {
                     val bitmap by produceState<Bitmap?>(null, file) {
                         value = withContext(Dispatchers.IO) { runCatching { BitmapFactory.decodeFile(file.path) }.getOrNull() }
                     }
+                    DisposeOwnedPreviewBitmap(bitmap)
                     Column(Modifier.width(148.dp)) {
                         Surface(onClick = { if (!busy) onSaved(file) }, shape = QuietTheme.shapes.thumbnail, color = Color.White,
                             modifier = Modifier.fillMaxWidth().height(84.dp)) {

@@ -36,13 +36,14 @@ internal fun CollagePlacementPreview(bitmap:Bitmap,cells:List<Rect>,onMove:(Int,
     val label=stringResource(R.string.studio_collage_drag)
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         BoxWithConstraints(Modifier.fillMaxWidth().height(320.dp).testTag("preview.bitmap"),contentAlignment=Alignment.Center) {
-            val aspect=bitmap.width.toFloat()/bitmap.height
+            val aspect=if(bitmap.width>0 && bitmap.height>0) bitmap.width.toFloat()/bitmap.height else 1f
             val width=minOf(maxWidth,maxHeight*aspect)
             Box(Modifier.size(width,width/aspect)) {
                 Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
                 Canvas(Modifier.fillMaxSize().testTag("collage.canvas").semantics {contentDescription=label}
                     .pointerInput(Unit) {
                         fun cell(point:Offset):Int {
+                            if(size.width<=0 || size.height<=0) return -1
                             val normalized=Offset(point.x/size.width,point.y/size.height)
                             return latestCells.indexOfFirst {it.contains(normalized)}
                         }

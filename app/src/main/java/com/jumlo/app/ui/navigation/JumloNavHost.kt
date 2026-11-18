@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -323,29 +322,70 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val errorLogExportPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         viewModel.exportErrorLog(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
     }
+    var pendingGoogleAccount by rememberSaveable { mutableStateOf<android.accounts.Account?>(null) }
+    lateinit var fetchGoogleDriveToken: (android.accounts.Account, Boolean) -> Unit
+    val googleConsentLauncher=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val account = pendingGoogleAccount
+        pendingGoogleAccount = null
+        if(result.resultCode==Activity.RESULT_OK && account!=null) {
+            fetchGoogleDriveToken(account, false)
+        } else {
+            viewModel.notifyMessage("DRIVE_SIGNIN_CANCELLED")
+        }
+    }
+    fetchGoogleDriveToken = { account, allowConsent ->
+        val activity = hostActivity
+        if(activity!=null && !activity.isFinishing && !activity.isDestroyed) {
+            AccountManager.get(activity).getAuthToken(
+                account,
+                "oauth2:https://www.googleapis.com/auth/drive.file",
+                null,
+                activity,
+                { future ->
+                    runCatching {
+                        val bundle=future.result
+                        val token=bundle.getString(AccountManager.KEY_AUTHTOKEN)
+                        @Suppress("DEPRECATION")
+                        val consentIntent=bundle.getParcelable<Intent>(AccountManager.KEY_INTENT)
+                        when {
+                            !token.isNullOrBlank() -> {
+                                pendingGoogleAccount = null
+                                viewModel.updateForm { it.copy(secret1=token) }
+                            }
+                            consentIntent!=null && allowConsent && !activity.isFinishing && !activity.isDestroyed -> {
+                                pendingGoogleAccount=account
+                                googleConsentLauncher.launch(consentIntent)
+                            }
+                            else -> {
+                                pendingGoogleAccount = null
+                                viewModel.notifyMessage("LOGIN_REQUIRED")
+                            }
+                        }
+                    }.onFailure {
+                        pendingGoogleAccount = null
+                        viewModel.notifyMessage(
+                            if (it is android.accounts.OperationCanceledException) "DRIVE_SIGNIN_CANCELLED"
+                            else "LOGIN_REQUIRED"
+                        )
+                    }
+                },
+                android.os.Handler(android.os.Looper.getMainLooper())
+            )
+        } else {
+            pendingGoogleAccount = null
+            viewModel.notifyMessage("LOGIN_REQUIRED")
+        }
+    }
     val googleAccountPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==Activity.RESULT_OK) {
             val accountName=result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
             val accountType=result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE)
             if(!accountName.isNullOrBlank() && !accountType.isNullOrBlank()) {
                 val account=android.accounts.Account(accountName,accountType)
-                val activity=context as? Activity
-                if(activity!=null) {
-                    AccountManager.get(context).getAuthToken(
-                        account,
-                        "oauth2:https://www.googleapis.com/auth/drive.file",
-                        null,
-                        activity,
-                        { future ->
-                            runCatching {
-                                val bundle=future.result
-                                val token=bundle.getString(AccountManager.KEY_AUTHTOKEN)
-                                if(!token.isNullOrBlank()) viewModel.updateForm { it.copy(secret1=token) }
-                            }.onFailure { viewModel.notifyMessage("LOGIN_REQUIRED") }
-                        },
-                        null
-                    )
-                }
+                pendingGoogleAccount=account
+                fetchGoogleDriveToken(account, true)
+            } else {
+                viewModel.notifyMessage("LOGIN_REQUIRED")
             }
         } else {
             // A cancelled picker used to leave the token field blank with
@@ -484,7 +524,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 {record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },
                                 {sourceId->viewModel.prepareSourceWorkflow(sourceId) {navigateTo("workspace")} },
                                 {pickFolder(it.uri)}, {entry ->
-                                    if(entry.mimeType=="application/pdf") navController.navigate(ViewerRoute(entry.uri,entry.name))
+                                    if(entry.mimeType=="application/pdf") navController.navigate(ViewerRoute(entry.uri,entry.name)) { launchSingleTop = true }
                                     else launchExternal(entry.uri,entry.mimeType,false)
                                 },
                                 {entry->viewModel.importProviderEntryToWorkspace(entry.uri,Intent.FLAG_GRANT_READ_URI_PERMISSION) {navigateTo("workspace")} },

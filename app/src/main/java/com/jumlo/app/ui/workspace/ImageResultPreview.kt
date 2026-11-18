@@ -95,6 +95,9 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
         } catch(cancel:CancellationException) {throw cancel}
           catch(error:Exception) {Result.failure(error)}
     }
+    DisposeOwnedPreviewBitmap(frame?.getOrNull()?.bitmap)
+    DisposeOwnedPreviewBitmap(logoResult?.getOrNull()?.bitmap)
+    DisposeOwnedPreviewBitmap(result?.getOrNull()?.bitmap)
     QuietCard(Modifier.fillMaxWidth()) {
         Text(stringResource(if(joined) R.string.interactive_layout_preview else R.string.interactive_result_preview),style=QuietTheme.typography.sectionTitle)
         val shown=if(showOriginal && !joined) frame?.getOrNull()?.let {ImageResult(it.bitmap,it.width,it.height)} else result?.getOrNull()

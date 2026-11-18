@@ -1,5 +1,4 @@
 package com.jumlo.app.data.media
-import android.content.Context
 import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.HttpPolicy
 import com.jumlo.app.core.PlatformHeaderPolicy

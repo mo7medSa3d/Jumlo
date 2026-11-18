@@ -21,8 +21,8 @@ SOURCES=(
 )
 
 caches="${GRADLE_USER_HOME:-$HOME/.gradle}/caches"
-pdfbox=$(find "$caches" -name 'pdfbox-android-*-runtime.jar' 2>/dev/null | sort | tail -1)
-commons=$(find "$caches" -name 'commons-logging-1.2.jar' 2>/dev/null | sort | tail -1)
+pdfbox=$(find "$caches" -name 'pdfbox-android-*-runtime.jar' 2>/dev/null | sort | tail -1 || true)
+commons=$(find "$caches" -name 'commons-logging-1.2.jar' 2>/dev/null | sort | tail -1 || true)
 if [ -z "$pdfbox" ]; then
   echo 'BLOCKED: the pdfbox-android runtime jar is not in the Gradle cache' >&2
   exit 2
@@ -35,15 +35,15 @@ for candidate in "${JAVA_HOME:-}" /usr/lib/jvm/java-17-temurin-jdk /usr/lib/jvm/
 done
 [ -n "$jdk" ] || jdk="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
 
-compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-2.0.21.jar' 2>/dev/null | head -1)
-[ -n "$compiler" ] || compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-*.jar' 2>/dev/null | grep -v sources | sort | tail -1)
-stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name 'kotlin-stdlib-*.jar' 2>/dev/null | grep -v sources | grep -v -- '-jdk' | sort | tail -1)
-coroutines=$(find "$caches" -name 'kotlinx-coroutines-core-jvm-*.jar' 2>/dev/null | grep -v sources | sort | tail -1)
-trove=$(find "$caches" -iname '*trove4j*.jar' 2>/dev/null | grep -v sources | sort | tail -1)
-annotations=$(find "$caches" -name 'annotations-13.0.jar' 2>/dev/null | sort | tail -1)
-daemon=$(find "$caches" -name 'kotlin-daemon-embeddable-*.jar' 2>/dev/null | sort | tail -1)
-script=$(find "$caches" -name 'kotlin-script-runtime-*.jar' 2>/dev/null | sort | tail -1)
-reflect=$(find "$caches" -name 'kotlin-reflect-*.jar' 2>/dev/null | grep -v sources | sort | tail -1)
+compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-2.0.21.jar' 2>/dev/null | head -1 || true)
+[ -n "$compiler" ] || compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
+stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name 'kotlin-stdlib-*.jar' 2>/dev/null | grep -v sources | grep -v -- '-jdk' | sort | tail -1 || true)
+coroutines=$(find "$caches" -name 'kotlinx-coroutines-core-jvm-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
+trove=$(find "$caches" -iname '*trove4j*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
+annotations=$(find "$caches" -name 'annotations-13.0.jar' 2>/dev/null | sort | tail -1 || true)
+daemon=$(find "$caches" -name 'kotlin-daemon-embeddable-*.jar' 2>/dev/null | sort | tail -1 || true)
+script=$(find "$caches" -name 'kotlin-script-runtime-*.jar' 2>/dev/null | sort | tail -1 || true)
+reflect=$(find "$caches" -name 'kotlin-reflect-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
 [ -n "$compiler" ] || { echo 'BLOCKED: no Kotlin compiler available' >&2; exit 2; }
 
 "$jdk/bin/java" -cp "$compiler:$stdlib:$coroutines:$trove:$annotations:$daemon:$script:$reflect" \

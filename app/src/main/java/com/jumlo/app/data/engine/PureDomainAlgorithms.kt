@@ -5,7 +5,6 @@ import com.jumlo.app.model.ParsedUrlCandidate
 import com.jumlo.app.model.ResizeMode
 import com.jumlo.app.model.UrlValidationStatus
 import java.io.File
-import java.io.IOException
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min

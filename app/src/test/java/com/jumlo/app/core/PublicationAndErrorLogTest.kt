@@ -6,14 +6,16 @@ import com.jumlo.app.pdf.PdfFixtures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayInputStream
 import java.io.File
-import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 
 class PublicationRecoveryTest {
-    private fun root(): File = Files.createTempDirectory("pub-test").toFile()
+    @get:Rule val temporary = TemporaryFolder()
+    private fun root(): File = temporary.newFolder()
 
     @Test
     fun interrupted_publication_is_recovered_by_reconcile_after_simulated_death() {
@@ -165,6 +167,8 @@ class PublicationRecoveryTest {
 }
 
 class ErrorLogTest {
+    @get:Rule val temporary = TemporaryFolder()
+
     @Test
     fun sanitize_accepts_only_stable_codes() {
         assertEquals("PROCESSING_FAILED", ErrorLog.sanitize("PROCESSING_FAILED"))
@@ -176,7 +180,7 @@ class ErrorLogTest {
 
     @Test
     fun clearing_log_removes_rotated_file_and_export_includes_previous_codes() {
-        val file = File(Files.createTempDirectory("errlog-rotation").toFile(), "error-log.txt")
+        val file = File(temporary.newFolder(), "error-log.txt")
         val log = ErrorLog(file, 10L)
         log.record("FIRST_ERROR")
         log.record("SECOND_ERROR")
@@ -191,7 +195,7 @@ class ErrorLogTest {
 
     @Test
     fun log_records_codes_and_tool_ids_but_not_payloads() {
-        val file = File(Files.createTempDirectory("errlog").toFile(), "error-log.txt")
+        val file = File(temporary.newFolder(), "error-log.txt")
         val log = ErrorLog(file)
         log.record("DOWNLOAD_FAILED", "dl_02")
         log.record("https://signed.example/?token=SECRET")

@@ -1,6 +1,5 @@
 package com.jumlo.app.ui.workspace
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -10,14 +9,11 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.*
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.NavigateBefore
-import com.jumlo.app.ui.icons.automirrored.rounded.NavigateNext
 import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
@@ -80,6 +76,7 @@ private fun WorkspaceDraft.cropRectFor(page:Int,perPage:Boolean):VisualRect {
 }
 
 private fun Float.serialized():String = String.format(Locale.US,"%.5f",this)
+private fun safeAnnotationColor(hex:String):Color = runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color(0xFFFFEB3B))
 
 @Composable
 internal fun VisualDocumentEditor(
@@ -301,7 +298,7 @@ internal fun VisualDocumentEditor(
                                 .widthIn(max=180.dp).padding(5.dp),
                             maxLines=2,overflow=TextOverflow.Ellipsis,
                             style=QuietTheme.typography.metadataStrong,
-                            color=Color(android.graphics.Color.parseColor(draft.annotationColorHex)))
+                            color=safeAnnotationColor(draft.annotationColorHex))
                     }
 
                     val active by rememberUpdatedState(rect)
@@ -309,6 +306,7 @@ internal fun VisualDocumentEditor(
                     Canvas(Modifier.fillMaxSize().pointerInput(tool,sourceId,currentPage,handlePx,draft.turns) {
                         detectDragGestures(
                             onDragStart={ tap ->
+                                if(size.width<=0 || size.height<=0) return@detectDragGestures
                                 if(inkKind) {
                                     inkCapture=InkStrokeCapture(PdfInkDrawing.strokeCapacity(currentDraft.effectiveInkStrokes()))
                                         .append(tap.x/size.width,tap.y/size.height)
@@ -321,6 +319,7 @@ internal fun VisualDocumentEditor(
                                 dragging=handle!=VisualHandle.NONE
                             },
                             onDrag={ change,delta ->
+                                if(size.width<=0 || size.height<=0) return@detectDragGestures
                                 if(inkKind) {
                                     change.consume()
                                     inkCapture=inkCapture.append(change.position.x/size.width,change.position.y/size.height)
@@ -395,7 +394,7 @@ internal fun VisualDocumentEditor(
                                     Offset(x1,y0+(y1-y0)*position),1.dp.toPx())
                             }
                         } else if(annotation) {
-                            val inkColor=Color(android.graphics.Color.parseColor(currentDraft.annotationColorHex))
+                            val inkColor=safeAnnotationColor(currentDraft.annotationColorHex)
                             val inkWidth=currentDraft.annotationThicknessPt*size.width/frame.width
                             when(PdfAnnotationKind.from(currentDraft.text2)) {
                                 PdfAnnotationKind.HIGHLIGHT ->
@@ -428,7 +427,7 @@ internal fun VisualDocumentEditor(
                                         val py=stroke[index+1].coerceIn(0f,1f)*size.height
                                         if(index==0) path.moveTo(px,py) else path.lineTo(px,py)
                                     }
-                                    drawPath(path,Color(android.graphics.Color.parseColor(currentDraft.annotationColorHex)),style=Stroke(currentDraft.annotationThicknessPt*size.width/frame.width))
+                                    drawPath(path,safeAnnotationColor(currentDraft.annotationColorHex),style=Stroke(currentDraft.annotationThicknessPt*size.width/frame.width))
                                 }
                             }
                         } else {

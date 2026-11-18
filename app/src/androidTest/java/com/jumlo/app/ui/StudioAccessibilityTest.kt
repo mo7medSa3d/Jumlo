@@ -2,7 +2,6 @@ package com.jumlo.app.ui
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -52,7 +51,7 @@ class StudioAccessibilityTest {
     private fun verifyLargeCatalogue(language:AppLanguage) {
         val tool=CapabilityRegistry.tools.single {it.id=="pdf_to_pptx"}
         compose.setContent {LargeType(language) {
-            Column(Modifier.width(320.dp)) {ToolsCatalogue(listOf(tool),language,emptyList(),emptyList(),emptyList(),"",{},{})}
+            Column(Modifier.width(320.dp)) {ToolsCatalogue(listOf(tool),language,emptyList(),emptyList(),emptyList(),"",{},onTool={})}
         }}
         compose.onNodeWithTag("tool.${tool.id}").assertIsDisplayed().assertHasClickAction()
             .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)

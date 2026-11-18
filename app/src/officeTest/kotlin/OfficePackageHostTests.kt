@@ -4,7 +4,6 @@ import com.jumlo.app.core.office.OfficePackageWriter
 import com.jumlo.app.core.office.OfficePackageValidator
 import com.jumlo.app.core.office.OfficeSlide
 import com.jumlo.app.core.office.DocumentRenderPolicy
-import com.jumlo.app.core.office.OfficeParagraph
 import com.jumlo.app.core.office.OfficeTextPage
 import com.jumlo.app.core.office.OfficeTextParagraph
 import com.jumlo.app.core.office.OfficeTextSpan
@@ -23,6 +22,7 @@ private fun verify(name:String,block:()->Unit) { block(); checks++;println("PASS
 
 fun main(args:Array<String>) {
     val dir=if(args.isNotEmpty()) File(args[0]).apply {mkdirs()} else java.nio.file.Files.createTempDirectory("office-tests-").toFile()
+    try {
     verify("page rendering bounds memory and edges for large or extreme page geometry") {
         check(DocumentRenderPolicy.dimensions(600,800,2400,24L*1024*1024)==(1800 to 2400))
         for((width,height) in listOf(600 to 800,Int.MAX_VALUE to Int.MAX_VALUE,Int.MAX_VALUE to 1,1 to Int.MAX_VALUE)) {
@@ -167,4 +167,7 @@ fun main(args:Array<String>) {
         check(runCatching {OfficePackageValidator.validatePptx(bad,1)}.isFailure)
     }
     println("ALL PASS: $checks Office package checks; samples=${dir.absolutePath}")
+    } finally {
+        if (args.isEmpty()) dir.deleteRecursively()
+    }
 }

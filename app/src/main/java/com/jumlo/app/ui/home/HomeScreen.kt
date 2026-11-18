@@ -51,7 +51,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                     color = MaterialTheme.colorScheme.primaryContainer,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
                 ) {
-                    Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text(stringResource(R.string.modern_home_title), style = QuietTheme.typography.display,
                             color = MaterialTheme.colorScheme.onPrimaryContainer)
                         Text(stringResource(R.string.modern_home_subtitle), style = QuietTheme.typography.bodyMedium,
@@ -188,8 +188,8 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
         shadowElevation = 1.dp
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 Modifier.size(44.dp).background(colors.primaryContainer, QuietTheme.shapes.thumbnail),

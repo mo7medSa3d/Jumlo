@@ -3,6 +3,7 @@ package com.jumlo.app.ui.viewer
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.view.WindowManager
@@ -67,7 +68,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
@@ -122,6 +125,7 @@ private fun PdfViewerContent(
     var searchText by rememberSaveable { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<Int>>(emptyList()) }
     var searchBusy by remember { mutableStateOf(false) }
+    var searchJob by remember { mutableStateOf<Job?>(null) }
     var info by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var infoError by remember { mutableStateOf(false) }
 
@@ -167,7 +171,10 @@ private fun PdfViewerContent(
 
     DisposableEffect(activity) {
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            activity?.let { WindowInsetsControllerCompat(it.window, it.window.decorView).show(WindowInsetsCompat.Type.systemBars()) }
+        }
     }
 
     LaunchedEffect(chromeVisible, activity) {
@@ -258,11 +265,16 @@ private fun PdfViewerContent(
                 results = searchResults,
                 busy = searchBusy,
                 onSearch = { query ->
+                    searchJob?.cancel()
                     if (query.isBlank()) {
+                        searchBusy = false
                         searchResults = emptyList()
                     } else {
                         searchBusy = true
-                        scope.launch { searchResults = searchPdf(context, uri, query); searchBusy = false }
+                        searchJob = scope.launch {
+                            try { searchResults = searchPdf(context, uri, query) }
+                            finally { searchBusy = false }
+                        }
                     }
                 },
                 onJump = { page -> scope.launch { list.animateScrollToItem(page - 1) } },
@@ -294,16 +306,17 @@ private fun ThumbnailsSheet(document: PdfReaderSession, selected: Int, onJump: (
 
 @Composable
 private fun JumpDialog(count: Int, current: Int, onJump: (Int) -> Unit, onDismiss: () -> Unit) {
-    var page by rememberSaveable { mutableIntStateOf(current.coerceIn(1, count)) }
+    val safeCount = count.coerceAtLeast(1)
+    var page by rememberSaveable { mutableIntStateOf(current.coerceIn(1, safeCount)) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.reader_jump_title)) },
         text = {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Slider(value = page.toFloat(), valueRange = 1f..count.toFloat(), onValueChange = { page = it.toInt() }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(page.toString(), { value -> page = value.toIntOrNull()?.coerceIn(1, count) ?: page },
+                Slider(value = page.toFloat(), valueRange = 1f..safeCount.toFloat(), onValueChange = { page = it.toInt() }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(page.toString(), { value -> page = value.toIntOrNull()?.coerceIn(1, safeCount) ?: page },
                     label = { Text(stringResource(R.string.reader_jump_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text(stringResource(R.string.reader_page_indicator, page, count), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.reader_page_indicator, page, safeCount), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = { TextButton(onClick = { onJump(page) }) { Text(stringResource(R.string.reader_jump_go)) } },
@@ -399,7 +412,8 @@ private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, onT
             Text(pageLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = ::reset, enabled = scale > 1.01f, modifier = Modifier.heightIn(min = 48.dp)) { Text("${(scale * 100).toInt()}% · $fitLabel") }
         }
-        Box(Modifier.fillMaxWidth().aspectRatio(frame?.let { it.width.toFloat() / it.height } ?: document.firstPageRatio)
+        val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.firstPageRatio).takeIf { it.isFinite() && it > 0f } ?: 0.707f
+        Box(Modifier.fillMaxWidth().aspectRatio(pageRatio)
             .clip(QuietTheme.shapes.thumbnail).background(if (dark) Color.Black else Color.White).clipToBounds()
             .onSizeChanged { viewport = it }.testTag("pdf.page.$page")
             .pointerInput(page) { detectTapGestures(onTap = { onTap() }, onDoubleTap = { if (scale > 1.01f) reset() else scale = 2.5f }) }
@@ -454,12 +468,16 @@ private fun Context.findActivity(): Activity? {
 }
 
 private fun shareDocument(context: Context, uri: String, title: String) {
+    val parsed = runCatching { Uri.parse(uri) }.getOrNull() ?: return
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "application/pdf"
-        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_STREAM, parsed)
+        clipData = ClipData.newRawUri(title, parsed)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    runCatching {
+        context.startActivity(Intent.createChooser(intent, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
 }
 
 private fun copyToCache(context: Context, uri: String, prefix: String): File? {
@@ -498,6 +516,7 @@ private suspend fun searchPdf(context: Context, uri: String, query: String): Lis
             val needle = query.lowercase()
             val matches = mutableListOf<Int>()
             for (page in 0 until doc.numberOfPages) {
+                currentCoroutineContext().ensureActive()
                 val text = PdfPageText.extract(doc, page).lowercase()
                 if (text.contains(needle)) matches.add(page + 1)
                 if (matches.size >= 50) break

@@ -53,6 +53,7 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
             catch(cancel:CancellationException) {throw cancel}
             catch(error:Exception) {Result.failure(error)}
     }
+    DisposeOwnedPreviewBitmap(frame?.getOrNull()?.bitmap)
     val haptics=rememberAppHaptics()
     var margin by remember(draft.margin) {mutableFloatStateOf((WorkspaceDraft.normalizeDigits(draft.margin).toIntOrNull() ?: 10).coerceIn(0,200).toFloat())}
     var past by remember {mutableStateOf<List<PreviewSettings>>(emptyList())}

@@ -68,4 +68,13 @@ class MediaMetadataTest {
         assertTrue(asset.formats.single().hasVideo)
         assertTrue(asset.formats.single().hasAudio)
     }
+
+    @Test fun dashExtensionsNormalizeAndGenericProgressiveVideoKeepsTracks() {
+        val asset=MediaMetadata.parse("""{"id":"clip","extractor":"generic","formats":[{"format_id":"v","url":"https://cdn.example/v.mp4","ext":"mp4_dash","width":1280,"height":720,"protocol":"https"},{"format_id":"a","url":"https://cdn.example/a.m4a","ext":"m4a_dash"}]}""")
+        assertEquals(listOf("mp4", "m4a"), asset.formats.map { it.extension })
+        assertTrue(asset.formats[0].hasVideo)
+        assertTrue(asset.formats[0].hasAudio)
+        assertTrue(asset.formats[1].hasAudio)
+        assertFalse(asset.formats[1].hasVideo)
+    }
 }

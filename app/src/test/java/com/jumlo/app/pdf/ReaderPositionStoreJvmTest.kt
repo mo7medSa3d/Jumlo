@@ -2,7 +2,7 @@ package com.jumlo.app.data.pdf
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -19,7 +19,7 @@ import java.util.UUID
 class ReaderPositionStoreJvmTest {
     private fun uri() = "content://reader.test/secret/" + UUID.randomUUID()
 
-    @Test fun positionsPersistAndRemainIsolatedPerDocument() = runBlocking {
+    @Test fun positionsPersistAndRemainIsolatedPerDocument() = runTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val first = uri()
         val second = uri()
@@ -45,7 +45,7 @@ class ReaderPositionStoreJvmTest {
         assertEquals(key, ReaderPositionStore.opaqueKey(raw))
     }
 
-    @Test fun negativePagesCannotOverwriteSavedPage() = runBlocking {
+    @Test fun negativePagesCannotOverwriteSavedPage() = runTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val target = uri()
         assertTrue(ReaderPositionStore.save(context, target, 4))

@@ -5,6 +5,7 @@ import java.io.File
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.io.IOException
+import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import javax.xml.parsers.SAXParserFactory
@@ -299,7 +300,7 @@ object OfficeDocumentReader {
             // A non-OOXML file may still be identified by its extension, but
             // malformed XML inside an OOXML package must never use that fallback.
         }
-        return when (displayName.substringAfterLast('.', "").lowercase()) {
+        return when (displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)) {
             "docx" -> OfficeKind.DOCX
             "xlsx" -> OfficeKind.XLSX
             "pptx" -> OfficeKind.PPTX
@@ -390,7 +391,7 @@ object OfficeDocumentReader {
     }
 
     private fun imageExtension(target: String): String =
-        target.substringAfterLast('.', "").lowercase()
+        target.substringAfterLast('.', "").lowercase(Locale.ROOT)
 
     private fun isRasterImage(extension: String): Boolean =
         extension in setOf("png", "jpg", "jpeg", "gif", "bmp", "webp")
@@ -740,7 +741,7 @@ object OfficeDocumentReader {
         return cellFormats.indices.filter { index ->
             val id = cellFormats[index]
             id in builtInDates || formats[id]?.let { code ->
-                val lower = code.lowercase()
+                val lower = code.lowercase(Locale.ROOT)
                 ('y' in lower && ('m' in lower || 'd' in lower)) || 'h' in lower
             } ?: false
         }.toSet()
@@ -944,7 +945,6 @@ object OfficeDocumentReader {
                 var currentRow: ArrayList<OfficeCell>? = null
                 var inCell = false
                 var cellText = StringBuilder()
-                var inTblPr = false
                 var tableHeader = false
                 var slideTextChars = 0L
 
@@ -985,7 +985,6 @@ object OfficeDocumentReader {
                         "br" -> if (inRun) runText.append('\n')
                         "tbl" -> { inTable = true; tableRows = ArrayList(); tableHeader = false }
                         "tblPr" -> {
-                            inTblPr = true
                             // firstRow is an attribute of tblPr, not an element.
                             tableHeader = attr(attrs, "firstRow") == "1"
                         }
@@ -1034,7 +1033,6 @@ object OfficeDocumentReader {
                                 acc.add(OfficeBlock.TableBlock(tableRows.map { it.toList() }, tableHeader))
                             }
                         }
-                        "tblPr" -> inTblPr = false
                         "tr" -> {
                             val row = currentRow
                             if (row != null && row.isNotEmpty()) tableRows += row

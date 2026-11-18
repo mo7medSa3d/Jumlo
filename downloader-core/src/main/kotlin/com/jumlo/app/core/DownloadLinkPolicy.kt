@@ -33,6 +33,8 @@ object DownloadLinkPolicy {
         "snapchat.com",
         "kwai.com", "kwai-video.com",
         "t.me",
+        "vk.com", "vkvideo.ru", "ok.ru", "rumble.com", "odysee.com", "kick.com",
+        "streamable.com", "loom.com", "bandcamp.com", "mixcloud.com", "ted.com", "archive.org",
         "drive.google.com", "docs.google.com", "drive.usercontent.google.com"
     )
 
@@ -59,6 +61,17 @@ object DownloadLinkPolicy {
             matches("snapchat.com") -> "Snapchat"
             matches("kwai.com", "kwai-video.com") -> "Kwai"
             matches("t.me") -> "Telegram"
+            matches("vk.com", "vkvideo.ru") -> "VK"
+            matches("ok.ru") -> "OK.ru"
+            matches("rumble.com") -> "Rumble"
+            matches("odysee.com") -> "Odysee"
+            matches("kick.com") -> "Kick"
+            matches("streamable.com") -> "Streamable"
+            matches("loom.com") -> "Loom"
+            matches("bandcamp.com") -> "Bandcamp"
+            matches("mixcloud.com") -> "Mixcloud"
+            matches("ted.com") -> "TED"
+            matches("archive.org") -> "Internet Archive"
             matches("drive.google.com", "docs.google.com", "drive.usercontent.google.com") -> "Google Drive"
             else -> null
         }

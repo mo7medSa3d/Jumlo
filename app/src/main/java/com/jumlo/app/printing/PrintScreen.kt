@@ -6,7 +6,6 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.provider.Settings
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,7 +26,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.automirrored.rounded.Redo
-import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
 import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.rounded.Close
 import com.jumlo.app.ui.icons.rounded.DoneAll
@@ -74,9 +71,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.ui.components.QuietChip
 import com.jumlo.app.ui.components.QuietSwitch
-import com.jumlo.app.ui.theme.JumloMotion
-import com.jumlo.app.ui.theme.LocalReducedMotion
-import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.util.rememberZoomPanState
 import com.jumlo.app.ui.util.zoomPan
@@ -474,7 +468,6 @@ internal fun PrintPageTile(
     onDragPosition: (Offset) -> Unit,
     onDragEnd: (Boolean) -> Unit
 ) {
-    val haptics = rememberAppHaptics()
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val density = LocalDensity.current
     val stepPx = with(density) { 94.dp.toPx() }
@@ -591,7 +584,6 @@ private fun QuietEmptyQueue() {
 private fun PrintPreview(source:PrintSource,options:PrintOptions,page:PrintPage,layout:PrintLayout,vm:PrintViewModel,onMargins:(PrintMargins)->Unit) {
     // Two fingers can turn the preview; a page is never rotated past readability.
     val zoomState=rememberZoomPanState(1f,6f,allowRotation=true)
-    val reduced=LocalReducedMotion.current
     val latestMargins by rememberUpdatedState(options.margins)
     val latestChange by rememberUpdatedState(onMargins)
     val haptics=rememberAppHaptics()
@@ -624,8 +616,7 @@ private fun PrintPreview(source:PrintSource,options:PrintOptions,page:PrintPage,
                     Box(Modifier.absoluteOffset(x=previewWidth*x.toFloat()-24.dp,y=previewHeight*y.toFloat()-24.dp).size(48.dp)
                         .semantics {contentDescription=label}
                         .pointerInput(edge,layout.paper,widthPx,heightPx) {
-                            var originalMargins:PrintMargins?=null
-                            detectDragGestures(onDragStart={originalMargins=latestMargins;vm.beginContinuousEdit("print-margin-$edge");haptics.dragStart()},onDragEnd={originalMargins=null;vm.endContinuousEdit("print-margin-$edge",true);haptics.dragEnd()},onDragCancel={vm.endContinuousEdit("print-margin-$edge",false);originalMargins=null}) {change,drag ->
+                            detectDragGestures(onDragStart={vm.beginContinuousEdit("print-margin-$edge");haptics.dragStart()},onDragEnd={vm.endContinuousEdit("print-margin-$edge",true);haptics.dragEnd()},onDragCancel={vm.endContinuousEdit("print-margin-$edge",false)}) {change,drag ->
                             change.consume();val old=latestMargins
                             val dx=drag.x/widthPx*layout.paper.width;val dy=drag.y/heightPx*layout.paper.height
                             val next=when(edge) {
@@ -642,7 +633,7 @@ private fun PrintPreview(source:PrintSource,options:PrintOptions,page:PrintPage,
     val zoomLabel=stringResource(R.string.print_preview_zoom,(zoomState.scale*100).roundToInt())
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
         Text(zoomLabel,style=MaterialTheme.typography.bodySmall)
-        TextButton(onClick={zoomState.reset()},enabled=zoomState.scale>1.01f || zoomState.offset!=Offset.Zero,modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.ui_preview_reset_zoom))}
+        TextButton(onClick={zoomState.reset()},enabled=zoomState.scale>1.01f || zoomState.offset!=Offset.Zero || zoomState.rotation!=0f,modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.ui_preview_reset_zoom))}
     }
 }
 private data class PreviewImage(val bitmap:Bitmap?=null,val error:Boolean=false)

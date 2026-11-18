@@ -69,6 +69,7 @@ internal fun SourceOrderStrip(vm:AppViewModel,sources:List<SourceRef>,selectedId
                             catch(cancel:CancellationException) {throw cancel}
                             catch(_:Exception) {null}
                 }
+                DisposeOwnedPreviewBitmap(frame?.bitmap)
                 var displacement by remember(source.id) {mutableFloatStateOf(0f)}
                 val dragDescription=stringResource(R.string.studio_drag_reorder,source.displayName)
                 Column(Modifier.width(148.dp).animateItem().graphicsLayer {translationX=displacement},horizontalAlignment=Alignment.CenterHorizontally) {

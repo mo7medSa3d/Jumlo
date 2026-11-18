@@ -2,13 +2,16 @@ package com.jumlo.app.data
 
 import com.jumlo.app.data.jobs.SubmissionResetGate
 import kotlinx.coroutines.*
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.IOException
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SubmissionResetGateTest {
-    @Test fun failedResetBlocksSubmissionButNextExplicitResetCanRecover() = runBlocking {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+    @Test fun failedResetBlocksSubmissionButNextExplicitResetCanRecover() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
         var attempts = 0
         var submitted = 0
         val gate = SubmissionResetGate(scope) {
@@ -29,8 +32,8 @@ class SubmissionResetGateTest {
         } finally { scope.cancel() }
     }
 
-    @Test fun multipleRequestsAreSerializedAndSubmissionWaitsForTheLatestReset() = runBlocking {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+    @Test fun multipleRequestsAreSerializedAndSubmissionWaitsForTheLatestReset() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
         val first = CompletableDeferred<Unit>()
         val second = CompletableDeferred<Unit>()
         val events = mutableListOf<String>()
@@ -43,7 +46,7 @@ class SubmissionResetGateTest {
         }
         try {
             gate.request()
-            val waiting = async(Dispatchers.Unconfined) { gate.awaitLatest() }
+            val waiting = async(UnconfinedTestDispatcher(testScheduler)) { gate.awaitLatest() }
             gate.request()
             assertEquals(listOf("start 1"), events)
             first.complete(Unit)
@@ -55,8 +58,8 @@ class SubmissionResetGateTest {
         } finally { scope.cancel() }
     }
 
-    @Test fun cancelledScopeCancelsPendingResetsAndAwaitStillThrowsCancellation() = runBlocking {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+    @Test fun cancelledScopeCancelsPendingResetsAndAwaitStillThrowsCancellation() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
         var attempts = 0
         val gate = SubmissionResetGate(scope) { attempts++; awaitCancellation() }
         gate.request()
@@ -68,8 +71,8 @@ class SubmissionResetGateTest {
         assertFalse(scope.isActive)
     }
 
-    @Test fun fatalResetFailureIsNotConvertedIntoSuccessfulCompletion() = runBlocking {
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+    @Test fun fatalResetFailureIsNotConvertedIntoSuccessfulCompletion() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
         val fatal = LinkageError("fixture fatal failure")
         val gate = SubmissionResetGate(scope) { throw fatal }
         try {

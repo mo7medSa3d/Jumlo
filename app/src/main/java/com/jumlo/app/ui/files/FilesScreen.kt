@@ -29,8 +29,6 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,8 +36,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.jumlo.app.R
 import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.data.files.DocumentEntry
@@ -84,10 +80,16 @@ import com.jumlo.app.model.*
     var purgeIds by remember {mutableStateOf<Set<String>?>(null)}
     var details by remember {mutableStateOf<OutputRecord?>(null)}
     LaunchedEffect(outputs,outputLoad) {
-        if(outputLoad==DataLoadStatus.READY) selected=selected.intersect(outputs.map {it.id}.toSet())
+        if(outputLoad==DataLoadStatus.READY) {
+            selected=selected.intersect(outputs.map {it.id}.toSet())
+            if(outputs.isEmpty()) selecting=false
+        }
     }
     LaunchedEffect(imported,sourceLoad) {
-        if(sourceLoad==DataLoadStatus.READY) selectedSources=selectedSources.intersect(imported.map {it.id}.toSet())
+        if(sourceLoad==DataLoadStatus.READY) {
+            selectedSources=selectedSources.intersect(imported.map {it.id}.toSet())
+            if(imported.isEmpty()) selectingSources=false
+        }
     }
     val density=LocalDensity.current
     val visible=remember(outputs,search,sort,type,settings.favoriteOutputIds) {
@@ -111,6 +113,7 @@ import com.jumlo.app.model.*
         tree?.entries?.filter {it.name.contains(search,true)}.orEmpty()
     }
     val selectedOutputs = visible.filter { it.id in selected }
+    val now = remember(visible) { System.currentTimeMillis() }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("files.screen")) {
     val columns=((maxWidth.value-40f)/(if(density.fontScale>=1.5f) 240f else 160f)).toInt().coerceIn(1,4)
     LazyColumn(
@@ -146,7 +149,7 @@ import com.jumlo.app.model.*
                 item("filter") { Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
                         items(listOf("all","favorites","Video","Audio","PDF","Images","Documents")) {filter->
-                            FilterChip(type==filter,{haptics.selectionToggle();type=filter;selected=emptySet()},border=null,label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->"PDF";"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
+                            FilterChip(type==filter,{haptics.selectionToggle();type=filter;selected=emptySet()},border=null,label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->stringResource(R.string.redesign_pdf_type);"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
                         }
                     }
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
@@ -174,7 +177,6 @@ import com.jumlo.app.model.*
                         stringResource(if(filtered) R.string.files_state_reset_filters else R.string.import_device_files),
                         { if(filtered) { search=""; type="all"; selected=emptySet() } else onImport() })
                 }
-                val now = System.currentTimeMillis()
                 val grouped = when(group) {
                     "type" -> visible.groupBy { StoragePaths.category(it.mimeType) }
                     "date" -> visible.groupBy { fileDateGroup(it.createdAtEpochMs, now).name }

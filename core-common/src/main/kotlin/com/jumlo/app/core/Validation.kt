@@ -8,19 +8,19 @@ import kotlin.math.*
 
 /** UI page numbers are physical, one-based, and preserve the user's order. */
 object PageSelection {
-    /** Contiguous ranges stay together: "1-3,5" yields [[1,2,3],[5]]. */
-    fun groups(value: String, count: Int): List<List<Int>> {
+    private val rangePattern = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$")
+
+    private fun parseRanges(value: String, count: Int): List<IntRange> {
         require(count > 0) { "INVALID_PAGE_COUNT" }
         val normalized = normalize(value)
         require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
-        val result = mutableListOf<List<Int>>()
         // A 100 KB range expression can repeat "1-10000" thousands of times.
         // Avoid allocating millions of duplicated boxed page numbers before
         // downstream document size limits can reject the request.
         var expandedPages = 0L
         val maxExpandedPages = 100_000L
-        normalized.split(',').forEach { part ->
-            val match = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$").matchEntire(part)
+        return normalized.split(',').map { part ->
+            val match = rangePattern.matchEntire(part)
             require(match != null) { "INVALID_PAGE_RANGE" }
             val first = match.groupValues[1].toIntOrNull()
             val endpoint = match.groupValues[2]
@@ -29,10 +29,12 @@ object PageSelection {
             val boundedEnd = minOf(last, count)
             expandedPages += boundedEnd.toLong() - first + 1L
             require(expandedPages <= maxExpandedPages) { "PAGE_SELECTION_LIMIT" }
-            result += (first..boundedEnd).toList()
+            first..boundedEnd
         }
-        return result
     }
+
+    /** Contiguous ranges stay together: "1-3,5" yields [[1,2,3],[5]]. */
+    fun groups(value: String, count: Int): List<List<Int>> = parseRanges(value, count).map { it.toList() }
 
     private fun normalize(value: String): String = value.map { c -> when (c) {
         in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
@@ -42,20 +44,8 @@ object PageSelection {
     } }.joinToString("")
 
     fun parse(value: String, count: Int): List<Int> {
-        require(count > 0) { "INVALID_PAGE_COUNT" }
-        val normalized = normalize(value)
-        require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
         val result = linkedSetOf<Int>()
-        normalized.split(',').forEach { part ->
-            val match = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$").matchEntire(part)
-            require(match != null) { "INVALID_PAGE_RANGE" }
-            val first = match.groupValues[1].toIntOrNull()
-            val endpoint=match.groupValues[2]
-            val last=if(endpoint.isEmpty()) first else endpoint.toIntOrNull()
-            require(first != null && last != null && first in 1..count && last >= first) { "INVALID_PAGE_RANGE" }
-            // A range that reaches past the last page is clamped to the pages that exist.
-            for (page in first..minOf(last,count)) result.add(page)
-        }
+        for (range in parseRanges(value, count)) result.addAll(range)
         return result.toList()
     }
     fun groups(count: Int, every: Int): List<List<Int>> {
@@ -127,7 +117,9 @@ object SafeNames {
         require(parts.size <= maxDepth && parts.none { it.isEmpty() || it == "." || it == ".." }) { "UNSAFE_ARCHIVE_PATH" }
         val normalizedParts=parts.map(::basename)
         val destination = File(root, normalizedParts.joinToString(File.separator)).canonicalFile
-        require(destination.path.startsWith(root.canonicalPath + File.separator)) { "UNSAFE_ARCHIVE_PATH" }
+        val rootPath = root.canonicalFile.toPath()
+        val destPath = destination.toPath()
+        require(destPath != rootPath && destPath.startsWith(rootPath)) { "UNSAFE_ARCHIVE_PATH" }
         return destination
     }
     fun unique(existing: Set<String>, desired: String): String {

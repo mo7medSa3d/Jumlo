@@ -44,11 +44,11 @@ case "$MODE" in
     run_task benchmark-compile :app:assembleBenchmark :benchmark:assembleBenchmark
     run_task media-dependencies :app:dependencies --configuration releaseRuntimeClasspath
     if [[ "${JUMLO_NATIVE_EXTENDED_MEDIA:-true}" == "true" ]]; then
-      if ! rg -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
+      if ! grep -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
         echo 'ERROR: full-media release is missing its media runtime' >&2
         exit 1
       fi
-    elif rg -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
+    elif grep -q 'youtubedl-android:library' "$LOG_DIR/media-dependencies.log"; then
       echo 'ERROR: explicitly requested lite release includes the media runtime' >&2
       exit 1
     fi

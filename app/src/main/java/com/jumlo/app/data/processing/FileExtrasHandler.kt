@@ -218,7 +218,7 @@ import javax.inject.Singleton
         val tokenChars = secrets.copy(settings.tokenSecretHandle) ?: throw OperationFailure("DRIVE_TOKEN_MISSING")
         try {
             require(tokenChars.isNotEmpty()) { "DRIVE_TOKEN_MISSING" }
-            val client = GoogleDriveClient(OkHttpTransport(okHttpClient), okHttpClient)
+            val client = GoogleDriveClient(OkHttpTransport(okHttpClient, checkCancellation = context.checkCancellation), okHttpClient)
             return if (!settings.exportMode) {
                 val itemKey = "drive-import"
                 context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
@@ -233,7 +233,8 @@ import javax.inject.Singleton
                     checkCancel = context.checkCancellation
                 )
                 context.report(JobProgress(JobStage.FINALIZING, downloaded.sizeBytes ?: ticket.stageFile.length(), downloaded.sizeBytes))
-                val rec = context.outputs.publish(ticket) { OutputMetadata() }
+                val finalTicket = ticket.copy(displayName = SafeNames.basename(downloaded.name), mimeType = downloaded.mimeType)
+                val rec = context.outputs.publish(finalTicket) { OutputMetadata() }
                 secrets.remove(settings.tokenSecretHandle)
                 listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
             } else {

@@ -9,7 +9,6 @@ import com.tom_roush.pdfbox.pdmodel.PDResources
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
-import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget
 import com.tom_roush.pdfbox.pdmodel.interactive.form.PDAcroForm
@@ -24,7 +23,7 @@ internal object ScreenshotPdfFixtures {
     /** One text page per entry, drawn at a known position (72pt, 700pt from bottom). */
     fun simpleDoc(target: File, texts: List<String>): File {
         PDDocument().use { doc ->
-            texts.forEachIndexed { index, text ->
+            texts.forEach { text ->
                 val page = PDPage(PDRectangle.A4)
                 doc.addPage(page)
                 PDPageContentStream(doc, page, PDPageContentStream.AppendMode.OVERWRITE, true, true).use { cs ->
@@ -34,7 +33,6 @@ internal object ScreenshotPdfFixtures {
                     cs.showText(text)
                     cs.endText()
                 }
-                index
             }
             save(doc, target)
         }

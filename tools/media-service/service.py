@@ -83,7 +83,8 @@ def classify(message: str) -> str:
 
 def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["yt-dlp", "--ignore-config", "--no-plugin-dirs", "--no-playlist",
+        ["yt-dlp", "--ignore-config", "--no-plugin-dirs", "--no-playlist", "--geo-bypass",
+         "--extractor-args", "youtube:player_client=android_vr,android,web",
          "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "2", *args],
         capture_output=True, text=True, timeout=timeout, check=False,
     )
@@ -106,7 +107,7 @@ def to_format(entry: dict) -> dict:
     tbr = entry.get("tbr")
     if vbr is None and tbr is not None:
         vbr = tbr
-    extension = (entry.get("ext") or "mp4").lower()
+    extension = {"mp4_dash": "mp4", "m4a_dash": "m4a"}.get((entry.get("ext") or "mp4").lower(), (entry.get("ext") or "mp4").lower())
     video_codec = (entry.get("vcodec") or "").split(".")[0]
     audio_codec = (entry.get("acodec") or "").split(".")[0]
     # Some sites (Facebook, X) publish a progressive file and report no codec at
@@ -143,10 +144,11 @@ def to_format(entry: dict) -> dict:
 
 def extract(url: str) -> dict:
     """Return the formats for a public URL, or an error code."""
-    if not re.match(r"^https?://", url, re.IGNORECASE):
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme.lower() not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
         return {"error": "MEDIA_SITE_UNSUPPORTED"}
     try:
-        result = run_ytdlp(["-J", url], timeout=120)
+        result = run_ytdlp(["-J", "--", url], timeout=120)
     except subprocess.TimeoutExpired:
         return {"error": "MEDIA_NETWORK_ERROR"}
     if result.returncode != 0:
@@ -410,10 +412,23 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path != "/extract":
             self._error("MEDIA_SITE_UNSUPPORTED", 404)
             return
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            self._error("MEDIA_SITE_UNSUPPORTED", 400)
+            return
+        if length < 0:
+            self._error("MEDIA_SITE_UNSUPPORTED", 400)
+            return
+        if length > 65536:
+            self._error("MEDIA_OUTPUT_LIMIT", 413)
+            return
         try:
             payload = json.loads(self.rfile.read(length) or b"{}")
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._error("MEDIA_SITE_UNSUPPORTED", 400)
+            return
+        if not isinstance(payload, dict):
             self._error("MEDIA_SITE_UNSUPPORTED", 400)
             return
         url = str(payload.get("url") or "")

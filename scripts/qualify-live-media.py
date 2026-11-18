@@ -36,7 +36,9 @@ ASSETS = ROOT / 'app/src/media/assets/media'
 # has no extractor host. This is a qualification plan, not a claim of support.
 PLATFORMS = ('youtube', 'tiktok', 'instagram', 'facebook', 'linkedin', 'x_twitter',
              'soundcloud', 'vimeo', 'reddit', 'twitch', 'dailymotion', 'pinterest',
-             'bilibili', 'threads', 'snapchat', 'kwai', 'telegram', 'google_drive', 'direct')
+             'bilibili', 'threads', 'snapchat', 'kwai', 'telegram', 'vk', 'ok_ru',
+             'rumble', 'odysee', 'kick', 'streamable', 'loom', 'bandcamp', 'mixcloud',
+             'ted', 'internet_archive', 'google_drive', 'direct')
 PLATFORM_META = {
     'youtube': ('YouTube', ('youtube.com', 'youtu.be', 'youtube-nocookie.com')),
     'tiktok': ('TikTok', ('tiktok.com', 'tiktokv.com', 'douyin.com')),
@@ -55,6 +57,17 @@ PLATFORM_META = {
     'snapchat': ('Snapchat', ('snapchat.com',)),
     'kwai': ('Kwai', ('kwai.com', 'kwai-video.com')),
     'telegram': ('Telegram', ('t.me',)),
+    'vk': ('VK', ('vk.com', 'vkvideo.ru')),
+    'ok_ru': ('OK.ru', ('ok.ru',)),
+    'rumble': ('Rumble', ('rumble.com',)),
+    'odysee': ('Odysee', ('odysee.com',)),
+    'kick': ('Kick', ('kick.com',)),
+    'streamable': ('Streamable', ('streamable.com',)),
+    'loom': ('Loom', ('loom.com',)),
+    'bandcamp': ('Bandcamp', ('bandcamp.com',)),
+    'mixcloud': ('Mixcloud', ('mixcloud.com',)),
+    'ted': ('TED', ('ted.com',)),
+    'internet_archive': ('Internet Archive', ('archive.org',)),
     'google_drive': ('Google Drive', ('drive.google.com', 'docs.google.com', 'drive.usercontent.google.com')),
     'direct': ('Direct file', ()),
 }

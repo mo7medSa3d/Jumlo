@@ -1,8 +1,5 @@
 package android.print;
 
-import android.os.CancellationSignal;
-import android.os.ParcelFileDescriptor;
-
 public final class PrintAdapterHelper {
     public interface LayoutCallback {
         void onLayoutFinished(PrintDocumentInfo info, boolean changed);

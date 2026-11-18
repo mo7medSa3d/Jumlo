@@ -22,7 +22,7 @@ class DurablePublication(private val root: File) {
     init { require(root.mkdirs() || root.isDirectory); journal.mkdirs(); results.mkdirs(); staging.mkdirs() }
     private fun identity(job: String,key: String): String {
         require(UUID.fromString(job).toString()==job && key.isNotBlank() && key.length<=512) { "INVALID_OUTPUT_IDENTITY" }
-        return Hashing.sha256(ByteArrayInputStream("$job\u0000$key".toByteArray()))
+        return Hashing.sha256(ByteArrayInputStream("$job\u0000$key".toByteArray(Charsets.UTF_8)))
     }
     private fun <T> locked(block: () -> T): T = lock.withLock {
         RandomAccessFile(File(root,"publication.lock"),"rw").use { f -> f.channel.lock().use { block() } }

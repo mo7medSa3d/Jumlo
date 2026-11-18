@@ -37,7 +37,7 @@
     <string name="msg_drive_token_missing">سجّل الدخول بحساب Google أو الصق رمز الوصول أولًا — تنزيل Drive يحتاج حسابًا. والملف العام (أي شخص لديه الرابط) يمكن تنزيله أيضًا بأداة التنزيلات.</string>
     <string name="msg_drive_token_expired">انتهت صلاحية تسجيل الدخول إلى Google أو تم رفضه. سجّل الدخول مجددًا ثم حاول مرة أخرى.</string>
     <string name="msg_drive_signin_cancelled">تم إلغاء تسجيل الدخول إلى Google، فلم يتم تنزيل شيء. سجّل الدخول أو الصق رمزًا ثم حاول مجددًا.</string>
-    <string name="msg_http_403">الوصول إلى هذا الرابط مرفوض أو منتهي الصلاحية (HTTP 403). في Google Drive، تأكد أن المشاركة مضبوطة على "أي شخص لديه الرابط".</string>
+    <string name="msg_http_403">الوصول إلى هذا الرابط مرفوض أو منتهي الصلاحية (HTTP 403). في Google Drive، تأكد أن المشاركة مضبوطة على \"أي شخص لديه الرابط\".</string>
     <string name="msg_http_404">الملف المطلوب غير موجود على هذا الرابط (HTTP 404).</string>
     <string name="msg_http_429">تم تجاوز حد الطلبات من الخادم (HTTP 429). انتظر قليلاً ثم حاول مجددًا.</string>
     <string name="msg_too_many_redirects">قام الرابط بإعادة التوجيه مرات كثيرة جدًا. استخدم رابط ملف مباشر.</string>

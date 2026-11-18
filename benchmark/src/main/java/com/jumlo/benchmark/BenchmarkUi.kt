@@ -2,13 +2,13 @@ package com.jumlo.benchmark
 
 import android.content.Context
 import android.content.res.Configuration
-import android.os.SystemClock
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
+import androidx.test.uiautomator.Until
 import java.util.Locale
 import java.util.regex.Pattern
 
@@ -35,14 +35,8 @@ internal class BenchmarkUi(private val device:UiDevice) {
     private fun text(name:String)=By.pkg(TARGET_PACKAGE).text(labels(name))
     private fun description(name:String)=By.pkg(TARGET_PACKAGE).desc(labels(name))
 
-    private fun await(selector:BySelector,message:String):UiObject2 {
-        val deadline=SystemClock.uptimeMillis()+10_000
-        do {
-            device.findObject(selector)?.let {return it}
-            SystemClock.sleep(50)
-        } while(SystemClock.uptimeMillis()<deadline)
-        error(message)
-    }
+    private fun await(selector:BySelector,message:String):UiObject2 =
+        device.wait(Until.findObject(selector),10_000L) ?: error(message)
 
     fun dismissOnboarding() {
         device.waitForIdle()

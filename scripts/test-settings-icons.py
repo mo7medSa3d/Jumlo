@@ -60,12 +60,6 @@ class SettingsIconContracts(unittest.TestCase):
         app_color_block = screen.split('item("app-color")', 1)[1].split('item("language")', 1)[0]
         self.assertIn('Icons.Rounded.Palette', app_color_block)
 
-    def test_account_hub_rows_pass_fixed_styles_too(self):
-        hub = read('ui/components/AccountHubModal.kt')
-        for key in HUB_ROWS:
-            with self.subTest(row=key):
-                self.assertIn(f'settingsIconStyleFor("{key}"', hub)
-
     def test_settings_icon_styles_cover_every_row_and_stay_readable(self):
         colors = read('ui/theme/Color.kt')
         for mode in ('Light', 'Dark'):

@@ -6,11 +6,9 @@ import com.jumlo.app.core.media.MediaFormat
 import com.jumlo.app.data.media.RemoteExtractorRuntime
 import com.jumlo.app.data.media.executeCancellable
 import com.jumlo.app.data.jobs.OperationFailure
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before

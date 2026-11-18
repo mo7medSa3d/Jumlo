@@ -10,10 +10,11 @@ from datetime import datetime, timezone
 ROOT=Path(__file__).resolve().parents[1]
 DEST=ROOT/'verification/final'
 DEST.mkdir(parents=True,exist_ok=True)
+SAFE_ENV={k:v for k,v in os.environ.items() if k not in ('BASH_ENV','ENV')}
 
 def capture(command):
     try:
-        result=subprocess.run(command,cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+        result=subprocess.run(command,cwd=ROOT,env=SAFE_ENV,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
         return result.returncode,result.stdout
     except FileNotFoundError:
         return 127,'BLOCKED: executable unavailable\n'
@@ -51,9 +52,10 @@ cases=[
 ]
 # A source ZIP intentionally has no repository metadata. Do not turn its absence
 # into a misleading test failure, or accidentally inspect a parent repository.
-if (ROOT/'.git').exists():
+is_git_repo=(ROOT/'.git').exists() and capture(['git','-C',str(ROOT),'rev-parse','--is-inside-work-tree'])[0]==0
+if is_git_repo:
     cases.append(('source-whitespace',
-        ['bash', '-c', 'git diff --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts && git diff --cached --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts'],
+        ['bash', '-c', 'git -C "$1" diff --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts && git -C "$1" diff --cached --check -- app scripts gradlew gradlew.bat gradle build.gradle.kts settings.gradle.kts', '_', str(ROOT)],
         'Staged and unstaged source diff whitespace only; excludes documentation/evidence'))
 records=[]
 for name,command,scope in cases:
@@ -64,7 +66,7 @@ for name,command,scope in cases:
     (DEST/f'{name}.log').write_text(log)
     records.append(dict(name=name,command=command,scope=scope,exit_code=code,status=status,log=f'verification/final/{name}.log'))
     print(f'{name}: {status} (exit {code})',flush=True)
-if not (ROOT/'.git').exists():
+if not is_git_repo:
     message='NOT_APPLICABLE: this source archive contains no Git metadata; no diff check was run.\n'
     (DEST/'source-whitespace.log').write_text(message)
     records.append(dict(name='source-whitespace', command=None,

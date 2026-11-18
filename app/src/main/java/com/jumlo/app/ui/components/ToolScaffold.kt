@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -34,6 +35,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.CheckCircle
 import com.jumlo.app.model.PillarCategory
 import com.jumlo.app.ui.theme.QuietTheme
 
@@ -72,6 +75,7 @@ fun ToolScaffold(
                 content()
             }
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Row(
                 Modifier
@@ -116,7 +120,10 @@ fun ToolResultScreen(
     actions: List<ToolResultAction>
 ) {
     Column(Modifier.fillMaxSize().padding(24.dp)) {
-        Text(title, style = QuietTheme.typography.sectionTitle, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+            Text(title, style = QuietTheme.typography.sectionTitle, fontWeight = FontWeight.SemiBold)
+        }
         if (message != null) {
             Spacer(Modifier.height(8.dp))
             Text(message, style = QuietTheme.typography.body,
@@ -124,12 +131,17 @@ fun ToolResultScreen(
         }
         Spacer(Modifier.height(24.dp))
         if (actions.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                actions.forEach { action ->
-                    Button(onClick = action.onClick, modifier = Modifier.weight(1f)) {
-                        Icon(action.icon, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(action.label, fontWeight = FontWeight.Medium)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                actions.chunked(2).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        row.forEach { action ->
+                            Button(onClick = action.onClick, modifier = Modifier.weight(1f)) {
+                                Icon(action.icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(action.label, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }

@@ -5,15 +5,17 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
-import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.util.zip.GZIPOutputStream
 
 class StreamTransferMidstreamRetryTest {
-    private fun partial():File = File(Files.createTempDirectory("jumlo-resume").toFile(), "download.part")
+    @get:Rule val temporary = TemporaryFolder()
+    private fun partial():File = File(temporary.newFolder(), "download.part")
     private fun brokenStream(prefix:String):InputStream =
         object: ByteArrayInputStream(prefix.toByteArray(Charsets.UTF_8)) {
             override fun read(b:ByteArray,off:Int,len:Int):Int {

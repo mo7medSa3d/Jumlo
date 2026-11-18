@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
@@ -38,11 +39,13 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     var search by rememberSaveable { mutableStateOf("") }
+    var showAllTools by rememberSaveable { mutableStateOf(false) }
     val eligible = remember { CapabilityRegistry.tools.filter {
         CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id) && com.jumlo.app.core.ToolCatalogue.isListed(it.id)
     } }
     ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
-        settings.quickActionIds, settings.recentToolIds, search, { search = it }, onTool)
+        settings.quickActionIds, settings.recentToolIds, search, { search = it },
+        showAllTools, { showAllTools = !showAllTools }, onTool)
 }
 
 /** One catalogue group: a header and the tool IDs it contains. */
@@ -105,15 +108,18 @@ internal fun ToolsCatalogue(
     recentToolIds: List<String>,
     search: String,
     onSearch: (String) -> Unit,
+    showAllTools: Boolean = false,
+    onToggleShowAll: () -> Unit = {},
     onTool: (UtilityTool) -> Unit
 ) {
     val byId = remember(tools) { tools.associateBy { it.id } }
-    val filtered = remember(tools, rankedToolIds, search) {
+    val specialistCount = remember(tools) { tools.count { ToolCatalogue.isListed(it.id) && !ToolCatalogue.isPrimary(it.id) } }
+    val filtered = remember(tools, rankedToolIds, search, showAllTools) {
         val ranks = rankedToolIds.withIndex().associate { it.value to it.index }
         val query = search.trim()
         tools.withIndex().filter { (_, tool) ->
             if (query.isEmpty()) {
-                ToolCatalogue.isListed(tool.id)
+                ToolCatalogue.isListed(tool.id) && (showAllTools || ToolCatalogue.isPrimary(tool.id))
             } else {
                 ToolCatalogue.isSearchable(tool.id) &&
                     listOf(
@@ -153,12 +159,12 @@ internal fun ToolsCatalogue(
             item("catalogue-intro", span = { GridItemSpan(maxLineSpan) }) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        if (language.isRtl) "كل ما تحتاجه، بلمسة واحدة" else "Everything you need, one tap away",
+                        stringResource(R.string.tools_catalogue_title),
                         style = QuietTheme.typography.screenTitle,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        if (language.isRtl) "ابحث بالاسم أو المهمة وأنجزها فورًا — دون تعقيد." else "Search by name or task, then get it done — no learning curve.",
+                        stringResource(R.string.tools_catalogue_subtitle),
                         style = QuietTheme.typography.metadata,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -171,7 +177,7 @@ internal fun ToolsCatalogue(
             if (search.isNotBlank()) {
                 item("search-count", span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        if (language.isRtl) "${filtered.size} نتائج" else "${filtered.size} results",
+                        stringResource(R.string.tools_search_results_count, filtered.size),
                         style = QuietTheme.typography.metadataStrong,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp)
@@ -222,6 +228,16 @@ internal fun ToolsCatalogue(
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
                     }
                 }
+                if (specialistCount > 0) {
+                    item("toggle-all-tools", span = { GridItemSpan(maxLineSpan) }) {
+                        OutlinedButton(
+                            onClick = onToggleShowAll,
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 48.dp)
+                        ) {
+                            Text(if (showAllTools) stringResource(R.string.tools_show_essential) else stringResource(R.string.tools_show_more, specialistCount))
+                        }
+                    }
+                }
             }
         }
     }
@@ -242,7 +258,7 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
     val haptics = rememberAppHaptics()
     Surface(
         onClick = { haptics.actionClick(); onClick() },
-        modifier = modifier.fillMaxWidth().heightIn(min = 176.dp).pressFeedback().testTag("tool.${tool.id}"),
+        modifier = modifier.fillMaxWidth().heightIn(min = 122.dp).pressFeedback().testTag("tool.${tool.id}"),
         shape = QuietTheme.shapes.card,
         color = tileColor,
         contentColor = colors.onSurface,
@@ -250,28 +266,16 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
         shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Box(
+                Modifier.size(44.dp).background(accent, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    Modifier.size(48.dp).background(accent, RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ToolIcon(
-                        tool.id, iconForeground,
-                        Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
-                    )
-                }
-                Text(
-                    toolCategoryLabel(tool.id, language),
-                    color = colors.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1
+                ToolIcon(
+                    tool.id, iconForeground,
+                    Modifier.size(22.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
                 )
             }
             Text(
@@ -279,6 +283,7 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
                 color = colors.onSurface,
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
@@ -286,21 +291,11 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
                 color = colors.onSurfaceVariant,
                 style = QuietTheme.typography.metadata,
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
         }
     }
-}
-
-private fun toolCategoryLabel(toolId: String, language: AppLanguage): String {
-    val labels = when {
-        toolId == "scan_doc" -> "Scan" to "مسح"
-        toolId.startsWith("pdf_") -> "PDF" to "PDF"
-        toolId.startsWith("img_") -> "Images" to "صور"
-        toolId.startsWith("dl_") -> "Downloads" to "تنزيلات"
-        else -> "Files" to "ملفات"
-    }
-    return if (language.isRtl) labels.second else labels.first
 }
 
 /** Concise task labels; full catalogue titles still support search and workspace headings. */

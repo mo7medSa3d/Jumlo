@@ -1,5 +1,6 @@
 package com.jumlo.app.core
 
+import java.util.Locale
 import java.util.UUID
 
 /** A selected result is an immutable, verified output, never an arbitrary filesystem path. */
@@ -13,7 +14,7 @@ object OutputWorkflowPolicy {
     fun reuseTool(mimeType: String): String = when {
         mimeType.equals("application/pdf", ignoreCase = true) -> "pdf_04"
         mimeType.startsWith("image/", ignoreCase = true) -> "img_01"
-        mimeType.lowercase() in setOf("application/zip", "application/x-zip-compressed") -> "file_08"
+        mimeType.lowercase(Locale.ROOT) in setOf("application/zip", "application/x-zip-compressed") -> "file_08"
         else -> "file_07"
     }
 
@@ -26,7 +27,7 @@ object OutputWorkflowPolicy {
         val one = files.size == 1
         val allPdf = files.all { it.mime.equals("application/pdf", ignoreCase = true) }
         val allImages = files.all { it.mime.startsWith("image/", ignoreCase = true) }
-        val allArchives = files.all { it.mime.lowercase() in setOf("application/zip", "application/x-zip-compressed") }
+        val allArchives = files.all { it.mime.lowercase(Locale.ROOT) in setOf("application/zip", "application/x-zip-compressed") }
         val compatible = when (toolId) {
             "file_07" -> true
             "pdf_02" -> allImages

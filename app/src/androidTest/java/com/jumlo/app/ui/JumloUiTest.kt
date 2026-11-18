@@ -168,7 +168,7 @@ class JumloUiTest {
         toolsSearch().performTextReplacement("resize")
         compose.onNodeWithTag("tool.img_02").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
-        compose.onNodeWithText(compose.activity.getString(R.string.workspace_process_files)).assertIsNotEnabled()
+        compose.onNodeWithText(compose.activity.getString(R.string.workspace_action_resize_images)).assertIsNotEnabled()
         val importPrompt = compose.activity.getString(R.string.ui_choose_inputs)
         // The lazy empty state follows presets and import actions on compact screens.
         workspaceList().performScrollToNode(hasText(importPrompt))

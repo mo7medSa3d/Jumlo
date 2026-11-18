@@ -7,7 +7,6 @@ import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
 import androidx.core.content.FileProvider
 import com.jumlo.app.core.*
-import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.local.*
 import com.jumlo.app.diagnostics.AppDiagnostics

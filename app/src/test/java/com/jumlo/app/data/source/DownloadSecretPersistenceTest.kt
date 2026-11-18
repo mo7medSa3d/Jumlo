@@ -1,6 +1,6 @@
 package com.jumlo.app.data.source
 
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -12,7 +12,7 @@ class DownloadSecretPersistenceTest {
         override fun remove(handle:String) { data.remove(handle)?.fill('\u0000') }
         override fun clear() { data.clear() }
     }
-    @Test fun queuedDownloadSurvivesRecreationWhilePasswordsStayEphemeral()=runBlocking {
+    @Test fun queuedDownloadSurvivesRecreationWhilePasswordsStayEphemeral()=runTest {
         val disk=FakeDisk()
         val before=EphemeralSecretStore(disk)
         val url=before.putDownload("https://example.org/film?token=private".toCharArray())
@@ -23,7 +23,7 @@ class DownloadSecretPersistenceTest {
         after.remove(url)
         assertNull(EphemeralSecretStore(disk).copy(url))
     }
-    @Test fun retryReplacementAndConsumeSurviveRecreation()=runBlocking {
+    @Test fun retryReplacementAndConsumeSurviveRecreation()=runTest {
         val disk=FakeDisk();val before=EphemeralSecretStore(disk)
         val handle=before.putDownload("https://example.org/old".toCharArray())
         before.replaceDownload(handle,"https://example.org/new".toCharArray())

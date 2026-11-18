@@ -22,7 +22,6 @@ import java.nio.file.Files
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
-import javax.imageio.stream.ImageOutputStream
 
 /**
  * The PDF compression path, on a real JPEG, without a device.

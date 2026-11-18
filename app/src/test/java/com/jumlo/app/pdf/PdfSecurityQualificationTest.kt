@@ -2,7 +2,6 @@ package com.jumlo.app.pdf
 
 import com.jumlo.app.data.pdf.PdfBoxBackend
 import com.jumlo.app.core.PdfProtectionPermissions
-import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.junit.After
 import org.junit.Assert.assertEquals

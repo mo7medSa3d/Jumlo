@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
@@ -56,7 +57,6 @@ import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.processing.BatchRenameSettings
 import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
-import com.jumlo.app.ui.CompressionProfile
 import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.theme.QuietTheme
@@ -88,7 +88,8 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     val download=tool.startsWith("dl_")
     val driveImport=tool=="file_drive" && !form.flag1
     val viewer=tool=="pdf_01"
-    val hasAdvanced=!viewer
+    val hasInlineFields=tool in setOf("file_07","file_encrypted_zip","file_batch_rename","file_drive","sha256","pdf_protect","pdf_clean","img_exif","pdf_metadata")
+    val hasAdvanced=!viewer && !hasInlineFields
     var previewId by rememberSaveable(tool, form.sourceIds) {mutableStateOf<String?>(null)}
     var advanced by rememberSaveable(tool) {mutableStateOf(false)}
     var renamePreviewOpen by rememberSaveable(tool, form.sourceIds) {mutableStateOf(false)}
@@ -195,20 +196,73 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         LazyColumn(Modifier.weight(1f).fillMaxWidth().widthIn(max=840.dp).align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error)}
             if(!download) {
-                if(!viewer && !driveImport) item("processing-presets") {
+                if(!viewer && !driveImport) item(key="step-bar") {
+                    val activeStep = when {
+                        busy -> 3
+                        queue.isEmpty() -> 1
+                        else -> 2
+                    }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            1 to stringResource(R.string.workspace_step_1),
+                            2 to stringResource(R.string.workspace_step_2),
+                            3 to stringResource(R.string.workspace_step_3)
+                        ).forEach { (step, label) ->
+                            val current = step == activeStep
+                            val done = step < activeStep
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                color = when {
+                                    current -> MaterialTheme.colorScheme.primaryContainer
+                                    done -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                                    else -> MaterialTheme.colorScheme.surfaceContainerLow
+                                }
+                            ) {
+                                Text(
+                                    label,
+                                    style = QuietTheme.typography.metadataStrong,
+                                    color = if (current) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                if(queue.isEmpty() && !driveImport) {
+                    item {
+                        QuietStateCard(
+                            stringResource(R.string.ui_choose_inputs),
+                            stringResource(R.string.ui_choose_inputs_body),
+                            stringResource(R.string.import_device_files),
+                            onImport
+                        )
+                    }
+                    if(tool in setOf("pdf_02","pdf_image","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_")) {
+                        item(key="inputs-photos") {
+                            QuietTonalButton(stringResource(R.string.import_photo_gallery), onPhotos, Modifier.fillMaxWidth())
+                        }
+                    }
+                } else if(!driveImport) {
+                    item(key="inputs") {
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
+                            if(tool in setOf("pdf_02","pdf_image","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_"))
+                                QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
+                        }
+                    }
+                }
+                if(!viewer && !driveImport && queue.isNotEmpty()) item("processing-presets") {
                     ProcessingPresetsPanel(form,processingPresets,
                         onSave=vm::saveProcessingPreset,
                         onApply=vm::applyProcessingPreset,
                         onDelete=vm::deleteProcessingPreset)
                 }
-                item(key="inputs") {
-                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
-                        if(tool in setOf("pdf_02","pdf_image","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_"))
-                            QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
-                    }
-                }
-                if(queue.isEmpty()) item {QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body),stringResource(R.string.import_device_files),onImport)}
                 if(tool in setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")) item("conversion-scope") {
                     Text(stringResource(when(tool) { "pdf_to_docx" -> R.string.rebuild_word_note; "pdf_to_pptx" -> R.string.rebuild_slides_note; "office_to_pdf" -> R.string.rebuild_office_note; else -> R.string.rebuild_ocr_note }),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -255,13 +309,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     VisualWatermarkEditor(vm,queue.first().id,form,vm::updateForm,queue.getOrNull(1)?.id?.takeIf {form.flag1},onPhotos)
                 }
                 if(tool in setOf("img_02","img_adjust","img_join","img_stitch") && preview!=null && !inputMismatch) item("transformed-image-preview") {
-                    val ids=when {
-                        tool in setOf("img_join","img_stitch") -> queue.map {it.id}
-                        tool=="img_watermark" && form.flag1 -> listOfNotNull(
-                            preview.takeUnless {it.id==queue.getOrNull(1)?.id}?.id ?: queue.firstOrNull()?.id,
-                            queue.getOrNull(1)?.id)
-                        else -> listOf(preview.id)
-                    }
+                    val ids=if(tool in setOf("img_join","img_stitch")) queue.map {it.id} else listOf(preview.id)
                     ImageResultPreview(vm,ids,form)
                 }
                 if(tool in setOf("img_01","img_04","img_target") && preview!=null && !inputMismatch) item("encoded-image-preview") {
@@ -298,7 +346,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         }
                     }
                 }
-                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","sha256","pdf_protect","pdf_clean","img_exif")) item("primary-tool-settings") {
+                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","file_drive","sha256","pdf_protect","pdf_clean","img_exif")) item("primary-tool-settings") {
                     WorkspaceFields(vm,form,vm::updateForm,onGoogleSignIn)
                 }
                 if(queue.isNotEmpty()) item {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong)}
@@ -343,31 +391,34 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             if(!viewer) {
                 item(key="essential-settings") {
                     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                        Surface(
-                            color=MaterialTheme.colorScheme.surfaceContainerLow,
-                            shape=QuietTheme.shapes.card
-                        ) {
-                            Row(
-                                modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),
-                                verticalAlignment=Alignment.CenterVertically,
-                                horizontalArrangement=Arrangement.SpaceBetween
+                        if(queue.isNotEmpty() || download || driveImport) {
+                            Surface(
+                                onClick={if(hasAdvanced) advanced=!advanced},
+                                enabled=hasAdvanced,
+                                color=MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape=QuietTheme.shapes.card
                             ) {
                                 Row(
-                                    modifier=Modifier.weight(1f),
+                                    modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),
                                     verticalAlignment=Alignment.CenterVertically,
-                                    horizontalArrangement=Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement=Arrangement.SpaceBetween
                                 ) {
-                                    Icon(Icons.Rounded.AutoAwesome,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(20.dp))
-                                    Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                                        Text(stringResource(R.string.ui_smart_defaults_active),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurface)
-                                        Text(stringResource(R.string.ui_destination),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Row(
+                                        modifier=Modifier.weight(1f),
+                                        verticalAlignment=Alignment.CenterVertically,
+                                        horizontalArrangement=Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.AutoAwesome,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(20.dp))
+                                        Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                                            Text(stringResource(R.string.ui_smart_defaults_active),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurface)
+                                            Text(stringResource(R.string.ui_destination),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
-                                }
-                                if(hasAdvanced) {
-                                    TextButton(onClick={advanced=!advanced}) {
-                                        Icon(Icons.Rounded.Tune,null,modifier=Modifier.size(18.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(stringResource(R.string.ui_advanced),style=QuietTheme.typography.metadataStrong)
+                                    if(hasAdvanced) {
+                                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                            Icon(Icons.Rounded.Tune,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(18.dp))
+                                            Text(stringResource(R.string.ui_advanced),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
                             }
@@ -384,19 +435,43 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                 }
             }
-            if(advanced) item("inline-advanced-settings") {
+            if(advanced && hasAdvanced) item("inline-advanced-settings") {
                 WorkspaceFields(vm,form,vm::updateForm,onGoogleSignIn)
             }
         }
-        if(!viewer) Surface(tonalElevation=2.dp) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp)) {
-                if(busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=8.dp))
-                QuietPrimaryButton(text=when(tool) {"pdf_to_docx"->stringResource(R.string.rebuild_word_action);"pdf_to_pptx"->stringResource(R.string.rebuild_slides_action);"pdf_ocr"->stringResource(R.string.rebuild_ocr_action);"pdf_02"->stringResource(R.string.ui_create_pdf);"pdf_03"->stringResource(R.string.ui_merge_files,queue.size);else->stringResource(if(download) R.string.workspace_queue_download else R.string.workspace_process_files)},onClick=onExecute,modifier=Modifier.fillMaxWidth(),enabled=ready)
+        if(!viewer) {
+            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.45f))
+            Surface(color=MaterialTheme.colorScheme.surfaceContainerLow) {
+                Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp)) {
+                    if(busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=8.dp))
+                    QuietPrimaryButton(text=when(tool) {
+                        "pdf_to_docx"->stringResource(R.string.rebuild_word_action)
+                        "pdf_to_pptx"->stringResource(R.string.rebuild_slides_action)
+                        "pdf_ocr"->stringResource(R.string.rebuild_ocr_action)
+                        "pdf_02"->stringResource(R.string.ui_create_pdf)
+                        "pdf_03"->stringResource(R.string.ui_merge_files,queue.size)
+                        "pdf_04"->stringResource(R.string.workspace_action_save_order)
+                        "pdf_05"->stringResource(R.string.workspace_action_split_pdf)
+                        "pdf_06"->stringResource(R.string.workspace_action_extract_pages)
+                        "pdf_07"->stringResource(R.string.workspace_action_export_images)
+                        "pdf_compress"->stringResource(R.string.workspace_action_compress_pdf)
+                        "pdf_signature"->stringResource(R.string.workspace_action_sign_pdf)
+                        "pdf_protect"->stringResource(R.string.workspace_action_protect_pdf)
+                        "pdf_crop"->stringResource(R.string.workspace_action_crop_pdf)
+                        "img_01"->stringResource(R.string.workspace_action_convert_images)
+                        "img_02"->stringResource(R.string.workspace_action_resize_images)
+                        "img_03"->stringResource(R.string.workspace_action_crop_images)
+                        "img_04"->stringResource(R.string.workspace_action_compress_images)
+                        "file_07"->stringResource(R.string.workspace_action_create_zip)
+                        "file_08"->stringResource(R.string.workspace_action_extract_zip)
+                        else->stringResource(if(download) R.string.workspace_queue_download else R.string.workspace_process_files)
+                    },onClick=onExecute,modifier=Modifier.fillMaxWidth(),enabled=ready)
+                }
             }
         }
     }
     previewId?.let {id->AlertDialog(onDismissRequest={previewId=null},title={Text(stringResource(R.string.dialog_preview_title))},text={InputPreview(vm,id,reduceMotion,isFullViewer=true)},confirmButton={TextButton(onClick={previewId=null}) {Text(stringResource(R.string.action_close))}})}
-    if(renamePreviewOpen && proposedNames!=null) AlertDialog(
+    if(renamePreviewOpen && proposedNames!=null && proposedNames.size==queue.size) AlertDialog(
         onDismissRequest={renamePreviewOpen=false},
         title={Text(stringResource(R.string.ui_rename_preview_title))},
         text={
@@ -950,7 +1025,7 @@ internal fun annotationKindLabel(kind:com.jumlo.app.core.PdfAnnotationKind):Int 
                     if(!f.flag1) Field(stringResource(R.string.field_drive_file_id),f.text1,{v->edit {it.copy(text1=v)}})
                     else Field(stringResource(R.string.field_drive_folder_id),f.text2,{v->edit {it.copy(text2=v)}})
                     QuietTonalButton(text=stringResource(R.string.field_drive_signin),onClick=onGoogleSignIn)
-                    Field(stringResource(R.string.field_drive_token),f.secret1,{v->edit {it.copy(secret1=v)}})
+                    Field(stringResource(R.string.field_drive_token),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true)
                     Text(stringResource(R.string.field_drive_note),style=QuietTheme.typography.metadata)
                 }
                 "dl_02","dl_03" -> {

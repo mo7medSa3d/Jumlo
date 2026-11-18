@@ -17,7 +17,7 @@
     <string name="neon_tools_download">Download</string>
     <string name="neon_tools_manage">File utilities</string>
     <string name="neon_tools_other">More tools</string>
-    <string name="home_search_hint">Search for a tool, like "Merge"</string>
+    <string name="home_search_hint">Search for a tool, like \"Merge\"</string>
 
     <string name="neon_tools_search">Find a tool</string>
     <string name="neon_files_subtitle">All your work, in one place</string>
@@ -41,4 +41,29 @@
     <string name="neon_batch_actions">Batch actions</string>
     <string name="neon_tool_description">Choose a tool to get started</string>
     <string name="neon_scan_action">Scan document</string>
+    <string name="tools_catalogue_title">Everyday tools, ready to go</string>
+    <string name="tools_catalogue_subtitle">Pick a tool or search by task — extra specialist tools stay tucked away.</string>
+    <string name="tools_search_results_count">%1$d results</string>
+    <string name="tools_show_more">Show %1$d more specialist tools</string>
+    <string name="tools_show_essential">Show essential tools only</string>
+    <string name="workspace_step_pick_file">Step 1: Add a file below, then tap the action button.</string>
+    <string name="settings_notifications_summary">Get notified when downloads or jobs finish</string>
+    <string name="settings_about_summary">Version, quick guide, diagnostics &amp; privacy</string>
+    <string name="workspace_action_compress_pdf">Compress PDF</string>
+    <string name="workspace_action_split_pdf">Split PDF</string>
+    <string name="workspace_action_save_order">Save page order</string>
+    <string name="workspace_action_extract_pages">Extract pages</string>
+    <string name="workspace_action_export_images">Export images</string>
+    <string name="workspace_action_sign_pdf">Sign PDF</string>
+    <string name="workspace_action_protect_pdf">Protect PDF</string>
+    <string name="workspace_action_crop_pdf">Crop PDF</string>
+    <string name="workspace_action_convert_images">Convert images</string>
+    <string name="workspace_action_resize_images">Resize images</string>
+    <string name="workspace_action_crop_images">Crop &amp; rotate</string>
+    <string name="workspace_action_compress_images">Compress images</string>
+    <string name="workspace_action_create_zip">Create ZIP</string>
+    <string name="workspace_action_extract_zip">Extract ZIP</string>
+    <string name="workspace_step_1">1. Files</string>
+    <string name="workspace_step_2">2. Adjust</string>
+    <string name="workspace_step_3">3. Export</string>
 </resources>
