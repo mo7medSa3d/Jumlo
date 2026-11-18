@@ -98,8 +98,9 @@ object DownloadLinkPolicy {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
         if (uri.scheme?.lowercase(Locale.ROOT) !in setOf("http", "https")) return false
         val host = uri.host?.lowercase(Locale.ROOT) ?: return false
-        if (extractorDomains.any { host == it || host.endsWith(".$it") }) return false
         val extension = uri.path.orEmpty().substringAfterLast('/').substringAfterLast('.', "").lowercase(Locale.ROOT)
+        if (extension in setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "zip", "rar", "7z", "apk", "txt", "csv")) return true
+        if (extractorDomains.any { host == it || host.endsWith(".$it") }) return false
         return extension in directTypes
     }
 

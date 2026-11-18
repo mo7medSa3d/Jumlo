@@ -89,7 +89,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
             muxed.copy(id="portrait1080",width=1080,height=1920),
             muxed.copy(id="portrait720",width=720,height=1280)))
         val choices=MediaCatalog.choices(vertical,MediaMode.VIDEO)
-        val selected=MediaCatalog.preferred(choices,MediaMode.VIDEO)!!
+        val selected=MediaCatalog.preferred(choices,MediaMode.VIDEO,maxHeight=1080)!!
         check(selected.formatIds==listOf("portrait1080"))
         check(MediaCatalog.qualityTitle(selected)=="1080p Full HD")
         check(selected.expectedHeight==1920) // Track validation keeps the real coded height.

@@ -113,14 +113,14 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { prefs ->
             val old=decodePresets(prefs[Keys.PROCESSING_PRESETS])
             val replacement=old.filterNot { it.toolId==preset.toolId && it.name==preset.name } + preset
-            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement)
+            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement.takeLast(16))
         }
     }
     suspend fun removeProcessingPreset(toolId: String,name: String) {
         context.dataStore.edit { prefs ->
             val old=decodePresets(prefs[Keys.PROCESSING_PRESETS])
             val replacement=old.filterNot { it.toolId==toolId && it.name==name }
-            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement)
+            prefs[Keys.PROCESSING_PRESETS]=Json.encodeToString(replacement.take(16))
         }
     }
 

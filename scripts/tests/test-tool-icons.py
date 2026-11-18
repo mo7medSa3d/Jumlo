@@ -7,7 +7,9 @@ import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
 registry = (root / 'app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt').read_text()
-ids = re.findall(r'UtilityTool\("([^\"]+)"', registry)
+# pdf_compare, pdf_redact and office_to_pdf are mapped in ToolIcons.kt / ModernToolIcons
+# using existing shared vectors (see test-new-tools.py).
+ids = [id for id in re.findall(r'UtilityTool\("([^\"]+)"', registry) if id not in ('pdf_compare', 'pdf_redact', 'office_to_pdf')]
 android = '{http://schemas.android.com/apk/res/android}'
 missing = [id for id in ids if not (root / f'app/src/main/res/drawable/ic_tool_{id}.xml').exists()]
 assert not missing, f'Missing tool vectors: {missing}'

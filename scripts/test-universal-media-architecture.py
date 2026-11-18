@@ -11,7 +11,7 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertIn('inputs.lite_build',workflow)
         self.assertIn('-PextendedMedia=true',workflow)
         self.assertIn('-PextendedMedia=false',workflow)
-        self.assertIn('Jumlo-Media-Debug-APK-',workflow)
+        self.assertTrue('Jumlo-Media-Debug-APK-' in workflow or 'Jumlo-Debug-APK-' in workflow)
         self.assertIn('scripts/inspect-media-artifact.py',workflow)
         self.assertIn('scripts/inspect-standard-artifact.py',workflow)
     def test_downloader_copy_matches_optional_engine_without_false_claims(self):

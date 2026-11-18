@@ -39,7 +39,7 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     var search by rememberSaveable { mutableStateOf("") }
     val eligible = remember { CapabilityRegistry.tools.filter {
-        CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id)
+        CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id) && com.jumlo.app.core.ToolCatalogue.isListed(it.id)
     } }
     ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
         settings.quickActionIds, settings.recentToolIds, search, { search = it }, onTool)
@@ -62,12 +62,12 @@ private val toolSections = listOf(
         setOf("pdf_annotate", "pdf_signature", "pdf_stamp", "pdf_image", "pdf_forms", "pdf_metadata", "pdf_clean", "pdf_redact")),
     ToolSection("optimize", "Optimize", "التحسين",
         setOf("pdf_compress", "img_02", "img_03", "img_04", "img_adjust", "img_target", "img_join",
-            "img_stitch", "img_compare", "img_exif", "img_watermark")),
+            "img_stitch", "img_exif", "img_watermark")),
     ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect")),
     ToolSection("download", "Download", "التنزيل", setOf("dl_media", "dl_02", "dl_03")),
     ToolSection("files", "Files", "الملفات",
-        setOf("file_02", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename",
-            "file_duplicates", "file_trash", "sha256", "file_drive"))
+        setOf("file_07", "file_08", "file_encrypted_zip", "file_batch_rename",
+            "file_duplicates", "sha256", "file_drive"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =

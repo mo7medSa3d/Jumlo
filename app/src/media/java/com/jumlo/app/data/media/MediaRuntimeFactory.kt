@@ -16,6 +16,7 @@ import com.jumlo.app.core.media.MediaFailurePolicy
 import com.jumlo.app.core.media.MediaProgress
 import com.jumlo.app.core.media.MediaProgressParser
 import com.jumlo.app.data.jobs.OperationFailure
+import com.jumlo.app.diagnostics.AppDiagnostics
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import okhttp3.OkHttpClient
@@ -87,6 +88,14 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         }
     }
 
+    override fun warmup() {
+        try {
+            initialize()
+        } catch (_: Throwable) {
+            // Background pre-warming is opportunistic
+        }
+    }
+
     private fun resetExtractedTree() {
         runCatching { File(context.noBackupFilesDir, "youtubedl-android").deleteRecursively() }
         runCatching { launcher.deleteRecursively() }
@@ -112,12 +121,20 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
                     catch (error: Exception) { sink.failWrite(output); throw error }
                 }
             }
-            for (name in listOf("libpython.so", "libffmpeg.so", "libffprobe.so", "libqjs.so"))
-                if (!File(nativeDir, name).canExecute()) throw OperationFailure("MEDIA_NATIVE_ABI_UNAVAILABLE")
+            for (name in listOf("libpython.so", "libffmpeg.so", "libffprobe.so", "libqjs.so")) {
+                val file = File(nativeDir, name)
+                if (!file.exists()) throw OperationFailure("MEDIA_NATIVE_ABI_UNAVAILABLE")
+                if (!file.canExecute()) {
+                    runCatching { file.setExecutable(true, false) }
+                }
+            }
             initialized = true
         } catch (cancel: java.util.concurrent.CancellationException) { throw cancel }
         catch (error: OperationFailure) { throw error }
-        catch (_: Exception) { throw OperationFailure("MEDIA_RUNTIME_INITIALIZATION_FAILED") }
+        catch (error: Throwable) {
+            AppDiagnostics.report("media_runtime_init", error)
+            throw OperationFailure("MEDIA_RUNTIME_INITIALIZATION_FAILED")
+        }
     }
 
     private fun sha256(input: java.io.InputStream): ByteArray {

@@ -80,7 +80,20 @@ data class MediaUiState(
     private var lastAnalysisInput: String?=null
     private var lastSignature: String?=null
     private var lastJob: String?=null
+    private var lastSubmissionTime = 0L
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            runtime.warmup()
+        }
+    }
     private val submissions=MediaSubmissionSlot<JobRequest>()
+    private data class CachedAnalysis(val asset: MediaAsset?, val direct: DirectPreview?, val platform: String?)
+    private val analysisCache = java.util.Collections.synchronizedMap(
+        object : LinkedHashMap<String, CachedAnalysis>(16, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CachedAnalysis>?): Boolean = size > 32
+        }
+    )
     private val probeClient=client.newBuilder().followRedirects(false).followSslRedirects(false).build()
     private fun probeDirect(url:String,allowHttp:Boolean,check:()->Unit):DirectPreview {
         // A socket timeout alone cannot bound asynchronous DNS or a chain of
@@ -231,6 +244,32 @@ data class MediaUiState(
             try {
                 val url=MediaLinks.normalize(snapshot.url,snapshot.allowHttp)
                 val detectedPlatform=DownloadLinkPolicy.detectPlatformName(url)
+                val cached=analysisCache[url]
+                if(cached!=null && !forceExtractor) {
+                    if(token==generation) {
+                        analyzedUrl=url
+                        if(cached.direct!=null) {
+                            _state.update { it.copy(direct=cached.direct,platformBadge=cached.platform,name=cached.direct.title,
+                                selectedKey=null,error=null) }
+                        } else if(cached.asset!=null) {
+                            val videos=MediaCatalog.choices(cached.asset,MediaMode.VIDEO)
+                            val audios=MediaCatalog.choices(cached.asset,MediaMode.AUDIO)
+                            val effectiveMode=when {
+                                videos.isEmpty() -> MediaMode.AUDIO
+                                audios.isEmpty() -> MediaMode.VIDEO
+                                else -> snapshot.mode
+                            }
+                            val choices=if(effectiveMode==MediaMode.VIDEO) videos else audios
+                            _state.update {
+                                it.copy(asset=cached.asset,mode=effectiveMode,
+                                    platformBadge=cached.platform ?: cached.asset.extractor.takeIf { e -> !e.equals("generic",true) },
+                                    choices=choices,selectedKey=MediaCatalog.preferred(choices,effectiveMode,preferredVideoHeight)?.key,
+                                    name=cached.asset.title.ifBlank { "media" },error=null)
+                            }
+                        }
+                    }
+                    return@launch
+                }
                 val active=currentCoroutineContext()
                 val knownDirect=DownloadLinkPolicy.isDirect(url) || DownloadLinkPolicy.isGoogleDriveDownload(url)
                 val direct=if(!forceExtractor && (knownDirect || detectedPlatform==null)) {
@@ -241,11 +280,12 @@ data class MediaUiState(
                 fun showDirect(preview:DirectPreview,error:String?=null) {
                     if(token==generation) {
                         analyzedUrl=url
+                        analysisCache[url]=CachedAnalysis(null,preview,detectedPlatform)
                         _state.update { it.copy(direct=preview,platformBadge=detectedPlatform,name=preview.title,
                             selectedKey=null,error=error) }
                     }
                 }
-                if(direct!=null && direct.kind !in setOf(DirectFileKind.VIDEO,DirectFileKind.AUDIO)) {
+                if(direct!=null && (DownloadLinkPolicy.isGoogleDriveDownload(url) || direct.kind !in setOf(DirectFileKind.VIDEO,DirectFileKind.AUDIO))) {
                     showDirect(direct)
                 } else {
                     try {
@@ -261,6 +301,7 @@ data class MediaUiState(
                         if(choices.isEmpty()) throw OperationFailure("MEDIA_NO_USABLE_FORMAT")
                         if(token==generation) {
                             analyzedUrl=url
+                            analysisCache[url]=CachedAnalysis(asset,null,detectedPlatform ?: asset.extractor.takeIf { e -> !e.equals("generic",true) })
                             _state.update {
                                 it.copy(asset=asset,mode=effectiveMode,
                                     platformBadge=detectedPlatform ?: asset.extractor.takeIf { e -> !e.equals("generic",true) },
@@ -272,7 +313,7 @@ data class MediaUiState(
                     catch(error:Exception) {
                         // A validated direct file remains downloadable when its
                         // optional track probe fails. Never fabricate qualities.
-                        if(direct!=null) showDirect(direct,stableError(error)) else throw error
+                        if(direct!=null) showDirect(direct,null) else throw error
                     }
                 }
             } catch(cancel:CancellationException) { throw cancel }
@@ -306,7 +347,9 @@ data class MediaUiState(
                     selection?.let { Json.encodeToString(it) } ?: "direct:${s.directMode}",
                     url,customName,s.wifiOnly,s.unmetered,s.allowHttp
                 )
-                if(signature==lastSignature && lastJob!=null) { onQueued(lastJob!!);return@launch }
+                val now = System.currentTimeMillis()
+                if(signature==lastSignature && lastJob!=null && now - lastSubmissionTime < 1500L) { onQueued(lastJob!!);return@launch }
+                lastSubmissionTime = now
                 val request=submissions.existing(signature) ?: run {
                     val chars=url.toCharArray()
                     val handle=try { secrets.putDownload(chars) } finally { chars.fill('\u0000') }

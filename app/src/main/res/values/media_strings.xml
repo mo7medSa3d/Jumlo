@@ -44,6 +44,7 @@
     <string name="media_error_rate">The source is limiting requests. Try again later; repeated browser retries will not restore access.</string>
     <string name="media_error_network">A network or TLS error prevented reaching the source. Check connectivity and try again.</string>
     <string name="media_error_format">The selected format changed or is unavailable. Analyze the link again.</string>
+    <string name="media_error_no_media">No downloadable video or audio was found at this link. Check that the post contains playable media.</string>
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
     <string name="media_error_runtime">The media engine could not start. Update or reinstall Jumlo, then retry.</string>
     <string name="media_error_abi">The bundled media engine is not available for this processor.</string>

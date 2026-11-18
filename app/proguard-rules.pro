@@ -30,3 +30,29 @@
 # OkHttp & TLS
 -dontwarn okhttp3.**
 -dontwarn okio.**
+
+# youtubedl-android, FFmpeg & youtubedl_common
+-keep class com.yausername.** { *; }
+-keepclassmembers class com.yausername.** { *; }
+-dontwarn com.yausername.**
+
+# Preserve raw resource IDs for youtubedl-android
+-keepclassmembers class **.R$raw { *; }
+-keep class **.R$raw { *; }
+
+# Jackson Databind (used by youtubedl-android)
+-keep class com.fasterxml.jackson.** { *; }
+-dontwarn com.fasterxml.jackson.**
+
+# Apache Commons (used by youtubedl-android)
+-keep class org.apache.commons.compress.** { *; }
+-dontwarn org.apache.commons.compress.**
+-keep class org.apache.commons.io.** { *; }
+-dontwarn org.apache.commons.io.**
+
+# Media Runtime & Process Execution
+-keep class com.jumlo.app.data.media.** { *; }
+-keepclassmembers class com.jumlo.app.data.media.** { *; }
+-keep class com.jumlo.app.core.media.** { *; }
+-keepclassmembers class com.jumlo.app.core.media.** { *; }
+

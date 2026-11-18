@@ -342,7 +342,7 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
         })
 
     override fun inspect(url: String, allowHttp: Boolean, check: () -> Unit): MediaAsset {
-        var last: OperationFailure? = null
+        var firstError: OperationFailure? = null
         for (engine in engines) {
             check()
             try {
@@ -353,12 +353,18 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
                 throw cancel
             } catch (failure: OperationFailure) {
                 val code = failure.message.orEmpty()
-                if (code != "MEDIA_SITE_UNSUPPORTED" && code != "MEDIA_RUNTIME_UNAVAILABLE" &&
-                    code != "MEDIA_SERVICE_NOT_CONFIGURED" && code != "MEDIA_BUILD_NOT_ENABLED") throw failure
-                last = failure
+                if (code in setOf("MEDIA_RUNTIME_UNAVAILABLE", "MEDIA_SERVICE_NOT_CONFIGURED", "MEDIA_BUILD_NOT_ENABLED")) {
+                    continue
+                }
+                if (firstError == null && code != "MEDIA_SITE_UNSUPPORTED") {
+                    firstError = failure
+                }
+                if (code in setOf("MEDIA_RATE_LIMITED", "MEDIA_NETWORK_ERROR", "MEDIA_SESSION_REQUIRED", "CLEARTEXT_CONSENT_REQUIRED")) {
+                    throw failure
+                }
             }
         }
-        throw last ?: OperationFailure("MEDIA_SITE_UNSUPPORTED")
+        throw firstError ?: OperationFailure("MEDIA_SITE_UNSUPPORTED")
     }
 
     override fun download(

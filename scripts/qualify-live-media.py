@@ -36,14 +36,14 @@ ASSETS = ROOT / 'app/src/media/assets/media'
 # has no extractor host. This is a qualification plan, not a claim of support.
 PLATFORMS = ('youtube', 'tiktok', 'instagram', 'facebook', 'linkedin', 'x_twitter',
              'soundcloud', 'vimeo', 'reddit', 'twitch', 'dailymotion', 'pinterest',
-             'bilibili', 'threads', 'snapchat', 'google_drive', 'direct')
+             'bilibili', 'threads', 'snapchat', 'kwai', 'telegram', 'google_drive', 'direct')
 PLATFORM_META = {
     'youtube': ('YouTube', ('youtube.com', 'youtu.be', 'youtube-nocookie.com')),
-    'tiktok': ('TikTok', ('tiktok.com', 'tiktokv.com')),
+    'tiktok': ('TikTok', ('tiktok.com', 'tiktokv.com', 'douyin.com')),
     'instagram': ('Instagram', ('instagram.com', 'instagr.am', 'ig.me')),
     'facebook': ('Facebook', ('facebook.com', 'fb.watch', 'fb.com', 'fb.gg')),
     'linkedin': ('LinkedIn', ('linkedin.com', 'lnkd.in')),
-    'x_twitter': ('X (Twitter)', ('twitter.com', 'x.com', 't.co', 'fxtwitter.com', 'vxtwitter.com')),
+    'x_twitter': ('X (Twitter)', ('twitter.com', 'x.com', 't.co', 'fxtwitter.com', 'vxtwitter.com', 'fixupx.com')),
     'soundcloud': ('SoundCloud', ('soundcloud.com',)),
     'vimeo': ('Vimeo', ('vimeo.com',)),
     'reddit': ('Reddit', ('reddit.com', 'redd.it', 'redditmedia.com')),
@@ -53,6 +53,8 @@ PLATFORM_META = {
     'bilibili': ('Bilibili', ('bilibili.com', 'b23.tv')),
     'threads': ('Threads', ('threads.net',)),
     'snapchat': ('Snapchat', ('snapchat.com',)),
+    'kwai': ('Kwai', ('kwai.com', 'kwai-video.com')),
+    'telegram': ('Telegram', ('t.me',)),
     'google_drive': ('Google Drive', ('drive.google.com', 'docs.google.com', 'drive.usercontent.google.com')),
     'direct': ('Direct file', ()),
 }

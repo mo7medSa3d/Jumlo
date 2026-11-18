@@ -84,15 +84,24 @@ class MediaOperationHandler @Inject constructor(
             if(MediaCatalog.fingerprint(choice)!=selection.fingerprint) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
             choice.estimatedBytes?.let { if(it>context.budget.maxMediaWorkspaceBytes) throw OperationFailure("MEDIA_WORKSPACE_LIMIT") }
             val received = mutableMapOf<String,Long>()
+            val streamTotals = mutableMapOf<String,Long>()
             var lastReport=0L
             // Transport I/O detects an interrupted connection. A connectivity snapshot must not
             // reject already received bytes while the runtime muxes or validates its local file.
             runtime.download(url,choice,audio,selection.audioBitrate,settings.cleartextConsent,directory,::checkLocal) { progress ->
                 received[progress.streamId]=maxOf(received[progress.streamId] ?: 0,progress.downloadedBytes)
+                val totalCandidate = progress.totalBytes ?: progress.estimatedBytes
+                if (totalCandidate != null && totalCandidate > 0L) {
+                    streamTotals[progress.streamId] = maxOf(streamTotals[progress.streamId] ?: 0L, totalCandidate)
+                }
                 val now=SystemClock.elapsedRealtime()
-                if(now-lastReport>=500) {
+                if(now-lastReport>=250) {
                     val sum=received.values.fold(0L) { a,b -> if(b>Long.MAX_VALUE-a) Long.MAX_VALUE else a+b }
-                    runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING,sum,choice.estimatedBytes)) }
+                    val computedTotal = if (streamTotals.isNotEmpty()) {
+                        val totalSum = streamTotals.values.fold(0L) { a,b -> if(b>Long.MAX_VALUE-a) Long.MAX_VALUE else a+b }
+                        totalSum.takeIf { it >= sum }
+                    } else choice.estimatedBytes
+                    runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING,sum,computedTotal ?: choice.estimatedBytes)) }
                     lastReport=now
                 }
             }

@@ -168,8 +168,8 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
         title = { Text(stringResource(R.string.modern_convert)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             listOf("pdf_02" to R.string.modern_images_pdf, "pdf_to_docx" to R.string.modern_pdf_word,
-                "pdf_to_pptx" to R.string.modern_pdf_powerpoint, "pdf_07" to R.string.modern_pdf_images,
-                "img_01" to R.string.modern_convert_images).forEach { (id, label) ->
+                "pdf_to_pptx" to R.string.modern_pdf_powerpoint, "office_to_pdf" to R.string.modern_office_to_pdf,
+                "pdf_07" to R.string.modern_pdf_images, "img_01" to R.string.modern_convert_images).forEach { (id, label) ->
                 if (CapabilityRegistry.enabled(id)) TextButton(onClick = { showConvert = false; open(id) },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(stringResource(label)) }
             }

@@ -101,7 +101,7 @@ fun transferTests(test:(String,()->Unit)->Unit) {
                 }
             }
             var error:Throwable?=null
-            try { StreamTransfer(broken).execute(TransferRequest("https://example.org/resume",file,5,"\"v1\"",knownTotalBytes=10,minFreeBytes=0,finalUrlSha256=fingerprint("https://example.org/resume"),retryBackoffMs=0)) }
+            try { StreamTransfer(broken).execute(TransferRequest("https://example.org/resume",file,5,"\"v1\"",knownTotalBytes=10,minFreeBytes=0,finalUrlSha256=fingerprint("https://example.org/resume"),maxRetries=0,retryBackoffMs=0)) }
             catch(t:Throwable) { error=t }
             check(error is IOException && error.message=="CONNECTION_RESET_FIXTURE")
             check(attempts==1 && file.readText()=="0123456")

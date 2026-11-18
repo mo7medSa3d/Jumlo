@@ -94,7 +94,7 @@ import kotlin.math.roundToInt
     // Also re-inspect on a fresh entry with the exact same shared URL.
     LaunchedEffect(sessionEpoch, state.url, state.allowHttp) {
         if(runCatching { MediaLinks.normalize(state.url,state.allowHttp) }.isSuccess) {
-            delay(400)
+            delay(200)
             viewModel.analyze(automatic=true)
         }
     }
@@ -144,7 +144,7 @@ import kotlin.math.roundToInt
                             }
                         }
                         Text(
-                            stringResource(R.string.redesign_download_subtitle),
+                            stringResource(if (BuildConfig.EXTENDED_MEDIA) R.string.media_supported_platforms_extended else R.string.media_supported_platforms),
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f),
                             style = QuietTheme.typography.bodyMedium
                         )
@@ -284,7 +284,7 @@ import kotlin.math.roundToInt
                     }
                 }
             }
-            state.error?.let { code -> item("error") {
+            state.error?.let { code -> if (state.direct == null && state.asset == null) item("error") {
                 val restricted = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_AGE_RESTRICTED","MEDIA_SOURCE_REJECTED","HTTP_401","HTTP_403")
                 val unsupported = code in setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
                 QuietStateCard(

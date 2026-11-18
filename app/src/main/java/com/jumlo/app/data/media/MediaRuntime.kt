@@ -11,6 +11,7 @@ interface MediaRuntime {
         allowHttp: Boolean, directory: File, check: () -> Unit,
         progress: (MediaProgress) -> Unit)
     fun refreshExtractor(): String = "MEDIA_BUILD_NOT_ENABLED"
+    fun warmup() {}
 }
 
 /** Native loading failures are recoverable UI errors; cancellation is untouched. */

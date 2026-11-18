@@ -127,7 +127,6 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 if (response.code !in 200..299) throw OperationFailure("HTTP_${response.code}")
                 val mime = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
                 if (mime !in setOf("text/html", "application/xhtml+xml")) throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
-                if ((response.body?.contentLength() ?: -1L) > 262144L) throw OperationFailure("MEDIA_PAGE_TOO_LARGE")
                 val input = response.body?.byteStream() ?: throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
                 val buffer = ByteArray(8192)
                 val data = ByteArrayOutputStream()
@@ -135,8 +134,9 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                     check()
                     val count = input.read(buffer)
                     if (count < 0) break
-                    if (data.size() + count > 262144) throw OperationFailure("MEDIA_PAGE_TOO_LARGE")
-                    data.write(buffer, 0, count)
+                    val toWrite = minOf(count, 262144 - data.size())
+                    if (toWrite > 0) data.write(buffer, 0, toWrite)
+                    if (data.size() >= 262144) break
                 }
                 return PageRead(current.toString(), data.toString(Charsets.UTF_8.name()), profileIndex)
             }

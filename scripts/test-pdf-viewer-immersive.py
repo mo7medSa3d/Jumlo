@@ -89,7 +89,7 @@ class PdfViewerImmersiveContracts(unittest.TestCase):
 
     def test_nav_shell_hides_dock_and_topbar_for_viewer(self):
         # Bottom dock only on roots and the workspace/activity routes.
-        self.assertRegex(self.nav, r'showDock\s*=\s*root\s*\|\|\s*shellRoute in setOf\("workspace",\s*"activity"\)')
+        self.assertRegex(self.nav, r'showDock\s*=\s*root\s*\|\|\s*shellRoute in setOf\((?:"downloads",\s*)?"workspace",\s*"activity"\)')
         # The workspace top bar is skipped for the viewer route.
         self.assertIn('else if(shellRoute!="viewer") QuietWorkspaceTopBar', self.nav)
 

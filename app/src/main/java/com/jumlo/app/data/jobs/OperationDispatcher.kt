@@ -2,9 +2,12 @@ package com.jumlo.app.data.jobs
 
 import com.jumlo.app.data.source.SourceStore
 import com.jumlo.app.data.output.OutputStore
+import com.jumlo.app.data.processing.DownloadSettings
 import com.jumlo.app.model.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,7 +45,14 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
             "img_01","img_02","img_03","img_04","img_exif","img_watermark","img_join","img_adjust","img_target","img_compare","img_stitch" -> images.execute(request,context)
             "file_07","file_08","sha256" -> archives.execute(request,context)
             "dl_02","dl_03" -> downloads.execute(request,context)
-            "dl_media" -> media.execute(request,context)
+            "dl_media" -> {
+                val settings = runCatching { Json.decodeFromString<DownloadSettings>(request.settingsJson) }.getOrNull()
+                if (settings?.media == null) {
+                    downloads.execute(request.copy(toolId = "dl_02"), context)
+                } else {
+                    media.execute(request, context)
+                }
+            }
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }

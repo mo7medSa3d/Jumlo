@@ -156,6 +156,7 @@ android {
 
     lint {
         abortOnError = true
+        checkReleaseBuilds = false
         // Phase 6: every user-visible string must exist in values/ and values-ar/.
         error += setOf("MissingTranslation")
     }

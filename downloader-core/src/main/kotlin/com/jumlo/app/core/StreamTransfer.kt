@@ -79,9 +79,13 @@ class StreamTransfer(private val transport:HttpTransport) {
 
     private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferMetadata)->Unit):TransferResult {
         var current=HttpPolicy.url(request.url,request.cleartextConsent)
+        val cookieJar=mutableMapOf<String,String>()
         repeat(11) { redirects ->
             checkCancel()
             val headers=mutableMapOf("Accept-Encoding" to "identity")
+            if(cookieJar.isNotEmpty()) {
+                headers["Cookie"]=cookieJar.entries.joinToString("; ") { "${it.key}=${it.value}" }
+            }
             if(request.offset>0) {
                 headers["Range"]="bytes=${request.offset}-"
                 val validator=request.strongEtag?.takeIf { !it.startsWith("W/") } ?: request.lastModified
@@ -90,12 +94,39 @@ class StreamTransfer(private val transport:HttpTransport) {
             }
             val response=transport.open(current.toString(),headers)
             try {
+                response.headers["set-cookie"]?.let { cookieHeader ->
+                    cookieHeader.split(',').forEach { entry ->
+                        val pair = entry.substringBefore(';').trim()
+                        val eq = pair.indexOf('=')
+                        if (eq > 0) {
+                            val name = pair.substring(0, eq).trim()
+                            val value = pair.substring(eq + 1).trim()
+                            if (name.isNotEmpty() && value.isNotEmpty()) cookieJar[name] = value
+                        }
+                    }
+                }
                 if(response.code in setOf(301,302,303,307,308)) {
                     require(redirects<10) { "TOO_MANY_REDIRECTS" }
                     val location=response.headers["location"] ?: throw IllegalArgumentException("REDIRECT_WITHOUT_LOCATION")
                     val next=HttpPolicy.url(current.resolve(location).toString(),request.cleartextConsent)
                     require(current.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
                     current=next; return@repeat
+                }
+                val mimeType=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
+                val isGoogleHost=current.host?.let { it.endsWith("google.com") || it.endsWith("googleusercontent.com") } == true
+                if(response.code==200 && request.offset==0L && mimeType in setOf("text/html","application/xhtml+xml") && isGoogleHost) {
+                    val sample=ByteArray(32768)
+                    val read=response.body.read(sample)
+                    response.close()
+                    if(read>0) {
+                        val html=String(sample,0,read,Charsets.UTF_8)
+                        val confirmed=DriveLink.parseConfirmationUrl(html,current)
+                        if(confirmed!=null) {
+                            current=HttpPolicy.url(confirmed,request.cleartextConsent)
+                            return@repeat
+                        }
+                    }
+                    throw IOException("DOWNLOAD_NOT_A_FILE")
                 }
                 val finalDigest=Hashing.sha256(ByteArrayInputStream(current.toString().toByteArray(Charsets.UTF_8)))
                 if(request.offset>0 && response.code==200) {

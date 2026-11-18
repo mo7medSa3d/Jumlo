@@ -36,12 +36,15 @@ object MediaFailurePolicy {
             contains("429", "rate limit", "too many requests") -> "MEDIA_RATE_LIMITED"
             contains("unsupported url", "unsupported site") -> "MEDIA_SITE_UNSUPPORTED"
             "requested format is not available" in message -> "MEDIA_REANALYSIS_REQUIRED"
-            contains("no video formats found", "no formats found") -> "MEDIA_NO_USABLE_FORMAT"
+            contains("no video formats found", "no formats found", "there's no video", "does not contain video", "not a video", "no video data found") -> "MEDIA_NO_USABLE_FORMAT"
             contains("private video", "this video is private", "members-only", "private content") -> "MEDIA_PRIVATE_CONTENT"
             contains("not available in your country", "geo-restricted", "geo restricted") -> "MEDIA_GEO_BLOCKED"
             contains("video unavailable", "has been removed", "does not exist", "404", "410 gone") -> "MEDIA_REMOVED"
             contains("link has expired", "link expired", "url has expired", "this link is no longer valid", "expired link", "signature has expired") -> "MEDIA_LINK_EXPIRED"
-            contains("extractor error", "extractor failed", "unable to extract", "yt-dlp error", "extraction failed", "player response", "signature extraction") -> "MEDIA_EXTRACTOR_CHANGED"
+            contains("extractor error", "extractor failed", "unable to extract", "yt-dlp error", "extraction failed", "player response", "signature extraction") -> {
+                if (contains("no video", "video data", "could not find video", "carousel", "article", "photo", "image", "document")) "MEDIA_NO_USABLE_FORMAT"
+                else "MEDIA_EXTRACTOR_CHANGED"
+            }
             contains("drm", "encrypted") -> "MEDIA_ENCRYPTED_SOURCE"
             contains("sign in", "login", "log in", "logged-in", "cookies", "not a bot", "authentication is required") -> "MEDIA_SESSION_REQUIRED"
             contains("timed out", "connection reset", "network is unreachable", "unable to download webpage", "name or service not known") -> "MEDIA_NETWORK_ERROR"

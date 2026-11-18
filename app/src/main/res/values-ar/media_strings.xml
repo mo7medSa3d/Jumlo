@@ -46,6 +46,7 @@
     <string name="media_error_rate">المصدر يحد من عدد الطلبات. حاول لاحقًا؛ تكرار تغيير المتصفح لن يمنح صلاحيات وصول.</string>
     <string name="media_error_network">تعذر الاتصال بالمصدر بسبب خطأ في الشبكة. تحقق من الاتصال وحاول مجدداً.</string>
     <string name="media_error_format">الجودة المختارة تغيرت أو غير متاحة. حلل الرابط من جديد.</string>
+    <string name="media_error_no_media">لم يتم العثور على مقطع فيديو أو صوت قابل للتنزيل في هذا الرابط. تأكد من أن المنشور يحتوي على فيديو.</string>
     <string name="media_error_runtime">تعذر تشغيل محرك الوسائط. حدّث جملو أو أعد تثبيته ثم حاول مجددًا.</string>
     <string name="media_error_abi">محرك الوسائط المدمج غير متاح لمعالج هذا الجهاز.</string>
     <string name="media_error_native_repair">إصلاح الوسائط المدمج لا يطابق هذا الإصدار. حدّث جملو ثم حاول مجددًا.</string>

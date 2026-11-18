@@ -69,7 +69,8 @@ import com.jumlo.app.R
     code=="MEDIA_ENCRYPTED_SOURCE" -> R.string.media_error_drm
     code=="MEDIA_RATE_LIMITED" -> R.string.media_error_rate
     code in setOf("MEDIA_NETWORK_ERROR","MEDIA_TLS_FAILED") -> R.string.media_error_network
-    code in setOf("MEDIA_REANALYSIS_REQUIRED","MEDIA_SELECTION_REQUIRED","MEDIA_NO_USABLE_FORMAT","AUDIO_TRACK_UNAVAILABLE") -> R.string.media_error_format
+    code=="MEDIA_NO_USABLE_FORMAT" -> R.string.media_error_no_media
+    code in setOf("MEDIA_REANALYSIS_REQUIRED","MEDIA_SELECTION_REQUIRED","AUDIO_TRACK_UNAVAILABLE") -> R.string.media_error_format
     code=="MEDIA_NATIVE_ABI_UNAVAILABLE" -> R.string.media_error_abi
     code=="MEDIA_NATIVE_REPAIR_INVALID" -> R.string.media_error_native_repair
     code=="MEDIA_NATIVE_REPAIR_UNAVAILABLE" -> R.string.media_error_native_repair_unavailable
@@ -142,9 +143,17 @@ code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="HTTPS_REQUIRED" || code.contains("CLEARTEXT") || code.contains("HTTP_CONSENT") -> R.string.msg_https
     code.contains("NETWORK") || code.contains("TIMEOUT") || code.startsWith("HTTP_") || code.contains("DOWNLOAD_RESTART") -> R.string.msg_network
     code=="PAGE_SELECTION_LIMIT" -> R.string.msg_page_selection_limit
+    code in setOf("INVALID_REDIRECT","INSECURE_REDIRECT") -> R.string.msg_insecure_redirect
+    code in setOf("INVALID_URL","INVALID_DOWNLOAD_LIST","INVALID_DRIVE_FILE_ID","INVALID_NETWORK_URL") -> R.string.msg_url
+    code=="INVALID_CONTENT_RANGE" -> R.string.msg_network
+    code.startsWith("INVALID_MEDIA_") || code.startsWith("INVALID_AUDIO_") || code.startsWith("INVALID_VIDEO_") -> R.string.media_error_generic
+    code.startsWith("INVALID_COOKIE") || code.startsWith("INVALID_HTTP_") || code=="INVALID_USER_AGENT" -> R.string.media_error_session
+    code=="INVALID_FILENAME" -> R.string.files_rename_invalid_name
+    code=="INVALID_TREE_URI" -> R.string.msg_choose_folder
+    code in setOf("INVALID_JOB_REQUEST","INVALID_JOB_ID") -> R.string.msg_failed
+    code=="INVALID_ARCHIVE_REQUEST" -> R.string.msg_archive_corrupt
     code=="DUPLICATE_PAGE_ORDER" || code=="INVALID_PAGE_ORDER" -> R.string.msg_check_settings
     code=="SPLIT_BOUNDARY_REQUIRED" || code=="INVALID_SPLIT_BOUNDARY" -> R.string.msg_check_settings
-    code=="INVALID_URL" || code=="INVALID_DOWNLOAD_LIST" -> R.string.msg_url
     code=="WATERMARK_CONTENT_REQUIRED" -> R.string.ui_watermark_text_required
     code=="WATERMARK_LOGO_REQUIRED" -> R.string.ui_watermark_logo_required
     code=="INVALID_ANNOTATION" -> R.string.ui_annotation_text_required

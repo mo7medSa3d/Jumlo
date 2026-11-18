@@ -164,8 +164,15 @@ fun JobSnapshot.isActive()=progress.stage in setOf(JobStage.QUEUED,JobStage.VALI
         }
         if(job.isActive()) {
             val total=job.progress.totalUnits
-            if(total==null || total<=0) LinearProgressIndicator(Modifier.fillMaxWidth())
-            else {
+            if(total==null || total<=0) {
+                Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if(job.progress.completedUnits > 0L) {
+                        Text(formatBytes(job.progress.completedUnits),
+                            style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
                 val fraction=(job.progress.completedUnits.toDouble()/total).toFloat().coerceIn(0f,1f)
                 val progress by animateFloatAsState(fraction,
                     animationSpec=if(LocalReducedMotion.current) snap() else spring(dampingRatio=.9f,stiffness=260f),label="job-progress")

@@ -25,6 +25,7 @@
     <string name="modern_images_pdf">صور إلى PDF</string>
     <string name="modern_pdf_word">PDF إلى Word</string>
     <string name="modern_pdf_powerpoint">PDF إلى PowerPoint</string>
+    <string name="modern_office_to_pdf">Office إلى PDF</string>
     <string name="modern_pdf_images">PDF إلى صور</string>
     <string name="modern_convert_images">تحويل الصور</string>
     <string name="modern_fewer_tools">أدوات أقل</string>

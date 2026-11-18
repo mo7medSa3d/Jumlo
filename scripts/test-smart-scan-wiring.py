@@ -33,7 +33,7 @@ class SmartScannerWiring(unittest.TestCase):
         ar=ET.parse(ROOT/"app/src/main/res/values-ar/smart_scan.xml")
         keys=lambda root: {e.get("name") for e in root.getroot()}
         self.assertEqual(keys(en),keys(ar))
-        self.assertEqual(3,len(keys(en)))
+        self.assertEqual(6,len(keys(en)))
     def test_library_is_real_dependency(self):
         gradle=(ROOT/"app/build.gradle.kts").read_text()
         self.assertIn("play-services-mlkit-document-scanner:16.0.0",gradle)
