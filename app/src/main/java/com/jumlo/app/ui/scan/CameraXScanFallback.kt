@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -84,7 +85,7 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<
     val latestResult by rememberUpdatedState(onScannedPdf)
     val latestJpegs by rememberUpdatedState(onScannedJpegs)
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> permitted=granted }
-    val previewView=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FIT_CENTER}}
+    val previewView=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FILL_CENTER}}
     @Suppress("DEPRECATION")
     val capture=remember {ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()}
     val mainExecutor=remember {ContextCompat.getMainExecutor(context)}
@@ -163,6 +164,8 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<
         try { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
         catch (_: ActivityNotFoundException) { error = true }
     }
+    // Cap the control overlay so at least half the preview stays visible below the page guide.
+    val maxControlHeight=LocalConfiguration.current.screenHeightDp.dp*0.5f
     Box(Modifier.fillMaxSize().testTag("scan.cameraFallback")) {
         if(permitted) AndroidView(factory={previewView},modifier=Modifier.matchParentSize(),
             update={capture.targetRotation=it.display?.rotation ?: Surface.ROTATION_0})
@@ -175,6 +178,7 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<
             }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .heightIn(max = maxControlHeight)
             .background(MaterialTheme.colorScheme.surface.copy(alpha=0.96f))
             .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(20.dp),
             verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -208,7 +212,7 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<
             Text(stringResource(R.string.studio_scan_page_count,pagePaths.size),style=QuietTheme.typography.metadataStrong)
             if(pagePaths.isEmpty()) QuietStateCard(stringResource(R.string.studio_scan_empty),stringResource(R.string.studio_scan_empty_body),
                 stringResource(R.string.import_photo_gallery),::launchGallery)
-            else LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            else LazyRow(modifier=Modifier.height(224.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(pagePaths,key={_,path->path},contentType={_,_->"scan-page"}) {index,path ->
                     val bitmap by produceState<Bitmap?>(null,path) {
                         value=withContext(Dispatchers.IO) {

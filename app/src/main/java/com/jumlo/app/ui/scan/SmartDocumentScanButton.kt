@@ -119,9 +119,11 @@ internal fun SmartDocumentScanLauncher(
                 } catch (_: Exception) { launched = false; busy = false; error = true }
             }
             .addOnFailureListener {
+                // Once the user chose the basic camera, no late result may flip fallback back.
+                if (!active) return@addOnFailureListener
                 failures++
                 fallback = ScannerFallbackPolicy.shouldFallback(playServicesAvailable, failures)
-                if (active) { busy = false; error = true }
+                busy = false; error = true
             }
         } catch (_: Exception) {
             failures++
@@ -143,11 +145,13 @@ internal fun SmartDocumentScanLauncher(
         if (error && !fallback) {
             QuietPrimaryButton(stringResource(R.string.scan_smart_retry), onClick = ::startScan,
                 enabled = !busy && !externalBusy, modifier = Modifier.fillMaxWidth())
-            QuietTonalButton(stringResource(R.string.scan_use_basic_camera), onClick = { fallback = true },
+            QuietTonalButton(stringResource(R.string.scan_use_basic_camera), onClick = { active = false; fallback = true },
                 modifier = Modifier.fillMaxWidth())
         }
-        QuietPrimaryButton(stringResource(R.string.scan_smart_action), onClick = ::startScan,
-            enabled = !busy && !externalBusy, modifier = Modifier.fillMaxWidth())
+        if (!error) {
+            QuietPrimaryButton(stringResource(R.string.scan_smart_action), onClick = ::startScan,
+                enabled = !busy && !externalBusy, modifier = Modifier.fillMaxWidth())
+        }
         QuietTonalButton(stringResource(R.string.action_close), onClick = onBack, modifier = Modifier.fillMaxWidth())
     }
 }
