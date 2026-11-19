@@ -1,9 +1,9 @@
 package com.jumlo.app.ui.scan
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.util.Size
 import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -15,8 +15,11 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
@@ -24,11 +27,18 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -76,7 +86,7 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> permitted=granted }
     val previewView=remember {PreviewView(context).apply {implementationMode=PreviewView.ImplementationMode.COMPATIBLE;scaleType=PreviewView.ScaleType.FIT_CENTER}}
     @Suppress("DEPRECATION")
-    val capture=remember {ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).setTargetResolution(Size(1600,2200)).build()}
+    val capture=remember {ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY).build()}
     val mainExecutor=remember {ContextCompat.getMainExecutor(context)}
     LaunchedEffect(sessionId) {
         try {
@@ -149,88 +159,93 @@ internal fun CameraXScanFallback(onScannedPdf:(File)->Unit,onScannedJpegs:(List<
             }
         }
     }
-    Column(Modifier.fillMaxSize().testTag("scan.cameraFallback")) {
-        LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-            item {
-                Text(stringResource(R.string.studio_camera_fallback),style=QuietTheme.typography.sectionTitle)
-                Text(stringResource(R.string.studio_camera_fallback_note),style=QuietTheme.typography.metadata)
+    fun launchGallery() {
+        try { gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+        catch (_: ActivityNotFoundException) { error = true }
+    }
+    Box(Modifier.fillMaxSize().testTag("scan.cameraFallback")) {
+        if(permitted) AndroidView(factory={previewView},modifier=Modifier.matchParentSize(),
+            update={capture.targetRotation=it.display?.rotation ?: Surface.ROTATION_0})
+        val guideColor=MaterialTheme.colorScheme.onSurface.copy(alpha=0.4f)
+        Canvas(Modifier.matchParentSize()) {
+            val frameInset=24.dp.toPx()
+            inset(frameInset) {
+                drawRoundRect(color=guideColor,
+                    cornerRadius=CornerRadius(16.dp.toPx()),style=Stroke(width=2.dp.toPx()))
             }
-            item {
-                if(permitted) AndroidView(factory={previewView},modifier=Modifier.fillMaxWidth().height(340.dp),
-                    update={capture.targetRotation=it.display?.rotation ?: Surface.ROTATION_0})
-                else QuietStateCard(stringResource(R.string.studio_camera_permission),stringResource(R.string.studio_camera_permission_body),
-                    stringResource(R.string.studio_camera_enable),{permission.launch(Manifest.permission.CAMERA)})
-            }
-            item {
-                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    QuietPrimaryButton(stringResource(R.string.studio_capture_page),modifier=Modifier.weight(1f),enabled=cameraReady && initialized && !busy && !externalBusy && pagePaths.size<100,
-                        onClick={
-                            busy=true;error=false
-                            capture.targetRotation=previewView.display?.rotation ?: Surface.ROTATION_0
-                            val file=File(sessionDirectory,"page-${UUID.randomUUID()}.jpg")
-                            try { capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(),mainExecutor,object:ImageCapture.OnImageSavedCallback {
-                                override fun onImageSaved(result:ImageCapture.OutputFileResults) {
-                                    if(active) {pagePaths=pagePaths+file.path;busy=false}
-                                    else scope.launch(Dispatchers.IO) {file.delete()}
-                                }
-                                override fun onError(exception:ImageCaptureException) {
-                                    if(active) {busy=false;error=true}
-                                    scope.launch(Dispatchers.IO) {file.delete()}
-                                }
-                            }) } catch(_:Exception) {
-                                busy=false;error=true
-                                scope.launch(Dispatchers.IO) {file.delete()}
+        }
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha=0.96f))
+            .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(20.dp),
+            verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            Text(stringResource(R.string.studio_camera_fallback),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
+            Text(stringResource(R.string.studio_camera_fallback_note),style=QuietTheme.typography.metadata)
+            if(!permitted) QuietStateCard(stringResource(R.string.studio_camera_permission),stringResource(R.string.studio_camera_permission_body),
+                stringResource(R.string.studio_camera_enable),{permission.launch(Manifest.permission.CAMERA)})
+            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                QuietPrimaryButton(stringResource(R.string.studio_capture_page),modifier=Modifier.weight(1f),enabled=cameraReady && initialized && !busy && !externalBusy && pagePaths.size<100,
+                    onClick={
+                        busy=true;error=false
+                        capture.targetRotation=previewView.display?.rotation ?: Surface.ROTATION_0
+                        val file=File(sessionDirectory,"page-${UUID.randomUUID()}.jpg")
+                        try { capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(),mainExecutor,object:ImageCapture.OnImageSavedCallback {
+                            override fun onImageSaved(result:ImageCapture.OutputFileResults) {
+                                if(active) {pagePaths=pagePaths+file.path;busy=false}
+                                else Thread { runCatching { file.delete() } }.start()
                             }
-                        })
-                    QuietTonalButton(stringResource(R.string.import_photo_gallery),modifier=Modifier.weight(1f),enabled=initialized && !busy && !externalBusy && pagePaths.size<100,
-                        onClick={gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))})
-                }
+                            override fun onError(exception:ImageCaptureException) {
+                                if(active) {busy=false;error=true}
+                                Thread { runCatching { file.delete() } }.start()
+                            }
+                        }) } catch(_:Exception) {
+                            busy=false;error=true
+                            scope.launch(Dispatchers.IO) {file.delete()}
+                        }
+                    })
+                QuietTonalButton(stringResource(R.string.import_photo_gallery),modifier=Modifier.weight(1f),enabled=initialized && !busy && !externalBusy && pagePaths.size<100,
+                    onClick=::launchGallery)
             }
-            item {
-                Text(stringResource(R.string.studio_scan_page_count,pagePaths.size),style=QuietTheme.typography.metadataStrong)
-                if(pagePaths.isEmpty()) QuietStateCard(stringResource(R.string.studio_scan_empty),stringResource(R.string.studio_scan_empty_body),
-                    stringResource(R.string.import_photo_gallery),{gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))})
-                else LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    itemsIndexed(pagePaths,key={_,path->path}) {index,path ->
-                        val bitmap by produceState<Bitmap?>(null,path) {
-                            value=withContext(Dispatchers.IO) {
-                                runCatching {
-                                    BitmapTransforms.decodeSampled(File(path),4L*1024*1024,maxEdge=320).bitmap
-                                }.getOrNull()
+            Text(stringResource(R.string.studio_scan_page_count,pagePaths.size),style=QuietTheme.typography.metadataStrong)
+            if(pagePaths.isEmpty()) QuietStateCard(stringResource(R.string.studio_scan_empty),stringResource(R.string.studio_scan_empty_body),
+                stringResource(R.string.import_photo_gallery),::launchGallery)
+            else LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                itemsIndexed(pagePaths,key={_,path->path},contentType={_,_->"scan-page"}) {index,path ->
+                    val bitmap by produceState<Bitmap?>(null,path) {
+                        value=withContext(Dispatchers.IO) {
+                            try { BitmapTransforms.decodeSampled(File(path),4L*1024*1024,maxEdge=320).bitmap }
+                            catch (cancel: CancellationException) { throw cancel }
+                            catch (_: Exception) { null }
+                            catch (_: OutOfMemoryError) { null }
+                        }
+                    }
+                    // This row owns the decoded native preview, not its original source.
+                    // Release it on remove, scroll disposal, rotation and scanner exit.
+                    DisposeOwnedPreviewBitmap(bitmap)
+                    Column(Modifier.width(144.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                        Surface(shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {
+                            Box(Modifier.fillMaxWidth().height(150.dp),contentAlignment=Alignment.Center) {
+                                bitmap?.let {Image(it.asImageBitmap(),stringResource(R.string.jumlo_page_label,index+1),Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
                             }
                         }
-                        // This row owns the decoded native preview, not its original source.
-                        // Release it on remove, scroll disposal, rotation and scanner exit.
-                        DisposeOwnedPreviewBitmap(bitmap)
-                        Column(Modifier.width(144.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                            Surface(shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {
-                                Box(Modifier.fillMaxWidth().height(150.dp),contentAlignment=Alignment.Center) {
-                                    bitmap?.let {Image(it.asImageBitmap(),stringResource(R.string.jumlo_page_label,index+1),Modifier.fillMaxSize(),contentScale=ContentScale.Fit)}
-                                }
+                        Text(stringResource(R.string.jumlo_page_label,index+1),style=QuietTheme.typography.metadata)
+                        Row {
+                            IconButton(enabled=index>0 && !busy,onClick={if(index in 1..pagePaths.lastIndex) pagePaths=pagePaths.toMutableList().apply {add(index-1,removeAt(index))}}) {
+                                Icon(Icons.AutoMirrored.Rounded.NavigateBefore,stringResource(R.string.jumlo_move_earlier))
                             }
-                            Text(stringResource(R.string.jumlo_page_label,index+1),style=QuietTheme.typography.metadata)
-                            Row {
-                                IconButton(enabled=index>0 && !busy,onClick={pagePaths=pagePaths.toMutableList().apply {add(index-1,removeAt(index))}}) {
-                                    Icon(Icons.AutoMirrored.Rounded.NavigateBefore,stringResource(R.string.jumlo_move_earlier))
-                                }
-                                IconButton(enabled=!busy,onClick={
-                                    pagePaths=pagePaths.filterNot {it==path}
-                                    scope.launch(Dispatchers.IO) {File(path).delete()}
-                                }) {Icon(Icons.Rounded.Delete,stringResource(R.string.action_delete))}
-                                IconButton(enabled=index<pagePaths.lastIndex && !busy,onClick={pagePaths=pagePaths.toMutableList().apply {add(index+1,removeAt(index))}}) {
-                                    Icon(Icons.AutoMirrored.Rounded.NavigateNext,stringResource(R.string.jumlo_move_later))
-                                }
+                            IconButton(enabled=!busy,onClick={
+                                pagePaths=pagePaths.filterNot {it==path}
+                                scope.launch(Dispatchers.IO) {File(path).delete()}
+                            }) {Icon(Icons.Rounded.Delete,stringResource(R.string.action_delete))}
+                            IconButton(enabled=index<pagePaths.lastIndex && !busy,onClick={if(index in 0 until pagePaths.lastIndex) pagePaths=pagePaths.toMutableList().apply {add(index+1,removeAt(index))}}) {
+                                Icon(Icons.AutoMirrored.Rounded.NavigateNext,stringResource(R.string.jumlo_move_later))
                             }
                         }
                     }
                 }
             }
-            if(error) item {
-                QuietStateCard(stringResource(R.string.studio_scan_error),stringResource(R.string.studio_scan_error_body),
-                    stringResource(R.string.import_photo_gallery),{gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},isError=true)
-            }
-        }
-        Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            if(error) QuietStateCard(stringResource(R.string.studio_scan_error),stringResource(R.string.studio_scan_error_body),
+                stringResource(R.string.import_photo_gallery),::launchGallery,isError=true,
+                modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })
             if(busy || externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
             QuietPrimaryButton(stringResource(R.string.ui_create_pdf),enabled=pagePaths.isNotEmpty() && !busy && !externalBusy,modifier=Modifier.fillMaxWidth(),onClick={
                 val pages=pagePaths.map(::File)
