@@ -464,7 +464,7 @@ internal fun CameraXScanFallback(
             val guideColor = Color.White.copy(alpha = 0.35f)
             Canvas(Modifier.matchParentSize()) {
                 val frameInset = 24.dp.toPx()
-                inset(frameInset, top = 88.dp.toPx(), bottom = 196.dp.toPx()) {
+                inset(left = frameInset, right = frameInset, top = 88.dp.toPx(), bottom = 196.dp.toPx()) {
                     drawRoundRect(
                         color = guideColor,
                         cornerRadius = CornerRadius(16.dp.toPx()),

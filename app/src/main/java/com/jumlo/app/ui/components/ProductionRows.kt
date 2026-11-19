@@ -150,9 +150,9 @@ fun JobSnapshot.isActive()=progress.stage in ActiveJobStages
     val tool=remember(job.request.toolId) { CapabilityRegistry.tools.find {it.id==job.request.toolId} }
     val name=tool?.let {if(language.isRtl) it.titleAr else it.titleEn} ?: job.request.toolId
     val rowIcon=when(tool?.pillar) {
-        PillarCategory.DOWNLOAD -> Icons.Rounded.Download
-        PillarCategory.IMAGE -> Icons.Rounded.Image
-        PillarCategory.FILE -> Icons.Rounded.Folder
+        PillarCategory.DOWNLOADS -> Icons.Rounded.Download
+        PillarCategory.IMAGES -> Icons.Rounded.Image
+        PillarCategory.FILES -> Icons.Rounded.Folder
         else -> Icons.Rounded.Description
     }
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {

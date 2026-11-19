@@ -285,7 +285,7 @@ object PdfBoxBackend {
                 typeface = android.graphics.Typeface.create(when(style.fontFamily) {
                     "serif" -> "serif"; "mono" -> "monospace"; else -> "sans-serif"
                 }, android.graphics.Typeface.BOLD)
-                color = runCatching { android.graphics.Color.parseColor(OverlayStylePolicy.requireColor(style.colorHex)) }.getOrElse { android.graphics.Color.parseColor("#64748B") }
+                color = runCatching { OverlayStylePolicy.requireColor(style.colorHex); android.graphics.Color.parseColor(style.colorHex) }.getOrElse { android.graphics.Color.parseColor("#64748B") }
                 alpha = (style.opacityPercent * 255 / 100).coerceIn(0,255)
             }
             // Keep temporary ARGB and PDF image allocations bounded.
