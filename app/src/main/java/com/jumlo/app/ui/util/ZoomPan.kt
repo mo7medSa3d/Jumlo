@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -198,6 +199,8 @@ fun Modifier.zoomPan(
     onDoubleTap: (() -> Unit)? = null
 ): Modifier {
     val reduced = LocalReducedMotion.current
+    val currentDoubleTap by rememberUpdatedState(onDoubleTap)
+    val currentDoubleTapZoom by rememberUpdatedState(doubleTapZoom)
     return this
         .onSizeChanged { state.onViewportSize(it.width.toFloat(), it.height.toFloat()) }
         .pointerInput(state, key) {
@@ -211,16 +214,18 @@ fun Modifier.zoomPan(
                 var multiTouch = false
                 while (true) {
                     val event = awaitPointerEvent()
-                    val down = event.changes.firstOrNull { it.changedToDown() && it.id != trackedId }
-                    if (down != null) {
-                        tracker = VelocityTracker().apply { addPosition(down.uptimeMillis, down.position) }
-                        trackedId = down.id
-                        multiTouch = false
-                        continue
+                    if (event.changes.count { it.pressed } > 1) multiTouch = true
+                    if (trackedId == null) {
+                        val down = event.changes.firstOrNull { it.changedToDown() }
+                        if (down != null) {
+                            tracker = VelocityTracker().apply { addPosition(down.uptimeMillis, down.position) }
+                            trackedId = down.id
+                            multiTouch = event.changes.count { it.pressed } > 1
+                            continue
+                        }
                     }
                     val id = trackedId ?: continue
                     val change = event.changes.firstOrNull { it.id == id } ?: continue
-                    if (event.changes.count { it.pressed } > 1) multiTouch = true
                     if (!change.pressed) {
                         if (!multiTouch) {
                             val velocity = tracker?.calculateVelocity()
@@ -238,7 +243,7 @@ fun Modifier.zoomPan(
         }
         .pointerInput(state, key) {
             detectTapGestures(
-                onDoubleTap = { onDoubleTap?.invoke() ?: state.toggleZoom(doubleTapZoom) }
+                onDoubleTap = { currentDoubleTap?.invoke() ?: state.toggleZoom(currentDoubleTapZoom) }
             )
         }
 }

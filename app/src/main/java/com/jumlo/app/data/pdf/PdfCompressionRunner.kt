@@ -92,7 +92,7 @@ object PdfCompressionRunner {
                         onPage = { done, total ->
                             check()
                             onProgress(pass.toLong() * total + done, profiles.size.toLong() * total)
-                        }, codec = codec, maxWorkingBytes = maxWorkingBytes, checkCancel = ::check)
+                        }, codec = codec, maxWorkingBytes = maxWorkingBytes, checkCancel = ::check, walkLadder = false)
                     check()
                     // Strip document metadata (info dictionary and XMP) as part of the size
                     // ladder. The private output is re-derived from the source on every run,

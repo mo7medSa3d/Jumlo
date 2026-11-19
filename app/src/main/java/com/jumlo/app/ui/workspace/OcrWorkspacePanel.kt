@@ -52,7 +52,10 @@ internal fun OcrWorkspacePanel(vm:AppViewModel,sourceId:String,onExport:()->Unit
             @Composable fun Page(modifier:Modifier) {
                 Surface(modifier,shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {
                     Box(Modifier.height(340.dp),contentAlignment=Alignment.Center) {
-                        frame?.getOrNull()?.takeUnless {it.bitmap.isRecycled}?.let {Image(it.bitmap.asImageBitmap(),stringResource(R.string.jumlo_page_label,page),Modifier.fillMaxSize().testTag("ocr.page"),contentScale=ContentScale.Fit)}
+                        frame?.getOrNull()?.takeUnless {it.bitmap.isRecycled}?.let {current ->
+                            val imageBitmap=remember(current.bitmap) {current.bitmap.asImageBitmap()}
+                            Image(imageBitmap,stringResource(R.string.jumlo_page_label,page),Modifier.fillMaxSize().testTag("ocr.page"),contentScale=ContentScale.Fit)
+                        }
                             ?: if(frame?.isFailure==true) Text(stringResource(R.string.msg_preview_unavailable),modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite }) else CircularProgressIndicator()
                     }
                 }

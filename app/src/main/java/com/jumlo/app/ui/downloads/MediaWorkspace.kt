@@ -2,13 +2,12 @@ package com.jumlo.app.ui.downloads
 
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.foundation.layout.*
@@ -23,19 +22,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -55,7 +53,6 @@ import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.components.QuietStateCard
 import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.components.userMessageResource
-import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
@@ -63,6 +60,22 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
+
+private val UrlKeyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go)
+private val RESTRICTED_ERROR_CODES = setOf("MEDIA_SESSION_REQUIRED", "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED", "MEDIA_SOURCE_REJECTED", "HTTP_401", "HTTP_403")
+private val UNSUPPORTED_ERROR_CODES = setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
+private val AUDIO_BITRATES = listOf(320, 256, 192, 128, 96, 64)
+private val PDF_DIRECT_MODES = listOf(
+    "ORIGINAL" to R.string.media_pdf_original,
+    "PDF_RECOMMENDED" to R.string.media_pdf_recommended,
+    "PDF_EXTREME" to R.string.media_pdf_extreme,
+    "PDF_TO_IMAGES" to R.string.media_pdf_to_images
+)
+private val IMAGE_DIRECT_MODES = listOf(
+    "ORIGINAL" to R.string.media_img_original,
+    "IMAGE_COMPRESSED" to R.string.media_img_compressed,
+    "IMAGE_TO_PDF" to R.string.media_img_to_pdf
+)
 
 /** Inspect a link, select actual source qualities and queue a durable download. */
 @Composable fun MediaWorkspace(
@@ -79,15 +92,18 @@ import kotlin.math.roundToInt
     val state by viewModel.state.collectAsStateWithLifecycle()
     // Keep the parent workspace's draft URL in sync with the media-specific VM.
     // Navigation's unsaved-changes guard observes the parent URL, not media state.
-    fun editUrl(value:String) {
-        viewModel.editUrl(value)
-        onEditedUrl(value)
+    val currentOnEditedUrl by rememberUpdatedState(onEditedUrl)
+    val currentOnQueued by rememberUpdatedState(onQueued)
+    val editUrl = remember(viewModel) {
+        { value: String ->
+            viewModel.editUrl(value)
+            currentOnEditedUrl(value)
+        }
     }
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
     val reducedMotion=LocalReducedMotion.current
     var clipboardEmpty by remember { mutableStateOf(false) }
-    var showAdvanced by rememberSaveable(sessionEpoch) { mutableStateOf(false) }
     val readClipboard = remember(clipboard) {
         { try { clipboard.getText()?.text?.take(32768) } catch (_:RuntimeException) { null } }
     }
@@ -96,6 +112,26 @@ import kotlin.math.roundToInt
             runCatching { MediaLinks.normalize(text,allowHttp=true) }.getOrNull()
         }
     }
+    val onAnalyze = remember(viewModel) { { viewModel.analyze() } }
+    val onAnalyzeWithHaptics = remember(haptics, viewModel) { { haptics.actionClick(); viewModel.analyze() } }
+    val onUrlChange = remember(editUrl) { { value: String -> clipboardEmpty = false; editUrl(value) } }
+    val onClearUrl = remember(haptics, editUrl) { { haptics.selectionToggle(); editUrl("") } }
+    val onPasteUrl = remember(readClipboard, haptics, editUrl, viewModel) {
+        {
+            val clip = readClipboard()?.takeIf { it.isNotBlank() }
+            clipboardEmpty = clip == null
+            if (clip != null) {
+                haptics.actionClick()
+                editUrl(clip)
+                viewModel.analyze()
+            }
+        }
+    }
+    val onSwitchToExtractor = remember(haptics, viewModel) { { haptics.actionClick(); viewModel.analyzeAsMediaStream() } }
+    val onSelectVideo = remember(haptics, viewModel) { { haptics.selectionToggle(); viewModel.mode(MediaMode.VIDEO) } }
+    val onSelectAudio = remember(haptics, viewModel) { { haptics.selectionToggle(); viewModel.mode(MediaMode.AUDIO) } }
+    val onSubmit = remember(haptics, viewModel) { { haptics.toolExecute(); viewModel.submit(currentOnQueued) } }
+    val urlKeyboardActions = remember(onAnalyze) { KeyboardActions(onGo = { onAnalyze() }) }
     LaunchedEffect(sessionEpoch) {
         viewModel.beginSession(initialUrl,sessionEpoch,defaultVideoQuality,defaultAudioQuality)
     }
@@ -108,97 +144,22 @@ import kotlin.math.roundToInt
     }
     LaunchedEffect(state.error) { if(state.error!=null) haptics.error() }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
-    val supportedPlatforms = remember {
-        listOf("TikTok", "YouTube", "Instagram", "Facebook", "LinkedIn", "X (Twitter)", "Pinterest", "Google Drive")
-    }
-    val audioBitrates = remember { listOf(320, 256, 192, 128, 96, 64) }
     val choiceRows = remember(state.choices) { state.choices.chunked(2) }
+    val selectedChoice = remember(state.choices, state.selectedKey) {
+        state.choices.firstOrNull { it.key == state.selectedKey }
+    }
+    val unknownSizeLabel = stringResource(R.string.media_size_unknown)
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(
             modifier=Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
             contentPadding=PaddingValues(horizontal=20.dp,vertical=20.dp),
             verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
-            item("hero") {
-                Surface(
-                    shape = RoundedCornerShape(26.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
-                    modifier = Modifier.fillMaxWidth().then(if (reducedMotion) Modifier else Modifier.animateContentSize())
-                ) {
-                    Column(
-                        Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(JumloRadii.indicator)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Download,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    stringResource(R.string.redesign_download_hero),
-                                    style = QuietTheme.typography.screenTitle,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.semantics { heading() }
-                                )
-                            }
-                        }
-                        Text(
-                            stringResource(if (BuildConfig.EXTENDED_MEDIA) R.string.media_supported_platforms_extended else R.string.media_supported_platforms),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f),
-                            style = QuietTheme.typography.bodyMedium
-                        )
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(top = 2.dp)
-                        ) {
-                            items(supportedPlatforms, key = { it }, contentType = { "platform-chip" }) { platform ->
-                                Surface(
-                                    shape = RoundedCornerShape(JumloRadii.thumbnail),
-                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
-                                ) {
-                                    Row(
-                                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Box(
-                                            Modifier.size(7.dp).background(
-                                                MaterialTheme.colorScheme.primary,
-                                                CircleShape
-                                            )
-                                        )
-                                        Text(
-                                            platform,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Top bar already displays the tool title and subtitle; start directly with link input.
             item("input") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(
-                        shape = RoundedCornerShape(22.dp),
+                        shape = QuietTheme.shapes.card,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                         border = BorderStroke(1.dp, if (state.platformBadge != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)),
                         modifier = Modifier.fillMaxWidth().then(if (reducedMotion) Modifier else Modifier.animateContentSize())
@@ -206,7 +167,7 @@ import kotlin.math.roundToInt
                         Column(Modifier.padding(6.dp)) {
                             TextField(
                                 value = state.url,
-                                onValueChange = { clipboardEmpty = false; editUrl(it) },
+                                onValueChange = onUrlChange,
                                 singleLine = true,
                                 enabled = !state.submitting,
                                 isError = clipboardEmpty,
@@ -214,7 +175,7 @@ import kotlin.math.roundToInt
                                 placeholder = { Text(stringResource(R.string.redesign_link_hint), style = QuietTheme.typography.metadata) },
                                 label = { Text(stringResource(R.string.media_link)) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(18.dp),
+                                shape = QuietTheme.shapes.innerPanel,
                                 colors = TextFieldDefaults.colors(
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent,
@@ -222,27 +183,19 @@ import kotlin.math.roundToInt
                                     focusedContainerColor = Color.Transparent,
                                     unfocusedContainerColor = Color.Transparent
                                 ),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                                keyboardActions = KeyboardActions(onGo = { viewModel.analyze() }),
+                                keyboardOptions = UrlKeyboardOptions,
+                                keyboardActions = urlKeyboardActions,
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
                                 leadingIcon = { Icon(Icons.Rounded.Link, null, tint = MaterialTheme.colorScheme.primary) },
                                 trailingIcon = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         if (state.url.isNotEmpty()) {
-                                            IconButton(onClick = { haptics.selectionToggle(); editUrl("") }) {
+                                            IconButton(onClick = onClearUrl) {
                                                 Icon(Icons.Rounded.Close, stringResource(R.string.signature_clear))
                                             }
                                         }
                                         FilledTonalIconButton(
-                                            onClick = {
-                                                val clip = readClipboard()?.takeIf { it.isNotBlank() }
-                                                clipboardEmpty = clip == null
-                                                if (clip != null) {
-                                                    haptics.actionClick()
-                                                    editUrl(clip)
-                                                    viewModel.analyze()
-                                                }
-                                            },
+                                            onClick = onPasteUrl,
                                             modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                         ) {
                                             Icon(Icons.Rounded.ContentPaste, stringResource(R.string.action_paste), Modifier.size(18.dp))
@@ -273,8 +226,9 @@ import kotlin.math.roundToInt
                         }
                         if (state.url.isNotBlank() && !state.analyzing) {
                             FilledTonalButton(
-                                onClick = { haptics.actionClick(); viewModel.analyze() },
-                                shape = RoundedCornerShape(JumloRadii.indicator)
+                                onClick = onAnalyzeWithHaptics,
+                                shape = QuietTheme.shapes.activeIndicatorPill,
+                                modifier = Modifier.heightIn(min = 48.dp)
                             ) {
                                 Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
@@ -285,7 +239,10 @@ import kotlin.math.roundToInt
                 }
             }
             if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
-                SuggestionChip(onClick={haptics.actionClick();editUrl(clipboardSuggestion);viewModel.analyze()},
+                val onUseSuggestion = remember(clipboardSuggestion, haptics, editUrl, viewModel) {
+                    { haptics.actionClick(); editUrl(clipboardSuggestion); viewModel.analyze() }
+                }
+                SuggestionChip(onClick=onUseSuggestion,
                     label={Text(stringResource(R.string.redesign_paste_suggestion))},icon={Icon(Icons.Rounded.ContentPaste,null)})
             }
             if(state.analyzing) item("loading") {
@@ -295,14 +252,14 @@ import kotlin.math.roundToInt
                     Text(stringResource(R.string.media_analyzing),style=QuietTheme.typography.metadata,
                         color=MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    TextButton(onClick=viewModel::cancelAnalysis) {
+                    TextButton(onClick=viewModel::cancelAnalysis,modifier=Modifier.heightIn(min=48.dp)) {
                         Text(stringResource(R.string.action_cancel))
                     }
                 }
             }
-            state.error?.let { code -> if (state.direct == null && state.asset == null) item("error") {
-                val restricted = code in setOf("MEDIA_SESSION_REQUIRED","MEDIA_PRIVATE_CONTENT","MEDIA_AGE_RESTRICTED","MEDIA_SOURCE_REJECTED","HTTP_401","HTTP_403")
-                val unsupported = code in setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
+            state.error?.let { code -> item("error") {
+                val restricted = code in RESTRICTED_ERROR_CODES
+                val unsupported = code in UNSUPPORTED_ERROR_CODES
                 QuietStateCard(
                     title=mediaError(code),
                     subtitle=stringResource(when {
@@ -311,7 +268,7 @@ import kotlin.math.roundToInt
                         else -> R.string.redesign_download_retry_hint
                     }),
                     actionLabel=if(restricted || unsupported) null else stringResource(R.string.media_analyze),
-                    onAction=if(restricted || unsupported) null else ({ viewModel.analyze() }),
+                    onAction=if(restricted || unsupported) null else onAnalyze,
                     isError=true,
                     modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                 )
@@ -320,8 +277,11 @@ import kotlin.math.roundToInt
 
             state.direct?.let { preview ->
                 item("direct-preview") {
+                    val directMeta = remember(preview.mime, preview.sizeBytes) {
+                        listOfNotNull(preview.mime, preview.sizeBytes?.let(::mediaBytes)).joinToString(" · ")
+                    }
                     Surface(
-                        shape=RoundedCornerShape(24.dp),
+                        shape=QuietTheme.shapes.heroCard,
                         color=MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -346,9 +306,9 @@ import kotlin.math.roundToInt
                                 )
                                 Text(stringResource(R.string.redesign_ready_file),color=MaterialTheme.colorScheme.primary,style=QuietTheme.typography.metadataStrong)
                             }
-                            Text(state.name.ifBlank { preview.title },style=QuietTheme.typography.sectionTitle,fontWeight=FontWeight.Bold)
+                            Text(state.name.ifBlank { preview.title },style=QuietTheme.typography.sectionTitle.copy(fontWeight=FontWeight.Bold,textDirection=TextDirection.Content))
                             Text(
-                                text=listOfNotNull(preview.mime,preview.sizeBytes?.let(::mediaBytes)).joinToString(" · ").ifBlank { stringResource(R.string.media_size_unknown) },
+                                text=directMeta.ifBlank { stringResource(R.string.media_size_unknown) },
                                 style=QuietTheme.typography.metadata,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -356,62 +316,57 @@ import kotlin.math.roundToInt
                         }
                     }
                 }
-                if (showAdvanced && preview.kind == DirectFileKind.PDF) {
+                if (preview.kind == DirectFileKind.PDF) {
                     item("direct-pdf-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                            Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
-                            val pdfModes = listOf(
-                                "ORIGINAL" to stringResource(R.string.media_pdf_original),
-                                "PDF_RECOMMENDED" to stringResource(R.string.media_pdf_recommended),
-                                "PDF_EXTREME" to stringResource(R.string.media_pdf_extreme),
-                                "PDF_TO_IMAGES" to stringResource(R.string.media_pdf_to_images)
-                            )
-                            pdfModes.forEach { (modeKey, modeLabel) ->
+                            Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
+                            PDF_DIRECT_MODES.forEach { (modeKey, modeLabelRes) ->
                                 val selected = state.directMode == modeKey
+                                val onModeClick = remember(modeKey, haptics, viewModel) {
+                                    { haptics.selectionToggle(); viewModel.directMode(modeKey) }
+                                }
                                 Surface(
-                                    shape=RoundedCornerShape(18.dp),
+                                    shape=QuietTheme.shapes.innerPanel,
                                     color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                                    modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick={haptics.selectionToggle();viewModel.directMode(modeKey)}).pressFeedback()
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick=onModeClick).pressFeedback()
                                 ) {
                                     Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                         RadioButton(selected=selected,onClick=null)
-                                        Text(modeLabel,style=QuietTheme.typography.bodyMedium.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
+                                        Text(stringResource(modeLabelRes),style=QuietTheme.typography.bodyMedium.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
                                             color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }
                         }
                     }
-                } else if (showAdvanced && preview.kind == DirectFileKind.IMAGE) {
+                } else if (preview.kind == DirectFileKind.IMAGE) {
                     item("direct-image-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                            Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
-                            val imgModes = listOf(
-                                "ORIGINAL" to stringResource(R.string.media_img_original),
-                                "IMAGE_COMPRESSED" to stringResource(R.string.media_img_compressed),
-                                "IMAGE_TO_PDF" to stringResource(R.string.media_img_to_pdf)
-                            )
-                            imgModes.forEach { (modeKey, modeLabel) ->
+                            Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
+                            IMAGE_DIRECT_MODES.forEach { (modeKey, modeLabelRes) ->
                                 val selected = state.directMode == modeKey
+                                val onModeClick = remember(modeKey, haptics, viewModel) {
+                                    { haptics.selectionToggle(); viewModel.directMode(modeKey) }
+                                }
                                 Surface(
-                                    shape=RoundedCornerShape(18.dp),
+                                    shape=QuietTheme.shapes.innerPanel,
                                     color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                                    modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick={haptics.selectionToggle();viewModel.directMode(modeKey)}).pressFeedback()
+                                    modifier=Modifier.fillMaxWidth().heightIn(min=56.dp).selectable(selected=selected,role=Role.RadioButton,onClick=onModeClick).pressFeedback()
                                 ) {
                                     Row(Modifier.fillMaxWidth().padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                         RadioButton(selected=selected,onClick=null)
-                                        Text(modeLabel,style=QuietTheme.typography.bodyMedium.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
+                                        Text(stringResource(modeLabelRes),style=QuietTheme.typography.bodyMedium.copy(fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium),
                                             color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }
                         }
                     }
-                } else if (showAdvanced && preview.kind in setOf(DirectFileKind.VIDEO, DirectFileKind.AUDIO)) {
+                } else if (preview.kind == DirectFileKind.VIDEO || preview.kind == DirectFileKind.AUDIO) {
                     item("direct-media-switch") {
                         QuietTonalButton(
                             text=stringResource(R.string.media_switch_to_extractor),
-                            onClick={haptics.actionClick();viewModel.analyzeAsMediaStream()},
+                            onClick=onSwitchToExtractor,
                             modifier=Modifier.fillMaxWidth()
                         )
                     }
@@ -421,7 +376,7 @@ import kotlin.math.roundToInt
             state.asset?.let { asset ->
                 item("media-preview") {
                     Surface(
-                        shape=RoundedCornerShape(24.dp),
+                        shape=QuietTheme.shapes.heroCard,
                         color=MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -442,36 +397,37 @@ import kotlin.math.roundToInt
                                     )
                                 }
                                 asset.uploader?.let { up ->
-                                    Text(up,style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                    Text(up,style=QuietTheme.typography.metadata.copy(textDirection=TextDirection.Content),color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                                 }
                             }
-                            Text(state.name.ifBlank { asset.title },style=QuietTheme.typography.sectionTitle,fontWeight=FontWeight.Bold,maxLines=3,overflow=TextOverflow.Ellipsis)
+                            Text(state.name.ifBlank { asset.title },style=QuietTheme.typography.sectionTitle.copy(fontWeight=FontWeight.Bold,textDirection=TextDirection.Content),maxLines=3,overflow=TextOverflow.Ellipsis)
 
                         }
                     }
                 }
 
                 item("media-type-selector") {
+                    val hasVideo = remember(asset.formats) { asset.formats.any { it.hasVideo } }
+                    val hasAudio = remember(asset.formats) { asset.formats.any { it.hasAudio } }
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
+                        Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
-                            val hasVideo = asset.formats.any { it.hasVideo }
                             if (hasVideo) {
                                 ModeSelectionCard(
-                                    title=stringResource(if (asset.formats.any { it.hasAudio })
+                                    title=stringResource(if (hasAudio)
                                         R.string.media_video else R.string.media_video_only),
                                     icon=Icons.Rounded.Videocam,
                                     selected=state.mode==MediaMode.VIDEO,
-                                    onClick={haptics.selectionToggle();viewModel.mode(MediaMode.VIDEO)},
+                                    onClick=onSelectVideo,
                                     modifier=Modifier.weight(1f)
                                 )
                             }
-                            if (asset.formats.any { it.hasAudio }) {
+                            if (hasAudio) {
                                 ModeSelectionCard(
                                     title=stringResource(R.string.media_audio_only),
                                     icon=Icons.Rounded.Audiotrack,
                                     selected=state.mode==MediaMode.AUDIO,
-                                    onClick={haptics.selectionToggle();viewModel.mode(MediaMode.AUDIO)},
+                                    onClick=onSelectAudio,
                                     modifier=Modifier.weight(1f)
                                 )
                             }
@@ -482,29 +438,41 @@ import kotlin.math.roundToInt
                 if (state.mode == MediaMode.AUDIO) {
                     item("audio-format-controls") {
                         Surface(
-                            shape=RoundedCornerShape(22.dp),
+                            shape=QuietTheme.shapes.card,
                             color=MaterialTheme.colorScheme.surfaceContainerLow
                         ) {
                             Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                                 Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
                                 val originalAudioLabel = stringResource(R.string.media_original_audio)
-                                val hasNativeOnlyChoice = state.choices.any { MediaEngineRouting.isNativeChoice(it) }
-                                val audioFormats = if (BuildConfig.EXTENDED_MEDIA && !hasNativeOnlyChoice) {
-                                    listOf(
-                                        AudioOutput.ORIGINAL to originalAudioLabel,
-                                        AudioOutput.MP3 to "MP3",
-                                        AudioOutput.M4A to "M4A",
-                                        AudioOutput.OPUS to "OPUS"
-                                    )
-                                } else {
-                                    listOf(AudioOutput.ORIGINAL to originalAudioLabel)
+                                val hasNativeOnlyChoice = remember(state.choices) {
+                                    state.choices.any { MediaEngineRouting.isNativeChoice(it) }
+                                }
+                                LaunchedEffect(hasNativeOnlyChoice, state.audio) {
+                                    if ((!BuildConfig.EXTENDED_MEDIA || hasNativeOnlyChoice) && state.audio != AudioOutput.ORIGINAL) {
+                                        viewModel.audio(AudioOutput.ORIGINAL)
+                                    }
+                                }
+                                val audioFormats = remember(hasNativeOnlyChoice, originalAudioLabel) {
+                                    if (BuildConfig.EXTENDED_MEDIA && !hasNativeOnlyChoice) {
+                                        listOf(
+                                            AudioOutput.ORIGINAL to originalAudioLabel,
+                                            AudioOutput.MP3 to "MP3",
+                                            AudioOutput.M4A to "M4A",
+                                            AudioOutput.OPUS to "OPUS"
+                                        )
+                                    } else {
+                                        listOf(AudioOutput.ORIGINAL to originalAudioLabel)
+                                    }
                                 }
                                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                     items(audioFormats, key={it.first.name}, contentType={"audio-format-chip"}) { (fmt, label) ->
+                                        val onFormatClick = remember(fmt, haptics, viewModel) {
+                                            { haptics.selectionToggle(); viewModel.audio(fmt) }
+                                        }
                                         FilterChip(
                                             border=null,
                                             selected=state.audio==fmt,
-                                            onClick={haptics.selectionToggle();viewModel.audio(fmt)},
+                                            onClick=onFormatClick,
                                             label={Text(label,style=QuietTheme.typography.metadataStrong)}
                                         )
                                     }
@@ -512,11 +480,14 @@ import kotlin.math.roundToInt
                                 if (state.audio != AudioOutput.ORIGINAL) {
                                     Text(stringResource(R.string.media_encoding_bitrate),style=QuietTheme.typography.metadataStrong)
                                     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                        items(audioBitrates, key={it}, contentType={"bitrate-chip"}) { kbps ->
+                                        items(AUDIO_BITRATES, key={it}, contentType={"bitrate-chip"}) { kbps ->
+                                            val onBitrateClick = remember(kbps, haptics, viewModel) {
+                                                { haptics.selectionToggle(); viewModel.bitrate(kbps) }
+                                            }
                                             FilterChip(
                                                 border=null,
                                                 selected=state.bitrate==kbps,
-                                                onClick={haptics.selectionToggle();viewModel.bitrate(kbps)},
+                                                onClick=onBitrateClick,
                                                 label={Text(stringResource(R.string.modern_audio_bitrate, kbps),style=QuietTheme.typography.metadataStrong)}
                                             )
                                         }
@@ -527,172 +498,80 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // ViewModel auto-selects the best format by default; manual quality selection is Advanced-only.
-                if (showAdvanced) item("media-quality-header") {
-                    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
-                        Text(stringResource(R.string.media_actual_qualities),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                if (choiceRows.isNotEmpty()) item("media-quality-header") {
+                    Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                 }
+                val isUnprobedExtractor = asset.extractor in setOf("DirectMedia", "Html5")
 
-                if (showAdvanced) items(choiceRows, key={row -> row.joinToString("-") { it.key }}, contentType={"quality-row"}) { row ->
+                items(
+                    choiceRows,
+                    key={row -> if (row.size == 1) row[0].key else "${row[0].key}-${row[1].key}"},
+                    contentType={"quality-row"}
+                ) { row ->
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { choice ->
                             val selected = state.selectedKey == choice.key
-                            val title = MediaCatalog.qualityTitle(choice)
-                            val estBytes = MediaCatalog.displayBytes(choice, asset.durationSeconds)
-                            val sizeLabel = estBytes?.let { (if(choice.sizeIsApproximate || choice.estimatedBytes == null) "~" else "") + mediaBytes(it) }
-                                ?: stringResource(R.string.media_size_unknown)
-                            val containerLabel = if (state.mode == MediaMode.AUDIO && state.audio != AudioOutput.ORIGINAL) {
-                                state.audio.name
-                            } else {
-                                choice.container.uppercase(Locale.ROOT)
+                            val title = remember(choice) { MediaCatalog.qualityTitle(choice) }
+                            val sizeLabel = remember(choice, asset.durationSeconds, unknownSizeLabel) {
+                                MediaCatalog.displayBytes(choice, asset.durationSeconds)
+                                    ?.let { (if(choice.sizeIsApproximate || choice.estimatedBytes == null) "~" else "") + mediaBytes(it) }
+                                    ?: unknownSizeLabel
+                            }
+                            val containerLabel = remember(state.mode, state.audio, choice.container) {
+                                if (state.mode == MediaMode.AUDIO && state.audio != AudioOutput.ORIGINAL) {
+                                    state.audio.name
+                                } else {
+                                    choice.container.uppercase(Locale.ROOT)
+                                }
                             }
                             val subBadge = if (choice.mode == MediaMode.VIDEO) {
-                                val audioLabel = if (asset.extractor in setOf("DirectMedia", "Html5"))
+                                val audioLabel = if (isUnprobedExtractor)
                                     R.string.media_audio_not_probed else if (choice.expectsAudio)
                                     R.string.media_with_audio else R.string.media_without_audio
                                 "$containerLabel · ${stringResource(audioLabel)}"
                             } else {
                                 containerLabel
                             }
-                            Surface(
-                                onClick={haptics.selectionToggle();viewModel.select(choice.key)},
-                                shape=RoundedCornerShape(JumloRadii.card),
-                                color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                                modifier=Modifier.weight(1f).heightIn(min=96.dp).pressFeedback()
-                                    .semantics {this.selected=selected;role=Role.RadioButton}
-                            ) {
-                                Column(
-                                    modifier=Modifier.fillMaxWidth().heightIn(min=96.dp).padding(14.dp),
-                                    verticalArrangement=Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        modifier=Modifier.fillMaxWidth(),
-                                        verticalAlignment=Alignment.CenterVertically,
-                                        horizontalArrangement=Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text=title,
-                                            style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.Bold),
-                                            color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                            maxLines=1,
-                                            overflow=TextOverflow.Ellipsis
-                                        )
-                                        if(selected) {
-                                            Icon(Icons.Rounded.CheckCircle,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(18.dp))
-                                        }
-                                    }
-                                    Row(
-                                        modifier=Modifier.fillMaxWidth(),
-                                        verticalAlignment=Alignment.CenterVertically,
-                                        horizontalArrangement=Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text=subBadge,
-                                            style=QuietTheme.typography.badge,
-                                            color=if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text=sizeLabel,
-                                            style=QuietTheme.typography.metadata,
-                                            color=if(selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines=1
-                                        )
-                                    }
-                                }
+                            val onChoiceClick = remember(choice.key, haptics, viewModel) {
+                                { haptics.selectionToggle(); viewModel.select(choice.key) }
                             }
+                            QualityChoiceCard(
+                                title=title,
+                                subBadge=subBadge,
+                                sizeLabel=sizeLabel,
+                                selected=selected,
+                                onClick=onChoiceClick,
+                                modifier=Modifier.weight(1f)
+                            )
                         }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
 
-            if (!showAdvanced && state.asset != null && state.selectedKey != null) {
-                item("auto-quality-summary") {
-                    val selectedChoice = state.choices.firstOrNull { it.key == state.selectedKey }
-                    if (selectedChoice != null) Text(
-                        stringResource(R.string.media_selected_quality_summary, MediaCatalog.qualityTitle(selectedChoice)),
-                        style=QuietTheme.typography.bodyMedium,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    else Text(stringResource(R.string.media_auto_best_quality),
-                        style=QuietTheme.typography.bodyMedium,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            if (showAdvanced && state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
+            if (state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
                 item("choose-quality-hint") {
                     Text(stringResource(R.string.media_choose_quality_hint),
                         style=QuietTheme.typography.bodyMedium,
                         color=MaterialTheme.colorScheme.primary)
                 }
             }
-
-            if (state.asset != null || state.direct != null) {
-                item("advanced-options-toggle") {
-                    TextButton(
-                        onClick = { haptics.actionClick(); showAdvanced = !showAdvanced },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        Text(stringResource(if (showAdvanced) R.string.media_hide_advanced else R.string.media_advanced_options))
-                    }
-                }
-            }
-
-            if (showAdvanced && (state.asset != null || state.direct != null)) item("filename") {
-                TextField(value=state.name,onValueChange=viewModel::name,
-                    singleLine=true,label={Text(stringResource(R.string.media_filename))},
-                    modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(JumloRadii.field),
-                    colors=TextFieldDefaults.colors(focusedIndicatorColor=Color.Transparent,
-                        unfocusedIndicatorColor=Color.Transparent,disabledIndicatorColor=Color.Transparent))
-            }
-
-            if (showAdvanced && (state.asset != null || state.direct != null)) item("network-wifi") {
-                Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
-                    .toggleable(value=state.wifiOnly, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.wifi(it)})
-                    .padding(horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
-                    Text(stringResource(R.string.media_wifi), Modifier.weight(1f), style=QuietTheme.typography.body)
-                    Switch(checked=state.wifiOnly, onCheckedChange=null)
-                }
-            }
-            if (showAdvanced && (state.asset != null || state.direct != null)) item("network-unmetered") {
-                Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
-                    .toggleable(value=state.unmetered, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.unmetered(it)})
-                    .padding(horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
-                    Text(stringResource(R.string.media_unmetered), Modifier.weight(1f), style=QuietTheme.typography.body)
-                    Switch(checked=state.unmetered, onCheckedChange=null)
-                }
-            }
-            if (showAdvanced && (state.asset != null || state.direct != null)) item("network-http") {
-                Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
-                        .toggleable(value=state.allowHttp, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.allowHttp(it)})
-                        .padding(horizontal=4.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Text(stringResource(R.string.media_http), Modifier.weight(1f), style=QuietTheme.typography.body)
-                        Switch(checked=state.allowHttp, onCheckedChange=null)
-                    }
-                    if (state.allowHttp) Text(stringResource(R.string.field_http_warning),
-                        style=QuietTheme.typography.metadata, color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
         }
         Surface(tonalElevation=2.dp) {
             Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
-            val selectedChoice = state.choices.firstOrNull { it.key == state.selectedKey }
+            val selectedQualityTitle = remember(selectedChoice) {
+                selectedChoice?.let(MediaCatalog::qualityTitle)
+            }
             val downloadButtonLabel = when {
                 state.submitting -> stringResource(R.string.media_queueing)
-                selectedChoice != null -> {
-                    val qTitle = MediaCatalog.qualityTitle(selectedChoice)
-                    stringResource(R.string.media_download_with_quality, qTitle)
-                }
+                selectedQualityTitle != null -> stringResource(R.string.media_download_with_quality, selectedQualityTitle)
                 state.asset != null -> stringResource(R.string.media_download_selected)
                 else -> stringResource(R.string.redesign_download_now)
             }
             Button(
-                onClick={haptics.toolExecute();viewModel.submit(onQueued)},
+                onClick=onSubmit,
                 enabled=!state.analyzing && !state.submitting && (state.direct!=null || state.selectedKey!=null),
-                modifier=Modifier.widthIn(max=840.dp).fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
+                modifier=Modifier.widthIn(max=840.dp).fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
                 shape=QuietTheme.shapes.button
             ) {
                 Icon(Icons.Rounded.Download,null);Spacer(Modifier.width(8.dp))
@@ -709,6 +588,63 @@ import kotlin.math.roundToInt
 }
 
 @Composable
+private fun QualityChoiceCard(
+    title: String,
+    subBadge: String,
+    sizeLabel: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = QuietTheme.shapes.card,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier.heightIn(min = 96.dp).pressFeedback()
+            .semantics { this.selected = selected; role = Role.RadioButton }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp).padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = title,
+                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (selected) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = subBadge,
+                    style = QuietTheme.typography.badge,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = sizeLabel,
+                    style = QuietTheme.typography.metadata,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ModeSelectionCard(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -718,7 +654,7 @@ private fun ModeSelectionCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(JumloRadii.card),
+        shape = QuietTheme.shapes.card,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier.heightIn(min = 64.dp).pressFeedback()
             .semantics {this.selected=selected;role=Role.RadioButton}
@@ -746,14 +682,33 @@ private fun ModeSelectionCard(
 
 @Composable
 private fun MediaArtwork(url:String,title:String) {
+    val context = LocalContext.current
+    val request = remember(url, context) {
+        val referer = when {
+            url.contains("tiktok", ignoreCase = true) -> "https://www.tiktok.com/"
+            url.contains("instagram", ignoreCase = true) || url.contains("cdninstagram", ignoreCase = true) -> "https://www.instagram.com/"
+            url.contains("fbcdn", ignoreCase = true) || url.contains("facebook", ignoreCase = true) -> "https://www.facebook.com/"
+            url.contains("twimg", ignoreCase = true) -> "https://x.com/"
+            else -> null
+        }
+        ImageRequest.Builder(context)
+            .data(url)
+            .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
+            .apply { if (referer != null) addHeader("Referer", referer) }
+            .crossfade(true)
+            .build()
+    }
     var loading by remember(url) {mutableStateOf(true)}
     var failed by remember(url) {mutableStateOf(false)}
-    Box(Modifier.fillMaxWidth().height(190.dp).clip(QuietTheme.shapes.thumbnail),
+    val onLoading = remember(url) { { _: Any -> loading = true; failed = false } }
+    val onSuccess = remember(url) { { _: Any -> loading = false; failed = false } }
+    val onError = remember(url) { { _: Any -> loading = false; failed = true } }
+    Box(Modifier.fillMaxWidth().height(190.dp).clip(QuietTheme.shapes.thumbnail).background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment=Alignment.Center) {
-        AsyncImage(model=url,contentDescription=title,modifier=Modifier.fillMaxSize(),
+        AsyncImage(model=request,contentDescription=title,modifier=Modifier.fillMaxSize(),
             contentScale=ContentScale.Crop,
-            onLoading={loading=true;failed=false},onSuccess={loading=false;failed=false},
-            onError={loading=false;failed=true})
+            onLoading=onLoading,onSuccess=onSuccess,
+            onError=onError)
         if(loading) QuietShimmerSkeleton(Modifier.fillMaxSize())
         if(failed) Column(horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(QuietTheme.spacing.sm)) {

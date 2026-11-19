@@ -60,7 +60,7 @@ object PrintSourcePolicy {
                         output.fd.sync()
                     } }
                     currentCoroutineContext().ensureActive()
-                    java.nio.file.Files.move(partial.toPath(),destination.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+                    try { java.nio.file.Files.move(partial.toPath(),destination.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING) } catch (_: java.nio.file.AtomicMoveNotSupportedException) { java.nio.file.Files.move(partial.toPath(),destination.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
                     acquired
                 } finally {partial.delete()}
             }
@@ -80,7 +80,7 @@ object PrintSourcePolicy {
     private suspend fun cleanupSnapshots() = withContext(Dispatchers.IO) {
         snapshotMutations.withLock {snapshots.cleanup(data.first().snapshotReferences())}
     }
-    private fun decode(raw:String?):PrintSavedData = if(raw==null) PrintSavedData() else json.decodeFromString<PrintSavedData>(raw)
+    private fun decode(raw:String?):PrintSavedData = if(raw==null) PrintSavedData() else runCatching { json.decodeFromString<PrintSavedData>(raw) }.getOrElse { PrintSavedData() }
     private suspend fun update(change:(PrintSavedData)->PrintSavedData) {
         context.printDataStore.edit { prefs -> prefs[key]=json.encodeToString(change(decode(prefs[key]))) }
     }

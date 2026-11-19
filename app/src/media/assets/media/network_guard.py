@@ -32,7 +32,7 @@ def validate_url(url, allow_http=False):
             address = ipaddress.IPv4Address(socket.inet_aton(hostname))
         except (OSError, ValueError):
             address = None
-    if address is not None and not address.is_global:
+    if address is not None and (not address.is_global or address.is_multicast):
         raise ValueError('MEDIA_PRIVATE_NETWORK_URL')
     return url
 
@@ -40,6 +40,17 @@ def validate_url(url, allow_http=False):
 def _origin(parts):
     port = parts.port or (443 if parts.scheme == 'https' else 80)
     return (parts.scheme, (parts.hostname or '').lower().rstrip('.'), port)
+
+
+def _registrable_site(hostname):
+    host = (hostname or '').lower().rstrip('.')
+    labels = [label for label in host.split('.') if label]
+    if len(labels) <= 2:
+        return host
+    # Handle common two-part public suffixes (e.g. co.uk, com.br)
+    if len(labels[-1]) == 2 and labels[-2] in ('co', 'com', 'org', 'net', 'gov', 'edu', 'ac'):
+        return '.'.join(labels[-3:])
+    return '.'.join(labels[-2:])
 
 
 def install(allow_http=False):
@@ -61,9 +72,11 @@ def install(allow_http=False):
             raise ValueError('MEDIA_TLS_DOWNGRADE')
         result = original_redirect(self, req, fp, code, msg, headers, newurl)
         if result and _origin(previous) != _origin(destination):
-            # urllib.request.Request capitalizes header keys (e.g. 'Proxy-authorization'),
-            # so case-sensitive remove_header('Proxy-Authorization') misses it.
-            sensitive = {'authorization', 'cookie', 'proxy-authorization'}
+            # Always strip credentials on cross-origin redirects; preserve domain-scoped
+            # cookies across same-site subdomain redirects (e.g. vt.tiktok.com -> www.tiktok.com -> CDN)
+            # so yt-dlp's cookie jar and platform session tokens stay intact.
+            same_site = _registrable_site(previous.hostname) == _registrable_site(destination.hostname)
+            sensitive = {'authorization', 'proxy-authorization'} if same_site else {'authorization', 'cookie', 'proxy-authorization'}
             for store in (result.headers, result.unredirected_hdrs):
                 for key in [k for k in store if k.lower() in sensitive]:
                     store.pop(key, None)

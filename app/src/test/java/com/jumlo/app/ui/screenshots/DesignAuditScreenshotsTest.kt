@@ -20,8 +20,8 @@ import org.robolectric.annotation.LooperMode
 import java.io.File
 
 /**
- * Fast opt-in Roborazzi visual audit capturing real MainActivity screens (Home, Tools, Files,
- * Downloads, Settings) in Light, Dark, Arabic RTL, and Tablet layouts for before/after comparison.
+ * Fast opt-in Roborazzi visual audit capturing real MainActivity root tabs (Home, Tools, Files,
+ * Settings) in Light, Dark, Arabic RTL, and Tablet layouts for before/after comparison.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = JumloApplication::class, qualifiers = "w411dp-h891dp-mdpi")
@@ -59,28 +59,24 @@ class DesignAuditScreenshotsTest {
         // 1. Home
         compose.onRoot().captureRoboImage(File(outDir, "01_home.png").absolutePath)
 
-        // 2. Downloads (from Home button)
-        if (compose.onAllNodesWithTag("home.manageDownloads").fetchSemanticsNodes().isNotEmpty()) {
-            compose.onNodeWithTag("home.manageDownloads").performClick()
-            compose.waitForIdle()
-            compose.onRoot().captureRoboImage(File(outDir, "02_downloads.png").absolutePath)
-        }
+        // Downloads is no longer a root dock tab or static Home button; it is only surfaced from
+        // Home's Active Tasks header when jobs are active, so it is skipped on a clean launch.
 
-        // 3. Tools tab
+        // 2. Tools tab
         if (compose.onAllNodesWithTag("nav.TOOLS").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithTag("nav.TOOLS").performClick()
             compose.waitForIdle()
             compose.onRoot().captureRoboImage(File(outDir, "03_tools.png").absolutePath)
         }
 
-        // 4. Files tab
+        // 3. Files tab
         if (compose.onAllNodesWithTag("nav.FILES").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithTag("nav.FILES").performClick()
             compose.waitForIdle()
             compose.onRoot().captureRoboImage(File(outDir, "04_files.png").absolutePath)
         }
 
-        // 5. Settings tab
+        // 4. Settings tab
         if (compose.onAllNodesWithTag("nav.SETTINGS").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithTag("nav.SETTINGS").performClick()
             compose.waitForIdle()

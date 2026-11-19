@@ -24,6 +24,7 @@ import io
 import os
 import posixpath
 import re
+import stat
 import struct
 import sys
 import tempfile
@@ -179,8 +180,10 @@ class LinkUniverse:
                 if info.is_dir():
                     continue
                 if is_symlink(info):
+                    if info.file_size > 4096:
+                        raise ValueError(f'Oversized symlink target: {node}')
                     target = archive.read(info).decode('utf8', 'strict')
-                    if not target or '\x00' in target or posixpath.isabs(target):
+                    if not target or '\x00' in target or '\\' in target or posixpath.isabs(target):
                         raise ValueError(f'Invalid symlink target: {node}')
                     resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
                     if resolved == '..' or resolved.startswith('../'):
@@ -273,8 +276,6 @@ def decide(name: str, info: zipfile.ZipInfo, closure: set[str]) -> tuple[bool, s
         return False, 'platform-lzma-development-alias'
     if name.startswith(('usr/lib/engines-3/', 'usr/lib/ossl-modules/')):
         return True, 'openssl-modules'
-    if name.startswith(('usr/etc/', 'usr/share/')):
-        return True, 'config'
     if insta_keep(name):
         return True, 'keep-list'
     if name.startswith('usr/lib/python3.12/site-packages/'):
@@ -312,7 +313,7 @@ def repack_bytes(original: bytes, closure: set[str]) -> tuple[bytes, list[tuple[
     """
     with zipfile.ZipFile(io.BytesIO(original)) as src:
         eocd = original.rfind(b'PK\x05\x06', max(0, len(original) - 65557))
-        if eocd < 0:
+        if eocd < 0 or eocd + 22 > len(original):
             raise ValueError('ZIP end record missing')
         disk, cd_disk, count_disk, count, cd_size, cd_start, comment_size = struct.unpack_from('<HHHHIIH', original, eocd + 4)
         if disk or cd_disk or count_disk != count or count == 65535 or cd_start + cd_size != eocd or eocd + 22 + comment_size != len(original):
@@ -353,7 +354,7 @@ def repack_bytes(original: bytes, closure: set[str]) -> tuple[bytes, list[tuple[
                 out.extend(record)
                 retained += 1
             position += length
-        if position != eocd:
+        if position != eocd or retained != len(offsets):
             raise ValueError('Invalid ZIP directory length')
         out.extend(struct.pack('<4sHHHHIIH', b'PK\x05\x06', 0, 0, retained, retained,
                                len(out) - new_cd_start, new_cd_start, comment_size))
@@ -362,10 +363,12 @@ def repack_bytes(original: bytes, closure: set[str]) -> tuple[bytes, list[tuple[
 
 
 def _write_atomic(path: str, data: bytes) -> None:
+    mode = stat.S_IMODE(os.stat(path).st_mode) if os.path.exists(path) else 0o644
     fd, tmp_path = tempfile.mkstemp(prefix='.repack-', dir=os.path.dirname(path) or '.')
     try:
         with os.fdopen(fd, 'wb') as stream:
             stream.write(data)
+        os.chmod(tmp_path, mode)
         os.replace(tmp_path, path)
     except BaseException:
         try:
@@ -394,8 +397,11 @@ def main() -> int:
                 line = line.strip()
                 if '=' in line and not line.startswith('#'):
                     k, v = line.split('=', 1)
-                    pins[k] = v
+                    pins[k.strip()] = v.strip()
     for d in args.dir:
+        if not os.path.isdir(d):
+            print(f'repack-native-media: directory not found: {d}', file=sys.stderr)
+            return 2
         abi = os.path.basename(os.path.normpath(d))
         if abi not in ('arm64-v8a', 'x86_64', 'armeabi-v7a', 'x86'):
             print(f'repack-native-media: cannot infer the ABI from {d} (use the per-ABI dir)', file=sys.stderr)

@@ -1,6 +1,5 @@
 package com.jumlo.app.ui.theme
 
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Immutable
@@ -13,13 +12,19 @@ import androidx.compose.ui.unit.dp
  *  thumbnails all read from here, so this single change restyles Home, Tools, Files,
  *  Settings, workspaces, viewer and print together. */
 object JumloRadii {
+    val hairline = 4.dp
     val extraSmall = 8.dp
+    val badge = 10.dp
     val thumbnail = 12.dp
+    val indicator = 14.dp
+    val iconTile = 15.dp
     val field = 16.dp
+    val surface = 18.dp
     val card = 20.dp
+    val hero = 24.dp
     val dock = 24.dp
     val sheet = 28.dp
-    val indicator = 14.dp
+    val splashIcon = 38.dp
 }
 
 @Immutable
@@ -33,21 +38,33 @@ data class QuietPrecisionElevation(
 /**
  * Jumlo Studio shape language: crisp architectural radii with disciplined hierarchy.
  *
+ * - Hairline bars & accents: 4dp
+ * - Compact badges & chips: 10dp
  * - Thumbnails and tags: 12dp
+ * - Active indicators & pills: 14dp
+ * - Tool & action icon tiles: 15dp
  * - Inputs, search, and buttons: 16dp
+ * - Nested inner surfaces & panels: 18dp
  * - Cards and tiles: 20dp
+ * - Hero / spotlight cards & floating navigation dock: 24dp
  * - Sheets and overlays: 28dp top radius
- * - Floating navigation dock: 24dp rounded pill
  */
 @Immutable
 data class QuietPrecisionShapes(
+    val bar: RoundedCornerShape = RoundedCornerShape(JumloRadii.hairline),
+    val badge: RoundedCornerShape = RoundedCornerShape(JumloRadii.badge),
     val thumbnail: RoundedCornerShape = RoundedCornerShape(JumloRadii.thumbnail),
+    val activeIndicatorPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.indicator),
+    val iconTile: RoundedCornerShape = RoundedCornerShape(JumloRadii.iconTile),
     val inputField: RoundedCornerShape = RoundedCornerShape(JumloRadii.field),
     val button: RoundedCornerShape = RoundedCornerShape(JumloRadii.field),
+    val innerPanel: RoundedCornerShape = RoundedCornerShape(JumloRadii.surface),
     val card: RoundedCornerShape = RoundedCornerShape(JumloRadii.card),
-    val modalSheetTop: RoundedCornerShape = RoundedCornerShape(topStart = JumloRadii.sheet, topEnd = JumloRadii.sheet),
+    val heroCard: RoundedCornerShape = RoundedCornerShape(JumloRadii.hero),
     val dockPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.dock),
-    val activeIndicatorPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.indicator)
+    val modalSheetTop: RoundedCornerShape = RoundedCornerShape(topStart = JumloRadii.sheet, topEnd = JumloRadii.sheet),
+    val pill: RoundedCornerShape = RoundedCornerShape(percent = 50),
+    val splashIcon: RoundedCornerShape = RoundedCornerShape(JumloRadii.splashIcon)
 )
 
 @Immutable
@@ -75,7 +92,6 @@ data class QuietPrecisionSpacing(
 
 /** Icon tiles and avatars use crisp squircles / circles from here. */
 val IconTileShape = RoundedCornerShape(JumloRadii.thumbnail)
-val AvatarShape = CircleShape
 
 val Material3Shapes = Shapes(
     extraSmall = RoundedCornerShape(JumloRadii.extraSmall),

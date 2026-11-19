@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -52,6 +53,13 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
+private val SIGNATURE_INKS = listOf(
+    Color.Black to R.string.studio_ink_black,
+    Color(0xFF1746A2) to R.string.studio_ink_blue,
+    Color(0xFF8E2430) to R.string.studio_ink_red,
+    Color(0xFF145D4C) to R.string.studio_ink_green
+)
+
 /** The scanner first asks for the output format, because the Play-services result
  *  carries both a PDF and JPEG pages and the old code silently discarded the JPEGs.
  *  ML Kit owns capture, crop, filters and page ordering. */
@@ -67,11 +75,12 @@ fun ScanScreen(
             Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
             QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { format = "pdf" },
-                modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
+                enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
             QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { format = "jpg" },
-                modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_close)) }
+                enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
+            // Back navigation is handled cleanly by QuietWorkspaceTopBar.
         }
     } else {
         SmartDocumentScanLauncher(
@@ -116,6 +125,7 @@ fun SignaturePad(onSaved: (File) -> Unit) {
     }
     val latestInk by rememberUpdatedState(inkArgb)
     val latestPen by rememberUpdatedState(with(density) { penDp.dp.toPx() })
+    val strokePath = remember { androidx.compose.ui.graphics.Path() }
     val hasInk = strokes.isNotEmpty()
     val padDescription = stringResource(R.string.studio_signature_pad)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -140,9 +150,15 @@ fun SignaturePad(onSaved: (File) -> Unit) {
                                 activePoints.add(Offset((point.x / size.width).coerceIn(0f, 1f), (point.y / size.height).coerceIn(0f, 1f)))
                         },
                         onDrag = { change, _ ->
-                            if (size.width > 0 && size.height > 0 && activePoints.isNotEmpty() && activePoints.size < 200) {
+                            if (size.width > 0 && size.height > 0 && activePoints.isNotEmpty() && activePoints.size < 2000) {
                                 change.consume()
-                                activePoints.add(Offset((change.position.x / size.width).coerceIn(0f, 1f), (change.position.y / size.height).coerceIn(0f, 1f)))
+                                val next = Offset((change.position.x / size.width).coerceIn(0f, 1f), (change.position.y / size.height).coerceIn(0f, 1f))
+                                val last = activePoints.last()
+                                val dx = next.x - last.x
+                                val dy = next.y - last.y
+                                if (dx * dx + dy * dy >= 0.000016f) {
+                                    activePoints.add(next)
+                                }
                             }
                         },
                         onDragEnd = {
@@ -157,11 +173,12 @@ fun SignaturePad(onSaved: (File) -> Unit) {
                 }) {
                 fun drawStroke(points: List<Offset>, color: Int, width: Float) {
                     if (points.size < 2) return
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(points.first().x * size.width, points.first().y * size.height)
-                        points.drop(1).forEach { lineTo(it.x * size.width, it.y * size.height) }
+                    strokePath.reset()
+                    strokePath.moveTo(points[0].x * size.width, points[0].y * size.height)
+                    for (i in 1 until points.size) {
+                        strokePath.lineTo(points[i].x * size.width, points[i].y * size.height)
                     }
-                    drawPath(path, Color(color), style = androidx.compose.ui.graphics.drawscope.Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    drawPath(strokePath, Color(color), style = androidx.compose.ui.graphics.drawscope.Stroke(width, cap = StrokeCap.Round, join = StrokeJoin.Round))
                 }
                 strokes.forEach { drawStroke(it.points, it.colorArgb, it.widthFraction * size.width) }
                 drawStroke(activePoints, inkArgb, latestPen)
@@ -169,19 +186,20 @@ fun SignaturePad(onSaved: (File) -> Unit) {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             IconButton(onClick = { strokes.lastOrNull()?.let { last -> undone = undone + last; strokes = strokes.dropLast(1) } }, enabled = strokes.isNotEmpty() && !busy,
-                modifier = Modifier.testTag("signature.undo")) { Icon(Icons.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
+                modifier = Modifier.size(48.dp).testTag("signature.undo")) { Icon(Icons.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
             IconButton(onClick = { undone.lastOrNull()?.let { last -> strokes = strokes + last; undone = undone.dropLast(1) } }, enabled = undone.isNotEmpty() && !busy,
-                modifier = Modifier.testTag("signature.redo")) { Icon(Icons.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
-            TextButton(onClick = { strokes = emptyList(); undone = emptyList(); activePoints.clear() }, enabled = !busy && hasInk) {
+                modifier = Modifier.size(48.dp).testTag("signature.redo")) { Icon(Icons.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
+            TextButton(onClick = { strokes = emptyList(); undone = emptyList(); activePoints.clear() }, enabled = !busy && hasInk, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.signature_clear))
             }
         }
-        Text(stringResource(R.string.studio_pen_thickness, penDp.toInt()), style = QuietTheme.typography.metadataStrong)
+        val penLabel = stringResource(R.string.studio_pen_thickness, penDp.toInt())
+        Text(penLabel, style = QuietTheme.typography.metadataStrong)
         Slider(penDp, { penDp = it }, valueRange = 1f..12f, steps = 10, enabled = !busy,
-            modifier = Modifier.testTag("signature.thickness"))
+            modifier = Modifier.heightIn(min = 48.dp).testTag("signature.thickness").semantics { contentDescription = penLabel; stateDescription = penLabel })
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            listOf(Color.Black, Color(0xFF1746A2), Color(0xFF8E2430), Color(0xFF145D4C)).forEachIndexed { index, ink ->
-                val label = stringResource(listOf(R.string.studio_ink_black, R.string.studio_ink_blue, R.string.studio_ink_red, R.string.studio_ink_green)[index])
+            SIGNATURE_INKS.forEach { (ink, labelRes) ->
+                val label = stringResource(labelRes)
                 Surface(onClick = { inkArgb = ink.toArgb() }, color = ink, shape = CircleShape,
                     modifier = Modifier.size(48.dp).semantics { contentDescription = label; selected = inkArgb == ink.toArgb() }) {
                     Box(contentAlignment = Alignment.Center) { if (inkArgb == ink.toArgb()) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(22.dp)) }
@@ -215,7 +233,7 @@ fun SignaturePad(onSaved: (File) -> Unit) {
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (saveFailed) Text(stringResource(R.string.interactive_signature_failed), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (library.isNotEmpty()) {
-            Text(stringResource(R.string.studio_signature_library), style = QuietTheme.typography.metadataStrong)
+            Text(stringResource(R.string.studio_signature_library), style = QuietTheme.typography.metadataStrong, modifier = Modifier.semantics { heading() })
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(library, key = { it.name }, contentType = { "signature" }) { file ->
                     val bitmap by produceState<Bitmap?>(null, file) {
@@ -225,9 +243,12 @@ fun SignaturePad(onSaved: (File) -> Unit) {
                     Column(Modifier.width(148.dp)) {
                         Surface(onClick = { if (!busy) onSaved(file) }, shape = QuietTheme.shapes.thumbnail, color = Color.White,
                             modifier = Modifier.fillMaxWidth().height(84.dp)) {
-                            bitmap?.let { Image(it.asImageBitmap(), stringResource(R.string.studio_use_signature), Modifier.padding(8.dp), contentScale = ContentScale.Fit) }
+                            bitmap?.takeUnless { it.isRecycled }?.let { decoded ->
+                                val imageBitmap = remember(decoded) { decoded.asImageBitmap() }
+                                Image(imageBitmap, stringResource(R.string.studio_use_signature), Modifier.padding(8.dp), contentScale = ContentScale.Fit)
+                            }
                         }
-                        TextButton(onClick = {
+                        TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = {
                             scope.launch {
                                 try { withContext(Dispatchers.IO) { check(file.delete() || !file.exists()) }; libraryVersion++ }
                                 catch (cancel: CancellationException) { throw cancel }

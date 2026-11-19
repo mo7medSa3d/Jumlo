@@ -31,7 +31,12 @@ embedded_kotlin_run() {
   for candidate in "${JAVA_HOME:-}" /usr/lib/jvm/java-17-temurin-jdk /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/temurin-17-jdk-amd64; do
     if [ -x "$candidate/bin/java" ] && "$candidate/bin/java" -version 2>&1 | head -1 | grep -qE '"17\.'; then jdk="$candidate"; break; fi
   done
-  [ -n "$jdk" ] || jdk="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
+  if [ -z "$jdk" ]; then
+    local java_bin
+    java_bin=$(command -v java || true)
+    [ -n "$java_bin" ] || { echo 'BLOCKED: java not found' >&2; return 2; }
+    jdk="$(dirname "$(dirname "$(readlink -f "$java_bin")")")"
+  fi
   local compiler_cp="" runtime_cp="" jar
   for jar in "$compiler" "$stdlib" "$coroutines" "$trove" "$annotations" "$daemon" "$script" "$reflect"; do
     [ -n "$jar" ] && compiler_cp="${compiler_cp:+${compiler_cp}:}$jar"

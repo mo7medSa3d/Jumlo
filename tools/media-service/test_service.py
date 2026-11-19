@@ -220,7 +220,7 @@ class AudioConversionTest(unittest.TestCase):
             "https://example.org/track", "audio", "mp3", 128
         )
         self.addCleanup(lambda: os.path.isdir(os.path.dirname(direct)) and
-                        __import__("shutil").rmtree(os.path.dirname(direct), ignore_errors=True))
+                        shutil.rmtree(os.path.dirname(direct), ignore_errors=True))
         self.assertTrue(direct.endswith(".mp3"), direct)
         self.assertTrue(os.path.exists(direct), "the converted file must exist")
         self.assertEqual("media.mp3", name)
@@ -290,10 +290,6 @@ class ValidatorForwardingTest(unittest.TestCase):
         service.resolve_stream = lambda *args, **kwargs: (upstream, 'media.mp4', 'video/mp4')
 
     def test_the_service_passes_the_validator_and_the_range_to_the_app(self):
-        request = urllib.request.Request(
-            f"http://127.0.0.1:{self.port}/direct", headers={"Range": "bytes=10-"}
-        )
-        # The upstream is called through the service's own proxy.
         handler = service.Handler.__new__(service.Handler)
         handler.send_response = lambda *args, **kwargs: None
         handler.send_header = lambda *args, **kwargs: None
@@ -307,7 +303,6 @@ class ValidatorForwardingTest(unittest.TestCase):
         self.assertEqual("bytes=10-", _Upstream.seen_ranges[0])
 
     def test_the_service_forwards_the_validator_headers(self):
-        # A real request through the service's own handler.
         server = service.MediaHTTPServer(("127.0.0.1", 0), _ServiceHandler)
         port = server.server_address[1]
         threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True).start()
@@ -413,6 +408,8 @@ class RequestValidationTest(unittest.TestCase):
             "http://169.254.169.254/latest/meta-data/",
             "http://10.0.0.1/internal",
             "http://192.168.1.1/router",
+            "http://224.0.0.1/multicast",
+            "http://[ff02::1]/multicast",
             "https://localhost/secret",
             "https://service.internal/secret",
             "https://printer.local/secret",
@@ -434,6 +431,43 @@ class RequestValidationTest(unittest.TestCase):
         handler.send_header = lambda name, value: None
         handler.end_headers = lambda: None
         service.Handler._proxy(handler, "file:///etc/passwd", "passwd", "text/plain")
+        self.assertEqual(422, captured["status"])
+        self.assertEqual({"error": "MEDIA_SITE_UNSUPPORTED"}, json.loads(handler.wfile.getvalue()))
+
+    def test_redirect_handler_blocks_ssrf_downgrade_and_strips_cross_origin_credentials(self):
+        redirector = service._HttpOnlyRedirectHandler()
+        base_req = urllib.request.Request(
+            "https://cdn.example.org/video.mp4",
+            headers={"Authorization": "Bearer secret", "Cookie": "sid=abc"},
+        )
+        for bad_target in (
+            "http://127.0.0.1/admin",
+            "http://169.254.169.254/latest/meta-data/",
+            "http://224.0.0.1/multicast",
+            "http://cdn.example.org/video.mp4",
+            "file:///etc/passwd",
+        ):
+            with self.subTest(target=bad_target):
+                with self.assertRaisesRegex(ValueError, "MEDIA_SITE_UNSUPPORTED"):
+                    redirector.redirect_request(base_req, None, 302, "Found", {}, bad_target)
+
+        redirected = redirector.redirect_request(
+            base_req, None, 302, "Found", {}, "https://other.example.net/video.mp4"
+        )
+        self.assertIsNotNone(redirected)
+        self.assertFalse(any(k.lower() in ("authorization", "cookie") for k in redirected.headers))
+        self.assertFalse(any(k.lower() in ("authorization", "cookie") for k in redirected.unredirected_hdrs))
+
+    def test_proxy_reports_http_error_when_open_fails_before_headers_committed(self):
+        handler = service.Handler.__new__(service.Handler)
+        captured = {}
+        handler.headers = {}
+        handler.wfile = io.BytesIO()
+        handler.send_response = lambda code: captured.update(status=code)
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        with patch.object(service._HTTP_OPENER, "open", side_effect=ValueError("MEDIA_SITE_UNSUPPORTED")):
+            service.Handler._proxy(handler, "https://example.org/video.mp4", "media.mp4", "video/mp4")
         self.assertEqual(422, captured["status"])
         self.assertEqual({"error": "MEDIA_SITE_UNSUPPORTED"}, json.loads(handler.wfile.getvalue()))
 
@@ -548,6 +582,8 @@ class ProductionHardeningTest(unittest.TestCase):
             "X-Frame-Options": "DENY",
             "Cache-Control": "no-store",
             "Referrer-Policy": "no-referrer",
+            "Content-Security-Policy": "default-src 'none'",
+            "Permissions-Policy": "interest-cohort=()",
         }
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as response:
             for name, value in expected.items():
@@ -562,8 +598,76 @@ class ProductionHardeningTest(unittest.TestCase):
         finally:
             not_found.exception.close()
 
+        for body, expected_code in ((b"not-json", 400), (b'{"url": "http://127.0.0.1/private"}', 422)):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/extract",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(urllib.error.HTTPError) as err:
+                urllib.request.urlopen(req, timeout=10)
+            try:
+                self.assertEqual(expected_code, err.exception.code)
+                for name, value in expected.items():
+                    self.assertEqual(value, err.exception.headers.get(name))
+            finally:
+                err.exception.close()
+
+    def test_security_headers_are_emitted_on_unauthorized_error_response(self):
+        _, port = self._start_server(token="secret-token")
+        with self.assertRaises(urllib.error.HTTPError) as unauth:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10)
+        try:
+            self.assertEqual(401, unauth.exception.code)
+            self.assertEqual("nosniff", unauth.exception.headers.get("X-Content-Type-Options"))
+            self.assertEqual("no-store", unauth.exception.headers.get("Cache-Control"))
+            self.assertEqual("default-src 'none'", unauth.exception.headers.get("Content-Security-Policy"))
+            self.assertEqual("interest-cohort=()", unauth.exception.headers.get("Permissions-Policy"))
+        finally:
+            unauth.exception.close()
+
+    def test_health_endpoint_caches_probe_within_ttl_and_refreshes_after_expiry(self):
+        clock = [100.0]
+        versions = ["2026.10.26", "2026.11.01"]
+        ytdlp_calls = []
+        which_calls = []
+
+        def fake_ytdlp():
+            ytdlp_calls.append(1)
+            return versions[min(len(ytdlp_calls) - 1, len(versions) - 1)]
+
+        def fake_which(cmd):
+            which_calls.append(cmd)
+            return "/usr/bin/ffmpeg"
+
+        with patch.object(service.time, "monotonic", side_effect=lambda: clock[0]),                 patch.object(service, "ytdlp_version", side_effect=fake_ytdlp),                 patch.object(service.shutil, "which", side_effect=fake_which):
+            _, port = self._start_server(health_cache_ttl=30.0)
+            for _ in range(3):
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+                    self.assertEqual(200, resp.status)
+                    payload = json.loads(resp.read())
+                    self.assertTrue(payload["ok"])
+                    self.assertEqual("2026.10.26", payload["ytdlp"])
+                    self.assertTrue(payload["ffmpeg"])
+                    self.assertEqual(0, payload["uptime_seconds"])
+                    self.assertIn("metrics", payload)
+            self.assertEqual(1, len(ytdlp_calls), "ytdlp_version must be cached across /health probes within TTL")
+            self.assertEqual(1, len(which_calls), "shutil.which must be cached across /health probes within TTL")
+
+            clock[0] += 31.0
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+                self.assertEqual(200, resp.status)
+                payload = json.loads(resp.read())
+                self.assertTrue(payload["ok"])
+                self.assertEqual("2026.11.01", payload["ytdlp"])
+                self.assertTrue(payload["ffmpeg"])
+                self.assertEqual(31, payload["uptime_seconds"])
+            self.assertEqual(2, len(ytdlp_calls), "expired TTL must refresh /health probe")
+            self.assertEqual(2, len(which_calls))
+
     def test_ready_endpoint_reflects_ytdlp_availability_and_shutdown_state(self):
-        server, port = self._start_server()
+        server, port = self._start_server(health_cache_ttl=0)
         with patch.object(service, "ytdlp_version", return_value="2026.01.01"):
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=10) as response:
                 self.assertEqual(200, response.status)
@@ -591,6 +695,105 @@ class ProductionHardeningTest(unittest.TestCase):
                 self.assertTrue(payload["shutting_down"])
             finally:
                 draining.exception.close()
+
+    def test_ready_endpoint_reuses_cached_ytdlp_status_and_checks_shutdown_live(self):
+        clock = [200.0]
+        versions = ["2026.10.26", "2026.11.01"]
+        ytdlp_calls = []
+        which_calls = []
+
+        def fake_ytdlp():
+            ytdlp_calls.append(1)
+            return versions[min(len(ytdlp_calls) - 1, len(versions) - 1)]
+
+        def fake_which(cmd):
+            which_calls.append(cmd)
+            return "/usr/bin/ffmpeg"
+
+        with patch.object(service.time, "monotonic", side_effect=lambda: clock[0]), \
+                patch.object(service, "ytdlp_version", side_effect=fake_ytdlp), \
+                patch.object(service.shutil, "which", side_effect=fake_which):
+            server, port = self._start_server(health_cache_ttl=30.0)
+            for _ in range(2):
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=10) as resp:
+                    self.assertEqual(200, resp.status)
+                    self.assertEqual(
+                        {"ready": True, "shutting_down": False, "ytdlp": "2026.10.26", "ffmpeg": True},
+                        json.loads(resp.read()),
+                    )
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+                self.assertEqual(200, resp.status)
+                payload = json.loads(resp.read())
+                self.assertTrue(payload["ok"])
+                self.assertEqual("2026.10.26", payload["ytdlp"])
+                self.assertTrue(payload["ffmpeg"])
+            self.assertEqual(1, len(ytdlp_calls), "/ready and /health must share cached ytdlp_version within TTL")
+            self.assertEqual(1, len(which_calls))
+
+            server.shutting_down = True
+            with self.assertRaises(urllib.error.HTTPError) as draining:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=10)
+            try:
+                self.assertEqual(503, draining.exception.code)
+                payload = json.loads(draining.exception.read())
+                self.assertFalse(payload["ready"])
+                self.assertTrue(payload["shutting_down"])
+            finally:
+                draining.exception.close()
+            self.assertEqual(1, len(ytdlp_calls), "live shutting_down check must not bypass ytdlp cache")
+
+            server.shutting_down = False
+            clock[0] += 31.0
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=10) as resp:
+                self.assertEqual(200, resp.status)
+                self.assertEqual("2026.11.01", json.loads(resp.read())["ytdlp"])
+            self.assertEqual(2, len(ytdlp_calls))
+
+    def test_head_probes_return_empty_body_matching_headers_and_enforce_auth(self):
+        with patch.object(service, "ytdlp_version", return_value="2026.01.01"):
+            server, port = self._start_server(token="probe-secret", health_cache_ttl=30.0)
+            for path in ("/health", "/ready"):
+                req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", method="HEAD")
+                with self.assertRaises(urllib.error.HTTPError) as unauth:
+                    urllib.request.urlopen(req, timeout=10)
+                try:
+                    self.assertEqual(401, unauth.exception.code)
+                    self.assertEqual(b"", unauth.exception.read())
+                    self.assertEqual("default-src 'none'", unauth.exception.headers.get("Content-Security-Policy"))
+                    self.assertEqual("interest-cohort=()", unauth.exception.headers.get("Permissions-Policy"))
+                finally:
+                    unauth.exception.close()
+
+            auth_headers = {"Authorization": "Bearer probe-secret"}
+            for path in ("/health", "/ready"):
+                req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", headers=auth_headers, method="HEAD")
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    self.assertEqual(200, resp.status)
+                    self.assertEqual(b"", resp.read())
+                    self.assertEqual("application/json", resp.headers.get("Content-Type"))
+                    self.assertGreater(int(resp.headers.get("Content-Length") or "0"), 0)
+                    self.assertEqual("default-src 'none'", resp.headers.get("Content-Security-Policy"))
+                    self.assertEqual("interest-cohort=()", resp.headers.get("Permissions-Policy"))
+
+            server.shutting_down = True
+            req = urllib.request.Request(f"http://127.0.0.1:{port}/ready", headers=auth_headers, method="HEAD")
+            with self.assertRaises(urllib.error.HTTPError) as draining:
+                urllib.request.urlopen(req, timeout=10)
+            try:
+                self.assertEqual(503, draining.exception.code)
+                self.assertEqual(b"", draining.exception.read())
+                self.assertGreater(int(draining.exception.headers.get("Content-Length") or "0"), 0)
+            finally:
+                draining.exception.close()
+
+            req = urllib.request.Request(f"http://127.0.0.1:{port}/unknown", headers=auth_headers, method="HEAD")
+            with self.assertRaises(urllib.error.HTTPError) as missing:
+                urllib.request.urlopen(req, timeout=10)
+            try:
+                self.assertEqual(404, missing.exception.code)
+                self.assertEqual(b"", missing.exception.read())
+            finally:
+                missing.exception.close()
 
     def test_per_ip_rate_limiting_returns_429_with_retry_after_and_exempts_probes(self):
         _, port = self._start_server(rate_limit=2)
@@ -680,7 +883,6 @@ class ProductionHardeningTest(unittest.TestCase):
                     service.main(["--host", non_loopback, "--token", ""])
                 self.assertEqual(2, exited.exception.code)
 
-        # Allowed combinations: loopback without token, non-loopback with token or explicit opt-in.
         loopback_cfg = service.parse_config([], environ={})
         self.assertEqual("127.0.0.1", loopback_cfg.host)
         self.assertEqual(8787, loopback_cfg.port)
@@ -717,6 +919,424 @@ class ProductionHardeningTest(unittest.TestCase):
             with self.subTest(bad_env=bad_env):
                 with self.assertRaises(ValueError):
                     service.parse_config([], environ=bad_env)
+
+    def test_cors_config_validation_accepts_valid_origins_and_rejects_invalid(self):
+        default_cfg = service.parse_config([], environ={})
+        self.assertEqual("", default_cfg.cors_origin)
+
+        for valid in ("*", "https://app.example.com", "http://localhost:3000", "https://[::1]:8443"):
+            with self.subTest(valid=valid):
+                self.assertEqual(valid, service.parse_config(["--cors-origin", valid], environ={}).cors_origin)
+                self.assertEqual(valid, service.parse_config([], environ={"JUMLO_MEDIA_CORS_ORIGIN": valid}).cors_origin)
+
+        for invalid in (
+            "https://app.example.com/",
+            "https://app.example.com/path",
+            "https://app.example.com?q=1",
+            "https://app.example.com#frag",
+            "https://user@app.example.com",
+            "ftp://app.example.com",
+            "null",
+            "app.example.com",
+            "https://app.example.com:99999",
+            "https://app.example.com\r\nX-Evil: 1",
+        ):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ValueError):
+                    service.parse_config(["--cors-origin", invalid], environ={})
+                captured = io.StringIO()
+                with redirect_stderr(captured), self.assertRaises(SystemExit) as exited:
+                    service.main(["--cors-origin", invalid])
+                self.assertEqual(2, exited.exception.code)
+
+    def test_cors_disabled_by_default_omits_headers_and_rejects_options(self):
+        _, port = self._start_server()
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+            self.assertEqual(200, resp.status)
+            self.assertIsNone(resp.headers.get("Access-Control-Allow-Origin"))
+            self.assertIsNone(resp.headers.get("Vary"))
+
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/extract", method="OPTIONS")
+        with self.assertRaises(urllib.error.HTTPError) as err:
+            urllib.request.urlopen(req, timeout=10)
+        try:
+            self.assertEqual(405, err.exception.code)
+            self.assertEqual("GET, POST, HEAD", err.exception.headers.get("Allow"))
+            self.assertIsNone(err.exception.headers.get("Access-Control-Allow-Origin"))
+        finally:
+            err.exception.close()
+
+    def test_cors_headers_and_options_preflight_when_configured(self):
+        _, port = self._start_server(token="cors-secret", cors_origin="https://app.example.com")
+
+        with self.assertRaises(urllib.error.HTTPError) as unauth:
+            urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10)
+        try:
+            self.assertEqual(401, unauth.exception.code)
+            self.assertEqual("https://app.example.com", unauth.exception.headers.get("Access-Control-Allow-Origin"))
+            self.assertEqual("Origin", unauth.exception.headers.get("Vary"))
+        finally:
+            unauth.exception.close()
+
+        auth_req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/health",
+            headers={"Authorization": "Bearer cors-secret"},
+        )
+        with urllib.request.urlopen(auth_req, timeout=10) as resp:
+            self.assertEqual(200, resp.status)
+            self.assertEqual("https://app.example.com", resp.headers.get("Access-Control-Allow-Origin"))
+            self.assertEqual("Origin", resp.headers.get("Vary"))
+
+        preflight = urllib.request.Request(f"http://127.0.0.1:{port}/extract", method="OPTIONS")
+        with urllib.request.urlopen(preflight, timeout=10) as resp:
+            self.assertEqual(204, resp.status)
+            self.assertEqual(b"", resp.read())
+            self.assertEqual("https://app.example.com", resp.headers.get("Access-Control-Allow-Origin"))
+            self.assertEqual("Origin", resp.headers.get("Vary"))
+            self.assertEqual("GET, POST, HEAD, OPTIONS", resp.headers.get("Access-Control-Allow-Methods"))
+            self.assertEqual("Authorization, Content-Type", resp.headers.get("Access-Control-Allow-Headers"))
+            self.assertEqual("nosniff", resp.headers.get("X-Content-Type-Options"))
+
+    def test_health_metrics_track_uptime_requests_errors_rate_limits_and_active_extractions(self):
+        clock = [500.0]
+        entered = threading.Event()
+        release = threading.Event()
+
+        def slow_extract(_url):
+            entered.set()
+            release.wait(timeout=5)
+            return {"id": "1", "formats": []}
+
+        with patch.object(service.time, "monotonic", side_effect=lambda: clock[0]), \
+                patch.object(service, "ytdlp_version", return_value="2026.10.26"), \
+                patch.object(service, "extract", side_effect=slow_extract):
+            _, port = self._start_server(rate_limit=2, max_concurrent=1, log_level="ERROR")
+            clock[0] += 12.7
+
+            # Trigger 1 in-flight extraction, then 1 404, then 1 429 rate limit.
+            body = json.dumps({"url": "https://example.org/watch"}).encode("utf-8")
+            worker_status = []
+
+            def run_extract():
+                req = urllib.request.Request(
+                    f"http://127.0.0.1:{port}/extract",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    worker_status.append(resp.status)
+
+            worker = threading.Thread(target=run_extract, daemon=True)
+            worker.start()
+            self.assertTrue(entered.wait(timeout=5))
+            try:
+                with self.assertRaises(urllib.error.HTTPError) as missing:
+                    urllib.request.urlopen(f"http://127.0.0.1:{port}/missing", timeout=10)
+                self.assertEqual(404, missing.exception.code)
+                missing.exception.close()
+
+                with self.assertRaises(urllib.error.HTTPError) as limited:
+                    urllib.request.urlopen(f"http://127.0.0.1:{port}/missing", timeout=10)
+                self.assertEqual(429, limited.exception.code)
+                limited.exception.close()
+
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+                    raw = resp.read()
+                    payload = json.loads(raw)
+                self.assertNotIn(b"127.0.0.1", raw)
+                self.assertNotIn(b"example.org", raw)
+                self.assertEqual(12, payload["uptime_seconds"])
+                self.assertEqual(
+                    {
+                        "requests_total": 2,
+                        "errors_total": 2,
+                        "rate_limited_total": 1,
+                        "active_extractions": 1,
+                    },
+                    payload["metrics"],
+                )
+            finally:
+                release.set()
+            worker.join(timeout=5)
+            self.assertEqual([200], worker_status)
+
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+                after = json.loads(resp.read())
+            self.assertEqual(
+                {
+                    "requests_total": 4,
+                    "errors_total": 2,
+                    "rate_limited_total": 1,
+                    "active_extractions": 0,
+                },
+                after["metrics"],
+            )
+
+
+
+
+class ExtractionEdgeCasesTest(unittest.TestCase):
+    def test_single_format_entry_without_formats_array_is_extracted(self):
+        payload = {
+            "id": "track-1",
+            "extractor_key": "Soundcloud",
+            "title": "Demo Track",
+            "format_id": "http_mp3_128",
+            "url": "https://cdn.example.org/track.mp3",
+            "ext": "mp3",
+            "vcodec": "none",
+            "acodec": "mp3",
+            "abr": 128,
+        }
+        with patch.object(service, "run_ytdlp", return_value=_completed(["yt-dlp"], 0, json.dumps(payload))):
+            result = service.extract("https://example.org/track")
+        self.assertNotIn("error", result)
+        self.assertEqual(1, len(result["formats"]))
+        self.assertEqual("http_mp3_128", result["formats"][0]["id"])
+        self.assertEqual("mp3", result["formats"][0]["ext"])
+
+    def test_multi_entry_playlist_or_carousel_reports_playlist_selection_required(self):
+        payload = {
+            "_type": "playlist",
+            "id": "carousel-1",
+            "title": "Public Carousel",
+            "entries": [
+                {"id": "1", "url": "https://cdn.example.org/1.mp4"},
+                {"id": "2", "url": "https://cdn.example.org/2.mp4"},
+            ],
+        }
+        with patch.object(service, "run_ytdlp", return_value=_completed(["yt-dlp"], 0, json.dumps(payload))):
+            result = service.extract("https://example.org/carousel")
+        self.assertEqual({"error": "PLAYLIST_REQUIRES_ITEM_SELECTION"}, result)
+
+    def test_single_entry_wrapped_playlist_is_unwrapped(self):
+        payload = {
+            "_type": "playlist",
+            "id": "post-1",
+            "extractor_key": "Instagram",
+            "title": "Single Wrapped Post",
+            "uploader": "creator",
+            "entries": [
+                {
+                    "id": "item-1",
+                    "formats": [
+                        {"format_id": "v1", "url": "https://cdn.example.org/v1.mp4", "ext": "mp4", "width": 720, "height": 1280}
+                    ],
+                }
+            ],
+        }
+        with patch.object(service, "run_ytdlp", return_value=_completed(["yt-dlp"], 0, json.dumps(payload))):
+            result = service.extract("https://example.org/p/1")
+        self.assertNotIn("error", result)
+        self.assertEqual("Single Wrapped Post", result["title"])
+        self.assertEqual("creator", result["uploader"])
+        self.assertEqual(1, len(result["formats"]))
+        self.assertEqual("v1", result["formats"][0]["id"])
+
+    def test_live_and_upcoming_streams_report_live_not_finite(self):
+        for extra in ({"is_live": True}, {"live_status": "is_upcoming"}):
+            payload = {"id": "live-1", "title": "Live Stream", **extra}
+            with self.subTest(extra=extra):
+                with patch.object(service, "run_ytdlp", return_value=_completed(["yt-dlp"], 0, json.dumps(payload))):
+                    self.assertEqual({"error": "LIVE_MEDIA_NOT_FINITE"}, service.extract("https://example.org/live"))
+
+    def test_dimensioned_video_with_omitted_vcodec_keeps_video_track(self):
+        # HLS or progressive video where acodec is declared (or protocol is m3u8_native) and vcodec is omitted.
+        progressive = service.to_format({"format_id": "v1", "ext": "mp4", "width": 1920, "height": 1080, "acodec": "aac"})
+        self.assertEqual("unknown", progressive["vcodec"])
+        hls = service.to_format({"format_id": "h1", "ext": "mp4", "width": 1280, "height": 720, "protocol": "m3u8_native"})
+        self.assertEqual("unknown", hls["vcodec"])
+
+    def test_resolve_stream_handles_uppercase_output_extension(self):
+        def fake_run(args, timeout=120):
+            target = args[args.index("-o") + 1].replace("%(ext)s", "MP4")
+            Path(target).write_bytes(b"\x00\x00\x00\x18ftypmp42" * 8)
+            return _completed(args, 0, "", "")
+
+        with patch.object(service, "run_ytdlp", side_effect=fake_run):
+            path, name, mime = service.resolve_stream("https://example.org/clip", "video", "18", 0)
+        self.addCleanup(shutil.rmtree, os.path.dirname(path), ignore_errors=True)
+        self.assertEqual("media.MP4", name)
+        self.assertEqual("video/mp4", mime)
+
+    def test_classify_covers_geo_hyphen_rate_limit_no_video_and_expired_link(self):
+        cases = (
+            ("ERROR: This video is geo-restricted", "MEDIA_GEO_BLOCKED"),
+            ("HTTP Error 429: Too Many Requests", "MEDIA_RATE_LIMITED"),
+            ("ERROR: There's no video in this tweet", "MEDIA_NO_USABLE_FORMAT"),
+            ("ERROR: No formats found for this post", "MEDIA_NO_USABLE_FORMAT"),
+            ("ERROR: This link has expired", "MEDIA_LINK_EXPIRED"),
+            ("ERROR: Temporary failure in name or service not known", "MEDIA_NETWORK_ERROR"),
+        )
+        for msg, expected in cases:
+            with self.subTest(msg=msg):
+                self.assertEqual(expected, service.classify(msg))
+
+
+    def test_run_ytdlp_scopes_youtube_player_client_to_youtube_hosts_only(self):
+        captured_cmds = []
+
+        class _FakeProc:
+            pid = 12345
+            returncode = 0
+
+            def communicate(self, timeout=None):
+                return ("{}", "")
+
+        def fake_popen(cmd, **kwargs):
+            captured_cmds.append(list(cmd))
+            return _FakeProc()
+
+        with patch.object(service.subprocess, "Popen", side_effect=fake_popen):
+            service.run_ytdlp(["-J", "--", "https://www.youtube.com/watch?v=abc"])
+            service.run_ytdlp(["-J", "--", "https://youtu.be/abc"])
+            service.run_ytdlp(["-J", "--", "https://www.tiktok.com/@user/video/12345"])
+            service.run_ytdlp(["-J", "--", "https://www.instagram.com/reel/C123/"])
+
+        for yt_cmd in captured_cmds[:2]:
+            self.assertIn("--extractor-args", yt_cmd)
+            self.assertEqual("youtube:player_client=default,web_embedded", yt_cmd[yt_cmd.index("--extractor-args") + 1])
+        for other_cmd in captured_cmds[2:]:
+            self.assertNotIn("--extractor-args", other_cmd)
+
+    def test_resolve_stream_video_uses_android_compatible_format_sort(self):
+        captured = []
+
+        def fake_run(args, timeout=120):
+            captured.append(list(args))
+            target = args[args.index("-o") + 1].replace("%(ext)s", "mp4")
+            Path(target).write_bytes(b"\x00\x00\x00\x18ftypmp42" * 8)
+            return _completed(args, 0, "", "")
+
+        with patch.object(service, "run_ytdlp", side_effect=fake_run):
+            path, _, _ = service.resolve_stream("https://example.org/clip", "video", "137+140", 0)
+        self.addCleanup(shutil.rmtree, os.path.dirname(path), ignore_errors=True)
+        self.assertIn("-S", captured[0])
+        self.assertEqual("res,vcodec:h264,acodec:m4a", captured[0][captured[0].index("-S") + 1])
+
+
+class SecurityHardeningRegressionTest(unittest.TestCase):
+    def test_dns_ssrf_and_empty_userinfo_bypass_are_blocked(self):
+        for bad_url in (
+            "https://@example.org/watch",
+            "https://:@example.org/watch",
+            "https://example.org/" + ("a" * 9000),
+        ):
+            with self.subTest(url=bad_url[:64]):
+                self.assertFalse(service._is_public_web_url(bad_url))
+
+        for resolved_ip in ("127.0.0.1", "169.254.169.254", "100.64.0.1", "::ffff:10.0.0.1"):
+            fake_addr = [(service.socket.AF_INET, service.socket.SOCK_STREAM, 6, "", (resolved_ip, 443))]
+            with self.subTest(resolved_ip=resolved_ip), patch.object(
+                service.socket, "getaddrinfo", return_value=fake_addr
+            ):
+                self.assertFalse(service._is_public_web_url("https://rebind.example.org/video"))
+
+        public_addr = [(service.socket.AF_INET, service.socket.SOCK_STREAM, 6, "", ("93.184.216.34", 443))]
+        with patch.object(service.socket, "getaddrinfo", return_value=public_addr):
+            self.assertTrue(service._is_public_web_url("https://example.org/video"))
+
+    def test_get_and_head_enforce_uri_length_and_query_field_limits(self):
+        for method in ("do_GET", "do_HEAD"):
+            handler = service.Handler.__new__(service.Handler)
+            handler.path = "/stream?" + ("a" * 9000)
+            handler.headers = {}
+            handler.wfile = io.BytesIO()
+            captured = {}
+            handler.send_response = lambda code: captured.update(status=code)
+            handler.send_header = lambda name, value: None
+            handler.end_headers = lambda: None
+            getattr(handler, method)()
+            self.assertEqual(414, captured["status"])
+            self.assertTrue(handler.close_connection)
+
+        handler = service.Handler.__new__(service.Handler)
+        handler.path = "/stream?" + "&".join(f"k{i}=1" for i in range(40))
+        handler.headers = {}
+        handler.wfile = io.BytesIO()
+        captured = {}
+        handler.send_response = lambda code: captured.update(status=code)
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        handler.do_GET()
+        self.assertEqual(400, captured["status"])
+
+    def test_post_extract_rejects_transfer_encoding_and_truncated_body_and_closes_connection(self):
+        cases = (
+            ({"Transfer-Encoding": "chunked"}, b"", 400),
+            ({"Content-Length": "20"}, b'{"url":', 400),
+            ({"Content-Length": "65537"}, b"{}", 413),
+        )
+        for headers, body, expected_status in cases:
+            with self.subTest(headers=headers):
+                handler = service.Handler.__new__(service.Handler)
+                handler.path = "/extract"
+                handler.headers = headers
+                handler.rfile = io.BytesIO(body)
+                handler.wfile = io.BytesIO()
+                captured = {}
+                handler.send_response = lambda code: captured.update(status=code)
+                handler.send_header = lambda name, value: None
+                handler.end_headers = lambda: None
+                handler.do_POST()
+                self.assertEqual(expected_status, captured["status"])
+                self.assertTrue(handler.close_connection)
+
+    def test_error_sanitizes_untrusted_codes_and_health_sanitizes_version(self):
+        handler = service.Handler.__new__(service.Handler)
+        handler.wfile = io.BytesIO()
+        handler.send_response = lambda code: None
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        handler._error("https://secret.example/leak?token=abc")
+        self.assertEqual({"error": "MEDIA_EXTRACTION_FAILED"}, json.loads(handler.wfile.getvalue()))
+
+        server = service.MediaHTTPServer(("127.0.0.1", 0), _ServiceHandler, bind_and_activate=False)
+        self.addCleanup(server.server_close)
+        with patch.object(service, "ytdlp_version", return_value="ERROR: https://secret.example/?tok=1"):
+            version, _, body = server._cached_probe()
+        self.assertEqual("unknown", version)
+        self.assertNotIn(b"secret.example", body)
+
+    def test_rate_limiter_bounds_memory_under_distinct_ip_flood(self):
+        limiter = service._RateLimiter(limit=1, window=60.0, max_keys=4)
+        for i in range(10):
+            allowed, retry = limiter.allow(f"198.51.100.{i}")
+            self.assertTrue(allowed)
+            self.assertEqual(0, retry)
+        self.assertLessEqual(len(limiter._hits), 4)
+        allowed, retry = limiter.allow("198.51.100.9")
+        self.assertFalse(allowed)
+        self.assertGreaterEqual(retry, 1)
+
+    def test_proxy_file_does_not_delete_non_jumlo_directories(self):
+        work = tempfile.mkdtemp(prefix="other-app-")
+        self.addCleanup(shutil.rmtree, work, ignore_errors=True)
+        path = Path(work) / "media.mp4"
+        path.write_bytes(b"0123456789")
+        handler = service.Handler.__new__(service.Handler)
+        handler.headers = {}
+        handler.wfile = io.BytesIO()
+        handler.send_response = lambda code: None
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        service.Handler._proxy_file(handler, str(path), "media.mp4", "video/mp4")
+        self.assertTrue(os.path.isdir(work), "non-jumlo directories must never be deleted")
+
+    def test_run_ytdlp_blocks_exec_cookies_and_batch_file_options(self):
+        for forbidden in (
+            "--exec",
+            "--exec=id",
+            "--exec-before-download=id",
+            "--cookies=/etc/passwd",
+            "--cookies-from-browser",
+            "--plugin-dirs=/tmp/p",
+            "--batch-file=/tmp/b",
+        ):
+            with self.subTest(forbidden=forbidden):
+                with self.assertRaisesRegex(RuntimeError, "MEDIA_FORBIDDEN_NETRC_OPTION"):
+                    service.run_ytdlp([forbidden, "--", "https://example.org/watch"])
 
 
 if __name__ == "__main__":

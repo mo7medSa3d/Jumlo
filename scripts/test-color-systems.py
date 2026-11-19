@@ -215,9 +215,9 @@ class ColorSystemsContracts(unittest.TestCase):
 
     def test_settings_wiring_theme_and_repo(self):
         settings = read_ui('settings/SettingsScreen.kt')
-        self.assertIn('colorSystemLabel(settings.colorSystem, settings.language)', settings)
-        self.assertIn('onSelect = { viewModel.setColorSystem(it); panel = null }', settings)
-        self.assertIn('current = settings.colorSystem', settings)
+        # streamlined OLED/White Settings hides app-color row while keeping ColorSystems intact
+        self.assertIn('viewModel.setThemeMode(', settings)
+        self.assertIn('settings.themeMode', settings)
         for gone in ('DYNAMIC', 'setAccentColor', 'accentColor', 'ColorPresets', 'M3ColorFactory'):
             self.assertNotIn(gone, settings, f'old wiring remains: {gone}')
         theme = read_ui('theme/Theme.kt')

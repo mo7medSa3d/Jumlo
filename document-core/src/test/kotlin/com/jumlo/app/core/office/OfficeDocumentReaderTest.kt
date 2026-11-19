@@ -342,4 +342,63 @@ class OfficeDocumentReaderTest {
             file.delete()
         }
     }
+
+    @Test fun officePackageRejectsDotSegmentsEmptySegmentsAndDirectoryPayloads() {
+        val document = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>Hello</w:t></w:r></w:p></w:body>
+</w:document>""".toByteArray(Charsets.UTF_8)
+        for (badName in listOf("word/./document.xml", "word//document.xml")) {
+            val file = packageFile(mapOf(badName to document))
+            try {
+                val failure = assertThrows(IllegalArgumentException::class.java) {
+                    OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000)
+                }
+                assertEquals("OFFICE_INVALID", failure.message)
+            } finally {
+                file.delete()
+            }
+        }
+        val dirPayload = File.createTempFile("office-dir-payload-", ".zip")
+        try {
+            ZipOutputStream(dirPayload.outputStream()).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("word/"))
+                zip.write("smuggled".toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("word/document.xml"))
+                zip.write(document)
+                zip.closeEntry()
+            }
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(dirPayload, OfficeKind.DOCX, 10_000_000)
+            }
+            assertEquals("OFFICE_INVALID", failure.message)
+        } finally {
+            dirPayload.delete()
+        }
+    }
+
+    @Test fun officePackageValidatorRejectsExternalSchemeRelationshipTargets() {
+        val badRels = """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="https://evil.example/word/document.xml"/>
+</Relationships>""".toByteArray(Charsets.UTF_8)
+        val types = """<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>""".toByteArray(Charsets.UTF_8)
+        val document = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Ok</w:t></w:r></w:p></w:body></w:document>""".toByteArray(Charsets.UTF_8)
+        val styles = """<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>""".toByteArray(Charsets.UTF_8)
+        val file = packageFile(mapOf(
+            "[Content_Types].xml" to types,
+            "_rels/.rels" to badRels,
+            "word/document.xml" to document,
+            "word/styles.xml" to styles
+        ))
+        try {
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficePackageValidator.validateDocx(file, 1)
+            }
+            assertEquals("OFFICE_VERIFY_FAILED", failure.message)
+        } finally {
+            file.delete()
+        }
+    }
 }

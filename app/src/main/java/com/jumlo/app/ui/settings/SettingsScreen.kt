@@ -2,6 +2,8 @@ package com.jumlo.app.ui.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import com.jumlo.app.ui.icons.Icons
@@ -45,41 +47,41 @@ fun SettingsScreen(
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     // Row icons use fixed per-row colors, never the user accent.
     val dark = isDarkTheme(settings.themeMode)
+    val totalStorageBytes = remember(storage) {
+        storage.sources + storage.outputs + storage.partials + storage.temporary + storage.trash
+    }
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
-    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Box(Modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer + navBottom),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item("appearance-heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
-        item("theme") { PreferenceRow(stringResource(R.string.pref_theme), themeLabel(settings.themeMode),
-            Icons.Rounded.DarkMode, { panel = "theme" }, Modifier.testTag("settings.theme"),
-            iconStyle = settingsIconStyleFor("theme", dark)) }
-        item("app-color") { PreferenceRow(stringResource(R.string.pref_app_color),
-            colorSystemLabel(settings.colorSystem, settings.language), Icons.Rounded.Palette, { panel = "app-color" },
-            Modifier.testTag("settings.appColor"), iconStyle = settingsIconStyleFor("app-color", dark)) }
-        item("language") { PreferenceRow(stringResource(R.string.pref_language), languageLabel(settings.language),
-            Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language"),
-            iconStyle = settingsIconStyleFor("language", dark)) }
-        item("sounds") {
-            PreferenceToggleRow(
-                stringResource(R.string.settings_ui_sounds),
-                settings.soundsEnabled,
-                viewModel::setSoundsEnabled,
-                Modifier.testTag("settings.sounds"),
-                icon = Icons.Rounded.Audiotrack,
-                iconStyle = settingsIconStyleFor("sounds", dark)
-            )
+        item("appearance-group") {
+            PreferenceGroup {
+                PreferenceRow(
+                    stringResource(R.string.pref_theme),
+                    themeLabel(if (dark) ThemeMode.DARK else ThemeMode.LIGHT),
+                    Icons.Rounded.DarkMode,
+                    { panel = "theme" },
+                    Modifier.testTag("settings.theme"),
+                    iconStyle = settingsIconStyleFor("theme", dark),
+                    grouped = true
+                )
+                PreferenceGroupDivider()
+                PreferenceRow(
+                    stringResource(R.string.pref_language),
+                    languageLabel(settings.language),
+                    Icons.Rounded.Language,
+                    { panel = "language" },
+                    Modifier.testTag("settings.language"),
+                    iconStyle = settingsIconStyleFor("language", dark),
+                    grouped = true
+                )
+            }
         }
-        item("text-size") { PreferenceRow(stringResource(R.string.pref_text_size),
-            textSizeLabel(settings.fontScale), Icons.Rounded.FormatSize, { panel = "text-size" },
-            Modifier.testTag("settings.textSize"), iconStyle = settingsIconStyleFor("text-size", dark)) }
-        item("notifications") { PreferenceRow(stringResource(R.string.settings_allow_notifications),
-            stringResource(R.string.settings_notifications_summary), Icons.Rounded.Notifications, onRequestNotifications,
-            Modifier.testTag("settings.notifications"), iconStyle = settingsIconStyleFor("notifications", dark)) }
         item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
         item("save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
@@ -89,60 +91,58 @@ fun SettingsScreen(
                 Text(stringResource(R.string.modern_reset_save_folder))
             }
         }
-        item("defaults-heading") { PreferenceHeading(stringResource(R.string.modern_download_defaults)) }
-        item("video-quality") { PreferenceRow(stringResource(R.string.modern_video_quality),
-            if (settings.defaultVideoQuality == "BEST") stringResource(R.string.modern_best_available)
-            else "${settings.defaultVideoQuality}p", Icons.Rounded.Movie, { panel = "video" }, Modifier.testTag("settings.videoQuality"),
-            iconStyle = settingsIconStyleFor("video-quality", dark)) }
-        item("audio-quality") { PreferenceRow(stringResource(R.string.modern_audio_quality),
-            stringResource(R.string.modern_audio_bitrate, settings.defaultAudioQuality), Icons.Rounded.Audiotrack,
-            { panel = "audio" }, Modifier.testTag("settings.audioQuality"),
-            iconStyle = settingsIconStyleFor("audio-quality", dark)) }
-        item("defaults-note") { Text(stringResource(R.string.modern_quality_defaults_note),
-            style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item("storage-heading") { PreferenceHeading(stringResource(R.string.account_storage)) }
-        item("storage") { PreferenceRow(stringResource(R.string.modern_storage_usage),
-            formatBytes(storage.sources + storage.outputs + storage.partials + storage.temporary + storage.trash),
-            Icons.Rounded.Storage, { viewModel.refreshStorage(); onOpenStorage?.invoke() ?: run { panel = "storage" } },
-            Modifier.testTag("settings.storage"), iconStyle = settingsIconStyleFor("storage", dark)) }
-        item("cache") { PreferenceRow(stringResource(R.string.modern_clear_cache), formatBytes(storage.temporary),
-            Icons.Rounded.CleaningServices, { panel = "cache" }, Modifier.testTag("settings.cache"), enabled = !busy,
-            iconStyle = settingsIconStyleFor("cache", dark)) }
-        item("about") { PreferenceRow(stringResource(R.string.modern_about), stringResource(R.string.settings_about_summary), Icons.Rounded.Info,
-            { panel = "about" }, Modifier.testTag("settings.about"), iconStyle = settingsIconStyleFor("about", dark)) }
+        item("storage-group") {
+            PreferenceGroup {
+                PreferenceRow(
+                    stringResource(R.string.modern_storage_usage),
+                    formatBytes(totalStorageBytes),
+                    Icons.Rounded.Storage,
+                    { viewModel.refreshStorage(); onOpenStorage?.invoke() ?: run { panel = "storage" } },
+                    Modifier.testTag("settings.storage"),
+                    iconStyle = settingsIconStyleFor("storage", dark),
+                    grouped = true
+                )
+                PreferenceGroupDivider()
+                PreferenceRow(
+                    stringResource(R.string.modern_clear_cache),
+                    formatBytes(storage.temporary),
+                    Icons.Rounded.CleaningServices,
+                    { panel = "cache" },
+                    Modifier.testTag("settings.cache"),
+                    enabled = !busy,
+                    iconStyle = settingsIconStyleFor("cache", dark),
+                    grouped = true
+                )
+            }
+        }
+        item("about-spacer") { Spacer(Modifier.height(10.dp)) }
+        item("about") {
+            PreferenceRow(
+                stringResource(R.string.modern_about),
+                stringResource(R.string.settings_about_summary),
+                Icons.Rounded.Info,
+                { panel = "about" },
+                Modifier.testTag("settings.about"),
+                iconStyle = settingsIconStyleFor("about", dark)
+            )
+        }
     }
     }
     when (panel) {
-        "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },
-            settings.themeMode.ordinal, { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
-        "app-color" -> AppearanceColorPicker(
-            current = settings.colorSystem,
-            onDismiss = { panel = null },
-            onSelect = { viewModel.setColorSystem(it); panel = null },
-            language = settings.language
-        )
+        "theme" -> {
+            val simpleThemes = listOf(ThemeMode.LIGHT, ThemeMode.DARK)
+            val currentIdx = if (dark) 1 else 0
+            ChoiceDialog(
+                stringResource(R.string.pref_theme),
+                simpleThemes.map { themeLabel(it) },
+                currentIdx,
+                { viewModel.setThemeMode(simpleThemes[it]); panel = null },
+                { panel = null }
+            )
+        }
         "language" -> ChoiceDialog(stringResource(R.string.pref_language), AppLanguage.entries.map { languageLabel(it) },
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
-        "text-size" -> {
-            val choices = listOf("SMALL", "NORMAL", "LARGE")
-            ChoiceDialog(stringResource(R.string.pref_text_size),
-                choices.map { textSizeLabel(it) },
-                choices.indexOf(settings.fontScale).takeIf { it >= 0 } ?: 1,
-                { viewModel.setFontScale(choices[it]); panel = null }, { panel = null })
-        }
-        "video" -> {
-            val choices = listOf("BEST", "1080", "720", "480")
-            ChoiceDialog(stringResource(R.string.modern_video_quality),
-                choices.map { if (it == "BEST") stringResource(R.string.modern_best_available) else "${it}p" },
-                choices.indexOf(settings.defaultVideoQuality),
-                { viewModel.setDefaultVideoQuality(choices[it]); panel = null }, { panel = null })
-        }
-        "audio" -> {
-            val choices = listOf(320, 192, 128)
-            ChoiceDialog(stringResource(R.string.modern_audio_quality), choices.map { stringResource(R.string.modern_audio_bitrate, it) },
-                choices.indexOf(settings.defaultAudioQuality),
-                { viewModel.setDefaultAudioQuality(choices[it]); panel = null }, { panel = null })
-        }
         "storage" -> StorageOverviewDialog(storage, { panel = null },
             onClean = { panel = null; viewModel.cleanTemporary() }, outputFiles = outputs)
         "about" -> AlertDialog(onDismissRequest = { panel = null },
@@ -163,6 +163,7 @@ fun SettingsScreen(
     }
 }
 
+
 @Composable private fun themeLabel(mode: ThemeMode): String = stringResource(when (mode) {
     ThemeMode.SYSTEM -> R.string.pref_theme_system
     ThemeMode.LIGHT -> R.string.pref_theme_light
@@ -175,11 +176,6 @@ internal fun colorSystemLabel(system: String, language: AppLanguage): String {
     val found = ColorSystems.systemFor(system)
     return if (language == AppLanguage.ARABIC) found.nameAr else found.nameEn
 }
-@Composable private fun textSizeLabel(scale: String): String = stringResource(when (scale) {
-    "SMALL" -> R.string.pref_text_size_small
-    "LARGE" -> R.string.pref_text_size_large
-    else -> R.string.pref_text_size_normal
-})
 
 @Composable private fun languageLabel(language: AppLanguage): String = stringResource(
     if (language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
@@ -187,7 +183,7 @@ internal fun colorSystemLabel(system: String, language: AppLanguage): String {
 @Composable private fun ChoiceDialog(title: String, labels: List<String>, selected: Int,
     onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = onDismiss, title = { Text(title, modifier = Modifier.semantics { heading() }) }, text = {
-        Column(Modifier.selectableGroup()) {
+        Column(Modifier.verticalScroll(rememberScrollState()).selectableGroup()) {
             labels.forEachIndexed { index, label ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
                     .selectable(index == selected, role = Role.RadioButton, onClick = { onSelected(index) })

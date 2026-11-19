@@ -54,8 +54,8 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('fileDateLabel(output.createdAtEpochMs)', home)
         self.assertIn('onFiles: () -> Unit', home)
         self.assertIn('onDownloads: () -> Unit', home)
-        self.assertIn('home.manageDownloads', home)
-        self.assertIn('R.string.home_manage_downloads', home)
+        self.assertIn('home.action.$tag', home)
+        self.assertIn('R.string.modern_download', home)
         self.assertNotIn('Mohamed Saad', home)
         self.assertNotIn('Pro subscription', home)
 
@@ -84,7 +84,7 @@ class NeonReferenceRedesign(unittest.TestCase):
                      'onOutputWorkflow(selectedOutputs,"pdf_02")',
                      'vm.trashOutputs(', 'vm.restoreOutput(', 'vm.purgeTrashIds(',
                      'vm.setFileViewMode(', 'onImport()',
-                     'SaveFolderCard(settings.downloadDestinationFolder, onChangeSaveFolder, onSavedFolder)'):
+                     'QuietPrimaryButton(text=stringResource(R.string.import_device_files)'):
             with self.subTest(item=text):
                 self.assertIn(text, files)
         self.assertIn('selectedOutputs.isNotEmpty()', files)
@@ -109,8 +109,8 @@ class NeonReferenceRedesign(unittest.TestCase):
         settings = read('ui/settings/SettingsScreen.kt')
         downloads = read('ui/downloads/DownloadsScreen.kt')
         self.assertIn('storage.outputs', settings)
-        self.assertIn('viewModel.setDefaultVideoQuality', settings)
-        self.assertIn('viewModel.setDefaultAudioQuality', settings)
+        self.assertNotIn('viewModel.setDefaultVideoQuality', settings)
+        self.assertNotIn('viewModel.setDefaultAudioQuality', settings)
         self.assertIn('viewModel.cleanTemporary()', settings)
         self.assertIn('onChooseDownloadFolder', settings)
         self.assertIn('SaveFolderCard(', settings)

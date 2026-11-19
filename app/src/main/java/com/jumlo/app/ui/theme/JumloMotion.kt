@@ -1,5 +1,6 @@
 package com.jumlo.app.ui.theme
 
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -7,50 +8,55 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import kotlinx.coroutines.delay
 
-/** Transform/opacity-only interaction motion. No new animation framework or bitmap allocations. */
+/** Transform/opacity-only interaction motion tuned to fluid iOS-style spring physics. */
 object JumloMotion {
     const val fastMs = 120
     const val standardMs = 220
     const val exitMs = 160
     const val stateChangeMs = 180
     const val loadingPulseMs = 900
-    const val pressScale = 0.965f
+    const val pressScale = 0.96f
     const val pressAlpha = 0.93f
     const val revealTravelPx = 18f
-    const val staggerMs = 44L
+    const val staggerMs = 38L
     const val maxStaggered = 12
-    const val pressDamping = 0.72f
-    const val enterDamping = 0.87f
-    const val indicatorDamping = 0.76f
-    const val navDamping = 0.88f
-    const val navStiffness = 440f
+    const val pressDamping = 0.68f
+    const val enterDamping = 0.84f
+    const val indicatorDamping = 0.72f
+    const val fluidDamping = 0.78f
+    const val fluidStiffness = 380f
+    const val bouncyDamping = 0.62f
+    const val bouncyStiffness = 460f
+    const val navDamping = 0.82f
+    const val navStiffness = 420f
     const val printScaleDamping = 0.9f
+
+    fun <T> fluidSpring(reduced: Boolean): AnimationSpec<T> =
+        if (reduced) snap() else spring(dampingRatio = fluidDamping, stiffness = fluidStiffness)
+
+    fun <T> bouncySpring(reduced: Boolean): AnimationSpec<T> =
+        if (reduced) snap() else spring(dampingRatio = bouncyDamping, stiffness = bouncyStiffness)
 }
 
 /** An observer, not a gesture consumer: existing clickable/combinedClickable semantics remain intact. */
 fun Modifier.pressFeedback(): Modifier = composed {
     val reduced = LocalReducedMotion.current
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
+    val scaleState = animateFloatAsState(
         if (pressed && !reduced) JumloMotion.pressScale else 1f,
         animationSpec = if (reduced) snap() else spring(dampingRatio = JumloMotion.pressDamping, stiffness = Spring.StiffnessHigh),
         label = "press-scale"
     )
-    val brightness by animateFloatAsState(
+    val brightnessState = animateFloatAsState(
         if (pressed) JumloMotion.pressAlpha else 1f,
         animationSpec = if (reduced) snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
         label = "press-highlight"
@@ -61,25 +67,10 @@ fun Modifier.pressFeedback(): Modifier = composed {
             pressed = true
             try { waitForUpOrCancellation() } finally { pressed = false }
         }
-    }.graphicsLayer { scaleX = scale; scaleY = scale; alpha = brightness }
-}
-
-/** Lightweight entrance choreography: key by row identity to avoid replay on every recomposition or scroll recycle. */
-@Composable
-fun StaggeredReveal(index: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val reduced = LocalReducedMotion.current
-    var shown by rememberSaveable { mutableStateOf(reduced) }
-    LaunchedEffect(reduced) {
-        if (!shown) {
-            if (!reduced) delay(index.coerceIn(0, JumloMotion.maxStaggered).toLong() * JumloMotion.staggerMs)
-            shown = true
-        }
+    }.graphicsLayer {
+        val s = scaleState.value
+        scaleX = s
+        scaleY = s
+        alpha = brightnessState.value
     }
-    val alpha by animateFloatAsState(if (shown || reduced) 1f else 0f,
-        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium, dampingRatio = JumloMotion.enterDamping),
-        label = "reveal-opacity")
-    val travel by animateFloatAsState(if (shown || reduced) 0f else JumloMotion.revealTravelPx,
-        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = JumloMotion.enterDamping),
-        label = "reveal-position")
-    Box(modifier.graphicsLayer { this.alpha = alpha; translationY = travel }, content = { content() })
 }

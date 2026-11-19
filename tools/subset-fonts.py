@@ -71,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
                         raise RuntimeError('Required glyphs lost')
                 finally:
                     result.close()
+                os.chmod(tmp_path, 0o644)
                 os.replace(tmp_path, target)
             except BaseException:
                 tmp_path.unlink(missing_ok=True)

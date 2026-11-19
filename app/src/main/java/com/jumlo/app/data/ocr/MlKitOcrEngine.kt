@@ -58,7 +58,13 @@ class MlKitOcrEngine @Inject constructor(@ApplicationContext private val context
                 }
             }
             currentCoroutineContext().ensureActive()
-            val text = recognizer.process(InputImage.fromBitmap(bitmap, 0)).awaitNativeCompletion()
+            val text = try {
+                recognizer.process(InputImage.fromBitmap(bitmap, 0)).awaitNativeCompletion()
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                throw OperationFailure("OCR_FAILED")
+            }
             currentCoroutineContext().ensureActive()
             return text.textBlocks.joinToString("\n\n") { block -> block.lines.joinToString("\n") { it.text } }.trim()
         } catch (cancel: CancellationException) {

@@ -1,18 +1,22 @@
 package com.jumlo.app.data.media
 
+import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import com.jumlo.app.core.PlatformHeaderPolicy
 import com.jumlo.app.core.ResumePolicy
 import com.jumlo.app.core.media.MediaLinks
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.URI
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /** A bounded HTTP sample for local-only media inspection. */
 internal class MediaProbeSample(private val client:OkHttpClient,private val partBytes:Int=2*1024*1024) {
     private val http=client.newBuilder().followRedirects(false).followSslRedirects(false)
-        .connectTimeout(10,TimeUnit.SECONDS).readTimeout(10,TimeUnit.SECONDS).callTimeout(25,TimeUnit.SECONDS).build()
+        .cookieJar(CookieJar.NO_COOKIES)
+        .connectTimeout(10,TimeUnit.SECONDS).readTimeout(10,TimeUnit.SECONDS).writeTimeout(10,TimeUnit.SECONDS).callTimeout(25,TimeUnit.SECONDS).build()
     private class Part(val url:String,val total:Long?,val count:Long,val ranged:Boolean,val etag:String?,val modified:String?)
 
     fun fetch(url:String,allowHttp:Boolean,file:File,headers:Map<String,String> = emptyMap(),check:()->Unit = {}):Long? {
@@ -27,8 +31,13 @@ internal class MediaProbeSample(private val client:OkHttpClient,private val part
                 var current=MediaLinks.normalize(initial,allowHttp)
                 repeat(9) { hop ->
                     check()
+                    val sameOrigin = PlatformHeaderPolicy.sameOrigin(initial, current)
                     val request=Request.Builder().url(current).get().apply {
-                        allowedHeaders.forEach { (key,value)->header(key,value) }
+                        allowedHeaders.forEach { (key,value) ->
+                            if (sameOrigin || key.lowercase(Locale.ROOT) !in setOf("referer", "origin")) {
+                                header(key, value)
+                            }
+                        }
                         header("Accept-Encoding","identity")
                         header("Range","bytes=$start-$end")
                         (previous?.etag ?: previous?.modified)?.let { header("If-Range",it) }
@@ -43,7 +52,7 @@ internal class MediaProbeSample(private val client:OkHttpClient,private val part
                         } else {
                             require(response.code==200 || response.code==206) { "HTTP_${response.code}" }
                             require(response.header("Content-Encoding")?.equals("identity",true)!=false) { "INVALID_MEDIA_PROBE" }
-                            val mime=response.header("Content-Type")?.substringBefore(';')?.trim()
+                            val mime=response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
                             require(mime !in setOf("text/html","application/xhtml+xml")) { "DOWNLOAD_NOT_A_FILE" }
                             val range=if(response.code==206) ResumePolicy.range(response.header("Content-Range"))
                                 ?: throw IllegalArgumentException("INVALID_CONTENT_RANGE") else null

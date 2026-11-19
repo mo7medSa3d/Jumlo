@@ -19,5 +19,5 @@
     <string name="reader_jump_title">انتقال إلى صفحة</string>
     <string name="reader_jump_go">انتقال</string>
     <string name="reader_close">إغلاق</string>
-    <string name="reader_info_error">تعذّر قراءة البيانات</string>
+    <string name="reader_info_error">تعذّرت قراءة تفاصيل المستند. أعد فتح الملف وحاول مجددًا.</string>
 </resources>

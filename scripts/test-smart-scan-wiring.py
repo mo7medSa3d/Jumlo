@@ -19,7 +19,7 @@ class SmartScannerWiring(unittest.TestCase):
         self.assertIn("SCANNER_MODE_FULL",smart)
         self.assertIn("RESULT_FORMAT_PDF",smart)
         self.assertIn(".setGalleryImportAllowed(true)",smart)
-        self.assertIn("LaunchedEffect(Unit)",smart)
+        self.assertIn("LaunchedEffect(externalBusy)",smart)
         self.assertIn("addOnFailureListener",smart)
     def test_batch_intake_is_ordered_and_rollback_safe(self):
         vm=code("ui/AppViewModel.kt")

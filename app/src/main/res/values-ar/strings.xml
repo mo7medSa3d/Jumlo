@@ -183,9 +183,9 @@
     <string name="scan_allow_camera">السماح بالكاميرا</string>
     <string name="scan_capture">التقط وصحّح المنظور</string>
     <string name="scan_back">رجوع</string>
-    <string name="scan_error_bind">الكاميرا غير متاحة</string>
-    <string name="scan_error_process">تعذّرت معالجة المسح</string>
-    <string name="scan_error_capture">فشل الالتقاط</string>
+    <string name="scan_error_bind">الكاميرا غير متاحة. أغلق تطبيقات الكاميرا الأخرى أو تحقق من إذن الكاميرا ثم أعد المحاولة.</string>
+    <string name="scan_error_process">تعذّرت معالجة المسح. أعد التقاط الصورة أو استورد صورة بدلًا من ذلك.</string>
+    <string name="scan_error_capture">تعذّر التقاط الصفحة. ثبّت الجهاز وحاول مجددًا.</string>
     <string name="signature_title">ارسم التوقيع</string>
     <string name="signature_clear">مسح</string>
     <string name="signature_save">حفظ الرسم كصورة توقيع</string>
@@ -198,8 +198,6 @@
 
     <!-- Workspace & Tool Fields -->
     <string name="home_resume_workspace">استئناف مساحة العمل النشطة (%1$d)</string>
-    <string name="candidate_debug_notice">نسخة معاينة: أدوات المعالجة مفعّلة في هذا الإصدار الاختباري.</string>
-    <string name="candidate_release_notice">أدوات المعالجة غير متاحة في هذا الإصدار.</string>
     <string name="downloads_empty_title">لا توجد تنزيلات مباشرة بعد</string>
     <string name="downloads_empty_sub">أضف رابط HTTPS مباشر للتنزيل مع متابعة التقدم والإلغاء والتحقق من SHA-256.</string>
     <string name="files_snapshots_title">نسخ الملفات المستوردة</string>
@@ -388,4 +386,41 @@
     <string name="output_saved_location">محفوظ في %1$s</string>
     <string name="output_saved_privately">محفوظ داخل جملو فقط. استخدم مشاركة أو تصدير لحفظ نسخة خارج التطبيق.</string>
     <string name="settings_ui_sounds">أصوات الواجهة</string>
+    <string name="files_folders_heading">المجلدات</string>
+    <string name="files_folder_count_items">%1$d ملفات</string>
+    <string name="files_folder_empty_short">فارغ</string>
+    <string name="files_folder_create_title">مجلد جديد</string>
+    <string name="files_folder_create_hint">اسم المجلد</string>
+    <string name="files_folder_create_action">إنشاء</string>
+    <string name="files_folder_rename_title">إعادة تسمية المجلد</string>
+    <string name="files_folder_delete_title">حذف المجلد؟</string>
+    <string name="files_folder_delete_body">ستبقى الملفات الموجودة بداخله محفوظة بأمان في كل الملفات.</string>
+    <string name="files_folder_all_files">كل الملفات</string>
+    <string name="files_folder_drop_here">أفلت هنا</string>
+    <string name="files_folder_drop_to_root">أفلت للإخراج من المجلد</string>
+    <string name="files_folder_drag_count">%1$d ملفات</string>
+    <string name="files_folder_drag_hint">اضغط مطولاً على الملفات لسحبها إلى مجلد، أو اضغط مطولاً على الصفحة لإنشاء مجلد.</string>
+    <string name="files_folder_actions_title">خيارات المجلد</string>
+    <string name="files_folder_action_zip">إنشاء ملف ZIP</string>
+    <string name="files_folder_action_zip_sub">ضغط كل الملفات (%1$d) في أرشيف ZIP واحد</string>
+    <string name="files_folder_action_merge_pdf">دمج ملفات PDF</string>
+    <string name="files_folder_action_merge_pdf_sub">دمج %1$d ملفات PDF في مستند واحد</string>
+    <string name="files_folder_action_images_pdf">تحويل الصور إلى PDF</string>
+    <string name="files_folder_action_images_pdf_sub">تجميع %1$d صور في ملف PDF واحد</string>
+    <string name="files_folder_action_compress_images">ضغط الصور</string>
+    <string name="files_folder_action_compress_images_sub">تقليل حجم %1$d صور في هذا المجلد</string>
+    <string name="files_folder_action_share_all">مشاركة ملفات المجلد</string>
+    <string name="files_folder_action_rename">إعادة تسمية المجلد</string>
+    <string name="files_folder_action_delete">حذف المجلد</string>
+    <string name="files_folder_empty_title">هذا المجلد فارغ</string>
+    <string name="files_folder_empty_body">اسحب الملفات وأفلتها هنا أو انقلها من كل الملفات.</string>
+    <string name="files_page_actions_title">خيارات الصفحة</string>
+    <string name="files_page_action_new_folder">إنشاء مجلد جديد</string>
+    <string name="files_page_action_new_folder_sub">نظّم ملفاتك حسب المشروع أو النوع</string>
+    <string name="files_page_action_import">استيراد ملفات من الجهاز</string>
+    <string name="files_page_action_select">تحديد وتنظيم الملفات</string>
+    <string name="files_page_action_sort">ترتيب وتجميع</string>
+    <string name="files_move_to_folder">نقل إلى مجلد</string>
+    <string name="files_move_out_of_folder">نقل إلى كل الملفات</string>
+    <string name="files_move_no_folders">أنشئ مجلداً أولاً لتنظيم الملفات.</string>
 </resources>

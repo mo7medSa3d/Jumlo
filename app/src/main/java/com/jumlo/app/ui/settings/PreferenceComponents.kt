@@ -1,20 +1,17 @@
 package com.jumlo.app.ui.settings
 
-import com.jumlo.app.ui.theme.JumloRadii
+import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 import android.text.format.Formatter
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,14 +34,39 @@ import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.ui.components.QuietIconTile
 
 @Composable internal fun PreferenceHeading(text: String) {
-    Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 6.dp)
-        .semantics { heading() }, verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.size(width = 3.dp, height = 16.dp)
-            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)))
-        Text(text, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 6.dp, end = 6.dp, top = 18.dp, bottom = 6.dp)
+            .semantics { heading() }
+    )
+}
+
+/** iOS Inset Grouped container: groups related preference rows into one clean borderless surface. */
+@Composable internal fun PreferenceGroup(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val pillars = QuietTheme.pillars
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = QuietTheme.shapes.card,
+        color = pillars.cardSurface,
+        shadowElevation = 0.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth(), content = content)
     }
+}
+
+@Composable internal fun PreferenceGroupDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 62.dp, end = 14.dp),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+    )
 }
 
 /** Dark-mode resolution shared by settings surfaces: AMOLED counts as dark. */
@@ -62,51 +84,57 @@ import com.jumlo.app.ui.components.QuietIconTile
  */
 @Composable fun PreferenceRow(title: String, summary: String?, icon: ImageVector, onClick: () -> Unit,
     modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false,
-    iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle) {
+    iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle, grouped: Boolean = false) {
     val colors = MaterialTheme.colorScheme
-    val pillars = com.jumlo.app.ui.theme.QuietTheme.pillars
+    val pillars = QuietTheme.pillars
     val titleColor = if (destructive) colors.error else colors.onSurface
     val haptics = rememberAppHaptics()
-    val shape = RoundedCornerShape(JumloRadii.field)
-    Surface(
-        modifier = modifier.fillMaxWidth().heightIn(min = 72.dp).pressFeedback()
-            .clip(shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = {
-                if (destructive) haptics.secondaryAction() else haptics.actionClick()
-                onClick()
-            }),
-        shape = shape,
-        color = if (destructive) colors.errorContainer.copy(alpha = 0.24f) else pillars.cardSurface,
-        border = BorderStroke(
-            1.dp,
-            if (destructive) colors.error.copy(alpha = 0.35f)
-            else pillars.cardBorder
-        ),
-        shadowElevation = 1.dp
-    ) {
+    val shape = QuietTheme.shapes.card
+    val rowContent: @Composable () -> Unit = {
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 14.dp),
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 12.dp, horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             QuietIconTile(
                 icon,
                 tint = if (destructive) colors.error else iconStyle.tint,
                 container = if (destructive) colors.errorContainer else iconStyle.container,
-                size = 42.dp
+                size = 34.dp
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), color = titleColor)
+                Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = titleColor)
                 summary?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 }
             }
             Spacer(Modifier.width(8.dp))
             Icon(
-                Icons.AutoMirrored.Rounded.ArrowForward, null,
-                Modifier.size(18.dp), tint = colors.onSurfaceVariant.copy(alpha = 0.75f)
+                Icons.AutoMirrored.Rounded.ChevronRight, null,
+                Modifier.size(18.dp), tint = colors.onSurfaceVariant.copy(alpha = 0.55f)
             )
         }
+    }
+    if (grouped) {
+        Box(
+            modifier = modifier.fillMaxWidth()
+                .clickable(enabled = enabled, role = Role.Button, onClick = {
+                    if (destructive) haptics.secondaryAction() else haptics.actionClick()
+                    onClick()
+                })
+        ) { rowContent() }
+    } else {
+        Surface(
+            modifier = modifier.fillMaxWidth().pressFeedback()
+                .clip(shape)
+                .clickable(enabled = enabled, role = Role.Button, onClick = {
+                    if (destructive) haptics.secondaryAction() else haptics.actionClick()
+                    onClick()
+                }),
+            shape = shape,
+            color = if (destructive) colors.errorContainer.copy(alpha = 0.24f) else pillars.cardSurface,
+            shadowElevation = 0.dp
+        ) { rowContent() }
     }
 }
 
@@ -120,16 +148,15 @@ import com.jumlo.app.ui.components.QuietIconTile
     iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle? = null
 ) {
     val colors = MaterialTheme.colorScheme
-    val pillars = com.jumlo.app.ui.theme.QuietTheme.pillars
-    val shape = RoundedCornerShape(JumloRadii.field)
+    val pillars = QuietTheme.pillars
+    val shape = QuietTheme.shapes.inputField
     Surface(
-        modifier = modifier.fillMaxWidth().heightIn(min = 70.dp)
+        modifier = modifier.fillMaxWidth().heightIn(min = 60.dp)
             .clip(shape)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
         shape = shape,
         color = pillars.cardSurface,
-        border = BorderStroke(1.dp, pillars.cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Row(
             Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 14.dp),
@@ -140,7 +167,7 @@ import com.jumlo.app.ui.components.QuietIconTile
                     icon,
                     tint = iconStyle.tint,
                     container = iconStyle.container,
-                    size = 42.dp
+                    size = 34.dp
                 )
                 Spacer(Modifier.width(14.dp))
             }
@@ -157,7 +184,7 @@ import com.jumlo.app.ui.components.QuietIconTile
 }
 
 @Composable internal fun InfoDialog(title: String, body: String, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(title, modifier = Modifier.semantics { heading() }) },
         text = { Text(body, Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.account_done)) } })
 }
@@ -172,7 +199,7 @@ import com.jumlo.app.ui.components.QuietIconTile
     val context = LocalContext.current
     val items = listOf(R.string.storage_imports to usage.sources, R.string.storage_results to usage.outputs,
         R.string.storage_transfers to usage.partials, R.string.storage_temporary to usage.temporary, R.string.storage_trash to usage.trash)
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.account_storage)) }, text = {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.account_storage), modifier = Modifier.semantics { heading() }) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items.forEach { (label, bytes) ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -182,7 +209,7 @@ import com.jumlo.app.ui.components.QuietIconTile
             }
             if(outputFiles.isNotEmpty()) {
                 HorizontalDivider()
-                Text(stringResource(R.string.redesign_storage_by_type),style=MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.redesign_storage_by_type),style=MaterialTheme.typography.titleSmall,modifier=Modifier.semantics { heading() })
                 val groups=outputFiles.groupBy { StoragePaths.category(it.mimeType) }
                 listOf("Video","Audio","PDF","Images","Documents").forEach {category->
                     val bytes=groups[category].orEmpty().sumOf { it.sizeBytes }

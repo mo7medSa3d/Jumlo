@@ -36,7 +36,7 @@ object BitmapTransforms {
         require(bounds.outMimeType in setOf("image/jpeg", "image/png", "image/webp", "image/heic", "image/heif")) { "UNSUPPORTED_IMAGE_FORMAT" }
         rejectAnimation(file, bounds.outMimeType)
         require(bounds.outWidth > 0 && bounds.outHeight > 0) { "INVALID_DIMENSIONS" }
-        val orientation = try { ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } catch (_: java.io.IOException) { 1 }
+        val orientation = try { ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } catch (_: Exception) { 1 }
         return ImageInfo(bounds.outWidth, bounds.outHeight, orientation)
     }
 
@@ -109,6 +109,7 @@ object BitmapTransforms {
                 require(kind !in setOf("acTL","ANIM","ANMF")) { "ANIMATED_IMAGE_UNSUPPORTED" }
                 val step=8+length+(if(mime=="image/png") 4 else length%2)
                 require(step>=8 && step<=f.length()-at) { "MALFORMED_IMAGE" }
+                if (mime == "image/png" && kind == "IEND") break
                 at+=step
             }
         }
@@ -127,9 +128,9 @@ object BitmapTransforms {
     }
     fun crop(source:Bitmap,box:Box,turns:Int,flipX:Boolean,flipY:Boolean,budget:Long):Bitmap {
         box.normalized()
-        val x=(box.left*source.width).floorToInt(); val y=(box.top*source.height).floorToInt()
-        val right=(box.right*source.width).ceilToInt().coerceAtMost(source.width); val bottom=(box.bottom*source.height).ceilToInt().coerceAtMost(source.height)
-        val w=(right-x).coerceAtLeast(1); val h=(bottom-y).coerceAtLeast(1)
+        val x=(box.left*source.width).floorToInt().coerceIn(0,source.width-1); val y=(box.top*source.height).floorToInt().coerceIn(0,source.height-1)
+        val right=(box.right*source.width).ceilToInt().coerceIn(x+1,source.width); val bottom=(box.bottom*source.height).ceilToInt().coerceIn(y+1,source.height)
+        val w=right-x; val h=bottom-y
         if(x==0 && y==0 && w==source.width && h==source.height && turns%4==0 && !flipX && !flipY) return source
         ImageWorkPolicy.requireFits(w,h,source.allocationByteCount.toLong(),budget)
         val matrix=Matrix().apply { setScale(if(flipX) -1f else 1f,if(flipY) -1f else 1f); postRotate(((turns%4+4)%4)*90f) }
@@ -137,8 +138,8 @@ object BitmapTransforms {
     }
     private fun Double.floorToInt()=floor(this).toInt()
     private fun Double.ceilToInt()=ceil(this).toInt()
-    fun encode(bitmap:Bitmap,file:File,settings:ImageConversionSettings,budget:Long) {
-        encodeWithResult(bitmap,file,settings,budget)
+    fun encode(bitmap:Bitmap,file:File,settings:ImageConversionSettings,budget:Long,checkCancel:()->Unit={}) {
+        encodeWithResult(bitmap,file,settings,budget,checkCancel)
     }
 
     fun encodeWithResult(bitmap:Bitmap,file:File,settings:ImageConversionSettings,budget:Long,checkCancel:()->Unit={}):ImageEncodingResult {
@@ -213,7 +214,7 @@ object BitmapTransforms {
                 val encoded=encodeWithResult(bitmap, candidate, preferredSettings, budget,checkCancel)
                 smallest = candidate.length()
                 if (ImageWorkPolicy.meetsStrictBound(smallest, maxAllowedBytes)) {
-                    candidate.copyTo(file, overwrite = true)
+                    moveSynced(candidate, file)
                     checkCancel()
                     return encoded
                 }
@@ -244,7 +245,7 @@ object BitmapTransforms {
                             val encoded=encodeWithResult(scaled, candidate, preferredSettings.copy(format = effectiveFormat, quality = quality), encodeBudget,checkCancel)
                             smallest = minOf(smallest, candidate.length())
                             if (ImageWorkPolicy.meetsStrictBound(candidate.length(), maxAllowedBytes)) {
-                                candidate.copyTo(file, overwrite = true)
+                                moveSynced(candidate, file)
                                 checkCancel()
                                 return encoded
                             }
@@ -258,6 +259,14 @@ object BitmapTransforms {
             require(smallest != Long.MAX_VALUE) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
             throw ImageSizeBoundException(maxAllowedBytes - 1L, smallest)
         } finally { candidate.delete() }
+    }
+
+    private fun moveSynced(source: File, destination: File) {
+        try {
+            java.nio.file.Files.move(source.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+            java.nio.file.Files.move(source.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     fun extension(format:String)=when(format) { "JPEG" -> "jpg"; "PNG" -> "png"; "WEBP" -> "webp"; else -> throw IllegalArgumentException("UNSUPPORTED_IMAGE_FORMAT") }

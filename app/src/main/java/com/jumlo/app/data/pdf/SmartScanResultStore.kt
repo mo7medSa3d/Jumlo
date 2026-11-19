@@ -39,7 +39,9 @@ object SmartScanResultStore {
                     check()
                     PDFBoxResourceLoader.init(context)
                     val target = File.createTempFile("jumlo-scan-", ".pdf", context.cacheDir).also { pending = it }
-                    val memory = MemoryUsageSetting.setupTempFileOnly(context.cacheDir.usableSpace - ResourceBudgetPolicy.minFreeBytes)
+                    val storageLimit = context.cacheDir.usableSpace - ResourceBudgetPolicy.minFreeBytes
+                    require(storageLimit > 0L) { "DISK_BUDGET_EXCEEDED" }
+                    val memory = MemoryUsageSetting.setupTempFileOnly(storageLimit)
                         .setTempDir(context.cacheDir)
                     val bitmapBudget = minOf(Runtime.getRuntime().maxMemory() / 4, 64L * 1024 * 1024)
                     PDDocument(memory).use { document ->
@@ -99,6 +101,7 @@ object SmartScanResultStore {
                             coroutine.ensureActive()
                             val read = source.read(buffer)
                             if (read < 0) break
+                            require(context.cacheDir.usableSpace >= ResourceBudgetPolicy.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                             if (read > 0) output.write(buffer, 0, read)
                         }
                         output.fd.sync()
@@ -132,6 +135,7 @@ object SmartScanResultStore {
                             coroutine.ensureActive()
                             val read = input.read(buffer)
                             if (read < 0) break
+                            require(context.cacheDir.usableSpace >= ResourceBudgetPolicy.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                             if (read > 0) output.write(buffer, 0, read)
                         }
                         output.fd.sync()

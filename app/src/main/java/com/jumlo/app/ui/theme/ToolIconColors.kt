@@ -53,12 +53,8 @@ object ToolIconColors {
     }
 
     /** Black or white, whichever reads better on the tile (WCAG contrast). */
-    fun glyphOn(icon: Color): Color {
-        val lum = luminance(icon)
-        val onWhite = 1.05f / (lum + 0.05f)
-        val onBlack = (lum + 0.05f) / 0.05f
-        return if (onWhite >= onBlack) Color.White else Color.Black
-    }
+    fun glyphOn(icon: Color): Color =
+        if (M3ColorFactory.contrast(icon, Color.White) >= M3ColorFactory.contrast(icon, Color.Black)) Color.White else Color.Black
 
     /** Linear mix of two colors, for tile borders that echo the icon. */
     fun mix(a: Color, b: Color, amount: Float): Color {
@@ -69,14 +65,6 @@ object ToolIconColors {
             blue = a.blue + (b.blue - a.blue) * t,
             alpha = 1f
         )
-    }
-
-    private fun luminance(color: Color): Float {
-        fun linear(channel: Float): Float =
-            if (channel <= 0.03928f) channel / 12.92f
-            else Math.pow(((channel + 0.055f) / 1.055f).toDouble(), 2.4).toFloat()
-        return 0.2126f * linear(color.red) + 0.7152f * linear(color.green) +
-            0.0722f * linear(color.blue)
     }
 
     private fun hsl(hueDeg: Float, saturation: Float, lightness: Float): Color {

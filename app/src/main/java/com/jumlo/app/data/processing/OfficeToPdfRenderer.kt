@@ -21,6 +21,7 @@ import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
+import com.tom_roush.pdfbox.pdmodel.font.encoding.WinAnsiEncoding
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import java.io.Closeable
@@ -133,7 +134,15 @@ object OfficeToPdfRenderer {
             font(bold, italic).getStringWidth(text) / 1000f * size
 
         private fun isLatin(text: String): Boolean =
-            text.all { it == '\n' || it in ' '..'~' }
+            text.all { ch -> ch == '\n' || ch == '\t' || ch in ' '..'~' || (ch.code >= 0xA0 && WinAnsiEncoding.INSTANCE.contains(ch.code)) }
+
+        private fun isRtlText(text: String): Boolean {
+            for (ch in text) when (Character.getDirectionality(ch)) {
+                Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> return true
+                Character.DIRECTIONALITY_LEFT_TO_RIGHT -> return false
+            }
+            return false
+        }
 
         private fun sizeFor(level: Int): Float = when (level) {
             1 -> 22f; 2 -> 16f; 3 -> 13.5f; 4 -> 12f; else -> 11f
@@ -157,14 +166,17 @@ object OfficeToPdfRenderer {
             }
             val size = sizeFor(paragraph.level)
             val lineHeight = size * 1.35f
+            val spaceWidth = widthOf(" ", false, false, size)
             val baseIndent = paragraph.listIndent * 18f
             val marker = paragraph.listMarker
             val markerWidth = marker?.let { widthOf(it, true, false, size) } ?: 0f
-            cursorY -= beforeFor(paragraph.level)
+            val spaceBefore = if (hasContent) beforeFor(paragraph.level) else 0f
+            needSpace(spaceBefore + lineHeight)
+            if (hasContent) cursorY -= spaceBefore
             val lines = ArrayList<List<Word>>()
             var current = ArrayList<Word>()
             var currentWidth = 0f
-            val lineWidth = availWidth - baseIndent - markerWidth
+            val lineWidth = (availWidth - baseIndent - markerWidth).coerceAtLeast(36f)
             fun flushLine() {
                 if (current.isNotEmpty()) {
                     lines += current.toList()
@@ -172,39 +184,41 @@ object OfficeToPdfRenderer {
                 }
             }
             for (run in paragraph.runs) {
-                for (segment in run.text.split('\n')) {
+                val segments = run.text.replace('\t', ' ').split('\n')
+                for ((segIndex, segment) in segments.withIndex()) {
                     for (word in segment.split(' ').filter { it.isNotEmpty() }) {
                         var remaining = word
                         while (remaining.isNotEmpty()) {
                             val wordWidth = widthOf(remaining, run.bold, run.italic, size)
-                            if (currentWidth + wordWidth <= lineWidth || current.isEmpty()) {
+                            if (currentWidth + wordWidth <= lineWidth) {
                                 current += Word(remaining, run.bold, run.italic)
-                                currentWidth += wordWidth + widthOf(" ", false, false, size)
+                                currentWidth += wordWidth + spaceWidth
                                 remaining = ""
+                            } else if (current.isNotEmpty() && wordWidth <= lineWidth) {
+                                flushLine()
                             } else {
-                                val cut = cutWord(remaining, run.bold, run.italic, size, lineWidth - currentWidth)
-                                if (cut.isEmpty()) {
-                                    flushLine()
-                                } else {
-                                    current += Word(cut, run.bold, run.italic)
-                                    remaining = remaining.substring(cut.length)
-                                    flushLine()
-                                }
+                                val available = (lineWidth - currentWidth).coerceAtLeast(size)
+                                val cut = cutWord(remaining, run.bold, run.italic, size, available)
+                                current += Word(cut, run.bold, run.italic)
+                                remaining = remaining.substring(cut.length)
+                                flushLine()
                             }
                         }
                     }
-                    flushLine()
+                    if (segIndex < segments.lastIndex) flushLine()
                 }
             }
             flushLine()
             var first = true
+            val ascent = size * 0.85f
             for (line in lines) {
+                checkCancel()
                 needSpace(lineHeight)
                 val wordsWidth = line.sumOf { widthOf(it.text, it.bold, it.italic, size).toDouble() }.toFloat() +
-                    widthOf(" ", false, false, size) * (line.size - 1).coerceAtLeast(0)
+                    spaceWidth * (line.size - 1).coerceAtLeast(0)
                 val fullWidth = wordsWidth + if (first && marker != null) markerWidth else 0f
-                // beginText resets the text matrix, so newLineAtOffset below is
-                // absolute; later showText calls only advance from there.
+                // cursorY tracks the TOP edge of the next block consistently for both vector and raster blocks.
+                // Offset by ascent so PDF text baseline sits inside [cursorY - lineHeight, cursorY].
                 val startX = when (paragraph.align) {
                     "center" -> margin + baseIndent + (availWidth - baseIndent - fullWidth) / 2f
                     "right" -> margin + availWidth - fullWidth
@@ -212,7 +226,7 @@ object OfficeToPdfRenderer {
                 }
                 val content = stream!!
                 content.beginText()
-                content.newLineAtOffset(startX, cursorY)
+                content.newLineAtOffset(startX, cursorY - ascent)
                 if (first && marker != null) {
                     content.setFont(font(true, false), size)
                     content.showText(marker)
@@ -244,7 +258,19 @@ object OfficeToPdfRenderer {
 
         private fun drawRasterParagraph(paragraph: OfficeParagraph) {
             val size = sizeFor(paragraph.level)
-            val widthPx = (availWidth * SCALE).toInt().coerceAtLeast(1)
+            val baseIndent = paragraph.listIndent * 18f
+            val blockWidthPt = (availWidth - baseIndent).coerceAtLeast(48f)
+            val widthPx = (blockWidthPt * SCALE).toInt().coerceAtLeast(1)
+            val displayText = buildString {
+                paragraph.listMarker?.let { append(it).append(' ') }
+                append(paragraph.text)
+            }
+            val spaceBefore = if (hasContent) beforeFor(paragraph.level) else 0f
+            if (hasContent && cursorY - spaceBefore - size * 1.35f < margin) {
+                newPage()
+            } else if (hasContent) {
+                cursorY -= spaceBefore
+            }
             val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.BLACK
                 textSize = size * SCALE
@@ -252,43 +278,69 @@ object OfficeToPdfRenderer {
                     if (paragraph.runs.any { it.bold }) Typeface.BOLD else Typeface.NORMAL)
                 if (paragraph.runs.any { it.italic }) textSkewX = -0.25f
             }
-            val layout = StaticLayout.Builder.obtain(paragraph.text, 0, paragraph.text.length, paint, widthPx)
+            val rtl = isRtlText(displayText)
+            val align = when (paragraph.align) {
+                "center" -> android.text.Layout.Alignment.ALIGN_CENTER
+                "right" -> if (rtl) android.text.Layout.Alignment.ALIGN_NORMAL else android.text.Layout.Alignment.ALIGN_OPPOSITE
+                else -> android.text.Layout.Alignment.ALIGN_NORMAL
+            }
+            val layout = StaticLayout.Builder.obtain(displayText, 0, displayText.length, paint, widthPx)
+                .setAlignment(align)
+                .setTextDirection(if (rtl) android.text.TextDirectionHeuristics.RTL else android.text.TextDirectionHeuristics.FIRSTSTRONG_LTR)
                 .setLineSpacing(0f, 1.35f).build()
-            drawSliced(layout, widthPx, layout.height)
+            drawSliced(layout, widthPx, layout.height, if (rtl) margin else margin + baseIndent, blockWidthPt)
             cursorY -= 4f
             rasterized++
         }
 
         /**
-         * Draws a full-width layout in vertical slices, one page per slice, so
-         * a tall block never clips. The layout is drawn once per slice with a
-         * negative vertical translation; only the slice's bitmap is kept.
+         * Draws a layout in vertical slices aligned to StaticLayout line boundaries so
+         * characters are never sliced horizontally across page breaks.
          */
-        private fun drawSliced(layout: StaticLayout, widthPx: Int, totalHeightPx: Int) {
-            var offset = 0
-            while (offset < totalHeightPx) {
-                val roomPt = cursorY - margin
-                if (roomPt <= 0) newPage()
-                val slicePx = minOf(totalHeightPx - offset, (roomPt * SCALE).toInt().coerceAtLeast(1))
+        private fun drawSliced(
+            layout: StaticLayout,
+            widthPx: Int,
+            totalHeightPx: Int,
+            xPt: Float = margin,
+            drawWidthPt: Float = availWidth
+        ) {
+            var lineIdx = 0
+            val lineCount = layout.lineCount
+            while (lineIdx < lineCount) {
+                checkCancel()
+                val startY = layout.getLineTop(lineIdx)
+                var roomPt = cursorY - margin
+                val firstLineHeightPx = (layout.getLineBottom(lineIdx) - startY).coerceAtLeast(1)
+                if (roomPt * SCALE < firstLineHeightPx && hasContent) {
+                    newPage()
+                    roomPt = cursorY - margin
+                }
+                val roomPx = (roomPt * SCALE).toInt().coerceAtLeast(1)
+                var endLine = lineIdx
+                while (endLine + 1 < lineCount && layout.getLineBottom(endLine + 1) - startY <= roomPx) {
+                    endLine++
+                }
+                val endY = layout.getLineBottom(endLine).coerceAtMost(totalHeightPx)
+                val slicePx = (endY - startY).coerceAtLeast(1)
                 require(widthPx.toLong() * slicePx * 4L <= maxBitmapBytes / 2L) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
                 val bitmap = Bitmap.createBitmap(widthPx, slicePx, Bitmap.Config.ARGB_8888)
                 try {
                     val canvas = Canvas(bitmap)
                     canvas.drawColor(Color.WHITE)
                     canvas.save()
-                    canvas.translate(0f, -offset.toFloat())
+                    canvas.translate(0f, -startY.toFloat())
                     layout.draw(canvas)
                     canvas.restore()
                     val heightPt = slicePx / SCALE
-                    val image = LosslessFactory.createFromImage(document, bitmap)
-                    stream!!.drawImage(image, margin, cursorY - heightPt, availWidth, heightPt)
+                    val image = JPEGFactory.createFromImage(document, bitmap, 0.92f)
+                    stream!!.drawImage(image, xPt, cursorY - heightPt, drawWidthPt, heightPt)
                     cursorY -= heightPt
                     hasContent = true
                 } finally {
                     bitmap.recycle()
                 }
-                offset += slicePx
-                if (offset < totalHeightPx) newPage()
+                lineIdx = endLine + 1
+                if (lineIdx < lineCount) newPage()
             }
         }
 
@@ -301,13 +353,16 @@ object OfficeToPdfRenderer {
             }
             val size = 10f
             val lineHeight = size * 1.35f
+            val spaceWidth = widthOf(" ", false, false, size)
             val pad = 4f
+            require(rows.all { row -> row.all { it.colSpan >= 1 } }) { "OFFICE_INVALID" }
             val colCount = rows.maxOf { row -> row.sumOf { it.colSpan } }
+            if (colCount <= 0) return
             val weights = DoubleArray(colCount)
             for (row in rows) {
                 var col = 0
                 for (cell in row) {
-                    val longest = cell.text.split(' ').maxOfOrNull { widthOf(it, cell.bold, false, size).toDouble() } ?: 0.0
+                    val longest = cell.text.replace('\t', ' ').split('\n', ' ').maxOfOrNull { widthOf(it, cell.bold, false, size).toDouble() } ?: 0.0
                     for (k in 0 until cell.colSpan) {
                         if (col + k < colCount) weights[col + k] = maxOf(weights[col + k], longest / cell.colSpan)
                     }
@@ -322,17 +377,33 @@ object OfficeToPdfRenderer {
             fun wrapCell(text: String, bold: Boolean, width: Float): List<String> {
                 val inner = (width - 2 * pad).coerceAtLeast(10f)
                 val out = ArrayList<String>()
-                var line = StringBuilder()
-                var lineWidth = 0f
-                for (word in text.split(' ').filter { it.isNotEmpty() }) {
-                    val w = widthOf(word, bold, false, size)
-                    if (line.isNotEmpty() && lineWidth + widthOf(" ", false, false, size) + w > inner) {
-                        out += line.toString(); line = StringBuilder(); lineWidth = 0f
+                for (segment in text.replace('\t', ' ').split('\n')) {
+                    var line = StringBuilder()
+                    var lineWidth = 0f
+                    for (word in segment.split(' ').filter { it.isNotEmpty() }) {
+                        var remaining = word
+                        while (remaining.isNotEmpty()) {
+                            val w = widthOf(remaining, bold, false, size)
+                            val needed = if (line.isNotEmpty()) spaceWidth + w else w
+                            if (lineWidth + needed <= inner) {
+                                if (line.isNotEmpty()) { line.append(' '); lineWidth += spaceWidth }
+                                line.append(remaining); lineWidth += w
+                                remaining = ""
+                            } else if (line.isNotEmpty() && w <= inner) {
+                                out += line.toString(); line = StringBuilder(); lineWidth = 0f
+                            } else {
+                                val avail = (inner - if (line.isNotEmpty()) lineWidth + spaceWidth else 0f).coerceAtLeast(size)
+                                val cut = cutWord(remaining, bold, false, size, avail)
+                                if (line.isNotEmpty()) { line.append(' '); lineWidth += spaceWidth }
+                                line.append(cut)
+                                remaining = remaining.substring(cut.length)
+                                out += line.toString(); line = StringBuilder(); lineWidth = 0f
+                            }
+                        }
                     }
-                    if (line.isNotEmpty()) { line.append(' '); lineWidth += widthOf(" ", false, false, size) }
-                    line.append(word); lineWidth += w
+                    if (line.isNotEmpty() || segment.isEmpty()) out += line.toString()
                 }
-                if (line.isNotEmpty() || out.isEmpty()) out += line.toString()
+                if (out.isEmpty()) out += ""
                 return out
             }
 
@@ -386,9 +457,11 @@ object OfficeToPdfRenderer {
                 return maxLines * lineHeight + 2 * pad
             }
 
+            val cachedHeaderHeight = if (block.headerRow) headerHeight() else 0f
             var rowIndex = 0
             var headerDrawnOnPage = false
             while (rowIndex < rows.size) {
+                checkCancel()
                 val row = rows[rowIndex]
                 var col = 0
                 var maxLines = 1
@@ -400,14 +473,14 @@ object OfficeToPdfRenderer {
                 // Reserve the header too, so a row never starts under a header
                 // that pushed it off the page. A single row taller than a whole
                 // page still draws (and may clip) instead of looping forever.
-                val needed = height + if (block.headerRow && !headerDrawnOnPage) headerHeight() else 0f
+                val needed = height + if (block.headerRow && !headerDrawnOnPage) cachedHeaderHeight else 0f
                 if (cursorY - needed < margin && needed <= availHeight) {
                     newPage()
                     headerDrawnOnPage = false
                     continue
                 }
                 if (block.headerRow && !headerDrawnOnPage) {
-                    val hh = headerHeight()
+                    val hh = cachedHeaderHeight
                     drawRow(rows[0], cursorY, hh, header = true)
                     cursorY -= hh
                     hasContent = true
@@ -460,13 +533,16 @@ object OfficeToPdfRenderer {
                         rowChars <= MAX_RASTER_ROW_CHARS) { "OFFICE_SIZE_LIMIT" }
                     require(cell.colSpan in 1..MAX_RASTER_TABLE_COLUMNS &&
                         col + cell.colSpan <= MAX_RASTER_TABLE_COLUMNS) { "OFFICE_SIZE_LIMIT" }
-                    val cellWidth = (colWidthPx * cell.colSpan - 16).coerceAtLeast(16)
+                    val cellPad = minOf(8, colWidthPx * cell.colSpan / 4)
+                    val cellWidth = (colWidthPx * cell.colSpan - 2 * cellPad).coerceAtLeast(1)
+                    val rtl = isRtlText(cell.text)
                     val layout = StaticLayout.Builder.obtain(
                         cell.text, 0, cell.text.length,
                         if (cell.bold) boldPaint else paint, cellWidth
-                    ).setLineSpacing(0f, 1.35f).build()
+                    ).setTextDirection(if (rtl) android.text.TextDirectionHeuristics.RTL else android.text.TextDirectionHeuristics.FIRSTSTRONG_LTR)
+                        .setLineSpacing(0f, 1.35f).build()
                     cells += RasterCellLayout(cell.colSpan, layout)
-                    rowHeight = maxOf(rowHeight, layout.height + 16)
+                    rowHeight = maxOf(rowHeight, layout.height + 2 * cellPad)
                     col += cell.colSpan
                 }
                 return RasterRowLayout(cells, rowHeight)
@@ -509,8 +585,10 @@ object OfficeToPdfRenderer {
                         var x = 0
                         for (cell in rowLayout.cells) {
                             val cellWidth = colWidthPx * cell.span
+                            val cellPad = minOf(8, cellWidth / 4)
                             canvas.save()
-                            canvas.translate((x + 8).toFloat(), (y + 8).toFloat())
+                            canvas.clipRect(x.toFloat(), y.toFloat(), (x + cellWidth).toFloat(), (y + rowLayout.height).toFloat())
+                            canvas.translate((x + cellPad).toFloat(), (y + cellPad).toFloat())
                             cell.layout.draw(canvas)
                             canvas.restore()
                             canvas.drawRect(
@@ -576,7 +654,7 @@ object OfficeToPdfRenderer {
         private fun drawImage(block: OfficeBlock.ImageBlock) {
             checkCancel()
             try {
-                val image = if (block.extension == "jpg" || block.extension == "jpeg") {
+                val image = if (block.extension.equals("jpg", true) || block.extension.equals("jpeg", true)) {
                     JPEGFactory.createFromByteArray(document, block.bytes)
                 } else {
                     val bitmap = decodeEmbeddedRaster(block.bytes)

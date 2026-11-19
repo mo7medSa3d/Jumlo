@@ -184,21 +184,32 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         fail("TOO_MANY_DOWNLOAD_URLS") { MediaLinks.sharedUrls(big) }
         fail("INVALID_DOWNLOAD_LIST") { MediaLinks.sharedUrls("x".repeat(100001)) }
     }
+    test("duplicate CDN mirrors at the same quality tier collapse to one choice") {
+        val mirrors=asset.copy(formats=listOf(
+            v1080.copy(id="v1080-0"), v1080.copy(id="v1080-1"), aac))
+        val choices=MediaCatalog.choices(mirrors,MediaMode.VIDEO)
+        check(choices.size==1 && choices.single().formatIds==listOf("v1080-0","a128"))
+    }
     test("media probe arguments do not download, execute a shell or bypass TLS") {
         val args=MediaArguments.probe("https://example.test/watch?v=hello&x=world")
         check("--dump-single-json" in args && "--skip-download" in args && "--ignore-config" in args)
         check(args.takeLast(2)==listOf("--","https://example.test/watch?v=hello&x=world"))
-        check(args[args.indexOf("--extractor-args")+1]=="youtube:player_client=web_embedded")
+        check("--extractor-args" !in args && "--no-check-formats" !in args)
         check(args.none { it in listOf("--exec","--no-check-certificates","--allow-unplayable-formats","--ignore-errors") })
+        val ytArgs=MediaArguments.probe("https://www.youtube.com/watch?v=hello")
+        check(ytArgs[ytArgs.indexOf("--extractor-args")+1]=="youtube:player_client=default,web_embedded")
+        check("--no-check-formats" !in ytArgs)
     }
-    test("selected video format is exact without silent best-quality fallback") {
+    test("selected video format uses exact ID first with bounded resolution fallback") {
         val c=MediaCatalog.choices(asset,MediaMode.VIDEO).first()
         val args=MediaArguments.download("https://example.test/video",c)
-        check(args[args.indexOf("--format")+1]=="best*[format_id='v1080']+best*[format_id='a128']")
+        check(args[args.indexOf("--format")+1]=="best*[format_id='v1080']+best*[format_id='a128']/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best")
         check("--abort-on-unavailable-fragments" in args && "--continue" in args && "--no-overwrites" in args)
-        check("--no-continue" !in args && "--force-overwrites" !in args)
+        check("--no-continue" !in args && "--force-overwrites" !in args && "--no-check-formats" !in args)
         check(args[args.indexOf("--output")+1]=="media.%(ext)s")
-        check(args[args.indexOf("--extractor-args")+1]=="youtube:player_client=web_embedded")
+        check("--extractor-args" !in args)
+        val ytArgs=MediaArguments.download("https://www.youtube.com/watch?v=abc",c)
+        check(ytArgs[ytArgs.indexOf("--extractor-args")+1]=="youtube:player_client=default,web_embedded")
     }
     test("MP3 M4A and Opus audio choices invoke real extraction options") {
         val c=MediaCatalog.choices(asset,MediaMode.AUDIO).first()

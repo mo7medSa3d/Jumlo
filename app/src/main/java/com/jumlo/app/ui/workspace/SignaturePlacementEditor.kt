@@ -104,8 +104,11 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
                     IconButton(onClick={page++;selectedId=null},enabled=page<current.count) {Icon(Icons.AutoMirrored.Rounded.NavigateNext,stringResource(R.string.watermark_next_page))}
                 }
             }
-            frame?.isFailure==true -> QuietStateCard(stringResource(R.string.msg_preview_unavailable),stringResource(R.string.interactive_signature_failed),
-                stringResource(R.string.interactive_preview_retry),{retry++},isError=true)
+            frame?.isFailure==true -> {
+                QuietStateCard(stringResource(R.string.msg_preview_unavailable),stringResource(R.string.interactive_signature_failed),
+                    stringResource(R.string.interactive_preview_retry),{retry++},isError=true)
+                if(page>1) TextButton(onClick={page=1;selectedId=null;retry++}) {Text(stringResource(R.string.interactive_first_page))}
+            }
             else -> LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         if(signatureId!=null) {

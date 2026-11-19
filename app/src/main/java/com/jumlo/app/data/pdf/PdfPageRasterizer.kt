@@ -10,8 +10,9 @@ import java.io.File
 
 /** Only one page may be open at a time. Callers serialize access and run outside the UI thread. */
 class PdfPageRasterizer(file: File, checkCancellation: () -> Unit = {}) : Closeable {
+    private val scratchDir = requireNotNull(file.absoluteFile.parentFile)
     private val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-    private val renderer = PdfRendererFactory.open(descriptor, requireNotNull(file.absoluteFile.parentFile), checkCancellation)
+    private val renderer = PdfRendererFactory.open(descriptor, scratchDir, checkCancellation)
     val pageCount: Int get() = renderer.pageCount
 
     fun render(index: Int, maxEdge: Int, bitmapBudget: Long): Bitmap {

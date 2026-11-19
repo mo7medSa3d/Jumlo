@@ -76,14 +76,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun receiveIntent(incoming: Intent?) {
-        if (incoming == null) return
+        if (incoming == null || (incoming.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return
         // A third-party share can carry a malformed Parcelable or revoked URI.
         // Keep the Activity alive and present the failure through the normal UI.
         try {
             if (incoming.action == "${packageName}.OPEN_JOB") {
                 appViewModel.openNotificationJob(incoming.getStringExtra("job_id"))
             }
-            if (incoming.action in setOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)) {
+            if (incoming.action == Intent.ACTION_SEND || incoming.action == Intent.ACTION_SEND_MULTIPLE) {
                 appViewModel.intake(IntakeController.collect(incoming), externalShare = true)
             }
         } catch (error: RuntimeException) {

@@ -16,7 +16,7 @@
     <string name="upgrade_no_results_hint">جرّب بحثًا أو مرشحًا آخر.</string>
     <string name="upgrade_new_name">الاسم الجديد</string>
     <string name="upgrade_renamed">تمت إعادة تسمية المستند</string>
-    <string name="upgrade_rename_failed">تعذّرت إعادة تسمية هذا المستند</string>
+    <string name="upgrade_rename_failed">تعذّرت إعادة تسمية هذا المستند. اختر اسمًا آخر وحاول مجددًا.</string>
     <string name="upgrade_image_to_pdf_preview">معاينة الورق</string>
     <string name="upgrade_margin_drag">اسحب الدليل لضبط الهامش</string>
     <string name="upgrade_margin_mm">الهامش: %1$d مم</string>

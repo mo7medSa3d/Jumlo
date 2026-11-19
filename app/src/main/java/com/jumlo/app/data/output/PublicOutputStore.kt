@@ -115,7 +115,8 @@ interface PublicOutputPublisher {
     private fun saveLegacy(file:File,name:String,mime:String,sha256:String,subfolder:String?=null,check:()->Unit):String {
         val cleanSub=subfolder?.trim()?.takeIf { it.isNotEmpty() }?.let { AutoOutputName.cleanBaseName(it,"Folder") }
         val rel=if(cleanSub!=null) "Jumlo/${StoragePaths.category(mime)}/$cleanSub" else "Jumlo/${StoragePaths.category(mime)}"
-        val dir=File(app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),rel).apply { mkdirs() }
+        val base=app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: error("DESTINATION_UNAVAILABLE")
+        val dir=File(base,rel).apply { check(isDirectory || mkdirs()) { "DESTINATION_CREATE_FAILED" } }
         val candidate=StoragePaths.uniqueName(name,dir.list()?.toSet() ?: emptySet())
         val destination=File(dir,SafeNames.basename(candidate))
         VerifiedFileCopy.copy(file,destination,sha256,check)

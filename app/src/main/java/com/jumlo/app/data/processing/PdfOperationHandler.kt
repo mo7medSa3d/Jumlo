@@ -15,7 +15,9 @@ import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.json.JSONObject
@@ -27,19 +29,21 @@ import javax.inject.Singleton
 import kotlin.math.roundToInt
 
 @Singleton class PdfOperationHandler @Inject constructor(private val secrets:com.jumlo.app.data.source.EphemeralSecretStore):OperationHandler {
-    override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> = when(request.toolId) {
-        "pdf_02" -> imagesToPdf(request,context)
-        "pdf_07" -> pagesToImages(request,context)
-        "pdf_03" -> structural(request,context,"merge")
-        "pdf_05" -> structural(request,context,"split")
-        "pdf_04" -> structural(request,context,"organize")
-        "pdf_06" -> structural(request,context,"extract")
-        "pdf_crop" -> structural(request,context,"crop")
-        "pdf_compress" -> structural(request,context,"compress")
-        "pdf_stamp" -> structural(request,context,"stamp")
-        "pdf_signature" -> structural(request,context,"signature")
-        "pdf_protect" -> structural(request,context,"protect")
-        else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
+    override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> = withContext(Dispatchers.IO) {
+        when(request.toolId) {
+            "pdf_02" -> imagesToPdf(request,context)
+            "pdf_07" -> pagesToImages(request,context)
+            "pdf_03" -> structural(request,context,"merge")
+            "pdf_05" -> structural(request,context,"split")
+            "pdf_04" -> structural(request,context,"organize")
+            "pdf_06" -> structural(request,context,"extract")
+            "pdf_crop" -> structural(request,context,"crop")
+            "pdf_compress" -> structural(request,context,"compress")
+            "pdf_stamp" -> structural(request,context,"stamp")
+            "pdf_signature" -> structural(request,context,"signature")
+            "pdf_protect" -> structural(request,context,"protect")
+            else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
+        }
     }
 
     /** A placed image must be upright: re-encode with the EXIF orientation applied. */
@@ -53,7 +57,7 @@ import kotlin.math.roundToInt
         try {
             BitmapTransforms.decode(file, context.budget.maxBitmapBytes).use { decoded ->
                 // PNG preserves drawn-signature alpha while applying EXIF mirroring/rotation.
-                BitmapTransforms.encode(decoded.bitmap, temp, ImageConversionSettings(format = "PNG"), context.budget.maxBitmapBytes)
+                BitmapTransforms.encode(decoded.bitmap, temp, ImageConversionSettings(format = "PNG"), context.budget.maxBitmapBytes, context.checkCancellation)
             }
             return temp
         } catch (t: Throwable) { temp.delete(); throw t }
@@ -75,6 +79,10 @@ import kotlin.math.roundToInt
             doc.close()
             throw OperationFailure("PDF_ENCRYPTED")
         }
+        if (doc.numberOfPages <= 0) {
+            doc.close()
+            throw OperationFailure("EMPTY_PDF")
+        }
         return doc
     }
 
@@ -91,12 +99,14 @@ import kotlin.math.roundToInt
         suspend fun publishOne(key:String,display:String,originalBytes:Long?=null,verify:((File)->Unit)?=null,stage:suspend (File)->Unit):List<ItemOutcome> {
             context.outputs.find(request.id,key)?.let { return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
             val ticket=context.outputs.reserve(request.id,key,display,"application/pdf")
-            stage(ticket.stageFile)
-            // A password protected PDF cannot be opened by the renderer, so it is verified with the backend.
-            val record=context.outputs.publish(ticket){ file ->
-                if(verify!=null) { verify(file); OutputMetadata(originalSizeBytes=originalBytes) }
-                else context.outputs.inspect(file,"application/pdf",originalSizeBytes=originalBytes)
-            }
+            val record=try {
+                stage(ticket.stageFile)
+                // A password protected PDF cannot be opened by the renderer, so it is verified with the backend.
+                context.outputs.publish(ticket){ file ->
+                    if(verify!=null) { verify(file); OutputMetadata(originalSizeBytes=originalBytes) }
+                    else context.outputs.inspect(file,"application/pdf",originalSizeBytes=originalBytes)
+                }
+            } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
             return listOf(ItemOutcome(key,ItemStatus.CREATED,record.id))
         }
         return when(kind){
@@ -117,8 +127,8 @@ import kotlin.math.roundToInt
                 require(request.sourceIds.size==1){"ONE_PDF_REQUIRED"}
                 val outcomes=mutableListOf<ItemOutcome>()
                 context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
-                    openUnencrypted(src).use{ doc ->
-                        val count=doc.numberOfPages
+                    val count=openUnencrypted(src).use{ it.numberOfPages }
+                    run {
                         val groups:List<Pair<Int,Int>> = when(s.optString("mode","RANGES")) {
                             "EVERY" -> {
                                 val every=s.optInt("every",1).coerceAtLeast(1)
@@ -151,7 +161,7 @@ import kotlin.math.roundToInt
                                     context.checkCancellation()
                                     val temp=File.createTempFile("split-page-",".pdf",ticket.stageFile.parentFile)
                                     try {
-                                        PdfBoxBackend.open(src,null).use { d -> PdfBoxBackend.split(d,listOf(PageGroup(group.first,group.second)),listOf(temp)) }
+                                        PdfBoxBackend.split(src,listOf(PageGroup(group.first,group.second)),listOf(temp),context.checkCancellation)
                                         // CRC alone only proves ZIP integrity: validate the PDF
                                         // structure and the expected page count BEFORE packing.
                                         PdfBoxBackend.open(temp,null).use { part ->
@@ -184,7 +194,7 @@ import kotlin.math.roundToInt
                                 else {
                                     val partDisplayName = AutoOutputName.splitPartName(s.optString("displayName",""), firstSourceName, gi + 1)
                                     val ticket=context.outputs.reserve(request.id,key,partDisplayName,"application/pdf")
-                                    PdfBoxBackend.open(src,null).use { d -> PdfBoxBackend.split(d,listOf(PageGroup(g.first,g.second)),listOf(ticket.stageFile)) }
+                                    PdfBoxBackend.split(src,listOf(PageGroup(g.first,g.second)),listOf(ticket.stageFile),context.checkCancellation)
                                     // Validate the published part, not just that a file exists.
                                     PdfBoxBackend.open(ticket.stageFile,null).use { part ->
                                         require(part.numberOfPages == g.second) { "PDF_VERIFY_FAILED" }
@@ -203,35 +213,34 @@ import kotlin.math.roundToInt
                 require(request.sourceIds.size==1){"ONE_PDF_REQUIRED"}
                 publishOne(kind,name(if(kind=="extract")"Extracted.pdf" else "Organized.pdf")){ out ->
                     context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
-                        openUnencrypted(src).use{ doc ->
-                            val count=doc.numberOfPages
-                            context.report(JobProgress(JobStage.RUNNING,1L,2L))
-                            if(kind=="extract"){
-                                val selected=pages(s.optString("pages","all"),count)
-                                PdfBoxBackend.extract(doc,selected.map{ it-1 },out)
-                            } else {
-                                val settings=Json.decodeFromString<PdfOrganizeSettings>(request.settingsJson)
-                                val ops=if(settings.pageEdits.isNotEmpty()) {
-                                    require(settings.pageEdits.map { it.instanceId }.distinct().size==settings.pageEdits.size && settings.pageEdits.all { it.instanceId.isNotBlank() }) { "INVALID_PAGE_INSTANCE" }
-                                    settings.pageEdits.map { edit ->
-                                        require(edit.sourcePage in 1..count) { "INVALID_PAGE_INDEX" }
-                                        require(edit.rotationDegrees in setOf(0,90,180,270)) { "INVALID_ROTATION" }
-                                        OrganizeOp(edit.sourcePage-1,edit.rotationDegrees)
-                                    }
-                                } else {
-                                    // Legacy serialized order/rotatePages retain their exact semantics.
-                                    val order=PdfPageOrder.parse(s.optString("order",""),count)
-                                    val rotateSpec=s.optString("rotatePages","")
-                                    val rotateSet=if(rotateSpec.isBlank()) emptySet() else pages(rotateSpec,count).toSet()
-                                    val degrees=s.optInt("rotateDegrees",90)
-                                    // PDF rotations are quarter turns only; a free angle would write an invalid page.
-                                    require(degrees % 90 == 0) { "INVALID_ROTATION" }
-                                    order.map { OrganizeOp(it-1,if(it in rotateSet) degrees else 0) }
+                        val count = openUnencrypted(src).use { it.numberOfPages }
+                        context.report(JobProgress(JobStage.RUNNING,1L,2L))
+                        context.checkCancellation()
+                        if(kind=="extract"){
+                            val selected=pages(s.optString("pages","all"),count)
+                            PdfBoxBackend.extract(src,selected.map{ it-1 },out,context.checkCancellation)
+                        } else {
+                            val settings=Json.decodeFromString<PdfOrganizeSettings>(request.settingsJson)
+                            val ops=if(settings.pageEdits.isNotEmpty()) {
+                                require(settings.pageEdits.map { it.instanceId }.distinct().size==settings.pageEdits.size && settings.pageEdits.all { it.instanceId.isNotBlank() }) { "INVALID_PAGE_INSTANCE" }
+                                settings.pageEdits.map { edit ->
+                                    require(edit.sourcePage in 1..count) { "INVALID_PAGE_INDEX" }
+                                    require(edit.rotationDegrees == 0 || edit.rotationDegrees == 90 || edit.rotationDegrees == 180 || edit.rotationDegrees == 270) { "INVALID_ROTATION" }
+                                    OrganizeOp(edit.sourcePage-1,edit.rotationDegrees)
                                 }
-                                PdfBoxBackend.organize(doc,ops,out)
+                            } else {
+                                // Legacy serialized order/rotatePages retain their exact semantics.
+                                val order=PdfPageOrder.parse(s.optString("order",""),count)
+                                val rotateSpec=s.optString("rotatePages","")
+                                val rotateSet=if(rotateSpec.isBlank()) emptySet() else pages(rotateSpec,count).toSet()
+                                val degrees=s.optInt("rotateDegrees",90)
+                                // PDF rotations are quarter turns only; a free angle would write an invalid page.
+                                require(degrees % 90 == 0) { "INVALID_ROTATION" }
+                                order.map { OrganizeOp(it-1,if(it in rotateSet) degrees else 0) }
                             }
-                            context.report(JobProgress(JobStage.RUNNING,2L,2L))
+                            PdfBoxBackend.organize(src,ops,out,context.checkCancellation)
                         }
+                        context.report(JobProgress(JobStage.RUNNING,2L,2L))
                     }
                 }
             }
@@ -257,18 +266,20 @@ import kotlin.math.roundToInt
                 val key="document"
                 context.outputs.find(request.id,key)?.let{ return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
                 val ticket=context.outputs.reserve(request.id,key,name("Compressed.pdf"),"application/pdf")
-                var originalSize=0L
-                var skippedImages=0
-                context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
-                    originalSize=src.length()
-                    skippedImages=compressPdfGuaranteedSmaller(src,ticket.stageFile,s.optInt("maxDpi",150),s.optInt("jpegQuality",80),s.optLong("targetBytes",0L),context)
-                }
-                // Only measured output bytes decide whether compression saved space.
-                // An already-optimal document stays UNCHANGED even when some images
-                // could not be recompressed; never call that a partial reduction.
-                val verdict=PdfCompressionResultPolicy.classify(originalSize,ticket.stageFile.length(),skippedImages)
-                val record=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf",originalSizeBytes=originalSize) }
-                listOf(ItemOutcome(key,if(verdict.smaller) ItemStatus.CREATED else ItemStatus.UNCHANGED,record.id,verdict.notice))
+                try {
+                    var originalSize=0L
+                    var skippedImages=0
+                    context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
+                        originalSize=src.length()
+                        skippedImages=compressPdfGuaranteedSmaller(src,ticket.stageFile,s.optInt("maxDpi",150),s.optInt("jpegQuality",80),s.optLong("targetBytes",0L),context)
+                    }
+                    // Only measured output bytes decide whether compression saved space.
+                    // An already-optimal document stays UNCHANGED even when some images
+                    // could not be recompressed; never call that a partial reduction.
+                    val verdict=PdfCompressionResultPolicy.classify(originalSize,ticket.stageFile.length(),skippedImages)
+                    val record=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf",originalSizeBytes=originalSize) }
+                    listOf(ItemOutcome(key,if(verdict.smaller) ItemStatus.CREATED else ItemStatus.UNCHANGED,record.id,verdict.notice))
+                } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
             }
             "stamp" -> {
                 val text=s.optString("text","")
@@ -348,8 +359,12 @@ import kotlin.math.roundToInt
                             val openPw=(user.ifEmpty { owner }).toCharArray()
                             try {
                                 val opened=try { PdfBoxBackend.open(src,if(remove) openPw else null) }
-                                catch(_: InvalidPasswordException) { throw OperationFailure("PDF_PASSWORD_INCORRECT") }
+                                catch(_: InvalidPasswordException) { throw OperationFailure(if (remove) "PDF_PASSWORD_INCORRECT" else "PDF_ENCRYPTED") }
+                                catch(failure: java.io.FileNotFoundException) { throw failure }
+                                catch(_: java.io.IOException) { throw OperationFailure("PDF_INVALID") }
                                 opened.use{ doc ->
+                                    context.checkCancellation()
+                                    if(doc.numberOfPages<=0) throw OperationFailure("EMPTY_PDF")
                                     if(remove) PdfBoxBackend.removeProtection(doc,out)
                                     else {
                                         require(owner.isNotEmpty()){"OWNER_PASSWORD_REQUIRED"}
@@ -398,12 +413,14 @@ import kotlin.math.roundToInt
         val key="document"
         context.outputs.find(request.id,key)?.let{ return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
         val ticket=context.outputs.reserve(request.id,key,display,"application/pdf")
-        var originalSize:Long?=null
-        context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
-            originalSize=src.length()
-            openUnencrypted(src).use{ block(it,ticket.stageFile) }
-        }
-        val record=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf",originalSizeBytes=originalSize) }
+        val record=try {
+            var originalSize:Long?=null
+            context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
+                originalSize=src.length()
+                openUnencrypted(src).use{ block(it,ticket.stageFile) }
+            }
+            context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf",originalSizeBytes=originalSize) }
+        } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
         return listOf(ItemOutcome(key,ItemStatus.CREATED,record.id))
     }
 
@@ -416,10 +433,12 @@ import kotlin.math.roundToInt
         val chosenName = settings.displayName.trim().takeUnless { it.isEmpty() || it == "Images.pdf" || it == "download.bin" }
             ?: firstSourceName?.let { AutoOutputName.fromSource("pdf_02", it) } ?: "Images.pdf"
         val ticket=context.outputs.reserve(request.id,"document",SafeNames.basename(chosenName.let { if(it.endsWith(".pdf",true)) it else "$it.pdf" }),"application/pdf")
+        try {
         var totalInputBytes=0L
         PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { outDoc ->
             for ((index, id) in request.sourceIds.withIndex()) {
                 context.checkCancellation()
+                require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                 context.sources.withSeekable(id,request.id) { file ->
                     totalInputBytes+=file.length()
                     BitmapTransforms.decode(file,context.budget.maxBitmapBytes).use { decoded ->
@@ -441,6 +460,7 @@ import kotlin.math.roundToInt
                             try {
                                 val canvas=Canvas(pageBmp)
                                 canvas.drawColor(Color.WHITE)
+                                pageBmp.setHasAlpha(false)
                                 val mPx=pageMargin*renderScale
                                 val left=placement.leftPt*renderScale; val top=placement.topPt*renderScale
                                 val dw=placement.widthPt*renderScale; val dh=placement.heightPt*renderScale
@@ -466,11 +486,13 @@ import kotlin.math.roundToInt
                 context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),request.sourceIds.size.toLong()))
             }
             context.checkCancellation()
+            require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
             context.report(JobProgress(JobStage.FINALIZING,request.sourceIds.size.toLong(),request.sourceIds.size.toLong()))
             outDoc.save(ticket.stageFile)
         }
         val record=context.outputs.publish(ticket) { file -> context.outputs.inspect(file,"application/pdf",originalSizeBytes=totalInputBytes).also { require(it.pageCount==request.sourceIds.size) { "PDF_VERIFY_FAILED" } } }
         return listOf(ItemOutcome("document",ItemStatus.CREATED,record.id))
+        } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
     }
 
     private suspend fun pagesToImages(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
@@ -510,6 +532,7 @@ import kotlin.math.roundToInt
                                 if(settings.grayscale) {
                                     val rowPixels=IntArray(width)
                                     for(y in 0 until height) {
+                                        if (y and 63 == 0) context.checkCancellation()
                                         bitmap.getPixels(rowPixels,0,width,0,y,width,1)
                                         for(x in 0 until width) {
                                             val c=rowPixels[x]
@@ -520,7 +543,7 @@ import kotlin.math.roundToInt
                                     }
                                 }
                                 context.checkCancellation()
-                                BitmapTransforms.encode(bitmap,target,ImageConversionSettings(format=settings.format,quality=settings.quality),context.budget.maxBitmapBytes)
+                                BitmapTransforms.encode(bitmap,target,ImageConversionSettings(format=settings.format,quality=settings.quality),context.budget.maxBitmapBytes,context.checkCancellation)
                             } finally { bitmap.recycle() }
                         }
                     }

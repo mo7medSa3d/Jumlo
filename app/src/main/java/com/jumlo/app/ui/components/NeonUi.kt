@@ -1,19 +1,14 @@
 package com.jumlo.app.ui.components
 
 import kotlinx.coroutines.ensureActive
-
 import kotlinx.coroutines.currentCoroutineContext
-
 import com.jumlo.app.data.pdf.PdfRendererFactory
-
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
 import com.jumlo.app.ui.icons.rounded.*
@@ -38,7 +33,6 @@ import coil.request.ImageRequest
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.model.UtilityTool
-import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.ToolPalette
@@ -65,8 +59,8 @@ fun NeonPanel(
         shape = QuietTheme.shapes.card,
         color = accent?.let { ToolPalette.mix(pillars.cardSurface, it, .04f) }
             ?: pillars.cardSurface,
-        border = BorderStroke(1.dp, pillars.cardBorder),
-        shadowElevation = 2.dp
+        border = null,
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(QuietTheme.spacing.cardInteriorPadding),
@@ -91,7 +85,7 @@ fun NeonSectionHeader(
             maxLines = 1, overflow = TextOverflow.Ellipsis
         )
         if (action != null && onAction != null) {
-            TextButton(onClick = onAction, modifier = Modifier.pressFeedback()) {
+            TextButton(onClick = onAction, modifier = Modifier.pressFeedback().sizeIn(minHeight = 48.dp)) {
                 Text(action, style = QuietTheme.typography.metadataStrong)
                 Spacer(Modifier.width(4.dp))
                 Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(17.dp))
@@ -117,19 +111,22 @@ fun NeonToolTile(
         onClick = { haptics.actionClick(); onClick() },
         modifier = modifier.fillMaxWidth().pressFeedback()
             .heightIn(min = if (compact) 116.dp else 126.dp),
-        shape = RoundedCornerShape(18.dp),
+        shape = QuietTheme.shapes.innerPanel,
         color = pillars.cardSurface,
-        border = BorderStroke(1.dp, pillars.cardBorder),
-        shadowElevation = 1.dp
+        border = null,
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(Modifier.size(if (compact) 48.dp else 54.dp)
-                .background(iconSurface, RoundedCornerShape(JumloRadii.indicator)),
-                contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .size(if (compact) 48.dp else 54.dp)
+                    .background(iconSurface, QuietTheme.shapes.iconTile),
+                contentAlignment = Alignment.Center
+            ) {
                 ModernToolIcon(tool.iconName, tint,
                     Modifier.size(if (compact) 25.dp else 27.dp))
             }
@@ -145,9 +142,8 @@ fun NeonToolTile(
 }
 
 /**
- * Shows image and PDF previews from the actual persisted output URI.
- * PDF page 0 is rasterized off the UI thread with a strict bitmap bound.
- * Other file types display a semantic icon; there are no fake thumbnails.
+ * Shows image and PDF previews from the actual persisted output URI, paired with
+ * crisp iOS-style layered file type tiles and extension badges for every format.
  */
 @Composable
 fun NeonOutputPreview(
@@ -156,8 +152,32 @@ fun NeonOutputPreview(
 ) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     val isPdf = output.mimeType.equals("application/pdf", ignoreCase = true)
     val isImage = output.mimeType.startsWith("image/")
+    val isVideo = output.mimeType.startsWith("video/")
+    val isAudio = output.mimeType.startsWith("audio/")
+    val isZip = output.mimeType.contains("zip", ignoreCase = true)
+    val extBadge = remember(output.displayName, output.mimeType) {
+        val ext = output.displayName.substringAfterLast('.', "").uppercase().take(4)
+        when {
+            ext.isNotBlank() && ext.all { it.isLetterOrDigit() } -> ext
+            isPdf -> "PDF"
+            isZip -> "ZIP"
+            isVideo -> "VID"
+            isAudio -> "AUD"
+            isImage -> "IMG"
+            else -> "DOC"
+        }
+    }
+    val (tileAccent, tileBg) = when {
+        isPdf -> pillars.pdfPrimary to pillars.pdfContainer
+        isImage -> pillars.imagesPrimary to pillars.imagesContainer
+        isZip -> pillars.filesPrimary to pillars.filesContainer
+        isVideo || isAudio -> pillars.downloadsPrimary to pillars.downloadsContainer
+        else -> colors.primary to colors.primaryContainer
+    }
+
     val pdfBitmap by produceState<Bitmap?>(null, output.uri, isPdf) {
         value = if (!isPdf) null else withContext(Dispatchers.IO) {
             val coroutine = currentCoroutineContext()
@@ -168,9 +188,15 @@ fun NeonOutputPreview(
                             val width = 240
                             val height = (width * (page.height.toFloat() / page.width.coerceAtLeast(1)))
                                 .roundToInt().coerceIn(80, 360)
-                            Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+                            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            try {
                                 bitmap.eraseColor(AndroidColor.WHITE)
                                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                coroutine.ensureActive()
+                                bitmap
+                            } catch (t: Throwable) {
+                                bitmap.recycle()
+                                throw t
                             }
                         }
                     }
@@ -183,8 +209,9 @@ fun NeonOutputPreview(
     DisposeOwnedPreviewBitmap(pdfBitmap)
     val renderedPdf = pdfBitmap
     Box(
-        modifier = modifier.clip(RoundedCornerShape(JumloRadii.indicator))
-            .background(colors.surfaceContainerHigh),
+        modifier = modifier
+            .clip(QuietTheme.shapes.activeIndicatorPill)
+            .background(tileBg),
         contentAlignment = Alignment.Center
     ) {
         when {
@@ -198,19 +225,44 @@ fun NeonOutputPreview(
                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
                 )
             }
-            isPdf && renderedPdf != null -> androidx.compose.foundation.Image(
-                bitmap = renderedPdf.asImageBitmap(),
-                contentDescription = output.displayName,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
-            )
-            else -> Icon(
-                when {
-                    isPdf -> Icons.Rounded.PictureAsPdf
-                    output.mimeType.startsWith("video/") -> Icons.Rounded.Movie
-                    output.mimeType.startsWith("audio/") -> Icons.Rounded.AudioFile
-                    else -> Icons.Rounded.InsertDriveFile
-                }, contentDescription = output.displayName,
-                tint = colors.primary, modifier = Modifier.size(40.dp)
+            isPdf && renderedPdf != null && !renderedPdf.isRecycled -> {
+                val imageBitmap = remember(renderedPdf) { renderedPdf.asImageBitmap() }
+                androidx.compose.foundation.Image(
+                    bitmap = imageBitmap,
+                    contentDescription = output.displayName,
+                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+                )
+            }
+            else -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        when {
+                            isPdf -> Icons.Rounded.PictureAsPdf
+                            isVideo -> Icons.Rounded.Movie
+                            isAudio -> Icons.Rounded.AudioFile
+                            isZip -> Icons.Rounded.FolderZip
+                            else -> Icons.Rounded.InsertDriveFile
+                        },
+                        contentDescription = output.displayName,
+                        tint = tileAccent,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+            }
+        }
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(5.dp),
+            shape = QuietTheme.shapes.badge,
+            color = tileAccent.copy(alpha = 0.92f),
+            contentColor = ToolIconColors.glyphOn(tileAccent)
+        ) {
+            Text(
+                text = extBadge,
+                style = QuietTheme.typography.badge,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
             )
         }
     }

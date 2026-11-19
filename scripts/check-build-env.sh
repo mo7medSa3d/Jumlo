@@ -20,7 +20,7 @@ raw_version=$("$jdk/bin/java" -version 2>&1)
 first_line=${raw_version%%$'\n'*}
 full_version=$(printf '%s\n' "$first_line" | sed -E 's/.*"(.*)".*/\1/')
 major=$(printf '%s\n' "$full_version" | sed -E 's/^([0-9]+).*/\1/')
-if [ -n "$major" ] && [ "$major" -gt 21 ] 2>/dev/null; then
+if [ -z "$major" ] || ! [ "$major" -ge 17 ] 2>/dev/null || [ "$major" -gt 21 ] 2>/dev/null; then
   cat >&2 <<MSG
 Jumlo must be built with JDK 17 or 21.
 Gradle is running on JDK ${full_version}.

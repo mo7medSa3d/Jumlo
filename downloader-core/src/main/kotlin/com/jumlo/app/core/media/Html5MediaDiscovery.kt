@@ -26,8 +26,8 @@ object Html5MediaDiscovery {
     private val downloadAttr = Regex("""\bdownload(?:\s|=|>)""", RegexOption.IGNORE_CASE)
     private val numericHost = Regex("[0-9.]+")
     private val jsonUnicode = Regex("""\\u([0-9a-fA-F]{4})""")
-    private val titleTag = Regex("""<title\b[^>]*>([^<]{1,1024})</title\s*>""", RegexOption.IGNORE_CASE)
-    private val htmlEntity = Regex("""&(#x[0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt);""")
+    private val titleTag = Regex("""<title\b[^>]{0,4096}>([^<]{1,1024})</title\s*>""", RegexOption.IGNORE_CASE)
+    private val htmlEntity = Regex("""&(#x[0-9a-fA-F]{1,8}|#[0-9]{1,8}|amp|quot|apos|lt|gt);""")
     private val metaTypes = setOf("og:video", "og:video:url", "og:video:secure_url", "og:audio",
         "og:audio:url", "twitter:player:stream")
 
@@ -42,7 +42,7 @@ object Html5MediaDiscovery {
             val uri = runCatching { HttpPolicy.url(target, allowHttp) }.getOrNull() ?: return
             if (base.scheme == "https" && uri.scheme != "https") return
             if (!safeEmbeddedHost(uri.host.orEmpty())) return
-            val mime = type?.substringBefore(';')?.lowercase(Locale.ROOT)
+            val mime = type?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
             val pathExt = uri.path.substringAfterLast('/').substringAfterLast('.', "").lowercase(Locale.ROOT)
             // Signature-only URLs are *candidates*, never classified as a playable file
             // until a later HTTPS HEAD/Range response confirms an actual media MIME.

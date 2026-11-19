@@ -55,10 +55,10 @@ class Prism2026LaunchIconChecks(unittest.TestCase):
         tiles=read('ui/components/NeonUi.kt')
         segment=tiles.split('fun NeonToolTile(',1)[1].split('fun NeonOutputPreview(',1)[0]
         self.assertIn('ToolIconColors.iconColorFor(tool.id)',segment)
-        self.assertIn('BorderStroke(1.dp, pillars.cardBorder)',segment)
-        self.assertIn('shadowElevation = 1.dp',segment)
+        self.assertIn('color = pillars.cardSurface',segment)
+        self.assertIn('shadowElevation = 0.dp',segment)
         self.assertIn('else -> 2',tools)
-        self.assertTrue('heightIn(min = 122.dp)' in tools or 'heightIn(min = 176.dp)' in tools)
+        self.assertTrue('heightIn(min = 126.dp)' in tools or 'heightIn(min = 122.dp)' in tools or 'heightIn(min = 176.dp)' in tools)
         self.assertIn('CapabilityRegistry.enabled(it.id)',tools)
     def test_brand_uses_the_active_launcher_theme_and_simple_topbar(self):
         for name in ['ic_launcher_foreground.xml','ic_launcher_monochrome.xml',

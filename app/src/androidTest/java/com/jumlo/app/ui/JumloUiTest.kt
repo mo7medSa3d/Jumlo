@@ -29,11 +29,11 @@ class JumloUiTest {
         }
     }
 
-    @Test fun downloadManagerIsReachableWithoutAnActiveJobAndBackReturnsHome() {
-        compose.onNodeWithTag("home.manageDownloads").performScrollTo().performClick()
-        compose.onNodeWithTag("route.downloads").assertIsDisplayed()
+    @Test fun homeQuickActionOpensWorkspaceAndBackReturnsHome() {
+        compose.onNodeWithTag("home.action.compress").performScrollTo().performClick()
+        compose.onNodeWithTag("route.workspace").assertIsDisplayed()
         compose.onNodeWithTag("nav.DOWNLOADS").assertDoesNotExist()
-        compose.onNodeWithTag("nav.HOME").assertIsSelected()
+        compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
         pressBack()
         compose.onNodeWithTag("home.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.HOME").assertIsSelected()
@@ -76,8 +76,7 @@ class JumloUiTest {
             assertNoInspectedFormats()
 
             val retryHint = compose.activity.getString(R.string.redesign_download_retry_hint)
-            // Loading/error is the next lazy item after the hero and link input.
-            workspaceList().performScrollToIndex(2)
+            // Loading/error is index 1 directly below the link input item.
             compose.waitUntil(30_000) {
                 compose.onAllNodesWithText(retryHint).fetchSemanticsNodes().isNotEmpty()
             }
@@ -114,18 +113,15 @@ class JumloUiTest {
         toolsSearch().assertTextEquals("pdf")
     }
 
-    @Test fun settingsShortcutAndStorageBackReturnToTheCallingScreen() {
-        compose.onNodeWithTag("nav.FILES").performClick()
-        compose.onNodeWithContentDescription(compose.activity.getString(R.string.settings_title)).performClick()
-        compose.onNodeWithTag("route.settings_detail").assertIsDisplayed()
+    @Test fun settingsTabAndStorageBackReturnToSettings() {
+        compose.onNodeWithTag("nav.SETTINGS").performClick()
+        compose.onNodeWithTag("settings.screen").assertIsDisplayed()
         compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.storage"))
         compose.onNodeWithTag("settings.storage").performClick()
         compose.onNodeWithTag("storage.screen").assertIsDisplayed()
         pressBack()
-        compose.onNodeWithTag("route.settings_detail").assertIsDisplayed()
-        pressBack()
-        compose.onNodeWithTag("files.screen").assertIsDisplayed()
-        compose.onNodeWithTag("nav.FILES").assertIsSelected()
+        compose.onNodeWithTag("settings.screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav.SETTINGS").assertIsSelected()
     }
 
     @Test fun existingDownloadSessionSurvivesTabsAndFreshEntryIsEmpty() {

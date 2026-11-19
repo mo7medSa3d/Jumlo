@@ -48,11 +48,17 @@ internal fun ImageComparisonPreview(original:Bitmap,edited:Bitmap) {
                     change.consume();split=if(rtl) 1f-physical else physical
                 }
             }) {
-            if(!edited.isRecycled) Image(edited.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-            if(!original.isRecycled) Image(original.asImageBitmap(),null,Modifier.fillMaxSize().drawWithContent {
+            if(!edited.isRecycled) {
+                val editedBitmap=remember(edited) {edited.asImageBitmap()}
+                Image(editedBitmap,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            }
+            if(!original.isRecycled) {
+                val originalBitmap=remember(original) {original.asImageBitmap()}
+                Image(originalBitmap,null,Modifier.fillMaxSize().drawWithContent {
                 val boundary=size.width*(if(rtl) 1f-split else split)
                 clipRect(left=if(rtl) boundary else 0f,right=if(rtl) size.width else boundary) {this@drawWithContent.drawContent()}
             },contentScale=ContentScale.Fit)
+            }
             Canvas(Modifier.fillMaxSize()) {
                 val x=size.width*(if(rtl) 1f-split else split)
                 drawLine(Color.Black.copy(alpha=.35f),Offset(x,0f),Offset(x,size.height),5.dp.toPx())

@@ -1,22 +1,19 @@
 package com.jumlo.app.ui.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
@@ -25,14 +22,12 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.NeonPanel
 import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
-import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.QuietTheme
 
 @Composable fun StorageScreen(vm: AppViewModel, onChooseFolder: () -> Unit, onOpenFolder: () -> Unit) {
     val usage by vm.storage.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val system = LocalColorSystem.current
     LaunchedEffect(Unit) { vm.refreshStorage() }
     val categories = remember(usage) {
         listOf(R.string.storage_imports to usage.sources, R.string.storage_results to usage.outputs,
@@ -52,42 +47,34 @@ import com.jumlo.app.ui.theme.QuietTheme
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item("storage-hero") {
+                val colors = MaterialTheme.colorScheme
+                val pillars = QuietTheme.pillars
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = system.splashMid,
-                    shadowElevation = 4.dp,
+                    shape = QuietTheme.shapes.heroCard,
+                    color = pillars.cardSurface,
+                    shadowElevation = 0.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(system.splashStart, system.splashMid, system.splashEnd)
-                                )
-                            )
+                    Column(
+                        Modifier.fillMaxWidth().padding(22.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(22.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                stringResource(R.string.modern_storage_usage),
-                                style = QuietTheme.typography.metadataStrong,
-                                color = Color.White.copy(alpha = 0.85f),
-                                modifier = Modifier.semantics { heading() }
-                            )
-                            Text(
-                                formatBytes(total),
-                                style = QuietTheme.typography.display,
-                                color = Color.White
-                            )
-                            Text(
-                                stringResource(R.string.storage_scope),
-                                style = QuietTheme.typography.metadata,
-                                color = Color.White.copy(alpha = 0.86f)
-                            )
-                        }
+                        Text(
+                            stringResource(R.string.modern_storage_usage),
+                            style = QuietTheme.typography.metadataStrong,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.semantics { heading() }
+                        )
+                        Text(
+                            formatBytes(total),
+                            style = QuietTheme.typography.display.copy(textDirection = TextDirection.Ltr),
+                            color = colors.onSurface
+                        )
+                        Text(
+                            stringResource(R.string.storage_scope),
+                            style = QuietTheme.typography.metadata,
+                            color = colors.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -144,7 +131,7 @@ import com.jumlo.app.ui.theme.QuietTheme
                 modifier = Modifier.weight(1f),
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
             )
-            Text(formatBytes(bytes), style = QuietTheme.typography.metadataStrong)
+            Text(formatBytes(bytes), style = QuietTheme.typography.metadataStrong.copy(textDirection = TextDirection.Ltr))
         }
         LinearProgressIndicator(
             progress = { if (total > 0L) (bytes.toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f },

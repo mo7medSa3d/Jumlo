@@ -39,12 +39,16 @@ object PageSelection {
     fun groups(value: String, count: Int): List<List<Int>> =
         parseRanges(value, count, enforceExpandedLimit = true).map { it.toList() }
 
-    private fun normalize(value: String): String = value.map { c -> when (c) {
-        in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
-        in '\u06f0'..'\u06f9' -> '0' + (c - '\u06f0')
-        '\u060c' -> ','
-        else -> c
-    } }.joinToString("")
+    private fun normalize(value: String): String = buildString(value.length) {
+        for (c in value) append(
+            when (c) {
+                in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
+                in '\u06f0'..'\u06f9' -> '0' + (c - '\u06f0')
+                '\u060c' -> ','
+                else -> c
+            }
+        )
+    }
 
     fun parse(value: String, count: Int): List<Int> {
         val maxUniquePages = 100_000
@@ -62,6 +66,7 @@ object PageSelection {
     }
     fun groups(count: Int, every: Int): List<List<Int>> {
         require(count > 0 && every > 0) { "INVALID_SPLIT_SIZE" }
+        require(count <= 100_000) { "PAGE_SELECTION_LIMIT" }
         return (1..count).toList().chunked(every)
     }
 }
@@ -138,7 +143,7 @@ object SafeNames {
         val safe = basename(desired)
         val folded = existing.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
         if (safe.lowercase(Locale.ROOT) !in folded) return safe
-        val dot = safe.lastIndexOf('.').takeIf { it > 0 } ?: safe.length
+        val dot = safe.lastIndexOf('.').takeIf { it > 0 && safe.length - it <= 16 && safe.substring(it).toByteArray(Charsets.UTF_8).size <= 64 } ?: safe.length
         val suffixPart = safe.drop(dot)
         for (n in 1..100000) {
             val counterPart = " ($n)$suffixPart"
@@ -168,17 +173,24 @@ data class Box(val left: Double, val top: Double, val right: Double, val bottom:
     val width: Double get() = right - left
     val height: Double get() = bottom - top
     fun normalized(): Box {
-        require(listOf(left,top,right,bottom).all { it.isFinite() && it in 0.0..1.0 } && width > 0 && height > 0) { "INVALID_CROP" }
+        require(
+            left.isFinite() && left in 0.0..1.0 &&
+                top.isFinite() && top in 0.0..1.0 &&
+                right.isFinite() && right in 0.0..1.0 &&
+                bottom.isFinite() && bottom in 0.0..1.0 &&
+                width > 0 && height > 0
+        ) { "INVALID_CROP" }
         return this
     }
 }
 data class Geometry(val width: Int, val height: Int, val crop: Box, val draw: Box)
 
 object ImageGeometry {
+    private val FULL_BOX = Box(0.0, 0.0, 1.0, 1.0)
     fun resolve(sw: Int, sh: Int, w: Int, h: Int, mode: FitMode, upscale: Boolean): Geometry {
         require(sw > 0 && sh > 0 && w > 0 && h > 0) { "INVALID_DIMENSIONS" }
         var ow = w; var oh = h
-        val full = Box(0.0,0.0,1.0,1.0)
+        val full = FULL_BOX
         if (mode == FitMode.FIT) {
             val scale = min(w.toDouble()/sw,h.toDouble()/sh).let { if(upscale) it else min(1.0,it) }
             ow = max(1,(sw*scale).roundToInt()); oh = max(1,(sh*scale).roundToInt())

@@ -8,8 +8,8 @@ object PdfOverlaySourcePolicy {
         require(sources.size == 2 && sources.map { it.first }.distinct().size == 2) {
             "PDF_AND_IMAGE_REQUIRED"
         }
-        val pdf = sources.singleOrNull { it.second == "application/pdf" }?.first
-        val image = sources.singleOrNull { it.second?.startsWith("image/") == true }?.first
+        val pdf = sources.singleOrNull { it.second.equals("application/pdf", ignoreCase = true) }?.first
+        val image = sources.singleOrNull { it.second?.startsWith("image/", ignoreCase = true) == true }?.first
         require(pdf != null && image != null) { "PDF_AND_IMAGE_REQUIRED" }
         return listOf(pdf, image)
     }

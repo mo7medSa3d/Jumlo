@@ -13,7 +13,9 @@ object OcrTextPolicy {
     fun sanitizeForLayer(text:String):List<String> {
         return text.lines()
             .flatMap { line ->
-                val ascii = line.map { if (it in ' '..'~') it else ' ' }.joinToString("").trim()
+                val ascii = buildString(line.length) {
+                    for (ch in line) append(if (ch in ' '..'~') ch else ' ')
+                }.trim()
                 if (ascii.isEmpty()) emptyList() else ascii.chunked(480)
             }
             .take(195)

@@ -200,8 +200,8 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_settings_are_focused_and_keep_real_quality_defaults(self):
         code = source('settings/SettingsScreen.kt')
-        for tag in ('settings.theme','settings.language','settings.videoQuality',
-                    'settings.audioQuality','settings.storage','settings.cache','settings.about'):
+        for tag in ('settings.theme','settings.language',
+                    'settings.storage','settings.cache','settings.about'):
             self.assertIn(tag,code)
         for obsolete in ('setWifiOnlyDefault','setMaxConcurrentDownloads','mediaServerUrl','allowHttp'):
             self.assertNotIn(obsolete,code)
@@ -209,8 +209,9 @@ class PremiumUxContracts(unittest.TestCase):
         # reduce-motion rows are gone; the stored preferences stay.
         self.assertNotIn('viewModel.setHapticIntensity',code)
         self.assertNotIn('viewModel.setRespectReducedMotion',code)
-        self.assertIn('viewModel.setDefaultVideoQuality(choices[it])',code)
-        self.assertIn('viewModel.setDefaultAudioQuality(choices[it])',code)
+        self.assertNotIn('settings.videoQuality',code)
+        self.assertNotIn('settings.audioQuality',code)
+        self.assertIn('PreferenceGroup',code)
         self.assertIn('viewModel.cleanTemporary()',code)
 
     def test_file_import_is_distinct_primary_action(self):
@@ -218,8 +219,8 @@ class PremiumUxContracts(unittest.TestCase):
         heading = code[code.index('item("heading")'):code.index('item("search")')]
         self.assertIn('QuietPrimaryButton(', heading)
         self.assertIn('onClick=onImport', heading)
-        self.assertIn('SaveFolderCard(settings.downloadDestinationFolder, onChangeSaveFolder, onSavedFolder)', heading)
-        self.assertIn('onStorage()',heading)
+        self.assertIn('QuietPrimaryButton(text=stringResource(R.string.import_device_files)', heading)
+        self.assertIn('onImport',heading)
 
     def test_media_workspace_is_readable_on_large_displays_and_uses_url_keyboard(self):
         code = source('downloads/MediaWorkspace.kt')

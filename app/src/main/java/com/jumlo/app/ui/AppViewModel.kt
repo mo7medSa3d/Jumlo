@@ -47,6 +47,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -235,7 +236,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     private val _sessionEpoch=MutableStateFlow(0L)
     val sessionEpoch=_sessionEpoch.asStateFlow()
     private val submitting=AtomicBoolean(false)
-    private var storageRefresh:Job?=null
+    private val storageRefresh=AtomicReference<Job?>(null)
     private var lastFingerprint:String?=null
     private var lastJobId:String?=null
     private val submissionReset=SubmissionResetGate(operationScope) {
@@ -602,7 +603,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 rollback()
                 _message.value=stableError(error)
             } finally {
-                selected.forEach { it.delete() }
+                withContext(NonCancellable + Dispatchers.IO) { selected.forEach { it.delete() } }
                 endBusy()
             }
         }
@@ -638,6 +639,10 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     }
 
     fun toggleOutputFavorite(id:String) = savePreference { preferences.toggleFavoriteOutput(id) }
+    fun createFileFolder(name:String) = savePreference { preferences.createFileFolder(name) }
+    fun renameFileFolder(folderId:String,name:String) = savePreference { preferences.renameFileFolder(folderId,name) }
+    fun deleteFileFolder(folderId:String) = savePreference { preferences.deleteFileFolder(folderId) }
+    fun moveOutputsToFolder(outputIds:Collection<String>,folderId:String?) = savePreference { preferences.moveOutputsToFolder(outputIds,folderId) }
 
     /** Reuse an immutable imported source in an operation that actually accepts its MIME type. */
     fun prepareSourceWorkflow(sourceId:String,onReady:()->Unit) { operationScope.launch {
@@ -828,8 +833,8 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 val previousJobId=lastJobId; if(lastFingerprint==fingerprint && previousJobId!=null) { onQueued(previousJobId); return@launch }
                 newHandle=when {
                     download -> effectiveUrlText.toCharArray().let { chars -> try { secrets.putDownload(chars) } finally { chars.fill('\u0000') } }
-                    state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
-                    state.toolId=="file_encrypted_zip" -> secrets.put(state.secret1.toCharArray())
+                    state.toolId=="pdf_protect" -> (state.secret1+"\n"+state.secret2).toCharArray().let { chars -> try { secrets.put(chars) } finally { chars.fill('\u0000') } }
+                    state.toolId=="file_encrypted_zip" -> state.secret1.toCharArray().let { chars -> try { secrets.put(chars) } finally { chars.fill('\u0000') } }
                     else -> null
                 }
                 val settings=state.executionSettings(newHandle)
@@ -1011,7 +1016,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         catch(_:Exception) { _message.value="CLEANUP_FAILED" }
         finally { endBusy() }
     } }
-    fun refreshStorage() { storageRefresh?.cancel();storageRefresh=operationScope.launch(Dispatchers.IO) {
+    fun refreshStorage() { storageRefresh.getAndSet(operationScope.launch(Dispatchers.IO) {
         val context=currentCoroutineContext()
         fun bytes(file:File):Long { var total=0L;file.walkTopDown().forEach { context.ensureActive();if(it.isFile) total+=it.length() };return total }
         _storage.value=StorageUsage(
@@ -1021,7 +1026,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
             bytes(app.cacheDir),
             bytes(File(app.filesDir,"processing/trash"))
         )
-    } }
+    })?.cancel() }
     suspend fun preview(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 1600)
 
     /** Reads only a verified app-owned output, never a caller supplied path or provider URI. */

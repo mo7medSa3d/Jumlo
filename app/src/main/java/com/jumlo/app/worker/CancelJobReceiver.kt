@@ -8,7 +8,9 @@ import com.jumlo.app.diagnostics.AppDiagnostics
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 /** Non-exported: cancellation is persisted before WorkManager is stopped, preventing recovery restarts. */
@@ -22,7 +24,8 @@ class CancelJobReceiver:BroadcastReceiver() {
         } ?: return
         val pending=goAsync()
         CoroutineScope(Dispatchers.IO).launch {
-            try { jobs.cancel(jobId) }
+            try { withTimeout(8_000L) { jobs.cancel(jobId) } }
+            catch(timeout:TimeoutCancellationException) { AppDiagnostics.report("worker_cancel",timeout); android.util.Log.w("JobCancellation","Cancellation timed out") }
             catch(cancel:kotlinx.coroutines.CancellationException) { throw cancel }
             catch(error:Exception) { AppDiagnostics.report("worker_cancel",error); android.util.Log.w("JobCancellation","Cancellation could not be persisted") }
             finally { pending.finish() }

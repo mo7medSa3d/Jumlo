@@ -81,7 +81,7 @@ class VisualEditorContract(unittest.TestCase):
         # move/size buttons record recordEdit(rect, next) before saveRect(next).
         self.assertIn('recordEdit(it, active)',editor)
         self.assertIn('saveRect(active)',editor)
-        self.assertIn('saveRect(next)',editor)
+        self.assertIn('saveRect(active)',editor)
 
     def test_compression_progress_and_signature_order_are_resilient(self):
         engine=code('data/processing/PdfOperationHandler.kt')

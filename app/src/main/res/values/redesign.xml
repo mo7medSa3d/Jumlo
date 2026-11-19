@@ -28,7 +28,7 @@
     <string name="redesign_tools_subtitle">Work locally on your documents and images.</string>
     <string name="redesign_saved_outputs">Your recent work</string>
     <string name="redesign_storage_path">Default: Download / Jumlo</string>
-    <string name="redesign_platform_unavailable">This link cannot be analyzed on this device yet.</string>
+    <string name="redesign_platform_unavailable">This link cannot be analyzed on this device yet. Paste a direct file link instead.</string>
     <string name="redesign_quality_balanced">Balanced · up to 1080p</string>
     <string name="redesign_quality_best">Best available</string>
     <string name="redesign_quality_saver">Save data · up to 480p</string>

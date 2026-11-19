@@ -9,8 +9,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Search
 import androidx.compose.material3.*
@@ -37,11 +35,11 @@ import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
-import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.util.AppHaptics
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 /** Every available tool has one tile; the catalogue is grouped into sections and
@@ -52,7 +50,7 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     var search by rememberSaveable { mutableStateOf("") }
     var showAllTools by rememberSaveable { mutableStateOf(false) }
     val eligible = remember { CapabilityRegistry.tools.filter {
-        CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id) && com.jumlo.app.core.ToolCatalogue.isListed(it.id)
+        CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id) && ToolCatalogue.isListed(it.id)
     } }
     ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
         settings.quickActionIds, settings.recentToolIds, search, { search = it },
@@ -89,34 +87,22 @@ private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
 private fun SectionHeader(title: String, count: Int? = null) {
     val colors = MaterialTheme.colorScheme
     Row(
-        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+        Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 14.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Box(
-            Modifier
-                .width(3.dp)
-                .height(16.dp)
-                .background(colors.primary, CircleShape)
-        )
         Text(
             title,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = colors.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier.weight(1f).semantics { heading() }
         )
         count?.let {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = colors.primaryContainer
-            ) {
-                Text(
-                    it.toString(),
-                    color = colors.onPrimaryContainer,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp)
-                )
-            }
+            Text(
+                it.toString(),
+                color = colors.onSurfaceVariant.copy(alpha = 0.72f),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+            )
         }
     }
 }
@@ -168,14 +154,17 @@ internal fun ToolsCatalogue(
     val availableSections = remember(filtered) {
         toolSections.filter { section -> filtered.any { it.id in section.ids } }
     }
-    val (sectionedTools, ungroupedTools) = remember(filtered, featuredIds, selectedSectionKey) {
-        val remaining = if (selectedSectionKey == null) filtered.filter { it.id !in featuredIds } else filtered
+    val effectiveSectionKey = remember(selectedSectionKey, availableSections) {
+        selectedSectionKey?.takeIf { key -> availableSections.any { it.key == key } }
+    }
+    val (sectionedTools, ungroupedTools) = remember(filtered, featuredIds, effectiveSectionKey) {
+        val remaining = if (effectiveSectionKey == null) filtered.filter { it.id !in featuredIds } else filtered
         val sections = toolSections.mapNotNull { section ->
-            if (selectedSectionKey != null && section.key != selectedSectionKey) return@mapNotNull null
+            if (effectiveSectionKey != null && section.key != effectiveSectionKey) return@mapNotNull null
             val matching = remaining.filter { it.id in section.ids }
             if (matching.isEmpty()) null else section to matching
         }
-        val ungrouped = if (selectedSectionKey == null) {
+        val ungrouped = if (effectiveSectionKey == null) {
             remaining.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
         } else emptyList()
         sections to ungrouped
@@ -198,21 +187,6 @@ internal fun ToolsCatalogue(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item("catalogue-intro", span = { GridItemSpan(maxLineSpan) }) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        stringResource(R.string.tools_catalogue_title),
-                        style = QuietTheme.typography.screenTitle,
-                        color = colors.onSurface,
-                        modifier = Modifier.semantics { heading() }
-                    )
-                    Text(
-                        stringResource(R.string.tools_catalogue_subtitle),
-                        style = QuietTheme.typography.metadata,
-                        color = colors.onSurfaceVariant
-                    )
-                }
-            }
             item("search", span = { GridItemSpan(maxLineSpan) }) {
                 QuietSearchBar(search, stringResource(R.string.neon_tools_search),
                     onSearch, { onSearch("") }, modifier=Modifier.testTag("tools.search"))
@@ -226,26 +200,27 @@ internal fun ToolsCatalogue(
                         selectedContainerColor = colors.primaryContainer,
                         selectedLabelColor = colors.onPrimaryContainer
                     )
+                    val activeChipBorder = remember(colors.primary) { BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)) }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item("cat-all", contentType = "category-chip") {
-                            val active = selectedSectionKey == null
+                            val active = effectiveSectionKey == null
                             FilterChip(
                                 selected = active,
                                 onClick = { haptics.selectionToggle(); selectedSectionKey = null },
-                                shape = RoundedCornerShape(JumloRadii.thumbnail),
+                                shape = QuietTheme.shapes.pill,
                                 colors = chipColors,
-                                border = if (active) BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)) else BorderStroke(1.dp, pillars.cardBorder),
+                                border = if (active) activeChipBorder else null,
                                 label = { Text(stringResource(R.string.ui_all), style = QuietTheme.typography.metadataStrong) }
                             )
                         }
                         rowItems(availableSections, key = { "cat:${it.key}" }, contentType = { "category-chip" }) { section ->
-                            val active = selectedSectionKey == section.key
+                            val active = effectiveSectionKey == section.key
                             FilterChip(
                                 selected = active,
                                 onClick = { haptics.selectionToggle(); selectedSectionKey = if (active) null else section.key },
-                                shape = RoundedCornerShape(JumloRadii.thumbnail),
+                                shape = QuietTheme.shapes.pill,
                                 colors = chipColors,
-                                border = if (active) BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)) else BorderStroke(1.dp, pillars.cardBorder),
+                                border = if (active) activeChipBorder else null,
                                 label = { Text(sectionTitle(section, language), style = QuietTheme.typography.metadataStrong) }
                             )
                         }
@@ -269,16 +244,16 @@ internal fun ToolsCatalogue(
                         icon = Icons.Rounded.Search)
                 }
                 items(filtered, key = { it.id }, contentType = { "tool" }) { tool ->
-                    ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem())
+                    ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
                 }
             } else {
-                val activeSection = selectedSectionKey
+                val activeSection = effectiveSectionKey
                 if (activeSection == null && pinned.isNotEmpty()) {
                     item("pinned", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(stringResource(R.string.tools_section_pinned), pinned.size)
                     }
                     items(pinned, key = { "pinned:" + it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem())
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
                     }
                 }
                 if (activeSection == null && recent.isNotEmpty()) {
@@ -286,7 +261,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_recent), recent.size)
                     }
                     items(recent, key = { "recent:" + it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem())
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
                     }
                 }
                 for ((section, sectionTools) in sectionedTools) {
@@ -294,7 +269,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(sectionTitle(section, language), sectionTools.size)
                     }
                     items(sectionTools, key = { it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem())
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
                     }
                 }
                 if (ungroupedTools.isNotEmpty()) {
@@ -302,7 +277,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_all), ungroupedTools.size)
                     }
                     items(ungroupedTools, key = { it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem())
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
                     }
                 }
                 if (specialistCount > 0) {
@@ -324,48 +299,42 @@ internal fun ToolsCatalogue(
  * ToolIconColors), never the theme accent — in a warm system every tile
  * used to read as the same orange. Text stays neutral in every theme. */
 @Composable
-internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier, appHaptics: AppHaptics? = null) {
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     val isDark = colors.background.luminance() < 0.5f
-    val accent = ToolIconColors.iconColorFor(tool.id)
-    val iconForeground = ToolIconColors.glyphOn(accent)
+    val accent = remember(tool.id) { ToolIconColors.iconColorFor(tool.id) }
+    val iconForeground = remember(accent) { ToolIconColors.glyphOn(accent) }
     val tileColor = pillars.cardSurface
-    val borderColor = ToolIconColors.mix(pillars.cardBorder, accent, if (isDark) 0.28f else 0.16f)
     val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn
-    val haptics = rememberAppHaptics()
+    val haptics = appHaptics ?: rememberAppHaptics()
     Surface(
         onClick = { haptics.actionClick(); onClick() },
-        modifier = modifier.fillMaxWidth().heightIn(min = 122.dp).pressFeedback().testTag("tool.${tool.id}"),
+        modifier = modifier.fillMaxWidth().heightIn(min = 126.dp).pressFeedback().testTag("tool.${tool.id}"),
         shape = QuietTheme.shapes.card,
         color = tileColor,
         contentColor = colors.onSurface,
-        border = BorderStroke(1.dp, borderColor),
-        shadowElevation = if (isDark) 1.dp else 2.dp
+        border = null,
+        shadowElevation = 0.dp
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(15.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+            Surface(
+                shape = QuietTheme.shapes.iconTile,
+                color = accent,
+                modifier = Modifier.size(48.dp)
             ) {
                 Box(
-                    Modifier.size(42.dp).background(accent, RoundedCornerShape(JumloRadii.thumbnail)),
+                    Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     ToolIcon(
                         tool.id, iconForeground,
-                        Modifier.size(21.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
+                        Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
                     )
                 }
-                Box(
-                    Modifier
-                        .size(7.dp)
-                        .background(accent.copy(alpha = 0.55f), CircleShape)
-                )
             }
             Text(
                 shortToolLabel(tool, language),

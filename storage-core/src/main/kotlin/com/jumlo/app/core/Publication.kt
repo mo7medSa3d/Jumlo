@@ -24,7 +24,7 @@ class DurablePublication(private val root: File) {
     private val results=File(root,"results")
     init { require(root.mkdirs() || root.isDirectory); journal.mkdirs(); results.mkdirs(); staging.mkdirs() }
     private fun identity(job: String,key: String): String {
-        require(UUID.fromString(job).toString()==job && key.isNotBlank() && key.length<=512) { "INVALID_OUTPUT_IDENTITY" }
+        require(runCatching { UUID.fromString(job).toString()==job }.getOrDefault(false) && key.isNotBlank() && key.length<=512) { "INVALID_OUTPUT_IDENTITY" }
         return Hashing.sha256(ByteArrayInputStream("$job\u0000$key".toByteArray(Charsets.UTF_8)))
     }
     private fun <T> locked(block: () -> T): T = lock.withLock {
@@ -68,8 +68,13 @@ class DurablePublication(private val root: File) {
             setProperty("size",record.sizeBytes.toString()); setProperty("sha256",record.sha256); setProperty("created",record.createdAtEpochMs.toString())
         }
         val temp=File(journal,"$key.pending")
-        FileOutputStream(temp).use { data.store(it,"Jumlo publication v1"); it.fd.sync() }
-        Files.move(temp.toPath(),log.toPath(),StandardCopyOption.ATOMIC_MOVE)
+        try {
+            FileOutputStream(temp).use { data.store(it,"Jumlo publication v1"); it.fd.sync() }
+            Files.move(temp.toPath(),log.toPath(),StandardCopyOption.ATOMIC_MOVE)
+        } catch(t: Throwable) {
+            temp.delete()
+            throw t
+        }
         return record
     }
     fun publish(ticket: PublicationTicket): PublishedFile = locked {
@@ -96,7 +101,9 @@ class DurablePublication(private val root: File) {
         val id=field("id"); require(UUID.fromString(id).toString()==id)
         val job=field("job"); val key=field("key"); require(file.name==identity(job,key)+".properties")
         val name=SafeNames.basename(field("name")); val hash=field("sha256"); require(SHA256_HEX.matches(hash))
-        return PublishedFile(id,job,key,File(File(results,id),name),name,field("mime"),field("size").toLong().also { require(it>=0) },hash,field("created").toLong(),p.getProperty("metadata","{}"))
+        val size=requireNotNull(field("size").toLongOrNull()) { "CORRUPT_PUBLICATION_JOURNAL" }.also { require(it>=0) { "CORRUPT_PUBLICATION_JOURNAL" } }
+        val created=requireNotNull(field("created").toLongOrNull()) { "CORRUPT_PUBLICATION_JOURNAL" }
+        return PublishedFile(id,job,key,File(File(results,id),name),name,field("mime"),size,hash,created,p.getProperty("metadata","{}"))
     }
     fun reconcile(): List<PublishedFile> = locked {
         journal.listFiles { f -> f.extension=="properties" }.orEmpty().sortedBy { it.name }.map { f ->

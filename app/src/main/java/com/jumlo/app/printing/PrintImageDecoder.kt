@@ -11,11 +11,11 @@ import java.io.RandomAccessFile
 
 /** Printing may downsample pixels without changing physical page geometry (kept in PrintPageInfo). */
 object PrintImageDecoder {
-    class Decoded(val bitmap:Bitmap):Closeable {override fun close() {bitmap.recycle()}}
+    class Decoded(val bitmap:Bitmap):Closeable {override fun close() {if(!bitmap.isRecycled) bitmap.recycle()}}
     fun decode(file:File):Decoded {
         val bounds=BitmapFactory.Options().apply {inJustDecodeBounds=true}
         BitmapFactory.decodeFile(file.path,bounds)
-        require(bounds.outMimeType in setOf("image/jpeg","image/png","image/webp","image/heic","image/heif")) { "PRINT_UNSUPPORTED" }
+        require(bounds.outMimeType in setOf("image/jpeg","image/png","image/webp","image/heic","image/heif") && bounds.outWidth>0 && bounds.outHeight>0) { "PRINT_UNSUPPORTED" }
         rejectAnimation(file,bounds.outMimeType)
         val options=BitmapFactory.Options().apply {
             inSampleSize=PrintImageBudget.sampleSize(bounds.outWidth,bounds.outHeight)
@@ -54,6 +54,7 @@ object PrintImageDecoder {
                 require(kind !in setOf("acTL","ANIM","ANMF")) { "PRINT_UNSUPPORTED" }
                 val step=8+size+if(mime=="image/png") 4 else size%2
                 require(step>=8 && step<=input.length()-position) { "PRINT_UNSUPPORTED" }
+                if(mime=="image/png" && kind=="IEND") break
                 position+=step
             }
         }

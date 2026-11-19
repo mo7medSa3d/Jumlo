@@ -38,7 +38,7 @@
     <string name="interactive_form_title">حقول النموذج</string>
     <string name="interactive_form_empty">لا يحتوي ملف PDF هذا على حقول مدعومة قابلة للتعبئة.</string>
     <string name="interactive_form_read_only">للقراءة فقط</string>
-    <string name="interactive_form_error">تعذّر تحميل حقول النموذج.</string>
+    <string name="interactive_form_error">تعذّر تحميل حقول النموذج. أعد فتح ملف PDF أو جرّب ملفًا آخر.</string>
     <string name="interactive_form_invalid_draft">القيم المحفوظة لا تتطابق مع حقول ملف PDF هذا. أعد تعيين القيم لتحرير هذا النموذج.</string>
     <string name="interactive_form_reset">إعادة تعيين قيم النموذج</string>
     <string name="interactive_form_options">اختر خياراً</string>

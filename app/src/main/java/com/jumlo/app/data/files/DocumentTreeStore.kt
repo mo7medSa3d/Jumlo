@@ -38,21 +38,26 @@ import kotlin.coroutines.coroutineContext
         if(!root.canRead()) throw OperationFailure("ACCESS_LOST")
         val children=root.listFiles()
         require(children.size<=10000) { "DIRECTORY_ENTRY_BUDGET_EXCEEDED" }
-        DocumentListing(uri,root.name ?: "Folder",children.map { DocumentEntry(it.uri.toString(),it.name ?: "Document",it.type,if(it.isFile) measuredSize(it.uri) else null,it.isDirectory,it.canRead(),it.canWrite(),supports(it.uri,DocumentsContract.Document.FLAG_SUPPORTS_RENAME),supports(it.uri,DocumentsContract.Document.FLAG_SUPPORTS_DELETE)) }.sortedWith(compareByDescending<DocumentEntry> { it.isDirectory }.thenBy { it.name.lowercase() }),root.canWrite())
+        DocumentListing(uri,root.name ?: "Folder",children.map { child ->
+            coroutineContext.ensureActive()
+            val flags=documentFlags(child.uri)
+            DocumentEntry(child.uri.toString(),child.name ?: "Document",child.type,if(child.isFile) measuredSize(child.uri) else null,child.isDirectory,child.canRead(),child.canWrite(),(flags and DocumentsContract.Document.FLAG_SUPPORTS_RENAME.toLong())!=0L,(flags and DocumentsContract.Document.FLAG_SUPPORTS_DELETE.toLong())!=0L)
+        }.sortedWith(compareByDescending<DocumentEntry> { it.isDirectory }.thenBy { it.name.lowercase() }),root.canWrite())
     }
-    private fun supports(uri:Uri,flag:Int):Boolean = runCatching {
+    private fun documentFlags(uri:Uri):Long = runCatching {
         app.contentResolver.query(uri,arrayOf(DocumentsContract.Document.COLUMN_FLAGS),null,null,null)?.use { cursor ->
             val index=cursor.getColumnIndex(DocumentsContract.Document.COLUMN_FLAGS)
-            cursor.moveToFirst() && index>=0 && !cursor.isNull(index) && (cursor.getLong(index) and flag.toLong())!=0L
-        } ?: false
-    }.getOrDefault(false)
-    private fun measuredSize(uri:Uri):Long? {
-        return app.contentResolver.query(uri,arrayOf(OpenableColumns.SIZE),null,null,null)?.use { cursor ->
+            if(cursor.moveToFirst() && index>=0 && !cursor.isNull(index)) cursor.getLong(index) else 0L
+        } ?: 0L
+    }.getOrDefault(0L)
+    private fun supports(uri:Uri,flag:Int):Boolean = (documentFlags(uri) and flag.toLong())!=0L
+    private fun measuredSize(uri:Uri):Long? = runCatching {
+        app.contentResolver.query(uri,arrayOf(OpenableColumns.SIZE),null,null,null)?.use { cursor ->
             val index=cursor.getColumnIndex(OpenableColumns.SIZE)
             if(!cursor.moveToFirst() || index<0 || cursor.isNull(index)) null
             else cursor.getLong(index).takeIf { it>=0 }
         }
-    }
+    }.getOrNull()
     suspend fun createFolder(treeUri:String,name:String):Unit=withContext(Dispatchers.IO) {
         val root=DocumentFile.fromTreeUri(app,Uri.parse(treeUri)) ?: throw OperationFailure("ACCESS_LOST")
         val safe=SafeNames.basename(name)
@@ -112,7 +117,7 @@ import kotlin.coroutines.coroutineContext
             val expectedHash = app.contentResolver.openInputStream(srcParsed)?.use { Hashing.sha256(it) { cancellationContext.ensureActive() } }
                 ?: throw OperationFailure("ACCESS_LOST")
             app.contentResolver.openInputStream(srcParsed)?.use { input ->
-                app.contentResolver.openOutputStream(destDoc.uri, "wt")?.use { output ->
+                (app.contentResolver.openOutputStream(destDoc.uri, "wt") ?: app.contentResolver.openOutputStream(destDoc.uri))?.use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
                         coroutineContext.ensureActive()
@@ -128,7 +133,8 @@ import kotlin.coroutines.coroutineContext
             check(actualHash == expectedHash) { "EXPORT_HASH_MISMATCH" }
             verified=true
             // Read provider metadata before source deletion: a metadata failure must not destroy both copies.
-            val result=DocumentEntry(destDoc.uri.toString(), destDoc.name ?: finalName, destDoc.type, measuredSize(destDoc.uri), false, destDoc.canRead(), destDoc.canWrite(),supports(destDoc.uri,DocumentsContract.Document.FLAG_SUPPORTS_RENAME),supports(destDoc.uri,DocumentsContract.Document.FLAG_SUPPORTS_DELETE))
+            val destFlags=documentFlags(destDoc.uri)
+            val result=DocumentEntry(destDoc.uri.toString(), destDoc.name ?: finalName, destDoc.type, measuredSize(destDoc.uri), false, destDoc.canRead(), destDoc.canWrite(),(destFlags and DocumentsContract.Document.FLAG_SUPPORTS_RENAME.toLong())!=0L,(destFlags and DocumentsContract.Document.FLAG_SUPPORTS_DELETE.toLong())!=0L)
             coroutineContext.ensureActive()
             if (move) {
                 require(supports(srcParsed,DocumentsContract.Document.FLAG_SUPPORTS_DELETE) && srcDoc.delete()) { "PROVIDER_MOVE_SOURCE_DELETE_FAILED" }

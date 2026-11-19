@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Properties
@@ -180,7 +181,9 @@ internal class RemoteExtractorRuntime(
             isLive = root["isLive"]?.jsonPrimitive?.booleanOrNull ?: false,
             isPlaylist = root["isPlaylist"]?.jsonPrimitive?.booleanOrNull ?: false,
             uploader = root["uploader"]?.jsonPrimitive?.content,
-            thumbnailUrl = root["thumbnail"]?.jsonPrimitive?.content
+            thumbnailUrl = root["thumbnail"]?.jsonPrimitive?.content?.takeIf {
+                it.startsWith("https://") && it.length <= 4096 && !it.contains("secret=", ignoreCase = true)
+            }
         )
     }
 
@@ -279,7 +282,7 @@ internal class RemoteExtractorRuntime(
                 }
                 val pending = File(directory, "remote-media.pending")
                 FileOutputStream(pending).use { state.store(it, null); it.fd.sync() }
-                Files.move(pending.toPath(), journal.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                try { Files.move(pending.toPath(), journal.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } catch (_: AtomicMoveNotSupportedException) { Files.move(pending.toPath(), journal.toPath(), StandardCopyOption.REPLACE_EXISTING) }
             }
         ) } catch (failure: RejectedServiceResponse) {
             throw OperationFailure(failure.code)
@@ -294,7 +297,7 @@ internal class RemoteExtractorRuntime(
             throw OperationFailure("MEDIA_OUTPUT_MISSING") else if (mode == "audio") format else choice.container
         val published = File(directory, MediaOutputPolicy.displayName("media", extension))
         if (!partial.exists()) throw OperationFailure("MEDIA_OUTPUT_MISSING")
-        Files.move(partial.toPath(), published.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        try { Files.move(partial.toPath(), published.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } catch (_: AtomicMoveNotSupportedException) { Files.move(partial.toPath(), published.toPath(), StandardCopyOption.REPLACE_EXISTING) }
         journal.delete()
         try { MediaOutputPolicy.inspect(published) }
         catch (error: Exception) { published.delete(); throw error }
@@ -376,13 +379,17 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
         throw firstError ?: OperationFailure("MEDIA_SITE_UNSUPPORTED")
     }
 
+    override fun warmup() {
+        engines.forEach { engine -> runCatching { engine.warmup() } }
+    }
+
     override fun download(
         url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,
         allowHttp: Boolean, directory: File, check: () -> Unit,
         progress: (MediaProgress) -> Unit
     ) {
         check()
-        val engine = answered[url] ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
+        val engine = answered[url] ?: engines.firstOrNull() ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
         guardMediaRuntime { engine.download(url, choice, audio, bitrate, allowHttp, directory, check, progress) }
     }
 

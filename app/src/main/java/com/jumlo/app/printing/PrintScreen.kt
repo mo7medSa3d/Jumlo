@@ -6,7 +6,6 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.provider.Settings
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,10 +20,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.automirrored.rounded.Redo
 import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.rounded.Close
@@ -64,6 +61,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -74,7 +72,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.ui.components.QuietChip
 import com.jumlo.app.ui.components.QuietSwitch
-import com.jumlo.app.ui.theme.JumloRadii
+import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.util.rememberZoomPanState
 import com.jumlo.app.ui.util.zoomPan
@@ -104,14 +102,7 @@ import kotlin.math.roundToInt
     fun openServices() {haptics.actionClick();try {context.startActivity(Intent(Settings.ACTION_PRINT_SETTINGS));serviceError=false} catch(_:Exception) {serviceError=true}}
     LazyColumn(modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
         item("header") {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                if(state.source!=null) IconButton(onClick={haptics.actionClick();onBack()},modifier=Modifier.size(48.dp)) {Icon(Icons.AutoMirrored.Rounded.ArrowBack,stringResource(R.string.print_back))}
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.print_title),style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics { heading() })
-                    Text(stringResource(R.string.print_subtitle),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Icon(Icons.Rounded.Print,null,Modifier.size(28.dp))
-            }
+            Text(stringResource(R.string.print_subtitle),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 QuietChip(section==0,{section=0},stringResource(if(state.source==null) R.string.print_documents else R.string.print_setup))
                 QuietChip(section==1,{section=1},stringResource(R.string.print_history))
@@ -157,7 +148,7 @@ import kotlin.math.roundToInt
             items(state.saved.recent.sortedByDescending {it.favorite},key={"recent-${PrintSourceIdentity.documentKey(it.source)}"}) {recent ->
                 Card(onClick={haptics.actionClick();viewModel.open(recent.source)},modifier=Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(12.dp).heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Text(recent.source.name,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+                        Text(recent.source.name,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium.copy(textDirection=TextDirection.Content))
                         IconButton(onClick={haptics.selectionToggle();viewModel.favorite(recent.source)},modifier=Modifier.size(48.dp)) {Icon(if(recent.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,stringResource(if(recent.favorite) R.string.print_unfavorite else R.string.print_favorite))}
                     }
                 }
@@ -165,7 +156,7 @@ import kotlin.math.roundToInt
         } else {
             item("document") {
                 Row(verticalAlignment=Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {Text(state.source!!.name,style=MaterialTheme.typography.titleMedium)
+                    Column(Modifier.weight(1f)) {Text(state.source!!.name,style=MaterialTheme.typography.titleMedium.copy(textDirection=TextDirection.Content))
                         state.info?.let {Text(stringResource(R.string.print_page_count,state.pages.size,state.orderedPages.size),style=MaterialTheme.typography.bodySmall)}}
                     IconButton(onClick={haptics.actionClick();viewModel.open(null)},modifier=Modifier.size(48.dp)) {Icon(Icons.Rounded.Close,stringResource(R.string.print_close_document))}
                 }
@@ -288,7 +279,7 @@ import kotlin.math.roundToInt
                     QuietSwitch(state.options.grayscale,{viewModel.edit(state.options.copy(grayscale=it))},stringResource(R.string.print_grayscale))
                 }
                 Text(stringResource(if(state.options.grayscale) R.string.print_grayscale_help else R.string.print_color_help),style=MaterialTheme.typography.bodySmall)
-                Text(stringResource(R.string.print_duplex),style=MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.print_duplex),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics { heading() })
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {PrintDuplex.entries.forEach {duplex ->QuietChip(state.options.duplex==duplex,{viewModel.edit(state.options.copy(duplex=duplex))},stringResource(when(duplex) {PrintDuplex.NONE->R.string.print_single_sided;PrintDuplex.LONG_EDGE->R.string.print_long_edge;PrintDuplex.SHORT_EDGE->R.string.print_short_edge}))}}
             }
             item("submit") {
@@ -367,7 +358,7 @@ internal fun PrintPageManager(
             accumulated += listState.scrollBy(edgeScroll)
             if (abs(accumulated) >= stepPx) {
                 val order = live ?: break
-                val from = dragged ?: break
+                val from = order.indexOf(dragged ?: break).takeIf { it >= 0 } ?: break
                 val delta = if (accumulated > 0) 1 else -1
                 val target = (from + delta).coerceIn(0, order.lastIndex)
                 if (target != from) {
@@ -504,7 +495,7 @@ internal fun PrintPageTile(
                     }
                 )
             }
-            .clip(RoundedCornerShape(JumloRadii.indicator))
+            .clip(QuietTheme.shapes.activeIndicatorPill)
             .background(if (selected || focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
             .semantics {
                 this.contentDescription = description
@@ -520,7 +511,7 @@ internal fun PrintPageTile(
                 .fillMaxWidth()
                 .height(100.dp)
                 .padding(4.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .clip(QuietTheme.shapes.badge)
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
@@ -562,7 +553,7 @@ private fun PrintQueueRow(
     onRetry: () -> Unit
 ) {
     Card(Modifier.fillMaxWidth()) {Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Text(entry.source.name,style=MaterialTheme.typography.titleMedium)
+        Text(entry.source.name,style=MaterialTheme.typography.titleMedium.copy(textDirection=TextDirection.Content))
         Text(stringResource(jobStateString(entry.state)),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
         Text(stringResource(R.string.print_queue_pages_printed,PrintUsage.pages(entry)),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         if(active && spoolingTotal>0) {

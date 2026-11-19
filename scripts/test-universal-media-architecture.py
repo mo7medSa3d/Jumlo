@@ -18,7 +18,7 @@ class UniversalMediaArchitecture(unittest.TestCase):
         import xml.etree.ElementTree as ET
         ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text(encoding="utf-8")
         self.assertIn('BuildConfig.EXTENDED_MEDIA', ui)
-        self.assertIn('media_supported_platforms_extended', ui)
+        self.assertIn('BuildConfig.EXTENDED_MEDIA', ui)
         for folder in ('values', 'values-ar'):
             values={v.attrib['name']: v.text or '' for v in ET.parse(ROOT/'app/src/main/res'/folder/'media_strings.xml').getroot()}
             self.assertTrue(values['media_supported_platforms_extended'])

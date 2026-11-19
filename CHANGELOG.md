@@ -1,5 +1,19 @@
 # Changelog — current production-hardening candidate
 
+## 2026-11-20 — Production Hardening, Media Deduplication, iOS UI Polish & Observability
+
+- **Production hardening & release docs:** Aligned `.env.example` and `README.md` with all `tools/media-service` (`JUMLO_MEDIA_HOST`, `JUMLO_MEDIA_PORT`, `JUMLO_MEDIA_TOKEN`, `JUMLO_MEDIA_RATE_LIMIT`, `JUMLO_MEDIA_MAX_CONCURRENT`, `JUMLO_MEDIA_LOG_LEVEL`, `JUMLO_MEDIA_CORS_ORIGIN`) and Android release signing (`JUMLO_KEYSTORE_PATH`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`) variables with safe defaults, and verified CI/repo cleanliness.
+- **Media deduplication & runtime packaging:** Consolidated media extraction/packaging guardrails (`tools/repack-native-media.py`, `tools/media-service/service.py`) to avoid duplicate payload work and enforce strict token, rate-limit, concurrency, and SSRF boundaries.
+- **iOS-inspired UI polish:** Refined borderless OLED `#000000` dark and `#F2F2F7`/`#FFFFFF` light surfaces, Files drag-and-drop virtual folders, Apple Document Scanner-inspired CameraX UI, and tick-dial adjustment sliders with EN/AR parity.
+- **Observability & contract verification:** Standardized `tools/media-service` structured logging (`JUMLO_MEDIA_LOG_LEVEL`) and `/health` + `/ready` liveness/readiness probes, and verified the standalone Python contract suite with bytecode writes disabled (`PYTHONDONTWRITEBYTECODE=1`).
+
+## 2026-11-19 — Production Release Hardening
+
+- **Release engineering & deployment hygiene:** Removed leftover scratch directories (`.superpowers/`, `docs/superpowers/`), added `.superpowers/` to `.gitignore`, added root `.env.example` documenting all Android signing and media-service environment variables with zero real secrets, and aligned `README.md` Docker build/run commands (repo-root context, port `8787`), local Python invocation, configuration table, and `/health` + `/ready` endpoint docs with `tools/media-service/Dockerfile` and `service.py`.
+- **Design system & UI surfaces:** Unified borderless surface tokens across OLED `#000000` dark and `#F2F2F7`/`#FFFFFF` light themes, streamlined Light/Dark Settings, hardened Material 3 typography/spacing discipline, and preserved bilingual EN/AR parity across core workspaces.
+- **Files, scanner & workspace UX:** Shipped Files virtual folders with iOS-style drag-and-drop and smart ZIP/PDF/Image folder actions, Apple Document Scanner-inspired CameraX UI, direct-manipulation workspace editors, and iOS Photos-style tick-dial sliders.
+- **Security & service hardening:** Hardened `tools/media-service` configuration validation, bearer token enforcement (`JUMLO_MEDIA_TOKEN`) on non-loopback binds, per-IP rate limiting (`JUMLO_MEDIA_RATE_LIMIT`), concurrency bounds (`JUMLO_MEDIA_MAX_CONCURRENT`), security response headers, and public-URL/redirect SSRF protections.
+
 ## Documentation status (2026-11-19 audit)
 
 Older entries below are historical and describe their own point in time. Several files they reference were intentionally removed from this tree and must not be recreated from history: `TEST_REPORT.md`, `docs/AUDIT_2.md`, `docs/PROGRESS.md`, `DECISIONS.md`, `AUDIT.md`, `HANDOFF_AR.md`, `ICON_MAP.md`, `IMPLEMENTATION_PLAN.md`, `PRODUCTION_BRIEF.md`, `ROUTES.md`, `TOOL_UI_SPEC.md`, `iOS_PLAN.md` and `SCREENSHOTS/`. Those references are provenance, not live links; regenerate release evidence for the release candidate. Current tree values are a 30-tool registry, four bottom tabs and the restored 60,000,000-byte full-media APK cap.

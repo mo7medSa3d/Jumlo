@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -42,7 +43,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
 @Composable internal fun ViewerWorkspace(vm:AppViewModel,sources:List<SourceRef>,onImport:()->Unit,onBack:()->Unit = {},onOpenFile:()->Unit = onImport) {
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     val pdfs=remember(sources) { sources.filter { it.mimeType=="application/pdf" } }
-    val source=pdfs.firstOrNull {it.id==selected} ?: pdfs.firstOrNull()
+    val source=remember(pdfs,selected) { pdfs.firstOrNull {it.id==selected} ?: pdfs.firstOrNull() }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.fillMaxWidth().padding(horizontal=20.dp))
         if(pdfs.size>1) LazyRow(contentPadding=PaddingValues(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -68,8 +69,12 @@ import com.jumlo.app.data.processing.PdfCompressSettings
     }
 }
 
+private val COMPRESSION_PRESETS = listOf(PdfCompressionPolicy.Preset.BEST_QUALITY, PdfCompressionPolicy.Preset.BALANCED, PdfCompressionPolicy.Preset.STRONG)
+private val COMPRESSION_TITLES = listOf(R.string.studio_compress_low, R.string.studio_compress_medium, R.string.studio_compress_high)
+private val COMPRESSION_DETAILS = listOf(R.string.studio_compress_low_detail, R.string.studio_compress_medium_detail, R.string.studio_compress_high_detail)
+
 @Composable internal fun CompressionEstimate(vm:AppViewModel,sourceId:String,form:WorkspaceDraft) {
-    val presets = listOf(PdfCompressionPolicy.Preset.BEST_QUALITY, PdfCompressionPolicy.Preset.BALANCED, PdfCompressionPolicy.Preset.STRONG)
+    val presets = COMPRESSION_PRESETS
     val measured = remember(sourceId) { mutableStateMapOf<PdfCompressionPolicy.Preset,Result<CompressionProfile>>() }
     LaunchedEffect(sourceId) {
         for(preset in presets) {
@@ -87,12 +92,12 @@ import com.jumlo.app.data.processing.PdfCompressSettings
             Surface(onClick={vm.updateForm {it.copy(num1=preset.dpi.toString(),quality=preset.quality.toString(),num2="")}},
                 shape=QuietTheme.shapes.card,
                 color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier=Modifier.fillMaxWidth().testTag("compression.preset.$index")) {
+                modifier=Modifier.fillMaxWidth().testTag("compression.preset.$index").semantics { this.selected = selected }) {
                 Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(stringResource(listOf(R.string.studio_compress_low,R.string.studio_compress_medium,R.string.studio_compress_high)[index]),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
-                            Text(stringResource(listOf(R.string.studio_compress_low_detail,R.string.studio_compress_medium_detail,R.string.studio_compress_high_detail)[index]),style=QuietTheme.typography.metadata)
+                            Text(stringResource(COMPRESSION_TITLES[index]),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
+                            Text(stringResource(COMPRESSION_DETAILS[index]),style=QuietTheme.typography.metadata)
                         }
                         RadioButton(selected=selected,onClick=null)
                     }
@@ -107,7 +112,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
                 }
             }
         }
-        val custom=presets.none { form.num2.isBlank() && draftNumber(form.num1,150)==it.dpi && draftNumber(form.quality,85)==it.quality }
+        val custom=remember(form.num1,form.quality,form.num2) { presets.none { form.num2.isBlank() && draftNumber(form.num1,150)==it.dpi && draftNumber(form.quality,85)==it.quality } }
         if(custom) {
             val profile by produceState<Result<CompressionProfile>?>(null,sourceId,Triple(form.num1,form.quality,form.num2)) {
                 value=null

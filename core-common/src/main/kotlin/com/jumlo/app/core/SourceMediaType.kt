@@ -7,6 +7,9 @@ import java.util.Locale
  */
 object SourceMediaType {
     private val generic = setOf("", "application/octet-stream", "binary/octet-stream", "application/unknown")
+    private val heicBrands = setOf("heic", "heix", "hevc", "hevx", "mif1", "msf1")
+    private val avifBrands = setOf("avif", "avis")
+    private val mp4Brands = setOf("isom", "iso2", "mp41", "mp42", "avc1", "dash", "m4a ", "m4v ")
 
     fun resolve(declared: String?, name: String, header: ByteArray): String {
         val supplied=declared?.trim()?.lowercase(Locale.ROOT).orEmpty()
@@ -24,9 +27,9 @@ object SourceMediaType {
             ascii(0,"GIF87a") || ascii(0,"GIF89a") -> "image/gif"
             ascii(0,"RIFF") && ascii(8,"WEBP") -> "image/webp"
             prefix(0x50,0x4b,0x03,0x04) || prefix(0x50,0x4b,0x05,0x06) || prefix(0x50,0x4b,0x07,0x08) -> "application/zip"
-            brand in setOf("heic","heix","hevc","hevx","mif1","msf1") -> "image/heic"
-            brand in setOf("avif","avis") -> "image/avif"
-            brand in setOf("isom","iso2","mp41","mp42","avc1","dash","m4a ","m4v ") ->
+            brand in heicBrands -> "image/heic"
+            brand in avifBrands -> "image/avif"
+            brand in mp4Brands ->
                 if(name.endsWith(".m4a",ignoreCase=true) || brand=="m4a ") "audio/mp4" else "video/mp4"
             prefix(0x49,0x44,0x33) -> "audio/mpeg"
             else -> "application/octet-stream"

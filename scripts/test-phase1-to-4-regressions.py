@@ -57,13 +57,17 @@ class SourceRegressionContracts(unittest.TestCase):
 
     def test_history_discloses_where_output_is_saved(self):
         history = read('ui/downloads/DownloadsScreen.kt')
-        self.assertIn('output_saved_location', history)
-        self.assertIn('output_saved_privately', history)
+        dialog = read('ui/components/OutputDetailsDialog.kt')
+        self.assertIn('OutputDetailsDialog(', history)
+        self.assertIn('output_saved_location', dialog)
+        self.assertIn('output_saved_privately', dialog)
 
     def test_file_library_explains_verified_public_and_private_locations(self):
         library = read('ui/files/FilesScreen.kt')
-        self.assertIn('output_saved_location', library)
-        self.assertIn('output_saved_privately', library)
+        dialog = read('ui/components/OutputDetailsDialog.kt')
+        self.assertIn('OutputDetailsDialog(', library)
+        self.assertIn('output_saved_location', dialog)
+        self.assertIn('output_saved_privately', dialog)
 
     def test_production_does_not_ship_unused_fake_before_after_preview(self):
         self.assertFalse((SRC / 'ui/components/LegacyPreviewFixtures.kt').exists(),

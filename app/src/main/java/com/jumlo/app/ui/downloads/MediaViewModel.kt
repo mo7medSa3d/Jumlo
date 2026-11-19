@@ -1,5 +1,6 @@
 package com.jumlo.app.ui.downloads
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jumlo.app.core.DirectFileKind
@@ -31,6 +32,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+@Immutable
 data class DirectPreview(
     val title: String,
     val sizeBytes: Long?,
@@ -38,6 +40,7 @@ data class DirectPreview(
     val kind: DirectFileKind = DirectFileKind.OTHER
 )
 
+@Immutable
 data class MediaUiState(
     val url: String = "",
     val asset: MediaAsset? = null,
@@ -127,7 +130,7 @@ data class MediaUiState(
             ).forEach { (k, v) -> reqBuilder.header(k, v) }
             val req = if (useRangeGet) reqBuilder.get().header("Range", "bytes=0-0").build() else reqBuilder.head().build()
             probeClient.executeCancellable(req,check,remainingMillis()).use { response ->
-                if(response.code in setOf(301,302,303,307,308)) {
+                if(response.code in REDIRECT_CODES) {
                     require(hops<10) { "TOO_MANY_REDIRECTS" }
                     val location=response.header("Location") ?: throw IllegalArgumentException("INVALID_REDIRECT")
                     val next=HttpPolicy.url(MediaLinks.normalize(uri.resolve(location).toString(),allowHttp),allowHttp)
@@ -136,7 +139,7 @@ data class MediaUiState(
                     profileIndex=0
                 } else if (BrowserProfilePolicy.tryNext(response.code, profileIndex, BrowserProfilePolicy.forUrl(uri.toString()).size)) {
                     profileIndex++
-                } else if (!useRangeGet && response.code in setOf(400, 403, 405, 501)) {
+                } else if (!useRangeGet && response.code in RANGE_FALLBACK_CODES) {
                     useRangeGet = true
                 } else {
                     if (response.code !in 200..299) throw OperationFailure("HTTP_${response.code}")
@@ -175,7 +178,7 @@ data class MediaUiState(
         sessionEpoch=epoch
         preferredVideoHeight=when(defaultVideoQuality) { "BEST" -> 0;"720" -> 720;"480" -> 480;else -> 1080 }
         beginSession(initialUrl)
-        _state.update { it.copy(bitrate=defaultAudioQuality.takeIf { rate -> rate in setOf(128,192,320) } ?: 192) }
+        _state.update { it.copy(bitrate=defaultAudioQuality.takeIf { rate -> rate in DEFAULT_AUDIO_BITRATES } ?: 192) }
     }
 
     fun newCopy() { lastSignature=null;lastJob=null;submissions.clear() }
@@ -202,19 +205,39 @@ data class MediaUiState(
         if(_state.value.analyzing) lastAnalysisInput=null
         generation++;analysis?.cancel();_state.update { it.copy(analyzing=false) }
     }
-    fun allowHttp(value:Boolean) { val url=_state.value.url;editUrl(url);_state.update { it.copy(allowHttp=value) } }
+    fun allowHttp(value:Boolean) {
+        if (_state.value.allowHttp == value) return
+        val url=_state.value.url
+        editUrl(url)
+        _state.update { it.copy(allowHttp=value) }
+    }
     fun wifi(value:Boolean) { _state.update { it.copy(wifiOnly=value) } }
     fun unmetered(value:Boolean) { _state.update { it.copy(unmetered=value) } }
     fun name(value:String) { _state.update { it.copy(name=value.take(200)) } }
-    fun audio(value:AudioOutput) { newCopy(); _state.update { it.copy(audio=value) } }
-    fun bitrate(value:Int) { if(value in setOf(64,96,128,160,192,256,320)) { newCopy(); _state.update { it.copy(bitrate=value) } } }
+    fun audio(value:AudioOutput) {
+        if (_state.value.audio == value) return
+        newCopy()
+        _state.update { it.copy(audio=value) }
+    }
+    fun bitrate(value:Int) {
+        if (value in ALLOWED_AUDIO_BITRATES && _state.value.bitrate != value) {
+            newCopy()
+            _state.update { it.copy(bitrate=value) }
+        }
+    }
     fun directMode(value:String) {
-        if(value in setOf("ORIGINAL","PDF_RECOMMENDED","PDF_EXTREME","PDF_TO_IMAGES","IMAGE_COMPRESSED","IMAGE_TO_PDF")) {
+        if (value in ALLOWED_DIRECT_MODES && _state.value.directMode != value) {
             newCopy()
             _state.update { it.copy(directMode=value) }
         }
     }
-    fun select(key:String) { if(_state.value.choices.any { it.key==key }) { newCopy(); _state.update { it.copy(selectedKey=key) } } }
+    fun select(key:String) {
+        val current = _state.value
+        if (current.selectedKey != key && current.choices.any { it.key==key }) {
+            newCopy()
+            _state.update { it.copy(selectedKey=key) }
+        }
+    }
     fun mode(value:MediaMode) {
         if (_state.value.mode == value) return
         newCopy()
@@ -285,7 +308,7 @@ data class MediaUiState(
                             selectedKey=null,error=error) }
                     }
                 }
-                if(direct!=null && (DownloadLinkPolicy.isGoogleDriveDownload(url) || direct.kind !in setOf(DirectFileKind.VIDEO,DirectFileKind.AUDIO))) {
+                if(direct!=null && (DownloadLinkPolicy.isGoogleDriveDownload(url) || direct.kind !in MEDIA_DIRECT_KINDS)) {
                     showDirect(direct)
                 } else {
                     try {
@@ -385,5 +408,14 @@ data class MediaUiState(
                 _state.update { it.copy(submitting=false) }
             }
         }
+    }
+
+    private companion object {
+        val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+        val RANGE_FALLBACK_CODES = setOf(400, 403, 405, 501)
+        val DEFAULT_AUDIO_BITRATES = setOf(128, 192, 320)
+        val ALLOWED_AUDIO_BITRATES = setOf(64, 96, 128, 160, 192, 256, 320)
+        val ALLOWED_DIRECT_MODES = setOf("ORIGINAL", "PDF_RECOMMENDED", "PDF_EXTREME", "PDF_TO_IMAGES", "IMAGE_COMPRESSED", "IMAGE_TO_PDF")
+        val MEDIA_DIRECT_KINDS = setOf(DirectFileKind.VIDEO, DirectFileKind.AUDIO)
     }
 }

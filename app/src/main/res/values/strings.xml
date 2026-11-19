@@ -183,9 +183,9 @@
     <string name="scan_allow_camera">Allow camera</string>
     <string name="scan_capture">Capture &amp; correct perspective</string>
     <string name="scan_back">Back</string>
-    <string name="scan_error_bind">Camera unavailable</string>
-    <string name="scan_error_process">Could not process the scan</string>
-    <string name="scan_error_capture">Capture failed</string>
+    <string name="scan_error_bind">Camera unavailable. Close other camera apps or check camera permission and retry.</string>
+    <string name="scan_error_process">Could not process the scan. Retake the photo or import an image instead.</string>
+    <string name="scan_error_capture">Could not capture the page. Hold steady and try again.</string>
     <string name="signature_title">Draw signature</string>
     <string name="signature_clear">Clear</string>
     <string name="signature_save">Save drawing as signature image</string>
@@ -198,8 +198,6 @@
 
     <!-- Workspace & Tool Fields -->
     <string name="home_resume_workspace">Resume active workspace (%1$d)</string>
-    <string name="candidate_debug_notice">Preview build: processing tools are active in this test build.</string>
-    <string name="candidate_release_notice">Processing tools are unavailable in this build.</string>
     <string name="downloads_empty_title">No direct downloads yet</string>
     <string name="downloads_empty_sub">Queue a direct HTTPS file URL to download with progress, cancellation, and SHA-256 verification.</string>
     <string name="files_snapshots_title">Imported Source Snapshots</string>
@@ -388,4 +386,41 @@
     <string name="output_saved_location">Saved in %1$s</string>
     <string name="output_saved_privately">Saved inside Jumlo only. Use Share or Export to save a copy outside the app.</string>
     <string name="settings_ui_sounds">Interface sounds</string>
+    <string name="files_folders_heading">Folders</string>
+    <string name="files_folder_count_items">%1$d files</string>
+    <string name="files_folder_empty_short">Empty</string>
+    <string name="files_folder_create_title">New folder</string>
+    <string name="files_folder_create_hint">Folder name</string>
+    <string name="files_folder_create_action">Create</string>
+    <string name="files_folder_rename_title">Rename folder</string>
+    <string name="files_folder_delete_title">Delete folder?</string>
+    <string name="files_folder_delete_body">Files inside this folder will stay safe in All files.</string>
+    <string name="files_folder_all_files">All files</string>
+    <string name="files_folder_drop_here">Drop here</string>
+    <string name="files_folder_drop_to_root">Drop to move out</string>
+    <string name="files_folder_drag_count">%1$d files</string>
+    <string name="files_folder_drag_hint">Long-press files to drag into a folder, or long-press the page to create one.</string>
+    <string name="files_folder_actions_title">Folder actions</string>
+    <string name="files_folder_action_zip">Create ZIP archive</string>
+    <string name="files_folder_action_zip_sub">Bundle all %1$d files into one ZIP</string>
+    <string name="files_folder_action_merge_pdf">Merge PDF files</string>
+    <string name="files_folder_action_merge_pdf_sub">Combine %1$d PDFs into one document</string>
+    <string name="files_folder_action_images_pdf">Images to PDF</string>
+    <string name="files_folder_action_images_pdf_sub">Convert %1$d images into a PDF</string>
+    <string name="files_folder_action_compress_images">Compress images</string>
+    <string name="files_folder_action_compress_images_sub">Shrink %1$d images in this folder</string>
+    <string name="files_folder_action_share_all">Share folder files</string>
+    <string name="files_folder_action_rename">Rename folder</string>
+    <string name="files_folder_action_delete">Delete folder</string>
+    <string name="files_folder_empty_title">This folder is empty</string>
+    <string name="files_folder_empty_body">Drag files into this folder or move them from All files.</string>
+    <string name="files_page_actions_title">Files actions</string>
+    <string name="files_page_action_new_folder">Create new folder</string>
+    <string name="files_page_action_new_folder_sub">Organize files by project or type</string>
+    <string name="files_page_action_import">Import from device</string>
+    <string name="files_page_action_select">Select &amp; organize files</string>
+    <string name="files_page_action_sort">Sort &amp; group</string>
+    <string name="files_move_to_folder">Move to folder</string>
+    <string name="files_move_out_of_folder">Move to All files</string>
+    <string name="files_move_no_folders">Create a folder first to organize files.</string>
 </resources>

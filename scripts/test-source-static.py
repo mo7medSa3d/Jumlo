@@ -80,6 +80,22 @@ class SourceConsistencyTests(unittest.TestCase):
         match=[r for r in receivers if r.get(android+'name')=='.worker.CancelJobReceiver']
         self.assertEqual(1,len(match))
         self.assertEqual('false',match[0].get(android+'exported'))
+    def test_print_service_query_is_declared_in_manifest(self):
+        android='{http://schemas.android.com/apk/res/android}'
+        actions=[node.get(android+'name')
+                 for node in ET.parse(MAIN/'AndroidManifest.xml').getroot().findall('queries/intent/action')]
+        self.assertIn('android.printservice.PrintService',actions)
+    def test_ui_hardening_regressions_are_absent(self):
+        self.assertNotIn('showAdvanced',self._main_kt[CODE/'ui/downloads/MediaWorkspace.kt'])
+        self.assertNotIn('inline-advanced-settings',self._main_kt[CODE/'ui/workspace/WorkspaceScreen.kt'])
+        downloads=self._main_kt[CODE/'ui/downloads/DownloadsScreen.kt']
+        self.assertIn('fun ActivityJobRow(',downloads)
+        activity_job_row=re.split(
+            r'\n(?=@Composable\b|(?:private\s+|internal\s+)?(?:fun|class|object)\b)',
+            downloads.split('fun ActivityJobRow(',1)[1],
+            maxsplit=1,
+        )[0]
+        self.assertNotIn('errorContainer',activity_job_row)
     def test_bundled_fonts_are_exactly_the_licensed_arabic_latin_subsets(self):
         import hashlib
         # Derived with tools/subset-fonts.py, retaining Arabic/Latin layout tables,

@@ -31,7 +31,7 @@ class RedesignWiringTests(unittest.TestCase):
     def test_thumbnail_error_is_actionable_and_media_audio_is_not_fabricated(self):
         editor=code('ui/workspace/PdfPageEditor.kt')
         self.assertIn('msg_preview_unavailable',editor)
-        self.assertIn('rememberUpdatedState(onDragStep)',editor)
+        self.assertIn('rememberUpdatedState(onDragPosition)',editor)
         self.assertIn('detectDragGesturesAfterLongPress',editor)
         self.assertIn('asset.extractor in setOf("DirectMedia", "Html5")',code('ui/downloads/MediaWorkspace.kt'))
         errors=(ROOT/'app/src/main/res/values/error_messages.xml').read_text(encoding="utf-8")
@@ -60,8 +60,8 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('DownloadAdmission',code('data/jobs/JobStore.kt'))
         self.assertIn('setFileViewMode',code('ui/files/FilesScreen.kt'))
         settings=code('ui/settings/SettingsScreen.kt')
-        self.assertIn('setDefaultVideoQuality',settings)
-        self.assertIn('setDefaultAudioQuality',settings)
+        self.assertNotIn('setDefaultVideoQuality',settings)
+        self.assertNotIn('setDefaultAudioQuality',settings)
         self.assertNotIn('maxConcurrentDownloads',settings)
         self.assertNotIn('wifiOnlyDefault',settings)
     def test_four_tabs_legacy_rail_unused(self):

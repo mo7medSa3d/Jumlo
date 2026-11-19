@@ -14,6 +14,13 @@ object MediaCatalog {
     private val idPattern = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")
     private val protocols = setOf("http", "https", "m3u8", "m3u8_native", "http_dash_segments")
     private val extensions = setOf("mp4", "m4v", "mov", "webm", "mkv", "m4a", "mp3", "ogg", "opus", "flac", "wav", "aac", "ts")
+    private val mp4VideoExtensions = setOf("mp4", "m4v", "mov")
+    private val mp4AudioExtensions = setOf("m4a", "mp4")
+    private val webmAudioExtensions = setOf("webm", "opus", "ogg")
+    private val standalonePairExtractors = setOf("Html5", "DirectMedia")
+    private val audioOrder = compareBy<MediaFormat> { it.audioBitrateKbps ?: it.bitrateKbps ?: -1.0 }.thenBy { it.preference }.thenBy { it.id }
+    private fun validMetric(v: Double?): Boolean = v == null || (v.isFinite() && v >= 0.0)
+    private fun validSize(v: Long?): Boolean = v == null || v >= 0L
     fun choices(asset: MediaAsset, mode: MediaMode): List<MediaChoice> {
         require(!asset.isPlaylist) { "PLAYLIST_REQUIRES_ITEM_SELECTION" }
         require(!asset.isLive) { "LIVE_MEDIA_NOT_FINITE" }
@@ -28,39 +35,96 @@ object MediaCatalog {
             if (!seen.add(f.id)) return@filter false
             require(f.width == null || f.width in 1..65536) { "INVALID_MEDIA_FORMAT" }
             require(f.height == null || f.height in 1..65536) { "INVALID_MEDIA_FORMAT" }
-            require(listOf(f.fps, f.bitrateKbps, f.audioBitrateKbps).all { it == null || it.isFinite() && it >= 0 }) { "INVALID_MEDIA_FORMAT" }
-            require(listOf(f.bytes, f.approximateBytes).all { it == null || it >= 0 }) { "INVALID_MEDIA_FORMAT" }
+            require(validMetric(f.fps) && validMetric(f.bitrateKbps) && validMetric(f.audioBitrateKbps)) { "INVALID_MEDIA_FORMAT" }
+            require(validSize(f.bytes) && validSize(f.approximateBytes)) { "INVALID_MEDIA_FORMAT" }
             true
         }
         val audioOnly = formats.filter { it.hasAudio && !it.hasVideo }
-        val audioOrder = compareBy<MediaFormat> { it.audioBitrateKbps ?: it.bitrateKbps ?: -1.0 }.thenBy { it.preference }.thenBy { it.id }
+        fun audioContainerPriority(ext: String): Int = when (ext.lowercase(Locale.ROOT)) {
+            "m4a", "mp3", "aac" -> 2
+            "opus", "ogg", "webm" -> 1
+            else -> 0
+        }
         if (mode == MediaMode.AUDIO) {
             val sources = audioOnly.ifEmpty { formats.filter { it.hasAudio } }
-            return sources.sortedWith(audioOrder.reversed()).map { choice(mode, listOf(it), it.extension) }
-        }
-        return formats.filter { it.hasVideo }
-            .sortedWith(compareByDescending<MediaFormat> { formatHeight(it) ?: 0 }.thenByDescending { it.fps ?: 0.0 }.thenByDescending { it.bitrateKbps ?: 0.0 }.thenByDescending { it.preference }.thenBy { it.id })
-            .map { video ->
-                val preferred = audioOnly.filter { audio ->
-                    when (video.extension) {
-                        "mp4", "m4v", "mov" -> audio.extension in setOf("m4a", "mp4")
-                        "webm" -> audio.extension in setOf("webm", "opus", "ogg") && (audio.audioCodec.contains("opus", ignoreCase = true) || audio.audioCodec.contains("vorbis", ignoreCase = true))
-                        else -> false
-                    }
-                }.ifEmpty { audioOnly }
-                // A static webpage may link an unrelated standalone audio file. Never
-                // silently combine two sources without an extractor declaring them a pair.
-                val audio = if (video.hasAudio || asset.extractor in setOf("Html5", "DirectMedia"))
-                    null else preferred.maxWithOrNull(audioOrder)
-                val selected = listOfNotNull(video, audio)
-                val container = when {
-                    audio == null -> video.extension
-                    video.extension in setOf("mp4", "m4v", "mov") && audio.extension in setOf("m4a", "mp4") -> "mp4"
-                    video.extension == "webm" && audio.extension in setOf("webm", "opus", "ogg") -> "webm"
-                    else -> "mkv"
-                }
-                choice(mode, selected, container)
+            val seenAudio = HashSet<Int>()
+            val rankedAudio = sources.sortedWith(
+                compareByDescending<MediaFormat> { ((it.audioBitrateKbps ?: it.bitrateKbps ?: 0.0) / 16.0).roundToInt() }
+                    .thenByDescending { audioContainerPriority(it.extension) }
+                    .thenByDescending { it.audioBitrateKbps ?: it.bitrateKbps ?: -1.0 }
+                    .thenByDescending { it.preference }
+                    .thenBy { it.id }
+            )
+            return rankedAudio.mapNotNull { f ->
+                val kbpsBucket = ((f.audioBitrateKbps ?: f.bitrateKbps ?: 0.0) / 16.0).roundToInt()
+                if (!seenAudio.add(kbpsBucket)) null else choice(mode, listOf(f), f.extension)
             }
+        }
+        val rawVideos = formats.filter { it.hasVideo }
+        val hasDimensioned = rawVideos.any { it.width != null || it.height != null }
+        val candidateVideos = if (hasDimensioned) {
+            rawVideos.filter { it.width != null || it.height != null }
+        } else rawVideos
+
+        fun codecPriority(codec: String): Int {
+            val c = codec.lowercase(Locale.ROOT)
+            return when {
+                c.startsWith("avc") || c.contains("h264") -> 3
+                c.startsWith("hvc") || c.startsWith("hev") || c.contains("265") -> 2
+                c.startsWith("vp9") || c.startsWith("av01") -> 1
+                else -> 0
+            }
+        }
+
+        fun containerPriority(ext: String): Int = when (ext.lowercase(Locale.ROOT)) {
+            "mp4", "m4v", "mov" -> 2
+            "webm" -> 1
+            else -> 0
+        }
+        fun fpsTier(fps: Double?): Int = if ((fps ?: 0.0) >= 50.0) 60 else 0
+
+        val isStandaloneExtractor = asset.extractor in standalonePairExtractors
+        val builtCandidates = candidateVideos.map { video ->
+            val preferred = audioOnly.filter { audio ->
+                when (video.extension) {
+                    "mp4", "m4v", "mov" -> audio.extension in mp4AudioExtensions
+                    "webm" -> audio.extension in webmAudioExtensions && (audio.audioCodec.contains("opus", ignoreCase = true) || audio.audioCodec.contains("vorbis", ignoreCase = true))
+                    else -> false
+                }
+            }.ifEmpty { audioOnly }
+            // A static webpage may link an unrelated standalone audio file. Never
+            // silently combine two sources without an extractor declaring them a pair.
+            val audio = if (video.hasAudio || isStandaloneExtractor)
+                null else preferred.maxWithOrNull(audioOrder)
+            val selected = listOfNotNull(video, audio)
+            val container = when {
+                audio == null -> video.extension
+                video.extension in mp4VideoExtensions && audio.extension in mp4AudioExtensions -> "mp4"
+                video.extension == "webm" && audio.extension in webmAudioExtensions -> "webm"
+                else -> "mkv"
+            }
+            video to choice(mode, selected, container)
+        }.sortedWith(
+            compareByDescending<Pair<MediaFormat, MediaChoice>> { qualityHeight(it.second) ?: 0 }
+                .thenByDescending { fpsTier(it.first.fps) }
+                .thenByDescending { it.second.expectsAudio }
+                .thenByDescending { containerPriority(it.second.container) }
+                .thenByDescending { codecPriority(it.first.videoCodec) }
+                .thenByDescending { !it.second.requiresMux }
+                .thenByDescending { it.first.bitrateKbps ?: 0.0 }
+                .thenByDescending { it.second.estimatedBytes ?: 0L }
+                .thenByDescending { it.first.preference }
+                .thenBy { it.first.id }
+        )
+
+        val seenVideoChoices = HashSet<String>()
+        return builtCandidates.mapNotNull { (video, built) ->
+            // Deduplicate CDN mirrors, container variants (MP4/WEBM/MKV), and codec variants
+            // strictly per resolution + FPS tier so YouTube/TikTok never show duplicate quality cards.
+            val h = qualityHeight(built) ?: -1
+            val dedupKey = "$h:${fpsTier(video.fps)}"
+            if (!seenVideoChoices.add(dedupKey)) null else built
+        }
     }
     /** Default: choose best verified audio-backed video; an explicit quality cap is an advanced preference. */
     fun preferred(choices:List<MediaChoice>,mode:MediaMode,maxHeight:Int=0):MediaChoice? {
@@ -74,9 +138,6 @@ object MediaCatalog {
         val height = choice.expectedHeight ?: video?.height ?: return null
         return video?.width?.let { minOf(it, height) } ?: height
     }
-    private fun formatHeight(format: MediaFormat): Int? = format.height?.let { height ->
-        format.width?.let { width -> minOf(width,height) } ?: height
-    }
     /** Human-readable quality badge for UI cards (e.g. "1080p Full HD · 60fps" or "160 kbps M4A"). */
     fun qualityTitle(choice: MediaChoice): String {
         if (choice.mode == MediaMode.AUDIO) {
@@ -88,7 +149,7 @@ object MediaCatalog {
         val v = choice.formats.firstOrNull { it.hasVideo }
         val h = qualityHeight(choice)
         val tier = when {
-            h == null -> choice.container.uppercase(Locale.ROOT)
+            h == null -> "Standard"
             h >= 2160 -> "${h}p 4K"
             h >= 1440 -> "${h}p 2K"
             h >= 1080 -> "${h}p Full HD"
@@ -105,7 +166,8 @@ object MediaCatalog {
         val rates = choice.formats.map { it.bitrateKbps ?: it.audioBitrateKbps }
         if (rates.any { it == null || !it.isFinite() || it <= 0.0 }) return null
         val totalKbps = rates.filterNotNull().sum()
-        return ((totalKbps * 1000.0 / 8.0) * dur).roundToLong().takeIf { it > 0L }
+        val estimated = (totalKbps * 1000.0 / 8.0) * dur
+        return estimated.takeIf { it.isFinite() && it > 0.0 && it < Long.MAX_VALUE.toDouble() }?.roundToLong()?.takeIf { it > 0L }
     }
     private fun choice(mode: MediaMode, formats: List<MediaFormat>, container: String): MediaChoice {
         val sizes = formats.map { it.bytes ?: it.approximateBytes }
@@ -132,6 +194,17 @@ object MediaCatalog {
         // always text. Quoting is required for YouTube IDs such as 137 and 140;
         // the strict ID grammar above also prevents quotes or selector injection.
         return choice.formatIds.joinToString("+") { "best*[format_id='$it']" }
+    }
+    /** Builds a resilient format selector with a safe resolution/mode fallback if a CDN mirror ID rotates between inspect and download. */
+    fun downloadSelector(choice: MediaChoice): String {
+        val exact = validateSelector(choice)
+        if (choice.mode == MediaMode.AUDIO) return "$exact/bestaudio/best"
+        val h = qualityHeight(choice)
+        return if (h != null && h > 0) {
+            "$exact/bestvideo[height<=$h]+bestaudio/best[height<=$h]/best"
+        } else {
+            "$exact/bestvideo+bestaudio/best"
+        }
     }
 }
 
@@ -189,25 +262,45 @@ object MediaLinks {
 }
 
 object MediaArguments {
-    private fun common() = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--geo-bypass", "--socket-timeout", "20", "--retries", "2", "--extractor-retries", "2", "--fragment-retries", "2", "--abort-on-error", "--no-check-formats")
-    fun probe(url: String, allowHttp: Boolean = false): List<String> = common() + listOf(
-        "--skip-download", "--dump-single-json", "--no-warnings", "--flat-playlist",
-        "--compat-options", "no-youtube-unavailable-videos",
-        "--extractor-args", "youtube:player_client=web_embedded",
-        "--", MediaLinks.normalize(url, allowHttp)
-    )
+    private val commonArgs = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--geo-bypass", "--socket-timeout", "30", "--retries", "3", "--extractor-retries", "3", "--fragment-retries", "3", "--abort-on-error")
+    private val probeFlags = listOf("--skip-download", "--dump-single-json", "--no-warnings", "--flat-playlist")
+    private val youtubeProbeArgs = listOf("--compat-options", "no-youtube-unavailable-videos", "--extractor-args", "youtube:player_client=default,web_embedded")
+    private val youtubeDownloadArgs = listOf("--extractor-args", "youtube:player_client=default,web_embedded")
+    private val allowedAudioBitrates = setOf(64, 96, 128, 160, 192, 256, 320)
+    private val muxContainers = setOf("mp4", "webm", "mkv")
+    private fun isYouTubeUrl(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
+        return host == "youtu.be" || host == "youtube.com" || host.endsWith(".youtube.com") || host.endsWith(".youtube-nocookie.com")
+    }
+    fun probe(url: String, allowHttp: Boolean = false): List<String> {
+        val normalized = MediaLinks.normalize(url, allowHttp)
+        val args = commonArgs.toMutableList()
+        args += probeFlags
+        if (isYouTubeUrl(normalized)) {
+            args += youtubeProbeArgs
+        }
+        args += listOf("--", normalized)
+        return args
+    }
     fun download(url: String, choice: MediaChoice, audio: AudioOutput = AudioOutput.ORIGINAL, bitrate: Int = 192, allowHttp: Boolean = false): List<String> {
-        require(bitrate in setOf(64, 96, 128, 160, 192, 256, 320)) { "INVALID_AUDIO_BITRATE" }
-        val args = common().toMutableList()
-        args += listOf("--extractor-args", "youtube:player_client=web_embedded", "--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
+        require(bitrate in allowedAudioBitrates) { "INVALID_AUDIO_BITRATE" }
+        val normalized = MediaLinks.normalize(url, allowHttp)
+        val args = commonArgs.toMutableList()
+        if (isYouTubeUrl(normalized)) {
+            args += youtubeDownloadArgs
+        }
+        if (choice.mode == MediaMode.VIDEO) {
+            args += listOf("--format-sort", "res,vcodec:h264,acodec:m4a")
+        }
+        args += listOf("--format", MediaCatalog.downloadSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
         if (choice.mode == MediaMode.AUDIO) {
             args += listOf("--extract-audio", "--audio-format", if (audio == AudioOutput.ORIGINAL) "best" else audio.name.lowercase(Locale.ROOT))
             if (audio != AudioOutput.ORIGINAL) args += listOf("--audio-quality", "${bitrate}K")
         } else if (choice.requiresMux) {
-            require(choice.container in setOf("mp4", "webm", "mkv")) { "INVALID_MEDIA_CONTAINER" }
+            require(choice.container in muxContainers) { "INVALID_MEDIA_CONTAINER" }
             args += listOf("--merge-output-format", choice.container)
         }
-        args += listOf("--", MediaLinks.normalize(url, allowHttp))
+        args += listOf("--", normalized)
         return args
     }
 }

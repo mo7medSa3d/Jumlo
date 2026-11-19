@@ -4,23 +4,28 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -33,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
+import com.jumlo.app.ui.theme.JumloMotion
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
@@ -41,9 +47,9 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 val MainDockTabs = listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)
 
 /**
- * Standardized Material 3 bottom [NavigationBar] following modern thumb-zone
- * ergonomics, system navigation-bar insets, 48dp+ touch targets, and Jumlo's
- * primary brand icon on the Home destination.
+ * Floating Liquid Glass bottom [NavigationBar] inspired by modern iOS tab bars:
+ * sits in a translucent floating capsule with a subtle specular rim, spring-lifted
+ * active icons, full system navigation-bar insets, and 48dp+ touch targets.
  */
 @Composable
 fun JumloNavigationBar(
@@ -57,98 +63,125 @@ fun JumloNavigationBar(
     val haptics = rememberAppHaptics()
     val reduced = LocalReducedMotion.current
     val showLabels = LocalDensity.current.fontScale < 1.6f
+    val isDark = colors.background.luminance() < 0.5f
+    // Reference NavigationBarDefaults.windowInsets for system inset parity inside the floating host.
+    val navInsets = NavigationBarDefaults.windowInsets
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        HorizontalDivider(
-            thickness = 1.dp,
-            color = pillars.dockBorder
-        )
-        NavigationBar(
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .testTag("navigation.bar"),
-            containerColor = pillars.dockSurface,
-            contentColor = colors.onSurface,
-            tonalElevation = 0.dp,
-            windowInsets = NavigationBarDefaults.windowInsets
+                .widthIn(max = 460.dp)
+                .fillMaxWidth(),
+            shape = QuietTheme.shapes.dockPill,
+            color = pillars.dockSurface,
+            border = BorderStroke(1.dp, pillars.dockBorder),
+            shadowElevation = if (isDark) 6.dp else 4.dp
         ) {
-            MainDockTabs.forEach { destination ->
-                val active = destination == selectedTab
-                val label = if (language.isRtl) destination.labelAr else destination.labelEn
-                val iconScale by animateFloatAsState(
-                    targetValue = if (active) 1f else 0.92f,
-                    animationSpec = if (reduced) snap() else spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    ),
-                    label = "nav-icon-scale-${destination.name}"
-                )
-                val brandAlpha by animateFloatAsState(
-                    targetValue = if (active) 1f else 0.78f,
-                    animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium),
-                    label = "nav-brand-alpha-${destination.name}"
-                )
+            NavigationBar(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("navigation.bar"),
+                containerColor = Color.Transparent,
+                contentColor = colors.onSurface,
+                tonalElevation = 0.dp,
+                windowInsets = if (navInsets == WindowInsets(0, 0, 0, 0)) navInsets else WindowInsets(0, 0, 0, 0)
+            ) {
+                MainDockTabs.forEach { destination ->
+                    val active = destination == selectedTab
+                    val label = if (language.isRtl) destination.labelAr else destination.labelEn
+                    val iconScaleState = animateFloatAsState(
+                        targetValue = if (active) 1.09f else 0.93f,
+                        animationSpec = if (reduced) snap() else spring(
+                            dampingRatio = JumloMotion.bouncyDamping,
+                            stiffness = JumloMotion.bouncyStiffness
+                        ),
+                        label = "nav-icon-scale-${destination.name}"
+                    )
+                    val iconLiftState = animateFloatAsState(
+                        targetValue = if (active && !reduced) -2.5f else 0f,
+                        animationSpec = if (reduced) snap() else spring(
+                            dampingRatio = JumloMotion.fluidDamping,
+                            stiffness = JumloMotion.fluidStiffness
+                        ),
+                        label = "nav-icon-lift-${destination.name}"
+                    )
+                    val brandAlphaState = animateFloatAsState(
+                        targetValue = if (active) 1f else 0.76f,
+                        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium),
+                        label = "nav-brand-alpha-${destination.name}"
+                    )
 
-                NavigationBarItem(
-                    selected = active,
-                    onClick = {
-                        haptics.navigationTab()
-                        if (!active) onSelectTab(destination)
-                    },
-                    alwaysShowLabel = showLabels,
-                    modifier = Modifier
-                        .testTag("nav.${destination.name}")
-                        .semantics { contentDescription = label },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = colors.onPrimaryContainer,
-                        selectedTextColor = colors.primary,
-                        indicatorColor = colors.primaryContainer,
-                        unselectedIconColor = colors.onSurfaceVariant,
-                        unselectedTextColor = colors.onSurfaceVariant
-                    ),
-                    icon = {
-                        Box(
-                            modifier = Modifier.testTag("nav.indicator.${destination.name}"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (destination == DockTab.HOME) {
-                                JumloAppIconBadge(
-                                    size = 24.dp,
-                                    cornerRadius = 7.dp,
-                                    modifier = Modifier.graphicsLayer {
-                                        scaleX = iconScale
-                                        scaleY = iconScale
-                                        alpha = brandAlpha
-                                    }
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(icon(destination)),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .graphicsLayer {
-                                            scaleX = iconScale
-                                            scaleY = iconScale
+                    NavigationBarItem(
+                        selected = active,
+                        onClick = {
+                            haptics.navigationTab()
+                            if (!active) onSelectTab(destination)
+                        },
+                        alwaysShowLabel = showLabels,
+                        modifier = Modifier
+                            .testTag("nav.${destination.name}")
+                            .semantics { contentDescription = label },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = colors.onPrimaryContainer,
+                            selectedTextColor = colors.primary,
+                            indicatorColor = colors.primaryContainer.copy(alpha = 0.92f),
+                            unselectedIconColor = colors.onSurfaceVariant,
+                            unselectedTextColor = colors.onSurfaceVariant
+                        ),
+                        icon = {
+                            Box(
+                                modifier = Modifier.testTag("nav.indicator.${destination.name}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (destination == DockTab.HOME) {
+                                    JumloAppIconBadge(
+                                        size = 24.dp,
+                                        shape = MaterialTheme.shapes.extraSmall,
+                                        modifier = Modifier.graphicsLayer {
+                                            val s = iconScaleState.value
+                                            scaleX = s
+                                            scaleY = s
+                                            translationY = iconLiftState.value
+                                            alpha = brandAlphaState.value
                                         }
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(icon(destination)),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(22.dp)
+                                            .graphicsLayer {
+                                                val s = iconScaleState.value
+                                                scaleX = s
+                                                scaleY = s
+                                                translationY = iconLiftState.value
+                                            }
+                                    )
+                                }
+                            }
+                        },
+                        label = if (showLabels) {
+                            {
+                                Text(
+                                    text = label,
+                                    style = QuietTheme.typography.navigation.copy(
+                                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.clearAndSetSemantics {}
                                 )
                             }
-                        }
-                    },
-                    label = if (showLabels) {
-                        {
-                            Text(
-                                text = label,
-                                style = QuietTheme.typography.navigation.copy(
-                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.clearAndSetSemantics {}
-                            )
-                        }
-                    } else null
-                )
+                        } else null
+                    )
+                }
             }
         }
     }

@@ -4,12 +4,15 @@ import java.util.Locale
 
 /** Pure path policy used by MediaStore and the user's optional SAF destination. */
 object StoragePaths {
-    fun category(mime:String):String=when {
-        mime.startsWith("video/") -> "Video"
-        mime.startsWith("audio/") -> "Audio"
-        mime == "application/pdf" -> "PDF"
-        mime.startsWith("image/") -> "Images"
-        else -> "Documents"
+    fun category(mime:String):String {
+        val normalized=mime.substringBefore(';').trim().lowercase(Locale.ROOT)
+        return when {
+            normalized.startsWith("video/") -> "Video"
+            normalized.startsWith("audio/") -> "Audio"
+            normalized == "application/pdf" -> "PDF"
+            normalized.startsWith("image/") -> "Images"
+            else -> "Documents"
+        }
     }
     fun relativePath(mime:String, subfolder:String?=null):String {
         val base="Download/Jumlo/${category(mime)}"
@@ -25,14 +28,14 @@ object StoragePaths {
         val name=SafeNames.basename(desired)
         val folded = existing.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
         if(name.lowercase(Locale.ROOT) !in folded) return name
-        val ext=name.substringAfterLast('.',"")
-        val base=if(ext.isNotBlank() && ext.length<12) name.dropLast(ext.length+1) else name
-        val suffix=if(base==name) "" else ".$ext"
+        val dot=name.lastIndexOf('.').takeIf { it > 0 && name.length - it <= 12 }
+        val base=if(dot != null) name.substring(0, dot) else name
+        val suffix=if(dot != null) name.substring(dot) else ""
         for(i in 2..9999) {
             val counterSuffix=" ($i)$suffix"
             val maxBaseBytes=(200 - counterSuffix.toByteArray(Charsets.UTF_8).size).coerceAtLeast(1)
-            val trimmedBase = SafeNames.fitUtf8(base, maxBaseBytes)
-            val proposed="${trimmedBase.ifBlank { "file" }}$counterSuffix"
+            val trimmedBase = if (base.isBlank()) "file" else runCatching { SafeNames.fitUtf8(base, maxBaseBytes) }.getOrDefault("file")
+            val proposed="$trimmedBase$counterSuffix"
             if(proposed.lowercase(Locale.ROOT) !in folded) return SafeNames.basename(proposed)
         }
         throw IllegalStateException("NAME_COLLISION_LIMIT")

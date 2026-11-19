@@ -32,8 +32,8 @@ import javax.inject.Singleton
         }
     }
     suspend fun clearSubmission() { db.processingDao().saveDraft(DraftEntity(SUBMISSION_ID,json.encodeToString(WorkspaceSubmission()))) }
-    suspend fun save(id:String,request:JobRequest) { require(id==request.id); db.processingDao().saveDraft(DraftEntity(id,Json.encodeToString(request))) }
-    suspend fun load(id:String):JobRequest?=db.processingDao().draft(id)?.let { Json.decodeFromString(it.requestJson) }
+    suspend fun save(id:String,request:JobRequest) { require(id==request.id); db.processingDao().saveDraft(DraftEntity(id,json.encodeToString(request))) }
+    suspend fun load(id:String):JobRequest?=db.processingDao().draft(id)?.let { json.decodeFromString(it.requestJson) }
 }
 
 private const val WORKSPACE_ID="00000000-0000-4000-8000-000000000001"

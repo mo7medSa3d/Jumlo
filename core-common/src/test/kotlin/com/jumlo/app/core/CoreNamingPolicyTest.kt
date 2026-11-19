@@ -24,10 +24,18 @@ class CoreNamingPolicyTest {
         assertThrows(IllegalArgumentException::class.java) {
             PageSelection.parse("1-100001", 200000)
         }
+        val splitLimit = assertThrows(IllegalArgumentException::class.java) {
+            PageSelection.groups(100_001, 1)
+        }
+        assertEquals("PAGE_SELECTION_LIMIT", splitLimit.message)
     }
 
     @Test fun filenameCollisionIsCaseInsensitiveAndDeterministic() {
         assertEquals("Report (1).pdf", SafeNames.unique(setOf("report.pdf"), "Report.pdf"))
+        assertEquals("folder report", AutoOutputName.cleanBaseName("folder\\report.pdf"))
+        val longSuffixName = "a." + "b".repeat(197)
+        val uniqueLong = SafeNames.unique(setOf(longSuffixName), longSuffixName)
+        assertEquals(uniqueLong, SafeNames.basename(uniqueLong))
         assertThrows(IllegalArgumentException::class.java) {
             SafeNames.basename("../escape")
         }

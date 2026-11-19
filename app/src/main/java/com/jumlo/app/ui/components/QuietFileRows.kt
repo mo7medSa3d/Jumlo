@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Icon
@@ -18,12 +17,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.ui.theme.pressFeedback
@@ -70,7 +68,7 @@ fun QuietFileRow(
     Surface(
         onClick = { haptics.actionClick(); onClick() },
         modifier = modifier.pressFeedback().fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
+        shape = QuietTheme.shapes.heroCard,
         color = if (selected) QuietTheme.pillars.activePillContainer else MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Row(
@@ -94,7 +92,7 @@ fun QuietFileRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = file.name,
-                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, textDirection = TextDirection.Content),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis

@@ -2,6 +2,7 @@ package com.jumlo.app.data.processing
 
 import android.webkit.MimeTypeMap
 import com.jumlo.app.core.ArchiveLimits
+import com.jumlo.app.core.ResourceBudgetPolicy
 import com.jumlo.app.data.files.EncryptedZip
 import com.jumlo.app.data.files.EncryptedZipEntrySource
 import com.jumlo.app.core.SafeNames
@@ -40,6 +41,8 @@ import javax.inject.Singleton
     }
 
     private suspend fun rename(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
+        require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+        ResourceBudgetPolicy.requireOutputCount(request.sourceIds.size + 1, context.budget.maxOutputFiles)
         val settings = Json.decodeFromString<BatchRenameSettings>(request.settingsJson)
         val names = request.sourceIds.map { context.sources.get(it).displayName }
         val preview = PureDomainAlgorithms.batchRenamePreview(names, settings.pattern, settings.startAt,
@@ -59,16 +62,18 @@ import javax.inject.Singleton
             try {
                 val source = context.sources.get(id)
                 val ticket = context.outputs.reserve(request.id, key, preview[index], source.mimeType ?: "application/octet-stream")
-                context.sources.openRead(id).use { input -> FileOutputStream(ticket.stageFile).use { output ->
-                    val buffer=ByteArray(64*1024);var copied=0L
-                    while(true) {
-                        context.checkCancellation();val n=input.read(buffer);if(n<0) break
-                        require(n.toLong()<=context.budget.maxTemporaryBytes-copied && requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace>=context.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
-                        if(n>0) { output.write(buffer,0,n);copied+=n }
-                    };output.fd.sync()
-                } }
-                context.checkCancellation()
-                val rec = context.outputs.publish(ticket) { OutputMetadata() }
+                val rec = try {
+                    context.sources.openRead(id).use { input -> FileOutputStream(ticket.stageFile).use { output ->
+                        val buffer=ByteArray(64*1024);var copied=0L
+                        while(true) {
+                            context.checkCancellation();val n=input.read(buffer);if(n<0) break
+                            require(n.toLong()<=context.budget.maxTemporaryBytes-copied && requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace>=context.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
+                            if(n>0) { output.write(buffer,0,n);copied+=n }
+                        };output.fd.sync()
+                    } }
+                    context.checkCancellation()
+                    context.outputs.publish(ticket) { OutputMetadata() }
+                } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                 outcomes += ItemOutcome(key, ItemStatus.CREATED, rec.id)
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (e: Exception) { outcomes += ItemOutcome(key, ItemStatus.FAILED, errorCode = com.jumlo.app.data.jobs.stableError(e)) }
@@ -128,15 +133,20 @@ import javax.inject.Singleton
                             context.checkCancellation()
                             require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                         }
+                    } catch (t: Throwable) {
+                        ticket.stageFile.delete()
+                        throw t
                     } finally {
                         tempSourcesDir.deleteRecursively()
                     }
                     // EncryptedZip.create has already reopened and authenticated
                     // every payload. java.util.zip.ZipFile (used by the generic
                     // inspector) cannot open AES ZIP method 99 on all runtimes.
-                    val rec = context.outputs.publish(ticket) {
-                        OutputMetadata(entryCount = request.sourceIds.size, originalSizeBytes = stagedBytes.takeIf { it > 0L })
-                    }
+                    val rec = try {
+                        context.outputs.publish(ticket) {
+                            OutputMetadata(entryCount = request.sourceIds.size, originalSizeBytes = stagedBytes.takeIf { it > 0L })
+                        }
+                    } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                     listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
                 }
             } else {
@@ -145,31 +155,40 @@ import javax.inject.Singleton
                 context.sources.withSeekable(request.sourceIds.single(), request.id) { src ->
                     val dir = File(src.parentFile, "ezx-${UUID.randomUUID()}")
                     try {
-                        val extractedFiles = EncryptedZip.extract(src, dir, password, limits, context.checkCancellation)
+                        val extractParent = requireNotNull(src.parentFile) { "OUTPUT_CREATE_FAILED" }
+                        val free = extractParent.usableSpace - context.budget.minFreeBytes
+                        if (free <= 0L) throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                        val extractLimits = limits.copy(maxBytes = minOf(limits.maxBytes, free))
+                        val extractedFiles = EncryptedZip.extract(src, dir, password, extractLimits) {
+                            context.checkCancellation()
+                            if (extractParent.usableSpace < context.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                        }
                         extractedFiles.forEachIndexed { index, f ->
                             val itemKey = "entry:$index"
                             context.outputs.find(request.id, itemKey)?.let {
                                 outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, it.id)
                             } ?: run {
                                 val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase(Locale.ROOT)) ?: "application/octet-stream"
-                                val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), mime)
                                 require(f.length() <= context.budget.maxTemporaryBytes) { "ARCHIVE_SIZE_LIMIT" }
-                                f.inputStream().use { input ->
-                                    FileOutputStream(ticket.stageFile).use { out ->
-                                        val buffer = ByteArray(64 * 1024)
-                                        while (true) {
-                                            context.checkCancellation()
-                                            val count = input.read(buffer)
-                                            if (count < 0) break
-                                            if (count > 0) {
-                                                require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
-                                                out.write(buffer, 0, count)
+                                val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), mime)
+                                val rec = try {
+                                    f.inputStream().use { input ->
+                                        FileOutputStream(ticket.stageFile).use { out ->
+                                            val buffer = ByteArray(64 * 1024)
+                                            while (true) {
+                                                context.checkCancellation()
+                                                val count = input.read(buffer)
+                                                if (count < 0) break
+                                                if (count > 0) {
+                                                    require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
+                                                    out.write(buffer, 0, count)
+                                                }
                                             }
+                                            out.fd.sync()
                                         }
-                                        out.fd.sync()
                                     }
-                                }
-                                val rec = context.outputs.publish(ticket) { OutputMetadata() }
+                                    context.outputs.publish(ticket) { OutputMetadata() }
+                                } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                                 outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, rec.id)
                             }
                             context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), extractedFiles.size.toLong()))

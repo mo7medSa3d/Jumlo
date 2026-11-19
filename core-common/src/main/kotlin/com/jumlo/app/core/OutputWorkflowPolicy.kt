@@ -10,16 +10,18 @@ data class OutputFileChoice(val id: String, val name: String, val mime: String, 
 object OutputWorkflowPolicy {
     // Align with JobStore admission. Large byte counts are constrained by real free space at processing time.
     private const val maxFiles = 1000
+    private val zipMimes = setOf("application/zip", "application/x-zip-compressed")
+    private val supportedTools = setOf("file_07", "pdf_02", "pdf_03", "pdf_04", "img_01", "file_08")
 
     fun reuseTool(mimeType: String): String = when {
         mimeType.equals("application/pdf", ignoreCase = true) -> "pdf_04"
         mimeType.startsWith("image/", ignoreCase = true) -> "img_01"
-        mimeType.lowercase(Locale.ROOT) in setOf("application/zip", "application/x-zip-compressed") -> "file_08"
+        mimeType.lowercase(Locale.ROOT) in zipMimes -> "file_08"
         else -> "file_07"
     }
 
     fun validate(files: List<OutputFileChoice>, toolId: String): List<OutputFileChoice> {
-        require(toolId in setOf("file_07", "pdf_02", "pdf_03", "pdf_04", "img_01", "file_08")) { "UNSUPPORTED_OUTPUT_WORKFLOW" }
+        require(toolId in supportedTools) { "UNSUPPORTED_OUTPUT_WORKFLOW" }
         require(files.isNotEmpty()) { "NO_SOURCES" }
         require(files.size <= maxFiles) { "BUNDLE_TOO_MANY_ITEMS" }
         require(files.all { isId(it.id) && it.bytes >= 0L && it.name.isNotBlank() }) { "BUNDLE_INVALID_SELECTION" }
@@ -27,7 +29,7 @@ object OutputWorkflowPolicy {
         val one = files.size == 1
         val allPdf = files.all { it.mime.equals("application/pdf", ignoreCase = true) }
         val allImages = files.all { it.mime.startsWith("image/", ignoreCase = true) }
-        val allArchives = files.all { it.mime.lowercase(Locale.ROOT) in setOf("application/zip", "application/x-zip-compressed") }
+        val allArchives = files.all { it.mime.lowercase(Locale.ROOT) in zipMimes }
         val compatible = when (toolId) {
             "file_07" -> true
             "pdf_02" -> allImages

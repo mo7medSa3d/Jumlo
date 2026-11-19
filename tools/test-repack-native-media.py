@@ -300,4 +300,43 @@ class PlatformLzmaCollisionTests(unittest.TestCase):
                 repack.LinkUniverse(str(root), payloads={'libpython.zip.so': result}).validate()
 
 
+
+class RepackHardeningTests(unittest.TestCase):
+    def test_oversized_and_backslash_symlinks_are_rejected(self):
+        for target in ('a' * 5000, 'sub\\libtarget.so'):
+            with self.subTest(size=len(target)), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = io.BytesIO()
+                with zipfile.ZipFile(source, 'w') as archive:
+                    entry = zipfile.ZipInfo('usr/lib/libalias.so')
+                    entry.create_system = 3
+                    entry.external_attr = 0o120777 << 16
+                    archive.writestr(entry, target)
+                (root / 'libpython.zip.so').write_bytes(source.getvalue())
+                with self.assertRaises(ValueError):
+                    repack.LinkUniverse(str(root))
+
+    def test_truncated_eocd_and_missing_dir_fail_closed(self):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as z:
+            z.writestr('usr/lib/libfoo.so', b'x')
+            z.comment = b'PK\x05\x06short'
+        with self.assertRaises((ValueError, zipfile.BadZipFile)):
+            repack.repack_bytes(buf.getvalue(), {'libfoo.so'})
+        with tempfile.TemporaryDirectory() as directory:
+            missing = str(Path(directory) / 'arm64-v8a')
+            with patch('sys.argv', ['repack-native-media.py', '--dir', missing]):
+                self.assertEqual(2, repack.main())
+
+    def test_write_atomic_preserves_readable_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'libpython.zip.so'
+            repack._write_atomic(str(target), b'first')
+            self.assertEqual(0o644, target.stat().st_mode & 0o777)
+            target.chmod(0o640)
+            repack._write_atomic(str(target), b'second')
+            self.assertEqual(0o640, target.stat().st_mode & 0o777)
+            self.assertEqual(b'second', target.read_bytes())
+
+
 if __name__=='__main__': unittest.main()

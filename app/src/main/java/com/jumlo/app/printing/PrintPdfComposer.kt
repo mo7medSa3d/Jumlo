@@ -17,7 +17,10 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
+import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
+import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
+import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget
 import com.tom_roush.pdfbox.util.Matrix
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -41,10 +44,14 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
         options.validate();check()
         val file=repository.resolve(source)
         return if(source.mimeType.equals("application/pdf", ignoreCase = true)) {
-            PDDocument.load(file,memory()).use { doc ->
-                require(doc.currentAccessPermission.canPrint()) { "PRINT_PERMISSION" }
-                require(doc.numberOfPages in 1..PrintRanges.MAX_PAGES) { "PRINT_PAGE_COUNT" }
-                PrintDocumentInfo((0 until doc.numberOfPages).map { i -> check(); info(doc.getPage(i)) })
+            try {
+                PDDocument.load(file,memory()).use { doc ->
+                    require(doc.currentAccessPermission.canPrint()) { "PRINT_PERMISSION" }
+                    require(doc.numberOfPages in 1..PrintRanges.MAX_PAGES) { "PRINT_PAGE_COUNT" }
+                    PrintDocumentInfo((0 until doc.numberOfPages).map { i -> check(); info(doc.getPage(i)) })
+                }
+            } catch (_: InvalidPasswordException) {
+                throw IllegalArgumentException("PRINT_PERMISSION")
             }
         } else {
             require(source.mimeType.startsWith("image/", ignoreCase = true)) { "PRINT_UNSUPPORTED" }
@@ -81,7 +88,8 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
         try {
             progress(0,pages.size)
             if(source.mimeType.equals("application/pdf", ignoreCase = true)) {
-                PDDocument.load(file,memory()).use { original ->
+                val loadedOriginal = try { PDDocument.load(file,memory()) } catch (_: InvalidPasswordException) { throw IllegalArgumentException("PRINT_PERMISSION") }
+                loadedOriginal.use { original ->
                     require(original.currentAccessPermission.canPrint()) { "PRINT_PERMISSION" }
                     val ordered=PrintRanges.sourcePages(pages,original.numberOfPages)
                     // Generate missing widget appearances before embedding printable annotations.
@@ -154,7 +162,7 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
         for(annotation in page.annotations) {
             if(!annotation.isPrinted || annotation.isHidden || annotation.isInvisible) continue
             val rect=annotation.rectangle ?: continue
-            val appearance=annotation.normalAppearanceStream ?: throw IllegalArgumentException("PRINT_APPEARANCE")
+            val appearance=annotation.normalAppearanceStream ?: if (annotation is PDAnnotationWidget) throw IllegalArgumentException("PRINT_APPEARANCE") else continue
             val box=appearance.bBox
             val matrix=appearance.matrix
             val points=listOf(box.lowerLeftX to box.lowerLeftY,box.upperRightX to box.lowerLeftY,box.lowerLeftX to box.upperRightY,box.upperRightX to box.upperRightY).map { matrix.transformPoint(it.first,it.second) }
@@ -190,7 +198,8 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
                                         for(x in row.indices) { val p=row[x];val gray=(Color.red(p)*.2126+Color.green(p)*.7152+Color.blue(p)*.0722).roundToInt();row[x]=Color.rgb(gray,gray,gray) }
                                         tile.setPixels(row,0,w,0,y,w,1)
                                     }
-                                    val image=LosslessFactory.createFromImage(pdf,tile)
+                                    tile.setHasAlpha(false)
+                                    val image=JPEGFactory.createFromImage(pdf,tile,0.92f)
                                     cs.drawImage(image,left/factor,page.height-(top+h)/factor,w/factor,h/factor)
                                 } finally {tile.recycle()}
                             }

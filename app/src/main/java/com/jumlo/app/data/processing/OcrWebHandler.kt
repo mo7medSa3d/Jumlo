@@ -26,6 +26,13 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
         require(request.sourceIds.size == 1) { "ONE_FILE_REQUIRED" }
         val source = context.sources.get(request.sourceIds.single())
         val settings = JSONObject(request.settingsJson)
+        val existingText = context.outputs.find(request.id, "text")
+        val existingDoc = context.outputs.find(request.id, "document")
+        if (existingText != null) {
+            val reused = mutableListOf(ItemOutcome("text", ItemStatus.CREATED, existingText.id))
+            if (existingDoc != null) reused += ItemOutcome("document", ItemStatus.CREATED, existingDoc.id)
+            return@withContext reused
+        }
         val base = AutoOutputName.cleanBaseName(source.displayName, "Document") + " - OCR"
         val textTicket = context.outputs.reserve(request.id, "text", SafeNames.basename("$base.txt"), "text/plain")
         var pdfTicket: OutputTicket? = null
@@ -51,7 +58,7 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
                         try {
                             pages.forEachIndexed { index, number ->
                                 context.checkCancellation()
-                                require(requireNotNull(input.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                                require(requireNotNull(textTicket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                                 var text = PdfPageText.extract(document, number - 1, context.checkCancellation)
                                 if (text.isBlank()) {
                                     val renderer = rasterizer ?: PdfPageRasterizer(input, context.checkCancellation).also { rasterizer = it }

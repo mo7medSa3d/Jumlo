@@ -9,7 +9,7 @@ def source(path): return (SRC/path).read_text(encoding="utf-8")
 class FlagshipReliabilityWiringTests(unittest.TestCase):
     def test_split_every_page_chip_selects_every_mode(self):
         editor=source('ui/workspace/PdfPageEditor.kt')
-        chunk=editor.split('item("each-page")',1)[1].split('item(',1)[0]
+        chunk=editor.split('"each-page"',1)[1].split('item(',1)[0]
         # Group mode uses the same flag, so "every page" is selected only for
         # a one-page group. Merely checking flag1 would mislabel larger groups.
         # Styling now supplies border before the named selection argument. Check

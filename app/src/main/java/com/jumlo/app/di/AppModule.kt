@@ -3,8 +3,6 @@ package com.jumlo.app.di
 import android.content.Context
 import androidx.room.Room
 import com.jumlo.app.data.local.AppDatabase
-import com.jumlo.app.data.local.DownloadTaskDao
-import com.jumlo.app.data.local.ManagedFileDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,12 +45,6 @@ object AppModule {
             .addCallback(com.jumlo.app.data.local.LegacyDownloadPrivacyCallback)
             .build()
     }
-
-    @Provides
-    fun provideManagedFileDao(db: AppDatabase): ManagedFileDao = db.managedFileDao()
-
-    @Provides
-    fun provideDownloadTaskDao(db: AppDatabase): DownloadTaskDao = db.downloadTaskDao()
 
     @Provides
     @Singleton

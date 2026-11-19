@@ -1,14 +1,9 @@
 package com.jumlo.app.ui.downloads
 
 import com.jumlo.app.ui.util.rememberAppHaptics
-import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Download
 import com.jumlo.app.ui.icons.rounded.CheckCircle
@@ -16,17 +11,14 @@ import com.jumlo.app.ui.icons.rounded.Bolt
 import com.jumlo.app.ui.icons.rounded.History
 import com.jumlo.app.ui.icons.rounded.Link
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -36,7 +28,6 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.model.*
 import com.jumlo.app.data.jobs.CapabilityRegistry
-import com.jumlo.app.core.StoragePaths
 
 @Composable fun DownloadsScreen(vm:AppViewModel,onTool:(UtilityTool)->Unit,onJob:(String)->Unit) {
     val haptics=rememberAppHaptics()
@@ -44,7 +35,6 @@ import com.jumlo.app.core.StoragePaths
     val jobLoad by vm.jobLoad.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val sources by vm.imported.collectAsStateWithLifecycle()
-    val system = LocalColorSystem.current
     val pillars = QuietTheme.pillars
     val colors = MaterialTheme.colorScheme
     var selecting by remember {mutableStateOf(false)}
@@ -55,7 +45,7 @@ import com.jumlo.app.core.StoragePaths
         val previousDownloads=downloads.filterNot(JobSnapshot::isActive)
         Triple(downloads, activeDownloads, previousDownloads)
     }
-    LaunchedEffect(downloads) {
+    LaunchedEffect(activeDownloads) {
         selected=selected.intersect(activeDownloads.map {it.request.id}.toSet())
         if(activeDownloads.isEmpty()) selecting=false
     }
@@ -74,34 +64,14 @@ import com.jumlo.app.core.StoragePaths
     ) {
         item("download-summary") {
             Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = system.splashMid,
-                shadowElevation = 4.dp,
+                shape = QuietTheme.shapes.heroCard,
+                color = pillars.cardSurface,
+                shadowElevation = 0.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(system.splashStart, system.splashMid, system.splashEnd)
-                            )
-                        )
-                ) {
-                    Box(
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 56.dp, y = (-52).dp)
-                            .size(190.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(system.splashGlow1.copy(alpha = 0.25f), Color.Transparent)
-                                ),
-                                CircleShape
-                            )
-                    )
+                Box(Modifier.fillMaxWidth()) {
                     Column(
-                        Modifier.fillMaxWidth().padding(20.dp),
+                        Modifier.fillMaxWidth().padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Row(
@@ -110,13 +80,12 @@ import com.jumlo.app.core.StoragePaths
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(15.dp),
-                                color = Color.White.copy(alpha = 0.16f),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                                modifier = Modifier.size(52.dp)
+                                shape = QuietTheme.shapes.iconTile,
+                                color = colors.primary,
+                                modifier = Modifier.size(48.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Rounded.Download, null, Modifier.size(26.dp), tint = Color.White)
+                                    Icon(Icons.Rounded.Download, null, Modifier.size(24.dp), tint = colors.onPrimary)
                                 }
                             }
                             Column(
@@ -126,13 +95,13 @@ import com.jumlo.app.core.StoragePaths
                                 Text(
                                     stringResource(R.string.neon_download_headline),
                                     style = QuietTheme.typography.screenTitle,
-                                    color = Color.White,
+                                    color = colors.onSurface,
                                     modifier = Modifier.semantics { heading() }
                                 )
                                 Text(
                                     stringResource(R.string.neon_download_subtitle),
                                     style = QuietTheme.typography.metadata,
-                                    color = Color.White.copy(alpha = 0.88f),
+                                    color = colors.onSurfaceVariant,
                                     maxLines = 2
                                 )
                             }
@@ -143,8 +112,8 @@ import com.jumlo.app.core.StoragePaths
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).pressFeedback(),
                                 shape = QuietTheme.shapes.button,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = system.splashStart
+                                    containerColor = colors.primary,
+                                    contentColor = colors.onPrimary
                                 )
                             ) {
                                 Icon(Icons.Rounded.Download, null, Modifier.size(20.dp))
@@ -157,21 +126,20 @@ import com.jumlo.app.core.StoragePaths
                                 onClick = { haptics.actionClick(); onTool(batchTool) },
                                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).pressFeedback(),
                                 shape = QuietTheme.shapes.button,
-                                color = Color.White.copy(alpha = 0.14f),
-                                contentColor = Color.White,
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.28f))
+                                color = colors.surfaceContainer,
+                                contentColor = colors.onSurface
                             ) {
                                 Row(
                                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Icon(Icons.Rounded.Link, null, Modifier.size(18.dp), tint = Color.White)
+                                    Icon(Icons.Rounded.Link, null, Modifier.size(18.dp), tint = colors.primary)
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         stringResource(R.string.ui_batch_download),
                                         style = QuietTheme.typography.metadataStrong,
-                                        color = Color.White
+                                        color = colors.onSurface
                                     )
                                 }
                             }
@@ -180,11 +148,11 @@ import com.jumlo.app.core.StoragePaths
                 }
             }
         }
-        item("download-stats") {
+        if (downloads.isNotEmpty()) item("download-stats") {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 NeonPanel(Modifier.weight(1f)) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = QuietTheme.shapes.badge,
                         color = colors.primaryContainer,
                         modifier = Modifier.size(36.dp)
                     ) {
@@ -207,7 +175,7 @@ import com.jumlo.app.core.StoragePaths
                 }
                 NeonPanel(Modifier.weight(1f)) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = QuietTheme.shapes.badge,
                         color = pillars.successContainer,
                         modifier = Modifier.size(36.dp)
                     ) {
@@ -265,8 +233,6 @@ import com.jumlo.app.core.StoragePaths
             QuietStateCard(
                 title=stringResource(R.string.downloads_empty_title),
                 subtitle=stringResource(R.string.premium_download_empty),
-                actionLabel=if (mediaTool!=null) stringResource(R.string.ui_new_download) else null,
-                onAction=if (mediaTool!=null) ({ onTool(mediaTool) }) else null,
                 icon=Icons.Rounded.Download
             )
         }
@@ -286,15 +252,13 @@ import com.jumlo.app.core.StoragePaths
     val activeJobs=remember(relevantJobs) { relevantJobs.filter(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val recentJobs=remember(relevantJobs) { relevantJobs.filterNot(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val availableOutputs=remember(outputs,selectedJob) { outputs.filter { selectedJob==null || it.jobId==selectedJob } }
+    val sourceNamesById=remember(sources) { sources.associate { it.id to it.displayName } }
     Box(Modifier.fillMaxSize()) {
-    LazyColumn(Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    LazyColumn(Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=QuietTheme.spacing.listBottomBuffer),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item("activity-summary") {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
-                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                    Text(stringResource(R.string.activity_title),style=QuietTheme.typography.screenTitle,modifier=Modifier.semantics { heading() })
-                    Text(stringResource(R.string.jumlo_activity_summary, activeJobs.size, availableOutputs.size),
-                        style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(stringResource(R.string.jumlo_activity_summary, activeJobs.size, availableOutputs.size),
+                    style=QuietTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.weight(1f))
                 if(selectedJob!=null && onShowAll!=null) {
                     TextButton(onClick=onShowAll) {
                         Text(stringResource(R.string.ui_all),style=QuietTheme.typography.metadataStrong)
@@ -313,7 +277,7 @@ import com.jumlo.app.core.StoragePaths
         if(activeJobs.isNotEmpty()) {
             item("active-title") { QuietSectionTitle(stringResource(R.string.jumlo_activity_active), Modifier.semantics { heading() }) }
             items(activeJobs,key={"active-${it.request.id}"},contentType={"active"}) { job ->
-                ActivityJobRow(vm,job,settings.language,sources)
+                ActivityJobRow(vm,job,settings.language,job.request.sourceIds.singleOrNull()?.let { sourceNamesById[it] })
             }
         }
         if(availableOutputs.isNotEmpty()) {
@@ -333,7 +297,7 @@ import com.jumlo.app.core.StoragePaths
         if(recentJobs.isNotEmpty()) {
             item("history-title") { QuietSectionTitle(stringResource(R.string.jumlo_activity_history), Modifier.semantics { heading() }) }
             items(recentJobs,key={"recent-${it.request.id}"},contentType={"history"}) { job ->
-                ActivityJobRow(vm,job,settings.language,sources)
+                ActivityJobRow(vm,job,settings.language,job.request.sourceIds.singleOrNull()?.let { sourceNamesById[it] })
             }
         }
         item("new-run") {
@@ -342,47 +306,31 @@ import com.jumlo.app.core.StoragePaths
     }
     }
     details?.let { output ->
-        AlertDialog(
-            onDismissRequest={details=null},
-            title={Text(output.displayName)},
-            text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(output.mimeType,style=QuietTheme.typography.metadata)
-                Text(formatOutputSizeSummary(output),style=QuietTheme.typography.bodyMedium)
-                output.metadata.pageCount?.let { Text(stringResource(R.string.output_pages_count, it),style=QuietTheme.typography.metadata) }
-                Text(stringResource(R.string.output_sha256_label, output.sha256.take(16) + "…"),style=QuietTheme.typography.metadata)
-                val savedDescription=if(output.publicUri.isNullOrBlank()) {
-                    stringResource(R.string.output_saved_privately)
-                } else {
-                    val folder=buildString {
-                        append("Jumlo / ").append(StoragePaths.category(output.mimeType))
-                        output.metadata.subfolder?.takeIf { it.isNotBlank() }?.let { append(" / ").append(it) }
-                    }
-                    stringResource(R.string.output_saved_location,folder)
-                }
-                Text(savedDescription,style=QuietTheme.typography.metadata)
-            }},
-            confirmButton={TextButton(onClick={details=null}) {Text(stringResource(R.string.account_done))}}
-        )
+        OutputDetailsDialog(output = output, onDismiss = { details = null })
     }
 }
 
-@Composable private fun ActivityJobRow(vm:AppViewModel,job:JobSnapshot,language:AppLanguage,sources:List<SourceRef>) {
+private val REENTER_URL_ERROR_CODES = setOf("SECRET_EXPIRED", "DOWNLOAD_RESTART_REQUIRED")
+
+@Composable private fun ActivityJobRow(vm:AppViewModel,job:JobSnapshot,language:AppLanguage,sourceName:String?) {
     TransferRow(job,language,null,{vm.pause(job.request.id)},{vm.cancel(job.request.id)},{vm.retry(job)},
-        sourceName=job.request.sourceIds.singleOrNull()?.let { id -> sources.firstOrNull { it.id == id }?.displayName })
+        sourceName=sourceName)
     if(job.progress.stage==JobStage.WAITING_FOR_INPUT && job.request.toolId.startsWith("dl_") &&
-        job.outcomes.lastOrNull {it.errorCode!=null}?.errorCode in setOf("SECRET_EXPIRED","DOWNLOAD_RESTART_REQUIRED")) {
+        job.outcomes.lastOrNull {it.errorCode!=null}?.errorCode in REENTER_URL_ERROR_CODES) {
         var replacement by remember(job.request.id) { mutableStateOf("") }
-        OutlinedTextField(replacement,{replacement=it},label={Text(stringResource(R.string.activity_reenter_url))},modifier=Modifier.fillMaxWidth())
+        OutlinedTextField(
+            value = replacement,
+            onValueChange = { replacement = it },
+            label = { Text(stringResource(R.string.activity_reenter_url)) },
+            singleLine = true,
+            shape = QuietTheme.shapes.inputField,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr),
+            modifier = Modifier.fillMaxWidth()
+        )
         Text(stringResource(R.string.activity_reenter_url_hint),style=QuietTheme.typography.metadata)
-        TextButton(onClick={vm.retry(job,replacement);replacement=""},enabled=replacement.isNotBlank()) {
+        TextButton(onClick={vm.retry(job,replacement);replacement=""},enabled=replacement.isNotBlank(),modifier=Modifier.heightIn(min=48.dp)) {
             Text(stringResource(R.string.activity_retry_urls))
         }
     }
-    job.outcomes.mapNotNull {it.errorCode}.forEach { errorCode ->
-        Surface(color=MaterialTheme.colorScheme.errorContainer.copy(alpha=0.55f),shape=MaterialTheme.shapes.medium,
-            modifier=Modifier.fillMaxWidth().padding(top=6.dp).semantics { liveRegion = LiveRegionMode.Polite }) {
-            Text(text=stringResource(userMessageResource(errorCode)),style=QuietTheme.typography.bodyMedium,
-                color=MaterialTheme.colorScheme.onErrorContainer,modifier=Modifier.padding(12.dp))
-        }
-    }
+    // Single error presentation is handled directly inside TransferRow to avoid duplicate error banners.
 }

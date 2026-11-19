@@ -40,6 +40,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.util.Consumer
@@ -65,6 +67,10 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+
+private val ROOT_ROUTES = setOf("home", "tools", "files", "settings")
+private val DROP_TARGET_ROUTES = setOf("files", "workspace")
+private val MEDIA_WORKSPACE_TOOLS = setOf("dl_media", "dl_02")
 
 private fun title(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) tool.titleAr else tool.titleEn
 private fun subtitle(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) tool.subtitleAr else tool.subtitleEn
@@ -98,8 +104,9 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val context=LocalContext.current
     val appHaptics = rememberAppHaptics()
     val trackedJobs by viewModel.jobs.collectAsStateWithLifecycle()
-    val lastStages=remember { mutableStateMapOf<String,JobStage>() }
+    val lastStages=remember { mutableMapOf<String,JobStage>() }
     LaunchedEffect(trackedJobs) {
+        lastStages.keys.retainAll(trackedJobs.mapTo(mutableSetOf()) { it.request.id })
         trackedJobs.forEach {job ->
             val id=job.request.id
             val previous=lastStages.put(id,job.progress.stage)
@@ -110,6 +117,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     val reduceMotion=LocalReducedMotion.current
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
+    val swipeDistance=with(LocalDensity.current) { 54.dp.toPx() }
     val navController = rememberNavController()
     val hostActivity = remember(context) {
         generateSequence(context) { current ->
@@ -132,7 +140,6 @@ fun JumloNavHost(viewModel:AppViewModel) {
         destination?.hasRoute<JobRoute>() == true || destination?.hasRoute<ActivityRoute>() == true -> "activity"
         else -> "home"
     }
-    val rootRoutes = setOf("home", "tools", "files", "settings")
     var lastTab by rememberSaveable { mutableStateOf(DockTab.HOME) }
     val tab = MainDockTabs.firstOrNull { it.route == route } ?: lastTab
     var tabHistory by rememberSaveable { mutableStateOf(listOf<String>()) }
@@ -187,7 +194,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         appHaptics.actionClick()
         when (name) {
             "workspace" -> openWorkspace()
-            "settings" -> navController.navigate(SettingsDetailRoute) { launchSingleTop = true }
+            "settings" -> switchTab(DockTab.SETTINGS)
             "storage" -> navController.navigate(StorageRoute) { launchSingleTop = true }
             "scan" -> {
                 val origin=currentToolOrigin() ?: tab.route
@@ -214,7 +221,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             navController.popBackStack()
             tabHistory=tabHistory.filterNot {it==originTab.name}
             switchTab(originTab,recordHistory=false)
-        } else if (route in rootRoutes && tabHistory.isNotEmpty()) {
+        } else if (route in ROOT_ROUTES && tabHistory.isNotEmpty()) {
             val previous = DockTab.entries.firstOrNull { it.name == tabHistory.last() } ?: DockTab.HOME
             tabHistory = tabHistory.dropLast(1)
             switchTab(previous, recordHistory = false)
@@ -383,10 +390,12 @@ fun JumloNavHost(viewModel:AppViewModel) {
 
     @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools") {
         var scanPublishing by remember(entryId) { mutableStateOf(false) }
-        val root = shellRoute in rootRoutes
+        val root = shellRoute in ROOT_ROUTES
         val showDock = root || shellRoute in setOf("downloads", "workspace", "activity")
-        val swipeDistance=with(LocalDensity.current) { 54.dp.toPx() }
         val headerToolId=entryToolId ?: form.toolId
+        val headerTool=remember(shellRoute, headerToolId) {
+            if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null
+        }
         CompositionLocalProvider(LocalToolTransitionVisibility provides transitionScope,
             LocalToolTransitionOrigin provides if(root) shellRoute else transitionOrigin) {
         com.jumlo.app.ui.adaptive.HingeSafeViewport {
@@ -407,10 +416,10 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         title=if(shellRoute=="home") stringResource(R.string.app_name)
                             else if(settings.language.isRtl) tab.labelAr else tab.labelEn,
                         titleContent=if(shellRoute=="home") {{ JumloWordmark() }} else null,
-                        onSettingsClick={navigateTo("settings")},showSettings=shellRoute!="settings"
+                        onSettingsClick={navigateTab(DockTab.SETTINGS)},showSettings=false
                     ) else if(shellRoute!="viewer") QuietWorkspaceTopBar(
                         title=when(shellRoute) {
-                            "workspace" -> CapabilityRegistry.tools.find {it.id==headerToolId}?.let {title(it,settings.language)} ?: stringResource(R.string.workspace_title)
+                            "workspace" -> headerTool?.let {title(it,settings.language)} ?: stringResource(R.string.workspace_title)
                             "activity" -> stringResource(R.string.activity_title)
                             "downloads" -> if(settings.language.isRtl) DockTab.DOWNLOADS.labelAr else DockTab.DOWNLOADS.labelEn
                             "scan" -> stringResource(R.string.scan_title)
@@ -422,12 +431,12 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         // Every tool screen shows its benefit subtitle and its own
                         // pillar family color; previously the subtitle was dropped
                         // and every tool inherited the PDF pillar colors.
-                        subtitle=if(shellRoute=="workspace") CapabilityRegistry.tools.find {it.id==headerToolId}?.let {subtitle(it,settings.language)} else null,
-                        pillar=if(shellRoute=="workspace") CapabilityRegistry.tools.find {it.id==headerToolId}?.pillar ?: com.jumlo.app.model.PillarCategory.PDF else com.jumlo.app.model.PillarCategory.PDF,
+                        subtitle=if(shellRoute=="workspace") headerTool?.let {subtitle(it,settings.language)} else null,
+                        pillar=if(shellRoute=="workspace") headerTool?.pillar ?: com.jumlo.app.model.PillarCategory.PDF else com.jumlo.app.model.PillarCategory.PDF,
                         onBack=::goBack,
                         toolId=when(shellRoute) { "workspace" -> headerToolId; "scan" -> "scan_doc"; else -> null }
                     )
-                    DropFilesTarget(enabled=shellRoute in setOf("files","workspace"),
+                    DropFilesTarget(enabled=shellRoute in DROP_TARGET_ROUTES,
                         modifier=Modifier.weight(1f).fillMaxWidth(),
                         onDropFiles={uris,release -> viewModel.intake(
                             Intake(uris,Intent.FLAG_GRANT_READ_URI_PERMISSION,null),
@@ -497,7 +506,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     subtitle=stringResource(R.string.ui_unavailable_body),
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
-                                ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
+                                ) else if(form.toolId in MEDIA_WORKSPACE_TOOLS) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
                                 else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.safeLaunch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,jobId,{openOutput(it)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
@@ -523,7 +532,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     (if(reduceMotion) EnterTransition.None
                     else if(targetState.destination.hasRoute<PrintRoute>()) scaleIn(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),initialScale=.94f)
                     else slideInHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) -1 else 1) * it / 7
+                        (if(rtl) -1 else 1) * it / 3
                     })
             },
             exitTransition = {
@@ -531,7 +540,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     (if(reduceMotion) ExitTransition.None
                     else if(initialState.destination.hasRoute<PrintRoute>()) scaleOut(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),targetScale=.96f)
                     else slideOutHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) 1 else -1) * it / 10
+                        (if(rtl) 1 else -1) * it / 4
                     })
             },
             popEnterTransition = {
@@ -539,7 +548,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     (if(reduceMotion) EnterTransition.None
                     else if(targetState.destination.hasRoute<PrintRoute>()) scaleIn(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),initialScale=.94f)
                     else slideInHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) 1 else -1) * it / 7
+                        (if(rtl) 1 else -1) * it / 4
                     })
             },
             popExitTransition = {
@@ -547,7 +556,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                     (if(reduceMotion) ExitTransition.None
                     else if(initialState.destination.hasRoute<PrintRoute>()) scaleOut(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),targetScale=.96f)
                     else slideOutHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) -1 else 1) * it / 10
+                        (if(rtl) -1 else 1) * it / 3
                     })
             }
         ) {
@@ -579,7 +588,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         // handler *after* NavHost in composition order so Android Back reaches
         // the unsaved-changes guard before Navigation can pop the tool.
         // Keep this active for both legacy button Back and predictive gestures.
-        PredictiveBackHandler(enabled = route !in rootRoutes || tabHistory.isNotEmpty()) { progress ->
+        PredictiveBackHandler(enabled = route !in ROOT_ROUTES || tabHistory.isNotEmpty()) { progress ->
             try {
                 progress.collect { backSwipe = it.progress.coerceIn(0f, 1f) }
                 goBack()
@@ -613,7 +622,10 @@ fun JumloNavHost(viewModel:AppViewModel) {
         AlertDialog(
             onDismissRequest={deleteEntry=null},
             title={Text(stringResource(R.string.dialog_delete_title))},
-            text={Text(entry.name+"\n"+stringResource(R.string.dialog_delete_body))},
+            text={Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text(entry.name,style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold,textDirection=TextDirection.Content))
+                Text(stringResource(R.string.dialog_delete_body))
+            }},
             confirmButton={TextButton(onClick={deleteEntry=null;viewModel.deleteFile(entry)}) {Text(stringResource(R.string.action_delete))}},
             dismissButton={TextButton(onClick={deleteEntry=null}) {Text(stringResource(R.string.action_cancel))}}
         )

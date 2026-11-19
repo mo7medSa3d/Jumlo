@@ -42,6 +42,7 @@ private val WATERMARK_COLORS = listOf("#FFFFFF" to R.string.studio_ink_white,"#1
 private val WATERMARK_ANGLES = listOf(-90,-45,0,45,90)
 private val WATERMARK_PLACEMENTS = listOf(Triple(R.string.studio_top_left,.2f,.2f),Triple(R.string.studio_top_right,.8f,.2f),Triple(R.string.studio_center,.5f,.5f),
     Triple(R.string.studio_bottom_left,.2f,.8f),Triple(R.string.studio_bottom_right,.8f,.8f))
+private val WATERMARK_MODES = listOf(false to R.string.studio_watermark_text_mode,true to R.string.studio_watermark_image_mode)
 
 /** Shared interactive PDF/image watermark controls use the exact serialized production geometry. */
 @Composable
@@ -91,18 +92,20 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
         Text(stringResource(if(tiled) R.string.studio_watermark_tile_hint else R.string.studio_watermark_gesture),style=QuietTheme.typography.metadata)
         val frame=result?.getOrNull()
         when {
-            frame!=null -> {
-                val applies=imageTool || page in selectedPageNumbers(draft.pages,frame.count)
+            frame!=null && !frame.bitmap.isRecycled -> {
+                val applies=remember(imageTool,page,draft.pages,frame.count) { imageTool || page in selectedPageNumbers(draft.pages,frame.count) }
                 if(!imageTool && !useImage) {
                     PdfWatermarkPreview(frame,draft,page,applies,centerX,centerY,::position,{},
                         onScaleRotation={size,angle->edit {it.copy(num1=size.toString(),text4=angle.toString())}})
                 } else {
                     val bitmap=if(useImage) logo?.getOrNull()?.bitmap else textBitmap
-                    val objects=if(bitmap==null || bitmap.isRecycled || !applies || frame.width<=0 || frame.height<=0) emptyList() else {
-                        val dimensions=OverlayStylePolicy.size(frame.width.toDouble(),frame.height.toDouble(),bitmap.width.toDouble(),bitmap.height.toDouble(),draft.watermarkScale)
-                        val w=(dimensions.first/frame.width).toFloat();val h=(dimensions.second/frame.height).toFloat()
-                        OverlayStylePolicy.centers(centerX.toDouble(),centerY.toDouble(),tiled).mapIndexed {index,(x,y)->
-                            PreviewObject(if(tiled) "tile-$index" else "watermark",bitmap,x.toFloat()-w/2,y.toFloat()-h/2,x.toFloat()+w/2,y.toFloat()+h/2,rotation.toFloat(),opacity/100f)
+                    val objects=remember(bitmap,applies,frame.width,frame.height,draft.watermarkScale,centerX,centerY,tiled,rotation,opacity) {
+                        if(bitmap==null || bitmap.isRecycled || !applies || frame.width<=0 || frame.height<=0) emptyList() else {
+                            val dimensions=OverlayStylePolicy.size(frame.width.toDouble(),frame.height.toDouble(),bitmap.width.toDouble(),bitmap.height.toDouble(),draft.watermarkScale)
+                            val w=(dimensions.first/frame.width).toFloat();val h=(dimensions.second/frame.height).toFloat()
+                            OverlayStylePolicy.centers(centerX.toDouble(),centerY.toDouble(),tiled).mapIndexed {index,(x,y)->
+                                PreviewObject(if(tiled) "tile-$index" else "watermark",bitmap,x.toFloat()-w/2,y.toFloat()-h/2,x.toFloat()+w/2,y.toFloat()+h/2,rotation.toFloat(),opacity/100f)
+                            }
                         }
                     }
                     TransformablePagePreview(frame,objects,selected,{selected=it},onTransform={obj->
@@ -125,7 +128,7 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
             else -> LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf(false to R.string.studio_watermark_text_mode,true to R.string.studio_watermark_image_mode).forEach {(value,label)->
+            WATERMARK_MODES.forEach {(value,label)->
                 FilterChip(border=null,selected=useImage==value,onClick={edit {current->
                     val ids=if(!value && overlayId!=null) current.sourceIds-overlayId else current.sourceIds
                     if(imageTool) current.copy(flag1=value,sourceIds=ids) else current.copy(watermarkUseImage=value,sourceIds=ids)

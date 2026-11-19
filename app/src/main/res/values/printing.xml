@@ -105,12 +105,12 @@
     <string name="print_error_layout">The paper size, margins or scale cannot form a printable page. Reduce margins or change the paper size.</string>
     <string name="print_error_write">The print document could not be written. Check available storage and try again.</string>
     <string name="print_error_source">This private document is missing or cannot be safely reopened. Choose the document again.</string>
-    <string name="print_error_permission">This PDF does not permit printing.</string>
+    <string name="print_error_permission">This PDF restricts printing. Unlock permissions or export a printable copy first.</string>
     <string name="print_error_password">This PDF requires a password. Import an unlocked copy for printing.</string>
     <string name="print_error_unsupported">This format cannot be printed. Choose a PDF or a supported still image.</string>
     <string name="print_error_appearance">A printable annotation or form field has no usable appearance. Save a flattened copy in its original PDF editor, then print that copy.</string>
     <string name="print_error_storage">Print data could not be saved. Check available device storage and try again.</string>
-    <string name="print_error_unavailable">Android printing or print-service settings are unavailable on this device.</string>
+    <string name="print_error_unavailable">Android printing services are unavailable on this device. Enable a print service in system settings or export the file to print elsewhere.</string>
     <string name="print_error_preset">Enter a preset name with 1–60 characters.</string>
     <string name="print_error_generic">The document could not be prepared. Retry or choose another document.</string>
 </resources>

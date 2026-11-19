@@ -31,9 +31,7 @@ def contrast(a, b):
 
 # 'haptics' was removed from the Settings page 2026-11-02 (user request);
 # the Color.kt map may still carry its entry, but no row renders it.
-SETTINGS_ROWS = ['theme', 'app-color', 'language', 'text-size',
-                 'notifications', 'video-quality', 'audio-quality',
-                 'storage', 'cache', 'about']
+SETTINGS_ROWS = ['theme', 'language', 'storage', 'cache', 'about']
 HUB_ROWS = ['my-files', 'storage', 'settings', 'privacy', 'about']
 
 
@@ -54,11 +52,10 @@ class SettingsIconContracts(unittest.TestCase):
 
     def test_theme_row_has_its_own_modern_icon_not_the_palette_duplicate(self):
         screen = read('ui/settings/SettingsScreen.kt')
-        theme_block = screen.split('item("theme")', 1)[1].split('item("app-color")', 1)[0]
+        theme_block = screen.split('R.string.pref_theme', 1)[1].split('R.string.pref_language', 1)[0]
         self.assertIn('Icons.Rounded.DarkMode', theme_block)
         self.assertNotIn('Icons.Rounded.Palette', theme_block)
-        app_color_block = screen.split('item("app-color")', 1)[1].split('item("language")', 1)[0]
-        self.assertIn('Icons.Rounded.Palette', app_color_block)
+        # app-color row removed from streamlined OLED/White Settings; theme retains DarkMode icon.
 
     def test_settings_icon_styles_cover_every_row_and_stay_readable(self):
         colors = read('ui/theme/Color.kt')

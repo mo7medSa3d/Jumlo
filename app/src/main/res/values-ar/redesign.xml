@@ -28,7 +28,7 @@
     <string name="redesign_tools_subtitle">حرّر ملفاتك وصورك على جهازك.</string>
     <string name="redesign_saved_outputs">أحدث أعمالك</string>
     <string name="redesign_storage_path">الافتراضي: التنزيلات / Jumlo</string>
-    <string name="redesign_platform_unavailable">تعذّر تحليل الرابط على هذا الجهاز حاليًا.</string>
+    <string name="redesign_platform_unavailable">تعذّر تحليل هذا الرابط على جهازك حاليًا. الصق رابط ملف مباشر بدلًا من ذلك.</string>
     <string name="redesign_quality_balanced">متوازن · حتى 1080p</string>
     <string name="redesign_quality_best">أفضل جودة متاحة</string>
     <string name="redesign_quality_saver">توفير البيانات · حتى 480p</string>

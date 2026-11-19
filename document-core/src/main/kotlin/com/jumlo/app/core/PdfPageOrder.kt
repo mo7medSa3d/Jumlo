@@ -7,12 +7,16 @@ object PdfPageOrder {
         require(count > 0) { "INVALID_PAGE_COUNT" }
         if (spec.isBlank()) return (1..count).toList()
         require(spec.length <= 100000) { "INVALID_PAGE_ORDER" }
-        val normalized = spec.map { ch -> when (ch) {
-            in '\u0660'..'\u0669' -> '0' + (ch - '\u0660')
-            in '\u06f0'..'\u06f9' -> '0' + (ch - '\u06f0')
-            '\u060c' -> ','
-            else -> ch
-        } }.joinToString("")
+        val normalized = buildString(spec.length) {
+            for (ch in spec) append(
+                when (ch) {
+                    in '\u0660'..'\u0669' -> '0' + (ch - '\u0660')
+                    in '\u06f0'..'\u06f9' -> '0' + (ch - '\u06f0')
+                    '\u060c' -> ','
+                    else -> ch
+                }
+            )
+        }
         val parsed = normalized.split(',').map { entry ->
             val token = entry.trim()
             require(token.isNotEmpty() && token.all { it in '0'..'9' }) { "INVALID_PAGE_ORDER" }

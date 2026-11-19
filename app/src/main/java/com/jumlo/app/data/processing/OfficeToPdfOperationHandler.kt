@@ -5,6 +5,7 @@ import com.jumlo.app.core.office.OfficeBlock
 import com.jumlo.app.core.office.OfficeDocumentReader
 import com.jumlo.app.core.AutoOutputName
 import com.jumlo.app.data.jobs.ExecutionContext
+import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.OperationHandler
 import com.jumlo.app.data.pdf.PdfBoxBackend
 import com.jumlo.app.model.ItemOutcome
@@ -47,51 +48,59 @@ import javax.inject.Singleton
             var rasterized = 0
             var dropped = 0
             var unsupported: List<String> = emptyList()
-            context.sources.withSeekable(request.sourceIds.single(), request.id) { input ->
-                originalBytes = input.length()
-                val kind = OfficeDocumentReader.detect(input, sourceName, context.budget.maxTemporaryBytes)
-                val imageBudget = minOf(
-                    OfficeDocumentReader.MAX_IMAGE_BYTES,
-                    context.budget.maxTemporaryBytes,
-                    context.budget.maxBitmapBytes / 4L
-                )
-                val document = OfficeDocumentReader.read(
-                    input, kind, context.budget.maxTemporaryBytes, imageBudget
-                ) {
-                    context.checkCancellation()
-                }
-                val renderable = document.blocks.any { block ->
-                    when (block) {
-                        is OfficeBlock.ParagraphBlock -> !block.paragraph.isBlank
-                        is OfficeBlock.TableBlock -> block.rows.isNotEmpty()
-                        is OfficeBlock.ImageBlock -> true
-                        is OfficeBlock.Section -> true
-                        is OfficeBlock.PageBreak -> false
+            try {
+                context.sources.withSeekable(request.sourceIds.single(), request.id) { input ->
+                    originalBytes = input.length()
+                    val kind = OfficeDocumentReader.detect(input, sourceName, context.budget.maxTemporaryBytes)
+                    val imageBudget = minOf(
+                        OfficeDocumentReader.MAX_IMAGE_BYTES,
+                        context.budget.maxTemporaryBytes,
+                        context.budget.maxBitmapBytes / 4L
+                    )
+                    val document = OfficeDocumentReader.read(
+                        input, kind, context.budget.maxTemporaryBytes, imageBudget
+                    ) {
+                        context.checkCancellation()
+                    }
+                    val renderable = document.blocks.any { block ->
+                        when (block) {
+                            is OfficeBlock.ParagraphBlock -> !block.paragraph.isBlank
+                            is OfficeBlock.TableBlock -> block.rows.isNotEmpty()
+                            is OfficeBlock.ImageBlock -> true
+                            is OfficeBlock.Section -> true
+                            is OfficeBlock.PageBreak -> false
+                        }
+                    }
+                    require(renderable) { "OFFICE_NO_CONTENT" }
+                    unsupported = document.unsupported
+                    OfficeToPdfRenderer.render(document, context.budget.maxBitmapBytes) {
+                        context.checkCancellation()
+                    }.use { rendered ->
+                        rasterized = rendered.stats.rasterizedBlocks
+                        dropped = rendered.stats.droppedImages
+                        pageCount = rendered.document.numberOfPages
+                        require(pageCount >= 1) { "PDF_VERIFY_FAILED" }
+                        require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                        rendered.document.save(ticket.stageFile)
                     }
                 }
-                require(renderable) { "OFFICE_NO_CONTENT" }
-                unsupported = document.unsupported
-                OfficeToPdfRenderer.render(document, context.budget.maxBitmapBytes) {
-                    context.checkCancellation()
-                }.use { rendered ->
-                    rasterized = rendered.stats.rasterizedBlocks
-                    dropped = rendered.stats.droppedImages
-                    pageCount = rendered.document.numberOfPages
-                    require(pageCount >= 1) { "PDF_VERIFY_FAILED" }
-                    rendered.document.save(ticket.stageFile)
+                context.checkCancellation()
+                val record = context.outputs.publish(ticket) { file ->
+                    PdfBoxBackend.open(file, null).use {
+                        check(it.numberOfPages == pageCount && pageCount >= 1) { "PDF_VERIFY_FAILED" }
+                    }
+                    context.outputs.inspect(file, "application/pdf", originalSizeBytes = originalBytes)
                 }
-            }
-            val record = context.outputs.publish(ticket) { file ->
-                PdfBoxBackend.open(file, null).use {
-                    check(it.numberOfPages == pageCount && pageCount >= 1) { "PDF_VERIFY_FAILED" }
+                val warning = when {
+                    unsupported.isNotEmpty() || dropped > 0 -> "OFFICE_UNSUPPORTED_CONTENT"
+                    rasterized > 0 -> "OFFICE_RASTER_TEXT"
+                    else -> null
                 }
-                context.outputs.inspect(file, "application/pdf", originalSizeBytes = originalBytes)
+                listOf(ItemOutcome(key, ItemStatus.CREATED, record.id, warning))
+            } catch (error: Throwable) {
+                ticket.stageFile.delete()
+                if (error is OutOfMemoryError) throw OperationFailure("LOW_MEMORY")
+                throw error
             }
-            val warning = when {
-                unsupported.isNotEmpty() || dropped > 0 -> "OFFICE_UNSUPPORTED_CONTENT"
-                rasterized > 0 -> "OFFICE_RASTER_TEXT"
-                else -> null
-            }
-            listOf(ItemOutcome(key, ItemStatus.CREATED, record.id, warning))
         }
 }

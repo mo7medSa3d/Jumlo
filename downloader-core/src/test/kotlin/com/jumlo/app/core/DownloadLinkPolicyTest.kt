@@ -1,8 +1,10 @@
 package com.jumlo.app.core
 
 import com.jumlo.app.core.media.MediaLinks
+import java.net.URI
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,6 +52,12 @@ class DownloadLinkPolicyTest {
     }
 
     @Test
+    fun unexpectedHtmlAndCleanNameTrimWhitespaceAroundMimeParameters() {
+        assertTrue(DownloadLinkPolicy.unexpectedHtml("text/html ; charset=utf-8", byteArrayOf(1, 2, 3)))
+        assertEquals("record.pdf", DownloadLinkPolicy.cleanName("https://example.com/get", "attachment; filename=record", " application/pdf ; charset=utf-8"))
+    }
+
+    @Test
     fun identifiesDirectUrlsAccurately() {
         assertTrue(DownloadLinkPolicy.isDirect("https://example.com/downloads/file.pdf"))
         assertTrue(DownloadLinkPolicy.isDirect("https://example.com/media/clip.mp4"))
@@ -65,5 +73,16 @@ class DownloadLinkPolicyTest {
         assertThrows(IllegalArgumentException::class.java) {
             MediaLinks.normalize("https://012.0.0.1/internal", allowHttp = true)
         }
+    }
+
+    @Test
+    fun driveLinkConfirmationRejectsOversizedHtmlAndParsesBoundedLink() {
+        val base = URI("https://drive.usercontent.google.com/download?id=1234567890")
+        assertNull(DriveLink.parseConfirmationUrl("a".repeat(262_145), base))
+        val html = """<a href="/download?id=1234567890&amp;confirm=t">Download</a>"""
+        assertEquals(
+            "https://drive.usercontent.google.com/download?id=1234567890&confirm=t",
+            DriveLink.parseConfirmationUrl(html, base)
+        )
     }
 }

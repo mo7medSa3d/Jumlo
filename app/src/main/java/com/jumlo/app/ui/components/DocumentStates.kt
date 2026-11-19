@@ -27,18 +27,17 @@ fun DocumentLoadState(status:DataLoadStatus,onRetry:()->Unit) {
     } else if(status==DataLoadStatus.LOADING) {
         val label=stringResource(R.string.upgrade_loading_documents)
         val reduced=LocalReducedMotion.current
-        val opacity=if(reduced) .65f else {
+        val opacityState=if(reduced) null else {
             val transition=rememberInfiniteTransition(label="document-loading")
-            val animated by transition.animateFloat(.42f,.75f,
+            transition.animateFloat(.42f,.75f,
                 infiniteRepeatable(tween(JumloMotion.loadingPulseMs),RepeatMode.Reverse),label="placeholder-opacity")
-            animated
         }
         Column(Modifier.fillMaxWidth().clearAndSetSemantics {
             contentDescription=label; liveRegion=LiveRegionMode.Polite
         },verticalArrangement=Arrangement.spacedBy(12.dp)) {
             repeat(3) {
                 Box(Modifier.fillMaxWidth().height(72.dp).clip(QuietTheme.shapes.card)
-                    .graphicsLayer { alpha=opacity }
+                    .graphicsLayer { alpha=opacityState?.value ?: .65f }
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest))
             }
         }

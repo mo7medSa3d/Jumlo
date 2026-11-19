@@ -3,7 +3,6 @@ package com.jumlo.app.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.DocumentScanner
 import com.jumlo.app.ui.icons.rounded.FolderOpen
@@ -19,7 +18,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.jumlo.app.R
-import com.jumlo.app.ui.theme.JumloRadii
+import com.jumlo.app.ui.theme.QuietTheme
 
 /** Local-only first-use guide. No fake accounts, premium status or cloud promises. */
 @Composable
@@ -31,7 +30,7 @@ fun OnboardingGuide(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(JumloRadii.sheet),
+            shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             tonalElevation = 8.dp,
             modifier = Modifier.fillMaxWidth().testTag("onboarding.guide")
@@ -100,7 +99,7 @@ private fun OnboardingAction(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(tag),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(18.dp)
+        shape = QuietTheme.shapes.innerPanel
     ) {
         icon()
         Spacer(Modifier.width(10.dp))

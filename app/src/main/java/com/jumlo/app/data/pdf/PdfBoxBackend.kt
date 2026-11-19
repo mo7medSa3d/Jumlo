@@ -108,7 +108,7 @@ object PdfBoxBackend {
 
     fun split(doc: PDDocument, groups: List<PageGroup>, destinations: List<File>): List<File> {
         require(groups.isNotEmpty() && groups.size == destinations.size) { "INVALID_SPLIT_GROUPS" }
-        val temp = File.createTempFile("split-src-", ".pdf")
+        val temp = File.createTempFile("split-src-", ".pdf", destinations.first().parentFile)
         try {
             doc.save(temp)
             val pageCount = doc.numberOfPages
@@ -121,7 +121,7 @@ object PdfBoxBackend {
     }
 
     fun extract(doc: PDDocument, zeroBasedPages: List<Int>, out: File): File {
-        val temp = File.createTempFile("extract-src-", ".pdf")
+        val temp = File.createTempFile("extract-src-", ".pdf", out.parentFile)
         try {
             doc.save(temp)
             assemble(temp, out, zeroBasedPages.map { it to 0 })
@@ -132,7 +132,7 @@ object PdfBoxBackend {
     fun organize(doc: PDDocument, ops: List<OrganizeOp>, out: File) {
         val pageCount = doc.numberOfPages
         require(ops.isNotEmpty() && ops.all { it.sourceIndex in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
-        val temp = File.createTempFile("organize-src-", ".pdf")
+        val temp = File.createTempFile("organize-src-", ".pdf", out.parentFile)
         try {
             doc.save(temp)
             assemble(temp, out, ops.map { it.sourceIndex to it.rotationDegrees })
@@ -285,7 +285,7 @@ object PdfBoxBackend {
                 typeface = android.graphics.Typeface.create(when(style.fontFamily) {
                     "serif" -> "serif"; "mono" -> "monospace"; else -> "sans-serif"
                 }, android.graphics.Typeface.BOLD)
-                color = android.graphics.Color.parseColor(style.colorHex)
+                color = runCatching { android.graphics.Color.parseColor(OverlayStylePolicy.requireColor(style.colorHex)) }.getOrElse { android.graphics.Color.parseColor("#64748B") }
                 alpha = (style.opacityPercent * 255 / 100).coerceIn(0,255)
             }
             // Keep temporary ARGB and PDF image allocations bounded.
@@ -308,7 +308,11 @@ object PdfBoxBackend {
         }
         if (addPageNumbers) zeroBasedPages.forEach { idx ->
             checkCancellation()
-            stampText(doc,listOf(idx),"${idx + 1}",0.47,0.96,10f,0.4f)
+            val label = "${idx + 1}"
+            val frame = displayFrame(doc.getPage(idx))
+            val labelW = com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA.getStringWidth(label) / 1000.0 * 10.0
+            val centeredX = ((frame.widthPt - labelW) / (2.0 * frame.widthPt)).coerceIn(0.05, 0.95)
+            stampText(doc,listOf(idx),label,centeredX,0.96,10f,0.4f)
         }
     }
 
@@ -408,11 +412,13 @@ object PdfBoxBackend {
         val lines = if (strict) com.jumlo.app.core.OcrTextPolicy.requireRepresentable(text)
             else com.jumlo.app.core.OcrTextPolicy.sanitizeForLayer(text)
         if (lines.isEmpty()) return
-        val page = doc.getPage(zeroBasedPage); val media = page.mediaBox
+        val page = doc.getPage(zeroBasedPage)
+        val frame = displayFrame(page)
         PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
+            cs.transform(displayMatrix(frame))
             cs.beginText(); cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
             cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.NEITHER)
-            cs.newLineAtOffset((media.lowerLeftX + xNorm * media.width).toFloat(), (media.lowerLeftY + (1.0 - yNormTop) * media.height).toFloat())
+            cs.newLineAtOffset((xNorm * frame.widthPt).toFloat(), ((1.0 - yNormTop) * frame.heightPt).toFloat())
             lines.forEachIndexed { i, line -> if (i > 0) cs.newLineAtOffset(0f, -fontSize * 1.2f); cs.showText(line) }
             cs.endText()
         }
@@ -521,25 +527,25 @@ object PdfBoxBackend {
         return removed.distinct().sorted()
     }
 
-    fun split(source: File, groups: List<PageGroup>, destinations: List<File>): List<File> {
+    fun split(source: File, groups: List<PageGroup>, destinations: List<File>, checkCancellation: () -> Unit = {}): List<File> {
         val pageCount = PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly()).use { it.numberOfPages }
         require(groups.isNotEmpty() && groups.size == destinations.size) { "INVALID_SPLIT_GROUPS" }
         return groups.mapIndexed { index, group ->
+            checkCancellation()
             require(group.first >= 0 && group.count > 0 && group.first.toLong() + group.count <= pageCount) { "INVALID_SPLIT_GROUP" }
-            assemble(source, destinations[index], (group.first until group.first + group.count).map { it to 0 })
+            assemble(source, destinations[index], (group.first until group.first + group.count).map { it to 0 }, checkCancellation)
             destinations[index]
         }
     }
 
-    fun extract(source: File, zeroBasedPages: List<Int>, out: File): File {
-        assemble(source, out, zeroBasedPages.map { it to 0 })
+    fun extract(source: File, zeroBasedPages: List<Int>, out: File, checkCancellation: () -> Unit = {}): File {
+        assemble(source, out, zeroBasedPages.map { it to 0 }, checkCancellation)
         return out
     }
 
-    fun organize(source: File, ops: List<OrganizeOp>, out: File) {
-        val pageCount = PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly()).use { it.numberOfPages }
-        require(ops.isNotEmpty() && ops.all { it.sourceIndex in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
-        assemble(source, out, ops.map { it.sourceIndex to it.rotationDegrees })
+    fun organize(source: File, ops: List<OrganizeOp>, out: File, checkCancellation: () -> Unit = {}) {
+        require(ops.isNotEmpty()) { "INVALID_PAGE_INDEX" }
+        assemble(source, out, ops.map { it.sourceIndex to it.rotationDegrees }, checkCancellation)
     }
 
 
@@ -547,33 +553,44 @@ object PdfBoxBackend {
         open(base, null).use { insert(it, other, atZeroIndex, out) }
 
 
-    private fun assemble(source: File, out: File, pages: List<Pair<Int, Int>>) {
+    private fun assemble(source: File, out: File, pages: List<Pair<Int, Int>>, checkCancellation: () -> Unit = {}) {
         require(pages.isNotEmpty()) { "NO_PAGES" }
-        source.copyTo(out, overwrite = true)
-        PDDocument.load(out, "", MemoryUsageSetting.setupTempFileOnly()).use { doc ->
-            val pageCount = doc.numberOfPages
-            require(pages.all { it.first in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
-            val repeated = pages.groupBy { it.first }.filterValues { it.size > 1 }.keys
-            val donor = if (repeated.isEmpty()) null else
-                PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly())
-            try {
-                val used = mutableSetOf<Int>()
-                val assembled = pages.map { (index, degrees) ->
-                    require(degrees % 90 == 0) { "INVALID_ROTATION" }
-                    val page = if (used.add(index)) doc.getPage(index) else {
-                        val copy = requireNotNull(donor).let { doc.importPage(it.getPage(index)) }
-                        detachAnnotations(copy)
-                        copy
+        val tempOut = File.createTempFile("assemble-", ".pdf", out.parentFile ?: source.parentFile)
+        try {
+            PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly()).use { doc ->
+                val pageCount = doc.numberOfPages
+                require(pages.all { it.first in 0 until pageCount }) { "INVALID_PAGE_INDEX" }
+                val repeated = pages.groupBy { it.first }.filterValues { it.size > 1 }.keys
+                val donor = if (repeated.isEmpty()) null else
+                    PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly())
+                try {
+                    val used = mutableSetOf<Int>()
+                    val assembled = pages.map { (index, degrees) ->
+                        checkCancellation()
+                        require(degrees % 90 == 0) { "INVALID_ROTATION" }
+                        val page = if (used.add(index)) doc.getPage(index) else {
+                            val copy = requireNotNull(donor).let { doc.importPage(it.getPage(index)) }
+                            detachAnnotations(copy)
+                            copy
+                        }
+                        if (degrees != 0) page.rotation = ((page.rotation + degrees) % 360 + 360) % 360
+                        page
                     }
-                    if (degrees != 0) page.rotation = ((page.rotation + degrees) % 360 + 360) % 360
-                    page
-                }
-                val tree = doc.pages
-                (0 until tree.getCount()).map { tree.get(it) }.forEach { tree.remove(it) }
-                assembled.forEach { tree.add(it) }
-                pruneDeadFormFields(doc)
-                doc.save(out)
-            } finally { donor?.close() }
+                    val tree = doc.pages
+                    (0 until tree.getCount()).map { tree.get(it) }.forEach { tree.remove(it) }
+                    assembled.forEach { tree.add(it) }
+                    pruneDeadFormFields(doc)
+                    checkCancellation()
+                    doc.save(tempOut)
+                } finally { donor?.close() }
+            }
+            try {
+                java.nio.file.Files.move(tempOut.toPath(), out.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                java.nio.file.Files.move(tempOut.toPath(), out.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            if (tempOut.exists()) tempOut.delete()
         }
     }
 

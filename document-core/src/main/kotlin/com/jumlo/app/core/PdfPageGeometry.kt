@@ -70,8 +70,9 @@ data class PdfPageEdit(
     }
 
     fun selectRange(first: Int, last: Int): PdfPageEdit {
-        require(first <= last && first in order && last in order) { "INVALID_PAGE_INDEX" }
-        return copy(selected = selected + (first..last).filter { it in order })
+        val orderSet = order.toHashSet()
+        require(first <= last && first in orderSet && last in orderSet) { "INVALID_PAGE_INDEX" }
+        return copy(selected = selected + (first..last).filter { it in orderSet })
     }
 
     fun selectAll(): PdfPageEdit = copy(selected = order.toSet())
@@ -83,7 +84,8 @@ data class PdfPageEdit(
     fun deleteSelected(): PdfPageEdit {
         val remaining = order.filterNot { it in selected }
         require(remaining.isNotEmpty()) { "AT_LEAST_ONE_PAGE_REQUIRED" }
-        return PdfPageEdit(remaining, emptySet(), rotations.filterKeys { it in remaining })
+        val remainingSet = remaining.toHashSet()
+        return PdfPageEdit(remaining, emptySet(), rotations.filterKeys { it in remainingSet })
     }
 
     fun duplicate(page: Int): PdfPageEdit {
@@ -116,7 +118,8 @@ data class PdfPageEdit(
     fun splitEvery(n: Int): List<PdfPageEdit> {
         require(n > 0) { "INVALID_SPLIT_SIZE" }
         return order.chunked(n).map { chunk ->
-            PdfPageEdit(chunk, emptySet(), rotations.filterKeys { it in chunk })
+            val chunkSet = chunk.toHashSet()
+            PdfPageEdit(chunk, emptySet(), rotations.filterKeys { it in chunkSet })
         }
     }
 }
@@ -212,7 +215,8 @@ object PdfCompressionPolicy {
     /** The share of the file the estimate expects to save, as a percentage. */
     fun estimatedSavingPercent(originalBytes: Long, estimatedBytes: Long): Int {
         if (originalBytes <= 0L || estimatedBytes >= originalBytes) return 0
-        return (((originalBytes - estimatedBytes).toDouble() / originalBytes.toDouble()) * 100.0)
+        val clamped = estimatedBytes.coerceAtLeast(0L)
+        return (((originalBytes - clamped).toDouble() / originalBytes.toDouble()) * 100.0)
             .toInt().coerceIn(0, 99)
     }
 

@@ -12,13 +12,15 @@ data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:Str
 
 class StreamTransfer(private val transport:HttpTransport) {
     companion object {
-        private val SET_COOKIE_SPLIT = Regex(",(?=\\s*[!#$%&'*+.^_`|~0-9A-Za-z-]+\\s*=)")
+        private val SET_COOKIE_SPLIT = Regex(",(?=\\s{0,64}[!#$%&'*+.^_`|~0-9A-Za-z-]{1,128}\\s{0,64}=)")
+        private const val MAX_COOKIE_HEADER_LENGTH = 32768
+        private const val MAX_COOKIES_PER_HOST = 64
     }
     private fun isTransient(code:Int)=code in setOf(408,425,429,500,502,503,504)
     private fun isTransientIo(e:IOException):Boolean {
         if(e is InterruptedIOException && e !is java.net.SocketTimeoutException) return false
         val msg=e.message.orEmpty()
-        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH")) return false
+        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH","DOWNLOAD_NOT_A_FILE","INVALID_CONTENT_LENGTH")) return false
         return true
     }
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferMetadata)->Unit={}):TransferResult {
@@ -102,12 +104,12 @@ class StreamTransfer(private val transport:HttpTransport) {
             val response=transport.open(current.toString(),headers)
             fun header(name:String):String? = response.headers[name] ?: response.headers.entries.firstOrNull { it.key.equals(name,ignoreCase=true) }?.value
             try {
-                header("set-cookie")?.let { cookieHeader ->
+                header("set-cookie")?.takeIf { it.length <= MAX_COOKIE_HEADER_LENGTH }?.let { cookieHeader ->
                     val jar = cookieJar.getOrPut(hostKey) { mutableMapOf() }
                     cookieHeader.split(SET_COOKIE_SPLIT).forEach { entry ->
                         val pair = entry.substringBefore(';').trim()
                         val eq = pair.indexOf('=')
-                        if (eq > 0) {
+                        if (eq > 0 && (jar.size < MAX_COOKIES_PER_HOST || pair.substring(0, eq).trim() in jar)) {
                             val name = pair.substring(0, eq).trim()
                             val value = pair.substring(eq + 1).trim()
                             if (name.isNotEmpty() && value.isNotEmpty() && name.none { it.isISOControl() || it == ';' } && value.none { it.isISOControl() || it == ';' }) jar[name] = value

@@ -14,6 +14,7 @@ import com.jumlo.app.diagnostics.AppDiagnostics
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.AppSettingsState
 import com.jumlo.app.model.ThemeMode
+import com.jumlo.app.model.FileFolder
 import com.jumlo.app.model.FileViewMode
 import com.jumlo.app.model.HapticIntensity
 import com.jumlo.app.model.ProcessingPreset
@@ -65,10 +66,19 @@ class UserPreferencesRepository @Inject constructor(
         val FONT_SCALE = stringPreferencesKey("font_scale")
         val NOTIFICATIONS_GRANTED = booleanPreferencesKey("notifications_granted")
         val MEDIA_RIGHTS_ACCEPTED = booleanPreferencesKey("media_rights_accepted")
+        val FILE_FOLDERS = stringPreferencesKey("file_folders_v1")
+        val OUTPUT_FOLDER_IDS = stringPreferencesKey("output_folder_ids_v1")
     }
 
     private companion object {
         val TOOL_ID_PATTERN = Regex("[a-z0-9_]{1,64}")
+        val FOLDER_FORBIDDEN_CHARS = Regex("""[\\/\r\n\t]""")
+        val WHITESPACE_RUN = Regex("""\s+""")
+        val VALID_VIDEO_QUALITIES = setOf("BEST", "1080", "720", "480")
+        val VALID_AUDIO_QUALITIES = setOf(320, 192, 128)
+        val VALID_FONT_SCALES = setOf("SMALL", "NORMAL", "LARGE")
+        val VALID_COLOR_SYSTEMS = setOf("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
+        val DEFAULT_QUICK_ACTION_IDS = listOf("pdf_02", "pdf_03", "img_02", "dl_media")
     }
 
     /**
@@ -113,7 +123,7 @@ class UserPreferencesRepository @Inject constructor(
         decodePresets(prefs[Keys.PROCESSING_PRESETS])
     }
     suspend fun setProcessingPreset(preset: ProcessingPreset) {
-        require(preset.version==1) { "PRESET_INVALID" }
+        require(preset.version==1 && preset.name.trim().length in 1..48 && preset.toolId.matches(TOOL_ID_PATTERN)) { "PRESET_INVALID" }
         context.dataStore.edit { prefs ->
             val old=decodePresets(prefs[Keys.PROCESSING_PRESETS])
             val replacement=old.filterNot { it.toolId==preset.toolId && it.name==preset.name } + preset
@@ -138,6 +148,17 @@ class UserPreferencesRepository @Inject constructor(
             if (id.matches(TOOL_ID_PATTERN) && count != null && count > 0) id to count else null
         }.toMap()
         val rankedTools = ToolUsagePolicy.ranked(counts, com.jumlo.app.data.jobs.CapabilityRegistry.tools.map { it.id })
+        val decodedFolders = runCatching {
+            Json.decodeFromString<List<FileFolder>>(prefs[Keys.FILE_FOLDERS] ?: "[]")
+                .filter { it.id.isNotBlank() && it.name.trim().length in 1..60 }
+                .distinctBy { it.id }
+                .take(64)
+        }.getOrDefault(emptyList())
+        val validFolderIds = decodedFolders.map { it.id }.toSet()
+        val decodedFolderMap = runCatching {
+            Json.decodeFromString<Map<String, String>>(prefs[Keys.OUTPUT_FOLDER_IDS] ?: "{}")
+                .filter { (outId, fldId) -> outId.isNotBlank() && fldId in validFolderIds }
+        }.getOrDefault(emptyMap())
         AppSettingsState(
             hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
             themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM),
@@ -149,14 +170,14 @@ class UserPreferencesRepository @Inject constructor(
             soundsEnabled = prefs[Keys.UI_SOUNDS] ?: true,
             downloadDestinationFolder = StoragePaths.canonicalDownloadFolder(prefs[Keys.DOWNLOAD_DEST_FOLDER]),
             maxConcurrentDownloads = 2, // Fixed scheduler policy; legacy preference no longer controls jobs.
-            defaultVideoQuality = (prefs[Keys.DEFAULT_VIDEO_QUALITY] ?: "BEST").takeIf { it in setOf("BEST", "1080", "720", "480") } ?: "BEST",
-            defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
+            defaultVideoQuality = (prefs[Keys.DEFAULT_VIDEO_QUALITY] ?: "BEST").takeIf { it in VALID_VIDEO_QUALITIES } ?: "BEST",
+            defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in VALID_AUDIO_QUALITIES } ?: 192,
             wifiOnlyDefault = false,
             fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),
             colorSystem = migrateColorSystem(prefs[Keys.COLOR_SYSTEM]),
-            fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
+            fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in VALID_FONT_SCALES } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
-            quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
+            quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: DEFAULT_QUICK_ACTION_IDS,
             recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter { it.matches(TOOL_ID_PATTERN) }.orEmpty(),
             mostUsedToolIds = rankedTools,
             rankedToolIds = rankedTools,
@@ -170,6 +191,8 @@ class UserPreferencesRepository @Inject constructor(
                     com.jumlo.app.core.OutputWorkflowPolicy.isId(id) && name.isNotBlank() && name.length<=200 && name.none { it<' ' || it=='/' || it=='\\' }
                 }
             }.getOrDefault(emptyMap()),
+            fileFolders = decodedFolders,
+            outputFolderIds = decodedFolderMap,
             isLoaded = true
         )
     }
@@ -194,6 +217,69 @@ class UserPreferencesRepository @Inject constructor(
             val next=old.toMutableMap()
             if(name==null) next.remove(id) else next[id]=com.jumlo.app.core.SafeNames.basename(name)
             prefs[Keys.OUTPUT_NAMES]=Json.encodeToString(next)
+        }
+    }
+
+
+    private fun cleanFolderName(raw: String): String =
+        raw.trim().replace(FOLDER_FORBIDDEN_CHARS, " ").replace(WHITESPACE_RUN, " ").take(60)
+
+    suspend fun createFileFolder(name: String): FileFolder {
+        val clean = cleanFolderName(name)
+        require(clean.isNotEmpty()) { "INVALID_FOLDER_NAME" }
+        val created = FileFolder(
+            id = java.util.UUID.randomUUID().toString(),
+            name = clean,
+            createdAtEpochMs = System.currentTimeMillis()
+        )
+        context.dataStore.edit { prefs ->
+            val old = runCatching {
+                Json.decodeFromString<List<FileFolder>>(prefs[Keys.FILE_FOLDERS] ?: "[]")
+            }.getOrDefault(emptyList())
+            val next = (old + created).distinctBy { it.id }.takeLast(64)
+            prefs[Keys.FILE_FOLDERS] = Json.encodeToString(next)
+        }
+        return created
+    }
+
+    suspend fun renameFileFolder(folderId: String, name: String) {
+        val clean = cleanFolderName(name)
+        require(folderId.isNotBlank() && clean.isNotEmpty()) { "INVALID_FOLDER_NAME" }
+        context.dataStore.edit { prefs ->
+            val old = runCatching {
+                Json.decodeFromString<List<FileFolder>>(prefs[Keys.FILE_FOLDERS] ?: "[]")
+            }.getOrDefault(emptyList())
+            val next = old.map { if (it.id == folderId) it.copy(name = clean) else it }
+            prefs[Keys.FILE_FOLDERS] = Json.encodeToString(next)
+        }
+    }
+
+    suspend fun deleteFileFolder(folderId: String) {
+        if (folderId.isBlank()) return
+        context.dataStore.edit { prefs ->
+            val oldFolders = runCatching {
+                Json.decodeFromString<List<FileFolder>>(prefs[Keys.FILE_FOLDERS] ?: "[]")
+            }.getOrDefault(emptyList())
+            prefs[Keys.FILE_FOLDERS] = Json.encodeToString(oldFolders.filterNot { it.id == folderId })
+            val oldMap = runCatching {
+                Json.decodeFromString<Map<String, String>>(prefs[Keys.OUTPUT_FOLDER_IDS] ?: "{}")
+            }.getOrDefault(emptyMap())
+            prefs[Keys.OUTPUT_FOLDER_IDS] = Json.encodeToString(oldMap.filterValues { it != folderId })
+        }
+    }
+
+    suspend fun moveOutputsToFolder(outputIds: Collection<String>, folderId: String?) {
+        if (outputIds.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            val oldMap = runCatching {
+                Json.decodeFromString<Map<String, String>>(prefs[Keys.OUTPUT_FOLDER_IDS] ?: "{}")
+            }.getOrDefault(emptyMap()).toMutableMap()
+            if (folderId.isNullOrBlank()) {
+                outputIds.forEach { oldMap.remove(it) }
+            } else {
+                outputIds.forEach { id -> if (id.isNotBlank()) oldMap[id] = folderId }
+            }
+            prefs[Keys.OUTPUT_FOLDER_IDS] = Json.encodeToString(oldMap)
         }
     }
 
@@ -251,12 +337,12 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setDefaultVideoQuality(value: String) {
-        require(value in setOf("BEST", "1080", "720", "480")) { "INVALID_VIDEO_QUALITY" }
+        require(value in VALID_VIDEO_QUALITIES) { "INVALID_VIDEO_QUALITY" }
         context.dataStore.edit { it[Keys.DEFAULT_VIDEO_QUALITY] = value }
     }
 
     suspend fun setDefaultAudioQuality(value: Int) {
-        require(value in setOf(320, 192, 128)) { "INVALID_AUDIO_QUALITY" }
+        require(value in VALID_AUDIO_QUALITIES) { "INVALID_AUDIO_QUALITY" }
         context.dataStore.edit { it[Keys.DEFAULT_AUDIO_QUALITY] = value }
     }
 
@@ -266,7 +352,7 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.COLOR_SYSTEM] = value }
     }
     suspend fun setFontScale(value: String) {
-        require(value in setOf("SMALL","NORMAL","LARGE"))
+        require(value in VALID_FONT_SCALES)
         context.dataStore.edit { it[Keys.FONT_SCALE] = value }
     }
     val mediaServiceUrlFlow: Flow<String> = mediaServiceSettings.state.map { it.url }
@@ -291,5 +377,5 @@ class UserPreferencesRepository @Inject constructor(
 
     /** Exactly four color systems exist; anything else falls back to COBALT. */
     private fun isValidColorSystem(value: String): Boolean =
-        value in setOf("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
+        value in VALID_COLOR_SYSTEMS
 }

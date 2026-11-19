@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.ui.theme.QuietTheme
@@ -54,10 +55,11 @@ fun SwipeFileActions(
             Box(Modifier.fillMaxSize().background(if(deleting) MaterialTheme.colorScheme.errorContainer
                 else MaterialTheme.colorScheme.secondaryContainer).padding(20.dp),
                 contentAlignment=if(deleting) Alignment.CenterEnd else Alignment.CenterStart) {
-                Icon(if(deleting) Icons.Rounded.DeleteOutline else Icons.Rounded.MoreHoriz,null)
+                Icon(if(deleting) Icons.Rounded.DeleteOutline else Icons.Rounded.MoreHoriz,null,
+                    tint=if(deleting) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }) { content() }
-    if(actions) AlertDialog(onDismissRequest={actions=false},title={Text(name)},text={
+    if(actions) AlertDialog(onDismissRequest={actions=false},title={Text(name,style=MaterialTheme.typography.headlineSmall.copy(textDirection=TextDirection.Content))},text={
         Column(Modifier.fillMaxWidth()) {
             TextButton(onClick={actions=false;onShare()},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp)) {
                 Text(stringResource(R.string.action_share))

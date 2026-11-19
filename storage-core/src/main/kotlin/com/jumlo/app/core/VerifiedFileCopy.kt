@@ -1,7 +1,8 @@
 package com.jumlo.app.core
 
 import java.io.File
-import java.nio.file.Files
+import java.nio.channels.Channels
+import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
 
 /** Verified public copy; a failed write must never remove an existing output. */
@@ -11,8 +12,9 @@ object VerifiedFileCopy {
         try {
             check()
             source.inputStream().use { input ->
-                Files.newOutputStream(target.toPath(),StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE).use { output ->
+                FileChannel.open(target.toPath(),StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE).use { channel ->
                     ownsTarget=true
+                    val output=Channels.newOutputStream(channel)
                     val buffer=ByteArray(64*1024)
                     while(true) {
                         check()
@@ -21,6 +23,7 @@ object VerifiedFileCopy {
                         if(count>0) output.write(buffer,0,count)
                     }
                     output.flush()
+                    channel.force(true)
                 }
             }
             check()

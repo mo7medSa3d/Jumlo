@@ -1,5 +1,7 @@
 package com.jumlo.app.model
 
+import kotlinx.serialization.Serializable
+
 enum class PillarCategory(val labelEn: String, val labelAr: String) {
     PDF("PDF", "ملفات PDF"),
     IMAGES("Images", "أدوات الصور"),
@@ -101,6 +103,13 @@ enum class UrlValidationStatus {
     VALID, DUPLICATE, UNSUPPORTED_PROTOCOL, MALFORMED
 }
 
+@Serializable
+data class FileFolder(
+    val id: String,
+    val name: String,
+    val createdAtEpochMs: Long = 0L
+)
+
 data class AppSettingsState(
     val hasCompletedOnboarding: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -132,5 +141,9 @@ data class AppSettingsState(
     /** The extraction service the downloader may use; empty means direct links only. */
     val mediaServiceUrl: String = "",
     /** The shared secret of the downloader service, when it asks for one. */
-    val mediaServiceToken: String = ""
+    val mediaServiceToken: String = "",
+    /** User-created virtual folders for drag-and-drop organization in Files. */
+    val fileFolders: List<FileFolder> = emptyList(),
+    /** Maps outputId -> folderId for outputs organized into virtual folders. */
+    val outputFolderIds: Map<String, String> = emptyMap()
 )

@@ -14,6 +14,15 @@ object DownloadLinkPolicy {
     private val DISPOSITION_FILENAME = Regex("filename\\s*=\\s*\"?([^\";]+)", RegexOption.IGNORE_CASE)
     private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
     private val WHITESPACE = Regex("\\s+")
+    private val videoExts = setOf("mp4", "m4v", "mov", "webm", "mkv")
+    private val audioExts = setOf("mp3", "m4a", "flac", "ogg", "opus", "wav", "aac")
+    private val imageExts = setOf("jpg", "jpeg", "png", "webp", "gif", "heic")
+    private val archiveMimes = setOf("application/zip", "application/x-zip-compressed", "application/x-rar-compressed", "application/x-7z-compressed")
+    private val archiveExts = setOf("zip", "rar", "7z", "tar", "gz")
+    private val httpSchemes = setOf("http", "https")
+    private val alwaysDirectExts = setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "zip", "rar", "7z", "apk", "txt", "csv")
+    private val genericPathNames = setOf("download", "uc", "open", "view", "edit", "export")
+    private val htmlMimes = setOf("text/html", "application/xhtml+xml")
     private val directTypes = setOf(
         "pdf", "jpg", "jpeg", "png", "gif", "webp", "heic", "svg",
         "zip", "7z", "rar", "apk", "txt", "csv", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
@@ -87,11 +96,10 @@ object DownloadLinkPolicy {
         val ext = name.substringAfterLast('.', "").lowercase(Locale.ROOT)
         return when {
             cleanMime == "application/pdf" || ext == "pdf" -> DirectFileKind.PDF
-            cleanMime.startsWith("video/") || ext in setOf("mp4", "m4v", "mov", "webm", "mkv") -> DirectFileKind.VIDEO
-            cleanMime.startsWith("audio/") || ext in setOf("mp3", "m4a", "flac", "ogg", "opus", "wav", "aac") -> DirectFileKind.AUDIO
-            cleanMime.startsWith("image/") || ext in setOf("jpg", "jpeg", "png", "webp", "gif", "heic") -> DirectFileKind.IMAGE
-            cleanMime in setOf("application/zip", "application/x-zip-compressed", "application/x-rar-compressed", "application/x-7z-compressed") ||
-                ext in setOf("zip", "rar", "7z", "tar", "gz") -> DirectFileKind.ARCHIVE
+            cleanMime.startsWith("video/") || ext in videoExts -> DirectFileKind.VIDEO
+            cleanMime.startsWith("audio/") || ext in audioExts -> DirectFileKind.AUDIO
+            cleanMime.startsWith("image/") || ext in imageExts -> DirectFileKind.IMAGE
+            cleanMime in archiveMimes || ext in archiveExts -> DirectFileKind.ARCHIVE
             else -> DirectFileKind.OTHER
         }
     }
@@ -113,10 +121,10 @@ object DownloadLinkPolicy {
 
     fun isDirect(url: String): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
-        if (uri.scheme?.lowercase(Locale.ROOT) !in setOf("http", "https")) return false
+        if (uri.scheme?.lowercase(Locale.ROOT) !in httpSchemes) return false
         val host = uri.host?.lowercase(Locale.ROOT) ?: return false
         val extension = uri.path.orEmpty().substringAfterLast('/').substringAfterLast('.', "").lowercase(Locale.ROOT)
-        if (extension in setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "zip", "rar", "7z", "apk", "txt", "csv")) return true
+        if (extension in alwaysDirectExts) return true
         if (extractorDomains.any { host == it || host.endsWith(".$it") }) return false
         return extension in directTypes
     }
@@ -130,11 +138,11 @@ object DownloadLinkPolicy {
         // A name the user typed ("My Report.pdf") is not a URI: URI parsing rejects it and the
         // file would be published as a generic "download". Fall back to the literal text.
         val path = runCatching { URI(url).path.orEmpty().substringAfterLast('/') }.getOrElse { url }
-        val base = (fromHeader ?: path).takeUnless { it in setOf("download", "uc", "open", "view", "edit", "export") }.orEmpty().ifBlank { "download" }
+        val base = (fromHeader ?: path).takeUnless { it in genericPathNames }.orEmpty().ifBlank { "download" }
         val clean = base.replace(INVALID_NAME_CHARS, " ").replace(WHITESPACE, " ").trim(' ', '.')
             .ifBlank { "download" }
         val extension = clean.substringAfterLast('.', "").lowercase(Locale.ROOT)
-        val type = mime?.substringBefore(';')?.lowercase(Locale.ROOT)
+        val type = mime?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
         val expected = when (type) {
             "application/pdf" -> "pdf"; "application/zip", "application/x-zip-compressed" -> "zip"
             "application/x-7z-compressed" -> "7z"; "application/vnd.rar", "application/x-rar-compressed" -> "rar"
@@ -160,7 +168,7 @@ object DownloadLinkPolicy {
     }
 
     fun unexpectedHtml(mime: String?, prefix: ByteArray): Boolean {
-        if (mime?.lowercase(Locale.ROOT)?.substringBefore(';') in setOf("text/html", "application/xhtml+xml")) return true
+        if (mime?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT) in htmlMimes) return true
         val head = prefix.toString(Charsets.UTF_8).trimStart('\uFEFF', ' ', '\r', '\n', '\t').lowercase(Locale.ROOT)
         return head.startsWith("<!doctype html") || head.startsWith("<html")
     }

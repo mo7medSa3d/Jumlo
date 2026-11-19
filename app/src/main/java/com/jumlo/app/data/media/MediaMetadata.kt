@@ -72,9 +72,23 @@ object MediaMetadata {
             )
         }
         val uploader = value.string("uploader").ifBlank { value.string("channel") }.take(256).takeIf(String::isNotBlank)
-        val thumb = value.string("thumbnail").takeIf {
-            it.startsWith("https://") && it.length <= 1024 && !it.contains("secret=", ignoreCase = true)
+        fun safeThumbUrl(candidate: String): String? = candidate.takeIf {
+            it.startsWith("https://") && it.length <= 4096 && !it.contains("secret=", ignoreCase = true)
         }
+        val thumbList = (value["thumbnails"] as? JsonArray).orEmpty().mapNotNull { el ->
+            val obj = el as? JsonObject ?: return@mapNotNull null
+            val url = safeThumbUrl(obj.string("url")) ?: return@mapNotNull null
+            val id = obj.string("id").lowercase()
+            val pref = obj.int("preference") ?: 0
+            // Prefer standard static cover frames over animated dynamicCover or blank originCover
+            val score = when {
+                id == "cover" || id == "thumbnail" -> 100 + pref
+                id.contains("dynamic") -> -50 + pref
+                else -> pref
+            }
+            score to url
+        }.sortedByDescending { it.first }
+        val thumb = thumbList.firstOrNull()?.second ?: safeThumbUrl(value.string("thumbnail"))
         return MediaAsset(
             value.string("id"),
             extractorName,

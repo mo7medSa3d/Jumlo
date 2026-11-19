@@ -110,10 +110,13 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
                         (placement.x+item.first).toFloat()/plan.width,(placement.y+item.second-placement.trimTop).toFloat()/plan.height)
                 }
                 CollagePlacementPreview(shown.bitmap,cells) {from,to->vm.moveSource(from,to-from)}
-            } else Image(shown.bitmap.asImageBitmap(),stringResource(R.string.interactive_result_preview),
-                contentScale=ContentScale.Fit,
-                modifier=Modifier.fillMaxWidth().height(320.dp).testTag("preview.bitmap").clip(QuietTheme.shapes.thumbnail)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest))
+            } else {
+                val shownBitmap=remember(shown.bitmap) {shown.bitmap.asImageBitmap()}
+                Image(shownBitmap,stringResource(R.string.interactive_result_preview),
+                    contentScale=ContentScale.Fit,
+                    modifier=Modifier.fillMaxWidth().height(320.dp).testTag("preview.bitmap").clip(QuietTheme.shapes.thumbnail)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest))
+            }
             Text(stringResource(if(showOriginal) R.string.interactive_preview_source_size else R.string.visual_output_dimensions,shown.width,shown.height),style=QuietTheme.typography.metadataStrong)
         } else if(result?.isFailure==true || frame?.isFailure==true || sizes?.isFailure==true || logoResult?.isFailure==true) {
             Text(stringResource(R.string.msg_preview_unavailable),color=MaterialTheme.colorScheme.error)
@@ -160,7 +163,7 @@ private fun renderSinglePreview(frame:PreviewFrame,logo:PreviewFrame?,draft:Work
         if(draft.toolId=="img_watermark") {
             val exact=Json.decodeFromString<ImageWatermarkSettings>(draft.executionSettings())
             val styled=BitmapExtras.watermark(out,if(exact.useLogo) logo?.bitmap else null,exact,64L*1024*1024)
-            out.recycle()
+            if(styled!==out) out.recycle()
             return ImageResult(styled,geometry.width,geometry.height)
         }
         return ImageResult(out,geometry.width,geometry.height)

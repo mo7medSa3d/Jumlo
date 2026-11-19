@@ -42,7 +42,10 @@ internal fun CollagePlacementPreview(bitmap:Bitmap,cells:List<Rect>,onMove:(Int,
             val aspect=if(bitmap.width>0 && bitmap.height>0) bitmap.width.toFloat()/bitmap.height else 1f
             val width=minOf(maxWidth,maxHeight*aspect)
             Box(Modifier.size(width,width/aspect)) {
-                if(!bitmap.isRecycled) Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                if(!bitmap.isRecycled) {
+                    val imageBitmap=remember(bitmap) {bitmap.asImageBitmap()}
+                    Image(imageBitmap,null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                }
                 Canvas(Modifier.fillMaxSize().testTag("collage.canvas").semantics {contentDescription=label}
                     .pointerInput(Unit) {
                         fun cell(point:Offset):Int {

@@ -17,7 +17,7 @@
          returns an empty list and the app would claim no printer could ever exist. -->
     <queries>
         <intent>
-            <action android:name="android.print.service" />
+            <action android:name="android.printservice.PrintService" />
         </intent>
     </queries>
 

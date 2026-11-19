@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import com.jumlo.app.ui.icons.Icons
@@ -36,10 +35,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,7 +52,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
-import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 
@@ -79,7 +77,7 @@ fun QuietTonalIconButton(
             // sizeIn after size: the minimum wins, so the target is never below 48dp.
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .semantics { this.contentDescription = contentDescription },
-        shape = RoundedCornerShape(JumloRadii.indicator),
+        shape = QuietTheme.shapes.activeIndicatorPill,
         color = containerColor,
         border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.55f))
     ) {
@@ -100,7 +98,7 @@ fun QuietIconTile(
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(size / 3))
+            .clip(QuietTheme.shapes.iconTile)
             .background(container),
         contentAlignment = Alignment.Center
     ) {
@@ -193,23 +191,23 @@ fun QuietSearchBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 54.dp)
+            .heightIn(min = 50.dp)
             .then(if (onClickBar != null) Modifier.clickable(role = Role.Button, onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.inputField,
         color = pillars.cardSurface,
-        border = BorderStroke(1.dp, pillars.cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp))
-                .background(colors.primaryContainer), contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Search, contentDescription = null,
-                    tint = colors.onPrimaryContainer, modifier = Modifier.size(19.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
+            Icon(
+                Icons.Rounded.Search,
+                contentDescription = null,
+                tint = colors.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                 if (onClickBar != null) {
                     Text(
@@ -255,7 +253,7 @@ fun QuietCheckbox(
 ) {
     val colors = MaterialTheme.colorScheme
     val checkboxAnimation = if (LocalReducedMotion.current) snap<androidx.compose.ui.graphics.Color>() else spring<androidx.compose.ui.graphics.Color>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
-    val fill by animateColorAsState(
+    val fillState = animateColorAsState(
         targetValue = if (checked) colors.primary else colors.surfaceContainerHighest,
         animationSpec = checkboxAnimation,
         label = "checkFill"
@@ -269,8 +267,8 @@ fun QuietCheckbox(
         Box(
             modifier = Modifier
                 .size(26.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(fill),
+                .clip(QuietTheme.shapes.badge)
+                .drawBehind { drawRect(fillState.value) },
             contentAlignment = Alignment.Center
         ) {
             if (checked) {

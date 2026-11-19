@@ -43,13 +43,14 @@ object PdfDisplayCoordinates {
         val yTop=(1.0-top)*frame.heightPt; val yBottom=(1.0-bottom)*frame.heightPt
         val corners=listOf(x0 to yTop,x1 to yTop,x0 to yBottom,x1 to yBottom)
             .map { (x,y) -> frame.displayToPage.map(x,y) }
-        require(corners.all { it.first.isFinite() && it.second.isFinite() }) { "INVALID_PDF_PAGE_GEOMETRY" }
-        return floatArrayOf(
+        val result = floatArrayOf(
             corners[0].first.toFloat(),corners[0].second.toFloat(),
             corners[1].first.toFloat(),corners[1].second.toFloat(),
             corners[2].first.toFloat(),corners[2].second.toFloat(),
             corners[3].first.toFloat(),corners[3].second.toFloat()
         )
+        require(result.all(Float::isFinite)) { "INVALID_PDF_PAGE_GEOMETRY" }
+        return result
     }
 
     fun frame(left:Double,bottom:Double,width:Double,height:Double,rotationDegrees:Int,userUnit:Double=1.0):PdfDisplayFrame {

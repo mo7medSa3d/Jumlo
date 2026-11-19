@@ -10,7 +10,6 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,7 +31,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.WorkspaceDraft
@@ -71,6 +69,13 @@ private fun WorkspaceDraft.cropRectFor(page: Int, perPage: Boolean): VisualRect 
 }
 
 private fun Float.serialized(): String = String.format(Locale.US, "%.5f", this)
+
+private val ASPECT_PRESETS = listOf(
+    R.string.visual_edit_free to 0f,
+    R.string.visual_edit_square to 1f,
+    R.string.visual_edit_document to (210f / 297f),
+    R.string.visual_landscape to (16f / 9f)
+)
 
 @Composable
 internal fun VisualDocumentEditor(
@@ -205,7 +210,7 @@ internal fun VisualDocumentEditor(
                 style = QuietTheme.typography.sectionTitle,
                 modifier = Modifier.weight(1f).semantics { heading() }
             )
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = {
                 val reset = VisualRect.WHOLE
                 if (rect != reset || lockedAspect != 0f || draft.turns != 0 || draft.flipX || draft.flipY) recordSnapshot()
                 lockedAspect = 0f
@@ -219,14 +224,14 @@ internal fun VisualDocumentEditor(
                 Icon(Icons.Rounded.RestartAlt, null)
                 Text(stringResource(R.string.visual_edit_reset))
             }
-            IconButton(enabled = undoHistory.isNotEmpty(), onClick = {
+            IconButton(modifier = Modifier.size(48.dp), enabled = undoHistory.isNotEmpty(), onClick = {
                 timeline.undo(snapshot())?.let { restored ->
                     timeline = restored.timeline
                     restoreSnapshot(restored.snapshot)
                     haptics.selectionToggle()
                 }
             }) { Icon(Icons.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
-            IconButton(enabled = redoHistory.isNotEmpty(), onClick = {
+            IconButton(modifier = Modifier.size(48.dp), enabled = redoHistory.isNotEmpty(), onClick = {
                 timeline.redo(snapshot())?.let { restored ->
                     timeline = restored.timeline
                     restoreSnapshot(restored.snapshot)
@@ -234,31 +239,7 @@ internal fun VisualDocumentEditor(
                 }
             }) { Icon(Icons.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
         }
-        var historyOpen by rememberSaveable(sourceId, tool) { mutableStateOf(false) }
-        if (undoHistory.isNotEmpty()) {
-            TextButton(onClick = { historyOpen = !historyOpen }) {
-                Text(stringResource(R.string.visual_edit_history, undoHistory.size))
-            }
-        }
-        if (historyOpen && undoHistory.isNotEmpty()) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                undoHistory.asReversed().forEachIndexed { index, _ ->
-                    val step = undoHistory.size - index
-                    TextButton(onClick = {
-                        timeline.restore(undoHistory.size - index - 1)?.let { restored ->
-                            timeline = restored.timeline
-                            restoreSnapshot(restored.snapshot)
-                        }
-                        haptics.selectionToggle()
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            stringResource(R.string.visual_edit_history_step, step),
-                            style = QuietTheme.typography.metadata
-                        )
-                    }
-                }
-            }
-        }
+
         val frame = preview
         if (frame != null && !frame.bitmap.isRecycled) {
             val sourceAspect = frame.bitmap.width.coerceAtLeast(1).toFloat() / frame.bitmap.height.coerceAtLeast(1)
@@ -269,7 +250,7 @@ internal fun VisualDocumentEditor(
                 val canvasHeight = canvasWidth / aspect
                 Box(
                     Modifier.width(canvasWidth).height(canvasHeight)
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(QuietTheme.shapes.innerPanel)
                         .background(colors.surfaceContainerLowest)
                         .pointerInput(sourceId, currentPage) { detectTapGestures(onDoubleTap = { zoom = 1f; pan = Offset.Zero }) }
                         .transformable(transformState, canPan = { zoom > 1f }),
@@ -289,8 +270,9 @@ internal fun VisualDocumentEditor(
                         },
                         contentAlignment = AbsoluteAlignment.TopLeft
                     ) {
+                        val imageBitmap = remember(frame.bitmap) { frame.bitmap.asImageBitmap() }
                         Image(
-                            frame.bitmap.asImageBitmap(),
+                            imageBitmap,
                             contentDescription = stringResource(R.string.visual_editor_title),
                             modifier = Modifier.fillMaxSize().testTag("preview.bitmap"),
                             contentScale = ContentScale.FillBounds
@@ -390,7 +372,7 @@ internal fun VisualDocumentEditor(
                     }
                 }
             }
-            TextButton(onClick = { zoom = 1f; pan = Offset.Zero }) { Text(stringResource(R.string.editor_fit_preview)) }
+            TextButton(onClick = { zoom = 1f; pan = Offset.Zero }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.editor_fit_preview)) }
             Text(
                 stringResource(R.string.visual_edit_drag_hint),
                 style = QuietTheme.typography.metadata,
@@ -415,7 +397,7 @@ internal fun VisualDocumentEditor(
                     rect = currentDraft.cropRectFor(currentPage, enabled)
                 }
                 Text(stringResource(R.string.studio_crop_override_count, draft.cropOverrides.size), style = QuietTheme.typography.metadata)
-                if (draft.cropOverrides.isNotEmpty()) TextButton(onClick = {
+                if (draft.cropOverrides.isNotEmpty()) TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = {
                     recordSnapshot()
                     latestEdit { it.copy(cropOverrides = emptyList()) }
                     perPageCrop = false
@@ -424,12 +406,7 @@ internal fun VisualDocumentEditor(
                 }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    R.string.visual_edit_free to 0f,
-                    R.string.visual_edit_square to 1f,
-                    R.string.visual_edit_document to (210f / 297f),
-                    R.string.visual_landscape to (16f / 9f)
-                ).forEach { (label, ratio) ->
+                ASPECT_PRESETS.forEach { (label, ratio) ->
                     FilterChip(selected = lockedAspect == ratio, border = null, onClick = {
                         val box = if (ratio == 0f) VisualRect.WHOLE
                         else VisualRect.fitAspect(frame.width, frame.height, sourceCropAspect(ratio, if (tool == "img_03") draft.turns else 0))
@@ -447,7 +424,7 @@ internal fun VisualDocumentEditor(
                         recordSnapshot()
                         if (lockedAspect > 0f) lockedAspect = 1f / lockedAspect
                         latestEdit { it.copy(turns = (it.turns + 1) % 4) }
-                    }, modifier = Modifier.weight(1f)) {
+                    }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                         Icon(Icons.AutoMirrored.Rounded.RotateRight, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.visual_rotate))
@@ -455,47 +432,21 @@ internal fun VisualDocumentEditor(
                     FilledTonalButton(onClick = {
                         recordSnapshot()
                         latestEdit { it.copy(flipX = !it.flipX) }
-                    }, modifier = Modifier.weight(1f)) {
+                    }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                         Icon(Icons.Rounded.Flip, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.visual_flip))
                     }
                 }
-                FilledTonalButton(onClick = { recordSnapshot(); latestEdit { it.copy(flipY = !it.flipY) } }) {
+                FilledTonalButton(onClick = { recordSnapshot(); latestEdit { it.copy(flipY = !it.flipY) } }, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.editor_flip_vertical))
                 }
             }
-            Text(stringResource(R.string.editor_adjust_region), style = QuietTheme.typography.metadataStrong, modifier = Modifier.semantics { heading() })
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(
-                    R.string.editor_move_left to (-.02f to 0f), R.string.editor_move_right to (.02f to 0f),
-                    R.string.editor_move_up to (0f to -.02f), R.string.editor_move_down to (0f to .02f)
-                ).forEach { (label, delta) ->
-                    FilledTonalButton(onClick = {
-                        val next = rect.dragged(VisualHandle.BODY, delta.first, delta.second)
-                        recordEdit(rect, next)
-                        rect = next
-                        saveRect(next)
-                    }) { Text(stringResource(label)) }
-                }
-            }
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(R.string.editor_smaller to -.02f, R.string.editor_larger to .02f).forEach { (label, delta) ->
-                    FilledTonalButton(onClick = {
-                        val next = rect.draggedLocked(
-                            VisualHandle.BOTTOM_RIGHT, delta, delta,
-                            if (lockedAspect > 0f) sourceCropAspect(lockedAspect, if (tool == "img_03") currentDraft.turns else 0) / sourceAspect else 0f
-                        )
-                        recordEdit(rect, next)
-                        rect = next
-                        saveRect(next)
-                    }) { Text(stringResource(label)) }
-                }
-            }
+
         } else if (failed) {
             Text(stringResource(R.string.msg_preview_unavailable), color = colors.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            TextButton(onClick = { retry++ }) { Text(stringResource(R.string.interactive_preview_retry)) }
-            if (sourceIsPdf && currentPage > 1) TextButton(onClick = {
+            TextButton(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.interactive_preview_retry)) }
+            if (sourceIsPdf && currentPage > 1) TextButton(modifier = Modifier.heightIn(min = 48.dp), onClick = {
                 currentPage = 1
                 retry++
             }) { Text(stringResource(R.string.interactive_first_page)) }
@@ -503,35 +454,3 @@ internal fun VisualDocumentEditor(
     }
 }
 
-/**
- * Numeric mirror of a crop edge. The handle is the primary control; this field is the
- * exact-value input for the same number and never disagrees with it.
- */
-@Composable
-internal fun CropNumberField(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    onChange: (Float) -> Unit
-) {
-    var text by remember { mutableStateOf(value) }
-    LaunchedEffect(value) {
-        val typed = text.replace(',', '.').toFloatOrNull()
-        val external = value.replace(',', '.').toFloatOrNull()
-        if (typed == null || external == null || typed != external) text = value
-    }
-    val parsed = text.replace(',', '.').toFloatOrNull()
-    OutlinedTextField(
-        value = text,
-        onValueChange = { next ->
-            text = next.take(8)
-            val candidate = text.replace(',', '.').toFloatOrNull()
-            if (candidate != null && candidate.isFinite() && candidate in 0f..1f) onChange(candidate)
-        },
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        singleLine = true,
-        isError = text.isNotEmpty() && (parsed == null || parsed < 0f || parsed > 1f),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
-        modifier = modifier.heightIn(min = 64.dp)
-    )
-}

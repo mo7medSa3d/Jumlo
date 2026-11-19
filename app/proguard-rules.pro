@@ -6,14 +6,18 @@
 -keep class * extends androidx.room.RoomDatabase { *; }
 
 # Keep Kotlinx Serialization models, settings, and type-safe Navigation routes
--keepclassmembers class com.jumlo.app.model.** { *; }
--keepclassmembers class com.jumlo.app.data.processing.** { *; }
--keepclassmembers class com.jumlo.app.ui.navigation.** { *; }
 -keep @kotlinx.serialization.Serializable class com.jumlo.app.** { *; }
+-keep,includedescriptorclasses class com.jumlo.app.**$$serializer { *; }
 -keepclassmembers class com.jumlo.app.** {
     *** Companion;
     kotlinx.serialization.KSerializer serializer(...);
 }
+-keepclassmembers class com.jumlo.app.**$Companion {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep Hilt workers instantiated via HiltWorkerFactory reflection
+-keep @androidx.hilt.work.HiltWorker class com.jumlo.app.** { *; }
 
 # PDFBox-Android (Apache-2.0)
 -keep class com.tom_roush.** { *; }
@@ -33,11 +37,9 @@
 
 # youtubedl-android, FFmpeg & youtubedl_common
 -keep class com.yausername.** { *; }
--keepclassmembers class com.yausername.** { *; }
 -dontwarn com.yausername.**
 
 # Preserve raw resource IDs for youtubedl-android
--keepclassmembers class **.R$raw { *; }
 -keep class **.R$raw { *; }
 
 # Jackson Databind (used by youtubedl-android)
@@ -49,10 +51,3 @@
 -dontwarn org.apache.commons.compress.**
 -keep class org.apache.commons.io.** { *; }
 -dontwarn org.apache.commons.io.**
-
-# Media Runtime & Process Execution
--keep class com.jumlo.app.data.media.** { *; }
--keepclassmembers class com.jumlo.app.data.media.** { *; }
--keep class com.jumlo.app.core.media.** { *; }
--keepclassmembers class com.jumlo.app.core.media.** { *; }
-

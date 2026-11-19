@@ -8,12 +8,14 @@ import com.jumlo.app.core.TransferRequest
 import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.processing.OkHttpTransport
+import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URI
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Locale
@@ -25,7 +27,8 @@ import java.util.concurrent.TimeUnit
  */
 internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessions: MediaSessionStore) : MediaRuntime {
     private val http = client.newBuilder().followRedirects(false).followSslRedirects(false)
-        .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
+        .cookieJar(CookieJar.NO_COOKIES)
+        .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).writeTimeout(15, TimeUnit.SECONDS).build()
     private val audioExt = setOf("m4a", "mp3", "ogg", "opus", "flac", "wav", "aac")
     private val videoExt = setOf("mp4", "m4v", "mov", "webm", "mkv", "ts")
     private val mimeToExt = mapOf(
@@ -38,7 +41,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     private data class Inspection(val name: String, val extractor: String, val streams: List<Remote>, val thumbnailUrl: String? = null)
     private data class PageRead(val url: String, val html: String, val profileIndex: Int)
 
-    private fun headers(url: String, profileIndex: Int = 0): Map<String, String> {
+    private fun headers(url: String, profileIndex: Int = 0, origin: String = url): Map<String, String> {
         val custom = sessions.getExtraHeaders().lineSequence().map(String::trim)
             .filter { ':' in it }
             .associate { it.substringBefore(':').trim() to it.substringAfter(':').trim() }
@@ -46,22 +49,25 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             url = url, customUserAgent = sessions.getCustomUserAgent(),
             preferDesktop = sessions.isPreferDesktopUa(),
             cookieHeader = sessions.cookieHeaderFor(url), customHeaders = custom,
-            compatibilityAttempt = profileIndex
+            compatibilityAttempt = profileIndex,
+            customHeaderOrigin = origin
         )
     }
 
-    private fun request(url: String, rangeGet: Boolean = false, profileIndex: Int = 0): Request = Request.Builder().url(url).apply {
-        headers(url, profileIndex).forEach { (name, value) -> header(name, value) }
+    private fun request(url: String, rangeGet: Boolean = false, profileIndex: Int = 0, origin: String = url): Request = Request.Builder().url(url).apply {
+        headers(url, profileIndex, origin).forEach { (name, value) -> header(name, value) }
         if (rangeGet) get().header("Range", "bytes=0-0") else head()
     }.build()
 
     private fun inspectDirect(url: String, allowHttp: Boolean, check: () -> Unit): Remote {
-        var current = HttpPolicy.url(MediaLinks.normalize(url,allowHttp),allowHttp)
+        val initial = HttpPolicy.url(MediaLinks.normalize(url,allowHttp),allowHttp)
+        val initialOrigin = initial.toString()
+        var current = initial
         var rangeGet = false
         var profileIndex = 0
         repeat(14) { hop ->
             check()
-            http.executeCancellable(request(current.toString(), rangeGet, profileIndex),check).use { response ->
+            http.executeCancellable(request(current.toString(), rangeGet, profileIndex, initialOrigin),check).use { response ->
                 if (response.code in setOf(301, 302, 303, 307, 308)) {
                     if (hop >= 10) throw OperationFailure("TOO_MANY_REDIRECTS")
                     val location = response.header("Location") ?: throw OperationFailure("INVALID_REDIRECT")
@@ -101,12 +107,16 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
 
     private fun readPage(url: String, allowHttp: Boolean, check: () -> Unit,
         preferredProfileIndex: Int = 0): PageRead {
-        var current = HttpPolicy.url(MediaLinks.normalize(url,allowHttp),allowHttp)
+        val initial = HttpPolicy.url(MediaLinks.normalize(url,allowHttp),allowHttp)
+        val initialOrigin = initial.toString()
+        var current = initial
         var profileIndex = preferredProfileIndex
         repeat(13) { hop ->
             check()
             val req = Request.Builder().url(current.toString()).get().apply {
-                headers(current.toString(), profileIndex).forEach { (k, v) -> header(k, v) }
+                val hopHeaders = if (current == initial) headers(current.toString(), profileIndex)
+                    else headers(current.toString(), profileIndex, initialOrigin)
+                hopHeaders.forEach { (k, v) -> header(k, v) }
                 header("Accept", "text/html,application/xhtml+xml")
             }.build()
             http.executeCancellable(req,check).use { response ->
@@ -226,7 +236,9 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             old.clear()
         }
         val target = File(directory, "media.${source.extension}")
-        val result = StreamTransfer(OkHttpTransport(http, ::headers,check)).execute(
+        val result = StreamTransfer(OkHttpTransport(http, { targetUrl, profileIndex ->
+            headers(targetUrl, profileIndex, source.url)
+        }, check)).execute(
             TransferRequest(
                 url = source.url, partialFile = partial, offset = partial.length(),
                 strongEtag = old.getProperty("etag"), lastModified = old.getProperty("modified"),
@@ -246,7 +258,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 }
                 val pending = File(directory, "native-media.pending")
                 java.io.FileOutputStream(pending).use { p.store(it, null); it.fd.sync() }
-                Files.move(pending.toPath(), journal.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                moveSafely(pending, journal)
             }
         )
         check()
@@ -254,11 +266,18 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             partial.delete(); journal.delete()
             throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
         }
-        Files.move(partial.toPath(), target.toPath(),
-            StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        moveSafely(partial, target)
         journal.delete()
         try { MediaOutputPolicy.inspect(target) }
         catch (error: Exception) { target.delete(); throw error }
         check()
+    }
+
+    private fun moveSafely(source: File, target: File) {
+        try {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 }

@@ -41,12 +41,18 @@ object ImageResizePolicy {
         if (percentage != null) {
             require(percentage in 1..400) { "INVALID_PERCENTAGE" }
             val scale = percentage / 100.0
-            return maxOf(1, Math.round(sourceWidth * scale).toInt()) to maxOf(1, Math.round(sourceHeight * scale).toInt())
+            val scaledW = maxOf(1L, Math.round(sourceWidth * scale))
+            val scaledH = maxOf(1L, Math.round(sourceHeight * scale))
+            require(scaledW <= Int.MAX_VALUE.toLong() && scaledH <= Int.MAX_VALUE.toLong()) { "IMAGE_DIMENSIONS_UNREPRESENTABLE" }
+            return scaledW.toInt() to scaledH.toInt()
         }
         if (longestEdge != null) {
             require(longestEdge > 0) { "INVALID_DIMENSIONS" }
             val scale = longestEdge.toDouble() / maxOf(sourceWidth, sourceHeight)
-            return maxOf(1, Math.round(sourceWidth * scale).toInt()) to maxOf(1, Math.round(sourceHeight * scale).toInt())
+            val scaledW = maxOf(1L, Math.round(sourceWidth * scale))
+            val scaledH = maxOf(1L, Math.round(sourceHeight * scale))
+            require(scaledW <= Int.MAX_VALUE.toLong() && scaledH <= Int.MAX_VALUE.toLong()) { "IMAGE_DIMENSIONS_UNREPRESENTABLE" }
+            return scaledW.toInt() to scaledH.toInt()
         }
         require(width > 0 && height > 0) { "INVALID_DIMENSIONS" }
         return width to height

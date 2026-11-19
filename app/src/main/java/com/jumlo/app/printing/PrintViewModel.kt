@@ -141,7 +141,10 @@ data class PrintUiState(
     private var dataJob: Job? = null
     init {
         observeSavedData()
-        _state.update { it.copy(printServicesInstalled = detectPrintServices()) }
+        operationScope.launch {
+            val installed = withContext(ioDispatcher) { detectPrintServices() }
+            _state.update { it.copy(printServicesInstalled = installed) }
+        }
     }
 
     /**
@@ -149,7 +152,7 @@ data class PrintUiState(
      * We can still tell the user up front when no print service is installed at all.
      */
     private fun detectPrintServices(): Boolean = runCatching {
-        val intent = android.content.Intent("android.print.service")
+        val intent = android.content.Intent(android.printservice.PrintService.SERVICE_INTERFACE)
         getApplication<Application>().packageManager.queryIntentServices(intent, 0).isNotEmpty()
     }.getOrDefault(true)
     /** Retry the failing persistence observer, not just the PDF inspection stage. */
@@ -370,8 +373,14 @@ data class PrintUiState(
         try {
             val job=getApplication<Application>().getSystemService(PrintManager::class.java)?.printJobs?.firstOrNull {it.id.toString()==entry.id}
             if(job?.isFailed==true) {job.restart();lastStates=null;return}
-            repository.resolve(entry.source);open(entry.source);edit(entry.options)
-        } catch(e:Exception) {_state.update {it.copy(error=errorCode(e))}}
+        } catch(e:Exception) {_state.update {it.copy(error=errorCode(e))};return}
+        operationScope.launch {
+            try {
+                withContext(ioDispatcher) { repository.resolve(entry.source) }
+                open(entry.source);edit(entry.options)
+            } catch(cancel:CancellationException) {throw cancel}
+            catch(e:Exception) {_state.update {it.copy(error=errorCode(e))}}
+        }
     }
     private fun Int.toPrintState()=when(this) {
         PrintJobInfo.STATE_CREATED->PrintJobState.CREATED;PrintJobInfo.STATE_QUEUED->PrintJobState.QUEUED

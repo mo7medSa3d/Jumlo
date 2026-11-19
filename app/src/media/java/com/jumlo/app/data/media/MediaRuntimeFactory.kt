@@ -217,7 +217,11 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         } catch (error: com.jumlo.app.core.media.MediaProcessException) {
             throw OperationFailure(error.code)
         }
-        if (result.exitCode != 0) throw OperationFailure(MediaFailurePolicy.extractorMessage(result.stderr))
+        if (result.exitCode != 0) {
+            val code = MediaFailurePolicy.extractorMessage(result.stderr)
+            AppDiagnostics.report("media_extractor_failure", IllegalStateException("$code: ${result.stderr.takeLast(400)}"))
+            throw OperationFailure(code)
+        }
         return result.stdout
     }
 

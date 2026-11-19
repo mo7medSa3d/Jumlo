@@ -4,7 +4,7 @@ import java.util.Locale
 
 /** Filename is derived from the first source; users never need a naming prompt. */
 object AutoOutputName {
-    private val INVALID_NAME_CHARS = Regex("[\\/:*?\"<>|\\p{Cc}\\p{Cf}]")
+    private val INVALID_NAME_CHARS = Regex("[\\\\/:*?\"<>|\\p{Cc}\\p{Cf}]")
     private val WHITESPACE = Regex("\\s+")
     private val operations = mapOf(
         "pdf_02" to "PDF", "pdf_03" to "Merged", "pdf_04" to "Organized",

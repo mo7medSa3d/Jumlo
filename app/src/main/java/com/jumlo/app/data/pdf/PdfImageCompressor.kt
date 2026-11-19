@@ -8,7 +8,6 @@ import com.tom_roush.pdfbox.cos.COSNumber
 import com.tom_roush.pdfbox.cos.COSStream
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
-import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject as ImageXObject
 import com.tom_roush.pdfbox.pdmodel.common.PDStream
 import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import java.io.ByteArrayInputStream
@@ -52,12 +51,13 @@ object PdfImageCompressor {
         onPage: ((Int, Int) -> Unit)? = null,
         codec: PdfImageCodec,
         maxWorkingBytes: Long = minOf(Runtime.getRuntime().maxMemory() / 2, 192L * 1024 * 1024),
-        checkCancel: () -> Unit = {}
+        checkCancel: () -> Unit = {},
+        walkLadder: Boolean = true
     ): Report {
         require(maxDpi in 36..600) { "INVALID_COMPRESS_SETTINGS" }
         require(jpegQuality in 0..100) { "INVALID_COMPRESS_SETTINGS" }
         require(maxWorkingBytes > 0) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
-        val ladder = PdfCompressionPolicy.profiles(maxDpi, jpegQuality)
+        val ladder = if (walkLadder) PdfCompressionPolicy.profiles(maxDpi, jpegQuality) else listOf(maxDpi to jpegQuality)
         var replaced = 0
         val skipped = mutableListOf<String>()
         val pageCount = doc.numberOfPages
@@ -94,10 +94,11 @@ object PdfImageCompressor {
                 }
             } finally { path.remove(resources.cosObject) }
         }
+        val path = java.util.IdentityHashMap<COSDictionary, Boolean>()
         doc.pages.forEach { page ->
             checkCancel()
             val (width, height) = pageTarget(page)
-            collect(page.resources, width, height, java.util.IdentityHashMap(), 0)
+            collect(page.resources, width, height, path, 0)
         }
         // Scanner apps often put the photo inside Form XObjects. The loop walks
         // into them, because a scanner PDF keeps the page photo there.
@@ -135,6 +136,7 @@ object PdfImageCompressor {
             }
         }
         doc.pages.forEachIndexed { pageIndex, page ->
+            checkCancel()
             val (maxWidth, maxHeight) = pageTarget(page)
             process(page.resources, maxWidth, maxHeight, 0)
             onPage?.invoke(pageIndex + 1, pageCount)
@@ -211,6 +213,7 @@ object PdfImageCompressor {
                              checkCancel: () -> Unit): ByteArray {
         val out = ByteArray(tw * th * cpp)
         val step = if (quality in 1..79) ((100 - quality) / 12).coerceAtLeast(1) else 1
+        val sums = LongArray(cpp)
         for (y in 0 until th) {
             checkCancel()
             val y0 = (y.toLong() * sh / th).toInt()
@@ -218,7 +221,7 @@ object PdfImageCompressor {
             for (x in 0 until tw) {
                 val x0 = (x.toLong() * sw / tw).toInt()
                 val x1 = ((x + 1L) * sw / tw).toInt().coerceAtLeast(x0 + 1).coerceAtMost(sw)
-                val sums = LongArray(cpp)
+                sums.fill(0L)
                 for (yy in y0 until y1) for (xx in x0 until x1) {
                     val base = (yy * sw + xx) * cpp
                     for (c in 0 until cpp) sums[c] += src[base + c].toInt() and 255
@@ -234,8 +237,6 @@ object PdfImageCompressor {
         }
         return out
     }
-
-    /** Shared image placement, separate from Android text rasterization for real-PDF JVM fixtures. */
 
     /**
      * Re-encode one image, walking the ladder until the result is smaller.
@@ -319,7 +320,7 @@ object PdfImageCompressor {
             } ?: return null to "DECODE_FAILED"
             checkCancel()
             if (recoded.bytes.isEmpty() || recoded.bytes.size >= originalLength) continue
-            val candidate = ImageXObject(
+            val candidate = PDImageXObject(
                 doc,
                 ByteArrayInputStream(recoded.bytes),
                 COSName.DCT_DECODE,

@@ -9,6 +9,6 @@ object LegacyDownloadPrivacyCallback : RoomDatabase.Callback() {
     const val REDACT_LEGACY_URLS = "UPDATE download_tasks SET fullUrl = '' WHERE fullUrl <> ''"
     override fun onOpen(db: SupportSQLiteDatabase) {
         super.onOpen(db)
-        db.execSQL(REDACT_LEGACY_URLS)
+        if (!db.isReadOnly) db.execSQL(REDACT_LEGACY_URLS)
     }
 }

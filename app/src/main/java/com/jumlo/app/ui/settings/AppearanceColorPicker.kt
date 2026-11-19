@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +32,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
@@ -39,6 +47,7 @@ import com.jumlo.app.ui.icons.rounded.Check
 import com.jumlo.app.ui.theme.ColorSystem
 import com.jumlo.app.ui.theme.ColorSystems
 import com.jumlo.app.ui.theme.QuietTheme
+import java.util.Locale
 
 /**
  * Appearance > Color system: four curated studio systems (Cobalt, Emerald,
@@ -59,11 +68,11 @@ fun AppearanceColorPicker(
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.pref_app_color), style = QuietTheme.typography.sectionTitle)
+                Text(stringResource(R.string.pref_app_color), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
             }
@@ -89,8 +98,9 @@ private fun SystemCard(system: ColorSystem, language: AppLanguage, selected: Boo
     val borderColor = if (selected) deep else system.light.outlineVariant
     Surface(
         onClick = onClick,
+        modifier = Modifier.semantics { this.selected = selected; role = Role.RadioButton },
         color = paper,
-        shape = RoundedCornerShape(18.dp),
+        shape = QuietTheme.shapes.innerPanel,
         border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
         shadowElevation = if (selected) 2.dp else 0.dp
     ) {
@@ -131,7 +141,7 @@ private fun SystemCard(system: ColorSystem, language: AppLanguage, selected: Boo
             }
             Box(
                 Modifier.fillMaxWidth().height(10.dp).background(
-                    Brush.horizontalGradient(system.ramp), RoundedCornerShape(5.dp)
+                    Brush.horizontalGradient(system.ramp), QuietTheme.shapes.bar
                 )
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -148,8 +158,8 @@ private fun SystemCard(system: ColorSystem, language: AppLanguage, selected: Boo
                     )
                 }
                 Text(
-                    system.ramp.joinToString(" · ") { "#%06X".format(it.toArgb() and 0xFFFFFF) },
-                    style = QuietTheme.typography.metadata,
+                    system.ramp.joinToString(" · ") { "#%06X".format(Locale.ROOT, it.toArgb() and 0xFFFFFF) },
+                    style = QuietTheme.typography.metadata.copy(textDirection = TextDirection.Ltr),
                     color = softInk
                 )
             }

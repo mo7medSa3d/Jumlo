@@ -25,7 +25,7 @@ object MediaJsonGuard {
                     depth++
                     require(depth <= MAX_DEPTH) { "MEDIA_METADATA_DEPTH" }
                 }
-                ']', '}' -> depth--
+                ']', '}' -> if (depth > 0) depth--
             }
         }
         // Unbalanced delimiters, escapes and trailing data are rejected by the parser.

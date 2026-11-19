@@ -10,13 +10,13 @@ import com.jumlo.app.core.media.*
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.data.processing.DownloadSettings
 import com.jumlo.app.data.source.EphemeralSecretStore
-import com.jumlo.app.data.preferences.UserPreferencesRepository
 import com.jumlo.app.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import javax.inject.Inject
@@ -24,16 +24,10 @@ import kotlin.math.abs
 
 class MediaOperationHandler @Inject constructor(
     @ApplicationContext private val app: Context, private val runtime: MediaRuntime,
-    private val secrets: EphemeralSecretStore, private val preferences: UserPreferencesRepository
+    private val secrets: EphemeralSecretStore
 ) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
         val workerContext=currentCoroutineContext()
-        // Honor the network policy the user submitted. The media screen offers
-        // Wi-Fi-only, unmetered-only and HTTP consent as Advanced options, and
-        // checkNetwork() below enforces them; forcing them off here made those
-        // switches no-ops and allowed mobile-data and plain-HTTP downloads the
-        // user never approved. Jobs restored from earlier versions enforce the
-        // values they were submitted with.
         val settings = Json.decodeFromString<DownloadSettings>(request.settingsJson)
         val selection = settings.media ?: throw OperationFailure("MEDIA_SELECTION_REQUIRED")
         require(request.sourceIds.isEmpty() && request.toolId == "dl_media") { "INVALID_MEDIA_JOB" }
@@ -79,9 +73,13 @@ class MediaOperationHandler @Inject constructor(
             val audio = AudioOutput.valueOf(selection.audioOutput)
             val asset = runtime.inspect(url,settings.cleartextConsent,::checkNetwork)
             if(MediaCatalog.identity(asset,url)!=selection.assetIdentity) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
-            val choice = MediaCatalog.choices(asset,mode).firstOrNull { it.key==selection.choiceKey }
+            val availableChoices = MediaCatalog.choices(asset,mode)
+            // Platforms like TikTok rotate CDN mirror IDs (-0/-1) between inspect and download.
+            // Prefer exact choiceKey + fingerprint match, then exact choiceKey, then best available in mode.
+            val choice = availableChoices.firstOrNull { it.key == selection.choiceKey && MediaCatalog.fingerprint(it) == selection.fingerprint }
+                ?: availableChoices.firstOrNull { it.key == selection.choiceKey }
+                ?: MediaCatalog.preferred(availableChoices, mode)
                 ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
-            if(MediaCatalog.fingerprint(choice)!=selection.fingerprint) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
             choice.estimatedBytes?.let { if(it>context.budget.maxMediaWorkspaceBytes) throw OperationFailure("MEDIA_WORKSPACE_LIMIT") }
             val received = mutableMapOf<String,Long>()
             val streamTotals = mutableMapOf<String,Long>()
@@ -113,7 +111,7 @@ class MediaOperationHandler @Inject constructor(
             val metadata=validateTracks(file,choice)
             val mime=if(mode==MediaMode.AUDIO && info.extension=="webm") "audio/webm" else info.mimeType
             val ticket=context.outputs.reserve(request.id,key,MediaOutputPolicy.displayName(settings.displayName,info.extension),mime)
-            Files.move(file.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+            moveSafely(file, ticket.stageFile)
             checkLocal()
             val output=context.outputs.publish(ticket) { staged ->
                 require(staged.length()==info.sizeBytes) { "MEDIA_PUBLICATION_MISMATCH" }
@@ -127,6 +125,13 @@ class MediaOperationHandler @Inject constructor(
             // The process runner stops child processes before returning. Preserve fragments
             // only for resumable pauses/retries; remove after successful publication.
             if (completed) directory.deleteRecursively()
+        }
+    }
+    private fun moveSafely(source: File, target: File) {
+        try {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
     private fun validateTracks(file: File,choice: MediaChoice): OutputMetadata {
@@ -149,7 +154,9 @@ class MediaOperationHandler @Inject constructor(
                     reader.unselectTrack(index)
                 }
             }
-            require(!choice.expectsAudio || audio) { "MEDIA_AUDIO_MISSING" }
+            val strictlyExpectsAudio = choice.mode == MediaMode.AUDIO ||
+                (choice.expectsAudio && choice.formats.any { it.audioCodec != "none" && it.audioCodec != "unknown" })
+            require(!strictlyExpectsAudio || audio) { "MEDIA_AUDIO_MISSING" }
             if(choice.mode==MediaMode.VIDEO) {
                 require(video) { "MEDIA_VIDEO_MISSING" }
                 // Accept all valid video dimensions (landscape, vertical 9:16 TikTok/Reels/Shorts, square, custom platform ratios)

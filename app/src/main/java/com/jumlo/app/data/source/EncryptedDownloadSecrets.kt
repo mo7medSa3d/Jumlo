@@ -26,13 +26,15 @@ import javax.inject.Singleton
         require(runCatching { UUID.fromString(handle).toString() == handle }.getOrDefault(false)) { "INVALID_SECRET_HANDLE" }
         return File(directory, "$handle.bin")
     }
-    @Synchronized private fun key(): SecretKey {
+    @Synchronized private fun key(create: Boolean): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(alias, null) as? SecretKey)?.let { return it }
+        check(create) { "SECRET_STORAGE_INVALID" }
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
             init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(true)
                 .setKeySize(256).build())
         }.generateKey()
     }
@@ -43,9 +45,10 @@ import javax.inject.Singleton
         val encoded = StandardCharsets.UTF_8.encode(CharBuffer.wrap(secret))
         val plain = ByteArray(encoded.remaining()).also(encoded::get)
         try {
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key(create = true)) }
             cipher.updateAAD(handle.toByteArray(StandardCharsets.US_ASCII))
             val encrypted = cipher.doFinal(plain)
+            check(cipher.iv.size == 12) { "SECRET_STORAGE_FAILED" }
             val atomic = AtomicFile(target)
             val stream = atomic.startWrite()
             try {
@@ -79,7 +82,7 @@ import javax.inject.Singleton
             }
             require(bytes.size in 30..MAX_BYTES + 64 && bytes[0].toInt() == VERSION && bytes[1].toInt() == 12)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
-                init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(2, 14)))
+                init(Cipher.DECRYPT_MODE, key(create = false), GCMParameterSpec(128, bytes.copyOfRange(2, 14)))
                 updateAAD(handle.toByteArray(StandardCharsets.US_ASCII))
             }
             val plain = cipher.doFinal(bytes, 14, bytes.size - 14)

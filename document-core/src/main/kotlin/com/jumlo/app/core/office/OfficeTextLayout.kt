@@ -51,7 +51,7 @@ object OfficeTextLayout {
             val weighted = overlapping.map { it.fontSizePt to (minOf(it.end, start + line.length) - maxOf(it.start, start)).toLong() }
             val fontSize = if (weighted.isEmpty()) bodySize else median(weighted)
             val length = weighted.sumOf { it.second }
-            val boldLength = overlapping.filter { it.bold }.sumOf { (minOf(it.end, start + line.length) - maxOf(it.start, start)).toLong() }
+            val boldLength = overlapping.sumOf { if (it.bold) (minOf(it.end, start + line.length) - maxOf(it.start, start)).toLong() else 0L }
             val ratio = fontSize / bodySize
             val trimmedLine = line.trim()
             val short = trimmedLine.length <= 160 && trimmedLine.split(WHITESPACE).size <= 20

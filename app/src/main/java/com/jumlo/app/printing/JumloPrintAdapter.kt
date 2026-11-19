@@ -79,6 +79,7 @@ class JumloPrintAdapter(
                 val ranges=PrintRanges.compact(selected).map {PageRange(it.first,it.last)}.toTypedArray()
                 result(PrintCallbackGate.Result.SUCCESS,ranges=ranges)
             } catch(_:CancellationException) {result(PrintCallbackGate.Result.CANCELED)}
+            catch(oom:OutOfMemoryError) {AppDiagnostics.report("print_write",oom);result(PrintCallbackGate.Result.FAILURE,message=context.getString(R.string.print_error_write))}
             catch(error:Exception) {AppDiagnostics.report("print_write",error);result(PrintCallbackGate.Result.FAILURE,message=context.getString(R.string.print_error_write))}
             finally {temporary?.delete();runCatching {destination.close()}}
         }

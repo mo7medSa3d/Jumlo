@@ -176,7 +176,7 @@ internal data class VisualTransform(val turns:Int=0,val flipX:Boolean=false,val 
 
 /** Fixed opposite corner; aspect is normalized width/height. BODY stays translation-only. */
 internal fun VisualRect.draggedLocked(handle:VisualHandle,dx:Float,dy:Float,aspect:Float):VisualRect {
-    if(handle==VisualHandle.BODY || handle==VisualHandle.NONE || aspect<=0f) return dragged(handle,dx,dy)
+    if(handle==VisualHandle.BODY || handle==VisualHandle.NONE || !aspect.isFinite() || aspect<=0f) return dragged(handle,dx,dy)
     val leftHandle=handle==VisualHandle.TOP_LEFT || handle==VisualHandle.BOTTOM_LEFT
     val topHandle=handle==VisualHandle.TOP_LEFT || handle==VisualHandle.TOP_RIGHT
     val anchorX=if(leftHandle) right else left;val anchorY=if(topHandle) bottom else top

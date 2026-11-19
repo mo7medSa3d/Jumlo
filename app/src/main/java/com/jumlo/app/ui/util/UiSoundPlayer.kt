@@ -7,7 +7,7 @@ import android.media.SoundPool
 import com.jumlo.app.R
 
 /** Preloaded tiny self-generated WAVs: no streaming, network, media-session, or UI thread decoding. */
-class UiSoundPlayer(private val context: Context) {
+class UiSoundPlayer(context: Context) {
     enum class Cue { TAP, TOGGLE, START, SUCCESS, ERROR, DELETE }
     private val audio=context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     private val pool=SoundPool.Builder().setMaxStreams(2).setAudioAttributes(

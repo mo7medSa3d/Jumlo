@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +20,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
+import com.jumlo.app.ui.theme.QuietTheme
 
 /**
  * Exact replica of the Jumlo Android adaptive launcher icon:
@@ -37,25 +38,24 @@ import com.jumlo.app.R
  * folded-page glyph with luminous mint corner fold and royal-indigo J
  * (`ic_launcher_foreground.xml`).
  */
+private val LauncherIconGradient = Brush.linearGradient(
+    colors = listOf(Color(0xFF3837BC), Color(0xFF8658F4)),
+    start = Offset(0f, Float.POSITIVE_INFINITY),
+    end = Offset(Float.POSITIVE_INFINITY, 0f)
+)
+
 @Composable
 fun JumloAppIconBadge(
     modifier: Modifier = Modifier,
     size: Dp = 34.dp,
-    cornerRadius: Dp = 10.dp
+    shape: Shape = QuietTheme.shapes.badge
 ) {
-    val shape = RoundedCornerShape(cornerRadius)
     Box(
         modifier = modifier
             .size(size)
             .shadow(elevation = 3.dp, shape = shape, clip = false)
             .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFF3837BC), Color(0xFF8658F4)),
-                    start = Offset(0f, Float.POSITIVE_INFINITY),
-                    end = Offset(Float.POSITIVE_INFINITY, 0f)
-                )
-            )
+            .background(LauncherIconGradient)
             .border(1.dp, Color.White.copy(alpha = 0.28f), shape),
         contentAlignment = Alignment.Center
     ) {
@@ -81,13 +81,14 @@ fun JumloAppIconBadge(
  */
 @Composable
 fun JumloWordmark(modifier: Modifier = Modifier) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             modifier = modifier,
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            JumloAppIconBadge(size = 34.dp, cornerRadius = 10.dp)
+            JumloAppIconBadge(size = 34.dp)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -97,7 +98,7 @@ fun JumloWordmark(modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 21.sp,
-                    letterSpacing = (-0.5).sp,
+                    letterSpacing = if (isRtl) 0.sp else (-0.5).sp,
                     maxLines = 1
                 )
                 Box(

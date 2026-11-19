@@ -16,7 +16,7 @@
     <string name="upgrade_no_results_hint">Try a different search or filter.</string>
     <string name="upgrade_new_name">New name</string>
     <string name="upgrade_renamed">Document renamed</string>
-    <string name="upgrade_rename_failed">Could not rename this document</string>
+    <string name="upgrade_rename_failed">Could not rename this document. Choose a different name and try again.</string>
     <string name="upgrade_image_to_pdf_preview">Paper preview</string>
     <string name="upgrade_margin_drag">Drag the guide to adjust the margin</string>
     <string name="upgrade_margin_mm">Margin: %1$d mm</string>

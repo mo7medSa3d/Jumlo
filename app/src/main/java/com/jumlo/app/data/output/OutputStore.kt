@@ -31,7 +31,6 @@ import javax.inject.Singleton
         this(context,db,publicOutputs as PublicOutputPublisher)
     private val rootDir get()=File(context.filesDir,"processing")
     private val resultsDir get()=File(rootDir,"results").apply { mkdirs() }
-    private val journalDir get()=File(rootDir,"journal").apply { mkdirs() }
     private val trashDir get()=File(rootDir,"trash").apply { mkdirs() }
     private val trashStorage=ManagedTrashStorage(rootDir)
     private val mutations=Mutex()
@@ -165,9 +164,9 @@ import javax.inject.Singleton
         withContext(NonCancellable) {
             db.processingDao().insertOutput(OutputEntity(privateRecord.id,privateRecord.jobId,privateRecord.itemKey,json.encodeToString(privateRecord)))
             trashStorage.acknowledgeRestore(outputId)
+            refreshTrashUnlocked()
         }
-        val restored=recordPublicCopy(privateRecord,File(File(resultsDir,record.id),SafeNames.basename(record.displayName)))
-        refreshTrashUnlocked();restored
+        recordPublicCopy(privateRecord,File(File(resultsDir,record.id),SafeNames.basename(record.displayName)))
     } }
     /** Only the exact IDs shown in a confirmation may be purged; new trash is never included. */
     suspend fun purgeTrashIds(outputIds:Set<String>):Int=withContext(Dispatchers.IO) { mutations.withLock {

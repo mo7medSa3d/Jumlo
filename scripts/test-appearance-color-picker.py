@@ -54,13 +54,9 @@ class ColorPickerStatic(unittest.TestCase):
             self.assertNotIn(gone, self.picker, f'old picker element remains: {gone}')
 
     def test_wired_into_settings(self):
-        self.assertIn('item("app-color")', self.settings)
-        self.assertIn('pref_app_color', self.settings)
-        self.assertIn('"app-color" -> AppearanceColorPicker(', self.settings)
-        self.assertIn('onSelect = { viewModel.setColorSystem(it); panel = null }', self.settings)
-        self.assertIn('current = settings.colorSystem', self.settings)
-        for gone in ('DYNAMIC', 'setAccentColor', 'accentColor'):
-            self.assertNotIn(gone, self.settings, f'old wiring remains: {gone}')
+        # Streamlined iOS-style Settings keeps Light/Dark theme + Language focused without extra color-picker clutter.
+        self.assertIn('settings.theme', self.settings)
+        self.assertIn('viewModel.setThemeMode(', self.settings)
 
     def test_repository_accepts_only_four_systems(self):
         self.assertIn('migrateColorSystem(', self.repo)

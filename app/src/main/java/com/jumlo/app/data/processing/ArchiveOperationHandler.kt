@@ -25,7 +25,11 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }
-    private fun limits(ctx:ExecutionContext,base:File,maxEntries:Int=ctx.budget.maxArchiveEntries)=ArchiveLimits(minOf(ctx.budget.maxExpandedArchiveBytes,(base.usableSpace-ctx.budget.minFreeBytes).coerceAtLeast(1)),maxEntries,32)
+    private fun limits(ctx:ExecutionContext,base:File,maxEntries:Int=ctx.budget.maxArchiveEntries):ArchiveLimits {
+        val free = base.usableSpace - ctx.budget.minFreeBytes
+        if (free <= 0L) throw OperationFailure("DISK_BUDGET_EXCEEDED")
+        return ArchiveLimits(minOf(ctx.budget.maxExpandedArchiveBytes, free), maxEntries, 32)
+    }
     private suspend fun create(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
         ctx.outputs.find(job.id,"archive")?.let { return listOf(ItemOutcome("archive",ItemStatus.CREATED,it.id)) }
         val settings=Json.decodeFromString<ArchiveSettings>(job.settingsJson)
@@ -44,17 +48,19 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
             // ZipOutputStream is blocking. Only opening the owned stream bridges Room's suspend API.
             ArchiveInput(unique) { ctx.checkCancellation(); runBlocking { ctx.sources.openRead(id) } }
         }
-        var completed=0L
-        ArchiveCore.create(ticket.stageFile,inputs.map { input -> ArchiveInput(input.name) {
-            ctx.checkCancellation()
-            runBlocking { ctx.report(JobProgress(JobStage.RUNNING,completed++,inputs.size.toLong())) }
-            input.open()
-        } },settings.compressionLevel,limits(ctx,app.filesDir)) {
-            ctx.checkCancellation()
-            if(app.filesDir.usableSpace<ctx.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
-        }
-        ctx.report(JobProgress(JobStage.FINALIZING,inputs.size.toLong(),inputs.size.toLong()))
-        val record=ctx.outputs.publish(ticket) { ctx.outputs.inspect(it,ticket.mimeType,originalSizeBytes=totalSourceBytes.takeIf { b -> b > 0L }) }
+        val record=try {
+            var completed=0L
+            ArchiveCore.create(ticket.stageFile,inputs.map { input -> ArchiveInput(input.name) {
+                ctx.checkCancellation()
+                runBlocking { ctx.report(JobProgress(JobStage.RUNNING,completed++,inputs.size.toLong())) }
+                input.open()
+            } },settings.compressionLevel,limits(ctx,app.filesDir)) {
+                ctx.checkCancellation()
+                if(app.filesDir.usableSpace<ctx.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
+            }
+            ctx.report(JobProgress(JobStage.FINALIZING,inputs.size.toLong(),inputs.size.toLong()))
+            ctx.outputs.publish(ticket) { ctx.outputs.inspect(it,ticket.mimeType,originalSizeBytes=totalSourceBytes.takeIf { b -> b > 0L }) }
+        } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
         return listOf(ItemOutcome("archive",ItemStatus.CREATED,record.id))
     }
     private suspend fun extract(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
@@ -73,21 +79,24 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
                 ResourceBudgetPolicy.requireOutputCount(entries.size, ctx.budget.maxOutputFiles)
                 for ((index, file) in entries.withIndex()) {
                     ctx.checkCancellation()
-                    val key="entry:"+file.relativeTo(directory).invariantSeparatorsPath
+                    val rel=file.relativeTo(directory).invariantSeparatorsPath
+                    val key=if(rel.length<=500) "entry:$rel" else "entry-sha256:"+Hashing.sha256(rel.byteInputStream())
                     val existing=ctx.outputs.find(job.id,key)
                     if(existing!=null) outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id)
                     else try {
                         val mime=MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase(Locale.ROOT)) ?: "application/octet-stream"
                         val ticket=ctx.outputs.reserve(job.id,key,SafeNames.basename(file.name),mime)
-                        file.inputStream().use { input -> FileOutputStream(ticket.stageFile).use { output ->
-                            val buffer=ByteArray(64*1024)
-                            while(true) { ctx.checkCancellation(); val n=input.read(buffer); if(n<0) break
-                                require(app.filesDir.usableSpace>=ctx.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
-                                if(n>0) output.write(buffer,0,n)
-                            }; output.fd.sync()
-                        } }
-                        // Arbitrary archive members are bytes, not a claim of decodable media.
-                        val record=ctx.outputs.publish(ticket) { require(it.length()==file.length()) { "OUTPUT_VERIFY_FAILED" }; OutputMetadata(subfolder=archiveFolder) }
+                        val record=try {
+                            file.inputStream().use { input -> FileOutputStream(ticket.stageFile).use { output ->
+                                val buffer=ByteArray(64*1024)
+                                while(true) { ctx.checkCancellation(); val n=input.read(buffer); if(n<0) break
+                                    require(app.filesDir.usableSpace>=ctx.budget.minFreeBytes+n) { "DISK_BUDGET_EXCEEDED" }
+                                    if(n>0) output.write(buffer,0,n)
+                                }; output.fd.sync()
+                            } }
+                            // Arbitrary archive members are bytes, not a claim of decodable media.
+                            ctx.outputs.publish(ticket) { require(it.length()==file.length()) { "OUTPUT_VERIFY_FAILED" }; OutputMetadata(subfolder=archiveFolder) }
+                        } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
                         outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
                     } catch(cancel:CancellationException) { throw cancel }
                     catch(error:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(error)) }

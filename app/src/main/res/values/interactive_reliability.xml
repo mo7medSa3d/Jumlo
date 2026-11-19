@@ -38,7 +38,7 @@
     <string name="interactive_form_title">Form fields</string>
     <string name="interactive_form_empty">This PDF has no supported fillable fields.</string>
     <string name="interactive_form_read_only">Read only</string>
-    <string name="interactive_form_error">The form fields could not be loaded.</string>
+    <string name="interactive_form_error">Could not load the form fields. Reopen the PDF or try a different file.</string>
     <string name="interactive_form_invalid_draft">The saved values do not match the fields in this PDF. Reset the values to edit this form.</string>
     <string name="interactive_form_reset">Reset form values</string>
     <string name="interactive_form_options">Choose an option</string>

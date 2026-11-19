@@ -224,26 +224,35 @@ object OfficePackageValidator {
         require(file.isFile && file.length() > 0) { "OFFICE_VERIFY_FAILED" }
         var counted = 0
         ZipFile(file).use { zip ->
+            require(zip.size() <= OfficePackageWriter.MAX_PAGES * 4 + 64) { "OFFICE_VERIFY_FAILED" }
             val entries = zip.entries().asSequence().toList()
             val names = entries.map { it.name }.toSet()
-            val foldedNames = entries.map { it.name.lowercase(Locale.ROOT) }.toSet()
-            require(entries.size == foldedNames.size && names.containsAll(required) && entries.size <= OfficePackageWriter.MAX_PAGES * 4 + 64) { "OFFICE_VERIFY_FAILED" }
+            val foldedNames = entries.map { it.name.removeSuffix("/").lowercase(Locale.ROOT) }.toSet()
+            require(entries.size == foldedNames.size && names.containsAll(required)) { "OFFICE_VERIFY_FAILED" }
+            val factory = SAXParserFactory.newInstance().apply {
+                isNamespaceAware = true
+                runCatching { isXIncludeAware = false }
+            }
+            var totalExpandedBytes = 0L
             for (entry in entries) {
                 checkCancel()
-                require(!entry.isDirectory && !entry.name.startsWith('/') && entry.name.split('/').none { it == ".." } && entry.size in 0..128L * 1024 * 1024) { "OFFICE_VERIFY_FAILED" }
+                require(!entry.isDirectory && entry.name.isNotEmpty() && !entry.name.startsWith('/') &&
+                    '\\' !in entry.name && '\u0000' !in entry.name &&
+                    entry.name.split('/').none { it.isEmpty() || it == "." || it == ".." } &&
+                    entry.size in 0..128L * 1024 * 1024) { "OFFICE_VERIFY_FAILED" }
+                require(entry.size <= OfficeDocumentReader.MAX_EXPANDED_PACKAGE_BYTES - totalExpandedBytes) { "OFFICE_VERIFY_FAILED" }
+                totalExpandedBytes += entry.size
                 zip.getInputStream(entry).use { raw ->
                     val input = LimitedInput(raw, 128L * 1024 * 1024, checkCancel)
                     if (entry.name.endsWith(".xml") || entry.name.endsWith(".rels")) {
-                        val factory = SAXParserFactory.newInstance().apply {
-                            isNamespaceAware = true
-                            runCatching { isXIncludeAware = false }
-                        }
                         val reader = factory.newSAXParser().xmlReader
                         // External entities are never needed by an Office package. The resolver is a second guard on parsers that don't support the flags.
+                        reader.setFeature("http://xml.org/sax/features/external-general-entities", false)
+                        reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+                        require(!reader.getFeature("http://xml.org/sax/features/external-general-entities") &&
+                            !reader.getFeature("http://xml.org/sax/features/external-parameter-entities")) { "OFFICE_VERIFY_FAILED" }
                         runCatching { reader.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true) }
                         runCatching { reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
-                        runCatching { reader.setFeature("http://xml.org/sax/features/external-general-entities", false) }
-                        runCatching { reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false) }
                         reader.entityResolver = org.xml.sax.EntityResolver { _, _ -> throw SAXException("OFFICE_EXTERNAL_ENTITY") }
                         reader.contentHandler = object : DefaultHandler() {
                             override fun startElement(uri: String, local: String, qName: String, attributes: Attributes) {
@@ -252,7 +261,9 @@ object OfficePackageValidator {
                                     require(attributes.getValue("TargetMode") != "External") { "OFFICE_VERIFY_FAILED" }
                                     val base = if (entry.name == "_rels/.rels") "/" else "/" + entry.name.substringBeforeLast("/_rels/") + "/"
                                     val rawTarget = requireNotNull(attributes.getValue("Target")) { "OFFICE_VERIFY_FAILED" }
-                                    val target = java.net.URI(base).resolve(rawTarget).normalize().path.removePrefix("/")
+                                    val resolved = java.net.URI(base).resolve(rawTarget).normalize()
+                                    require(resolved.scheme == null && resolved.authority == null) { "OFFICE_VERIFY_FAILED" }
+                                    val target = resolved.path.removePrefix("/")
                                     require(target in names) { "OFFICE_RELATIONSHIP_MISSING" }
                                 }
                             }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.Role
@@ -63,7 +62,6 @@ import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.*
-import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -115,13 +113,17 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         return
     }
     var selectedSourceId by rememberSaveable(tool, form.sourceIds) { mutableStateOf<String?>(null) }
-    val preview=queue.firstOrNull {it.id==selectedSourceId && (it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf")}
-        ?: queue.firstOrNull {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
+    val preview=remember(queue,selectedSourceId) {
+        queue.firstOrNull {it.id==selectedSourceId && (it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf")}
+            ?: queue.firstOrNull {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
+    }
     val visualPageSelection=tool in setOf("pdf_04","pdf_05","pdf_06","pdf_07","pdf_crop","pdf_stamp","pdf_ocr","pdf_to_docx","pdf_to_pptx")
-    val editorSource=if(tool in setOf("pdf_signature","pdf_stamp"))
-        queue.firstOrNull { it.mimeType=="application/pdf" } else preview
-    val overlayImage=if(tool in setOf("pdf_signature","pdf_stamp"))
-        queue.firstOrNull { it.mimeType?.startsWith("image/")==true } else null
+    val editorSource=remember(tool,queue,preview) {
+        if(tool in setOf("pdf_signature","pdf_stamp")) queue.firstOrNull { it.mimeType=="application/pdf" } else preview
+    }
+    val overlayImage=remember(tool,queue) {
+        if(tool in setOf("pdf_signature","pdf_stamp")) queue.firstOrNull { it.mimeType?.startsWith("image/")==true } else null
+    }
     val minimum=if(tool in setOf("pdf_03","pdf_signature","img_join") ||
         (tool=="img_watermark" && form.flag1) || (tool=="pdf_stamp" && form.watermarkUseImage)) 2 else 1
     val inputMismatch=remember(tool,queue,form.watermarkUseImage) { queue.any {source->
@@ -138,8 +140,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             else -> false
         }
     }}
-    val pagePickerSource=queue.filter {it.mimeType=="application/pdf"}.singleOrNull()?.takeIf {
-        visualPageSelection && (queue.size==1 || tool=="pdf_stamp" && form.watermarkUseImage)
+    val pagePickerSource=remember(queue,visualPageSelection,tool,form.watermarkUseImage) {
+        queue.filter {it.mimeType=="application/pdf"}.singleOrNull()?.takeIf {
+            visualPageSelection && (queue.size==1 || tool=="pdf_stamp" && form.watermarkUseImage)
+        }
     }
     val settingsError=remember(form,urls) {
         if(viewer) null else runCatching {
@@ -153,7 +157,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     }
                     com.jumlo.app.core.HttpPolicy.url(
                         com.jumlo.app.core.DownloadLinkPolicy.resolveDirectUrl(line),
-                        true
+                        form.cleartextConsent
                     )
                 }
             }
@@ -195,7 +199,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         LazyColumn(Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
-                if(!viewer) item(key="step-bar") {
+                if(!viewer) item(key="step-bar",contentType="step-bar") {
                     val activeStep = when {
                         busy -> 3
                         queue.isEmpty() -> 1
@@ -214,7 +218,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             val done = step < activeStep
                             Surface(
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(JumloRadii.thumbnail),
+                                shape = QuietTheme.shapes.thumbnail,
                                 color = when {
                                     current -> MaterialTheme.colorScheme.primaryContainer
                                     done -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
@@ -251,12 +255,12 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         )
                     }
                     if(tool in setOf("pdf_02","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_")) {
-                        item(key="inputs-photos") {
+                        item(key="inputs-photos",contentType="action-button") {
                             QuietTonalButton(stringResource(R.string.import_photo_gallery), onPhotos, Modifier.fillMaxWidth())
                         }
                     }
                 } else {
-                    item(key="inputs") {
+                    item(key="inputs",contentType="action-row") {
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
                             if(tool in setOf("pdf_02","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_"))
@@ -264,17 +268,18 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         }
                     }
                 }
-                if(!viewer && queue.isNotEmpty()) item("processing-presets") {
+                val supportsPresets = processingPresets.isNotEmpty() || tool in setOf("pdf_compress","pdf_02","pdf_07","pdf_stamp","img_01","img_02","img_04","img_watermark")
+                if(!viewer && queue.isNotEmpty() && supportsPresets) item(key="processing-presets",contentType="presets") {
                     ProcessingPresetsPanel(form,processingPresets,
                         onSave=vm::saveProcessingPreset,
                         onApply=vm::applyProcessingPreset,
                         onDelete=vm::deleteProcessingPreset)
                 }
-                if(tool in setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")) item("conversion-scope") {
+                if(tool in setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")) item(key="conversion-scope",contentType="notice") {
                     Text(stringResource(when(tool) { "pdf_to_docx" -> R.string.rebuild_word_note; "pdf_to_pptx" -> R.string.rebuild_slides_note; "office_to_pdf" -> R.string.rebuild_office_note; else -> R.string.rebuild_ocr_note }),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                if(queue.size>1) item("visual-source-order") {
+                if(queue.size>1) item(key="visual-source-order",contentType="source-order") {
                     SourceOrderStrip(vm,queue,preview?.id,
                         if(tool=="img_watermark" && form.flag1) queue.getOrNull(1)?.id else null,
                         onSelect={selectedSourceId=it},onMove=vm::moveSource,renamed=proposedNames)
@@ -282,62 +287,62 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 if(preview!=null && tool !in setOf(
                     "img_01","img_03","img_02","img_04","img_join","img_watermark","pdf_crop","pdf_signature","pdf_stamp","pdf_02","pdf_ocr"
                 ) && !(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1))
-                    item(key="preview-${preview.id}") {
+                    item(key="preview-${preview.id}",contentType="preview") {
                         InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer,
                             raster=if(tool=="pdf_07") form else null)
                     }
                 if(pagePickerSource!=null)
-                    item(key="pdf-visual-editor-${pagePickerSource.id}") { PdfPageEditor(vm,pagePickerSource.id,form,vm::updateForm,
+                    item(key="pdf-visual-editor-${pagePickerSource.id}",contentType="pdf-editor") { PdfPageEditor(vm,pagePickerSource.id,form,vm::updateForm,
                         onPrint={pages->onPrintPages?.invoke(pagePickerSource.id,pages)},printEnabled=onPrintPages!=null) }
                 if(editorSource!=null && tool in setOf("img_03","pdf_crop")) {
-                    item(key="visual-geometry-editor") {
+                    item(key="visual-geometry-editor",contentType="geometry-editor") {
                         VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm)
                     }
                 }
-                if(tool=="pdf_signature" && editorSource?.mimeType=="application/pdf") item("signature-placement-editor") {
+                if(tool=="pdf_signature" && editorSource?.mimeType=="application/pdf") item(key="signature-placement-editor",contentType="signature-editor") {
                     SignaturePlacementEditor(vm,editorSource.id,overlayImage?.id,form,vm::updateForm)
                 }
                 if(tool=="pdf_stamp" && editorSource?.mimeType=="application/pdf") {
-                    item(key="visual-watermark-editor") {
+                    item(key="visual-watermark-editor",contentType="watermark-editor") {
                         VisualWatermarkEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id,onPhotos)
                     }
                 }
                 if(tool=="pdf_signature" && queue.size<2) {
-                    item(key="image-overlay-hint") {
+                    item(key="image-overlay-hint",contentType="notice") {
                         Text(stringResource(R.string.visual_two_sources),
                             style=QuietTheme.typography.metadata,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if(tool=="img_watermark" && queue.isNotEmpty() && !inputMismatch) item("image-watermark-editor") {
+                if(tool=="img_watermark" && queue.isNotEmpty() && !inputMismatch) item(key="image-watermark-editor",contentType="watermark-editor") {
                     VisualWatermarkEditor(vm,queue.first().id,form,vm::updateForm,queue.getOrNull(1)?.id?.takeIf {form.flag1},onPhotos)
                 }
-                if(tool in setOf("img_02","img_join") && preview!=null && !inputMismatch) item("transformed-image-preview") {
-                    val ids=if(tool=="img_join") queue.map {it.id} else listOf(preview.id)
+                if(tool in setOf("img_02","img_join") && preview!=null && !inputMismatch) item(key="transformed-image-preview",contentType="image-preview") {
+                    val ids=remember(tool,queue,preview.id) { if(tool=="img_join") queue.map {it.id} else listOf(preview.id) }
                     ImageResultPreview(vm,ids,form)
                 }
-                if(tool in setOf("img_01","img_04") && preview!=null && !inputMismatch) item("encoded-image-preview") {
+                if(tool in setOf("img_01","img_04") && preview!=null && !inputMismatch) item(key="encoded-image-preview",contentType="encoded-preview") {
                     EncodedImagePreviewPanel(vm,preview.id,form)
                 }
                 if(tool.startsWith("img_") || tool in setOf("pdf_compress","pdf_07","pdf_02")) {
-                    item(key="visual-intuitive-controls") {
+                    item(key="visual-intuitive-controls",contentType="settings") {
                         VisualImageSettings(form,vm::updateForm)
                     }
                 }
-                if(tool=="pdf_02" && preview!=null) item("paper-preview") {
+                if(tool=="pdf_02" && preview!=null) item(key="paper-preview",contentType="paper-preview") {
                     ImagePdfPreview(vm,preview.id,form,vm::updateForm)
                 }
-                if(tool=="pdf_compress" && queue.size==1) item("compression-estimate") {
+                if(tool=="pdf_compress" && queue.size==1) item(key="compression-estimate",contentType="estimate") {
                     CompressionEstimate(vm,queue.single().id,form)
                 }
-                if(tool=="pdf_ocr" && queue.size==1 && !inputMismatch) item("ocr-result-panel") {
+                if(tool=="pdf_ocr" && queue.size==1 && !inputMismatch) item(key="ocr-result-panel",contentType="ocr-panel") {
                     OcrWorkspacePanel(vm,queue.single().id,onExecute,ready)
                 }
-                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect")) item("primary-tool-settings") {
+                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect")) item(key="primary-tool-settings",contentType="settings") {
                     WorkspaceFields(form,vm::updateForm)
                 }
                 if(queue.isNotEmpty()) item(key="input-count",contentType="metadata") {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })}
-                if(queue.isNotEmpty() && !countValid) item(key="source-count-help") {
+                if(queue.isNotEmpty() && !countValid) item(key="source-count-help",contentType="notice") {
                     Text(stringResource(R.string.watermark_correct_source_count),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
@@ -350,7 +355,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         DropdownMenuItem(text={Text(stringResource(R.string.action_remove))},onClick={close();vm.removeSource(source.id)})
                     }
                 }
-            } else item(key="url") {
+            } else item(key="url",contentType="url-input") {
                 val clipboard=LocalClipboardManager.current
                 TextField(urls,vm::setUrls,label={Text(stringResource(if(tool=="dl_03") R.string.workspace_direct_urls_batch else R.string.workspace_direct_url_single))},modifier=Modifier.fillMaxWidth(),shape=QuietTheme.shapes.card,colors=borderlessFieldColors(),minLines=if(tool=="dl_03") 4 else 2,textStyle=MaterialTheme.typography.bodyLarge.copy(textDirection=TextDirection.Ltr),trailingIcon={IconButton(onClick={
                     try {
@@ -365,71 +370,42 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     if(tool=="dl_03" && urls.isNotBlank()) runCatching { com.jumlo.app.data.engine.PureDomainAlgorithms.parseBatchUrls(urls) }.getOrNull() else null
                 }
                 batchStatus?.let { candidates ->
-                    val valid=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.VALID }
-                    val duplicates=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.DUPLICATE }
-                    val unsupported=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.UNSUPPORTED_PROTOCOL }
-                    val malformed=candidates.count { it.status==com.jumlo.app.model.UrlValidationStatus.MALFORMED }
+                    val (valid, duplicates, invalid) = remember(candidates) {
+                        var v = 0; var d = 0; var inv = 0
+                        for (c in candidates) when (c.status) {
+                            com.jumlo.app.model.UrlValidationStatus.VALID -> v++
+                            com.jumlo.app.model.UrlValidationStatus.DUPLICATE -> d++
+                            com.jumlo.app.model.UrlValidationStatus.UNSUPPORTED_PROTOCOL,
+                            com.jumlo.app.model.UrlValidationStatus.MALFORMED -> inv++
+                        }
+                        Triple(v, d, inv)
+                    }
                     Text(stringResource(R.string.workspace_batch_valid_links,valid,candidates.size),style=QuietTheme.typography.metadataStrong)
                     if(duplicates>0) Text(stringResource(R.string.workspace_batch_duplicates,duplicates),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.tertiary,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    if(unsupported+malformed>0) Text(stringResource(R.string.workspace_batch_invalid_links,unsupported+malformed),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    if(invalid>0) Text(stringResource(R.string.workspace_batch_invalid_links,invalid),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
                 Text(stringResource(R.string.rebuild_download_privacy),style=QuietTheme.typography.metadata)
             }
             if(!viewer) {
-                item(key="essential-settings") {
-                    Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                        if(queue.isNotEmpty() || download) {
-                            Surface(
-                                onClick={if(hasAdvanced) advanced=!advanced},
-                                enabled=hasAdvanced,
-                                color=MaterialTheme.colorScheme.surfaceContainerLow,
-                                shape=QuietTheme.shapes.card
-                            ) {
-                                Row(
-                                    modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),
-                                    verticalAlignment=Alignment.CenterVertically,
-                                    horizontalArrangement=Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        modifier=Modifier.weight(1f),
-                                        verticalAlignment=Alignment.CenterVertically,
-                                        horizontalArrangement=Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Icon(Icons.Rounded.AutoAwesome,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(20.dp))
-                                        Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                                            Text(stringResource(R.string.ui_smart_defaults_active),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.onSurface)
-                                            Text(stringResource(R.string.ui_destination),style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                    if(hasAdvanced) {
-                                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                            Icon(Icons.Rounded.Tune,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(18.dp))
-                                            Text(stringResource(R.string.ui_advanced),style=QuietTheme.typography.metadataStrong,color=MaterialTheme.colorScheme.primary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                val hasMessages = tool=="file_batch_rename" || inputMismatch || settingsError!=null || (tool=="pdf_03" && queue.size==1)
+                if(hasMessages) item(key="essential-settings",contentType="messages") {
+                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         if(tool=="file_batch_rename") {
                             if(renameInput!=null && renamePreview==null) Text(stringResource(R.string.ui_rename_checking),style=QuietTheme.typography.metadata)
                             renamePreview?.exceptionOrNull()?.let {Text(stringResource(userMessageResource(stableError(it))),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
-                            if(!proposedNames.isNullOrEmpty()) TextButton(onClick={renamePreviewOpen=true}) {Text(stringResource(R.string.ui_rename_preview_open,proposedNames.size))}
+                            if(!proposedNames.isNullOrEmpty()) TextButton(onClick={renamePreviewOpen=true},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.ui_rename_preview_open,proposedNames.size))}
                         }
                         if(inputMismatch) Text(stringResource(R.string.msg_file_type),color=MaterialTheme.colorScheme.error,style=QuietTheme.typography.metadata,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                         settingsError?.let {Text(stringResource(userMessageResource(it)),color=MaterialTheme.colorScheme.error,style=QuietTheme.typography.metadata,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
-                        if(!countValid && queue.isNotEmpty()) Text(stringResource(R.string.msg_one_file),color=MaterialTheme.colorScheme.error,style=QuietTheme.typography.metadata,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                         if(tool=="pdf_03" && queue.size==1) Text(stringResource(R.string.ui_merge_minimum),color=MaterialTheme.colorScheme.error,style=QuietTheme.typography.metadata,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     }
                 }
-            }
-            if(advanced && hasAdvanced) item("inline-advanced-settings") {
-                WorkspaceFields(form,vm::updateForm)
             }
         }
         if(!viewer) {
             HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.45f))
             Surface(color=MaterialTheme.colorScheme.surfaceContainerLow) {
-                Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=20.dp,vertical=12.dp)) {
+                Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp)) {
                     if(busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=8.dp))
                     QuietPrimaryButton(text=when(tool) {
                         "pdf_to_docx"->stringResource(R.string.rebuild_word_action)
@@ -457,10 +433,10 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             }
         }
     }
-    previewId?.let {id->AlertDialog(onDismissRequest={previewId=null},title={Text(stringResource(R.string.dialog_preview_title))},text={InputPreview(vm,id,reduceMotion,isFullViewer=true)},confirmButton={TextButton(onClick={previewId=null}) {Text(stringResource(R.string.action_close))}})}
+    previewId?.let {id->AlertDialog(onDismissRequest={previewId=null},title={Text(stringResource(R.string.dialog_preview_title),modifier=Modifier.semantics { heading() })},text={InputPreview(vm,id,reduceMotion,isFullViewer=true)},confirmButton={TextButton(onClick={previewId=null},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.action_close))}})}
     if(renamePreviewOpen && proposedNames!=null && proposedNames.size==queue.size) AlertDialog(
         onDismissRequest={renamePreviewOpen=false},
-        title={Text(stringResource(R.string.ui_rename_preview_title))},
+        title={Text(stringResource(R.string.ui_rename_preview_title),modifier=Modifier.semantics { heading() })},
         text={
             LazyColumn(Modifier.heightIn(max=420.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 itemsIndexed(proposedNames,key={index,_->queue[index].id},contentType={_,_->"rename-preview"}) {index,name ->
@@ -471,7 +447,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 }
             }
         },
-        confirmButton={TextButton(onClick={renamePreviewOpen=false}) {Text(stringResource(R.string.action_close))}}
+        confirmButton={TextButton(onClick={renamePreviewOpen=false},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.action_close))}}
     )
 }
 
@@ -503,7 +479,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(if (isFullViewer) 440.dp else 300.dp)
-                    .clip(RoundedCornerShape(JumloRadii.card))
+                    .clip(QuietTheme.shapes.card)
                     .background(MaterialTheme.colorScheme.surfaceContainerLowest)
                     .clipToBounds()
             ) {
@@ -516,8 +492,9 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     var frame by remember(sourceId, pageNumber) { mutableStateOf<PreviewFrame?>(null) }
                     var failure by remember(sourceId, pageNumber) { mutableStateOf<String?>(null) }
                     var loading by remember(sourceId, pageNumber) { mutableStateOf(true) }
+                    var retry by remember(sourceId, pageNumber) { mutableIntStateOf(0) }
 
-                    LaunchedEffect(sourceId, pageNumber) {
+                    LaunchedEffect(sourceId, pageNumber, retry) {
                         loading = true; failure = null; frame = null
                         try {
                             val loaded = vm.preview(sourceId, pageNumber)
@@ -585,20 +562,30 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             }
                         }
                         failure?.let {
-                            Text(
-                                text = stringResource(userMessageResource(it)),
-                                color = MaterialTheme.colorScheme.error,
-                                style = QuietTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite }
-                            )
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(userMessageResource(it)),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = QuietTheme.typography.bodyMedium,
+                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                                )
+                                TextButton(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text(stringResource(R.string.interactive_preview_retry))
+                                }
+                            }
                         }
                         frame?.takeUnless { it.bitmap.isRecycled }?.let { current ->
                             val rasterFilter=remember(raster?.grayscale) {
                                 if(raster?.grayscale==true) ColorFilter.colorMatrix(ColorMatrix().apply {setToSaturation(0f)})
                                 else null
                             }
+                            val currentBitmap = remember(current.bitmap) { current.bitmap.asImageBitmap() }
                             Image(
-                                bitmap = current.bitmap.asImageBitmap(),
+                                bitmap = currentBitmap,
                                 contentDescription = stringResource(R.string.dialog_preview_title),
                                 modifier = Modifier
                                     .fillMaxSize().testTag("preview.bitmap")
@@ -618,7 +605,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 if (scale > 1.05f) {
                     Surface(
                         onClick = { scale = 1f; offset = Offset.Zero },
-                        shape = RoundedCornerShape(50),
+                        shape = QuietTheme.shapes.pill,
                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f),
                         modifier = Modifier.align(Alignment.TopEnd).padding(10.dp)
                     ) {
@@ -711,7 +698,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     TextField(value,{onValue(it.take(512))},label={Text(label)},modifier=Modifier.fillMaxWidth(),shape=QuietTheme.shapes.card,colors=borderlessFieldColors(),singleLine=true,
         textStyle=if(ltrValue) LocalTextStyle.current.copy(textDirection=TextDirection.Ltr) else LocalTextStyle.current,
         keyboardOptions=KeyboardOptions(keyboardType=when{numeric->KeyboardType.Decimal;secret->KeyboardType.Password;else->KeyboardType.Text}),
-        trailingIcon=if(secret) ({ IconButton(onClick={revealed=!revealed}) {
+        trailingIcon=if(secret) ({ IconButton(onClick={revealed=!revealed},modifier=Modifier.size(48.dp)) {
             Icon(Icons.Rounded.Visibility,stringResource(if(revealed) R.string.studio_password_hide else R.string.studio_password_show))
         } }) else null,
         visualTransformation=if(secret && !revealed) PasswordVisualTransformation() else VisualTransformation.None)
@@ -950,7 +937,7 @@ internal fun passwordStrength(value:String):Int = when {
                                 )
                                 Text(
                                     text = if(f.outputName.isNotBlank() && f.outputName != "download.bin") f.outputName else stringResource(R.string.workspace_direct_url_hint),
-                                    style = QuietTheme.typography.metadata,
+                                    style = QuietTheme.typography.metadata.copy(textDirection = TextDirection.Content),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }

@@ -16,6 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
@@ -28,7 +32,10 @@ import com.jumlo.app.ui.components.QuietPrimaryButton
 import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /** No app camera permission or intermediate capture screen is needed for the Play-services scanner.
@@ -42,14 +49,14 @@ internal fun SmartDocumentScanLauncher(
 ) {
     val context = LocalContext.current
     val activity = remember(context) {
-        generateSequence<Context>(context) { (it as? ContextWrapper)?.baseContext }
+        generateSequence<Context>(context) { current -> (current as? ContextWrapper)?.baseContext?.takeUnless { it === current } }
             .filterIsInstance<Activity>().firstOrNull()
     }
     val scope = rememberCoroutineScope()
     var launched by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf(false) }
-    val playServicesAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)==ConnectionResult.SUCCESS
+    val playServicesAvailable = remember(context) { GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)==ConnectionResult.SUCCESS }
     var failures by rememberSaveable { mutableIntStateOf(0) }
     var fallback by rememberSaveable { mutableStateOf(!playServicesAvailable) }
     var active by remember { mutableStateOf(true) }
@@ -61,7 +68,7 @@ internal fun SmartDocumentScanLauncher(
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
         launched = false
         busy = false
-        if (latestExternalBusy) return@rememberLauncherForActivityResult
+        // Never silently discard a completed scan result; deliver it cleanly.
         if (activityResult.resultCode != Activity.RESULT_OK) {
             latestBack()
         } else {
@@ -74,12 +81,17 @@ internal fun SmartDocumentScanLauncher(
                     var owned: List<File>? = null
                     try {
                         owned = SmartScanResultStore.copyJpegPages(context, jpegUris)
-                        latestJpegs(requireNotNull(owned))
-                        owned = null // The ViewModel now owns publication and cleanup.
+                        if (active) {
+                            latestJpegs(requireNotNull(owned))
+                            owned = null // The ViewModel now owns publication and cleanup.
+                        }
                     } catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { error = true }
                     catch (_: OutOfMemoryError) { error = true }
-                    finally { owned?.forEach { it.delete() }; busy = false }
+                    finally {
+                        withContext(NonCancellable + Dispatchers.IO) { owned?.forEach { it.delete() } }
+                        busy = false
+                    }
                 }
             } else if (pdf == null || pdf.pageCount <= 0) error = true
             else {
@@ -88,12 +100,17 @@ internal fun SmartDocumentScanLauncher(
                     var owned: File? = null
                     try {
                         owned = SmartScanResultStore.copyPdf(context, pdf.uri, pdf.pageCount)
-                        latestResult(requireNotNull(owned))
-                        owned = null // The ViewModel now owns import/publication and cleanup.
+                        if (active) {
+                            latestResult(requireNotNull(owned))
+                            owned = null // The ViewModel now owns import/publication and cleanup.
+                        }
                     } catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { error = true }
                     catch (_: OutOfMemoryError) { error = true }
-                    finally { owned?.delete(); busy = false }
+                    finally {
+                        withContext(NonCancellable + Dispatchers.IO) { owned?.delete() }
+                        busy = false
+                    }
                 }
             }
         }
@@ -135,12 +152,13 @@ internal fun SmartDocumentScanLauncher(
         CameraXScanFallback(onScannedPdf=onScannedPdf,onScannedJpegs=onScannedJpegs,jpegOutput=jpegOutput,onBack=onBack,externalBusy=externalBusy)
         return
     }
-    LaunchedEffect(Unit) { if (!launched && !externalBusy) startScan() }
+    LaunchedEffect(externalBusy) { if (!launched && !externalBusy && !error) startScan() }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-        Text(stringResource(R.string.scan_title), style = QuietTheme.typography.sectionTitle)
+        Text(stringResource(R.string.scan_title), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
         Text(stringResource(if (error) R.string.scan_error_smart else R.string.scan_smart_hint),
-            style = QuietTheme.typography.bodyMedium, color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            style = QuietTheme.typography.bodyMedium, color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.semantics { if (error) liveRegion = LiveRegionMode.Polite })
         if (busy || externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (error && !fallback) {
             QuietPrimaryButton(stringResource(R.string.scan_smart_retry), onClick = ::startScan,

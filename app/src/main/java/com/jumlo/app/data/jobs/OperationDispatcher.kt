@@ -23,6 +23,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
     private val fileExtras:com.jumlo.app.data.processing.FileExtrasHandler,
     private val ocrWeb:com.jumlo.app.data.processing.OcrWebHandler
 ) : OperationHandler {
+    private val json = Json { ignoreUnknownKeys = true }
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         if(!CapabilityRegistry.canProcess(request.toolId)) throw OperationFailure("CAPABILITY_UNAVAILABLE")
         return if(request.toolId.startsWith("img_") || request.toolId.startsWith("pdf_")) {
@@ -41,7 +42,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
             "file_07","file_08" -> archives.execute(request,context)
             "dl_02","dl_03" -> downloads.execute(request,context)
             "dl_media" -> {
-                val settings = runCatching { Json.decodeFromString<DownloadSettings>(request.settingsJson) }.getOrNull()
+                val settings = runCatching { json.decodeFromString<DownloadSettings>(request.settingsJson) }.getOrNull()
                 if (settings?.media == null) {
                     downloads.execute(request.copy(toolId = "dl_02"), context)
                 } else {

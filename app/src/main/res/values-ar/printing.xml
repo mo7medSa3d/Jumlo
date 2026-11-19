@@ -105,12 +105,12 @@
     <string name="print_error_layout">لا ينتج حجم الورق أو الهوامش أو التحجيم صفحة قابلة للطباعة. قلل الهوامش أو غيّر حجم الورق.</string>
     <string name="print_error_write">تعذرت كتابة مستند الطباعة. تحقق من مساحة التخزين المتاحة وأعد المحاولة.</string>
     <string name="print_error_source">هذا المستند الخاص مفقود أو لا يمكن فتحه بأمان. اختر المستند مجددًا.</string>
-    <string name="print_error_permission">لا يسمح ملف PDF هذا بالطباعة.</string>
+    <string name="print_error_permission">يقيّد ملف PDF هذا الطباعة. افتح صلاحيات الطباعة أو صدّر نسخة قابلة للطباعة أولًا.</string>
     <string name="print_error_password">يتطلب ملف PDF هذا كلمة مرور. استورد نسخة غير مقفلة للطباعة.</string>
     <string name="print_error_unsupported">لا يمكن طباعة هذا التنسيق. اختر ملف PDF أو صورة ثابتة مدعومة.</string>
     <string name="print_error_appearance">لا يتوفر مظهر صالح لتعليق أو حقل نموذج قابل للطباعة. احفظ نسخة مسطحة من محرر PDF الأصلي، ثم اطبعها.</string>
     <string name="print_error_storage">تعذر حفظ بيانات الطباعة. تحقق من مساحة تخزين الجهاز وأعد المحاولة.</string>
-    <string name="print_error_unavailable">الطباعة أو إعدادات خدمات الطباعة في Android غير متاحة على هذا الجهاز.</string>
+    <string name="print_error_unavailable">خدمات الطباعة في Android غير متاحة على هذا الجهاز. فعّل خدمة طباعة في إعدادات النظام أو صدّر الملف لطباعته على جهاز آخر.</string>
     <string name="print_error_preset">أدخل اسمًا للإعداد المسبق من 1 إلى 60 حرفًا.</string>
     <string name="print_error_generic">تعذر تجهيز المستند. أعد المحاولة أو اختر مستندًا آخر.</string>
 </resources>

@@ -43,15 +43,22 @@ class ManagedTrashStorage(private val root:File) {
             setProperty("sha256",e.sha256);setProperty("record",e.recordJson);setProperty("journal",e.journalKey);setProperty("state",state)
         }
         val pending=File(dir,"entry.pending")
-        FileOutputStream(pending).use { p.store(it,"Jumlo managed trash v2");it.fd.sync() }
-        Files.move(pending.toPath(),File(dir,"entry.properties").toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+        try {
+            FileOutputStream(pending).use { p.store(it,"Jumlo managed trash v2");it.fd.sync() }
+            Files.move(pending.toPath(),File(dir,"entry.properties").toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+        } catch(t:Throwable) {
+            pending.delete()
+            if(!File(dir,"entry.properties").exists() && dir.list().isNullOrEmpty()) dir.delete()
+            throw t
+        }
     }
     private fun read(id:String):TrashRecovery? {
         val file=File(folder(id),"entry.properties");if(!file.exists()) return null
-        require(!Files.isSymbolicLink(file.toPath()) && file.length()<=2000000) { "INVALID_TRASH_RECORD" }
+        require(!Files.isSymbolicLink(file.toPath()) && file.isFile && file.length()<=2000000) { "INVALID_TRASH_RECORD" }
         val p=Properties().apply { file.inputStream().use(::load) }
         fun field(k:String)=requireNotNull(p.getProperty(k)) { "INVALID_TRASH_RECORD" }
-        val e=TrashEntry(field("id"),field("name"),field("size").toLong(),field("sha256"),field("record"),field("journal"))
+        val size=requireNotNull(field("size").toLongOrNull()) { "INVALID_TRASH_RECORD" }
+        val e=TrashEntry(field("id"),field("name"),size,field("sha256"),field("record"),field("journal"))
         validate(e);require(e.id==id) { "INVALID_TRASH_RECORD" }
         val state=field("state");require(state in setOf("TRASH","RESTORE")) { "INVALID_TRASH_RECORD" }
         return TrashRecovery(e,state=="RESTORE")
@@ -82,7 +89,15 @@ class ManagedTrashStorage(private val root:File) {
         val old=read(e.id)
         if(old!=null) { require(old.entry==e && !old.restored) { "TRASH_IDENTITY_CONFLICT" };finish(old);return e }
         verify(active(e),e)
-        require(!folder(e.id).exists()) { "TRASH_COLLISION" }
+        val dir=folder(e.id)
+        // Reclaim an abandoned entry.pending-only folder left by a crash before atomic rename.
+        if(dir.isDirectory && !Files.isSymbolicLink(dir.toPath())) {
+            val children=dir.listFiles().orEmpty()
+            if(children.all { !Files.isSymbolicLink(it.toPath()) && it.isFile && it.name=="entry.pending" }) {
+                children.forEach { it.delete() }; dir.delete()
+            }
+        }
+        require(!dir.exists()) { "TRASH_COLLISION" }
         write(e,"TRASH");finish(TrashRecovery(e,false));return e
     }
     /** Converts an existing v1 trash entry only after checking its original bytes. */

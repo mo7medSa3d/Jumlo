@@ -33,7 +33,11 @@ jdk=""
 for candidate in "${JAVA_HOME:-}" /usr/lib/jvm/java-17-temurin-jdk /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/temurin-17-jdk-amd64; do
   if [ -x "$candidate/bin/java" ] && "$candidate/bin/java" -version 2>&1 | head -1 | grep -qE '"17\.'; then jdk="$candidate"; break; fi
 done
-[ -n "$jdk" ] || jdk="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
+if [ -z "$jdk" ]; then
+  java_bin=$(command -v java || true)
+  [ -n "$java_bin" ] || { echo 'BLOCKED: java not found' >&2; exit 2; }
+  jdk="$(dirname "$(dirname "$(readlink -f "$java_bin")")")"
+fi
 
 compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-2.0.21.jar' 2>/dev/null | head -1 || true)
 [ -n "$compiler" ] || compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
@@ -51,11 +55,19 @@ script=$(find "$caches" -name "kotlin-script-runtime-${kver}.jar" 2>/dev/null | 
 reflect=$(find "$caches" -name "kotlin-reflect-${kver}.jar" 2>/dev/null | head -1 || true)
 [ -n "$reflect" ] || reflect=$(find "$caches" -name 'kotlin-reflect-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
 
-"$jdk/bin/java" -cp "$compiler:$stdlib:$coroutines:$trove:$annotations:$daemon:$script:$reflect" \
+compiler_cp=""
+for jar in "$compiler" "$stdlib" "$coroutines" "$trove" "$annotations" "$daemon" "$script" "$reflect"; do
+  [ -n "$jar" ] && compiler_cp="${compiler_cp:+${compiler_cp}:}$jar"
+done
+runtime_cp="$CLASSPATH"
+for jar in "$stdlib" "$coroutines"; do
+  [ -n "$jar" ] && runtime_cp="${runtime_cp:+${runtime_cp}:}$jar"
+done
+"$jdk/bin/java" -cp "$compiler_cp" \
   org.jetbrains.kotlin.cli.jvm.K2JVMCompiler "${SOURCES[@]}" -jvm-target 17 \
-  -classpath "$CLASSPATH:$stdlib:$coroutines" -d "$BUILD/pdf-compression-tests"
+  -classpath "$runtime_cp" -d "$BUILD/pdf-compression-tests"
 if [ "${1:-}" = "--measure" ]; then
-  ( cd "$ROOT" && "$jdk/bin/java" -cp "$BUILD/pdf-compression-tests:$CLASSPATH:$stdlib:$coroutines" com.jumlo.app.hosttest.PdfCompressionMeasureKt )
+  ( cd "$ROOT" && "$jdk/bin/java" -cp "$BUILD/pdf-compression-tests:$runtime_cp" com.jumlo.app.hosttest.PdfCompressionMeasureKt )
 else
-  "$jdk/bin/java" -cp "$BUILD/pdf-compression-tests:$CLASSPATH:$stdlib:$coroutines" com.jumlo.app.hosttest.PdfCompressionHostTestsKt
+  "$jdk/bin/java" -cp "$BUILD/pdf-compression-tests:$runtime_cp" com.jumlo.app.hosttest.PdfCompressionHostTestsKt
 fi

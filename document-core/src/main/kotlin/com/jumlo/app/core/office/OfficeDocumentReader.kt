@@ -196,10 +196,12 @@ object OfficeDocumentReader {
         while (enumeration.hasMoreElements()) {
             val entry = enumeration.nextElement()
             val name = entry.name
-            require(name.isNotEmpty() && !name.startsWith("/") && !name.contains(92.toChar()) &&
-                name.none { it == 0.toChar() } && name.split('/').none { it == ".." }) { "OFFICE_INVALID" }
-            // Reject both exact and case-variant duplicates (ECMA-376 OPC / ZipDiff ambiguity guard).
-            require(folded.add(name.lowercase(Locale.ROOT))) { "OFFICE_INVALID" }
+            val trimmed = name.removeSuffix("/")
+            require(trimmed.isNotEmpty() && !name.startsWith("/") && !name.contains(92.toChar()) &&
+                name.none { it == 0.toChar() } && trimmed.split('/').none { it.isEmpty() || it == "." || it == ".." }) { "OFFICE_INVALID" }
+            require(!entry.isDirectory || entry.size == 0L) { "OFFICE_INVALID" }
+            // Reject exact, case-variant, and trailing-slash-variant duplicates (ECMA-376 OPC / ZipDiff guard).
+            require(folded.add(trimmed.lowercase(Locale.ROOT))) { "OFFICE_INVALID" }
             val declaredSize = entry.size
             require(declaredSize >= 0L && declaredSize <= maxExpandedBytes - totalExpandedBytes) {
                 "OFFICE_SIZE_LIMIT"
@@ -479,8 +481,9 @@ object OfficeDocumentReader {
                         listMarker = numId?.let { id ->
                             val format = numbering[id]?.get(ilvl) ?: "bullet"
                             if (format == "bullet") "• " else {
-                                val next = (counters[id] ?: 0) + 1
-                                counters[id] = next
+                                val counterKey = "$id:$ilvl"
+                                val next = (counters[counterKey] ?: 0) + 1
+                                counters[counterKey] = next
                                 "$next. "
                             }
                         },
@@ -521,6 +524,8 @@ object OfficeDocumentReader {
                         "p" -> {
                             if (pDepth == 0) {
                                 runs = ArrayList(); styleId = null; align = "left"; numId = null; ilvl = 0
+                            } else if (runs.isNotEmpty()) {
+                                runs += OfficeRun("\n", false, false)
                             }
                             pDepth++
                         }
@@ -579,8 +584,8 @@ object OfficeDocumentReader {
                             attr(attrs, "w")?.toDoubleOrNull()?.let { (it / 20.0).takeIf { pt -> pt.isFinite() && pt in 72.0..14400.0 } }?.let { pageWidthPt = it }
                             attr(attrs, "h")?.toDoubleOrNull()?.let { (it / 20.0).takeIf { pt -> pt.isFinite() && pt in 72.0..14400.0 } }?.let { pageHeightPt = it }
                         }
-                        "mar" -> if (inSectPr) {
-                            attr(attrs, "left")?.toDoubleOrNull()?.let { marginPt = (it / 20.0).coerceIn(36.0, 108.0) }
+                        "pgMar", "mar" -> if (inSectPr) {
+                            attr(attrs, "left")?.toDoubleOrNull()?.takeIf { it.isFinite() }?.let { marginPt = (it / 20.0).coerceIn(36.0, 108.0) }
                         }
                         "blip" -> {
                             val embed = attr(attrs, "embed")
@@ -686,6 +691,7 @@ object OfficeDocumentReader {
         var current: StringBuilder? = null
         var totalChars = 0L
         var inText = false
+        var inPhonetic = false
         stream.use { parseXml(it, object : DefaultHandler() {
             override fun startElement(uri: String?, local: String, qName: String, attrs: Attributes) {
                 when (local) {
@@ -693,7 +699,8 @@ object OfficeDocumentReader {
                         require(out.size < MAX_SHARED_STRINGS) { "OFFICE_SIZE_LIMIT" }
                         current = StringBuilder()
                     }
-                    "t" -> inText = true
+                    "rPh" -> inPhonetic = true
+                    "t" -> if (!inPhonetic) inText = true
                 }
             }
             override fun characters(ch: CharArray, start: Int, length: Int) {
@@ -706,7 +713,8 @@ object OfficeDocumentReader {
             override fun endElement(uri: String?, local: String, qName: String) {
                 when (local) {
                     "t" -> inText = false
-                    "si" -> { out += current?.toString().orEmpty(); current = null }
+                    "rPh" -> inPhonetic = false
+                    "si" -> { out += current?.toString().orEmpty(); current = null; inPhonetic = false }
                 }
             }
         }) }
@@ -752,7 +760,7 @@ object OfficeDocumentReader {
 
     private fun colIndex(ref: String): Int {
         val letters = ref.takeWhile { it.isLetter() }
-        require(letters.length in 1..3 && letters.all { it.uppercaseChar() in 'A'..'Z' }) {
+        require(letters.length in 1..3 && letters.all { it in 'A'..'Z' || it in 'a'..'z' }) {
             "OFFICE_INVALID"
         }
         var index = 0

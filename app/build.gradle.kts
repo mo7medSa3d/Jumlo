@@ -190,6 +190,11 @@ android {
         }
     }
 
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     packaging {
         jniLibs.useLegacyPackaging = true
         resources {
@@ -320,7 +325,7 @@ afterEvaluate {
                 dir.walkTopDown().filter { it.isDirectory && abiNames.matches(it.name) }
             }.distinct()
             if (abiDirs.isEmpty()) return@doLast
-            val command = listOf("python3", repackTool.absolutePath, "--write",
+            val command = listOf("python3", "-B", repackTool.absolutePath, "--write",
                 "--pins", pinManifest.absolutePath) +
                 abiDirs.flatMap { listOf("--dir", it.absolutePath) }
             val process = ProcessBuilder(command).redirectErrorStream(true).start()

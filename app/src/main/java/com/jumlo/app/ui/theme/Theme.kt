@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
@@ -113,38 +114,70 @@ fun JumloTheme(
     }
     val isAmoled = themeMode == ThemeMode.AMOLED
 
-    val system = ColorSystems.systemFor(colorSystem)
-    val scheme = system.scheme(darkTheme)
+    val system = remember(colorSystem) { ColorSystems.systemFor(colorSystem) }
     // AMOLED keeps the system's hues but drops its backgrounds to pure black.
-    val colorScheme: ColorScheme = if (isAmoled) {
-        colorSchemeFor(scheme, dark = true).copy(
+    // True OLED #000000 in dark mode (battery-saving) and pure crisp white/neutral in light mode.
+    val colorScheme: ColorScheme = remember(system, darkTheme, isAmoled) {
+        val scheme = system.scheme(darkTheme)
+        val baseScheme = colorSchemeFor(scheme, darkTheme)
+        val oledDark = baseScheme.copy(
             background = Color.Black,
             surface = Color.Black,
             surfaceDim = Color.Black,
+            surfaceBright = Color(0xFF1C1F24),
             surfaceContainerLowest = Color.Black,
-            surfaceContainerLow = Color(0xFF0D0F16)
+            surfaceContainerLow = Color(0xFF15161A),
+            surfaceContainer = Color(0xFF16181C),
+            surfaceContainerHigh = Color(0xFF1C1F24),
+            surfaceContainerHighest = Color(0xFF242830),
+            outlineVariant = Color(0xFF262930)
         )
-    } else {
-        colorSchemeFor(scheme, darkTheme)
+        if (isAmoled) oledDark
+        else if (darkTheme) oledDark
+        else baseScheme.copy(
+            background = Color(0xFFF2F2F7),
+            surface = Color(0xFFF2F2F7),
+            surfaceDim = Color(0xFFECEEF2),
+            surfaceBright = Color.White,
+            surfaceContainerLowest = Color.White,
+            surfaceContainerLow = Color.White,
+            surfaceContainer = Color(0xFFF2F4F7),
+            surfaceContainerHigh = Color(0xFFE9ECF1),
+            surfaceContainerHighest = Color(0xFFE1E5EC),
+            outlineVariant = Color(0xFFE2E5EC)
+        )
     }
 
-    val basePillars = pillarColors(system, darkTheme)
-    val pillarColors: PillarColors = basePillars.copy(
-        cardSurface = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainerLowest,
-        cardBorder = colorScheme.outlineVariant.copy(alpha = if (darkTheme) 0.72f else 0.85f),
-        primaryActionBackground = colorScheme.primary,
-        primaryActionText = colorScheme.onPrimary,
-        dockSurface = (if (darkTheme) colorScheme.surfaceContainerHigh else colorScheme.surfaceContainerLowest).copy(alpha = 0.97f),
-        dockBorder = colorScheme.outlineVariant.copy(alpha = if (darkTheme) 0.65f else 0.85f),
-        activePillContainer = colorScheme.primaryContainer,
-        activePillContent = colorScheme.onPrimaryContainer
-    )
+    val pillarColors: PillarColors = remember(system, darkTheme, colorScheme) {
+        val basePillars = pillarColors(system, darkTheme)
+        basePillars.copy(
+            cardSurface = if (darkTheme) Color(0xFF15161A) else Color.White,
+            cardBorder = Color.Transparent,
+            primaryActionBackground = colorScheme.primary,
+            primaryActionText = colorScheme.onPrimary,
+            dockSurface = if (darkTheme) Color(0xFF141518) else Color.White,
+            dockBorder = if (darkTheme) Color(0xFF23252C) else Color(0xFFE5E5EA),
+            activePillContainer = colorScheme.primaryContainer,
+            activePillContent = colorScheme.onPrimaryContainer
+        )
+    }
     val layoutDirection = if (language == AppLanguage.ARABIC) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     val fontFamily = if (language.isRtl) IbmPlexSansArabicFont else IbmPlexSansFont
+    val quietTypography = remember(fontFamily, language.isRtl) {
+        DefaultQuietTypography.withFont(fontFamily, isArabic = language.isRtl)
+    }
+    val materialTypography = remember(fontFamily, language.isRtl) {
+        Material3Typography.withFont(fontFamily, isArabic = language.isRtl)
+    }
+    val quietShapes = remember { QuietPrecisionShapes() }
+    val quietSpacing = remember { QuietPrecisionSpacing() }
+    val quietElevation = remember { QuietPrecisionElevation() }
     val originalDensity = LocalDensity.current
     val multiplier = when (fontScale) { "SMALL" -> 0.91f; "LARGE" -> 1.15f; else -> 1f }
-    val adaptedDensity = Density(originalDensity.density, originalDensity.fontScale * multiplier)
+    val adaptedDensity = remember(originalDensity, multiplier) {
+        Density(originalDensity.density, originalDensity.fontScale * multiplier)
+    }
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -160,16 +193,16 @@ fun JumloTheme(
     CompositionLocalProvider(
         LocalColorSystem provides system,
         LocalPillarColors provides pillarColors,
-        LocalQuietTypography provides DefaultQuietTypography.withFont(fontFamily, isArabic = language.isRtl),
-        LocalQuietShapes provides QuietPrecisionShapes(),
-        LocalQuietSpacing provides QuietPrecisionSpacing(),
-        LocalQuietElevation provides QuietPrecisionElevation(),
+        LocalQuietTypography provides quietTypography,
+        LocalQuietShapes provides quietShapes,
+        LocalQuietSpacing provides quietSpacing,
+        LocalQuietElevation provides quietElevation,
         LocalLayoutDirection provides layoutDirection,
         LocalDensity provides adaptedDensity
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Material3Typography.withFont(fontFamily, isArabic = language.isRtl),
+            typography = materialTypography,
             shapes = Material3Shapes,
             content = content
         )

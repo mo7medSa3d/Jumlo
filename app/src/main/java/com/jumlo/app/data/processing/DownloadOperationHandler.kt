@@ -28,9 +28,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import okhttp3.CookieJar
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 import java.io.*
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Locale
@@ -79,7 +82,8 @@ class DownloadOperationHandler @Inject constructor(
     // StreamTransfer performs redirects itself, then obtains host-scoped cookies
     // for each hop. OkHttp must not automatically forward cookies to new hosts.
     private val redirectSafeClient = client.newBuilder()
-        .followRedirects(false).followSslRedirects(false).build()
+        .followRedirects(false).followSslRedirects(false)
+        .cookieJar(CookieJar.NO_COOKIES).writeTimeout(30, TimeUnit.SECONDS).build()
 
     private fun buildHeadersForUrl(targetUrl: String, profileIndex: Int, initialUrl: String): Map<String, String> {
         val extraMap = sessionStore.getExtraHeaders().lineSequence()
@@ -176,7 +180,7 @@ class DownloadOperationHandler @Inject constructor(
                             }
                             val pending=File(folder,"$index.pending")
                             FileOutputStream(pending).use { p.store(it,null); it.fd.sync() }
-                            Files.move(pending.toPath(),journal.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+                            moveSafely(pending, journal)
                         }
                     )
                     context.checkCancellation()
@@ -197,10 +201,12 @@ class DownloadOperationHandler @Inject constructor(
                             val maxDpi = if (settings.directMode == "PDF_EXTREME") 96 else 150
                             val quality = if (settings.directMode == "PDF_EXTREME") 50 else 75
                             val ticket = context.outputs.reserve(request.id, key, SafeNames.basename(name), "application/pdf")
-                            compressDownloadedPdf(partial, ticket.stageFile, maxDpi, quality, context)
-                            val output = context.outputs.publish(ticket) { file ->
-                                context.outputs.inspect(file, "application/pdf", originalSizeBytes = result.bytes)
-                            }
+                            val output = try {
+                                compressDownloadedPdf(partial, ticket.stageFile, maxDpi, quality, context)
+                                context.outputs.publish(ticket) { file ->
+                                    context.outputs.inspect(file, "application/pdf", originalSizeBytes = result.bytes)
+                                }
+                            } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                             partial.delete()
                             journal.delete()
                             outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
@@ -313,7 +319,7 @@ class DownloadOperationHandler @Inject constructor(
                                 val choice=DownloadCompressionPolicy.choose(name,resolvedMime,result.bytes,if(candidate.isFile) candidate.length() else result.bytes)
                                 val ticket=context.outputs.reserve(request.id,key,choice.filename,choice.mimeType)
                                 val source=if(choice.useCompressed) candidate else partial
-                                Files.move(source.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+                                moveSafely(source, ticket.stageFile)
                                 val output=context.outputs.publish(ticket) { file ->
                                     context.outputs.inspect(file,ticket.mimeType,originalSizeBytes=result.bytes)
                                 }
@@ -325,22 +331,24 @@ class DownloadOperationHandler @Inject constructor(
                         fileKind == DirectFileKind.IMAGE && settings.directMode == "IMAGE_TO_PDF" -> {
                             val pdfName = SafeNames.basename(AutoOutputName.cleanBaseName(name, "Image") + ".pdf")
                             val ticket = context.outputs.reserve(request.id, key, pdfName, "application/pdf")
-                            BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
-                                val bmp = decoded.bitmap
-                                PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { doc ->
-                                    val geometry = PdfPageGeometry.resolve(bmp.width,bmp.height)
-                                    val page = PDPage(PDRectangle(geometry.widthPt, geometry.heightPt))
-                                    doc.addPage(page)
-                                    val pdImg = JPEGFactory.createFromImage(doc, bmp, 0.85f)
-                                    PDPageContentStream(doc, page).use { cs ->
-                                        cs.drawImage(pdImg, 0f, 0f, geometry.widthPt, geometry.heightPt)
+                            val output = try {
+                                BitmapTransforms.decode(partial, context.budget.maxBitmapBytes).use { decoded ->
+                                    val bmp = decoded.bitmap
+                                    PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { doc ->
+                                        val geometry = PdfPageGeometry.resolve(bmp.width,bmp.height)
+                                        val page = PDPage(PDRectangle(geometry.widthPt, geometry.heightPt))
+                                        doc.addPage(page)
+                                        val pdImg = JPEGFactory.createFromImage(doc, bmp, 0.85f)
+                                        PDPageContentStream(doc, page).use { cs ->
+                                            cs.drawImage(pdImg, 0f, 0f, geometry.widthPt, geometry.heightPt)
+                                        }
+                                        doc.save(ticket.stageFile)
                                     }
-                                    doc.save(ticket.stageFile)
                                 }
-                            }
-                            val output = context.outputs.publish(ticket) { file ->
-                                context.outputs.inspect(file, "application/pdf", originalSizeBytes = result.bytes)
-                            }
+                                context.outputs.publish(ticket) { file ->
+                                    context.outputs.inspect(file, "application/pdf", originalSizeBytes = result.bytes)
+                                }
+                            } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                             partial.delete()
                             journal.delete()
                             outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
@@ -348,7 +356,7 @@ class DownloadOperationHandler @Inject constructor(
                         else -> {
                             val ticket=context.outputs.reserve(request.id,key,SafeNames.basename(name),resolvedMime)
                             // Same internal storage volume. Atomic move avoids duplicating a large download.
-                            Files.move(partial.toPath(),ticket.stageFile.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING)
+                            moveSafely(partial, ticket.stageFile)
                             val output=context.outputs.publish(ticket) { file ->
                                 require(file.length()==result.bytes) { "DOWNLOAD_VERIFY_FAILED" }
                                 context.outputs.inspect(file, resolvedMime)
@@ -376,17 +384,15 @@ class DownloadOperationHandler @Inject constructor(
         // A downloaded document must not become a flattened bitmap just to make the size smaller.
         // Preserve vectors, text, selectable content, page dimensions and the original partial file.
         val originalBytes=source.length()
-        val candidate=File(dest.parentFile,"download-compress-candidate.pdf")
+        val candidate=File.createTempFile("download-compress-candidate-",".pdf",dest.parentFile)
         try {
             val sourcePages = PdfBoxBackend.open(source,null).use { doc ->
                 require(!doc.isEncrypted) { "PDF_ENCRYPTED" }
-                doc.numberOfPages
-            }
-            candidate.delete()
-            PdfBoxBackend.open(source,null).use { doc ->
+                val pages = doc.numberOfPages
                 PdfBoxBackend.compressImages(doc, maxDpi, quality, onPage = { _, _ -> context.checkCancellation() },
                     maxBitmapBytes = context.budget.maxBitmapBytes)
                 doc.save(candidate)
+                pages
             }
             val validPages = runCatching { PdfBoxBackend.open(candidate,null).use { it.numberOfPages } }.getOrNull()
             // Downloaded PDFs that cannot get smaller are still useful and valid.
@@ -395,6 +401,14 @@ class DownloadOperationHandler @Inject constructor(
                 candidate.copyTo(dest,overwrite=true)
             else source.copyTo(dest,overwrite=true)
         } finally { candidate.delete() }
+    }
+
+    private fun moveSafely(source: File, target: File) {
+        try {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun networkPolicy(settings:DownloadSettings) {

@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,18 +33,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jumlo.app.R
 import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.LocalReducedMotion
+import com.jumlo.app.ui.theme.QuietTheme
 
 /** The splash follows the chosen color system (ColorSystems.kt): a dark,
  *  luxurious gradient from the system's own ramp, so the first screen already
@@ -62,74 +65,73 @@ import com.jumlo.app.ui.theme.LocalReducedMotion
 fun JumloSplash(modifier: Modifier = Modifier) {
     val system = LocalColorSystem.current
     val reduced = LocalReducedMotion.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var revealed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { revealed = true }
-    val logoScale by animateFloatAsState(
+    val logoScaleState = animateFloatAsState(
         targetValue = if (revealed) 1f else .72f,
         animationSpec = if (reduced) snap() else spring(
             dampingRatio = .73f, stiffness = Spring.StiffnessMediumLow),
         label = "brand-entrance-scale"
     )
-    val logoOpacity by animateFloatAsState(
+    val logoOpacityState = animateFloatAsState(
         targetValue = if (revealed) 1f else 0f,
         animationSpec = if (reduced) snap() else tween(440),
         label = "brand-entrance-fade"
     )
-    val captionTranslate by animateFloatAsState(
+    val captionTranslateState = animateFloatAsState(
         targetValue = if (revealed) 0f else 28f,
         animationSpec = if (reduced) snap() else spring(
             dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "brand-wordmark-rise"
     )
     // Avoid running an infinite transition on devices configured for reduced motion.
-    val orbitRotation = if (reduced) 0f else {
-        val atmosphere = rememberInfiniteTransition(label = "brand-orbit")
-        val rotation by atmosphere.animateFloat(
+    val orbitRotationState = if (reduced) null else {
+        rememberInfiniteTransition(label = "brand-orbit").animateFloat(
             initialValue = 0f, targetValue = 360f,
             animationSpec = infiniteRepeatable(tween(5200, easing = LinearEasing), RepeatMode.Restart),
             label = "brand-orbit-rotation"
         )
-        rotation
     }
-    val breath = if (reduced) .28f else {
-        val ambient = rememberInfiniteTransition(label = "brand-ambient")
-        val value by ambient.animateFloat(
+    val breathState = if (reduced) null else {
+        rememberInfiniteTransition(label = "brand-ambient").animateFloat(
             initialValue = .16f, targetValue = .37f,
             animationSpec = infiniteRepeatable(tween(1350), RepeatMode.Reverse),
             label = "brand-ambient-opacity"
         )
-        value
+    }
+    val bgBrush = remember(system) {
+        Brush.linearGradient(listOf(system.splashStart, system.splashMid, system.splashEnd))
+    }
+    val glow1Brush = remember(system) {
+        Brush.radialGradient(listOf(system.splashGlow1.copy(alpha = .37f), Color.Transparent))
+    }
+    val glow2Brush = remember(system) {
+        Brush.radialGradient(listOf(system.splashGlow2.copy(alpha = .16f), Color.Transparent))
+    }
+    val logoBrush = remember(system) {
+        Brush.linearGradient(listOf(system.splashLogoStart, system.splashLogoEnd))
     }
     Box(
-        modifier.fillMaxSize().background(
-            Brush.linearGradient(listOf(
-                system.splashStart, system.splashMid, system.splashEnd
-            ))
-        ),
+        modifier.fillMaxSize().background(bgBrush),
         contentAlignment = Alignment.Center
     ) {
         Box(
             Modifier.align(Alignment.TopEnd).offset(x = 158.dp, y = (-205).dp)
-                .size(400.dp).background(
-                    Brush.radialGradient(listOf(system.splashGlow1.copy(alpha = .37f), Color.Transparent)),
-                    CircleShape
-                )
+                .size(400.dp).background(glow1Brush, CircleShape)
         )
         Box(
             Modifier.align(Alignment.BottomStart).offset(x = (-180).dp, y = 180.dp)
-                .size(410.dp).background(
-                    Brush.radialGradient(listOf(system.splashGlow2.copy(alpha = .16f), Color.Transparent)),
-                    CircleShape
-                )
+                .size(410.dp).background(glow2Brush, CircleShape)
         )
         // A low-contrast orbit signals motion without competing with the brand.
         Box(
-            Modifier.size(282.dp).graphicsLayer { rotationZ = orbitRotation },
+            Modifier.size(282.dp).graphicsLayer { rotationZ = orbitRotationState?.value ?: 0f },
             contentAlignment = Alignment.Center
         ) {
             Box(
                 Modifier.align(Alignment.TopCenter).size(8.dp)
-                    .background(system.splashOrbit.copy(alpha = breath + .37f), CircleShape)
+                    .drawBehind { drawCircle(system.splashOrbit.copy(alpha = (breathState?.value ?: .28f) + .37f)) }
             )
             Box(
                 Modifier.align(Alignment.BottomEnd).offset(x = (-25).dp, y = (-25).dp)
@@ -138,16 +140,20 @@ fun JumloSplash(modifier: Modifier = Modifier) {
         }
         Column(
             Modifier.padding(horizontal = 24.dp).graphicsLayer {
-                alpha = logoOpacity
-                translationY = captionTranslate
+                alpha = logoOpacityState.value
+                translationY = captionTranslateState.value
             },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             Box(
-                Modifier.size(128.dp).graphicsLayer { scaleX = logoScale; scaleY = logoScale }
-                    .clip(RoundedCornerShape(38.dp))
-                    .background(Brush.linearGradient(listOf(system.splashLogoStart, system.splashLogoEnd))),
+                Modifier.size(128.dp).graphicsLayer {
+                    val s = logoScaleState.value
+                    scaleX = s
+                    scaleY = s
+                }
+                    .clip(QuietTheme.shapes.splashIcon)
+                    .background(logoBrush),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -160,7 +166,7 @@ fun JumloSplash(modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.app_name),
-                    fontSize = 42.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.7).sp,
+                    fontSize = 42.sp, fontWeight = FontWeight.Bold, letterSpacing = if (isRtl) 0.sp else (-1.7).sp,
                     color = Color.White
                 )
                 Box(

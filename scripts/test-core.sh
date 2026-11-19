@@ -44,11 +44,23 @@ run_with_embedded() {
   for candidate in "${JAVA_HOME:-}" /usr/lib/jvm/java-17-temurin-jdk /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/temurin-17-jdk-amd64; do
     if [ -x "$candidate/bin/java" ] && "$candidate/bin/java" -version 2>&1 | head -1 | grep -qE '"17\.'; then jdk="$candidate"; break; fi
   done
-  [ -n "$jdk" ] || jdk="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
-  "$jdk/bin/java" -cp "$compiler:$stdlib:$coroutines:$trove:$annotations:$daemon:$script:$reflect" \
+  if [ -z "$jdk" ]; then
+    local java_bin
+    java_bin=$(command -v java || true)
+    [ -n "$java_bin" ] || { echo 'BLOCKED: java not found' >&2; return 2; }
+    jdk="$(dirname "$(dirname "$(readlink -f "$java_bin")")")"
+  fi
+  local compiler_cp="" runtime_cp="" jar
+  for jar in "$compiler" "$stdlib" "$coroutines" "$trove" "$annotations" "$daemon" "$script" "$reflect"; do
+    [ -n "$jar" ] && compiler_cp="${compiler_cp:+${compiler_cp}:}$jar"
+  done
+  for jar in "$stdlib" "$coroutines"; do
+    [ -n "$jar" ] && runtime_cp="${runtime_cp:+${runtime_cp}:}$jar"
+  done
+  "$jdk/bin/java" -cp "$compiler_cp" \
     org.jetbrains.kotlin.cli.jvm.K2JVMCompiler "${SOURCES[@]}" -jvm-target 17 \
-    -classpath "$stdlib:$coroutines" -d "$BUILD/core-tests"
-  "$jdk/bin/java" -cp "$BUILD/core-tests:$stdlib:$coroutines" com.jumlo.app.hosttest.CoreTestsKt
+    -classpath "$runtime_cp" -d "$BUILD/core-tests"
+  "$jdk/bin/java" -cp "$BUILD/core-tests${runtime_cp:+:${runtime_cp}}" com.jumlo.app.hosttest.CoreTestsKt
 }
 
 if command -v kotlinc >/dev/null; then

@@ -6,18 +6,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -33,7 +31,6 @@ import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.rounded.MoreVert
 import com.jumlo.app.ui.icons.rounded.Settings
-import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolIconColors
 
@@ -49,7 +46,6 @@ fun QuietRootTopBar(
     onVaultClick: (() -> Unit)? = null,
     showSettings: Boolean = true
 ) {
-    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
     Surface(
         color = colors.surface,
@@ -60,7 +56,8 @@ fun QuietRootTopBar(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = statusTop + 10.dp, bottom = 10.dp)
+                    .statusBarsPadding()
+                    .padding(vertical = 10.dp)
                     .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -73,7 +70,7 @@ fun QuietRootTopBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        JumloAppIconBadge(size = 30.dp, cornerRadius = 9.dp)
+                        JumloAppIconBadge(size = 30.dp)
                         Text(
                             title,
                             style = QuietTheme.typography.screenTitle.copy(fontWeight = FontWeight.Bold),
@@ -92,12 +89,7 @@ fun QuietRootTopBar(
                     containerColor = colors.surfaceContainer
                 )
             }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colors.outlineVariant.copy(alpha = 0.55f))
-            )
+
         }
     }
 }
@@ -113,7 +105,6 @@ fun QuietWorkspaceTopBar(
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
     toolId: String? = null
 ) {
-    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     val backCd = stringResource(R.string.scan_back)
@@ -134,7 +125,8 @@ fun QuietWorkspaceTopBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = statusTop + 8.dp, bottom = 8.dp)
+                    .statusBarsPadding()
+                    .padding(vertical = 8.dp)
                     .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -150,13 +142,13 @@ fun QuietWorkspaceTopBar(
                         containerColor = colors.surfaceContainer
                     )
                     toolId?.let { id ->
-                        val iconBg = ToolIconColors.iconColorFor(id)
-                        val iconTint = ToolIconColors.glyphOn(iconBg)
+                        val iconBg = remember(id) { ToolIconColors.iconColorFor(id) }
+                        val iconTint = remember(iconBg) { ToolIconColors.glyphOn(iconBg) }
                         Box(
                             Modifier
                                 .padding(start = 10.dp)
                                 .size(40.dp)
-                                .clip(RoundedCornerShape(JumloRadii.thumbnail))
+                                .clip(QuietTheme.shapes.thumbnail)
                                 .background(iconBg),
                             contentAlignment = Alignment.Center
                         ) {
@@ -175,7 +167,7 @@ fun QuietWorkspaceTopBar(
                         ) {
                             Text(
                                 text = title,
-                                style = QuietTheme.typography.sectionTitle,
+                                style = QuietTheme.typography.sectionTitle.copy(textDirection = TextDirection.Content),
                                 color = colors.onSurface,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
@@ -212,12 +204,7 @@ fun QuietWorkspaceTopBar(
                     }
                 }
             }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colors.outlineVariant.copy(alpha = 0.55f))
-            )
+
         }
     }
 }

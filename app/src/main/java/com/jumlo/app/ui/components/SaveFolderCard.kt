@@ -42,8 +42,7 @@ import kotlinx.coroutines.withContext
         modifier.fillMaxWidth().testTag("saveFolder.card"),
         shape = QuietTheme.shapes.card,
         color = pillars.cardSurface,
-        border = BorderStroke(1.dp, pillars.cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
