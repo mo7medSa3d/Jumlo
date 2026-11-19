@@ -49,7 +49,9 @@ internal fun SmartDocumentScanLauncher(
     var launched by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf(false) }
-    var fallback by rememberSaveable { mutableStateOf(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)!=ConnectionResult.SUCCESS) }
+    val playServicesAvailable = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context)==ConnectionResult.SUCCESS
+    var failures by rememberSaveable { mutableIntStateOf(0) }
+    var fallback by rememberSaveable { mutableStateOf(!playServicesAvailable) }
     var active by remember { mutableStateOf(true) }
     val latestResult by rememberUpdatedState(onScannedPdf)
     val latestJpegs by rememberUpdatedState(onScannedJpegs)
@@ -116,8 +118,16 @@ internal fun SmartDocumentScanLauncher(
                     launcher.launch(IntentSenderRequest.Builder(sender).build())
                 } catch (_: Exception) { launched = false; busy = false; error = true }
             }
-            .addOnFailureListener { if (active) { busy = false; error = true; fallback = true } }
-        } catch (_: Exception) { busy=false;error=true;fallback=true }
+            .addOnFailureListener {
+                failures++
+                fallback = ScannerFallbackPolicy.shouldFallback(playServicesAvailable, failures)
+                if (active) { busy = false; error = true }
+            }
+        } catch (_: Exception) {
+            failures++
+            fallback = ScannerFallbackPolicy.shouldFallback(playServicesAvailable, failures)
+            busy=false;error=true
+        }
     }
     if(fallback) {
         CameraXScanFallback(onScannedPdf=onScannedPdf,onScannedJpegs=onScannedJpegs,jpegOutput=jpegOutput,onBack=onBack,externalBusy=externalBusy)
@@ -130,6 +140,12 @@ internal fun SmartDocumentScanLauncher(
         Text(stringResource(if (error) R.string.scan_error_smart else R.string.scan_smart_hint),
             style = QuietTheme.typography.bodyMedium, color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         if (busy || externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (error && !fallback) {
+            QuietPrimaryButton(stringResource(R.string.scan_smart_retry), onClick = ::startScan,
+                enabled = !busy && !externalBusy, modifier = Modifier.fillMaxWidth())
+            QuietTonalButton(stringResource(R.string.scan_use_basic_camera), onClick = { fallback = true },
+                modifier = Modifier.fillMaxWidth())
+        }
         QuietPrimaryButton(stringResource(R.string.scan_smart_action), onClick = ::startScan,
             enabled = !busy && !externalBusy, modifier = Modifier.fillMaxWidth())
         QuietTonalButton(stringResource(R.string.action_close), onClick = onBack, modifier = Modifier.fillMaxWidth())

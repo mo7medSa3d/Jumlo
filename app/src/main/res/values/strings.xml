@@ -177,6 +177,8 @@
     <string name="processing_cancel">Cancel</string>
     <string name="settings_export_error_log">Export error log</string>
     <string name="scan_title">Scan document</string>
+    <string name="scan_smart_retry">Retry smart scan</string>
+    <string name="scan_use_basic_camera">Use basic camera</string>
     <string name="scan_hint">Align the document inside the frame. Edges are detected automatically and can be adjusted.</string>
     <string name="scan_allow_camera">Allow camera</string>
     <string name="scan_capture">Capture &amp; correct perspective</string>

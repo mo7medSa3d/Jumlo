@@ -17,4 +17,8 @@ class ScannerFallbackPolicyTest {
     @Test fun missingPlayServicesFallsBackImmediately() {
         assertTrue(ScannerFallbackPolicy.shouldFallback(false, 0))
     }
+    @Test fun fallbackPolicyIsMonotonicInFailures() {
+        val seen = (0..4).map { ScannerFallbackPolicy.shouldFallback(true, it) }
+        assertTrue(seen == listOf(false, false, false, true, true))
+    }
 }
