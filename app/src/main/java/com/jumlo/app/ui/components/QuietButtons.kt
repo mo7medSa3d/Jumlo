@@ -7,6 +7,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import com.jumlo.app.ui.theme.LocalReducedMotion
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
@@ -67,6 +68,7 @@ fun QuietTonalIconButton(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh
 ) {
     val haptics = rememberAppHaptics()
+    val colors = MaterialTheme.colorScheme
     Surface(
         onClick = {
             haptics.actionClick()
@@ -77,11 +79,12 @@ fun QuietTonalIconButton(
             // sizeIn after size: the minimum wins, so the target is never below 48dp.
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .semantics { this.contentDescription = contentDescription },
-        shape = CircleShape,
-        color = containerColor
+        shape = RoundedCornerShape(14.dp),
+        color = containerColor,
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.55f))
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(21.dp))
         }
     }
 }
@@ -181,27 +184,30 @@ fun QuietSearchBar(
     placeholder: String,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
-    onClickBar: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClickBar: (() -> Unit)? = null
 ) {
     val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     val clearCd = stringResource(R.string.action_reset)
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
+            .heightIn(min = 54.dp)
             .then(if (onClickBar != null) Modifier.clickable(role = Role.Button, onClick = onClickBar) else Modifier),
-        shape = QuietTheme.shapes.button,
-        color = colors.surfaceContainerHigh
+        shape = QuietTheme.shapes.inputField,
+        color = pillars.cardSurface,
+        border = BorderStroke(1.dp, pillars.cardBorder),
+        shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(38.dp).clip(RoundedCornerShape(13.dp))
+            Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp))
                 .background(colors.primaryContainer), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Search, contentDescription = null,
-                    tint = colors.onPrimaryContainer, modifier = Modifier.size(20.dp))
+                    tint = colors.onPrimaryContainer, modifier = Modifier.size(19.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {

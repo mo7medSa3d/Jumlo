@@ -155,9 +155,9 @@ class MediaOperationHandler @Inject constructor(
                 // Accept all valid video dimensions (landscape, vertical 9:16 TikTok/Reels/Shorts, square, custom platform ratios)
                 require(height != null && height > 0 && width != null && width > 0) { "MEDIA_VIDEO_MISSING" }
                 val expected = choice.expectedHeight
-                if (expected != null && height != null) {
+                if (expected != null) {
                     val matchesHeight = abs(height - expected) <= 32
-                    val matchesWidth = width != null && abs(width - expected) <= 32
+                    val matchesWidth = abs(width - expected) <= 32
                     // Log or verify reasonable resolution while guaranteeing successful user output
                     if (!matchesHeight && !matchesWidth && height < 120 && width < 120) {
                         throw OperationFailure("MEDIA_QUALITY_MISMATCH")

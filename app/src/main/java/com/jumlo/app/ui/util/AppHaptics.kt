@@ -2,6 +2,7 @@ package com.jumlo.app.ui.util
 
 import android.content.Context
 import android.os.Build
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -21,10 +22,13 @@ class AppHaptics(
     private val enabled:Boolean, private val intensity:HapticIntensity,
     private val soundEnabled:Boolean, private val sound:UiSoundPlayer?
 ) {
+    @Suppress("DEPRECATION")
+    private fun legacySystemHapticsAllowed():Boolean = runCatching {
+        Settings.System.getInt(context.contentResolver,Settings.System.HAPTIC_FEEDBACK_ENABLED,1)!=0
+    }.getOrDefault(true)
+
     private fun allowed():Boolean = enabled && intensity!=HapticIntensity.OFF &&
-        view.isHapticFeedbackEnabled && runCatching {
-            Settings.System.getInt(context.contentResolver,Settings.System.HAPTIC_FEEDBACK_ENABLED,1)!=0
-        }.getOrDefault(true)
+        view.isHapticFeedbackEnabled && (Build.VERSION.SDK_INT >= 33 || legacySystemHapticsAllowed())
 
     @Suppress("DEPRECATION")
     private fun deviceVibrator():Vibrator? = if(Build.VERSION.SDK_INT>=31)
@@ -56,8 +60,16 @@ class AppHaptics(
             Event.START -> longArrayOf(0,20) to intArrayOf(0,(125*multiplier).toInt())
             Event.TICK -> longArrayOf(0,10) to intArrayOf(0,(65*multiplier).toInt())
         }
-        runCatching {vibrator.vibrate(VibrationEffect.createWaveform(timings,amplitudes,-1))}
-            .onFailure {view.performHapticFeedback(fallback)}
+        runCatching {
+            val waveform = VibrationEffect.createWaveform(timings,amplitudes,-1)
+            if (Build.VERSION.SDK_INT >= 33) {
+                // On Android 13+, OS applies global touch feedback preference via USAGE_TOUCH.
+                val attrs = VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_TOUCH).build()
+                vibrator.vibrate(waveform, attrs)
+            } else {
+                vibrator.vibrate(waveform)
+            }
+        }.onFailure {view.performHapticFeedback(fallback)}
     }
     private enum class Event { TICK, START, SUCCESS, ERROR, DELETE, HOLD, DRAG }
     private fun trigger(event:Event,cue:UiSoundPlayer.Cue?) {

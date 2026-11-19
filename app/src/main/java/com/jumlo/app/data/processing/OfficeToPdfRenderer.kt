@@ -83,23 +83,26 @@ object OfficeToPdfRenderer {
         private var hasContent = false
 
         fun run() {
-            newPage()
-            doc.blocks.forEach { block ->
-                checkCancel()
-                when (block) {
-                    is OfficeBlock.PageBreak -> newPageIfNeeded()
-                    is OfficeBlock.Section -> {
-                        newPageIfNeeded()
-                        drawParagraph(OfficeBlock.ParagraphBlock(
-                            OfficeParagraph(listOf(OfficeRun(block.title, bold = true)), level = 1)))
+            try {
+                newPage()
+                doc.blocks.forEach { block ->
+                    checkCancel()
+                    when (block) {
+                        is OfficeBlock.PageBreak -> newPageIfNeeded()
+                        is OfficeBlock.Section -> {
+                            newPageIfNeeded()
+                            drawParagraph(OfficeBlock.ParagraphBlock(
+                                OfficeParagraph(listOf(OfficeRun(block.title, bold = true)), level = 1)))
+                        }
+                        is OfficeBlock.ParagraphBlock -> drawParagraph(block)
+                        is OfficeBlock.TableBlock -> drawTable(block)
+                        is OfficeBlock.ImageBlock -> drawImage(block)
                     }
-                    is OfficeBlock.ParagraphBlock -> drawParagraph(block)
-                    is OfficeBlock.TableBlock -> drawTable(block)
-                    is OfficeBlock.ImageBlock -> drawImage(block)
                 }
+            } finally {
+                runCatching { stream?.close() }
+                stream = null
             }
-            stream?.close()
-            stream = null
         }
 
         private fun newPage() {
@@ -306,7 +309,7 @@ object OfficeToPdfRenderer {
             val lineHeight = size * 1.35f
             val pad = 4f
             val colCount = rows.maxOf { row -> row.sumOf { it.colSpan } }
-            val weights = DoubleArray(colCount) { 0.0 }
+            val weights = DoubleArray(colCount)
             for (row in rows) {
                 var col = 0
                 for (cell in row) {

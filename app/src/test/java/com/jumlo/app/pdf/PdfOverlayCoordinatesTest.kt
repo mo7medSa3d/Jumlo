@@ -73,7 +73,7 @@ class PdfOverlayCoordinatesTest {
         var font=0.0;var tx=0.0;var ty=0.0
         parser.tokens.forEach { token ->
             if(token !is Operator) operands+=token else {
-                fun number(index:Int)=(operands[index] as COSNumber).doubleValue()
+                fun number(index:Int)=(operands[index] as COSNumber).floatValue().toDouble()
                 when(token.name) {
                     "q" -> stack+=ctm
                     "Q" -> ctm=stack.removeAt(stack.lastIndex)

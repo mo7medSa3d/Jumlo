@@ -348,7 +348,6 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
 
     private fun smartDefaultsForTool(draft: WorkspaceDraft): WorkspaceDraft = when (draft.toolId) {
         "pdf_stamp" -> draft.copy(flag1 = true)
-        "pdf_annotate" -> draft.copy(text1 = "Jumlo", num1 = "1")
         "img_watermark" -> draft.copy(text1 = "Jumlo", num1 = "40")
         // Defaults are part of the new session baseline, not edits made by UI composition.
         "img_02" -> if (draft.percentage.isBlank() && draft.longestEdge.isBlank() &&
@@ -808,13 +807,8 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 val state=form.value
                 require(CapabilityRegistry.canProcess(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
-                val driveImport=state.toolId=="file_drive" && !state.flag1
-                require(download || driveImport || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
+                require(download || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
                 if(state.toolId in setOf("pdf_07","file_08","pdf_to_docx","pdf_to_pptx","pdf_ocr")) require(state.sourceIds.size==1) { "ONE_SOURCE_REQUIRED" }
-                if(state.toolId=="file_drive") {
-                    require(state.secret1.isNotBlank()) { "DRIVE_TOKEN_MISSING" }
-                    if(!state.flag1) require(state.text1.isNotBlank()) { "INVALID_DRIVE_FILE_ID" }
-                }
                 val urlSnapshot=urls.value
                 if(download) {
                     val lines=urlSnapshot.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
@@ -835,11 +829,11 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 newHandle=when {
                     download -> effectiveUrlText.toCharArray().let { chars -> try { secrets.putDownload(chars) } finally { chars.fill('\u0000') } }
                     state.toolId=="pdf_protect" -> secrets.put((state.secret1+"\n"+state.secret2).toCharArray())
-                    state.toolId in setOf("file_encrypted_zip","file_drive") -> secrets.put(state.secret1.toCharArray())
+                    state.toolId=="file_encrypted_zip" -> secrets.put(state.secret1.toCharArray())
                     else -> null
                 }
                 val settings=state.executionSettings(newHandle)
-                val candidate=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download || driveImport) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
+                val candidate=JobRequest(UUID.randomUUID().toString(),state.toolId,if(download) emptyList() else state.sourceIds,1,settings,System.currentTimeMillis())
                 val request=draftMutex.withLock { drafts.reserveSubmission(fingerprint,candidate,state) }
                 if(request.id==candidate.id) newHandleOwner=request.id
                 val reboundHandle=withContext(Dispatchers.IO) { rebindDownloadSubmissionSecret(request,candidate,secrets) }
@@ -1072,35 +1066,6 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
             finally { frame.bitmap.recycle() }
         }
     }
-
-    /** Exact-content groups for the visual duplicate panel; source bytes are streamed and never modified. */
-    suspend fun duplicateSourceGroups(sourceIds:List<String>):List<List<SourceRef>> = withContext(Dispatchers.IO) {
-        val active=currentCoroutineContext()
-        val byDigest=linkedMapOf<String,MutableList<SourceRef>>()
-        for(id in sourceIds.distinct()) {
-            active.ensureActive()
-            val source=sources.get(id)
-            val hash=sources.openRead(id).use { Hashing.sha256(it) { active.ensureActive() } }
-            byDigest.getOrPut(hash) { mutableListOf() }.add(source)
-        }
-        byDigest.values.filter { it.size>1 }.map { it.toList() }
-    }
-
-    /** Read real AcroForm controls from the immutable source without modifying it. */
-    suspend fun pdfFormFields(sourceId:String):List<com.jumlo.app.data.pdf.PdfFormFieldInfo> =
-        withContext(Dispatchers.IO) {
-            val active = currentCoroutineContext()
-            sources.withSeekable(sourceId, UUID.randomUUID().toString()) { file ->
-                active.ensureActive()
-                com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(app)
-                com.jumlo.app.data.pdf.PdfBoxBackend.open(file, null).use { doc ->
-                    active.ensureActive()
-                    com.jumlo.app.data.pdf.PdfBoxBackend.formFields(doc).also {
-                        active.ensureActive()
-                    }
-                }
-            }
-        }
 
     /**
      * The original size of a source and how much of it is embedded images, so the

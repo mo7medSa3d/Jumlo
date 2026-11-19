@@ -30,31 +30,24 @@ object ToolCatalogue {
         WorkspaceEntry(
             ToolWorkspace.PDF,
             primary = listOf(
-                "pdf_to_docx",  // editable paragraphs
-                "pdf_to_pptx",  // slide per page
-                "office_to_pdf",// Word, Excel and slides to PDF
-                "pdf_ocr",      // text extraction
-                "pdf_02",       // images to PDF
-                "pdf_03",       // merge
-                "pdf_05",       // split
-                "pdf_04",       // organise pages
-                "pdf_compress", // compress
-                "pdf_07",       // pdf to images
-                "pdf_signature",// sign
-                "pdf_clean"     // clean the authoring trail
+                "pdf_to_docx",   // editable paragraphs
+                "pdf_to_pptx",   // slide per page
+                "office_to_pdf", // Word, Excel and slides to PDF
+                "pdf_ocr",       // text extraction
+                "pdf_02",        // images to PDF
+                "pdf_03",        // merge
+                "pdf_05",        // split
+                "pdf_04",        // organise pages
+                "pdf_compress",  // compress
+                "pdf_07",        // pdf to images
+                "pdf_signature", // sign
+                "pdf_protect"    // password protect / unlock
             ),
             merged = listOf(
-                "pdf_06",       // extract pages
-                "pdf_crop",     // crop pages
-                "pdf_image",    // add an image
-                "pdf_forms",    // fill a form
-                "pdf_annotate", // annotate
-                "pdf_stamp",    // watermark and page numbers
-                "pdf_metadata", // document properties
-                "pdf_protect",  // password
-                "pdf_compare",  // compare two PDFs
-                "pdf_redact",   // permanently black out regions
-                "pdf_01"        // view
+                "pdf_06",        // extract pages
+                "pdf_crop",      // crop pages
+                "pdf_stamp",     // watermark and page numbers
+                "pdf_01"         // view
             )
         ),
         WorkspaceEntry(
@@ -65,32 +58,24 @@ object ToolCatalogue {
         WorkspaceEntry(
             ToolWorkspace.IMAGES,
             primary = listOf(
-                "img_03",       // crop, rotate, flip
-                "img_02",       // resize
-                "img_04",       // compress
-                "img_01",       // convert
-                "img_join",     // join and collage
-                "img_watermark" // watermark
+                "img_03",        // crop, rotate, flip
+                "img_02",        // resize
+                "img_04",        // compress
+                "img_01",        // convert
+                "img_join",      // join and collage
+                "img_watermark"  // watermark
             ),
-            merged = listOf(
-                "img_adjust", // adjust and pad
-                "img_target", // target size
-                "img_stitch", // stitch screenshots
-                "img_exif"    // exif inspector
-            )
+            merged = emptyList()
         ),
         WorkspaceEntry(
             ToolWorkspace.FILES,
             primary = listOf(
-                "file_07",            // create an archive
-                "file_duplicates",    // duplicate finder
-                "file_batch_rename"   // batch rename
+                "file_07",           // create an archive
+                "file_08",           // extract an archive
+                "file_batch_rename"  // batch rename
             ),
             merged = listOf(
-                "file_08",            // extract an archive
-                "file_encrypted_zip", // encrypted archive
-                "file_drive",         // google drive import / export
-                "sha256"              // verify a digest
+                "file_encrypted_zip" // encrypted archive
             )
         ),
         WorkspaceEntry(
@@ -121,14 +106,8 @@ object ToolCatalogue {
     fun workspaceOf(toolId: String): ToolWorkspace? =
         entries.firstOrNull { toolId in it.primary || toolId in it.merged }?.workspace
 
-    /**
-     * The tools that are deliberately kept out of the catalogue: specialists that
-     * belong inside a bigger tool, and comparisons that most people never want.
-     */
-    private val hidden = setOf("img_compare", "file_trash", "file_02")
-    // The specialist comparison stays accessible through search, without
-    // cluttering the default grid. Navigation aliases have their own tabs.
-    private val searchOnly = setOf("img_compare")
+    private val hidden: Set<String> = emptySet()
+    private val searchOnly: Set<String> = emptySet()
 
     /** True when the tool should be offered in the catalogue at all. */
     fun isListed(toolId: String): Boolean =
@@ -137,7 +116,7 @@ object ToolCatalogue {
     /** The capabilities that are deliberately kept out of the catalogue. */
     fun hiddenTools(): Set<String> = hidden
 
-    /** Search can find specialists, but never duplicate navigation-only aliases. */
+    /** Search finds every listed tool in the streamlined catalogue. */
     fun isSearchable(toolId: String): Boolean =
         isListed(toolId) || toolId in searchOnly
 }

@@ -13,12 +13,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ImagePixelTest {
-    @Test fun compareIncludesAlphaAndDoesNotClaimTransparentPixelsAreIdentical() {
-        val a=Bitmap.createBitmap(4,4,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.TRANSPARENT) }
-        val b=Bitmap.createBitmap(4,4,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLACK) }
-        try { assertTrue(BitmapExtras.meanDifference(a,b)>0.0);assertEquals(0.0,BitmapExtras.meanDifference(a,a),0.0) }
-        finally { a.recycle();b.recycle() }
-    }
     @Test(expected=IllegalArgumentException::class) fun joinBudgetsResidentSourceAndOutputTogether() {
         val a=Bitmap.createBitmap(10,10,Bitmap.Config.ARGB_8888)
         val b=Bitmap.createBitmap(10,10,Bitmap.Config.ARGB_8888)

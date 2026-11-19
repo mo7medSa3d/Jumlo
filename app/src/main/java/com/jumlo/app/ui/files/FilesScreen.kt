@@ -114,29 +114,83 @@ import com.jumlo.app.model.*
     }
     val selectedOutputs = visible.filter { it.id in selected }
     val now = remember(visible) { System.currentTimeMillis() }
+    val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
+    val chipColors = FilterChipDefaults.filterChipColors(
+        containerColor = pillars.cardSurface,
+        labelColor = colors.onSurfaceVariant,
+        selectedContainerColor = colors.primaryContainer,
+        selectedLabelColor = colors.onPrimaryContainer
+    )
     BoxWithConstraints(Modifier.fillMaxSize().testTag("files.screen")) {
-    val columns=((maxWidth.value-40f)/(if(density.fontScale>=1.5f) 240f else 160f)).toInt().coerceIn(1,4)
+    val paneWidth = minOf(maxWidth.value, 980f)
+    val columns=((paneWidth-40f)/(if(density.fontScale>=1.5f) 240f else 160f)).toInt().coerceIn(1,4)
     LazyColumn(
-        modifier=Modifier.fillMaxSize(),
-        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=20.dp,
+        modifier=Modifier.widthIn(max=980.dp).fillMaxSize().align(Alignment.TopCenter),
+        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=16.dp,
             bottom=QuietTheme.spacing.listBottomBuffer + if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) 96.dp else 0.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)
     ) {
-        item("heading") { Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        item("heading") { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(if(selecting && section=="outputs") stringResource(R.string.neon_selection_count,selected.size)
                 else stringResource(R.string.neon_my_documents),style=QuietTheme.typography.screenTitle)
             SaveFolderCard(settings.downloadDestinationFolder, onChangeSaveFolder, onSavedFolder)
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp), verticalAlignment=Alignment.CenterVertically) {
-                TextButton(onClick={vm.refreshStorage();onStorage()},modifier=Modifier.weight(1f).testTag("files.storage")) {
-                    Text(stringResource(R.string.modern_storage_usage)+" · "+formatBytes(storage.outputs),maxLines=2)
+            Row(
+                modifier=Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement=Arrangement.spacedBy(10.dp),
+                verticalAlignment=Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick={vm.refreshStorage();onStorage()},
+                    modifier=Modifier.weight(1f).fillMaxHeight().heightIn(min=54.dp).pressFeedback().testTag("files.storage"),
+                    shape=QuietTheme.shapes.button,
+                    color=pillars.cardSurface,
+                    border=BorderStroke(1.dp,pillars.cardBorder),
+                    shadowElevation=1.dp
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
+                        verticalAlignment=Alignment.CenterVertically,
+                        horizontalArrangement=Arrangement.spacedBy(10.dp)
+                    ) {
+                        Surface(
+                            modifier=Modifier.size(34.dp),
+                            shape=androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                            color=colors.primaryContainer
+                        ) {
+                            Box(contentAlignment=Alignment.Center) {
+                                Icon(Icons.Rounded.Storage,null,Modifier.size(18.dp),tint=colors.onPrimaryContainer)
+                            }
+                        }
+                        Column(verticalArrangement=Arrangement.spacedBy(1.dp)) {
+                            Text(stringResource(R.string.modern_storage_usage),
+                                style=QuietTheme.typography.metadata,
+                                color=colors.onSurfaceVariant,
+                                maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Text(formatBytes(storage.outputs),
+                                style=QuietTheme.typography.metadataStrong,
+                                color=colors.onSurface,
+                                maxLines=1,overflow=TextOverflow.Ellipsis)
+                        }
+                    }
                 }
                 QuietPrimaryButton(text=stringResource(R.string.import_device_files), onClick=onImport,
-                    modifier=Modifier.weight(1f),leadingIcon=Icons.Rounded.Add)
+                    modifier=Modifier.weight(1f).fillMaxHeight(),leadingIcon=Icons.Rounded.Add)
             }
         } }
         item("search") {QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})}
-        item("sections") {LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-            items(listOf("outputs" to R.string.ui_outputs,"sources" to R.string.ui_imported,"folder" to R.string.ui_granted_folder,"trash" to R.string.files_trash_title),key={it.first}) {(key,label)->FilterChip(section==key,{haptics.selectionToggle();section=key;selecting=false;selected=emptySet();selectingSources=false;selectedSources=emptySet()},border=null,label={Text(stringResource(label),style=QuietTheme.typography.metadataStrong)})}
+        item("sections") {LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            items(listOf("outputs" to R.string.ui_outputs,"sources" to R.string.ui_imported,"folder" to R.string.ui_granted_folder,"trash" to R.string.files_trash_title),key={it.first}) {(key,label)->
+                val active = section==key
+                FilterChip(
+                    selected=active,
+                    onClick={haptics.selectionToggle();section=key;selecting=false;selected=emptySet();selectingSources=false;selectedSources=emptySet()},
+                    shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors=chipColors,
+                    border=if(active) BorderStroke(1.dp,colors.primary.copy(alpha=0.25f)) else BorderStroke(1.dp,pillars.cardBorder),
+                    label={Text(stringResource(label),style=QuietTheme.typography.metadataStrong)}
+                )
+            }
         }}
         if(section=="outputs" && outputs.any { it.publicUri==null }) item("public-store-warning") {
             Surface(color=MaterialTheme.colorScheme.errorContainer.copy(alpha=0.65f),shape=MaterialTheme.shapes.medium) {
@@ -146,10 +200,18 @@ import com.jumlo.app.model.*
         }
         when(section) {
             "outputs" -> {
-                item("filter") { Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                    LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                item("filter") { Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         items(listOf("all","favorites","Video","Audio","PDF","Images","Documents")) {filter->
-                            FilterChip(type==filter,{haptics.selectionToggle();type=filter;selected=emptySet()},border=null,label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->stringResource(R.string.redesign_pdf_type);"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)})
+                            val active = type==filter
+                            FilterChip(
+                                selected=active,
+                                onClick={haptics.selectionToggle();type=filter;selected=emptySet()},
+                                shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                                colors=chipColors,
+                                border=if(active) BorderStroke(1.dp,colors.primary.copy(alpha=0.25f)) else BorderStroke(1.dp,pillars.cardBorder),
+                                label={Text(when(filter){"all"->stringResource(R.string.ui_all);"favorites"->stringResource(R.string.files_favorites);"Video"->stringResource(R.string.redesign_filter_video);"Audio"->stringResource(R.string.redesign_filter_audio);"PDF"->stringResource(R.string.redesign_pdf_type);"Images"->stringResource(R.string.redesign_filter_images);else->stringResource(R.string.redesign_filter_documents)},style=QuietTheme.typography.metadataStrong)}
+                            )
                         }
                     }
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
@@ -175,7 +237,8 @@ import com.jumlo.app.model.*
                     QuietStateCard(stringResource(if(filtered) R.string.upgrade_no_results else R.string.ui_recent_empty),
                         stringResource(if(filtered) R.string.upgrade_no_results_hint else R.string.redesign_storage_folder),
                         stringResource(if(filtered) R.string.files_state_reset_filters else R.string.import_device_files),
-                        { if(filtered) { search=""; type="all"; selected=emptySet() } else onImport() })
+                        { if(filtered) { search=""; type="all"; selected=emptySet() } else onImport() },
+                        icon=if(filtered) Icons.Rounded.Search else Icons.Rounded.FolderOpen)
                 }
                 val grouped = when(group) {
                     "type" -> visible.groupBy { StoragePaths.category(it.mimeType) }
@@ -218,14 +281,15 @@ import com.jumlo.app.model.*
                                         .combinedClickable(onClick={haptics.actionClick();if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
                                             onLongClick={haptics.selectionToggle();selecting=true;selected=selected+output.id})
                                         .semantics { if(selecting) { this.selected=output.id in selected; role=Role.Checkbox } },
-                                    shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+                                    shape=QuietTheme.shapes.card,
                                     color=if(selecting && output.id in selected) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surfaceContainerLow,
+                                        else pillars.cardSurface,
                                     border=BorderStroke(
                                         1.dp,
-                                        if(selecting && output.id in selected) MaterialTheme.colorScheme.primary.copy(alpha=0.46f)
-                                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.58f)
-                                    )
+                                        if(selecting && output.id in selected) MaterialTheme.colorScheme.primary.copy(alpha=0.55f)
+                                        else pillars.cardBorder
+                                    ),
+                                    shadowElevation=1.dp
                                 ) {
                                     Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                                         Box(Modifier.fillMaxWidth()
@@ -326,10 +390,10 @@ import com.jumlo.app.model.*
                         } else Text(stringResource(R.string.files_batch_tool_hint),style=QuietTheme.typography.metadata)
                     }
                 }
-                if(sourceLoad==DataLoadStatus.READY && imported.isEmpty()) item("sources-empty") {QuietStateCard(stringResource(R.string.files_empty_snapshots),stringResource(R.string.files_snapshots_sub),stringResource(R.string.import_device_files),onImport)}
+                if(sourceLoad==DataLoadStatus.READY && imported.isEmpty()) item("sources-empty") {QuietStateCard(stringResource(R.string.files_empty_snapshots),stringResource(R.string.files_snapshots_sub),stringResource(R.string.import_device_files),onImport,icon=Icons.Rounded.FolderOpen)}
                 if(sourceLoad==DataLoadStatus.READY && imported.isNotEmpty() && visibleSources.isEmpty()) item("sources-filtered-empty") {
                     QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
-                        stringResource(R.string.files_state_clear_search),{search="";selectedSources=emptySet()})
+                        stringResource(R.string.files_state_clear_search),{search="";selectedSources=emptySet()},icon=Icons.Rounded.Search)
                 }
                 items(visibleSources,key={it.id}) {source->
                     FileMenuRow(source.displayName,formatBytes(source.sizeBytes) + (source.modifiedAtEpochMs?.let { " · " + fileDateLabel(it) } ?: ""),
@@ -347,11 +411,11 @@ import com.jumlo.app.model.*
                 item {Text(stringResource(R.string.ui_trash_notice),style=QuietTheme.typography.metadata)}
                 if(trashLoad!=DataLoadStatus.READY) item("trash-state") {DocumentLoadState(trashLoad,vm::reloadTrash)}
                 else {
-                    if(trashed.isEmpty()) item("trash-empty") {QuietStateCard(stringResource(R.string.files_trash_title),stringResource(R.string.files_trash_empty))}
+                    if(trashed.isEmpty()) item("trash-empty") {QuietStateCard(stringResource(R.string.files_trash_title),stringResource(R.string.files_trash_empty),icon=Icons.Rounded.DeleteOutline)}
                     else item {TextButton(onClick={purgeIds=trashed.map {it.id}.toSet()}) {Text(stringResource(R.string.files_purge_trash))}}
                     if(trashed.isNotEmpty() && visibleTrashed.isEmpty()) item("trash-filtered-empty") {
                         QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
-                            stringResource(R.string.files_state_clear_search),{search=""})
+                            stringResource(R.string.files_state_clear_search),{search=""},icon=Icons.Rounded.Search)
                     }
                     items(visibleTrashed,key={it.id}) {entry->FileMenuRow(entry.displayName,formatBytes(entry.sizeBytes),{vm.restoreOutput(entry.id)},Icons.Rounded.DeleteOutline) {close->
                         DropdownMenuItem(text={Text(stringResource(R.string.action_restore))},onClick={close();vm.restoreOutput(entry.id)})
@@ -363,16 +427,16 @@ import com.jumlo.app.model.*
                 item {FilledTonalButton(onClick=onFolder) {Text(stringResource(R.string.tool_browse_storage))}}
                 val listing=tree
                 if(treeLoad!=DataLoadStatus.READY) item("folder-state") {DocumentLoadState(treeLoad,vm::reloadTree)}
-                else if(listing==null) item("folder-empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder)}
+                else if(listing==null) item("folder-empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder,icon=Icons.Rounded.Folder)}
                 else {
                     item {Text(listing.name,style=QuietTheme.typography.sectionTitle);Text(stringResource(R.string.ui_provider_notice),style=QuietTheme.typography.metadata)}
                     if(listing.writable) item {TextButton(onClick=onNewFolder) {Text(stringResource(R.string.files_new_folder))}}
                     if(listing.entries.isEmpty()) item("folder-no-files") {
                         QuietStateCard(stringResource(R.string.files_state_folder_empty_title),stringResource(R.string.files_state_folder_empty_body),
-                            stringResource(R.string.files_state_refresh_folder),vm::reloadTree)
+                            stringResource(R.string.files_state_refresh_folder),vm::reloadTree,icon=Icons.Rounded.FolderOpen)
                     } else if(visibleProviderEntries.isEmpty()) item("folder-filtered-empty") {
                         QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
-                            stringResource(R.string.files_state_clear_search),{search=""})
+                            stringResource(R.string.files_state_clear_search),{search=""},icon=Icons.Rounded.Search)
                     }
                     items(visibleProviderEntries,key={it.uri}) {entry->ProviderFileRow(entry,listing.writable,{onBrowse(entry)},{onProviderOpen(entry)},{onProviderImport(entry)},{onCopy(entry)},{onRename(entry)},{onDelete(entry)})}
                 }
@@ -387,10 +451,12 @@ import com.jumlo.app.model.*
             selectedOutputs.all { it.mimeType.startsWith("image/") }
         Surface(
             modifier=Modifier.align(Alignment.BottomCenter)
-                .padding(start=14.dp,end=14.dp,bottom=12.dp),
-            color=MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape=androidx.compose.foundation.shape.RoundedCornerShape(26.dp),
-            shadowElevation=9.dp
+                .widthIn(max=520.dp)
+                .padding(start=16.dp,end=16.dp,bottom=12.dp),
+            color=pillars.dockSurface,
+            shape=QuietTheme.shapes.dockPill,
+            border=BorderStroke(1.dp,pillars.dockBorder),
+            shadowElevation=10.dp
         ) {
             Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=7.dp),
                 verticalAlignment=Alignment.CenterVertically,

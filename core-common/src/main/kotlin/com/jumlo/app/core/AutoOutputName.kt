@@ -7,10 +7,9 @@ object AutoOutputName {
     private val operations = mapOf(
         "pdf_02" to "PDF", "pdf_03" to "Merged", "pdf_04" to "Organized",
         "pdf_05" to "Split", "pdf_06" to "Extracted", "pdf_07" to "Images", "pdf_crop" to "Cropped",
-        "pdf_compress" to "Compressed", "pdf_stamp" to "Stamped", "pdf_annotate" to "Annotated",
-        "pdf_signature" to "Signed", "pdf_metadata" to "Updated", "pdf_forms" to "Filled",
-        "pdf_protect" to "Protected", "pdf_clean" to "Cleaned",
-        "pdf_to_docx" to "Word", "pdf_to_pptx" to "Slides", "pdf_ocr" to "Text",
+        "pdf_compress" to "Compressed", "pdf_stamp" to "Stamped",
+        "pdf_signature" to "Signed", "pdf_protect" to "Protected",
+        "office_to_pdf" to "PDF", "pdf_to_docx" to "Word", "pdf_to_pptx" to "Slides", "pdf_ocr" to "Text",
         "file_07" to "Archive", "file_encrypted_zip" to "Archive"
     )
     fun cleanBaseName(displayName:String, fallback:String="File"):String {

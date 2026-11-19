@@ -45,8 +45,9 @@ fun SettingsScreen(
     val dark = isDarkTheme(settings.themeMode)
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().testTag("settings.screen"),
+        modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -61,9 +62,14 @@ fun SettingsScreen(
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language"),
             iconStyle = settingsIconStyleFor("language", dark)) }
         item("sounds") {
-            PreferenceToggleRow(stringResource(R.string.settings_ui_sounds),
-                settings.soundsEnabled, viewModel::setSoundsEnabled,
-                Modifier.testTag("settings.sounds"))
+            PreferenceToggleRow(
+                stringResource(R.string.settings_ui_sounds),
+                settings.soundsEnabled,
+                viewModel::setSoundsEnabled,
+                Modifier.testTag("settings.sounds"),
+                icon = Icons.Rounded.Audiotrack,
+                iconStyle = settingsIconStyleFor("sounds", dark)
+            )
         }
         item("text-size") { PreferenceRow(stringResource(R.string.pref_text_size),
             textSizeLabel(settings.fontScale), Icons.Rounded.FormatSize, { panel = "text-size" },
@@ -101,6 +107,7 @@ fun SettingsScreen(
             iconStyle = settingsIconStyleFor("cache", dark)) }
         item("about") { PreferenceRow(stringResource(R.string.modern_about), stringResource(R.string.settings_about_summary), Icons.Rounded.Info,
             { panel = "about" }, Modifier.testTag("settings.about"), iconStyle = settingsIconStyleFor("about", dark)) }
+    }
     }
     when (panel) {
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },

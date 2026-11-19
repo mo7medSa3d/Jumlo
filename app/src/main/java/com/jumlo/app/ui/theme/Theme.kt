@@ -101,7 +101,7 @@ private fun colorSchemeFor(s: SystemScheme, dark: Boolean): ColorScheme {
 fun JumloTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     language: AppLanguage = AppLanguage.ENGLISH,
-    colorSystem: String = "SUNSET",
+    colorSystem: String = "COBALT",
     fontScale: String = "NORMAL",
     content: @Composable () -> Unit
 ) {
@@ -122,7 +122,7 @@ fun JumloTheme(
             surface = Color.Black,
             surfaceDim = Color.Black,
             surfaceContainerLowest = Color.Black,
-            surfaceContainerLow = Color.Black
+            surfaceContainerLow = Color(0xFF0D0F16)
         )
     } else {
         colorSchemeFor(scheme, darkTheme)
@@ -130,12 +130,12 @@ fun JumloTheme(
 
     val basePillars = pillarColors(system, darkTheme)
     val pillarColors: PillarColors = basePillars.copy(
-        cardSurface = colorScheme.surfaceContainerLow,
-        cardBorder = colorScheme.outlineVariant,
+        cardSurface = if (darkTheme) colorScheme.surfaceContainerLow else colorScheme.surfaceContainerLowest,
+        cardBorder = colorScheme.outlineVariant.copy(alpha = if (darkTheme) 0.72f else 0.85f),
         primaryActionBackground = colorScheme.primary,
         primaryActionText = colorScheme.onPrimary,
-        dockSurface = colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
-        dockBorder = colorScheme.outlineVariant.copy(alpha = 0.55f),
+        dockSurface = (if (darkTheme) colorScheme.surfaceContainerHigh else colorScheme.surfaceContainerLowest).copy(alpha = 0.97f),
+        dockBorder = colorScheme.outlineVariant.copy(alpha = if (darkTheme) 0.65f else 0.85f),
         activePillContainer = colorScheme.primaryContainer,
         activePillContent = colorScheme.onPrimaryContainer
     )

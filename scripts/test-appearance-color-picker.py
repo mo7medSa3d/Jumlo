@@ -18,8 +18,8 @@ def read(relative):
 
 
 # --- Behavioral mirror of ColorSystems.systemFor ---
-SYSTEMS = ("LUIGI", "AURORA", "VIOLA", "SUNSET")
-DEFAULT = "SUNSET"
+SYSTEMS = ("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
+DEFAULT = "COBALT"
 
 
 def system_for(key):
@@ -35,8 +35,8 @@ class ColorPickerStatic(unittest.TestCase):
         cls.repo = read('data/preferences/UserPreferencesRepository.kt')
 
     def test_exactly_four_bilingual_systems(self):
-        order = re.findall(r'val (LUIGI|AURORA|VIOLA|SUNSET) = ColorSystem\(', self.systems)
-        self.assertEqual(order, ['LUIGI', 'AURORA', 'VIOLA', 'SUNSET'])
+        order = re.findall(r'val (COBALT|EMERALD|SAPPHIRE|AMETHYST) = ColorSystem\(', self.systems)
+        self.assertEqual(order, ['COBALT', 'EMERALD', 'SAPPHIRE', 'AMETHYST'])
         for key in SYSTEMS:
             block = self.systems.split(f'val {key} = ColorSystem(')[1]
             self.assertRegex(block, r'nameEn = "[^"]+"')
@@ -63,10 +63,10 @@ class ColorPickerStatic(unittest.TestCase):
             self.assertNotIn(gone, self.settings, f'old wiring remains: {gone}')
 
     def test_repository_accepts_only_four_systems(self):
-        self.assertIn('takeIf { isValidColorSystem(it) }', self.repo)
+        self.assertIn('migrateColorSystem(', self.repo)
         self.assertIn('private fun isValidColorSystem(value: String): Boolean', self.repo)
-        self.assertIn('setOf("LUIGI", "AURORA", "VIOLA", "SUNSET")', self.repo)
-        self.assertIn('"SUNSET"', self.repo)
+        self.assertIn('setOf("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")', self.repo)
+        self.assertIn('"COBALT"', self.repo)
 
     def test_app_color_strings_both_locales(self):
         en = (ROOT / 'app/src/main/res/values/account_settings.xml').read_text(encoding='utf-8')
@@ -92,10 +92,10 @@ class ColorPickerBehavior(unittest.TestCase):
 
     def test_ramps_are_distinct(self):
         ramps = {
-            'LUIGI': ('FFE3B3', 'C2DD6C', '79CE67', '30B155'),
-            'AURORA': ('FBCFE8', 'A78BFA', '60A5FA', '3B82F6'),
-            'VIOLA': ('FFE1C0', 'FFC57B', 'CD4FBA', '780E94'),
-            'SUNSET': ('FFE3B3', 'FBB931', 'F88F22', 'EA6113'),
+            'COBALT': ('E0E7FF', '83F5D2', '8658F4', '3837BC'),
+            'EMERALD': ('D1FAE5', '34D399', '10B981', '047857'),
+            'SAPPHIRE': ('DBEAFE', '38BDF8', '2563EB', '1D4ED8'),
+            'AMETHYST': ('F3E8FF', 'C084FC', '9333EA', '6B21A8'),
         }
         self.assertEqual(len(set(ramps.values())), 4)
 

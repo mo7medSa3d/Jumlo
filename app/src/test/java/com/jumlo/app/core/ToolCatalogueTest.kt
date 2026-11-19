@@ -39,10 +39,9 @@ class ToolCatalogueTest {
 
     @Test fun everyRegisteredCapabilityIsEitherListedOrDeliberatelyHidden() {
         val listed = (ToolCatalogue.primaryTools() + ToolCatalogue.mergedTools()).toSet()
-        val navigationOnly = setOf("file_02", "file_trash", "dl_settings")
         val hidden = ToolCatalogue.hiddenTools()
         registryIds.forEach { id ->
-            if (id in navigationOnly || id in hidden) return@forEach
+            if (id in hidden) return@forEach
             assertTrue("$id is in the registry but in no workspace", id in listed)
         }
     }
@@ -61,20 +60,18 @@ class ToolCatalogueTest {
         assertEquals(null, ToolCatalogue.workspaceOf("missing_tool"))
     }
 
-    @Test fun theSpecialistsAreKeptOutOfTheCatalogue() {
-        assertTrue("the image comparison must not take a tile", !ToolCatalogue.isListed("img_compare"))
-        assertTrue("the image comparison must not be a primary", !ToolCatalogue.isPrimary("img_compare"))
-    }
-
-    @Test fun searchRetainsSpecialistsButNeverDuplicatesNavigationTabs() {
-        assertTrue("image comparison remains available from search", ToolCatalogue.isSearchable("img_compare"))
-        assertTrue("image comparison must not occupy a default tile", !ToolCatalogue.isListed("img_compare"))
-        for (alias in listOf("file_02", "file_trash", "dl_settings")) {
-            assertTrue("$alias is still a registered navigation capability", alias in registryIds)
-            assertTrue("$alias must not duplicate Files or Settings", !ToolCatalogue.isListed(alias))
-            assertTrue("$alias should not appear in tool search", !ToolCatalogue.isSearchable(alias))
+    @Test fun retiredToolsAreAbsentFromRegistryCatalogueAndSearch() {
+        val retired = listOf(
+            "pdf_annotate", "pdf_image", "pdf_metadata", "pdf_clean", "pdf_forms", "pdf_compare", "pdf_redact",
+            "img_exif", "img_adjust", "img_target", "img_compare", "img_stitch",
+            "file_duplicates", "file_trash", "sha256", "file_drive"
+        )
+        for (id in retired) {
+            assertTrue("$id must not remain in registry", id !in registryIds)
+            assertTrue("$id must not be listed", !ToolCatalogue.isListed(id))
+            assertTrue("$id must not be searchable", !ToolCatalogue.isSearchable(id))
         }
-        for (id in listOf("pdf_03", "pdf_ocr", "scan_doc", "dl_media", "img_04", "file_drive", "sha256")) {
+        for (id in listOf("pdf_03", "pdf_ocr", "scan_doc", "dl_media", "img_04", "file_07", "office_to_pdf")) {
             assertTrue("$id must remain reachable from the Tools grid", ToolCatalogue.isListed(id))
             assertTrue("$id must remain searchable", ToolCatalogue.isSearchable(id))
         }
@@ -83,9 +80,5 @@ class ToolCatalogueTest {
     @Test fun theScannerIsItsOwnWorkspace() {
         assertEquals(ToolWorkspace.SCANNER, ToolCatalogue.workspaceOf("scan_doc"))
         assertTrue("the scanner must be a primary entry", ToolCatalogue.isPrimary("scan_doc"))
-    }
-
-    @Test fun theMetadataCleanerStaysAvailable() {
-        assertTrue("the metadata cleaner must stay reachable", ToolCatalogue.isListed("pdf_clean"))
     }
 }

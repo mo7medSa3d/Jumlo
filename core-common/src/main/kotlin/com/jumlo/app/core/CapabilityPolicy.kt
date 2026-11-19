@@ -18,26 +18,23 @@ data class CapabilityAvailability(
  * removed from the registry rather than exposed as blocked (see DECISIONS.md).
  */
 object CapabilityPolicy {
-    private val navigation = setOf("pdf_01", "file_02", "dl_settings", "file_trash", "scan_doc")
+    private val navigation = setOf("pdf_01", "scan_doc")
     // Tools whose correctness is proven by an executed test suite against the real backend.
     private val hostCoreTested = setOf(
-        "file_07", "file_08", "sha256", "dl_02", "dl_03",
+        "file_07", "file_08", "dl_02", "dl_03",
         // PdfSecurityQualificationTest proves the AES-128 protect/unlock round trip:
         // a wrong password is rejected and the owner password is honoured.
         "pdf_protect",
-        // PdfMetadataCleanerTest proves the authoring trail is really gone.
-        "pdf_clean",
         // EncryptedZipSafetyTest and ArchiveCoreReliabilityTest exercise real
         // AES payload authentication, collisions, tampering and cancellation.
         "file_encrypted_zip"
     )
     private val processing = hostCoreTested + setOf(
-        "file_duplicates", "file_batch_rename", "file_drive", "dl_media",
+        "file_batch_rename", "dl_media",
         "pdf_02", "pdf_07", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
-        "pdf_compress", "pdf_crop", "pdf_annotate", "pdf_stamp", "pdf_signature", "pdf_image", "pdf_metadata", "pdf_forms",
-        "pdf_compare", "pdf_redact", "office_to_pdf",
-        "pdf_to_docx", "pdf_to_pptx", "pdf_ocr",
-        "img_01", "img_02", "img_03", "img_04", "img_exif", "img_watermark", "img_join", "img_adjust", "img_target", "img_compare", "img_stitch"
+        "pdf_compress", "pdf_crop", "pdf_stamp", "pdf_signature",
+        "office_to_pdf", "pdf_to_docx", "pdf_to_pptx", "pdf_ocr",
+        "img_01", "img_02", "img_03", "img_04", "img_watermark", "img_join"
     )
     fun availability(id: String): CapabilityAvailability = when {
         id in navigation -> CapabilityAvailability(true, true, null, CapabilityKind.NAVIGATION, CapabilityEvidence.DEVICE_PENDING)

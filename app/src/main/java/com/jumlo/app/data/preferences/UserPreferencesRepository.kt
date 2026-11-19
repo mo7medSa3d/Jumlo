@@ -149,7 +149,7 @@ class UserPreferencesRepository @Inject constructor(
             defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
             wifiOnlyDefault = false,
             fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),
-            colorSystem = (prefs[Keys.COLOR_SYSTEM] ?: "SUNSET").takeIf { isValidColorSystem(it) } ?: "SUNSET",
+            colorSystem = migrateColorSystem(prefs[Keys.COLOR_SYSTEM]),
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
@@ -276,7 +276,16 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.NOTIFICATIONS_GRANTED] = granted }
     }
 
-    /** Exactly four color systems exist; anything else falls back to SUNSET. */
+    /** Maps legacy palette keys seamlessly into the four Cobalt-led studio systems. */
+    private fun migrateColorSystem(value: String?): String = when (value) {
+        "COBALT", "SUNSET" -> "COBALT"
+        "EMERALD", "LUIGI" -> "EMERALD"
+        "SAPPHIRE", "AURORA" -> "SAPPHIRE"
+        "AMETHYST", "VIOLA" -> "AMETHYST"
+        else -> "COBALT"
+    }
+
+    /** Exactly four color systems exist; anything else falls back to COBALT. */
     private fun isValidColorSystem(value: String): Boolean =
-        value in setOf("LUIGI", "AURORA", "VIOLA", "SUNSET")
+        value in setOf("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
 }

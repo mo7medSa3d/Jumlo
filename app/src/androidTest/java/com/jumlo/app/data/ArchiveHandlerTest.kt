@@ -25,7 +25,6 @@ import java.util.UUID
 import java.util.zip.ZipInputStream
 import com.jumlo.app.data.source.EphemeralSecretStore
 import com.jumlo.app.data.files.EncryptedZip
-import okhttp3.OkHttpClient
 
 @RunWith(AndroidJUnit4::class)
 class ArchiveHandlerTest {
@@ -83,7 +82,7 @@ class ArchiveHandlerTest {
             val ref=sources.inspect(FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",source).toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val settings=EncryptedArchiveSettings(secretHandle=secretStore.put(password))
             val job=JobRequest(UUID.randomUUID().toString(),"file_encrypted_zip",listOf(ref.id),1,Json.encodeToString(settings),System.currentTimeMillis())
-            val outcomes=FileExtrasHandler(secretStore,OkHttpClient()).execute(job,ExecutionContext(sources,outputs,WorkBudget(),{},{}))
+            val outcomes=FileExtrasHandler(secretStore).execute(job,ExecutionContext(sources,outputs,WorkBudget(),{},{}))
             assertEquals(ItemStatus.CREATED,outcomes.single().status)
             val record=outputs.find(job.id,"archive")!!
             assertEquals(1,record.metadata.entryCount)

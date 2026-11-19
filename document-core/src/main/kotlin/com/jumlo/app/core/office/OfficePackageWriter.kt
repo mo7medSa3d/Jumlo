@@ -227,8 +227,13 @@ object OfficePackageValidator {
                 zip.getInputStream(entry).use { raw ->
                     val input = LimitedInput(raw, 128L * 1024 * 1024, checkCancel)
                     if (entry.name.endsWith(".xml") || entry.name.endsWith(".rels")) {
-                        val reader = SAXParserFactory.newInstance().apply { isNamespaceAware = true }.newSAXParser().xmlReader
+                        val factory = SAXParserFactory.newInstance().apply {
+                            isNamespaceAware = true
+                            runCatching { isXIncludeAware = false }
+                        }
+                        val reader = factory.newSAXParser().xmlReader
                         // External entities are never needed by an Office package. The resolver is a second guard on parsers that don't support the flags.
+                        runCatching { reader.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true) }
                         runCatching { reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
                         runCatching { reader.setFeature("http://xml.org/sax/features/external-general-entities", false) }
                         runCatching { reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false) }

@@ -73,19 +73,17 @@ class ToolMatrixContractTest(unittest.TestCase):
         counts = Counter(row["registry_kind"] for row in self.matrix)
         self.assertEqual(0, counts["UNAVAILABLE"])
 
-    def test_enabled_drive_is_unqualified_processing_not_unavailable(self):
-        entries = [row for row in self.matrix if row["tool_id"] == "file_drive"]
-        self.assertEqual(4, len(entries))
-        for row in entries:
-            self.assertEqual(("PROCESSING", "NOT_RUN"),
-                             (row["registry_kind"], row["status"]))
-            self.assertNotIn("Blocked by CapabilityPolicy", row["reason"])
-
     def test_retired_ids_are_preserved_outside_active_matrix(self):
         old_ids = {row["tool_id"] for row in self.retired}
-        self.assertEqual({"webpage_pdf", "xf_05"}, old_ids)
+        expected_retired = {
+            "webpage_pdf", "xf_05", "file_02", "dl_settings",
+            "pdf_annotate", "pdf_image", "pdf_metadata", "pdf_clean", "pdf_forms", "pdf_compare", "pdf_redact",
+            "img_exif", "img_adjust", "img_target", "img_compare", "img_stitch",
+            "file_duplicates", "file_trash", "sha256", "file_drive",
+        }
+        self.assertEqual(expected_retired, old_ids)
         self.assertFalse(old_ids & set(self.registry))
-        self.assertEqual(8, len(self.retired))
+        self.assertEqual(4 * len(expected_retired), len(self.retired))
         self.assertTrue(all(row["status"] == "N/A" for row in self.retired))
 
 

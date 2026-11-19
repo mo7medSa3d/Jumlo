@@ -207,8 +207,6 @@ class ToolScreenshotMatrixTest {
         !CapabilityRegistry.visible(tool) || !CapabilityRegistry.enabled(tool) -> "CAPABILITY_UNAVAILABLE"
         tool == "scan_doc" -> "EXTERNAL_ML_KIT_SCANNER_REQUIRES_DEVICE"
         state == "loaded" && tool in setOf("dl_media", "dl_02") -> "REAL_NETWORK_METADATA_FIXTURE_REQUIRED"
-        state == "loaded" && tool == "file_drive" -> "GOOGLE_DRIVE_ACCOUNT_FIXTURE_REQUIRED"
-        state == "loaded" && tool == "file_trash" -> "DURABLE_TRASH_OUTPUT_FIXTURE_REQUIRED"
         hostPdfUnavailable && state == "loaded" && fixtureKeys(tool).any { it.startsWith("pdf") } -> "HOST_PDF_RENDERER_UNAVAILABLE"
         else -> null
     }
@@ -257,12 +255,11 @@ class ToolScreenshotMatrixTest {
                 if (!exists("settings.screen")) compose.onNodeWithTag("nav.SETTINGS").performClick()
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("settings.screen").fetchSemanticsNodes().isNotEmpty() }
             }
-            "file_02", "file_trash" -> {
+            "file_02" -> {
                 leaveWorkspaceBeforeRootTab()
                 if (!exists("files.screen")) compose.onNodeWithTag("nav.FILES").performClick()
                 compose.waitUntil(10_000) { compose.onAllNodesWithTag("files.screen").fetchSemanticsNodes().isNotEmpty() }
-                val label = if (tool == "file_trash") R.string.files_trash_title else R.string.ui_imported
-                compose.onNode(hasText(compose.activity.getString(label)) and hasClickAction()).performClick()
+                compose.onNode(hasText(compose.activity.getString(R.string.ui_imported)) and hasClickAction()).performClick()
             }
             else -> {
                 compose.runOnUiThread {
@@ -316,7 +313,7 @@ class ToolScreenshotMatrixTest {
             "dl_settings" -> "settings.screen" to com.jumlo.app.model.DockTab.SETTINGS.let {
                 if (language.isRtl) it.labelAr else it.labelEn
             }
-            "file_02", "file_trash" -> "files.screen" to com.jumlo.app.model.DockTab.FILES.let {
+            "file_02" -> "files.screen" to com.jumlo.app.model.DockTab.FILES.let {
                 if (language.isRtl) it.labelAr else it.labelEn
             }
             else -> {
@@ -329,8 +326,8 @@ class ToolScreenshotMatrixTest {
         }
         compose.onNodeWithTag(route).assertIsDisplayed()
         compose.onAllNodesWithText(title).onFirst().assertIsDisplayed()
-        if (tool in setOf("file_02", "file_trash")) {
-            val section = activity.getString(if (tool == "file_trash") R.string.files_trash_title else R.string.ui_imported)
+        if (tool == "file_02") {
+            val section = activity.getString(R.string.ui_imported)
             compose.onNode(hasText(section) and hasClickAction()).assertIsSelected().assertIsDisplayed()
         }
     }
@@ -352,13 +349,11 @@ class ToolScreenshotMatrixTest {
 
     private fun fixtureKeys(tool: String): List<String> = when {
         tool == "pdf_ocr" && hostPdfUnavailable -> listOf("image")
-        tool == "pdf_forms" -> listOf("pdf_form")
         tool == "pdf_02" -> listOf("image", "image_second")
-        tool in setOf("pdf_03", "pdf_compare") -> listOf("pdf", "pdf_second")
+        tool == "pdf_03" -> listOf("pdf", "pdf_second")
         tool == "pdf_signature" -> listOf("pdf", "signature")
-        tool == "pdf_image" -> listOf("pdf", "image_second")
         tool.startsWith("pdf_") -> listOf("pdf")
-        tool in setOf("img_join", "img_stitch", "img_compare") -> listOf("image", "image_second")
+        tool == "img_join" -> listOf("image", "image_second")
         tool.startsWith("img_") -> listOf("image")
         tool == "file_08" -> listOf("zip")
         tool in setOf("dl_03", "dl_settings", "file_02") -> emptyList()
@@ -368,12 +363,7 @@ class ToolScreenshotMatrixTest {
     private fun settleLoadedPreview(tool: String, keys: List<String>, ids: List<String>) {
         val visualIndex = keys.indexOfFirst { it.startsWith("pdf") || it.startsWith("image") }
         if (visualIndex < 0) {
-            if (tool == "file_duplicates") {
-                compose.onNodeWithTag("workspace.scroll").performScrollToKey("duplicate-result-panel")
-                val group = compose.activity.getString(R.string.studio_duplicates_group, 1, 2)
-                compose.waitUntil(readyTimeoutMillis) { compose.onAllNodesWithText(group).fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithText(group).assertIsDisplayed()
-            } else ids.firstOrNull()?.let { id ->
+            ids.firstOrNull()?.let { id ->
                 compose.onNodeWithTag("workspace.scroll").performScrollToKey(id)
                 val name = viewModel().imported.value.single { it.id == id }.displayName
                 compose.onNodeWithText(name).assertIsDisplayed()
@@ -388,15 +378,6 @@ class ToolScreenshotMatrixTest {
         // Exercise the same renderer against the imported bytes; a real failure stays a failure.
         val vm = viewModel()
         runBlocking(Dispatchers.IO) { vm.preview(ids[visualIndex], 1).bitmap.recycle() }
-        if (tool == "pdf_forms") {
-            compose.onNodeWithTag("workspace.scroll").performScrollToKey("pdf-form-fields")
-            // The page bitmap can arrive before discovery of the actual fixture widgets.
-            waitForReadyTags("form.page", "form.widget.name.0", "form.widget.agree.0")
-            compose.onNodeWithTag("form.page", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
-            compose.onNodeWithTag("form.widget.name.0", useUnmergedTree = true).assertIsDisplayed()
-            compose.onNodeWithTag("form.widget.agree.0", useUnmergedTree = true).assertIsDisplayed()
-            return
-        }
         if (tool == "pdf_ocr") {
             compose.onNodeWithTag("workspace.scroll").performScrollToKey("ocr-result-panel")
             waitForReadyTags("ocr.page")
@@ -404,21 +385,20 @@ class ToolScreenshotMatrixTest {
             return
         }
         val key = when (tool) {
-            "img_01", "img_04", "img_target" -> "encoded-image-preview"
-            "img_02", "img_adjust", "img_join", "img_stitch" -> "transformed-image-preview"
-            "img_03", "pdf_crop", "pdf_annotate", "pdf_image", "pdf_redact" -> "visual-geometry-editor"
+            "img_01", "img_04" -> "encoded-image-preview"
+            "img_02", "img_join" -> "transformed-image-preview"
+            "img_03", "pdf_crop" -> "visual-geometry-editor"
             "img_watermark" -> "image-watermark-editor"
             "pdf_02" -> "paper-preview"
             "pdf_04", "pdf_05", "pdf_06" -> "pdf-visual-editor-${ids[visualIndex]}"
             "pdf_signature" -> "signature-placement-editor"
             "pdf_stamp" -> "visual-watermark-editor"
-            "pdf_metadata" -> "metadata-workspace"
             else -> "preview-${ids[visualIndex]}"
         }
         compose.onNodeWithTag("workspace.scroll").performScrollToKey(key)
         waitForReadyTags("preview.bitmap")
         compose.onAllNodesWithTag("preview.bitmap", useUnmergedTree = true).onFirst().performScrollTo().assertIsDisplayed()
-        if (tool in setOf("img_01", "img_04", "img_target")) {
+        if (tool in setOf("img_01", "img_04")) {
             compose.onNodeWithTag("encoded.preview.error").assertDoesNotExist()
             compose.onNodeWithTag("image.comparison", useUnmergedTree = true).assertIsDisplayed()
         }

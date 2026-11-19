@@ -4,13 +4,9 @@ import com.jumlo.app.core.ArchiveLimits
 import com.jumlo.app.data.files.EncryptedZip
 import com.jumlo.app.data.files.EncryptedZipEntrySource
 import com.jumlo.app.core.HttpPolicy
-import com.jumlo.app.core.HttpTransport
 import com.jumlo.app.core.PageSelection
 import com.jumlo.app.core.SafeNames
-import com.jumlo.app.core.TransportResponse
 import com.jumlo.app.data.engine.PureDomainAlgorithms
-import com.jumlo.app.data.files.GoogleDriveClient
-import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.model.FittingStrategy
 import com.jumlo.app.model.ResizeMode
 import com.jumlo.app.model.UrlValidationStatus
@@ -20,7 +16,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.Random
 import java.util.zip.ZipEntry
@@ -278,92 +273,6 @@ class EncryptedZipTest {
             }
             assertTrue(byteLimited.isFailure)
             assertEquals("ARCHIVE_SIZE_LIMIT", byteLimited.exceptionOrNull()?.message)
-        } finally {
-            dir.deleteRecursively()
-        }
-    }
-}
-
-class GoogleDriveClientTest {
-    @Test fun extractFileId_parses_official_drive_urls_and_rejects_invalid_ids() {
-        assertEquals(
-            "1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345",
-            GoogleDriveClient.extractFileId("https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345/view?usp=sharing")
-        )
-        assertEquals(
-            "1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345",
-            GoogleDriveClient.extractFileId("https://drive.google.com/open?id=1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345")
-        )
-        assertEquals(
-            "1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345",
-            GoogleDriveClient.extractFileId("1aBcDeFgHiJkLmNoPqRsTuVwXyZ012345")
-        )
-        assertTrue(runCatching { GoogleDriveClient.extractFileId("../bad") }.isFailure)
-    }
-
-    @Test fun download_and_upload_use_official_drive_v3_endpoints_and_map_errors() {
-        val dir = java.nio.file.Files.createTempDirectory("gdrive-test").toFile()
-        try {
-            val transport = object : HttpTransport {
-                override fun open(url: String, headers: Map<String, String>): TransportResponse {
-                    val auth = headers["Authorization"]
-                    if (auth != "Bearer valid-session-token") {
-                        return TransportResponse(401, emptyMap(), ByteArrayInputStream("{\"error\":\"unauth\"}".toByteArray()))
-                    }
-                    return when {
-                        url.contains("/drive/v3/files/privateFileId123") ->
-                            TransportResponse(403, emptyMap(), ByteArrayInputStream("{\"error\":\"forbidden\"}".toByteArray()))
-                        url.contains("/drive/v3/files/missingFileId123") ->
-                            TransportResponse(404, emptyMap(), ByteArrayInputStream("{\"error\":\"notFound\"}".toByteArray()))
-                        url.contains("/drive/v3/files/goodFileId12345?fields=") ->
-                            TransportResponse(
-                                200,
-                                emptyMap(),
-                                ByteArrayInputStream("{\"id\":\"goodFileId12345\",\"name\":\"report.pdf\",\"mimeType\":\"application/pdf\",\"size\":\"11\"}".toByteArray())
-                            )
-                        url.contains("/drive/v3/files/goodFileId12345?alt=media") ->
-                            TransportResponse(200, emptyMap(), ByteArrayInputStream("%PDF-1.4-ok".toByteArray()))
-                        url.startsWith("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart") ->
-                            TransportResponse(
-                                200,
-                                emptyMap(),
-                                ByteArrayInputStream("{\"id\":\"uploadedId12345\",\"name\":\"notes.txt\",\"mimeType\":\"text/plain\",\"size\":\"5\"}".toByteArray())
-                            )
-                        else -> TransportResponse(500, emptyMap(), ByteArrayInputStream(ByteArray(0)))
-                    }
-                }
-            }
-            val client = GoogleDriveClient(transport)
-            val target = File(dir, "downloaded.pdf")
-            val meta = client.downloadFile("goodFileId12345", "valid-session-token".toCharArray(), target, 1024 * 1024, 0)
-            assertEquals("report.pdf", meta.name)
-            assertEquals("%PDF-1.4-ok", target.readText())
-
-            // A failed API attempt must never clobber a preexisting target.
-            val preserved = File(dir, "preexisting.pdf").apply { writeText("ORIGINAL CONTENT") }
-            assertTrue(runCatching {
-                client.downloadFile("goodFileId12345", "valid-session-token".toCharArray(), preserved, 1024 * 1024, 0)
-            }.isFailure)
-            assertEquals("ORIGINAL CONTENT", preserved.readText())
-
-            // Upload test
-            val toUpload = File(dir, "notes.txt").apply { writeText("hello") }
-            val uploaded = client.uploadFile(toUpload, "notes.txt", "text/plain", null, "valid-session-token".toCharArray())
-            assertEquals("uploadedId12345", uploaded.id)
-
-            // Error category mapping: an API 401 means the supplied token expired;
-            // a missing/empty token is a separate local precondition failure.
-            val unauth = runCatching { client.fetchMetadata("goodFileId12345", "wrong-token".toCharArray()) }
-            assertEquals("DRIVE_TOKEN_EXPIRED", (unauth.exceptionOrNull() as? OperationFailure)?.code)
-
-            val missingToken = runCatching { client.fetchMetadata("goodFileId12345", charArrayOf()) }
-            assertEquals("DRIVE_TOKEN_MISSING", missingToken.exceptionOrNull()?.message)
-
-            val priv = runCatching { client.fetchMetadata("privateFileId123", "valid-session-token".toCharArray()) }
-            assertEquals("PRIVATE_CONTENT", (priv.exceptionOrNull() as? OperationFailure)?.code)
-
-            val removed = runCatching { client.fetchMetadata("missingFileId123", "valid-session-token".toCharArray()) }
-            assertEquals("REMOVED", (removed.exceptionOrNull() as? OperationFailure)?.code)
         } finally {
             dir.deleteRecursively()
         }

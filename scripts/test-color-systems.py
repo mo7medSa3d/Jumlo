@@ -93,8 +93,8 @@ def parse_pillars(text, systems):
     light_part, dark_part = body.split('} else when', 1)
     out = {}
     for mode, part in (('light', light_part), ('dark', dark_part)):
-        for key in ('LUIGI', 'AURORA', 'VIOLA', 'SUNSET'):
-            marker = f'"{key}" -> listOf' if key != 'SUNSET' else 'else -> listOf'
+        for key in ('COBALT', 'EMERALD', 'SAPPHIRE', 'AMETHYST'):
+            marker = f'"{key}" -> listOf' if key != 'COBALT' else 'else -> listOf'
             entries = re.findall(r'tools\[(\d)\]|Color\(0xFF([0-9A-Fa-f]{6})\)',
                                  extract_call(part, marker))
             tools = systems[key]['lightTools' if mode == 'light' else 'darkTools']
@@ -105,11 +105,10 @@ def parse_pillars(text, systems):
 
 
 EXPECTED_RAMPS = {
-    'LUIGI': ['FFE3B3', 'C2DD6C', '79CE67', '30B155'],
-    'AURORA': ['FBCFE8', 'A78BFA', '60A5FA', '3B82F6'],
-    # Viola's printed labels repeat Luigi's; the ramp is measured from the artwork.
-    'VIOLA': ['FFE1C0', 'FFC57B', 'CD4FBA', '780E94'],
-    'SUNSET': ['FFE3B3', 'FBB931', 'F88F22', 'EA6113'],
+    'COBALT': ['E0E7FF', '83F5D2', '8658F4', '3837BC'],
+    'EMERALD': ['D1FAE5', '34D399', '10B981', '047857'],
+    'SAPPHIRE': ['DBEAFE', '38BDF8', '2563EB', '1D4ED8'],
+    'AMETHYST': ['F3E8FF', 'C084FC', '9333EA', '6B21A8'],
 }
 
 TEXT_PAIRS = [
@@ -129,12 +128,12 @@ class ColorSystemsContracts(unittest.TestCase):
         cls.systems = {key: parse_system(cls.text, key) for key in EXPECTED_RAMPS}
         cls.pillars = parse_pillars(cls.text, cls.systems)
 
-    def test_exactly_four_systems_in_artwork_order_with_sunset_default(self):
-        order = re.findall(r'val (LUIGI|AURORA|VIOLA|SUNSET) = ColorSystem\(', self.text)
-        self.assertEqual(order, ['LUIGI', 'AURORA', 'VIOLA', 'SUNSET'])
-        self.assertIn('val ALL: List<ColorSystem> = listOf(LUIGI, AURORA, VIOLA, SUNSET)', self.text)
-        self.assertIn('val DEFAULT: ColorSystem = SUNSET', self.text)
-        self.assertIn('ALL.firstOrNull { it.key == key } ?: DEFAULT', self.text)
+    def test_exactly_four_systems_in_studio_order_with_cobalt_default(self):
+        order = re.findall(r'val (COBALT|EMERALD|SAPPHIRE|AMETHYST) = ColorSystem\(', self.text)
+        self.assertEqual(order, ['COBALT', 'EMERALD', 'SAPPHIRE', 'AMETHYST'])
+        self.assertIn('val ALL: List<ColorSystem> = listOf(COBALT, EMERALD, SAPPHIRE, AMETHYST)', self.text)
+        self.assertIn('val DEFAULT: ColorSystem = COBALT', self.text)
+        self.assertIn('fun systemFor(key: String): ColorSystem', self.text)
 
     def test_ramps_match_the_reference_artworks(self):
         for key, ramp in EXPECTED_RAMPS.items():
@@ -222,7 +221,7 @@ class ColorSystemsContracts(unittest.TestCase):
         for gone in ('DYNAMIC', 'setAccentColor', 'accentColor', 'ColorPresets', 'M3ColorFactory'):
             self.assertNotIn(gone, settings, f'old wiring remains: {gone}')
         theme = read_ui('theme/Theme.kt')
-        self.assertIn('colorSystem: String = "SUNSET"', theme)
+        self.assertIn('colorSystem: String = "COBALT"', theme)
         self.assertIn('LocalColorSystem provides system', theme)
         self.assertIn('ColorSystems.systemFor(colorSystem)', theme)
         for gone in ('useDynamicColor', 'seeded', 'QuietLightColorScheme', 'QuietDarkColorScheme'):
@@ -230,7 +229,7 @@ class ColorSystemsContracts(unittest.TestCase):
         repo = read_app('data/preferences/UserPreferencesRepository.kt')
         self.assertIn('COLOR_SYSTEM', repo)
         self.assertIn('isValidColorSystem', repo)
-        self.assertIn('"SUNSET"', repo)
+        self.assertIn('"COBALT"', repo)
         for gone in ('ACCENT_COLOR', 'isValidAccent', 'setAccentColor'):
             self.assertNotIn(gone, repo, f'old repo wiring remains: {gone}')
         main = read_app('MainActivity.kt')
@@ -244,7 +243,7 @@ class ColorSystemsContracts(unittest.TestCase):
         lines = [ln for ln in out.splitlines() if 'ColorPresets.kt' not in ln and 'build/' not in ln]
         self.assertEqual(lines, [], f'ColorPresets still referenced: {lines}')
         themes = (ROOT / 'app/src/main/res/values/themes.xml').read_text(encoding='utf-8')
-        self.assertIn('#FFF6E8', themes)
+        self.assertIn('#F4F6FB', themes)
         self.assertNotIn('#FBF7F0', themes)
 
 

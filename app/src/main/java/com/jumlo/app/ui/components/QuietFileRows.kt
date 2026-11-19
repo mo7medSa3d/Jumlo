@@ -49,12 +49,12 @@ private fun fileTint(extension: String): Pair<Color, Color> {
 fun QuietFileRow(
     file: ManagedFileItem,
     language: AppLanguage,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     showCheckbox: Boolean = false,
     onToggleSelect: (() -> Unit)? = null,
-    onClick: () -> Unit,
     trailingActionText: String? = null,
-    onTrailingAction: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onTrailingAction: (() -> Unit)? = null
 ) {
     val (tint, container) = fileTint(file.extension)
     val isRtl = language.isRtl

@@ -5,13 +5,10 @@ import com.jumlo.app.core.DownloadLinkPolicy
 import com.jumlo.app.core.DriveLink
 import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.data.processing.ImageResizeSettings
-import com.jumlo.app.data.processing.ImageTargetSettings
 import com.jumlo.app.data.processing.ImageConversionSettings
 import com.jumlo.app.data.processing.PdfImagesSettings
 import com.jumlo.app.data.processing.PdfSplitSettings
-import com.jumlo.app.data.processing.ImageExifSettings
 import com.jumlo.app.data.processing.ImageWatermarkSettings
-import com.jumlo.app.data.processing.PdfAnnotateSettings
 import com.jumlo.app.data.processing.PdfStampSettings
 import com.jumlo.app.data.processing.PdfProtectSettings
 import com.jumlo.app.data.processing.DownloadSettings
@@ -66,23 +63,11 @@ class WorkspaceSettingsTest {
         assertEquals(65,settings.opacityPercent)
     }
 
-    @Test
-    fun annotationRequiresVisibleTextBeforeEnqueue() {
-        // A highlight is a region, so it needs no body; a note or a text box does.
-        WorkspaceDraft.forTool("pdf_annotate",listOf("pdf"))
-            .copy(text1="  ",text2="highlight").executionSettings()
-        for (kind in listOf("note","textbox","text")) {
-            runCatching {
-                WorkspaceDraft.forTool("pdf_annotate",listOf("pdf")).copy(text1="  ",text2=kind).executionSettings()
-            }.also { assertTrue("a $kind must require text", it.isFailure) }
-        }
-    }
-
-    @Test fun annotationPreservesUserTextAndPage() {
-        val settings=Json.decodeFromString<PdfAnnotateSettings>(WorkspaceDraft.forTool("pdf_annotate",listOf("pdf")).copy(text1="ملاحظة",num1="٢",flag1=true).executionSettings())
-        assertEquals("ملاحظة",settings.text)
-        assertEquals(2,settings.page)
-        assertTrue(settings.asAnnotation)
+    @Test fun compressionOpensInBalancedPresetByDefault() {
+        val settings=WorkspaceDraft.forTool("pdf_compress",listOf("pdf-id"))
+        assertEquals("180",settings.num1)
+        assertEquals("75",settings.quality)
+        assertNotNull(settings.executionSettings())
     }
 
     @Test(expected=IllegalArgumentException::class)
@@ -101,11 +86,6 @@ class WorkspaceSettingsTest {
         WorkspaceDraft.forTool("file_batch_rename",listOf("source")).copy(text1="x".repeat(201)).executionSettings()
     }
 
-    @Test fun retainedExifUsesVisibleJpegQualityRegardlessOfStaleFormat() {
-        val settings=Json.decodeFromString<ImageExifSettings>(WorkspaceDraft.forTool("img_exif",emptyList()).copy(format="PNG",quality="63",flag1=false).executionSettings())
-        assertEquals("JPEG",settings.output.format)
-        assertEquals(63,settings.output.quality)
-    }
 
     @Test fun losslessPngDoesNotRequireHiddenQuality() {
         val settings=Json.decodeFromString<ImageConversionSettings>(WorkspaceDraft.forTool("img_01",emptyList()).copy(format="PNG",quality="").executionSettings())
@@ -121,14 +101,6 @@ class WorkspaceSettingsTest {
         WorkspaceDraft.forTool("img_01",emptyList()).copy(format="JPEG",quality="").executionSettings()
     }
 
-    @Test fun targetSizeIgnoresStaleHiddenFormatAndQuality() {
-        val draft=WorkspaceDraft.forTool("img_target",emptyList()).copy(format="stale-format",quality="not-a-number",prefix="target_",num1="250000")
-        val settings=Json.decodeFromString<ImageTargetSettings>(draft.executionSettings())
-        assertEquals("JPEG",settings.output.format)
-        assertEquals(85,settings.output.quality)
-        assertEquals("target_",settings.output.namePrefix)
-        assertEquals(250000L,settings.targetBytes)
-    }
 
     @Test fun retiredNetworkControlsCannotRestrictNewDownloadSubmissions() {
         val restored = WorkspaceDraft.forTool("dl_02", emptyList())
@@ -140,7 +112,7 @@ class WorkspaceSettingsTest {
         assertTrue(settings.cleartextConsent)
     }
     @Test fun structuralPdfDraftsStartWithPdfOutputNames() {
-        for (id in listOf("pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_annotate","pdf_signature","pdf_metadata","pdf_forms"))
+        for (id in listOf("pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_signature"))
             assertTrue("Wrong default for $id",WorkspaceDraft.forTool(id,emptyList()).outputName.endsWith(".pdf"))
     }
 

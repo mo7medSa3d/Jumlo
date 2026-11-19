@@ -36,12 +36,12 @@ import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.ui.components.QuietIconTile
 
 @Composable internal fun PreferenceHeading(text: String) {
-    Row(Modifier.fillMaxWidth().padding(top = 25.dp, bottom = 7.dp)
+    Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 6.dp)
         .semantics { heading() }, verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(width = 4.dp, height = 20.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(width = 3.dp, height = 16.dp)
             .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)))
-        Text(text, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        Text(text, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onSurface)
     }
 }
@@ -63,37 +63,39 @@ import com.jumlo.app.ui.components.QuietIconTile
     modifier: Modifier = Modifier, enabled: Boolean = true, destructive: Boolean = false,
     iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle) {
     val colors = MaterialTheme.colorScheme
+    val pillars = com.jumlo.app.ui.theme.QuietTheme.pillars
     val titleColor = if (destructive) colors.error else colors.onSurface
     val haptics = rememberAppHaptics()
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(16.dp)
     Surface(
-        modifier = modifier.fillMaxWidth().heightIn(min = 76.dp).pressFeedback()
+        modifier = modifier.fillMaxWidth().heightIn(min = 72.dp).pressFeedback()
             .clip(shape)
             .clickable(enabled = enabled, role = Role.Button, onClick = {
                 if (destructive) haptics.secondaryAction() else haptics.actionClick()
                 onClick()
             }),
         shape = shape,
-        color = if (destructive) colors.errorContainer.copy(alpha = 0.24f) else colors.surfaceContainerLow,
+        color = if (destructive) colors.errorContainer.copy(alpha = 0.24f) else pillars.cardSurface,
         border = BorderStroke(
             1.dp,
-            if (destructive) colors.error.copy(alpha = 0.30f)
-            else colors.outlineVariant.copy(alpha = 0.58f)
-        )
+            if (destructive) colors.error.copy(alpha = 0.35f)
+            else pillars.cardBorder
+        ),
+        shadowElevation = 1.dp
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 12.dp),
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             QuietIconTile(
                 icon,
                 tint = if (destructive) colors.error else iconStyle.tint,
                 container = if (destructive) colors.errorContainer else iconStyle.container,
-                size = 44.dp
+                size = 42.dp
             )
             Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = titleColor)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold), color = titleColor)
                 summary?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 }
@@ -101,7 +103,7 @@ import com.jumlo.app.ui.components.QuietIconTile
             Spacer(Modifier.width(8.dp))
             Icon(
                 Icons.AutoMirrored.Rounded.ArrowForward, null,
-                Modifier.size(20.dp), tint = colors.onSurfaceVariant
+                Modifier.size(18.dp), tint = colors.onSurfaceVariant.copy(alpha = 0.75f)
             )
         }
     }
@@ -112,22 +114,41 @@ import com.jumlo.app.ui.components.QuietIconTile
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle? = null
 ) {
     val colors = MaterialTheme.colorScheme
+    val pillars = com.jumlo.app.ui.theme.QuietTheme.pillars
+    val shape = RoundedCornerShape(16.dp)
     Surface(
-        modifier = modifier.fillMaxWidth().heightIn(min = 64.dp)
+        modifier = modifier.fillMaxWidth().heightIn(min = 70.dp)
+            .clip(shape)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
-        shape = RoundedCornerShape(18.dp),
-        color = colors.surfaceContainerLow,
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.58f))
+        shape = shape,
+        color = pillars.cardSurface,
+        border = BorderStroke(1.dp, pillars.cardBorder),
+        shadowElevation = 1.dp
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 14.dp),
+            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge,
-                color = colors.onSurface)
+            if (icon != null && iconStyle != null) {
+                QuietIconTile(
+                    icon,
+                    tint = iconStyle.tint,
+                    container = iconStyle.container,
+                    size = 42.dp
+                )
+                Spacer(Modifier.width(14.dp))
+            }
+            Text(
+                title,
+                Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.onSurface
+            )
             Spacer(Modifier.width(12.dp))
             Switch(checked = checked, onCheckedChange = null)
         }

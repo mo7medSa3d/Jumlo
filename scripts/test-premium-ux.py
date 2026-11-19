@@ -41,7 +41,7 @@ def parse_systems(text):
     constants = {k: v.upper() for k, v in
                  re.findall(r'private val (\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)', text)}
     systems = {}
-    for key in ('LUIGI', 'AURORA', 'VIOLA', 'SUNSET'):
+    for key in ('COBALT', 'EMERALD', 'SAPPHIRE', 'AMETHYST'):
         start = text.index(f'val {key} = ColorSystem(')
         nxt = re.search(r'\n    val [A-Z]+ = ColorSystem\(', text[start + 10:])
         block = text[start:start + 10 + nxt.start()] if nxt else text[start:]
@@ -62,15 +62,15 @@ class PremiumUxContracts(unittest.TestCase):
         cls.systems = parse_systems(source('theme/ColorSystems.kt'))
 
     def test_brand_palette_is_four_systems_with_reference_ramps(self):
-        # Source-of-truth design tokens: the four reference artworks' ramps.
+        # Source-of-truth design tokens: four Cobalt-led studio systems.
         expected = {
-            'LUIGI': ['FFE3B3', 'C2DD6C', '79CE67', '30B155'],
-            'AURORA': ['FBCFE8', 'A78BFA', '60A5FA', '3B82F6'],
-            'VIOLA': ['FFE1C0', 'FFC57B', 'CD4FBA', '780E94'],
-            'SUNSET': ['FFE3B3', 'FBB931', 'F88F22', 'EA6113'],
+            'COBALT': ['E0E7FF', '83F5D2', '8658F4', '3837BC'],
+            'EMERALD': ['D1FAE5', '34D399', '10B981', '047857'],
+            'SAPPHIRE': ['DBEAFE', '38BDF8', '2563EB', '1D4ED8'],
+            'AMETHYST': ['F3E8FF', 'C084FC', '9333EA', '6B21A8'],
         }
         systems_text = source('theme/ColorSystems.kt')
-        self.assertIn('val DEFAULT: ColorSystem = SUNSET', systems_text)
+        self.assertIn('val DEFAULT: ColorSystem = COBALT', systems_text)
         for key, ramp in expected.items():
             with self.subTest(system=key):
                 block = systems_text.split(f'val {key} = ColorSystem(')[1]
@@ -145,7 +145,7 @@ class PremiumUxContracts(unittest.TestCase):
             self.assertNotIn(gone, settings, f'old wiring remains: {gone}')
         for gone in ('useDynamicColor', 'seeded', 'accentColor'):
             self.assertNotIn(gone, theme, f'old theme wiring remains: {gone}')
-        self.assertIn('colorSystem: String = "SUNSET"', theme)
+        self.assertIn('colorSystem: String = "COBALT"', theme)
         self.assertIn('surfaceTint = Color.Transparent', theme)
 
     def test_direct_mlkit_scan_returns_a_validated_pdf(self):
@@ -177,12 +177,12 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('colors.background.luminance()', source('tools/ToolsScreen.kt'))
         self.assertIn('LocalReducedMotion.current',dock)
         self.assertIn('if (reduced) snap()',dock)
-        self.assertIn('animateColorAsState(',dock)
         self.assertIn('animateFloatAsState(',dock)
-        self.assertIn('Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp).height(34.dp)',dock)
-        self.assertNotIn('BorderStroke(',dock)
+        self.assertIn('NavigationBar(',dock)
+        self.assertIn('NavigationBarItem(',dock)
+        self.assertIn('NavigationBarDefaults.windowInsets',dock)
+        self.assertIn('JumloAppIconBadge(',dock)
         self.assertNotIn('.offset(',dock)
-        self.assertIn('role = Role.Tab',dock)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):
         code = source('components/ProductionRows.kt')
@@ -244,9 +244,9 @@ class PremiumUxContracts(unittest.TestCase):
     def test_dock_keeps_screen_reader_labels_without_clipping_large_fonts(self):
         code = source('components/QuietNavigation.kt')
         self.assertIn('fontScale < 1.6f', code)
-        self.assertIn('if (showLabel)', code)
+        self.assertIn('alwaysShowLabel = showLabels', code)
         self.assertIn('contentDescription = label', code)
-        self.assertIn('heightIn(min = 64.dp)', code)
+        self.assertIn('NavigationBar(', code)
 
     def test_new_accessibility_strings_have_arabic_and_english(self):
         en = ET.parse(ROOT / 'app/src/main/res/values/premium_ui.xml').getroot()

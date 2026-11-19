@@ -3,11 +3,16 @@ package com.jumlo.app.ui.tools
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items as rowItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -58,19 +63,17 @@ private data class ToolSection(val key: String, val titleEn: String, val titleAr
 private val toolSections = listOf(
     ToolSection("scan", "Scan & Capture", "المسح والالتقاط", setOf("scan_doc")),
     ToolSection("organize", "Organize PDF", "تنظيم PDF",
-        setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop", "pdf_compare")),
+        setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop")),
     ToolSection("convert", "Convert", "التحويل",
         setOf("pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_ocr", "img_01")),
     ToolSection("edit", "Edit & Sign", "التحرير والتوقيع",
-        setOf("pdf_annotate", "pdf_signature", "pdf_stamp", "pdf_image", "pdf_forms", "pdf_metadata", "pdf_clean", "pdf_redact")),
+        setOf("pdf_signature", "pdf_stamp")),
     ToolSection("optimize", "Optimize", "التحسين",
-        setOf("pdf_compress", "img_02", "img_03", "img_04", "img_adjust", "img_target", "img_join",
-            "img_stitch", "img_exif", "img_watermark")),
+        setOf("pdf_compress", "img_02", "img_03", "img_04", "img_join", "img_watermark")),
     ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect")),
     ToolSection("download", "Download", "التنزيل", setOf("dl_media", "dl_02", "dl_03")),
     ToolSection("files", "Files", "الملفات",
-        setOf("file_07", "file_08", "file_encrypted_zip", "file_batch_rename",
-            "file_duplicates", "sha256", "file_drive"))
+        setOf("file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
@@ -78,22 +81,36 @@ private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
 
 @Composable
 private fun SectionHeader(title: String, count: Int? = null) {
+    val colors = MaterialTheme.colorScheme
     Row(
-        Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Box(
+            Modifier
+                .width(3.dp)
+                .height(16.dp)
+                .background(colors.primary, CircleShape)
+        )
         Text(
             title,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = colors.onSurface,
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
             modifier = Modifier.weight(1f)
         )
         count?.let {
-            Text(
-                it.toString(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelMedium
-            )
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = colors.primaryContainer
+            ) {
+                Text(
+                    it.toString(),
+                    color = colors.onPrimaryContainer,
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp)
+                )
+            }
         }
     }
 }
@@ -139,6 +156,12 @@ internal fun ToolsCatalogue(
         recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds && ToolCatalogue.isListed(it.id) }.take(8)
     }
     val featuredIds = (pinned.map { it.id } + recent.map { it.id }).toSet()
+    var selectedSectionKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val haptics = rememberAppHaptics()
+    val colors = MaterialTheme.colorScheme
+    val availableSections = remember(filtered, selectedSectionKey) {
+        toolSections.filter { section -> filtered.any { it.id in section.ids } }
+    }
     val largeText = LocalDensity.current.fontScale >= 1.6f
     BoxWithConstraints(Modifier.fillMaxSize().testTag("tools.screen")) {
         val columns = when {
@@ -161,12 +184,12 @@ internal fun ToolsCatalogue(
                     Text(
                         stringResource(R.string.tools_catalogue_title),
                         style = QuietTheme.typography.screenTitle,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = colors.onSurface
                     )
                     Text(
                         stringResource(R.string.tools_catalogue_subtitle),
                         style = QuietTheme.typography.metadata,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = colors.onSurfaceVariant
                     )
                 }
             }
@@ -174,25 +197,62 @@ internal fun ToolsCatalogue(
                 QuietSearchBar(search, stringResource(R.string.neon_tools_search),
                     onSearch, { onSearch("") }, modifier=Modifier.testTag("tools.search"))
             }
+            if (search.isBlank() && availableSections.isNotEmpty()) {
+                item("category-chips", span = { GridItemSpan(maxLineSpan) }) {
+                    val pillars = QuietTheme.pillars
+                    val chipColors = FilterChipDefaults.filterChipColors(
+                        containerColor = pillars.cardSurface,
+                        labelColor = colors.onSurfaceVariant,
+                        selectedContainerColor = colors.primaryContainer,
+                        selectedLabelColor = colors.onPrimaryContainer
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item("cat-all") {
+                            val active = selectedSectionKey == null
+                            FilterChip(
+                                selected = active,
+                                onClick = { haptics.selectionToggle(); selectedSectionKey = null },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = chipColors,
+                                border = if (active) BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)) else BorderStroke(1.dp, pillars.cardBorder),
+                                label = { Text(stringResource(R.string.ui_all), style = QuietTheme.typography.metadataStrong) }
+                            )
+                        }
+                        rowItems(availableSections, key = { "cat:${it.key}" }) { section ->
+                            val active = selectedSectionKey == section.key
+                            FilterChip(
+                                selected = active,
+                                onClick = { haptics.selectionToggle(); selectedSectionKey = if (active) null else section.key },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = chipColors,
+                                border = if (active) BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)) else BorderStroke(1.dp, pillars.cardBorder),
+                                label = { Text(sectionTitle(section, language), style = QuietTheme.typography.metadataStrong) }
+                            )
+                        }
+                    }
+                }
+            }
             if (search.isNotBlank()) {
                 item("search-count", span = { GridItemSpan(maxLineSpan) }) {
                     Text(
                         stringResource(R.string.tools_search_results_count, filtered.size),
                         style = QuietTheme.typography.metadataStrong,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = colors.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
                 if (filtered.isEmpty()) item("empty", span = { GridItemSpan(maxLineSpan) }) {
                     QuietStateCard(stringResource(R.string.tools_no_matching),
                         stringResource(R.string.tools_no_matching_sub),
-                        stringResource(R.string.tools_reset_filters), { onSearch("") })
+                        stringResource(R.string.tools_reset_filters), { onSearch("") },
+                        icon = Icons.Rounded.Search)
                 }
                 items(filtered, key = { it.id }, contentType = { "tool" }) { tool ->
                     ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
                 }
             } else {
-                if (pinned.isNotEmpty()) {
+                val activeSection = selectedSectionKey
+                if (activeSection == null && pinned.isNotEmpty()) {
                     item("pinned", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(stringResource(R.string.tools_section_pinned), pinned.size)
                     }
@@ -200,7 +260,7 @@ internal fun ToolsCatalogue(
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
                     }
                 }
-                if (recent.isNotEmpty()) {
+                if (activeSection == null && recent.isNotEmpty()) {
                     item("recent", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(stringResource(R.string.tools_section_recent), recent.size)
                     }
@@ -208,8 +268,9 @@ internal fun ToolsCatalogue(
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
                     }
                 }
-                val remaining = filtered.filter { it.id !in featuredIds }
+                val remaining = if (activeSection == null) filtered.filter { it.id !in featuredIds } else filtered
                 for (section in toolSections) {
+                    if (activeSection != null && section.key != activeSection) continue
                     val sectionTools = remaining.filter { it.id in section.ids }
                     if (sectionTools.isEmpty()) continue
                     item("section:" + section.key, span = { GridItemSpan(maxLineSpan) }) {
@@ -219,7 +280,9 @@ internal fun ToolsCatalogue(
                         ToolTile(tool, language, { onTool(tool) }, Modifier.animateItem())
                     }
                 }
-                val ungrouped = remaining.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
+                val ungrouped = if (activeSection == null) {
+                    remaining.filter { tool -> toolSections.none { section -> section.ids.contains(tool.id) } }
+                } else emptyList()
                 if (ungrouped.isNotEmpty()) {
                     item("section:all", span = { GridItemSpan(maxLineSpan) }) {
                         SectionHeader(stringResource(R.string.tools_section_all), ungrouped.size)
@@ -249,11 +312,12 @@ internal fun ToolsCatalogue(
 @Composable
 internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     val isDark = colors.background.luminance() < 0.5f
     val accent = ToolIconColors.iconColorFor(tool.id)
     val iconForeground = ToolIconColors.glyphOn(accent)
-    val tileColor = colors.surfaceContainerLow
-    val borderColor = ToolIconColors.mix(tileColor, accent, if (isDark) 0.34f else 0.24f)
+    val tileColor = pillars.cardSurface
+    val borderColor = ToolIconColors.mix(pillars.cardBorder, accent, if (isDark) 0.28f else 0.16f)
     val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn
     val haptics = rememberAppHaptics()
     Surface(
@@ -262,20 +326,31 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
         shape = QuietTheme.shapes.card,
         color = tileColor,
         contentColor = colors.onSurface,
-        border = BorderStroke(1.dp, borderColor.copy(alpha = 0.72f)),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        border = BorderStroke(1.dp, borderColor),
+        shadowElevation = if (isDark) 1.dp else 2.dp
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            Modifier.fillMaxWidth().padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            Box(
-                Modifier.size(44.dp).background(accent, RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                ToolIcon(
-                    tool.id, iconForeground,
-                    Modifier.size(22.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
+                Box(
+                    Modifier.size(42.dp).background(accent, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ToolIcon(
+                        tool.id, iconForeground,
+                        Modifier.size(21.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
+                    )
+                }
+                Box(
+                    Modifier
+                        .size(7.dp)
+                        .background(accent.copy(alpha = 0.55f), CircleShape)
                 )
             }
             Text(
@@ -316,7 +391,6 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "pdf_stamp" -> "Watermark" to "علامة مائية"
         "pdf_signature" -> "Sign" to "توقيع"
         "pdf_crop" -> "Crop pages" to "قص الصفحات"
-        "pdf_clean" -> "Clear metadata" to "مسح البيانات"
         "scan_doc" -> "Smart Scan" to "مسح ذكي"
         "img_01" -> "Convert images" to "تحويل الصور"
         "img_02" -> "Resize" to "تغيير الحجم"
@@ -329,7 +403,6 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "file_08" -> "Extract ZIP" to "فك ZIP"
         "file_encrypted_zip" -> "Encrypted ZIP" to "ZIP مشفر"
         "file_batch_rename" -> "Batch rename" to "تسمية جماعية"
-        "file_duplicates" -> "Find duplicates" to "كشف التكرار"
         else -> tool.titleEn to tool.titleAr
     }
     return if (language.isRtl) labels.second else labels.first

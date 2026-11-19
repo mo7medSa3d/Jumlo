@@ -14,7 +14,7 @@ import kotlinx.serialization.Serializable
             val normalized = name.trim()
             require(normalized.length in 1..48 && normalized.none {it < ' '}) { "INVALID_PRESET_NAME" }
             return ProcessingPreset(normalized, current.toolId, current.copy(
-                sourceIds=emptyList(), outputName="", pages="all", expectedHash="",
+                sourceIds=emptyList(), outputName="", pages="all",
                 text1="", text2="", text3="", text4="",
                 secret1="", secret2="", cleartextConsent=false,
                 pageEdits=emptyList()

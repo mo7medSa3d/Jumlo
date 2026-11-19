@@ -159,8 +159,9 @@ private fun PdfViewerContent(
         finally { opened?.close() }
     }
 
+    val currentPage by remember { derivedStateOf { list.firstVisibleItemIndex } }
     LaunchedEffect(uri) { wake() }
-    LaunchedEffect(list.firstVisibleItemIndex) { wake() }
+    LaunchedEffect(currentPage) { wake() }
 
     LaunchedEffect(infoOpen, uri) {
         if (infoOpen && info.isEmpty() && !infoError) {
@@ -213,7 +214,7 @@ private fun PdfViewerContent(
                     Text(title, Modifier.weight(1f).padding(horizontal = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
                     document?.let { doc ->
                         TextButton(onClick = { jumpOpen = true; wake() }, modifier = Modifier.testTag("pdf.page.indicator")) {
-                            Text(stringResource(R.string.reader_page_indicator, list.firstVisibleItemIndex + 1, doc.pageCount))
+                            Text(stringResource(R.string.reader_page_indicator, currentPage + 1, doc.pageCount))
                         }
                         IconButton(onClick = { menuOpen = !menuOpen; wake() }, modifier = Modifier.testTag("pdf.menu")) {
                             Icon(Icons.Rounded.MoreVert, stringResource(R.string.reader_menu))
@@ -253,10 +254,10 @@ private fun PdfViewerContent(
 
     if (document != null) {
         if (thumbsOpen) {
-            ThumbnailsSheet(document, list.firstVisibleItemIndex, { page -> scope.launch { list.animateScrollToItem(page) } }, { thumbsOpen = false })
+            ThumbnailsSheet(document, currentPage, { page -> scope.launch { list.animateScrollToItem(page) } }, { thumbsOpen = false })
         }
         if (jumpOpen) {
-            JumpDialog(document.pageCount, list.firstVisibleItemIndex + 1, { page -> scope.launch { list.animateScrollToItem(page - 1) }; jumpOpen = false }, { jumpOpen = false })
+            JumpDialog(document.pageCount, currentPage + 1, { page -> scope.launch { list.animateScrollToItem(page - 1) }; jumpOpen = false }, { jumpOpen = false })
         }
         if (searchOpen) {
             SearchSheet(

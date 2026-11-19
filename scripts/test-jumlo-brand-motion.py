@@ -123,11 +123,11 @@ class JumloBrandMotionChecks(unittest.TestCase):
         self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',main)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
-        for key in ('animateColorAsState','animateFloatAsState','MainDockTabs.forEach',
+        for key in ('NavigationBar(','NavigationBarItem(','NavigationBarDefaults.windowInsets',
+                    'JumloAppIconBadge(','animateFloatAsState','MainDockTabs.forEach',
                     'destination == selectedTab','if (language.isRtl) destination.labelAr else destination.labelEn',
-                    '.selectable(selected = active, role = Role.Tab','navigationTab()',
-                    'contentDescription = label','Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp)',
-                    '.clip(RoundedCornerShape(14.dp)).background(indicatorColor)'):
+                    'navigationTab()','contentDescription = label',
+                    'indicatorColor = colors.primaryContainer'):
             self.assertIn(key,dock)
         self.assertIn('listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)',dock)
     def test_system_and_user_reduce_motion_are_combined(self):
@@ -161,7 +161,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_semantic_color_pairs_meet_aa_text_contrast(self):
         text=code('ui/theme/ColorSystems.kt')
         constants={k:v.upper() for k,v in re.findall(r'private val (\w+) = Color\(0xFF([A-Fa-f0-9]{6})\)',text)}
-        for key in ('LUIGI','AURORA','VIOLA','SUNSET'):
+        for key in ('COBALT','EMERALD','SAPPHIRE','AMETHYST'):
             start=text.index(f'val {key} = ColorSystem(')
             nxt=re.search(r'\n    val [A-Z]+ = ColorSystem\(',text[start+10:])
             block=text[start:start+10+nxt.start()] if nxt else text[start:]

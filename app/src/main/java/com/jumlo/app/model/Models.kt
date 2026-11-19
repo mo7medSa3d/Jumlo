@@ -10,7 +10,7 @@ enum class PillarCategory(val labelEn: String, val labelAr: String) {
 
 enum class ThemeMode(val labelEn: String, val labelAr: String, val subtitleEn: String, val subtitleAr: String) {
     SYSTEM("System Default", "افتراضي النظام", "Follows Android OS setting", "يتبع إعدادات نظام أندرويد"),
-    LIGHT("Light Theme", "المظهر الفاتح", "Warm neutrals & crisp contrast", "ألوان دافئة وتباين واضح"),
+    LIGHT("Light Theme", "المظهر الفاتح", "Crisp studio light & high contrast", "مظهر فاتح نقي وتباين عالٍ"),
     DARK("Dark Theme", "المظهر الداكن", "Pure black OLED background", "خلفية سوداء خالصة لشاشات OLED"),
     AMOLED("AMOLED Black", "أسود OLED", "True black for OLED displays", "أسود حقيقي لشاشات OLED")
 }
@@ -114,7 +114,7 @@ data class AppSettingsState(
     val defaultVideoQuality: String = "BEST",
     val defaultAudioQuality: Int = 192,
     val fileViewMode: FileViewMode = FileViewMode.GRID,
-    val colorSystem: String = "SUNSET",
+    val colorSystem: String = "COBALT",
     val fontScale: String = "NORMAL",
     val wifiOnlyDefault: Boolean = false,
     val notificationsGranted: Boolean = false,

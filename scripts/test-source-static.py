@@ -98,12 +98,8 @@ class SourceConsistencyTests(unittest.TestCase):
         self.assertIn('val restored = open()', test)
         self.assertIn('assertEquals("", download.fullUrl)', test)
 
-    def test_drive_output_is_not_truncated_and_failure_does_not_delete_another_output(self):
-        drive = (CODE / 'data/files/GoogleDriveClient.kt').read_text()
-        self.assertIn('StandardOpenOption.CREATE_NEW', drive)
-        self.assertIn('var ownsTarget = false', drive)
-        self.assertIn('if (ownsTarget) targetFile.delete()', drive)
-        self.assertNotIn('FileOutputStream(targetFile)', drive)
+    def test_retired_google_drive_client_is_absent(self):
+        self.assertFalse((CODE / 'data/files/GoogleDriveClient.kt').exists())
 
     def test_current_room_schema_and_legacy_structural_fixture_are_packaged(self):
         schema_dir=ROOT/'app/schemas/com.jumlo.app.data.local.AppDatabase'

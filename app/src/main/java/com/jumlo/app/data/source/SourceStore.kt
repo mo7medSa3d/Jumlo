@@ -107,6 +107,8 @@ import javax.inject.Singleton
         Unit
     }
 
+    // Ownership of the returned InputStream transfers to the caller; withInputStreamOwnership closes it on cancellation.
+    @android.annotation.SuppressLint("Recycle")
     suspend fun openRead(sourceId:String):InputStream=withInputStreamOwnership(Dispatchers.IO) {
         val source=db.processingDao().source(sourceId) ?: throw OperationFailure("SOURCE_NOT_FOUND")
         try {

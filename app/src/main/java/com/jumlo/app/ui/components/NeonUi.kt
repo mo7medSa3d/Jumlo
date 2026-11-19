@@ -39,8 +39,8 @@ import coil.request.ImageRequest
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.model.UtilityTool
+import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.QuietTheme
-
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
@@ -58,14 +58,14 @@ fun NeonPanel(
     accent: Color? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     Surface(
         modifier = modifier,
         shape = QuietTheme.shapes.card,
-        color = accent?.let { ToolPalette.mix(colors.surfaceContainerLow, it, .04f) }
-            ?: colors.surfaceContainerLow,
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.58f)),
-        shadowElevation = 1.dp
+        color = accent?.let { ToolPalette.mix(pillars.cardSurface, it, .04f) }
+            ?: pillars.cardSurface,
+        border = BorderStroke(1.dp, pillars.cardBorder),
+        shadowElevation = 2.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(QuietTheme.spacing.cardInteriorPadding),
@@ -107,43 +107,47 @@ fun NeonHero(
     onAction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = MaterialTheme.colorScheme
+    val system = LocalColorSystem.current
+    val heroText = Color.White
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
-        color = colors.primary,
-        shadowElevation = 3.dp
+        shape = RoundedCornerShape(24.dp),
+        color = system.splashMid,
+        shadowElevation = 4.dp
     ) {
-        Box(Modifier.background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))) {
-            // Soft graphic accents remain decorative; only the real scan CTA is clickable.
+        Box(
+            Modifier.background(
+                Brush.linearGradient(listOf(system.splashStart, system.splashMid, system.splashEnd))
+            )
+        ) {
             Box(Modifier.align(Alignment.TopEnd).offset(x = 65.dp, y = (-66).dp)
-                .size(220.dp).background(colors.onPrimary.copy(alpha = 0.10f), CircleShape))
+                .size(220.dp).background(system.splashGlow1.copy(alpha = 0.16f), CircleShape))
             Box(Modifier.align(Alignment.BottomEnd).offset(x = 45.dp, y = 70.dp)
-                .size(138.dp).background(colors.onPrimary.copy(alpha = 0.08f), CircleShape))
+                .size(138.dp).background(system.splashGlow2.copy(alpha = 0.14f), CircleShape))
             Column(
                 Modifier.fillMaxWidth().padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Box(Modifier.size(52.dp)
-                    .background(colors.onPrimary.copy(alpha = 0.15f), RoundedCornerShape(18.dp)),
+                Box(Modifier.size(48.dp)
+                    .background(heroText.copy(alpha = 0.16f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center) {
-                    ModernToolIcon("document_scanner", colors.onPrimary, Modifier.size(28.dp))
+                    ModernToolIcon("document_scanner", heroText, Modifier.size(26.dp))
                 }
                 Text(title, style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold), color = colors.onPrimary,
+                    fontWeight = FontWeight.Bold), color = heroText,
                     maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text(description, style = QuietTheme.typography.bodyMedium,
-                    color = colors.onPrimary.copy(alpha = 0.93f),
+                    color = heroText.copy(alpha = 0.90f),
                     maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(2.dp))
                 Button(
                     onClick = onAction,
-                    modifier = Modifier.pressFeedback().fillMaxWidth().heightIn(min = 54.dp),
+                    modifier = Modifier.pressFeedback().fillMaxWidth().heightIn(min = 52.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.onPrimary, contentColor = colors.primary),
-                    shape = RoundedCornerShape(18.dp)
+                        containerColor = heroText, contentColor = system.splashStart),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    ModernToolIcon("document_scanner", colors.primary, Modifier.size(20.dp))
+                    ModernToolIcon("document_scanner", system.splashStart, Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(button, style = QuietTheme.typography.button, maxLines = 2)
                     Spacer(Modifier.weight(1f))
@@ -163,6 +167,7 @@ fun NeonToolTile(
     compact: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     val iconSurface = ToolIconColors.iconColorFor(tool.id)
     val tint = ToolIconColors.glyphOn(iconSurface)
     val haptics = rememberAppHaptics()
@@ -170,20 +175,21 @@ fun NeonToolTile(
         onClick = { haptics.actionClick(); onClick() },
         modifier = modifier.fillMaxWidth().pressFeedback()
             .heightIn(min = if (compact) 116.dp else 126.dp),
-        shape = RoundedCornerShape(22.dp),
-        color = colors.surfaceContainerLow,
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(18.dp),
+        color = pillars.cardSurface,
+        border = BorderStroke(1.dp, pillars.cardBorder),
+        shadowElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(Modifier.size(if (compact) 52.dp else 58.dp)
-                .background(iconSurface, RoundedCornerShape(18.dp)),
+            Box(Modifier.size(if (compact) 48.dp else 54.dp)
+                .background(iconSurface, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center) {
                 ModernToolIcon(tool.iconName, tint,
-                    Modifier.size(if (compact) 27.dp else 29.dp))
+                    Modifier.size(if (compact) 25.dp else 27.dp))
             }
             Text(
                 if (language.isRtl) tool.titleAr else tool.titleEn,

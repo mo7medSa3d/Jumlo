@@ -1,7 +1,6 @@
 package com.jumlo.app.ui.navigation
 
 import android.Manifest
-import android.accounts.AccountManager
 import android.app.Activity
 import android.content.ContextWrapper
 import android.content.ClipData
@@ -322,85 +321,6 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val errorLogExportPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         viewModel.exportErrorLog(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
     }
-    var pendingGoogleAccount by rememberSaveable { mutableStateOf<android.accounts.Account?>(null) }
-    lateinit var fetchGoogleDriveToken: (android.accounts.Account, Boolean) -> Unit
-    val googleConsentLauncher=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val account = pendingGoogleAccount
-        pendingGoogleAccount = null
-        if(result.resultCode==Activity.RESULT_OK && account!=null) {
-            fetchGoogleDriveToken(account, false)
-        } else {
-            viewModel.notifyMessage("DRIVE_SIGNIN_CANCELLED")
-        }
-    }
-    fetchGoogleDriveToken = { account, allowConsent ->
-        val activity = hostActivity
-        if(activity!=null && !activity.isFinishing && !activity.isDestroyed) {
-            AccountManager.get(activity).getAuthToken(
-                account,
-                "oauth2:https://www.googleapis.com/auth/drive.file",
-                null,
-                activity,
-                { future ->
-                    runCatching {
-                        val bundle=future.result
-                        val token=bundle.getString(AccountManager.KEY_AUTHTOKEN)
-                        @Suppress("DEPRECATION")
-                        val consentIntent=bundle.getParcelable<Intent>(AccountManager.KEY_INTENT)
-                        when {
-                            !token.isNullOrBlank() -> {
-                                pendingGoogleAccount = null
-                                viewModel.updateForm { it.copy(secret1=token) }
-                            }
-                            consentIntent!=null && allowConsent && !activity.isFinishing && !activity.isDestroyed -> {
-                                pendingGoogleAccount=account
-                                googleConsentLauncher.launch(consentIntent)
-                            }
-                            else -> {
-                                pendingGoogleAccount = null
-                                viewModel.notifyMessage("LOGIN_REQUIRED")
-                            }
-                        }
-                    }.onFailure {
-                        pendingGoogleAccount = null
-                        viewModel.notifyMessage(
-                            if (it is android.accounts.OperationCanceledException) "DRIVE_SIGNIN_CANCELLED"
-                            else "LOGIN_REQUIRED"
-                        )
-                    }
-                },
-                android.os.Handler(android.os.Looper.getMainLooper())
-            )
-        } else {
-            pendingGoogleAccount = null
-            viewModel.notifyMessage("LOGIN_REQUIRED")
-        }
-    }
-    val googleAccountPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if(result.resultCode==Activity.RESULT_OK) {
-            val accountName=result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
-            val accountType=result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE)
-            if(!accountName.isNullOrBlank() && !accountType.isNullOrBlank()) {
-                val account=android.accounts.Account(accountName,accountType)
-                pendingGoogleAccount=account
-                fetchGoogleDriveToken(account, true)
-            } else {
-                viewModel.notifyMessage("LOGIN_REQUIRED")
-            }
-        } else {
-            // A cancelled picker used to leave the token field blank with
-            // no message at all, so the next submit failed with a 401 toast
-            // that looked like the link itself had failed.
-            viewModel.notifyMessage("DRIVE_SIGNIN_CANCELLED")
-        }
-    }
-    fun launchGoogleSignIn() {
-        try {
-            @Suppress("DEPRECATION")
-            val intent=AccountManager.newChooseAccountIntent(null,null,arrayOf("com.google"),false,null,null,null,null)
-            googleAccountPicker.launch(intent)
-        } catch(_:Exception) { viewModel.notifyMessage("LOGIN_REQUIRED") }
-    }
     fun importFiles() {
         val mime=when(form.toolId) { "pdf_02","img_01","img_02","img_03","img_04"->"image/*";"pdf_01","pdf_03","pdf_07","pdf_to_docx","pdf_to_pptx","pdf_compress","pdf_ocr"->"application/pdf";"file_08"->"application/zip";else->"*/*" }
         picker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=mime;putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
@@ -449,7 +369,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         when(tool.id) {
             "scan_doc" -> navigateTo("scan")
             "dl_settings" -> {viewModel.recordToolOpen(tool.id);navigateTo("settings")}
-            "file_02", "file_trash" -> {viewModel.recordToolOpen(tool.id);navigateTo("files_overview")}
+            "file_02" -> {viewModel.recordToolOpen(tool.id);navigateTo("files_overview")}
             else -> if(viewModel.chooseTool(tool.id)) navigateTo("workspace")
         }
     }
@@ -465,7 +385,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         com.jumlo.app.ui.adaptive.HingeSafeViewport {
         Scaffold(
             snackbarHost={SnackbarHost(snackbar)},
-            bottomBar={if(showDock) QuietFloatingDock(selectedTab=tab,language=settings.language,onSelectTab=::navigateTab)},
+            bottomBar={if(showDock) JumloNavigationBar(selectedTab=tab,language=settings.language,onSelectTab=::navigateTab)},
             contentWindowInsets=WindowInsets(0,0,0,0)
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding).testTag("route.$shellRoute").graphicsLayer {
@@ -571,7 +491,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
                                 ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
-                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn,onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
+                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,jobId,{openOutput(it)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
                         }

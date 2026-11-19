@@ -14,10 +14,7 @@ import com.jumlo.app.data.local.AppDatabase
 import com.jumlo.app.data.output.OutputStore
 import com.jumlo.app.data.output.PublicOutputStore
 import com.jumlo.app.data.preferences.UserPreferencesRepository
-import com.jumlo.app.data.processing.PdfAnnotateSettings
 import com.jumlo.app.data.processing.PdfImagesSettings
-import com.jumlo.app.data.processing.PdfRedactRegion
-import com.jumlo.app.data.processing.PdfRedactSettings
 import com.jumlo.app.data.processing.PdfOperationHandler
 import com.jumlo.app.data.processing.PdfSplitSettings
 import com.jumlo.app.data.processing.PdfSignatureSettings
@@ -29,10 +26,7 @@ import com.jumlo.app.model.ItemStatus
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPage
-import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
-import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
-import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -86,79 +80,6 @@ class PdfHandlerReliabilityTest {
             assertArrayEquals(original,source.readBytes());assertArrayEquals(originalInk,signature.readBytes())
         } finally {db.close();folder.deleteRecursively()}
     }
-    @Test fun redactionRasterizesMaskedPagesAndRemovesTheirExtractableText()=runBlocking {
-        val app=ApplicationProvider.getApplicationContext<Context>()
-        PDFBoxResourceLoader.init(app)
-        val db=Room.inMemoryDatabaseBuilder(app,AppDatabase::class.java).build()
-        val folder=File(app.filesDir,"processing/results/fixture/redaction-${UUID.randomUUID()}").apply { mkdirs() }
-        val source=File(folder,"source.pdf")
-        try {
-            PDDocument().use { doc ->
-                repeat(2) { index ->
-                    val page=PDPage(PDRectangle(200f,300f))
-                    doc.addPage(page)
-                    PDPageContentStream(doc,page).use { stream ->
-                        stream.beginText()
-                        stream.setFont(PDType1Font.HELVETICA,12f)
-                        stream.newLineAtOffset(20f,220f)
-                        stream.showText(if(index==0) "REDACT_SECRET" else "KEEP_PUBLIC")
-                        stream.endText()
-                    }
-                }
-                doc.save(source)
-            }
-            val original=source.readBytes()
-            val budget=WorkBudget()
-            val sources=SourceStore(app,db,budget)
-            val outputs=OutputStore(app,db,PublicOutputStore(app,UserPreferencesRepository(app)))
-            val ref=sources.inspect(
-                FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",source).toString(),
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            val settings=PdfRedactSettings(regions=listOf(
-                PdfRedactRegion(page=1,left=.05,top=.20,right=.80,bottom=.32)
-            ))
-            val job=JobRequest(UUID.randomUUID().toString(),"pdf_redact",listOf(ref.id),1,
-                Json.encodeToString(settings),System.currentTimeMillis())
-            val outcomes=PdfOperationHandler(EphemeralSecretStore()).execute(
-                job,ExecutionContext(sources,outputs,budget,{}, {})
-            )
-            assertEquals(2,outcomes.size)
-            assertTrue(outcomes.all { it.status==ItemStatus.CREATED })
-            val record=outputs.find(job.id,"document")!!
-            app.contentResolver.openInputStream(android.net.Uri.parse(record.uri))!!.use { input ->
-                PDDocument.load(input).use { output ->
-                    assertEquals(2,output.numberOfPages)
-                    val extracted=PDFTextStripper().getText(output)
-                    assertFalse(extracted.contains("REDACT_SECRET"))
-                    assertTrue(extracted.contains("KEEP_PUBLIC"))
-                }
-            }
-            app.contentResolver.openFileDescriptor(android.net.Uri.parse(record.uri),"r")!!.use { fd ->
-                com.jumlo.app.data.pdf.PdfRendererFactory.open(fd,app.cacheDir).use { renderer ->
-                    renderer.openPage(0).use { page ->
-                        val bitmap=android.graphics.Bitmap.createBitmap(
-                            page.width,page.height,android.graphics.Bitmap.Config.ARGB_8888
-                        )
-                        try {
-                            bitmap.eraseColor(Color.WHITE)
-                            page.render(bitmap,null,null,android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                            assertEquals(Color.BLACK,bitmap.getPixel(page.width/2,(page.height*0.25f).toInt()))
-                        } finally { bitmap.recycle() }
-                    }
-                }
-            }
-            val report=outputs.find(job.id,"redact-report")!!
-            val reportText=app.contentResolver.openInputStream(android.net.Uri.parse(report.uri))!!.bufferedReader().use { it.readText() }
-            assertTrue(reportText.contains("rasterizedPages=1"))
-            assertTrue(reportText.contains("Nothing under a black rectangle survives."))
-            assertArrayEquals(original,source.readBytes())
-        } finally {
-            db.close()
-            folder.deleteRecursively()
-        }
-    }
-
     @Test fun corruptStructuralPdfReportsTheDocumentErrorWithoutPublishing()=runBlocking<Unit> {
         val app=ApplicationProvider.getApplicationContext<Context>()
         PDFBoxResourceLoader.init(app)
@@ -178,89 +99,6 @@ class PdfHandlerReliabilityTest {
             assertEquals("PDF_INVALID",com.jumlo.app.data.jobs.stableError(error!!))
             assertNull(outputs.find(request.id,"document"))
         } finally {db.close();source.delete()}
-    }
-
-    @Test fun legacyAndMultiStrokeDrawingJobsKeepSeparatePaths()=runBlocking {
-        val app=ApplicationProvider.getApplicationContext<Context>()
-        PDFBoxResourceLoader.init(app)
-        val db=Room.inMemoryDatabaseBuilder(app,AppDatabase::class.java).build()
-        try {
-            val sources=SourceStore(app,db,WorkBudget())
-            val outputs=OutputStore(app,db,PublicOutputStore(app,UserPreferencesRepository(app)))
-            val source=File(app.filesDir,"processing/results/fixture/ink-${UUID.randomUUID()}.pdf").apply {requireNotNull(parentFile).mkdirs()}
-            PDDocument().use {doc->doc.addPage(PDPage(PDRectangle.LETTER));doc.save(source)}
-            val original=source.readBytes()
-            val ref=sources.inspect(FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",source).toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val a="[0.1,0.1,0.2,0.2]"
-            val b="[0.7,0.8,0.8,0.9]"
-            val cases=listOf(
-                """{"kind":"ink","inkPoints":$a}""" to 1,
-                """{"kind":"ink","inkStrokes":[$a,$b]}""" to 2,
-                """{"kind":"ink","inkPoints":$a,"inkStrokes":[$a,$b]}""" to 2
-            )
-            for((settings,count) in cases) {
-                val job=JobRequest(UUID.randomUUID().toString(),"pdf_annotate",listOf(ref.id),1,settings,System.currentTimeMillis())
-                val result=PdfOperationHandler(EphemeralSecretStore()).execute(job,ExecutionContext(sources,outputs,WorkBudget(),{},{}))
-                assertEquals(ItemStatus.CREATED,result.single().status)
-                val record=outputs.find(job.id,"document")!!
-                app.contentResolver.openInputStream(android.net.Uri.parse(record.uri))!!.use {input->PDDocument.load(input).use {doc ->
-                    val annotation=doc.getPage(0).annotations.single()
-                    assertEquals("Ink",annotation.subtype)
-                    val paths=annotation.cosObject.getDictionaryObject(com.tom_roush.pdfbox.cos.COSName.INKLIST) as com.tom_roush.pdfbox.cos.COSArray
-                    assertEquals(count,paths.size())
-                    repeat(count) {index->assertEquals(4,(paths.get(index) as com.tom_roush.pdfbox.cos.COSArray).size())}
-                    val first=paths.get(0) as com.tom_roush.pdfbox.cos.COSArray
-                    assertEquals(61.2,(first.get(0) as com.tom_roush.pdfbox.cos.COSNumber).doubleValue(),.01)
-                    if(count==2) {
-                        val second=paths.get(1) as com.tom_roush.pdfbox.cos.COSArray
-                        assertEquals(428.4,(second.get(0) as com.tom_roush.pdfbox.cos.COSNumber).doubleValue(),.01)
-                    }
-                }}
-            }
-            assertArrayEquals(original,source.readBytes())
-        } finally {db.close()}
-    }
-
-    @Test fun malformedDrawingCannotPublishAnUnchangedPdf()=runBlocking {
-        val app=ApplicationProvider.getApplicationContext<Context>()
-        PDFBoxResourceLoader.init(app)
-        val db=Room.inMemoryDatabaseBuilder(app,AppDatabase::class.java).build()
-        try {
-            val sources=SourceStore(app,db,WorkBudget())
-            val outputs=OutputStore(app,db,PublicOutputStore(app,UserPreferencesRepository(app)))
-            val source=File(app.filesDir,"processing/results/fixture/invalid-ink-${UUID.randomUUID()}.pdf").apply {requireNotNull(parentFile).mkdirs()}
-            PDDocument().use {doc->doc.addPage(PDPage(PDRectangle.LETTER));doc.save(source)}
-            val ref=sources.inspect(FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",source).toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            for(paths in listOf("[]","[[0.1,0.2,0.3]]","[[0.1,0.2,1.1,0.4]]")) {
-                val job=JobRequest(UUID.randomUUID().toString(),"pdf_annotate",listOf(ref.id),1,"""{"kind":"ink","inkStrokes":$paths}""",System.currentTimeMillis())
-                assertTrue(runCatching {PdfOperationHandler(EphemeralSecretStore()).execute(job,ExecutionContext(sources,outputs,WorkBudget(),{},{}))}.isFailure)
-                assertNull(outputs.find(job.id,"document"))
-            }
-        } finally {db.close()}
-    }
-
-    @Test fun draggedTextCoordinatesReachThePublishedPdf()=runBlocking {
-        val app=ApplicationProvider.getApplicationContext<Context>()
-        PDFBoxResourceLoader.init(app)
-        val db=Room.inMemoryDatabaseBuilder(app,AppDatabase::class.java).build()
-        try {
-            val sources=SourceStore(app,db,WorkBudget())
-            val outputs=OutputStore(app,db,PublicOutputStore(app,UserPreferencesRepository(app)))
-            val source=File(app.filesDir,"processing/results/fixture/annotation-${UUID.randomUUID()}.pdf").apply { requireNotNull(parentFile).mkdirs() }
-            PDDocument().use { doc -> doc.addPage(PDPage(PDRectangle.LETTER));doc.save(source) }
-            val ref=sources.inspect(FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",source).toString(),Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val settings=PdfAnnotateSettings(text="Placed text",left=.65,top=.40,right=.90,bottom=.55,asAnnotation=true)
-            val job=JobRequest(UUID.randomUUID().toString(),"pdf_annotate",listOf(ref.id),1,Json.encodeToString(settings),System.currentTimeMillis())
-            PdfOperationHandler(EphemeralSecretStore()).execute(job,ExecutionContext(sources,outputs,WorkBudget(),{},{}))
-            val record=outputs.find(job.id,"document")!!
-            app.contentResolver.openInputStream(android.net.Uri.parse(record.uri))!!.use { input -> PDDocument.load(input).use { doc ->
-                val annotation=doc.getPage(0).annotations.single()
-                assertEquals("Placed text",annotation.contents)
-                assertEquals(612*.65,annotation.rectangle.lowerLeftX.toDouble(),.05)
-                assertEquals(792*.60,annotation.rectangle.lowerLeftY.toDouble(),.05)
-            } }
-            PDDocument.load(source).use { assertTrue(it.getPage(0).annotations.isEmpty()) }
-        } finally { db.close() }
     }
 
     @Test fun opaquePdfJpegExportFitsOneBitmapBudget()=runBlocking {

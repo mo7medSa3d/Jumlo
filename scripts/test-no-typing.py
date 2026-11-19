@@ -102,9 +102,6 @@ class NoTypingStatic(unittest.TestCase):
         self.assertEqual(self.screen.count('GeneratePasswordButton'), 2)
         self.assertIn('if(!f.flag1) GeneratePasswordButton', self.screen)
 
-    def test_sha256_gets_paste(self):
-        self.assertIn('PasteButton {v->edit {it.copy(expectedHash=v)}}', self.screen)
-
     def test_new_strings_both_locales(self):
         for locale in ('values', 'values-ar'):
             text = xml_strings(locale)

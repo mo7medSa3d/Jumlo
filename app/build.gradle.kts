@@ -59,7 +59,12 @@ android {
     sourceSets["test"].resources.srcDir(layout.buildDirectory.dir("generated/pdfboxTestAssets/assets"))
 
     signingConfigs {
-        // AGP owns the default debug configuration and creates its local keystore.
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             if (releaseSigningReady) {
                 storeFile = rootProject.file(releaseStorePath)
@@ -72,6 +77,7 @@ android {
 
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("debugConfig")
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
@@ -271,7 +277,7 @@ dependencies {
 }
 
 val extractPdfboxTestAssets by tasks.registering(Copy::class) {
-    from(pdfboxAar.map { zipTree(it) })
+    from(pdfboxAar.elements.map { files -> files.map { zipTree(it.asFile) } })
     include("assets/**")
     into(layout.buildDirectory.dir("generated/pdfboxTestAssets"))
 }

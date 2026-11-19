@@ -1,12 +1,11 @@
 package com.jumlo.app.data.processing
 
+import android.webkit.MimeTypeMap
 import com.jumlo.app.core.ArchiveLimits
 import com.jumlo.app.data.files.EncryptedZip
 import com.jumlo.app.data.files.EncryptedZipEntrySource
-import com.jumlo.app.core.Hashing
 import com.jumlo.app.core.SafeNames
 import com.jumlo.app.data.engine.PureDomainAlgorithms
-import com.jumlo.app.data.files.GoogleDriveClient
 import com.jumlo.app.data.jobs.ExecutionContext
 import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.OperationHandler
@@ -21,24 +20,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Batch rename (renamed copies), duplicate report, managed trash summary, encrypted ZIP via zip4j, and Google Drive v3 import/export. Passwords/tokens: session handles only. */
+/** Batch rename (renamed copies) and AES encrypted ZIP via zip4j. Passwords: session handles only. */
 @Singleton class FileExtrasHandler @Inject constructor(
-    private val secrets: EphemeralSecretStore,
-    private val okHttpClient: OkHttpClient
+    private val secrets: EphemeralSecretStore
 ) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
         when (request.toolId) {
             "file_batch_rename" -> rename(request, context)
-            "file_duplicates", "file_trash" -> duplicatesAndTrash(request, context)
             "file_encrypted_zip" -> encryptedZip(request, context)
-            "file_drive" -> googleDrive(request, context)
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }
@@ -79,33 +75,6 @@ import javax.inject.Singleton
             context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), request.sourceIds.size.toLong()))
         }
         return outcomes
-    }
-
-    private suspend fun duplicatesAndTrash(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
-        val key = if (request.toolId == "file_trash") "trash-report" else "duplicates-report"
-        context.outputs.find(request.id, key)?.let { return listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
-        val hashes = request.sourceIds.mapIndexed { idx, id ->
-            val h = context.sources.openRead(id).use { Hashing.sha256(it, context.checkCancellation) }
-            context.report(JobProgress(JobStage.RUNNING, (idx + 1).toLong(), request.sourceIds.size.toLong()))
-            h
-        }
-        val groups = PureDomainAlgorithms.duplicateGroups(hashes)
-        val names = request.sourceIds.map { context.sources.get(it).displayName }
-        val trashedItems = if (request.toolId == "file_trash") context.outputs.refreshTrash() else emptyList()
-        val text = buildString {
-            append("groups=${groups.size}\n")
-            groups.forEach { g -> append(g.joinToString(",") { names[it] }); append(" sha256="); append(hashes[g.first()]); append("\n") }
-            if (request.toolId == "file_trash") {
-                append("trashedCount=${trashedItems.size}\n")
-                trashedItems.forEach { item -> append("trashed=${item.displayName}|size=${item.sizeBytes}|sha256=${item.sha256}\n") }
-                append("trashNote=Trashed outputs stay in app-managed trash until restored or purged; sources are never deleted by this report.\n")
-            }
-        }
-        val reportName = if (request.toolId == "file_trash") "trash-report.txt" else "duplicates-report.txt"
-        val ticket = context.outputs.reserve(request.id, key, reportName, "text/plain")
-        ticket.stageFile.writeText(text)
-        val rec = context.outputs.publish(ticket) { OutputMetadata() }
-        return listOf(ItemOutcome(key, ItemStatus.CREATED, rec.id))
     }
 
     private suspend fun encryptedZip(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
@@ -182,7 +151,8 @@ import javax.inject.Singleton
                             context.outputs.find(request.id, itemKey)?.let {
                                 outcomes += ItemOutcome(itemKey, ItemStatus.CREATED, it.id)
                             } ?: run {
-                                val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), "application/octet-stream")
+                                val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase(Locale.ROOT)) ?: "application/octet-stream"
+                                val ticket = context.outputs.reserve(request.id, itemKey, SafeNames.basename(f.name), mime)
                                 require(f.length() <= context.budget.maxTemporaryBytes) { "ARCHIVE_SIZE_LIMIT" }
                                 f.inputStream().use { input ->
                                     FileOutputStream(ticket.stageFile).use { out ->
@@ -210,67 +180,6 @@ import javax.inject.Singleton
             }
         } finally {
             password.fill('\u0000')
-        }
-    }
-
-    private suspend fun googleDrive(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
-        val settings = Json.decodeFromString<GoogleDriveSettings>(request.settingsJson)
-        val tokenChars = secrets.copy(settings.tokenSecretHandle) ?: throw OperationFailure("DRIVE_TOKEN_MISSING")
-        try {
-            require(tokenChars.isNotEmpty()) { "DRIVE_TOKEN_MISSING" }
-            val client = GoogleDriveClient(OkHttpTransport(okHttpClient, checkCancellation = context.checkCancellation), okHttpClient)
-            return if (!settings.exportMode) {
-                val itemKey = "drive-import"
-                context.outputs.find(request.id, itemKey)?.let { return listOf(ItemOutcome(itemKey, ItemStatus.CREATED, it.id)) }
-                val meta = client.fetchMetadata(settings.fileIdOrUrl, tokenChars)
-                val ticket = context.outputs.reserve(request.id, itemKey, meta.name, meta.mimeType)
-                val downloaded = client.downloadFile(
-                    fileIdOrUrl = settings.fileIdOrUrl,
-                    accessToken = tokenChars,
-                    targetFile = ticket.stageFile,
-                    maxBytes = context.budget.maxExpandedArchiveBytes,
-                    minFreeBytes = context.budget.minFreeBytes,
-                    checkCancel = context.checkCancellation
-                )
-                context.report(JobProgress(JobStage.FINALIZING, downloaded.sizeBytes ?: ticket.stageFile.length(), downloaded.sizeBytes))
-                val finalTicket = ticket.copy(displayName = SafeNames.basename(downloaded.name), mimeType = downloaded.mimeType)
-                val rec = context.outputs.publish(finalTicket) { OutputMetadata() }
-                secrets.remove(settings.tokenSecretHandle)
-                listOf(ItemOutcome(itemKey, ItemStatus.CREATED, rec.id))
-            } else {
-                require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
-                val outcomes = mutableListOf<ItemOutcome>()
-                val uploadedLines = mutableListOf<String>()
-                for ((index, id) in request.sourceIds.withIndex()) {
-                    context.checkCancellation()
-                    val srcRef = context.sources.get(id)
-                    context.sources.withSeekable(id, request.id) { file ->
-                        val uploaded = client.uploadFile(
-                            sourceFile = file,
-                            displayName = srcRef.displayName,
-                            mimeType = srcRef.mimeType ?: "application/octet-stream",
-                            folderId = settings.folderId.takeIf { it.isNotBlank() },
-                            accessToken = tokenChars,
-                            checkCancel = context.checkCancellation
-                        )
-                        uploadedLines += "uploaded=${uploaded.name}|driveId=${uploaded.id}|mime=${uploaded.mimeType}"
-                    }
-                    context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), request.sourceIds.size.toLong()))
-                }
-                val reportKey = "drive-export-receipt"
-                context.outputs.find(request.id, reportKey)?.let {
-                    outcomes += ItemOutcome(reportKey, ItemStatus.CREATED, it.id)
-                } ?: run {
-                    val ticket = context.outputs.reserve(request.id, reportKey, "drive_export_receipt.txt", "text/plain")
-                    ticket.stageFile.writeText(uploadedLines.joinToString("\n") + "\n")
-                    val rec = context.outputs.publish(ticket) { OutputMetadata() }
-                    outcomes += ItemOutcome(reportKey, ItemStatus.CREATED, rec.id)
-                }
-                secrets.remove(settings.tokenSecretHandle)
-                outcomes
-            }
-        } finally {
-            tokenChars.fill('\u0000')
         }
     }
 }

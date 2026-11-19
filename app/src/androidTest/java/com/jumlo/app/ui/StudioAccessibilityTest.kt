@@ -18,17 +18,14 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import com.jumlo.app.core.PdfAnnotationKind
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
-import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.theme.ColorSystems
 import com.jumlo.app.ui.theme.JumloTheme
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.tools.ToolsCatalogue
 import com.jumlo.app.ui.tools.shortToolLabel
-import com.jumlo.app.ui.workspace.AnnotationToolbar
 import com.jumlo.app.ui.workspace.InteractiveIntSlider
 import com.jumlo.app.ui.workspace.InteractiveToggle
 import org.junit.Assert.assertEquals
@@ -60,24 +57,6 @@ class StudioAccessibilityTest {
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) {it(layouts)}
         assertTrue(layouts.isNotEmpty())
         layouts.forEach {assertFalse("Tool label overflow at 200%: ${language.code}",it.hasVisualOverflow)}
-    }
-
-    @Test fun annotationTargetsStayAtLeast48DpWithLargeArabicText() {
-        compose.setContent {LargeType(AppLanguage.ARABIC) {
-            Column(Modifier.width(320.dp)) {AnnotationToolbar(WorkspaceDraft.forTool("pdf_annotate",emptyList()),{})}
-        }}
-        PdfAnnotationKind.entries.forEach {kind ->
-            val tag="annotation.kind.${kind.id}"
-            compose.onNodeWithTag("annotation.tools").performScrollToNode(hasTestTag(tag))
-            compose.onNodeWithTag(tag).assertIsDisplayed().assertHasClickAction()
-                .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
-        }
-        listOf("#FFEB3B","#111111","#1746A2","#B42332","#145D4C").forEach {color ->
-            val tag="annotation.color.$color"
-            compose.onNodeWithTag("annotation.colors").performScrollToNode(hasTestTag(tag))
-            compose.onNodeWithTag(tag).assertIsDisplayed().assertHasClickAction()
-                .assertWidthIsAtLeast(48.dp).assertHeightIsAtLeast(48.dp)
-        }
     }
 
     @Test fun slidersAndTogglesExposeAccessibleActionsAnd48DpTargets() {
