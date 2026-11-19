@@ -58,26 +58,25 @@ class ToolCatalogueInteractionTest {
         tools.forEach { compose.onNodeWithTag("tool.${it.id}").assertExists() }
     }
 
-    @Test fun defaultGridHidesAliasesButSearchCanOpenImageComparison() {
-        val ids = listOf("img_compare", "file_trash", "file_02", "dl_settings", "img_04")
+    @Test fun defaultGridHidesMergedToolsButSearchCanOpenOne() {
+        val ids = listOf("img_04", "file_encrypted_zip", "pdf_crop")
         val tools = ids.map { id -> CapabilityRegistry.tools.single { it.id == id } }
         val query = androidx.compose.runtime.mutableStateOf("")
+        var selected = ""
         compose.setContent {
             JumloTheme(ThemeMode.LIGHT, AppLanguage.ENGLISH) {
                 ToolsCatalogue(tools, AppLanguage.ENGLISH, emptyList(),
-                    listOf("img_compare", "file_02"), listOf("file_trash"),
-                    query.value, { query.value = it }, onTool = {})
+                    emptyList(), emptyList(), query.value, { query.value = it }, onTool = { selected = it.id })
             }
         }
         compose.onNodeWithTag("tool.img_04").assertExists()
-        for (id in ids.filterNot { it == "img_04" }) {
-            compose.onNodeWithTag("tool.$id").assertDoesNotExist()
-        }
-        compose.runOnIdle { query.value = "Compare" }
-        compose.onNodeWithTag("tool.img_compare").assertHasClickAction()
-        compose.onNodeWithTag("tool.file_02").assertDoesNotExist()
-        compose.onNodeWithTag("tool.file_trash").assertDoesNotExist()
-        compose.onNodeWithTag("tool.dl_settings").assertDoesNotExist()
+        compose.onNodeWithTag("tool.file_encrypted_zip").assertDoesNotExist()
+        compose.onNodeWithTag("tool.pdf_crop").assertDoesNotExist()
+        compose.runOnIdle { query.value = "Encrypted" }
+        compose.onNodeWithTag("tool.file_encrypted_zip").assertHasClickAction().performClick()
+        compose.onNodeWithTag("tool.pdf_crop").assertDoesNotExist()
+        compose.onNodeWithTag("tool.img_04").assertDoesNotExist()
+        compose.runOnIdle { assertEquals("file_encrypted_zip", selected) }
     }
 
     @Test fun anEmptySearchResultProvidesResetAction() {
