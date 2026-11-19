@@ -14,7 +14,10 @@ data class PublishedFile(val id: String,val jobId: String,val itemKey: String,va
 
 /** Recoverable app-private publication. Room records are reconciled from this durable journal. */
 class DurablePublication(private val root: File) {
-    companion object { private val locks=ConcurrentHashMap<String,ReentrantLock>() }
+    companion object {
+        private val locks=ConcurrentHashMap<String,ReentrantLock>()
+        private val SHA256_HEX = Regex("[0-9a-f]{64}")
+    }
     private val lock=locks.getOrPut(root.canonicalPath) { ReentrantLock() }
     private val staging=File(root,"staging")
     private val journal=File(root,"journal")
@@ -36,7 +39,7 @@ class DurablePublication(private val root: File) {
     private fun checked(ticket: PublicationTicket): String {
         val id=identity(ticket.jobId,ticket.itemKey)
         require(ticket.stageFile.canonicalFile==File(File(staging,ticket.jobId),"$id.part").canonicalFile) { "INVALID_STAGING_PATH" }
-        SafeNames.basename(ticket.displayName)
+        require(SafeNames.basename(ticket.displayName)==ticket.displayName) { "INVALID_FILENAME" }
         require(ticket.metadataJson.length<=16384) { "OUTPUT_METADATA_TOO_LARGE" }
         return id
     }
@@ -87,11 +90,12 @@ class DurablePublication(private val root: File) {
         }
     }
     private fun read(file: File): PublishedFile {
+        require(!Files.isSymbolicLink(file.toPath()) && file.length()<=2_000_000L) { "CORRUPT_PUBLICATION_JOURNAL" }
         val p=Properties().apply { file.inputStream().use(::load) }
         fun field(name: String)=p.getProperty(name) ?: error("CORRUPT_PUBLICATION_JOURNAL")
         val id=field("id"); require(UUID.fromString(id).toString()==id)
         val job=field("job"); val key=field("key"); require(file.name==identity(job,key)+".properties")
-        val name=SafeNames.basename(field("name")); val hash=field("sha256"); require(Regex("[0-9a-f]{64}").matches(hash))
+        val name=SafeNames.basename(field("name")); val hash=field("sha256"); require(SHA256_HEX.matches(hash))
         return PublishedFile(id,job,key,File(File(results,id),name),name,field("mime"),field("size").toLong().also { require(it>=0) },hash,field("created").toLong(),p.getProperty("metadata","{}"))
     }
     fun reconcile(): List<PublishedFile> = locked {

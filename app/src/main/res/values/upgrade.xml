@@ -4,7 +4,7 @@
     <string name="upgrade_print_selected">Print selected document</string>
     <string name="upgrade_loading_documents">Loading your documents…</string>
     <string name="upgrade_loading_activity">Loading activity…</string>
-    <string name="upgrade_loading_failed">Could not load saved data. Try again.</string>
+    <string name="upgrade_loading_failed">Could not load saved data. Refresh the screen and retry.</string>
     <string name="upgrade_rename_copy">Rename</string>
     <string name="upgrade_swipe_hint">Swipe for file actions</string>
     <string name="upgrade_scan_corner">Corner %1$d</string>

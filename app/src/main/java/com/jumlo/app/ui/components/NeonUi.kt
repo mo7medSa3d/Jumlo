@@ -12,9 +12,7 @@ import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
@@ -24,11 +22,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.jumlo.app.ui.util.rememberAppHaptics
@@ -39,11 +38,13 @@ import coil.request.ImageRequest
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.model.UtilityTool
+import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
-
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.ToolPalette
 import com.jumlo.app.ui.theme.pressFeedback
+import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -58,14 +59,14 @@ fun NeonPanel(
     accent: Color? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     Surface(
         modifier = modifier,
         shape = QuietTheme.shapes.card,
-        color = accent?.let { ToolPalette.mix(colors.surfaceContainerLow, it, .04f) }
-            ?: colors.surfaceContainerLow,
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.58f)),
-        shadowElevation = 1.dp
+        color = accent?.let { ToolPalette.mix(pillars.cardSurface, it, .04f) }
+            ?: pillars.cardSurface,
+        border = BorderStroke(1.dp, pillars.cardBorder),
+        shadowElevation = 2.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(QuietTheme.spacing.cardInteriorPadding),
@@ -86,7 +87,7 @@ fun NeonSectionHeader(
         Text(
             title, style = QuietTheme.typography.sectionTitle,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).semantics { heading() },
             maxLines = 1, overflow = TextOverflow.Ellipsis
         )
         if (action != null && onAction != null) {
@@ -94,61 +95,6 @@ fun NeonSectionHeader(
                 Text(action, style = QuietTheme.typography.metadataStrong)
                 Spacer(Modifier.width(4.dp))
                 Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(17.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun NeonHero(
-    title: String,
-    description: String,
-    button: String,
-    onAction: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(30.dp),
-        color = colors.primary,
-        shadowElevation = 3.dp
-    ) {
-        Box(Modifier.background(Brush.linearGradient(listOf(colors.primary, colors.tertiary)))) {
-            // Soft graphic accents remain decorative; only the real scan CTA is clickable.
-            Box(Modifier.align(Alignment.TopEnd).offset(x = 65.dp, y = (-66).dp)
-                .size(220.dp).background(colors.onPrimary.copy(alpha = 0.10f), CircleShape))
-            Box(Modifier.align(Alignment.BottomEnd).offset(x = 45.dp, y = 70.dp)
-                .size(138.dp).background(colors.onPrimary.copy(alpha = 0.08f), CircleShape))
-            Column(
-                Modifier.fillMaxWidth().padding(22.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(Modifier.size(52.dp)
-                    .background(colors.onPrimary.copy(alpha = 0.15f), RoundedCornerShape(18.dp)),
-                    contentAlignment = Alignment.Center) {
-                    ModernToolIcon("document_scanner", colors.onPrimary, Modifier.size(28.dp))
-                }
-                Text(title, style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold), color = colors.onPrimary,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis)
-                Text(description, style = QuietTheme.typography.bodyMedium,
-                    color = colors.onPrimary.copy(alpha = 0.93f),
-                    maxLines = 3, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(2.dp))
-                Button(
-                    onClick = onAction,
-                    modifier = Modifier.pressFeedback().fillMaxWidth().heightIn(min = 54.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.onPrimary, contentColor = colors.primary),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    ModernToolIcon("document_scanner", colors.primary, Modifier.size(20.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(button, style = QuietTheme.typography.button, maxLines = 2)
-                    Spacer(Modifier.weight(1f))
-                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(20.dp))
-                }
             }
         }
     }
@@ -163,6 +109,7 @@ fun NeonToolTile(
     compact: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     val iconSurface = ToolIconColors.iconColorFor(tool.id)
     val tint = ToolIconColors.glyphOn(iconSurface)
     val haptics = rememberAppHaptics()
@@ -170,20 +117,21 @@ fun NeonToolTile(
         onClick = { haptics.actionClick(); onClick() },
         modifier = modifier.fillMaxWidth().pressFeedback()
             .heightIn(min = if (compact) 116.dp else 126.dp),
-        shape = RoundedCornerShape(22.dp),
-        color = colors.surfaceContainerLow,
-        shadowElevation = 2.dp
+        shape = RoundedCornerShape(18.dp),
+        color = pillars.cardSurface,
+        border = BorderStroke(1.dp, pillars.cardBorder),
+        shadowElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(Modifier.size(if (compact) 52.dp else 58.dp)
-                .background(iconSurface, RoundedCornerShape(18.dp)),
+            Box(Modifier.size(if (compact) 48.dp else 54.dp)
+                .background(iconSurface, RoundedCornerShape(JumloRadii.indicator)),
                 contentAlignment = Alignment.Center) {
                 ModernToolIcon(tool.iconName, tint,
-                    Modifier.size(if (compact) 27.dp else 29.dp))
+                    Modifier.size(if (compact) 25.dp else 27.dp))
             }
             Text(
                 if (language.isRtl) tool.titleAr else tool.titleEn,
@@ -227,11 +175,15 @@ fun NeonOutputPreview(
                         }
                     }
                 }
-            } catch (_: Exception) { null }
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) { null }
+            catch (_: OutOfMemoryError) { null }
         }
     }
+    DisposeOwnedPreviewBitmap(pdfBitmap)
+    val renderedPdf = pdfBitmap
     Box(
-        modifier = modifier.clip(RoundedCornerShape(14.dp))
+        modifier = modifier.clip(RoundedCornerShape(JumloRadii.indicator))
             .background(colors.surfaceContainerHigh),
         contentAlignment = Alignment.Center
     ) {
@@ -246,8 +198,8 @@ fun NeonOutputPreview(
                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
                 )
             }
-            isPdf && pdfBitmap != null -> androidx.compose.foundation.Image(
-                bitmap = pdfBitmap!!.asImageBitmap(),
+            isPdf && renderedPdf != null -> androidx.compose.foundation.Image(
+                bitmap = renderedPdf.asImageBitmap(),
                 contentDescription = output.displayName,
                 modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
             )

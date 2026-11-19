@@ -54,7 +54,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -71,12 +74,14 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.ui.components.QuietChip
 import com.jumlo.app.ui.components.QuietSwitch
+import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.util.rememberZoomPanState
 import com.jumlo.app.ui.util.zoomPan
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.text.DateFormat
+import java.text.NumberFormat
 import java.util.Date
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -102,7 +107,7 @@ import kotlin.math.roundToInt
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 if(state.source!=null) IconButton(onClick={haptics.actionClick();onBack()},modifier=Modifier.size(48.dp)) {Icon(Icons.AutoMirrored.Rounded.ArrowBack,stringResource(R.string.print_back))}
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.print_title),style=MaterialTheme.typography.headlineMedium)
+                    Text(stringResource(R.string.print_title),style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics { heading() })
                     Text(stringResource(R.string.print_subtitle),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Icon(Icons.Rounded.Print,null,Modifier.size(28.dp))
@@ -114,13 +119,13 @@ import kotlin.math.roundToInt
         }
         if(!state.loaded) item {LinearProgressIndicator(Modifier.fillMaxWidth())}
         if(state.error!=null && !state.rangeError) item("error") {
-            Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)) {Column(Modifier.padding(16.dp)) {
+            Card(modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite },colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)) {Column(Modifier.padding(16.dp)) {
                 Text(stringResource(printErrorString(state.error)),color=MaterialTheme.colorScheme.onErrorContainer)
                 Row {TextButton(onClick={haptics.actionClick();viewModel.retry()},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_retry))}
                     TextButton(onClick=onPickDocument,modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_choose_document))}}
             }}
         }
-        if(serviceError || !state.serviceAvailable) item {Text(stringResource(R.string.print_error_unavailable),color=MaterialTheme.colorScheme.error)}
+        if(serviceError || !state.serviceAvailable) item {Text(stringResource(R.string.print_error_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })}
         if(!state.printServicesInstalled && state.source!=null) item("no-print-service") {
             Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.secondaryContainer)) {Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.print_no_print_service),style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.onSecondaryContainer)
@@ -138,7 +143,7 @@ import kotlin.math.roundToInt
                     }
                 }
             }
-            if(state.historyError) item {Text(stringResource(R.string.print_history_unavailable),color=MaterialTheme.colorScheme.error)}
+            if(state.historyError) item {Text(stringResource(R.string.print_history_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })}
             if(state.saved.history.isEmpty()) item {QuietEmptyQueue()}
             items(state.saved.history,key={"job-${it.id}"}) {entry ->
                 PrintQueueRow(entry,active=entry.id==state.activeJobId,spoolingPages=state.spoolingPages,spoolingTotal=state.spoolingTotal,
@@ -147,7 +152,7 @@ import kotlin.math.roundToInt
             }
         } else if(state.source==null) {
             item {Button(onClick={haptics.actionClick();onPickDocument()},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp)) {Text(stringResource(R.string.print_choose_document))}}
-            item {Text(stringResource(R.string.print_recent),style=MaterialTheme.typography.titleLarge)}
+            item {Text(stringResource(R.string.print_recent),style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() })}
             if(state.saved.recent.isEmpty()) item {Text(stringResource(R.string.print_recent_empty))}
             items(state.saved.recent.sortedByDescending {it.favorite},key={"recent-${PrintSourceIdentity.documentKey(it.source)}"}) {recent ->
                 Card(onClick={haptics.actionClick();viewModel.open(recent.source)},modifier=Modifier.fillMaxWidth()) {
@@ -182,7 +187,7 @@ import kotlin.math.roundToInt
                 }
             }
             if(state.inputErrors.isNotEmpty()) item("invalid-print-input") {
-                Card(colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)) {
+                Card(modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite },colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.errorContainer)) {
                     Column(Modifier.fillMaxWidth().padding(12.dp)) {
                         Text(stringResource(R.string.print_invalid_numeric),
                             color=MaterialTheme.colorScheme.onErrorContainer)
@@ -230,7 +235,7 @@ import kotlin.math.roundToInt
                 TextField(colors=com.jumlo.app.ui.workspace.borderlessFieldColors(),shape=MaterialTheme.shapes.large,value=state.options.range,onValueChange={viewModel.edit(state.options.copy(range=it))},label={Text(stringResource(R.string.print_range))},placeholder={Text(stringResource(R.string.print_range_example))},supportingText={Text(stringResource(if(state.rangeError) R.string.print_error_range else R.string.print_range_help))},isError=state.rangeError,singleLine=true,modifier=Modifier.fillMaxWidth(),keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Ascii))
             }
             item("paper") {
-                Text(stringResource(R.string.print_paper),style=MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.print_paper),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics { heading() })
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {PrintPaper.entries.forEach {paper ->QuietChip(state.options.paper==paper,{viewModel.edit(state.options.copy(paper=paper))},stringResource(paperString(paper)))}}
                 if(state.options.paper==PrintPaper.CUSTOM) Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     NumberField("customWidth",state.options.customWidthMm,state.numericDrafts["customWidth"],stringResource(R.string.print_width_mm),Modifier.weight(1f),viewModel::setNumericDraft)
@@ -240,7 +245,7 @@ import kotlin.math.roundToInt
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {PrintOrientation.entries.forEach {orientation ->QuietChip(state.options.orientation==orientation,{viewModel.edit(state.options.copy(orientation=orientation))},stringResource(if(orientation==PrintOrientation.PORTRAIT) R.string.print_portrait else R.string.print_landscape))}}
             }
             item("scale") {
-                Text(stringResource(R.string.print_scaling),style=MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.print_scaling),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics { heading() })
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {PrintScale.entries.forEach {scale->QuietChip(state.options.scale==scale,{viewModel.edit(state.options.copy(scale=scale))},stringResource(when(scale) {PrintScale.FIT->R.string.print_fit;PrintScale.FILL->R.string.print_fill;PrintScale.ACTUAL->R.string.print_actual}))}}
                 val label=stringResource(R.string.print_scale_percent,state.options.scalePercent)
                 Text(label)
@@ -262,7 +267,7 @@ import kotlin.math.roundToInt
                 }
             }
             item("margins") {
-                Text(stringResource(R.string.print_margins),style=MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.print_margins),style=MaterialTheme.typography.titleMedium,modifier=Modifier.semantics { heading() })
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {PrintMarginPreset.entries.forEach {preset->
                     QuietChip(state.options.margins==preset.margins,{viewModel.edit(state.options.copy(margins=preset.margins))},stringResource(preset.label))}}
                 Text(stringResource(R.string.print_margins_help),style=MaterialTheme.typography.bodySmall)
@@ -305,7 +310,7 @@ import kotlin.math.roundToInt
         }
         if(section==0) {
             item("presets-title") {Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text(stringResource(R.string.print_presets),Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.print_presets),Modifier.weight(1f).semantics { heading() },style=MaterialTheme.typography.titleLarge)
                 TextButton(onClick={haptics.actionClick();presetDialog=true},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_save_preset))}
             }}
             if(state.saved.presets.isEmpty()) item {Text(stringResource(R.string.print_presets_empty),style=MaterialTheme.typography.bodyMedium)}
@@ -322,7 +327,7 @@ import kotlin.math.roundToInt
     }
     if(presetDialog) {
         var name by rememberSaveable {mutableStateOf("")}
-        AlertDialog(onDismissRequest={presetDialog=false},title={Text(stringResource(R.string.print_save_preset))},text={TextField(colors=com.jumlo.app.ui.workspace.borderlessFieldColors(),shape=MaterialTheme.shapes.large,value=name,onValueChange={name=it.take(60)},label={Text(stringResource(R.string.print_preset_name))},singleLine=true)},confirmButton={TextButton(onClick={haptics.actionClick();viewModel.savePreset(name);presetDialog=false},enabled=name.isNotBlank() && state.inputErrors.isEmpty(),modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_save))}},dismissButton={TextButton(onClick={presetDialog=false},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_cancel))}})
+        AlertDialog(onDismissRequest={presetDialog=false},title={Text(stringResource(R.string.print_save_preset),modifier=Modifier.semantics { heading() })},text={TextField(colors=com.jumlo.app.ui.workspace.borderlessFieldColors(),shape=MaterialTheme.shapes.large,value=name,onValueChange={name=it.take(60)},label={Text(stringResource(R.string.print_preset_name))},singleLine=true)},confirmButton={TextButton(onClick={haptics.actionClick();viewModel.savePreset(name);presetDialog=false},enabled=name.isNotBlank() && state.inputErrors.isEmpty(),modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_save))}},dismissButton={TextButton(onClick={presetDialog=false},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.print_cancel))}})
     }
 }
 
@@ -376,7 +381,7 @@ internal fun PrintPageManager(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.print_page_manager_title), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.print_page_manager_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.print_page_manager_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         LazyRow(
             modifier = Modifier.onGloballyPositioned { viewport = it.boundsInRoot() },
@@ -499,7 +504,7 @@ internal fun PrintPageTile(
                     }
                 )
             }
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(JumloRadii.indicator))
             .background(if (selected || focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
             .semantics {
                 this.contentDescription = description
@@ -528,7 +533,8 @@ internal fun PrintPageTile(
                         .background(accent, CircleShape)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text("${page.rotationDegrees}°", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)
+                    val rotationLabel = remember(page.rotationDegrees) { NumberFormat.getIntegerInstance().format(page.rotationDegrees) + "°" }
+                    Text(rotationLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }

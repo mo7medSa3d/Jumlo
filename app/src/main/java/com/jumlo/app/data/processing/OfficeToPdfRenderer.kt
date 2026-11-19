@@ -83,23 +83,26 @@ object OfficeToPdfRenderer {
         private var hasContent = false
 
         fun run() {
-            newPage()
-            doc.blocks.forEach { block ->
-                checkCancel()
-                when (block) {
-                    is OfficeBlock.PageBreak -> newPageIfNeeded()
-                    is OfficeBlock.Section -> {
-                        newPageIfNeeded()
-                        drawParagraph(OfficeBlock.ParagraphBlock(
-                            OfficeParagraph(listOf(OfficeRun(block.title, bold = true)), level = 1)))
+            try {
+                newPage()
+                doc.blocks.forEach { block ->
+                    checkCancel()
+                    when (block) {
+                        is OfficeBlock.PageBreak -> newPageIfNeeded()
+                        is OfficeBlock.Section -> {
+                            newPageIfNeeded()
+                            drawParagraph(OfficeBlock.ParagraphBlock(
+                                OfficeParagraph(listOf(OfficeRun(block.title, bold = true)), level = 1)))
+                        }
+                        is OfficeBlock.ParagraphBlock -> drawParagraph(block)
+                        is OfficeBlock.TableBlock -> drawTable(block)
+                        is OfficeBlock.ImageBlock -> drawImage(block)
                     }
-                    is OfficeBlock.ParagraphBlock -> drawParagraph(block)
-                    is OfficeBlock.TableBlock -> drawTable(block)
-                    is OfficeBlock.ImageBlock -> drawImage(block)
                 }
+            } finally {
+                runCatching { stream?.close() }
+                stream = null
             }
-            stream?.close()
-            stream = null
         }
 
         private fun newPage() {
@@ -118,8 +121,6 @@ object OfficeToPdfRenderer {
         private fun needSpace(height: Float) {
             if (cursorY - height < margin) newPage()
         }
-
-        // ---- fonts and measurement ----------------------------------------------
 
         private fun font(bold: Boolean, italic: Boolean): PDFont = when {
             bold && italic -> PDType1Font.HELVETICA_BOLD_OBLIQUE
@@ -141,8 +142,6 @@ object OfficeToPdfRenderer {
         private fun beforeFor(level: Int): Float = when (level) {
             1 -> 14f; 2 -> 12f; 3 -> 10f; 4 -> 8f; else -> 0f
         }
-
-        // ---- paragraphs -----------------------------------------------------------
 
         private data class Word(val text: String, val bold: Boolean, val italic: Boolean)
 
@@ -293,8 +292,6 @@ object OfficeToPdfRenderer {
             }
         }
 
-        // ---- tables ---------------------------------------------------------------
-
         private fun drawTable(block: OfficeBlock.TableBlock) {
             val rows = block.rows
             if (rows.isEmpty()) return
@@ -306,7 +303,7 @@ object OfficeToPdfRenderer {
             val lineHeight = size * 1.35f
             val pad = 4f
             val colCount = rows.maxOf { row -> row.sumOf { it.colSpan } }
-            val weights = DoubleArray(colCount) { 0.0 }
+            val weights = DoubleArray(colCount)
             for (row in rows) {
                 var col = 0
                 for (cell in row) {
@@ -359,6 +356,7 @@ object OfficeToPdfRenderer {
                         content.setNonStrokingColor(0.93f, 0.93f, 0.93f)
                         content.addRect(x, yTop - height, w, height)
                         content.fill()
+                        content.setNonStrokingColor(0f, 0f, 0f)
                     }
                     content.beginText()
                     content.setFont(font(cell.bold || header, false), size)
@@ -540,8 +538,6 @@ object OfficeToPdfRenderer {
             rasterized++
         }
 
-        // ---- images ---------------------------------------------------------------
-
         /**
          * Decode embedded raster images only after a bounds-only pass proves the
          * allocation fits. LosslessFactory may hold both the bitmap and encoded
@@ -590,6 +586,7 @@ object OfficeToPdfRenderer {
                         bitmap.recycle()
                     }
                 }
+                require(image.width > 0 && image.height > 0) { "IMAGE_DECODE_FAILED" }
                 val maxHeight = pageHeight - 2 * margin
                 val scale = min(availWidth / image.width, maxHeight / image.height).coerceAtMost(1f)
                 val w = image.width * scale
@@ -598,6 +595,8 @@ object OfficeToPdfRenderer {
                 stream!!.drawImage(image, margin + (availWidth - w) / 2f, cursorY - h, w, h)
                 cursorY -= h + 4f
                 hasContent = true
+            } catch (cancel: java.util.concurrent.CancellationException) {
+                throw cancel
             } catch (failure: IllegalArgumentException) {
                 if (failure.message == "IMAGE_MEMORY_BUDGET_EXCEEDED" ||
                     failure.message == "IMAGE_DIMENSIONS_UNREPRESENTABLE") throw failure

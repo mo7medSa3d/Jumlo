@@ -5,9 +5,10 @@ data class OfficeTextPage(val paragraphs: List<OfficeTextParagraph>) {
     val isBlank: Boolean get() = paragraphs.all { it.text.isBlank() }
 
     companion object {
+        private val BLANK_LINE_SPLIT = Regex("\n[\\t ]*\n+")
         fun fromPlainText(text: String): OfficeTextPage = OfficeTextPage(
             text.replace("\r\n", "\n").replace('\r', '\n').trim('\n')
-                .split(Regex("\n[\\t ]*\n+")).map { OfficeTextParagraph(it) })
+                .split(BLANK_LINE_SPLIT).map { OfficeTextParagraph(it) })
     }
 }
 
@@ -20,6 +21,7 @@ data class OfficeTextSpan(val start: Int, val end: Int, val fontSizePt: Double, 
  * not necessarily contain semantic headings, so complex columns/tables remain a stated limit.
  */
 object OfficeTextLayout {
+    private val WHITESPACE = Regex("\\s+")
     fun fromExtracted(text: String, spans: List<OfficeTextSpan>): OfficeTextPage {
         require(text.length <= OfficePackageWriter.MAX_PAGE_TEXT) { "OFFICE_TEXT_BUDGET_EXCEEDED" }
         val valid = spans.filter { it.start >= 0 && it.end in (it.start + 1)..text.length && it.fontSizePt.isFinite() && it.fontSizePt > 0.0 }
@@ -51,7 +53,8 @@ object OfficeTextLayout {
             val length = weighted.sumOf { it.second }
             val boldLength = overlapping.filter { it.bold }.sumOf { (minOf(it.end, start + line.length) - maxOf(it.start, start)).toLong() }
             val ratio = fontSize / bodySize
-            val short = line.trim().length <= 160 && line.trim().split(Regex("\\s+")).size <= 20
+            val trimmedLine = line.trim()
+            val short = trimmedLine.length <= 160 && trimmedLine.split(WHITESPACE).size <= 20
             val heading = if (!short || ratio < 1.25 && !(ratio >= 1.1 && boldLength * 2 >= length && length > 0)) 0
                 else if (ratio >= 1.75) 1 else if (ratio >= 1.35) 2 else 3
             if (current.isNotEmpty() && heading != currentHeading) flush()

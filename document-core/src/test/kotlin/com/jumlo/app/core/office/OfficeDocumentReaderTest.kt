@@ -282,4 +282,64 @@ class OfficeDocumentReaderTest {
             file.delete()
         }
     }
+
+    @Test fun officePackageRejectsCaseVariantDuplicateEntries() {
+        val document = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>Hello</w:t></w:r></w:p></w:body>
+</w:document>""".toByteArray(Charsets.UTF_8)
+        val file = File.createTempFile("office-dup-", ".zip")
+        try {
+            ZipOutputStream(file.outputStream()).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("word/document.xml"))
+                zip.write(document)
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("word/Document.xml"))
+                zip.write(document)
+                zip.closeEntry()
+            }
+            val readFailure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000)
+            }
+            assertEquals("OFFICE_INVALID", readFailure.message)
+            val detectFailure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.detect(file, "dup.docx", 10_000_000)
+            }
+            assertEquals("OFFICE_INVALID", detectFailure.message)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test fun officePackageRejectsZipBombInflationRatio() {
+        val bombBody = "A".repeat(2_000_000)
+        val document = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>$bombBody</w:t></w:r></w:p></w:body>
+</w:document>""".toByteArray(Charsets.UTF_8)
+        val file = packageFile(mapOf("word/document.xml" to document))
+        try {
+            val readFailure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000)
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", readFailure.message)
+            val detectFailure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.detect(file, "bomb.docx", 10_000_000)
+            }
+            assertEquals("OFFICE_SIZE_LIMIT", detectFailure.message)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test fun readPropagatesCancellationExceptionInsteadOfWrapping() {
+        val file = docxFile()
+        try {
+            assertThrows(java.util.concurrent.CancellationException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000, checkCancel = {
+                    throw java.util.concurrent.CancellationException("cancelled")
+                })
+            }
+        } finally {
+            file.delete()
+        }
+    }
 }

@@ -5,6 +5,7 @@ import java.io.FilterInputStream
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -33,6 +34,7 @@ object OfficePackageWriter {
     private const val PACKAGE_REL = "http://schemas.openxmlformats.org/package/2006/relationships"
     private const val CONTENT = "http://schemas.openxmlformats.org/package/2006/content-types"
     private const val HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+    private val BLANK_LINE_SPLIT = Regex("\n[\\t ]*\n+")
 
     fun writeDocx(destination: File, pageCount: Int, pageText: (Int) -> String, checkCancel: () -> Unit = {}) {
         writeStructuredDocx(destination, pageCount, { OfficeTextPage.fromPlainText(pageText(it)) }, checkCancel)
@@ -119,10 +121,12 @@ object OfficePackageWriter {
                 val x = (canvasWidth - width) / 2
                 val y = (canvasHeight - height) / 2
                 val textXml = paragraphs(current.text).joinToString("") { para ->
-                    val rtl = if (isRtl(para)) " rtl=\"1\"" else ""
+                    val paraRtl = isRtl(para)
+                    val rtl = if (paraRtl) " rtl=\"1\"" else ""
+                    val lang = if (paraRtl) "ar" else "en-US"
                     "<a:p><a:pPr$rtl/>" + para.split('\n').mapIndexed { line, value ->
                         (if (line > 0) "<a:br/>" else "") +
-                            "<a:r><a:rPr lang=\"${if (isRtl(para)) "ar" else "en-US"}\" sz=\"1200\"><a:solidFill><a:srgbClr val=\"000000\"><a:alpha val=\"0\"/></a:srgbClr></a:solidFill></a:rPr><a:t>${escape(value)}</a:t></a:r>"
+                            "<a:r><a:rPr lang=\"$lang\" sz=\"1200\"><a:solidFill><a:srgbClr val=\"000000\"><a:alpha val=\"0\"/></a:srgbClr></a:solidFill></a:rPr><a:t>${escape(value)}</a:t></a:r>"
                     }.joinToString("") + "</a:p>"
                 }
                 // Transparent text stays editable/selectable without drawing a second text copy over the page image.
@@ -144,7 +148,9 @@ object OfficePackageWriter {
 
     private fun publishPackage(destination: File, checkCancel: () -> Unit, validate: (File) -> Unit, body: (ZipOutputStream) -> Unit) {
         checkCancel()
-        val temporary = File.createTempFile("office-", ".partial", destination.absoluteFile.parentFile)
+        val parent = destination.absoluteFile.parentFile
+        parent?.mkdirs()
+        val temporary = File.createTempFile("office-", ".partial", parent)
         try {
             ZipOutputStream(temporary.outputStream().buffered()).use { zip -> body(zip) }
             checkCancel()
@@ -155,7 +161,7 @@ object OfficePackageWriter {
         } finally { temporary.delete() }
     }
     private fun paragraphs(text: String): List<String> = text.replace("\r\n", "\n").replace('\r', '\n').trim('\n')
-        .split(Regex("\n[\\t ]*\n+")).ifEmpty { listOf("") }
+        .split(BLANK_LINE_SPLIT).ifEmpty { listOf("") }
     private fun isRtl(text: String): Boolean {
         for (character in text) when (Character.getDirectionality(character)) {
             Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> return true
@@ -220,15 +226,21 @@ object OfficePackageValidator {
         ZipFile(file).use { zip ->
             val entries = zip.entries().asSequence().toList()
             val names = entries.map { it.name }.toSet()
-            require(entries.size == names.size && names.containsAll(required) && entries.size <= OfficePackageWriter.MAX_PAGES * 4 + 64) { "OFFICE_VERIFY_FAILED" }
+            val foldedNames = entries.map { it.name.lowercase(Locale.ROOT) }.toSet()
+            require(entries.size == foldedNames.size && names.containsAll(required) && entries.size <= OfficePackageWriter.MAX_PAGES * 4 + 64) { "OFFICE_VERIFY_FAILED" }
             for (entry in entries) {
                 checkCancel()
                 require(!entry.isDirectory && !entry.name.startsWith('/') && entry.name.split('/').none { it == ".." } && entry.size in 0..128L * 1024 * 1024) { "OFFICE_VERIFY_FAILED" }
                 zip.getInputStream(entry).use { raw ->
                     val input = LimitedInput(raw, 128L * 1024 * 1024, checkCancel)
                     if (entry.name.endsWith(".xml") || entry.name.endsWith(".rels")) {
-                        val reader = SAXParserFactory.newInstance().apply { isNamespaceAware = true }.newSAXParser().xmlReader
+                        val factory = SAXParserFactory.newInstance().apply {
+                            isNamespaceAware = true
+                            runCatching { isXIncludeAware = false }
+                        }
+                        val reader = factory.newSAXParser().xmlReader
                         // External entities are never needed by an Office package. The resolver is a second guard on parsers that don't support the flags.
+                        runCatching { reader.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true) }
                         runCatching { reader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
                         runCatching { reader.setFeature("http://xml.org/sax/features/external-general-entities", false) }
                         runCatching { reader.setFeature("http://xml.org/sax/features/external-parameter-entities", false) }
@@ -239,7 +251,8 @@ object OfficePackageValidator {
                                 if (local == "Relationship") {
                                     require(attributes.getValue("TargetMode") != "External") { "OFFICE_VERIFY_FAILED" }
                                     val base = if (entry.name == "_rels/.rels") "/" else "/" + entry.name.substringBeforeLast("/_rels/") + "/"
-                                    val target = java.net.URI(base).resolve(attributes.getValue("Target")).normalize().path.removePrefix("/")
+                                    val rawTarget = requireNotNull(attributes.getValue("Target")) { "OFFICE_VERIFY_FAILED" }
+                                    val target = java.net.URI(base).resolve(rawTarget).normalize().path.removePrefix("/")
                                     require(target in names) { "OFFICE_RELATIONSHIP_MISSING" }
                                 }
                             }

@@ -29,6 +29,8 @@ object JumloMotion {
     const val stateChangeMs = 180
     const val loadingPulseMs = 900
     const val pressScale = 0.965f
+    const val pressAlpha = 0.93f
+    const val revealTravelPx = 18f
     const val staggerMs = 44L
     const val maxStaggered = 12
     const val pressDamping = 0.72f
@@ -49,7 +51,7 @@ fun Modifier.pressFeedback(): Modifier = composed {
         label = "press-scale"
     )
     val brightness by animateFloatAsState(
-        if (pressed) .93f else 1f,
+        if (pressed) JumloMotion.pressAlpha else 1f,
         animationSpec = if (reduced) snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
         label = "press-highlight"
     )
@@ -73,10 +75,10 @@ fun StaggeredReveal(index: Int, modifier: Modifier = Modifier, content: @Composa
             shown = true
         }
     }
-    val alpha by animateFloatAsState(if (shown) 1f else 0f,
+    val alpha by animateFloatAsState(if (shown || reduced) 1f else 0f,
         animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium, dampingRatio = JumloMotion.enterDamping),
         label = "reveal-opacity")
-    val travel by animateFloatAsState(if (shown || reduced) 0f else 18f,
+    val travel by animateFloatAsState(if (shown || reduced) 0f else JumloMotion.revealTravelPx,
         animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = JumloMotion.enterDamping),
         label = "reveal-position")
     Box(modifier.graphicsLayer { this.alpha = alpha; translationY = travel }, content = { content() })

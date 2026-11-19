@@ -60,7 +60,7 @@ class ReconstructionContractTests(unittest.TestCase):
         targets = [float(value) for value in re.findall(r'heightIn\(min\s*=\s*(\d+(?:\.\d+)?)\.dp\)', home)]
         self.assertTrue(targets, 'Home actions must declare a minimum touch height')
         self.assertTrue(all(value >= 48 for value in targets), targets)
-        self.assertIn('maxLines = 3', state)
+        self.assertIn('maxLines = 2', state)
         self.assertIn('LazyColumn(', settings)
         self.assertIn('heightIn(min = 56.dp)', settings)
         self.assertIn('Text(label, Modifier.padding(start = 12.dp))', settings)

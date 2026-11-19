@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 if (($Download -and $From) -or (!$Download -and !$From)) { throw 'Choose -Download or -From PATH explicitly.' }
 $root = Split-Path -Parent $PSScriptRoot
 $dest = Join-Path $root 'gradle/wrapper/gradle-wrapper.jar'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
 $temp = "$dest.$([Guid]::NewGuid()).tmp"
 $expected = '7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172'
 try {

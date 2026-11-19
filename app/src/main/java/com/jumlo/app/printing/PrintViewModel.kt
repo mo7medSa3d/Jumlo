@@ -362,7 +362,7 @@ data class PrintUiState(
             val states=manager.printJobs.associate {it.id.toString() to it.info.state.toPrintState()}
             if(states!=lastStates) {repository.reconcile(states);lastStates=states}
             _state.update {it.copy(historyError=false)}
-        } catch(_:CancellationException) {throw CancellationException()}
+        } catch(cancel:CancellationException) {throw cancel}
         catch(_:Exception) {_state.update {it.copy(historyError=true)}}
     }
     fun cancelJob(id:String) {try {getApplication<Application>().getSystemService(PrintManager::class.java)?.printJobs?.firstOrNull {it.id.toString()==id}?.cancel();lastStates=null} catch(_:Exception) {_state.update {it.copy(historyError=true)}}}

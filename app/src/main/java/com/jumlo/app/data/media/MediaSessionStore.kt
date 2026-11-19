@@ -26,8 +26,12 @@ class MediaSessionStore @Inject constructor(@ApplicationContext context: Context
         return hostname.takeIf {
             uri.scheme.equals("https", true) && uri.rawUserInfo == null &&
                 uri.port == -1 && it.length in 4..253 && '.' in it &&
-                it.matches(Regex("[a-z0-9.-]+"))
+                it.matches(HOST_PATTERN)
         }
+    }
+
+    private companion object {
+        val HOST_PATTERN = Regex("[a-z0-9.-]+")
     }
 
     fun getCustomUserAgent(): String = prefs.getString("user_agent", "").orEmpty()

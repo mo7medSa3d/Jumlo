@@ -37,7 +37,7 @@ environment={
     'android_build_baseline':'JDK 17 / Gradle 8.14 / AGP 8.10.1 / SDK 36 / Build Tools 36.0.0',
     'note':'These observations concern this runner, not the user machine. No toolchains installed.'
 }
-(DEST/'environment.json').write_text(json.dumps(environment,indent=2)+'\n')
+(DEST/'environment.json').write_text(json.dumps(environment,indent=2)+'\n',encoding='utf-8')
 cases=[
  ('core-domain-http',['bash','scripts/test-core.sh'],'Production dependency-free Kotlin/domain sources and real loopback HTTP'),
  ('storage-sql',['python3','scripts/test-storage-sql.py'],'Exact production DAO/migration SQL in host SQLite; not Room'),
@@ -63,17 +63,17 @@ for name,command,scope in cases:
     code,output=capture(command)
     status='PASS' if code==0 else ('BLOCKED' if 'BLOCKED:' in output else 'FAIL')
     log=f'command: {json.dumps(command)}\nstarted_at_utc: {started}\nscope: {scope}\n\n{output}\nexit_code: {code}\nstatus: {status}\n'
-    (DEST/f'{name}.log').write_text(log)
+    (DEST/f'{name}.log').write_text(log,encoding='utf-8')
     records.append(dict(name=name,command=command,scope=scope,exit_code=code,status=status,log=f'verification/final/{name}.log'))
     print(f'{name}: {status} (exit {code})',flush=True)
 if not is_git_repo:
     message='NOT_APPLICABLE: this source archive contains no Git metadata; no diff check was run.\n'
-    (DEST/'source-whitespace.log').write_text(message)
+    (DEST/'source-whitespace.log').write_text(message,encoding='utf-8')
     records.append(dict(name='source-whitespace', command=None,
         scope='Git-only diff check, not applicable to extracted source archives',
         exit_code=None, status='NOT_APPLICABLE', log='verification/final/source-whitespace.log'))
     print('source-whitespace: NOT_APPLICABLE (source archive)', flush=True)
-(DEST/'results.json').write_text(json.dumps(records,indent=2)+'\n')
+(DEST/'results.json').write_text(json.dumps(records,indent=2)+'\n',encoding='utf-8')
 if any(x['status']=='FAIL' for x in records):
     raise SystemExit(1)
 if any(x['status']=='BLOCKED' for x in records):

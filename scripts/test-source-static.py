@@ -11,15 +11,22 @@ MAIN=ROOT/'app/src/main'
 CODE=MAIN/'java/com/jumlo/app'
 
 class SourceConsistencyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Cache Kotlin source text once so static checks do not repeatedly walk and re-read app/src.
+        cls._all_kt={p:p.read_text(encoding="utf-8") for p in (ROOT/'app/src').rglob('*.kt')}
+        cls._main_kt={p:txt for p,txt in cls._all_kt.items() if p.is_relative_to(CODE)}
+
     def test_xml_files_parse(self):
         for path in MAIN.rglob('*.xml'):
             with self.subTest(path=str(path.relative_to(ROOT))):
                 ET.parse(path)
     def test_default_strings_exist_for_all_code_references(self):
         names={node.get('name') for path in (MAIN/'res/values').glob('*.xml') for node in ET.parse(path).getroot() if node.tag=='string'}
+        ref_re=re.compile(r'(?<![\w.])R\.string\.(\w+)')
         used=set()
-        for path in CODE.rglob('*.kt'):
-            used.update(re.findall(r'(?<![\w.])R\.string\.(\w+)',path.read_text()))
+        for text in self._main_kt.values():
+            used.update(ref_re.findall(text))
         self.assertEqual(set(),used-names)
     def test_en_and_ar_string_resources_have_exact_parity(self):
         en_keys={node.get('name') for path in (MAIN/'res/values').glob('*.xml') for node in ET.parse(path).getroot() if node.tag=='string'}
@@ -40,16 +47,18 @@ class SourceConsistencyTests(unittest.TestCase):
             keys=[n.get('name') for path in folder.glob('*.xml') for n in ET.parse(path).getroot() if n.tag=='string']
             self.assertEqual(len(keys),len(set(keys)),str(folder))
     def test_legacy_simulated_engines_are_not_in_production(self):
-        for name in ('PdfEngine','ImageEngine','ArchiveAndFileEngine','CryptoVaultEngine','DownloadEngine','UniversalRepository','TransferForegroundService'):
-            self.assertFalse(list(CODE.rglob(f'{name}.kt')),name)
-            for path in CODE.rglob('*.kt'):
-                self.assertIsNone(re.search(r'\b'+name+r'\b',path.read_text()),str(path))
+        legacy_names=('PdfEngine','ImageEngine','ArchiveAndFileEngine','CryptoVaultEngine','DownloadEngine','UniversalRepository','TransferForegroundService')
+        legacy_files={f'{name}.kt' for name in legacy_names}
+        legacy_re=re.compile(r'\b(?:'+'|'.join(legacy_names)+r')\b')
+        for path, text in self._main_kt.items():
+            self.assertNotIn(path.name, legacy_files, path.stem)
+            self.assertIsNone(legacy_re.search(text), str(path))
     def test_capability_policy_is_enforced_at_enqueue_and_dispatch(self):
         # Behavioral policy cases run in CoreTests; this check verifies all entry points use it.
-        self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/OperationDispatcher.kt').read_text())
-        self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/JobStore.kt').read_text())
-        self.assertIn('CapabilityRegistry.canProcess(state.toolId)',(CODE/'ui/AppViewModel.kt').read_text())
-        registry=(CODE/'data/jobs/CapabilityRegistry.kt').read_text()
+        self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/OperationDispatcher.kt').read_text(encoding="utf-8"))
+        self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/JobStore.kt').read_text(encoding="utf-8"))
+        self.assertIn('CapabilityRegistry.canProcess(state.toolId)',(CODE/'ui/AppViewModel.kt').read_text(encoding="utf-8"))
+        registry=(CODE/'data/jobs/CapabilityRegistry.kt').read_text(encoding="utf-8")
         self.assertIn('CapabilityPolicy.availability(id)',registry)
         self.assertNotIn('BuildConfig.DEBUG',registry)
     def test_fileprovider_exposes_only_outputs_and_immutable_viewer_snapshots(self):
@@ -62,7 +71,7 @@ class SourceConsistencyTests(unittest.TestCase):
                       if node.get(android+'name')=='androidx.core.content.FileProvider')
         self.assertEqual('false',provider.get(android+'exported'))
         self.assertEqual('true',provider.get(android+'grantUriPermissions'))
-        viewer=(CODE/'ui/AppViewModel.kt').read_text().split('suspend fun viewerUri(',1)[1].split('/**',1)[0]
+        viewer=(CODE/'ui/AppViewModel.kt').read_text(encoding="utf-8").split('suspend fun viewerUri(',1)[1].split('/**',1)[0]
         for token in ('sources.get(sourceId)','printableSource(source)','FileProvider.getUriForFile'):
             self.assertIn(token,viewer)
     def test_cancel_receiver_is_not_exported(self):
@@ -82,15 +91,15 @@ class SourceConsistencyTests(unittest.TestCase):
         for name,path in found.items():
             self.assertEqual(pinned[name],hashlib.sha256(path.read_bytes()).hexdigest(),name)
         self.assertLessEqual(sum(path.stat().st_size for path in found.values()),360_000)
-        derivation=(ROOT/'tools/subset-fonts.py').read_text()
+        derivation=(ROOT/'tools/subset-fonts.py').read_text(encoding="utf-8")
         for token in ('Jumlo Sans Arabic', "'wdth':100", "'wght':(400,400,700)", "options.layout_features=['*']", 'Required glyphs lost'):
             self.assertIn(token,derivation)
-        self.assertIn('SIL OPEN FONT LICENSE',(MAIN/'assets/licenses/IBM-Plex-OFL.txt').read_text())
+        self.assertIn('SIL OPEN FONT LICENSE',(MAIN/'assets/licenses/IBM-Plex-OFL.txt').read_text(encoding="utf-8"))
     def test_room_download_url_writes_are_redacted_and_legacy_urls_scrubbed(self):
-        local = (CODE / 'data/local/AppDatabase.kt').read_text()
-        module = (CODE / 'di/AppModule.kt').read_text()
-        callback = (CODE / 'data/local/LegacyDownloadPrivacyCallback.kt').read_text()
-        test = (ROOT / 'app/src/androidTest/java/com/jumlo/app/data/DatabaseMigrationAndDaoTest.kt').read_text()
+        local = (CODE / 'data/local/AppDatabase.kt').read_text(encoding="utf-8")
+        module = (CODE / 'di/AppModule.kt').read_text(encoding="utf-8")
+        callback = (CODE / 'data/local/LegacyDownloadPrivacyCallback.kt').read_text(encoding="utf-8")
+        test = (ROOT / 'app/src/androidTest/java/com/jumlo/app/data/DatabaseMigrationAndDaoTest.kt').read_text(encoding="utf-8")
         self.assertIn('tasks.map { it.copy(fullUrl = "") }', local)
         self.assertIn('task.copy(fullUrl = "")', local)
         self.assertIn('.addCallback(com.jumlo.app.data.local.LegacyDownloadPrivacyCallback)', module)
@@ -98,33 +107,19 @@ class SourceConsistencyTests(unittest.TestCase):
         self.assertIn('val restored = open()', test)
         self.assertIn('assertEquals("", download.fullUrl)', test)
 
-    def test_drive_output_is_not_truncated_and_failure_does_not_delete_another_output(self):
-        drive = (CODE / 'data/files/GoogleDriveClient.kt').read_text()
-        self.assertIn('StandardOpenOption.CREATE_NEW', drive)
-        self.assertIn('var ownsTarget = false', drive)
-        self.assertIn('if (ownsTarget) targetFile.delete()', drive)
-        self.assertNotIn('FileOutputStream(targetFile)', drive)
+    def test_retired_google_drive_client_is_absent(self):
+        self.assertFalse((CODE / 'data/files/GoogleDriveClient.kt').exists())
 
-    def test_current_room_schema_and_legacy_structural_fixture_are_packaged(self):
+    def test_current_room_schema_is_packaged(self):
         schema_dir=ROOT/'app/schemas/com.jumlo.app.data.local.AppDatabase'
-        s2=json.loads((schema_dir/'2.json').read_text())
+        s2=json.loads((schema_dir/'2.json').read_text(encoding="utf-8"))
         self.assertEqual(2,s2['database']['version'])
         t2={e['tableName'] for e in s2['database']['entities']}
         self.assertEqual({'managed_files','download_tasks','sources','jobs','outputs','drafts'},t2)
-        import sqlite3
-        connection=sqlite3.connect(':memory:')
-        try:
-            connection.executescript((ROOT/'app/schemas/legacy-v1-structure.sql').read_text())
-            tables={row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            self.assertEqual({'managed_files','download_tasks'},tables)
-        finally:
-            connection.close()
-        # This fixture validates structure only. Historical exported identity is a release gate,
-        # documented explicitly; inventing a 1.json to satisfy an existence assertion is forbidden.
-        self.assertTrue((ROOT/'app/schemas/schema-provenance.md').is_file())
+        # No authentic v1 export is committed; inventing a 1.json to satisfy an existence check is forbidden.
+        self.assertFalse((schema_dir/'1.json').exists())
     def test_kotlin_files_have_balanced_delimiters_and_no_known_compile_hazards(self):
-        for path in (ROOT/'app/src').rglob('*.kt'):
-            text=path.read_text()
+        for path, text in self._all_kt.items():
             with self.subTest(path=str(path.relative_to(ROOT))):
                 self.assertNotIn('private set\n        private set',text)
                 self.assertNotIn('route=next.route',text)

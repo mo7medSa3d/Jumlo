@@ -11,6 +11,9 @@ data class TransferMetadata(val finalUrlSha256:String,val strongEtag:String?,val
 data class TransferResult(val bytes:Long,val totalBytes:Long?,val strongEtag:String?,val lastModified:String?,val finalUrlSha256:String,val mimeType:String?=null,val contentDisposition:String?=null)
 
 class StreamTransfer(private val transport:HttpTransport) {
+    companion object {
+        private val SET_COOKIE_SPLIT = Regex(",(?=\\s*[!#$%&'*+.^_`|~0-9A-Za-z-]+\\s*=)")
+    }
     private fun isTransient(code:Int)=code in setOf(408,425,429,500,502,503,504)
     private fun isTransientIo(e:IOException):Boolean {
         if(e is InterruptedIOException && e !is java.net.SocketTimeoutException) return false
@@ -77,6 +80,8 @@ class StreamTransfer(private val transport:HttpTransport) {
         }
     }
 
+    private fun isGoogleHost(host:String)=host=="google.com" || host.endsWith(".google.com") || host=="googleusercontent.com" || host.endsWith(".googleusercontent.com")
+
     private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferMetadata)->Unit):TransferResult {
         var current=HttpPolicy.url(request.url,request.cleartextConsent)
         val cookieJar=mutableMapOf<String,MutableMap<String,String>>()
@@ -95,29 +100,29 @@ class StreamTransfer(private val transport:HttpTransport) {
                 headers["If-Range"]=validator
             }
             val response=transport.open(current.toString(),headers)
+            fun header(name:String):String? = response.headers[name] ?: response.headers.entries.firstOrNull { it.key.equals(name,ignoreCase=true) }?.value
             try {
-                response.headers["set-cookie"]?.let { cookieHeader ->
+                header("set-cookie")?.let { cookieHeader ->
                     val jar = cookieJar.getOrPut(hostKey) { mutableMapOf() }
-                    cookieHeader.split(Regex(",(?=\\s*[!#$%&'*+.^_`|~0-9A-Za-z-]+\\s*=)")).forEach { entry ->
+                    cookieHeader.split(SET_COOKIE_SPLIT).forEach { entry ->
                         val pair = entry.substringBefore(';').trim()
                         val eq = pair.indexOf('=')
                         if (eq > 0) {
                             val name = pair.substring(0, eq).trim()
                             val value = pair.substring(eq + 1).trim()
-                            if (name.isNotEmpty() && value.isNotEmpty()) jar[name] = value
+                            if (name.isNotEmpty() && value.isNotEmpty() && name.none { it.isISOControl() || it == ';' } && value.none { it.isISOControl() || it == ';' }) jar[name] = value
                         }
                     }
                 }
                 if(response.code in setOf(301,302,303,307,308)) {
                     require(redirects<10) { "TOO_MANY_REDIRECTS" }
-                    val location=response.headers["location"] ?: throw IllegalArgumentException("REDIRECT_WITHOUT_LOCATION")
+                    val location=header("location") ?: throw IllegalArgumentException("REDIRECT_WITHOUT_LOCATION")
                     val next=HttpPolicy.url(current.resolve(location).toString(),request.cleartextConsent)
                     require(current.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
                     current=next; return@repeat
                 }
-                val mimeType=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
-                val isGoogleHost=hostKey=="google.com" || hostKey.endsWith(".google.com") || hostKey=="googleusercontent.com" || hostKey.endsWith(".googleusercontent.com")
-                if(response.code==200 && request.offset==0L && mimeType in setOf("text/html","application/xhtml+xml") && isGoogleHost) {
+                val mimeType=header("content-type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
+                if(response.code==200 && request.offset==0L && mimeType in setOf("text/html","application/xhtml+xml") && isGoogleHost(hostKey)) {
                     val sample=ByteArray(32768)
                     var read=0
                     while(read<sample.size) {
@@ -133,6 +138,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                         if(confirmed!=null) {
                             val next=HttpPolicy.url(confirmed,request.cleartextConsent)
                             require(current.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
+                            require(isGoogleHost(next.host?.lowercase(Locale.ROOT).orEmpty())) { "INSECURE_REDIRECT" }
                             current=next
                             return@repeat
                         }
@@ -152,14 +158,14 @@ class StreamTransfer(private val transport:HttpTransport) {
                         knownTotalBytes=null,finalUrlSha256=null),checkCancel,progress,onMetadata)
                 }
                 if(request.offset>0 && (request.finalUrlSha256==null || request.finalUrlSha256!=finalDigest)) throw RestartRequired("FINAL_URL_CHANGED")
-                val etag=response.headers["etag"]?.takeUnless { it.startsWith("W/") }
-                val modified=response.headers["last-modified"]
-                val contentEncoding=response.headers["content-encoding"]?.trim()?.lowercase(Locale.ROOT)
+                val etag=header("etag")?.takeUnless { it.startsWith("W/") }
+                val modified=header("last-modified")
+                val contentEncoding=header("content-encoding")?.trim()?.lowercase(Locale.ROOT)
                 val isGzipped = contentEncoding == "gzip" || contentEncoding == "x-gzip"
-                val declared=if(isGzipped) null else response.headers["content-length"]?.let { value -> value.toLongOrNull()?.takeIf { it>=0 } ?: throw IOException("INVALID_CONTENT_LENGTH") }
+                val declared=if(isGzipped) null else header("content-length")?.let { value -> value.toLongOrNull()?.takeIf { it>=0 } ?: throw IOException("INVALID_CONTENT_LENGTH") }
                 val total=if(request.offset>0) {
                     ResumePolicy.validate(request.offset,request.strongEtag,request.lastModified,request.knownTotalBytes,response.code,response.headers)
-                    val range=requireNotNull(ResumePolicy.range(response.headers["content-range"])) { "MISSING_RESUME_TOTAL" }
+                    val range=requireNotNull(ResumePolicy.range(header("content-range"))) { "MISSING_RESUME_TOTAL" }
                     val expectedSlice=range.end-request.offset+1
                     if(declared!=null && declared!=expectedSlice) throw IOException("HTTP_CONTENT_LENGTH_MISMATCH")
                     // The end of this 206 range may be just an intermediate chunk.
@@ -172,8 +178,8 @@ class StreamTransfer(private val transport:HttpTransport) {
                 }
                 if(total!=null) require(total<=request.maxBytes) { "DISK_BUDGET_EXCEEDED" }
                 request.partialFile.parentFile?.mkdirs()
-                val mime=response.headers["content-type"]?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
-                val disposition=response.headers["content-disposition"]?.takeIf { it.isNotBlank() }
+                val mime=header("content-type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
+                val disposition=header("content-disposition")?.takeIf { it.isNotBlank() }
                 onMetadata(TransferMetadata(finalDigest,etag ?: request.strongEtag,modified ?: request.lastModified,total,mime,disposition,
                     resumeSafe=contentEncoding==null || contentEncoding=="identity"))
                 var written=request.offset
@@ -184,8 +190,8 @@ class StreamTransfer(private val transport:HttpTransport) {
                         while(true) {
                             checkCancel()
                             val read=streamToRead.read(buf); if(read<0) break
+                            if(read.toLong()>request.maxBytes-written) throw IllegalArgumentException("DISK_BUDGET_EXCEEDED")
                             written+=read
-                            if(written>request.maxBytes) throw IllegalArgumentException("DISK_BUDGET_EXCEEDED")
                             if((request.partialFile.parentFile?.usableSpace ?: Long.MAX_VALUE)<request.minFreeBytes) throw IOException("INSUFFICIENT_STORAGE")
                             out.write(buf,0,read); progress(written,total)
                         }

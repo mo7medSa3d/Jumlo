@@ -127,7 +127,6 @@ class ImageProcessingReliabilityTest {
             catch(expected:IllegalArgumentException) { assertEquals("IMAGE_MEMORY_BUDGET_EXCEEDED",expected.message) }
         }
         try {
-            rejects { BitmapExtras.adjust(source,0,100,100,2000,1000) }
             rejects { BitmapExtras.watermarkLogo(source,logo,1000) }
             rejects { BitmapExtras.watermarkText(source,"test",100,799) }
             rejects { BitmapTransforms.resize(source,20,20,FitMode.PAD,true,Color.WHITE,1000) }

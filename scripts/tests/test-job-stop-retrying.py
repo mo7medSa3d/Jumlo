@@ -4,7 +4,7 @@ import unittest
 ROOT=Path(__file__).resolve().parents[2]
 class StopRetryingContracts(unittest.TestCase):
     def test_sql_atomically_cancels_failed_retryable_jobs(self):
-        source=(ROOT/'app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt').read_text()
+        source=(ROOT/'app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt').read_text(encoding="utf-8")
         statement=source.split('suspend fun stopRetryingIfUnleased')[0].split('@Query(')[-1]
         for status in ('FAILED','PARTIAL','WAITING_FOR_INPUT'):
             self.assertIn("'"+status+"'",statement)
@@ -12,8 +12,8 @@ class StopRetryingContracts(unittest.TestCase):
         self.assertNotIn("'COMPLETED'",statement)
     def test_actual_sql_preserves_legacy_cancel_and_requires_unleased_retry_state(self):
         import sqlite3,re
-        dao=(ROOT/'app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt').read_text()
-        migration=(ROOT/'app/src/main/java/com/jumlo/app/data/local/DatabaseMigrations.kt').read_text()
+        dao=(ROOT/'app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt').read_text(encoding="utf-8")
+        migration=(ROOT/'app/src/main/java/com/jumlo/app/data/local/DatabaseMigrations.kt').read_text(encoding="utf-8")
         q=lambda method: re.search(r'@Query\("([^"\n]+)"\)\s*suspend\s+fun\s+'+method+r'\(',dao).group(1)
         conn=sqlite3.connect(':memory:')
         for statement in re.findall(r'db\.execSQL\("([^"\n]+)"\)',migration):conn.execute(statement)
@@ -28,8 +28,8 @@ class StopRetryingContracts(unittest.TestCase):
         conn.close()
     def lease_database(self):
         import sqlite3,re
-        dao=(ROOT/'app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt').read_text()
-        migration=(ROOT/'app/src/main/java/com/jumlo/app/data/local/DatabaseMigrations.kt').read_text()
+        dao=(ROOT/'app/src/main/java/com/jumlo/app/data/local/ProcessingEntities.kt').read_text(encoding="utf-8")
+        migration=(ROOT/'app/src/main/java/com/jumlo/app/data/local/DatabaseMigrations.kt').read_text(encoding="utf-8")
         query=lambda method: re.search(r'@Query\("([^"\n]+)"\)\s*suspend\s+fun\s+'+method+r'\(',dao).group(1)
         conn=sqlite3.connect(':memory:')
         self.addCleanup(conn.close)
@@ -67,7 +67,7 @@ class StopRetryingContracts(unittest.TestCase):
                 self.assertEqual(1,conn.execute(q('stopRetryingIfUnleased'),{'id':'job','snapshot':'cancelled','now':1000}).rowcount)
                 self.assertEqual(('CANCELLED',None,0,'cancelled'),conn.execute('SELECT stage,leaseOwner,leaseUntil,snapshotJson FROM jobs').fetchone())
     def test_failure_rows_offer_stop_and_recover_with_accessible_layout(self):
-        source=(ROOT/'app/src/main/java/com/jumlo/app/ui/components/ProductionRows.kt').read_text()
+        source=(ROOT/'app/src/main/java/com/jumlo/app/ui/components/ProductionRows.kt').read_text(encoding="utf-8")
         self.assertIn('job_stop_retrying',source)
         self.assertIn('FlowRow(',source)
         self.assertIn('onCancel()',source)

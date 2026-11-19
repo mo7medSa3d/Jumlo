@@ -1,5 +1,7 @@
 package com.jumlo.app.core
 
+import java.io.ByteArrayInputStream
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -28,6 +30,35 @@ class CoreNamingPolicyTest {
         assertEquals("Report (1).pdf", SafeNames.unique(setOf("report.pdf"), "Report.pdf"))
         assertThrows(IllegalArgumentException::class.java) {
             SafeNames.basename("../escape")
+        }
+    }
+
+    @Test fun httpPolicyRejectsPortZero() {
+        assertThrows(IllegalArgumentException::class.java) {
+            HttpPolicy.url("https://example.com:0/file.pdf")
+        }
+    }
+
+    @Test fun archiveVerifyRejectsCumulativeDeclaredSizeOverBudget() {
+        val zipFile = File.createTempFile("archive-budget-", ".zip")
+        zipFile.delete()
+        try {
+            val payload = ByteArray(64) { 0x41 }
+            ArchiveCore.create(
+                out = zipFile,
+                inputs = listOf(
+                    ArchiveInput("a.bin") { ByteArrayInputStream(payload) },
+                    ArchiveInput("b.bin") { ByteArrayInputStream(payload) }
+                ),
+                level = 1,
+                limits = ArchiveLimits(maxBytes = 1024, maxEntries = 10, maxDepth = 4)
+            )
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                ArchiveCore.verify(zipFile, ArchiveLimits(maxBytes = 100, maxEntries = 10, maxDepth = 4))
+            }
+            assertEquals("ARCHIVE_BYTE_BUDGET_EXCEEDED", failure.message)
+        } finally {
+            zipFile.delete()
         }
     }
 }

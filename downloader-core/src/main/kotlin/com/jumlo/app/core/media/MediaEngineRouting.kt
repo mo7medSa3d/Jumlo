@@ -4,12 +4,13 @@ import com.jumlo.app.core.DownloadLinkPolicy
 
 /** Pure routing contract for two real installed engines; no network request is made here. */
 object MediaEngineRouting {
+    private val PAGE_SOURCE_ID = Regex("page_[0-9]{1,4}")
     fun preferExtractor(url: String): Boolean = DownloadLinkPolicy.requiresMediaExtractor(url)
 
     /** Direct downloads are identifiable by the source IDs and direct transport marker. */
     fun isNativeChoice(choice: MediaChoice): Boolean = choice.formats.size == 1 &&
         choice.formats.single().let { source ->
-            (source.id == "source" || Regex("page_[0-9]{1,4}").matches(source.id)) &&
+            (source.id == "source" || PAGE_SOURCE_ID.matches(source.id)) &&
                 (source.videoCodec == "direct" || source.audioCodec == "direct") &&
                 source.videoCodec in setOf("direct", "none") && source.audioCodec in setOf("direct", "none") &&
                 source.protocol in setOf("http", "https")

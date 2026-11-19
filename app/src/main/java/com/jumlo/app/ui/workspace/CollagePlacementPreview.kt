@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -33,13 +34,15 @@ internal fun CollagePlacementPreview(bitmap:Bitmap,cells:List<Rect>,onMove:(Int,
     val latestCells by rememberUpdatedState(cells)
     val latestMove by rememberUpdatedState(onMove)
     val accent=MaterialTheme.colorScheme.primary
+    val density=LocalDensity.current
+    val cellStroke=remember(density) {Stroke(with(density) {3.dp.toPx()})}
     val label=stringResource(R.string.studio_collage_drag)
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         BoxWithConstraints(Modifier.fillMaxWidth().height(320.dp).testTag("preview.bitmap"),contentAlignment=Alignment.Center) {
             val aspect=if(bitmap.width>0 && bitmap.height>0) bitmap.width.toFloat()/bitmap.height else 1f
             val width=minOf(maxWidth,maxHeight*aspect)
             Box(Modifier.size(width,width/aspect)) {
-                Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
+                if(!bitmap.isRecycled) Image(bitmap.asImageBitmap(),null,Modifier.fillMaxSize(),contentScale=ContentScale.FillBounds)
                 Canvas(Modifier.fillMaxSize().testTag("collage.canvas").semantics {contentDescription=label}
                     .pointerInput(Unit) {
                         fun cell(point:Offset):Int {
@@ -52,13 +55,16 @@ internal fun CollagePlacementPreview(bitmap:Bitmap,cells:List<Rect>,onMove:(Int,
                             onDragEnd={if(dragged>=0 && hovered>=0 && dragged!=hovered) latestMove(dragged,hovered);dragged=-1;hovered=-1},
                             onDragCancel={dragged=-1;hovered=-1})
                     }) {
-                    listOf(dragged,hovered).filter {it in cells.indices}.distinct().forEach {index->
+                    fun highlightCell(index:Int) {
+                        if(index !in cells.indices) return
                         val rect=cells[index]
                         val origin=Offset(rect.left*size.width,rect.top*size.height)
                         val extent=Size(rect.width*size.width,rect.height*size.height)
                         drawRect(accent.copy(alpha=.18f),origin,extent)
-                        drawRect(accent,origin,extent,style=Stroke(3.dp.toPx()))
+                        drawRect(accent,origin,extent,style=cellStroke)
                     }
+                    highlightCell(dragged)
+                    if(hovered!=dragged) highlightCell(hovered)
                 }
             }
         }

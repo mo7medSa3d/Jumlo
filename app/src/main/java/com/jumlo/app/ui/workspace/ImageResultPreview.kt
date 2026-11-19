@@ -3,8 +3,6 @@ package com.jumlo.app.ui.workspace
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
@@ -48,7 +46,7 @@ private data class ImagePreviewSettings(val tool:String,val width:String,val hei
 /** Bounded raster previews use original dimensions and the engine's placement policies. */
 @Composable
 internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:WorkspaceDraft) {
-    val joined=draft.toolId in setOf("img_join","img_stitch")
+    val joined=draft.toolId=="img_join"
     var retry by remember(sourceIds) {mutableIntStateOf(0)}
     var showOriginal by rememberSaveable(sourceIds.firstOrNull(),draft.toolId) {mutableStateOf(false)}
     val settings=ImagePreviewSettings(draft.toolId,draft.width,draft.height,draft.percentage,draft.longestEdge,
@@ -101,21 +99,18 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
     QuietCard(Modifier.fillMaxWidth()) {
         Text(stringResource(if(joined) R.string.interactive_layout_preview else R.string.interactive_result_preview),style=QuietTheme.typography.sectionTitle)
         val shown=if(showOriginal && !joined) frame?.getOrNull()?.let {ImageResult(it.bitmap,it.width,it.height)} else result?.getOrNull()
-        if(shown!=null) {
-            val original=frame?.getOrNull()?.bitmap
+        if(shown!=null && !shown.bitmap.isRecycled) {
             if(joined && sizes?.isSuccess==true) {
                 val dimensions=sizes!!.getOrThrow()
-                val layout=if(draft.toolId=="img_stitch") "VSTRIP" else draft.text1.ifBlank {"GRID2"}
-                val plan=ImageJoinPolicy.plan(dimensions,layout,draftNumber(draft.num1,8),if(draft.toolId=="img_stitch") draftNumber(draft.num2,0) else 0)
+                val layout=draft.text1.ifBlank {"GRID2"}
+                val plan=ImageJoinPolicy.plan(dimensions,layout,draftNumber(draft.num1,8),0)
                 val cells=plan.placements.mapIndexed {index,placement->
                     val item=dimensions[index]
                     androidx.compose.ui.geometry.Rect(placement.x.toFloat()/plan.width,placement.y.toFloat()/plan.height,
                         (placement.x+item.first).toFloat()/plan.width,(placement.y+item.second-placement.trimTop).toFloat()/plan.height)
                 }
                 CollagePlacementPreview(shown.bitmap,cells) {from,to->vm.moveSource(from,to-from)}
-            } else if(draft.toolId=="img_adjust" && original!=null && !showOriginal)
-                ImageComparisonPreview(original,shown.bitmap)
-            else Image(shown.bitmap.asImageBitmap(),stringResource(R.string.interactive_result_preview),
+            } else Image(shown.bitmap.asImageBitmap(),stringResource(R.string.interactive_result_preview),
                 contentScale=ContentScale.Fit,
                 modifier=Modifier.fillMaxWidth().height(320.dp).testTag("preview.bitmap").clip(QuietTheme.shapes.thumbnail)
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest))
@@ -137,37 +132,27 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
 }
 
 private fun previewBitmap(width:Int,height:Int):Bitmap {
-    val scale=minOf(1.0,1200.0/maxOf(width,height))
+    val scale=minOf(1.0,1200.0/maxOf(width,height,1))
     return Bitmap.createBitmap((width*scale).roundToInt().coerceAtLeast(1),
         (height*scale).roundToInt().coerceAtLeast(1),Bitmap.Config.ARGB_8888)
 }
 
 private fun renderSinglePreview(frame:PreviewFrame,logo:PreviewFrame?,draft:WorkspaceDraft):ImageResult {
     val sw=frame.width;val sh=frame.height
-    val padding=if(draft.toolId=="img_adjust") draftNumber(draft.num4,0).coerceIn(0,2000) else 0
     val geometry=if(draft.toolId=="img_02") {
         val percentage=draft.percentage.takeIf {it.isNotBlank()}?.let {draftNumber(it,100)}
         val edge=draft.longestEdge.takeIf {it.isNotBlank()}?.let {draftNumber(it,1920)}
         val target=ImageResizePolicy.targetDimensions(sw,sh,percentage,edge,draftNumber(draft.width,1600),draftNumber(draft.height,1600))
         ImageGeometry.resolve(sw,sh,target.first,target.second,FitMode.valueOf(draft.fit),
             ImageResizePolicy.allowsUpscaling(percentage,edge,draft.allowUpscaling))
-    } else Geometry(sw+padding*2,sh+padding*2,Box(0.0,0.0,1.0,1.0),
-        Box(padding.toDouble(),padding.toDouble(),(sw+padding).toDouble(),(sh+padding).toDouble()))
+    } else Geometry(sw,sh,Box(0.0,0.0,1.0,1.0),Box(0.0,0.0,sw.toDouble(),sh.toDouble()))
     val out=previewBitmap(geometry.width,geometry.height)
     try {
         val canvas=Canvas(out)
         canvas.scale(out.width.toFloat()/geometry.width,out.height.toFloat()/geometry.height)
-        // Padding and the default JPEG matte are white in the processor.
+        // The default JPEG matte is white in the processor.
         canvas.drawColor(Color.WHITE)
         val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        if(draft.toolId=="img_adjust") {
-            val c=draftNumber(draft.num2,100).coerceIn(0,300)/100f
-            val s=draftNumber(draft.num3,100).coerceIn(0,300)/100f
-            val b=draftNumber(draft.num1,0).coerceIn(-100,100)*1.27f
-            val matrix=ColorMatrix(floatArrayOf(c,0f,0f,0f,b,0f,c,0f,0f,b,0f,0f,c,0f,b,0f,0f,0f,1f,0f))
-            matrix.postConcat(ColorMatrix().apply {setSaturation(s)})
-            paint.colorFilter=ColorMatrixColorFilter(matrix)
-        }
         val crop=geometry.crop;val draw=geometry.draw;val source=frame.bitmap
         canvas.drawBitmap(source,Rect((crop.left*source.width).roundToInt(),(crop.top*source.height).roundToInt(),
             (crop.right*source.width).roundToInt(),(crop.bottom*source.height).roundToInt()),
@@ -184,20 +169,22 @@ private fun renderSinglePreview(frame:PreviewFrame,logo:PreviewFrame?,draft:Work
 
 /** Thumbnails are decoded and released one at a time, even for very large batches. */
 private suspend fun renderJoinPreview(vm:AppViewModel,ids:List<String>,sizes:List<Pair<Int,Int>>,draft:WorkspaceDraft):ImageResult {
-    val plan=ImageJoinPolicy.plan(sizes,if(draft.toolId=="img_stitch") "VSTRIP" else draft.text1.ifBlank {"GRID2"},
-        draftNumber(draft.num1,8),if(draft.toolId=="img_stitch") draftNumber(draft.num2,0) else 0)
+    val plan=ImageJoinPolicy.plan(sizes,draft.text1.ifBlank {"GRID2"},draftNumber(draft.num1,8),0)
     val output=previewBitmap(plan.width,plan.height)
     try {
         val canvas=Canvas(output)
         canvas.drawColor(Color.WHITE)
         canvas.scale(output.width.toFloat()/plan.width,output.height.toFloat()/plan.height)
+        val paint=Paint(Paint.FILTER_BITMAP_FLAG)
+        val srcRect=Rect();val dstRect=RectF()
         for((index,id) in ids.withIndex()) {
             currentCoroutineContext().ensureActive()
             val frame=vm.thumbnail(id,1)
             try {
                 val p=plan.placements[index];val (w,h)=sizes[index]
-                canvas.drawBitmap(frame.bitmap,Rect(0,(p.trimTop.toFloat()/h*frame.bitmap.height).roundToInt().coerceIn(0,frame.bitmap.height-1),frame.bitmap.width,frame.bitmap.height),
-                    RectF(p.x.toFloat(),p.y.toFloat(),(p.x+w).toFloat(),(p.y+h-p.trimTop).toFloat()),Paint(Paint.FILTER_BITMAP_FLAG))
+                srcRect.set(0,(p.trimTop.toFloat()/h.coerceAtLeast(1)*frame.bitmap.height).roundToInt().coerceIn(0,(frame.bitmap.height-1).coerceAtLeast(0)),frame.bitmap.width,frame.bitmap.height)
+                dstRect.set(p.x.toFloat(),p.y.toFloat(),(p.x+w).toFloat(),(p.y+h-p.trimTop).toFloat())
+                canvas.drawBitmap(frame.bitmap,srcRect,dstRect,paint)
             } finally {frame.bitmap.recycle()}
         }
         return ImageResult(output,plan.width,plan.height)

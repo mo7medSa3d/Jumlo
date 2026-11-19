@@ -105,37 +105,39 @@ class PdfReaderAndScanStoreTest {
         val resolver = ContentResolver.wrap(provider)
         val wrapped = object : ContextWrapper(app) { override fun getContentResolver() = resolver }
         val before = readerCopies(app)
-        val reader = PdfReaderSession.open(wrapped, "content://jumlo.fixture.pipe/document.pdf")
         try {
-            assertEquals(2, reader.pageCount)
-            assertEquals(before.size + 1, readerCopies(app).size)
-            assertNotNull(reader.render(1, 512).bitmap)
-        } finally { reader.close() }
-        assertEquals(before, readerCopies(app))
-        assertArrayEquals(bytes, source.readBytes())
-        source.delete()
+            val reader = PdfReaderSession.open(wrapped, "content://jumlo.fixture.pipe/document.pdf")
+            try {
+                assertEquals(2, reader.pageCount)
+                assertEquals(before.size + 1, readerCopies(app).size)
+                assertNotNull(reader.render(1, 512).bitmap)
+            } finally { reader.close() }
+            assertEquals(before, readerCopies(app))
+            assertArrayEquals(bytes, source.readBytes())
+        } finally { source.delete() }
     }
 
     @Test fun readerSerializesConcurrentPagesAndKeepsDisplayedEvictedBitmapsValid() = runBlocking<Unit> {
         val app = app()
         val source = fixture(app, 30)
         val original = source.readBytes()
-        val reader = PdfReaderSession.open(app, uri(app, source).toString())
         try {
-            assertEquals(30, reader.pageCount)
-            val first = reader.render(0, 1280)
-            assertEquals(0xff000000.toInt(), first.bitmap.getPixel(first.bitmap.width / 2, first.bitmap.height / 2))
-            val cached = reader.render(0, 1280)
-            assertSame(first.bitmap, cached.bitmap)
-            coroutineScope { (1 until 30).map { page -> async { reader.render(page, 1280); Unit } }.awaitAll() }
-            assertFalse("Eviction must never recycle a bitmap held by Compose", first.bitmap.isRecycled)
-            assertEquals(0xff000000.toInt(), first.bitmap.getPixel(first.bitmap.width / 2, first.bitmap.height / 2))
+            val reader = PdfReaderSession.open(app, uri(app, source).toString())
+            try {
+                assertEquals(30, reader.pageCount)
+                val first = reader.render(0, 1280)
+                assertEquals(0xff000000.toInt(), first.bitmap.getPixel(first.bitmap.width / 2, first.bitmap.height / 2))
+                val cached = reader.render(0, 1280)
+                assertSame(first.bitmap, cached.bitmap)
+                coroutineScope { (1 until 30).map { page -> async { reader.render(page, 1280); Unit } }.awaitAll() }
+                assertFalse("Eviction must never recycle a bitmap held by Compose", first.bitmap.isRecycled)
+                assertEquals(0xff000000.toInt(), first.bitmap.getPixel(first.bitmap.width / 2, first.bitmap.height / 2))
+                assertArrayEquals(original, source.readBytes())
+            } finally { reader.close() }
+            reader.close()
+            assertTrue(runCatching { reader.render(0, 512) }.isFailure)
             assertArrayEquals(original, source.readBytes())
-        } finally { reader.close() }
-        reader.close()
-        assertTrue(runCatching { reader.render(0, 512) }.isFailure)
-        assertArrayEquals(original, source.readBytes())
-        source.delete()
+        } finally { source.delete() }
     }
 
     /**
@@ -172,18 +174,19 @@ class PdfReaderAndScanStoreTest {
         val source = fixture(app, 3)
         val original = source.readBytes()
         val before = scanCopies(app)
-        val copy = SmartScanResultStore.copyPdf(app, uri(app, source), 3)
         try {
-            assertNotEquals(source.canonicalPath, copy.canonicalPath)
-            assertArrayEquals(original, copy.readBytes())
+            val copy = SmartScanResultStore.copyPdf(app, uri(app, source), 3)
+            try {
+                assertNotEquals(source.canonicalPath, copy.canonicalPath)
+                assertArrayEquals(original, copy.readBytes())
+                assertArrayEquals(original, source.readBytes())
+                for (wrongCount in listOf(0, 2, 101)) assertTrue(runCatching {
+                    SmartScanResultStore.copyPdf(app, uri(app, source), wrongCount)
+                }.isFailure)
+            } finally { copy.delete() }
+            assertEquals(before, scanCopies(app))
             assertArrayEquals(original, source.readBytes())
-            for (wrongCount in listOf(0, 2, 101)) assertTrue(runCatching {
-                SmartScanResultStore.copyPdf(app, uri(app, source), wrongCount)
-            }.isFailure)
-        } finally { copy.delete() }
-        assertEquals(before, scanCopies(app))
-        assertArrayEquals(original, source.readBytes())
-        source.delete()
+        } finally { source.delete() }
     }
 
     @Test fun corruptAndPasswordProtectedPdfsFailBeforeReaderOrScanReturns() = runBlocking {

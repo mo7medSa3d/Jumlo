@@ -33,6 +33,8 @@ object OfficeDocumentReader {
     const val MAX_TOTAL_CHARS = 10_000_000L
     const val MAX_IMAGE_BYTES = 256L * 1024 * 1024
     const val MAX_EXPANDED_PACKAGE_BYTES = 512L * 1024 * 1024
+    const val MAX_INFLATION_RATIO = 100L
+    const val MIN_RATIO_CHECK_BYTES = 1_048_576L
     const val MAX_TABLE_ROWS = 50_000
     const val MAX_TABLE_CELLS = 100_000
     const val MAX_TABLE_COLUMNS = 512
@@ -50,18 +52,19 @@ object OfficeDocumentReader {
      * differences can never turn that unsupported property into either a
      * broken valid-document path or an XXE bypass.
      */
+    private val DOCTYPE_PATTERNS = arrayOf(
+        "<!DOCTYPE".toByteArray(Charsets.US_ASCII),
+        "<!DOCTYPE".toByteArray(Charsets.UTF_16LE),
+        "<!DOCTYPE".toByteArray(Charsets.UTF_16BE)
+    )
+
     private class DoctypeRejectingInputStream(input: InputStream) : FilterInputStream(input) {
-        private val patterns = arrayOf(
-            "<!DOCTYPE".toByteArray(Charsets.US_ASCII),
-            "<!DOCTYPE".toByteArray(Charsets.UTF_16LE),
-            "<!DOCTYPE".toByteArray(Charsets.UTF_16BE)
-        )
-        private val matched = IntArray(patterns.size)
+        private val matched = IntArray(DOCTYPE_PATTERNS.size)
 
         private fun scan(value: Int) {
             if (value < 0) return
-            for (index in patterns.indices) {
-                val pattern = patterns[index]
+            for (index in DOCTYPE_PATTERNS.indices) {
+                val pattern = DOCTYPE_PATTERNS[index]
                 val next = value.toByte()
                 matched[index] = when {
                     next == pattern[matched[index]] -> matched[index] + 1
@@ -84,8 +87,6 @@ object OfficeDocumentReader {
             return count
         }
     }
-
-    // ---- generic SAX helpers -------------------------------------------------
 
     private fun parseXml(stream: InputStream, handler: DefaultHandler) {
         val factory = SAXParserFactory.newInstance().apply {
@@ -189,6 +190,7 @@ object OfficeDocumentReader {
     private fun entries(zip: ZipFile, maxExpandedBytes: Long): Map<String, ZipEntry> {
         require(zip.size() <= MAX_ENTRIES) { "OFFICE_SIZE_LIMIT" }
         val map = LinkedHashMap<String, ZipEntry>(zip.size())
+        val folded = HashSet<String>(zip.size())
         var totalExpandedBytes = 0L
         val enumeration = zip.entries()
         while (enumeration.hasMoreElements()) {
@@ -196,10 +198,17 @@ object OfficeDocumentReader {
             val name = entry.name
             require(name.isNotEmpty() && !name.startsWith("/") && !name.contains(92.toChar()) &&
                 name.none { it == 0.toChar() } && name.split('/').none { it == ".." }) { "OFFICE_INVALID" }
-            require(!map.containsKey(name)) { "OFFICE_INVALID" }
+            // Reject both exact and case-variant duplicates (ECMA-376 OPC / ZipDiff ambiguity guard).
+            require(folded.add(name.lowercase(Locale.ROOT))) { "OFFICE_INVALID" }
             val declaredSize = entry.size
             require(declaredSize >= 0L && declaredSize <= maxExpandedBytes - totalExpandedBytes) {
                 "OFFICE_SIZE_LIMIT"
+            }
+            if (declaredSize >= MIN_RATIO_CHECK_BYTES) {
+                val compressedSize = entry.compressedSize
+                require(compressedSize > 0L && declaredSize / MAX_INFLATION_RATIO <= compressedSize) {
+                    "OFFICE_SIZE_LIMIT"
+                }
             }
             totalExpandedBytes += declaredSize
             map[name] = entry
@@ -259,8 +268,6 @@ object OfficeDocumentReader {
         return out
     }
 
-    // ---- detection -----------------------------------------------------------
-
     fun detect(
         file: File,
         displayName: String,
@@ -292,6 +299,8 @@ object OfficeDocumentReader {
                     }
                 }
             }
+        } catch (e: java.util.concurrent.CancellationException) {
+            throw e
         } catch (e: IllegalArgumentException) {
             throw e
         } catch (e: SAXException) {
@@ -307,8 +316,6 @@ object OfficeDocumentReader {
             else -> throw IllegalArgumentException("OFFICE_INVALID")
         }
     }
-
-    // ---- entry point ---------------------------------------------------------
 
     fun read(
         file: File,
@@ -329,14 +336,14 @@ object OfficeDocumentReader {
                     OfficeKind.PPTX -> readPptx(zip, map, maxImageBytes, checkCancel)
                 }
             }
+        } catch (e: java.util.concurrent.CancellationException) {
+            throw e
         } catch (e: IllegalArgumentException) {
             throw e
         } catch (e: Exception) {
             throw IllegalArgumentException("OFFICE_INVALID", e)
         }
     }
-
-    // ---- shared accumulation ---------------------------------------------------
 
     private class Accumulator(private val maxImageBytes: Long) {
         val blocks = ArrayList<OfficeBlock>()
@@ -395,8 +402,6 @@ object OfficeDocumentReader {
 
     private fun isRasterImage(extension: String): Boolean =
         extension in setOf("png", "jpg", "jpeg", "gif", "bmp", "webp")
-
-    // ---- docx ------------------------------------------------------------------
 
     private fun readDocx(zip: ZipFile, map: Map<String, ZipEntry>, maxImageBytes: Long, checkCancel: () -> Unit): OfficeDocument {
         val main = "word/document.xml"
@@ -529,8 +534,8 @@ object OfficeDocumentReader {
                         "ilvl" -> if (inNumPr) ilvl = attr(attrs, "val")?.toIntOrNull() ?: 0
                         "r" -> { inRun = true; runBold = false; runItalic = false }
                         "rPr" -> inRPr = true
-                        "b" -> if (inRPr) runBold = true
-                        "i" -> if (inRPr) runItalic = true
+                        "b" -> if (inRPr) { val v = attr(attrs, "val"); runBold = v == null || (!v.equals("false", true) && v != "0") }
+                        "i" -> if (inRPr) { val v = attr(attrs, "val"); runItalic = v == null || (!v.equals("false", true) && v != "0") }
                         "instrText" -> inInstr++
                         "del" -> inDel++
                         "t" -> inText = true
@@ -571,8 +576,8 @@ object OfficeDocumentReader {
                         }
                         "sectPr" -> inSectPr = true
                         "pgSz" -> if (inSectPr) {
-                            attr(attrs, "w")?.toDoubleOrNull()?.let { pageWidthPt = it / 20.0 }
-                            attr(attrs, "h")?.toDoubleOrNull()?.let { pageHeightPt = it / 20.0 }
+                            attr(attrs, "w")?.toDoubleOrNull()?.let { (it / 20.0).takeIf { pt -> pt.isFinite() && pt in 72.0..14400.0 } }?.let { pageWidthPt = it }
+                            attr(attrs, "h")?.toDoubleOrNull()?.let { (it / 20.0).takeIf { pt -> pt.isFinite() && pt in 72.0..14400.0 } }?.let { pageHeightPt = it }
                         }
                         "mar" -> if (inSectPr) {
                             attr(attrs, "left")?.toDoubleOrNull()?.let { marginPt = (it / 20.0).coerceIn(36.0, 108.0) }
@@ -675,8 +680,6 @@ object OfficeDocumentReader {
         return numToAbstract.mapValues { (_, abs) -> abstract[abs].orEmpty() }
     }
 
-    // ---- xlsx ------------------------------------------------------------------
-
     private fun loadSharedStrings(zip: ZipFile, map: Map<String, ZipEntry>): List<String> {
         val stream = open(zip, map, "xl/sharedStrings.xml") ?: return emptyList()
         val out = ArrayList<String>()
@@ -761,7 +764,7 @@ object OfficeDocumentReader {
     }
 
     private fun formatExcelNumber(value: Double, isDate: Boolean): String {
-        if (isDate) {
+        if (isDate && value.isFinite() && value in -693_593.0..2_958_465.0) {
             // Excel epoch 1899-12-30 already accounts for the 1900 leap bug.
             val days = value.toLong()
             val seconds = ((value - days) * 86400).toLong()
@@ -789,7 +792,7 @@ object OfficeDocumentReader {
                 override fun startElement(uri: String?, local: String, qName: String, attrs: Attributes) {
                     if (local == "sheet") {
                         val name = attr(attrs, "name") ?: return
-                        val rid = attr(attrs, "id") ?: return
+                        val rid = relationshipId(attrs) ?: attr(attrs, "id") ?: return
                         sheets += name to rid
                     }
                 }
@@ -897,8 +900,6 @@ object OfficeDocumentReader {
         return OfficeDocument(OfficeKind.XLSX, 842.0, 595.0, 56.0, acc.blocks, acc.unsupported.toList())
     }
 
-    // ---- pptx ------------------------------------------------------------------
-
     private fun readPptx(zip: ZipFile, map: Map<String, ZipEntry>, maxImageBytes: Long, checkCancel: () -> Unit): OfficeDocument {
         val presentation = "ppt/presentation.xml"
         require(map.containsKey(presentation)) { "OFFICE_INVALID" }
@@ -910,8 +911,8 @@ object OfficeDocumentReader {
                 override fun startElement(uri: String?, local: String, qName: String, attrs: Attributes) {
                     when (local) {
                         "sldSz" -> {
-                            attr(attrs, "cx")?.toDoubleOrNull()?.let { slideWidthPt = it / 12700.0 }
-                            attr(attrs, "cy")?.toDoubleOrNull()?.let { slideHeightPt = it / 12700.0 }
+                            attr(attrs, "cx")?.toDoubleOrNull()?.let { (it / 12700.0).takeIf { pt -> pt.isFinite() && pt in 72.0..14400.0 } }?.let { slideWidthPt = it }
+                            attr(attrs, "cy")?.toDoubleOrNull()?.let { (it / 12700.0).takeIf { pt -> pt.isFinite() && pt in 72.0..14400.0 } }?.let { slideHeightPt = it }
                         }
                         // The required numeric id and r:id both have local name "id".
                         // Only the relationship namespace contains the slide target id.
@@ -926,7 +927,9 @@ object OfficeDocumentReader {
             checkCancel()
             val target = presRels[rid]?.let { resolve(presentation, it) } ?: return@forEachIndexed
             if (slideIndex > 0) acc.add(OfficeBlock.PageBreak)
-            val slideRels = rels(zip, map, target.substringBeforeLast('/') + "/_rels/" + target.substringAfterLast('/') + ".rels")
+            val slideDir = target.substringBeforeLast('/', "")
+            val slideRelsPath = if (slideDir.isEmpty()) "_rels/$target.rels" else "$slideDir/_rels/${target.substringAfterLast('/')}.rels"
+            val slideRels = rels(zip, map, slideRelsPath)
             val slideRelTargets = slideRels.mapValues { (_, t) -> resolve(target, t) }
             val stream = open(zip, map, target) ?: return@forEachIndexed
             stream.use { parseXml(it, object : DefaultHandler() {

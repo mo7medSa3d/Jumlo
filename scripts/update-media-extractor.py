@@ -8,8 +8,10 @@ import argparse
 import ast
 import hashlib
 import io
+import os
 from pathlib import Path
 import re
+import tempfile
 import urllib.request
 import zipfile
 
@@ -23,8 +25,12 @@ def pin(version):
     base = f'https://github.com/yt-dlp/yt-dlp/releases/download/{version}/'
     with urllib.request.urlopen(base + 'SHA2-256SUMS', timeout=60) as response:
         sums = response.read(256 * 1024).decode('ascii')
-    expected = next(line.split()[0] for line in sums.splitlines()
-                    if line.split()[-1].lstrip('*') == 'yt-dlp')
+    expected = next(
+        (parts[0] for line in sums.splitlines() if len(parts := line.split()) >= 2 and parts[-1].lstrip('*') == 'yt-dlp'),
+        None,
+    )
+    if not expected:
+        raise ValueError('Official SHA2-256SUMS does not contain a yt-dlp entry')
     with urllib.request.urlopen(base + 'yt-dlp', timeout=60) as response:
         payload = response.read(20 * 1024 * 1024 + 1)
     if len(payload) > 20 * 1024 * 1024:
@@ -43,9 +49,14 @@ def pin(version):
         if not any(name.startswith('yt_dlp_ejs/') and name.endswith('.js') for name in archive.namelist()):
             raise ValueError('Release does not bundle the required EJS scripts')
     ASSETS.mkdir(parents=True, exist_ok=True)
-    temporary = ASSETS / 'yt-dlp.tmp'
-    temporary.write_bytes(payload)
-    temporary.replace(ASSETS / 'yt-dlp')
+    fd, tmp_name = tempfile.mkstemp(prefix='.yt-dlp.', suffix='.tmp', dir=ASSETS)
+    temporary = Path(tmp_name)
+    try:
+        with os.fdopen(fd, 'wb') as handle:
+            handle.write(payload)
+        temporary.replace(ASSETS / 'yt-dlp')
+    finally:
+        temporary.unlink(missing_ok=True)
     (ASSETS / 'extractor.properties').write_text(
         '# Official release; regenerated with scripts/update-media-extractor.py\n'
         f'version={version}\nsha256={actual}\nsource={base}yt-dlp\n', encoding='ascii')

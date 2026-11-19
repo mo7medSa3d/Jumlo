@@ -17,14 +17,23 @@ def chunk(kind, data):
 
 def png(index, width=1280, height=960):
     compressor = zlib.compressobj(level=6)
+    templates = []
+    for parity in (0, 1):
+        row = bytearray(1 + width * 3)  # index 0 = 0 (PNG scanline filter: None)
+        for x in range(width):
+            offset = 1 + x * 3
+            row[offset] = (x // 5 + index * 17) % 256
+            row[offset + 2] = 48 + (((x // 80) + parity + index) % 2) * 144
+        templates.append(row)
+    last_g = [-1, -1]
     blocks = []
     for y in range(height):
-        row = bytearray([0])  # PNG scanline filter: None
-        for x in range(width):
-            tile = ((x // 80) + (y // 80) + index) % 2
-            row.extend(((x // 5 + index * 17) % 256,
-                        (y // 4 + index * 29) % 256,
-                        48 + tile * 144))
+        parity = (y // 80) % 2
+        row = templates[parity]
+        g = (y // 4 + index * 29) % 256
+        if g != last_g[parity]:
+            row[2::3] = bytes([g]) * width
+            last_g[parity] = g
         blocks.append(compressor.compress(row))
     blocks.append(compressor.flush())
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
@@ -42,7 +51,7 @@ def main():
         data = png(index)
         path.write_bytes(data)
         records.append({"file": path.name, "width": 1280, "height": 960, "bytes": len(data)})
-    (args.output / "manifest.json").write_text(json.dumps(records, indent=2) + "\n")
+    (args.output / "manifest.json").write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
     print(f"Created {len(records)} PNG inputs in {args.output}; import and process them in Jumlo before running Files benchmarks.")
 
 

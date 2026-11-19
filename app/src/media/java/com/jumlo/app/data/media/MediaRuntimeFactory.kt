@@ -61,7 +61,9 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
     private val launcher = File(context.noBackupFilesDir, "media-launcher")
     private val nativeDir get() = File(context.applicationInfo.nativeLibraryDir)
     private val runner = MediaProcessRunner { pid, force ->
-        Os.kill(-pid, if (force) OsConstants.SIGKILL else OsConstants.SIGTERM)
+        if (pid > 0) {
+            runCatching { Os.kill(-pid, if (force) OsConstants.SIGKILL else OsConstants.SIGTERM) }
+        }
     }
 
     /**
@@ -91,6 +93,10 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
     override fun warmup() {
         try {
             initialize()
+        } catch (cancel: java.util.concurrent.CancellationException) {
+            throw cancel
+        } catch (error: Error) {
+            throw error
         } catch (_: Throwable) {
             // Background pre-warming is opportunistic
         }
@@ -118,7 +124,7 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
                     val sink = AtomicFile(file)
                     val output = sink.startWrite()
                     try { input.copyTo(output); sink.finishWrite(output) }
-                    catch (error: Exception) { sink.failWrite(output); throw error }
+                    catch (error: Throwable) { sink.failWrite(output); throw error }
                 }
             }
             for (name in listOf("libpython.so", "libffmpeg.so", "libffprobe.so", "libqjs.so")) {
@@ -171,7 +177,7 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         try {
             context.assets.open("media/yt-dlp").use { it.copyTo(output) }
             sink.finishWrite(output)
-        } catch (error: Exception) { sink.failWrite(output); throw error }
+        } catch (error: Throwable) { sink.failWrite(output); throw error }
     }
 
     override fun refreshExtractor(): String {
@@ -191,7 +197,7 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         val quickJs = File(nativeDir, "libqjs.so")
         val archive = File(context.noBackupFilesDir, "youtubedl-android/yt-dlp/yt-dlp")
         val command = listOf(python.absolutePath, "-u", File(launcher, "bootstrap.py").absolutePath,
-            archive.absolutePath, "--no-plugin-dirs", "--js-runtimes", "quickjs:${quickJs.absolutePath}",
+            archive.absolutePath, "--no-plugin-dirs", "--no-config-locations", "--js-runtimes", "quickjs:${quickJs.absolutePath}",
             "--ffmpeg-location", ffmpeg.absolutePath) + args
         val environment = mapOf(
             "PYTHONHOME" to File(packages, "python/usr").absolutePath,
@@ -243,7 +249,11 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
                     "PYTHONNOUSERSITE" to "1","PYTHONDONTWRITEBYTECODE" to "1",
                     "LD_LIBRARY_PATH" to "${File(packages,"python/usr/lib")}:${File(packages,"ffmpeg/usr/lib")}",
                     "HOME" to dir.absolutePath,"TMPDIR" to dir.absolutePath)
-                val result=runner.run(MediaProcessSpec(command,dir,environment,timeoutMillis=20_000,stdoutLimit=262144),check)
+                val result = try {
+                    runner.run(MediaProcessSpec(command,dir,environment,timeoutMillis=20_000,stdoutLimit=262144),check)
+                } catch (error: com.jumlo.app.core.media.MediaProcessException) {
+                    throw OperationFailure(error.code)
+                }
                 if(result.exitCode!=0) throw OperationFailure("MEDIA_NO_USABLE_FORMAT")
                 MediaProbeMetadata.enrich(asset,result.stdout,bytes)
             } else asset

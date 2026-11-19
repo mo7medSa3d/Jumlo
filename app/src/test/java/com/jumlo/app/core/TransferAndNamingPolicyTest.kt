@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /** Policy checks for download naming, resume decisions and image request geometry. */
 class TransferAndNamingPolicyTest {
@@ -112,9 +111,4 @@ class TransferAndNamingPolicyTest {
         assertTrue("more outputs than the published limit must be refused", failed)
     }
 
-    @Test fun a_workspace_temp_file_is_not_published_as_an_output() {
-        val temp = File.createTempFile("jumlo-test", ".tmp")
-        temp.delete()
-        assertFalse(temp.exists())
-    }
 }

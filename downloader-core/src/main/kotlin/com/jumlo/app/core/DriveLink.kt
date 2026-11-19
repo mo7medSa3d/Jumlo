@@ -10,6 +10,9 @@ object DriveLink {
     private val ID = Regex("[A-Za-z0-9_-]{10,128}")
     private val DRIVE_FILE = Regex("/file/(?:u/[0-9]+/)?d/([A-Za-z0-9_-]{10,128})(?:/.*)?")
     private val DOC_FILE = Regex("/(document|spreadsheets|presentation)/(?:u/[0-9]+/)?d/([A-Za-z0-9_-]{10,128})(?:/.*)?")
+    private val CONFIRM_LINK = Regex("""<a\b[^>]*\bhref="([^"]*(?:confirm=|download\?id=)[^"]*)"[^>]*>""", RegexOption.IGNORE_CASE)
+    private val CONFIRM_FORM = Regex("""<form\b[^>]*\baction="([^"]+)"[^>]*>([\s\S]*?)</form>""", RegexOption.IGNORE_CASE)
+    private val CONFIRM_INPUT = Regex("""<input\b[^>]*\bname="([^"]+)"[^>]*\bvalue="([^"]*)"[^>]*>""", RegexOption.IGNORE_CASE)
 
     fun fileId(input: String): String {
         val value = input.trim()
@@ -73,22 +76,19 @@ object DriveLink {
 
     /** Extract large-file virus-scan download confirmation URL from Google Drive HTML warning page. */
     fun parseConfirmationUrl(html: String, baseUri: URI): String? {
-        val linkPattern = Regex("""<a\b[^>]*\bhref="([^"]*(?:confirm=|download\?id=)[^"]*)"[^>]*>""", RegexOption.IGNORE_CASE)
-        val linkMatch = linkPattern.find(html)
+        val linkMatch = CONFIRM_LINK.find(html)
         if (linkMatch != null) {
             val target = linkMatch.groupValues[1].replace("&amp;", "&")
             return runCatching { baseUri.resolve(target).toString() }.getOrNull()
         }
-        val formPattern = Regex("""<form\b[^>]*\baction="([^"]+)"[^>]*>([\s\S]*?)</form>""", RegexOption.IGNORE_CASE)
-        val formMatch = formPattern.find(html)
+        val formMatch = CONFIRM_FORM.find(html)
         if (formMatch != null) {
             val action = formMatch.groupValues[1].replace("&amp;", "&")
             val formBody = formMatch.groupValues[2]
-            val inputPattern = Regex("""<input\b[^>]*\bname="([^"]+)"[^>]*\bvalue="([^"]*)"[^>]*>""", RegexOption.IGNORE_CASE)
-            val params = inputPattern.findAll(formBody).map {
-                "${it.groupValues[1]}=${URLEncoder.encode(it.groupValues[2], "UTF-8")}"
+            val params = CONFIRM_INPUT.findAll(formBody).map {
+                "${URLEncoder.encode(it.groupValues[1], "UTF-8")}=${URLEncoder.encode(it.groupValues[2], "UTF-8")}"
             }.joinToString("&")
-            val full = if ('?' in action) "$action&$params" else "$action?$params"
+            val full = if (params.isEmpty()) action else if ('?' in action) "$action&$params" else "$action?$params"
             return runCatching { baseUri.resolve(full).toString() }.getOrNull()
         }
         return null

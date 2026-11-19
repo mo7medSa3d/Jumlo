@@ -335,6 +335,8 @@ object PdfImageCompressor {
                     dict.getItem(key)?.let { candidate.cosObject.setItem(key, it) }
                 }
                 return candidate to null
+            } else {
+                candidate.cosObject.close()
             }
         }
         return null to "NOT_SMALLER"

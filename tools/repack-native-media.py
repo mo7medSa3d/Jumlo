@@ -26,9 +26,8 @@ import posixpath
 import re
 import struct
 import sys
+import tempfile
 import zipfile
-
-EXECUTABLES = ('libffmpeg.so', 'libffprobe.so', 'libpython.so', 'libqjs.so')
 
 # Never considered for removal: app-level repair targets, network security
 # surface, the interpreter core, and generic small dependencies.
@@ -50,6 +49,14 @@ SYS_LIBS = {'libc.so', 'libm.so', 'libdl.so', 'libstdc++.so',
             'libandroid.so', 'libjnigraphics.so',
             'libmediandk.so'}
 _TEST_RE = re.compile(r'_test\w*\.')
+
+
+def _validate_archive_member_name(name: str) -> None:
+    if not name or '\x00' in name or '\\' in name or posixpath.isabs(name):
+        raise ValueError(f'Unsafe ZIP entry path: {name!r}')
+    if '..' in name.split('/'):
+        raise ValueError(f'ZIP entry path escapes archive: {name!r}')
+
 
 def son_key(name: str) -> str:
     # The loader requests exact filenames; version suffixes are not interchangeable.
@@ -78,10 +85,6 @@ def _elf_layout(data: bytes):
         return wide, order, segments
     except struct.error as error:
         raise ValueError('Truncated ELF header') from error
-
-def elf_needed(path: str) -> set[str]:
-    with open(path, 'rb') as fh:
-        return _needed_of(fh.read())
 
 def _needed_of(data: bytes) -> set[str]:
     layout = _elf_layout(data)
@@ -169,14 +172,14 @@ class LinkUniverse:
                 raise ValueError(f'Ambiguous ZIP directory: {relative}')
             for info in infos:
                 name = info.filename
+                _validate_archive_member_name(name)
                 node = relative + '!' + name
                 self.files.add(node)
                 self.entries[node] = info
                 if info.is_dir():
                     continue
-                data = archive.read(info)
                 if is_symlink(info):
-                    target = data.decode('utf8', 'strict')
+                    target = archive.read(info).decode('utf8', 'strict')
                     if not target or '\x00' in target or posixpath.isabs(target):
                         raise ValueError(f'Invalid symlink target: {node}')
                     resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
@@ -185,12 +188,16 @@ class LinkUniverse:
                     self.aliases[node] = relative + '!' + resolved
                     if decide(name, info, set())[0]:
                         self.module_roots.add(node)
-                elif data.startswith(b'\x7fELF'):
-                    self.needed[node] = _needed_of(data)
-                    # Includes versioned files that the retention policy keeps,
-                    # not just linked executables and dynamically loaded modules.
-                    if decide(name, info, set())[0]:
-                        self.module_roots.add(node)
+                else:
+                    with archive.open(info) as stream:
+                        magic = stream.read(4)
+                        if magic == b'\x7fELF':
+                            data = magic + stream.read()
+                            self.needed[node] = _needed_of(data)
+                            # Includes versioned files that the retention policy keeps,
+                            # not just linked executables and dynamically loaded modules.
+                            if decide(name, info, set())[0]:
+                                self.module_roots.add(node)
                 if posixpath.dirname(name) == 'usr/lib' and (node in self.needed or node in self.aliases):
                     self.providers.setdefault(son_key(name), set()).add(node)
 
@@ -303,52 +310,70 @@ def repack_bytes(original: bytes, closure: set[str]) -> tuple[bytes, list[tuple[
     The upstream payloads are ordinary ZIP32 archives. Reject other layouts
     instead of silently rewriting an unreviewed variant of the native payload.
     """
-    src = zipfile.ZipFile(io.BytesIO(original))
-    eocd = original.rfind(b'PK\x05\x06', max(0, len(original) - 65557))
-    if eocd < 0:
-        raise ValueError('ZIP end record missing')
-    disk, cd_disk, count_disk, count, cd_size, cd_start, comment_size = struct.unpack_from('<HHHHIIH', original, eocd + 4)
-    if disk or cd_disk or count_disk != count or count == 65535 or cd_start + cd_size != eocd or eocd + 22 + comment_size != len(original):
-        raise ValueError('Unsupported ZIP layout')
-    infos = src.infolist()
-    if len(infos) != count or len({i.filename for i in infos}) != count:
-        raise ValueError('Ambiguous ZIP directory')
-    by_offset = sorted(infos, key=lambda i: i.header_offset)
-    dropped: list[tuple[int, str]] = []
-    out = bytearray()
-    offsets = {}
-    for index, info in enumerate(by_offset):
-        end = by_offset[index + 1].header_offset if index + 1 < count else cd_start
-        if original[info.header_offset:info.header_offset + 4] != b'PK\x03\x04' or end <= info.header_offset:
-            raise ValueError('Invalid ZIP local record')
-        keep, _why = decide(info.filename, info, closure)
-        if keep or info.is_dir():
-            src.read(info)  # CRC and decompression validation before retaining bytes.
-            offsets[info.header_offset] = len(out)
-            out.extend(original[info.header_offset:end])
-        else:
-            dropped.append((info.compress_size, info.filename))
-    new_cd_start = len(out)
-    position = cd_start
-    retained = 0
-    for _ in range(count):
-        if original[position:position + 4] != b'PK\x01\x02':
-            raise ValueError('Invalid ZIP central record')
-        name_size, extra_size, entry_comment = struct.unpack_from('<HHH', original, position + 28)
-        length = 46 + name_size + extra_size + entry_comment
-        old_offset = struct.unpack_from('<I', original, position + 42)[0]
-        if old_offset in offsets:
-            record = bytearray(original[position:position + length])
-            struct.pack_into('<I', record, 42, offsets[old_offset])
-            out.extend(record)
-            retained += 1
-        position += length
-    if position != eocd:
-        raise ValueError('Invalid ZIP directory length')
-    out.extend(struct.pack('<4sHHHHIIH', b'PK\x05\x06', 0, 0, retained, retained,
-                           len(out) - new_cd_start, new_cd_start, comment_size))
-    out.extend(original[eocd + 22:])
-    return bytes(out), dropped
+    with zipfile.ZipFile(io.BytesIO(original)) as src:
+        eocd = original.rfind(b'PK\x05\x06', max(0, len(original) - 65557))
+        if eocd < 0:
+            raise ValueError('ZIP end record missing')
+        disk, cd_disk, count_disk, count, cd_size, cd_start, comment_size = struct.unpack_from('<HHHHIIH', original, eocd + 4)
+        if disk or cd_disk or count_disk != count or count == 65535 or cd_start + cd_size != eocd or eocd + 22 + comment_size != len(original):
+            raise ValueError('Unsupported ZIP layout')
+        infos = src.infolist()
+        if len(infos) != count or len({i.filename for i in infos}) != count:
+            raise ValueError('Ambiguous ZIP directory')
+        by_offset = sorted(infos, key=lambda i: i.header_offset)
+        dropped: list[tuple[int, str]] = []
+        out = bytearray()
+        offsets = {}
+        for index, info in enumerate(by_offset):
+            _validate_archive_member_name(info.filename)
+            end = by_offset[index + 1].header_offset if index + 1 < count else cd_start
+            if original[info.header_offset:info.header_offset + 4] != b'PK\x03\x04' or end <= info.header_offset:
+                raise ValueError('Invalid ZIP local record')
+            keep, _why = decide(info.filename, info, closure)
+            if keep or info.is_dir():
+                src.read(info)  # CRC and decompression validation before retaining bytes.
+                offsets[info.header_offset] = len(out)
+                out.extend(original[info.header_offset:end])
+            else:
+                dropped.append((info.compress_size, info.filename))
+        new_cd_start = len(out)
+        position = cd_start
+        retained = 0
+        for _ in range(count):
+            if position + 46 > eocd or original[position:position + 4] != b'PK\x01\x02':
+                raise ValueError('Invalid ZIP central record')
+            name_size, extra_size, entry_comment = struct.unpack_from('<HHH', original, position + 28)
+            length = 46 + name_size + extra_size + entry_comment
+            if position + length > eocd:
+                raise ValueError('Invalid ZIP central record')
+            old_offset = struct.unpack_from('<I', original, position + 42)[0]
+            if old_offset in offsets:
+                record = bytearray(original[position:position + length])
+                struct.pack_into('<I', record, 42, offsets[old_offset])
+                out.extend(record)
+                retained += 1
+            position += length
+        if position != eocd:
+            raise ValueError('Invalid ZIP directory length')
+        out.extend(struct.pack('<4sHHHHIIH', b'PK\x05\x06', 0, 0, retained, retained,
+                               len(out) - new_cd_start, new_cd_start, comment_size))
+        out.extend(original[eocd + 22:])
+        return bytes(out), dropped
+
+
+def _write_atomic(path: str, data: bytes) -> None:
+    fd, tmp_path = tempfile.mkstemp(prefix='.repack-', dir=os.path.dirname(path) or '.')
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(data)
+        os.replace(tmp_path, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -357,19 +382,19 @@ def main() -> int:
     parser.add_argument('--pins', type=str, default=None,
                         help='app/src/media/assets/media/native-overrides/manifest.properties; '
                              'after repacking, every produced digest must match '
-                             f'<abi>.{{ffmpeg,python}}Archive.sha256 pinned there')
+                             '<abi>.{ffmpeg,python}Archive.sha256 pinned there')
     args = parser.parse_args()
     pins = {}
     if args.pins:
         if not os.path.isfile(args.pins):
             print(f'repack-native-media: pin manifest missing: {args.pins}', file=sys.stderr)
             return 2
-        for line in open(args.pins, encoding='utf8'):
-            line = line.strip()
-            if '=' in line and not line.startswith('#'):
-                k, v = line.split('=', 1)
-                pins[k] = v
-    reports = []
+        with open(args.pins, encoding='utf8') as fh:
+            for line in fh:
+                line = line.strip()
+                if '=' in line and not line.startswith('#'):
+                    k, v = line.split('=', 1)
+                    pins[k] = v
     for d in args.dir:
         abi = os.path.basename(os.path.normpath(d))
         if abi not in ('arm64-v8a', 'x86_64', 'armeabi-v7a', 'x86'):
@@ -385,7 +410,8 @@ def main() -> int:
                     continue
                 source_pin = pins.get(f'{abi}.{source_key}.sha256')
                 output_pin = pins.get(f'{abi}.{output_key}.sha256')
-                actual = hashlib.sha256(open(path, 'rb').read()).hexdigest()
+                with open(path, 'rb') as fh:
+                    actual = hashlib.sha256(fh.read()).hexdigest()
                 if not source_pin or not output_pin or actual not in (source_pin, output_pin):
                     print(f'repack-native-media: {abi}/{name} does not match pinned upstream or repacked bytes', file=sys.stderr)
                     return 3
@@ -398,7 +424,8 @@ def main() -> int:
             if not os.path.isfile(path):
                 print(f'repack-native-media: no {name} in {d}; is extendedMedia disabled?', file=sys.stderr)
                 continue
-            original = open(path, 'rb').read()
+            with open(path, 'rb') as fh:
+                original = fh.read()
             new, dropped = repack_bytes(original, closure)
             sha = hashlib.sha256(new).hexdigest()
             pin_key = f'{abi}.ffmpegArchive.sha256' if name == 'libffmpeg.zip.so' else f'{abi}.pythonArchive.sha256'
@@ -412,8 +439,7 @@ def main() -> int:
         LinkUniverse(d, payloads=outputs).validate()
         if args.write:
             for name, data in outputs.items():
-                with open(os.path.join(d, name), 'wb') as stream:
-                    stream.write(data)
+                _write_atomic(os.path.join(d, name), data)
         for path, length, saved, sha, dropped in messages:
             print(f'REPACKED_OK {path} bytes_after={length} saved={saved} sha256={sha}')
             for size, name in sorted(dropped, reverse=True)[:6]:

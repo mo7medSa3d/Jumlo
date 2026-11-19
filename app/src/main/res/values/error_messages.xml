@@ -2,12 +2,12 @@
 <resources>
     <string name="msg_draft_saved">Workspace saved.</string>
     <string name="msg_draft_failed">Could not save or restore the workspace. Keep this screen open and try again.</string>
-    <string name="msg_settings_failed">Could not read or save your settings. Please try again.</string>
+    <string name="msg_settings_failed">Could not save your settings. Check available storage and retry.</string>
     <string name="msg_trashed">Moved to trash. You can undo this.</string>
     <string name="msg_restored">File restored.</string>
     <string name="msg_purged">Selected trash files permanently deleted.</string>
     <string name="msg_cleanup_done">Temporary files cleaned.</string>
-    <string name="msg_cleanup_failed">Could not finish cleaning temporary files. Please try again.</string>
+    <string name="msg_cleanup_failed">Could not finish cleaning temporary files. Stop active jobs and retry.</string>
     <string name="msg_export_verified">Copy saved and verified.</string>
     <string name="msg_log_exported">Diagnostic log exported.</string>
     <string name="msg_copy_verified">File copied and verified.</string>
@@ -30,7 +30,7 @@
     <string name="msg_page_selection_limit">Too many repeated page selections. Choose fewer ranges or remove duplicates, then try again.</string>
     <string name="msg_unavailable">This tool is unavailable in this build. Choose another tool.</string>
     <string name="msg_login">Sign in to continue.</string>
-    <string name="msg_failed">Could not complete this action. Please try again.</string>
+    <string name="msg_failed">Could not complete this action. Check your inputs and retry.</string>
     <string name="msg_one_file">Choose exactly one file for this tool.</string>
     <string name="msg_unsupported_social_platform">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
     <string name="msg_http_401">This link requires sign-in or authorization (HTTP 401).</string>
@@ -39,7 +39,7 @@
     <string name="msg_drive_signin_cancelled">Google sign-in was cancelled, so nothing was downloaded. Sign in or paste a token, then retry.</string>
     <string name="msg_http_403">Access to this link is restricted or expired (HTTP 403). If using Google Drive, set sharing to \"Anyone with the link\".</string>
     <string name="msg_http_404">The requested file was not found at this link (HTTP 404).</string>
-    <string name="msg_http_429">Too many requests to the server (HTTP 429). Please wait a moment and try again.</string>
+    <string name="msg_http_429">Server rate limit reached (HTTP 429). Wait a moment and retry.</string>
     <string name="msg_too_many_redirects">The download link redirected too many times. Use a direct file link.</string>
     <string name="msg_insecure_redirect">Blocked an unsafe redirect from HTTPS to unencrypted HTTP.</string>
     <string name="msg_download_not_a_file">This link points to a web page instead of a downloadable file. Check link sharing permissions.</string>

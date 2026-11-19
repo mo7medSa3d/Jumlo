@@ -32,6 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -96,8 +100,13 @@ fun ToolScaffold(
 fun ToolProgressSheet(visible: Boolean, title: String, message: String?, onDismiss: () -> Unit) {
     if (!visible) return
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp)) {
-            Text(title, style = QuietTheme.typography.sectionTitle)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite }
+        ) {
+            Text(title, style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
             if (message != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(message, style = QuietTheme.typography.body,
@@ -120,9 +129,18 @@ fun ToolResultScreen(
     actions: List<ToolResultAction>
 ) {
     Column(Modifier.fillMaxSize().padding(24.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+        ) {
             Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-            Text(title, style = QuietTheme.typography.sectionTitle, fontWeight = FontWeight.SemiBold)
+            Text(
+                title,
+                style = QuietTheme.typography.sectionTitle,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.semantics { heading() }
+            )
         }
         if (message != null) {
             Spacer(Modifier.height(8.dp))

@@ -86,8 +86,8 @@
     <string name="search_title">البحث في الأدوات والملفات</string>
     <string name="search_matching_utilities">الأدوات المطابقة</string>
     <string name="search_suggested_tools">أدوات مقترحة</string>
-    <string name="search_recent_matching_files">الملفات المطابقة في المساحة المحلية</string>
-    <string name="search_local_index_notice">يبحث فقط في الأدوات المثبتة والملفات المحلية. لا توجد فهرسة سحابية.</string>
+    <string name="search_recent_matching_files">الملفات المطابقة الحديثة</string>
+    <string name="search_local_index_notice">يبحث في الأدوات المثبتة وملفاتك على هذا الجهاز فقط، دون إرسال أي بيانات للإنترنت.</string>
 
     <!-- Choose Source Import -->
     <string name="import_title">استيراد الملفات</string>
@@ -150,7 +150,7 @@
 
     <!-- File Tools -->
     <string name="tool_browse_storage">تصفح التخزين</string>
-    <string name="tool_browse_storage_sub">فحص المجلدات الداخلية والممنوحة</string>
+    <string name="tool_browse_storage_sub">تصفح تخزين التطبيق والمجلدات المرتبطة</string>
     <string name="tool_create_zip">إنشاء أرشيف ZIP</string>
     <string name="tool_create_zip_sub">ضغط الملفات في أرشيف محلي</string>
     <string name="tool_extract_zip">فك ضغط ZIP</string>
@@ -198,8 +198,8 @@
 
     <!-- Workspace & Tool Fields -->
     <string name="home_resume_workspace">استئناف مساحة العمل النشطة (%1$d)</string>
-    <string name="candidate_debug_notice">نسخة تجريبية: أدوات المعالجة مفعلة في نسخة التصحيح هذه فقط حتى اكتمال فحص الأجهزة.</string>
-    <string name="candidate_release_notice">نسخة تجريبية: المعالجة معطلة في نسخ الإصدار حتى اكتمال فحص الأجهزة.</string>
+    <string name="candidate_debug_notice">نسخة معاينة: أدوات المعالجة مفعّلة في هذا الإصدار الاختباري.</string>
+    <string name="candidate_release_notice">أدوات المعالجة غير متاحة في هذا الإصدار.</string>
     <string name="downloads_empty_title">لا توجد تنزيلات مباشرة بعد</string>
     <string name="downloads_empty_sub">أضف رابط HTTPS مباشر للتنزيل مع متابعة التقدم والإلغاء والتحقق من SHA-256.</string>
     <string name="files_snapshots_title">نسخ الملفات المستوردة</string>
@@ -298,7 +298,7 @@
     <string name="field_insert_at_page">إدراج ملف PDF الثاني قبل الصفحة (تبدأ من 1، عند اختيار ملفين)</string>
     <string name="field_forms_json">قيم الحقول (مفتاح=قيمة في كل سطر)</string>
     <string name="field_flatten_form">دمج حقول النموذج في محتوى الصفحة الثابت</string>
-    <string name="field_ocr_note">يشغل التعرف الضوئي على الحروف محلياً لتصدير نص .txt ونسخة PDF قابلة للبحث.</string>
+    <string name="field_ocr_note">يتعرف على النص محليًا على جهازك لتصدير ملف .txt ونسخة PDF قابلة للبحث.</string>
     <string name="field_output_format">صيغة الإخراج</string>
     <string name="field_target_width">العرض المطلوب (بكسل)</string>
     <string name="field_target_height">الارتفاع المطلوب (بكسل)</string>
@@ -330,7 +330,7 @@
     <string name="field_rename_pattern">النمط ({n} = الرقم التسلسلي، {name} = الاسم الأصلي)</string>
     <string name="field_rename_note">ينشر نسخاً معاداً تسميتها من الملفات المحددة باستخدام النمط ورقم البداية.</string>
     <string name="field_duplicates_note">يحسب بصمة SHA-256 للملفات المحددة ويكتشف المجموعات المتطابقة تماماً.</string>
-    <string name="field_trash_note">يعرض عناصر سلة المهملات وينظف الملفات المؤقتة المنتهية الصلاحية.</string>
+    <string name="field_trash_note">يعرض عناصر سلة المهملات ويزيل الملفات المؤقتة المنتهية الصلاحية.</string>
     <string name="field_drive_export_mode">تصدير الملفات المحددة إلى Google Drive (أو استيراد)</string>
     <string name="field_drive_file_id">رابط أو معرف ملف Google Drive</string>
     <string name="field_drive_folder_id">معرف المجلد الهدف (اختياري)</string>
@@ -355,7 +355,7 @@
     <string name="account_privacy_status">المستندات على الجهاز • التنزيلات تستخدم الشبكة</string>
     <string name="account_storage_stats">مساحة التخزين والذاكرة</string>
     <string name="account_clear_cache_btn">تفريغ الذاكرة المؤقتة الآن</string>
-    <string name="account_clear_cache_success">تم تفريغ الملفات المؤقتة والذاكرة بنجاح</string>
+    <string name="account_clear_cache_success">تم مسح الملفات المؤقتة</string>
     <string name="account_preferences_header">المظهر واللغة وتجربة الاستخدام</string>
     <string name="home_greeting">أهلاً بك في جملو</string>
     <string name="home_greeting_sub">محركك المحلي الذكي لإدارة الوسائط والمستندات بخصوصية كاملة</string>
@@ -377,7 +377,7 @@
     <string name="files_workflow_size">قد لا تكفي مساحة الجهاز لمعالجة هذه الملفات. وفّر مساحة ثم أعد المحاولة؛ ملفاتك الأصلية لم تتغير.</string>
     <string name="files_workflow_invalid">تعذّر تجهيز بعض الملفات المختارة. حدّث صفحة الملفات واختر ملفات يمكن الوصول إليها مرة أخرى.</string>
     <string name="files_workflow_limit">يمكنك اختيار حتى ١٠٠٠ ملف في الدفعة الواحدة، وتقسيم المجموعات الأكبر إلى أكثر من مهمة.</string>
-    <string name="files_workflow_duplicates">تم اختيار الملف نفسه مرتين. اختر نتائج مختلفة.</string>
+    <string name="files_workflow_duplicates">تم اختيار الملف نفسه مرتين. اختر ملفات مختلفة.</string>
     <string name="files_favorites">المفضلة</string>
     <string name="files_mark_favorite">إضافة للمفضلة</string>
     <string name="files_unmark_favorite">إزالة من المفضلة</string>

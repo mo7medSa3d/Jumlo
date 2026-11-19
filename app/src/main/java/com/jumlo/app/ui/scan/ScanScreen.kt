@@ -30,7 +30,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.IntSize
@@ -61,7 +64,7 @@ fun ScanScreen(
     if (format == null) {
         Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-            Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle)
+            Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { format = "pdf" },
@@ -116,7 +119,7 @@ fun SignaturePad(onSaved: (File) -> Unit) {
     val hasInk = strokes.isNotEmpty()
     val padDescription = stringResource(R.string.studio_signature_pad)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.signature_title), style = QuietTheme.typography.sectionTitle)
+        Text(stringResource(R.string.signature_title), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
         // Signature-pad checkerboard follows the theme instead of fixed light
         // grays, so it stays readable in dark mode too.
         val padScheme = MaterialTheme.colorScheme
@@ -210,13 +213,13 @@ fun SignaturePad(onSaved: (File) -> Unit) {
                 }
             })
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (saveFailed) Text(stringResource(R.string.interactive_signature_failed), color = MaterialTheme.colorScheme.error)
+        if (saveFailed) Text(stringResource(R.string.interactive_signature_failed), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (library.isNotEmpty()) {
             Text(stringResource(R.string.studio_signature_library), style = QuietTheme.typography.metadataStrong)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(library, key = { it.name }) { file ->
+                items(library, key = { it.name }, contentType = { "signature" }) { file ->
                     val bitmap by produceState<Bitmap?>(null, file) {
-                        value = withContext(Dispatchers.IO) { runCatching { BitmapFactory.decodeFile(file.path) }.getOrNull() }
+                        value = withContext(Dispatchers.IO) { try { BitmapFactory.decodeFile(file.path) } catch (cancel: CancellationException) { throw cancel } catch (_: Exception) { null } catch (_: OutOfMemoryError) { null } }
                     }
                     DisposeOwnedPreviewBitmap(bitmap)
                     Column(Modifier.width(148.dp)) {

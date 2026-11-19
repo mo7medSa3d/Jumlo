@@ -10,6 +10,10 @@ enum class DirectFileKind {
 
 /** Smart URL routing & classification for all social/video/audio platforms, Google Drive, and direct files. */
 object DownloadLinkPolicy {
+    private val DISPOSITION_UTF8 = Regex("filename\\*=UTF-8''([^;]+)", RegexOption.IGNORE_CASE)
+    private val DISPOSITION_FILENAME = Regex("filename\\s*=\\s*\"?([^\";]+)", RegexOption.IGNORE_CASE)
+    private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
+    private val WHITESPACE = Regex("\\s+")
     private val directTypes = setOf(
         "pdf", "jpg", "jpeg", "png", "gif", "webp", "heic", "svg",
         "zip", "7z", "rar", "apk", "txt", "csv", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
@@ -119,15 +123,15 @@ object DownloadLinkPolicy {
 
     fun cleanName(url: String, contentDisposition: String? = null, mime: String? = null): String {
         val fromHeader = contentDisposition?.let { header ->
-            val encoded = Regex("filename\\*=UTF-8''([^;]+)", RegexOption.IGNORE_CASE).find(header)?.groupValues?.get(1)
+            val encoded = DISPOSITION_UTF8.find(header)?.groupValues?.get(1)
             val decoded = encoded?.let { runCatching { URLDecoder.decode(it.replace("+", "%2B"), "UTF-8") }.getOrNull() }
-            decoded ?: Regex("filename\\s*=\\s*\"?([^\";]+)", RegexOption.IGNORE_CASE).find(header)?.groupValues?.get(1)
+            decoded ?: DISPOSITION_FILENAME.find(header)?.groupValues?.get(1)
         }
         // A name the user typed ("My Report.pdf") is not a URI: URI parsing rejects it and the
         // file would be published as a generic "download". Fall back to the literal text.
         val path = runCatching { URI(url).path.orEmpty().substringAfterLast('/') }.getOrElse { url }
         val base = (fromHeader ?: path).takeUnless { it in setOf("download", "uc", "open", "view", "edit", "export") }.orEmpty().ifBlank { "download" }
-        val clean = base.replace(Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]"), " ").replace(Regex("\\s+"), " ").trim(' ', '.')
+        val clean = base.replace(INVALID_NAME_CHARS, " ").replace(WHITESPACE, " ").trim(' ', '.')
             .ifBlank { "download" }
         val extension = clean.substringAfterLast('.', "").lowercase(Locale.ROOT)
         val type = mime?.substringBefore(';')?.lowercase(Locale.ROOT)

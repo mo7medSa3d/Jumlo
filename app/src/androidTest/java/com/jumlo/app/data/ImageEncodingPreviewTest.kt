@@ -9,7 +9,6 @@ import com.jumlo.app.data.processing.ImageCompressionSettings
 import com.jumlo.app.data.processing.ImageConversionSettings
 import com.jumlo.app.data.processing.ImageEncodingPreview
 import com.jumlo.app.data.processing.ImageOutputEncoder
-import com.jumlo.app.data.processing.ImageTargetSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -64,7 +63,7 @@ class ImageEncodingPreviewTest {
         } finally {original.recycle();directory.deleteRecursively()}
     }
 
-    @Test fun compressionAndTargetUseTheSameCodecAndSelectedQualityAsPublication() {
+    @Test fun compressionUsesTheSameCodecAndSelectedQualityAsPublication() {
         val directory=directory();val source=File(directory,"source.png");val scratch=File(directory,"preview").apply {mkdirs()}
         val original=noisyBitmap(256,192)
         try {
@@ -75,20 +74,6 @@ class ImageEncodingPreviewTest {
                 assertTrue(preview.encodedBytes<source.length())
                 assertTrue(requireNotNull(preview.quality)<=71)
             }
-            val target=ImageTargetSettings(targetBytes=3000)
-            ImageEncodingPreview.create(source,scratch,"img_target",Json.encodeToString(target),budget,0).use { preview ->
-                assertFalse(preview.sampled)
-                assertEquals(3000L,preview.requestedTargetBytes)
-                assertEquals("JPEG",preview.format)
-                assertTrue(preview.encodedBytes in 1..3000L)
-                val expected=File(directory,"target.jpg")
-                BitmapTransforms.decode(source,budget).use { decoded ->
-                    val result=ImageOutputEncoder.encode(decoded.bitmap,expected,"img_target",target.output,source.length(),budget,target.targetBytes)
-                    assertEquals(result.sizeBytes,preview.encodedBytes)
-                    assertEquals(result.quality,preview.quality)
-                    assertEquals(result.width,preview.encodedWidth);assertEquals(result.height,preview.encodedHeight)
-                }
-            }
             assertTrue(scratch.listFiles().isNullOrEmpty())
         } finally {original.recycle();directory.deleteRecursively()}
     }
@@ -98,12 +83,12 @@ class ImageEncodingPreviewTest {
         val original=noisyBitmap(400,200)
         try {
             BitmapTransforms.encode(original,source,ImageConversionSettings(format="PNG"),budget)
-            ImageEncodingPreview.create(source,scratch,"img_target",Json.encodeToString(ImageTargetSettings(1000)),budget,0,maxEdge=100).use { preview ->
+            val settings=ImageCompressionSettings(ImageConversionSettings(format="JPEG",quality=70))
+            ImageEncodingPreview.create(source,scratch,"img_04",Json.encodeToString(settings),budget,0,maxEdge=100).use { preview ->
                 assertTrue(preview.sampled)
                 assertEquals(400,preview.sourceWidth);assertEquals(200,preview.sourceHeight)
                 assertTrue(preview.before.width<=100 && preview.before.height<=100)
                 assertTrue(preview.encodedWidth<=preview.before.width && preview.encodedHeight<=preview.before.height)
-                assertEquals(1000L,preview.requestedTargetBytes)
             }
             assertTrue(scratch.listFiles().isNullOrEmpty())
         } finally {original.recycle();directory.deleteRecursively()}

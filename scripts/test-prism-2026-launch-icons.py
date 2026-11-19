@@ -9,13 +9,13 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE=ROOT/'app/src/main/java/com/jumlo/app'
 RES=ROOT/'app/src/main/res'
 
-def read(rel): return (SOURCE/rel).read_text()
+def read(rel): return (SOURCE/rel).read_text(encoding="utf-8")
 
 class Prism2026LaunchIconChecks(unittest.TestCase):
     def test_used_icon_family_is_filled_vectors_without_the_extended_library(self):
         vectors=list((RES/'drawable').glob('ic_prism_*.xml'))
         self.assertTrue(vectors)
-        self.assertNotIn('material-icons-extended',(ROOT/'app/build.gradle.kts').read_text())
+        self.assertNotIn('material-icons-extended',(ROOT/'app/build.gradle.kts').read_text(encoding="utf-8"))
         ns='{http://schemas.android.com/apk/res/android}'
         for file in vectors:
             with self.subTest(icon=file.name):
@@ -50,12 +50,13 @@ class Prism2026LaunchIconChecks(unittest.TestCase):
         self.assertIn('ModernToolIcon(tool.iconName',read('ui/components/NeonUi.kt'))
         tools_code = read('ui/tools/ToolsScreen.kt')
         self.assertTrue('ModernToolIcon(tool.iconName' in tools_code or bool(re.search(r'ToolIcon\(\s*tool\.id', tools_code)))
-    def test_tools_use_borderless_and_readable_grid(self):
+    def test_tools_use_bordered_surface_and_readable_grid(self):
         tools=read('ui/tools/ToolsScreen.kt')
         tiles=read('ui/components/NeonUi.kt')
         segment=tiles.split('fun NeonToolTile(',1)[1].split('fun NeonOutputPreview(',1)[0]
-        self.assertNotIn('BorderStroke(',segment)
-        self.assertIn('shadowElevation = 2.dp',segment)
+        self.assertIn('ToolIconColors.iconColorFor(tool.id)',segment)
+        self.assertIn('BorderStroke(1.dp, pillars.cardBorder)',segment)
+        self.assertIn('shadowElevation = 1.dp',segment)
         self.assertIn('else -> 2',tools)
         self.assertTrue('heightIn(min = 122.dp)' in tools or 'heightIn(min = 176.dp)' in tools)
         self.assertIn('CapabilityRegistry.enabled(it.id)',tools)

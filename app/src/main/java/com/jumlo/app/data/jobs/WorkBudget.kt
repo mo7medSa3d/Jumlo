@@ -18,6 +18,7 @@ data class WorkBudget(
     val maxOutputFiles:Int=ResourceBudgetPolicy.maxPublishedOutputsPerJob,
     val minFreeBytes:Long=ResourceBudgetPolicy.minFreeBytes
 )
+private val ERROR_CODE_REGEX=Regex("[A-Z][A-Z_0-9]{2,80}")
 class OperationFailure(val code:String):IOException(code)
 fun stableError(t:Throwable):String = when(t) {
     is OperationFailure -> t.code
@@ -27,5 +28,5 @@ fun stableError(t:Throwable):String = when(t) {
     is SocketTimeoutException -> "NETWORK_TIMEOUT"
     is UnknownHostException -> "NETWORK_UNAVAILABLE"
     is OutOfMemoryError -> "LOW_MEMORY"
-    else -> t.message?.takeIf { Regex("[A-Z][A-Z_0-9]{2,80}").matches(it) } ?: "PROCESSING_FAILED"
+    else -> t.message?.takeIf { ERROR_CODE_REGEX.matches(it) } ?: "PROCESSING_FAILED"
 }

@@ -23,6 +23,9 @@ class MediaProcessException(val code: String): IOException(code)
  * No PID/command is accepted from URL metadata or a shell-expanded string.
  */
 class MediaProcessRunner(private val signalGroup: (Int, Boolean) -> Unit = { _, _ -> }) {
+    companion object {
+        private val PID_HEADER = Regex("UU_PID:([1-9][0-9]{0,9})")
+    }
     fun run(spec: MediaProcessSpec, checkCancel: () -> Unit = {}, onLine: (String) -> Unit = {}): MediaProcessResult {
         require(spec.command.isNotEmpty() && spec.command.size <= 256 && spec.command.all { it.length <= 65536 && '\u0000' !in it }) { "INVALID_MEDIA_COMMAND" }
         require(spec.directory.isDirectory && spec.timeoutMillis > 0 && spec.stdoutLimit in 1..16*1024*1024) { "INVALID_MEDIA_PROCESS_LIMITS" }
@@ -52,7 +55,7 @@ class MediaProcessRunner(private val signalGroup: (Int, Boolean) -> Unit = { _, 
                                 val b=buf[offset++].toInt() and 255
                                 if(b==10) {
                                     val header=handshake.toString("US-ASCII").trimEnd('\r')
-                                    val match=Regex("UU_PID:([1-9][0-9]{0,9})").matchEntire(header)
+                                    val match=PID_HEADER.matchEntire(header)
                                     val processId=match?.groupValues?.get(1)?.toIntOrNull()
                                     if(processId==null || processId<=1) throw MediaProcessException("MEDIA_PROCESS_HANDSHAKE")
                                     pid.set(processId); gotPid=true; break
@@ -107,7 +110,7 @@ class MediaProcessRunner(private val signalGroup: (Int, Boolean) -> Unit = { _, 
                 runCatching { process.waitFor(1000,TimeUnit.MILLISECONDS) }
             }
             runCatching { process.inputStream.close() }; runCatching { process.errorStream.close() }
-            stdout.join(1000); stderr.join(1000)
+            runCatching { stdout.join(1000) }; runCatching { stderr.join(1000) }
         }
     }
 }

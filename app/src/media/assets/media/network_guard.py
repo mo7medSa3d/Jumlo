@@ -37,6 +37,11 @@ def validate_url(url, allow_http=False):
     return url
 
 
+def _origin(parts):
+    port = parts.port or (443 if parts.scheme == 'https' else 80)
+    return (parts.scheme, (parts.hostname or '').lower().rstrip('.'), port)
+
+
 def install(allow_http=False):
     # Best-effort supplemental protection for yt-dlp's urllib handler. This is not a
     # complete network sandbox; other extractors and transports require device review.
@@ -55,11 +60,13 @@ def install(allow_http=False):
         if previous.scheme == 'https' and destination.scheme == 'http':
             raise ValueError('MEDIA_TLS_DOWNGRADE')
         result = original_redirect(self, req, fp, code, msg, headers, newurl)
-        if result and (previous.scheme, previous.hostname, previous.port) != (destination.scheme, destination.hostname, destination.port):
-            for name in ('Authorization', 'Cookie', 'Proxy-Authorization'):
-                result.remove_header(name)
-                result.headers.pop(name, None)
-                result.unredirected_hdrs.pop(name, None)
+        if result and _origin(previous) != _origin(destination):
+            # urllib.request.Request capitalizes header keys (e.g. 'Proxy-authorization'),
+            # so case-sensitive remove_header('Proxy-Authorization') misses it.
+            sensitive = {'authorization', 'cookie', 'proxy-authorization'}
+            for store in (result.headers, result.unredirected_hdrs):
+                for key in [k for k in store if k.lower() in sensitive]:
+                    store.pop(key, None)
         return result
 
     _urllib.UrllibRH._send = guarded_send

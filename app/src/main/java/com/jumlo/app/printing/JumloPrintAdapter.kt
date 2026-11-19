@@ -11,6 +11,7 @@ import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
 import android.print.PrintDocumentInfo as AndroidPrintDocumentInfo
 import com.jumlo.app.R
+import com.jumlo.app.diagnostics.AppDiagnostics
 import kotlinx.coroutines.*
 import java.io.File
 import kotlin.math.roundToInt
@@ -43,7 +44,7 @@ class JumloPrintAdapter(
             layout=next
             if(cancellationSignal.isCanceled) callback.onLayoutCancelled()
             else callback.onLayoutFinished(AndroidPrintDocumentInfo.Builder(source.name.ifBlank {context.getString(R.string.print_document)}).setContentType(AndroidPrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(pages.size).build(),changed)
-        } catch(_:Exception) { if(cancellationSignal.isCanceled) callback.onLayoutCancelled() else callback.onLayoutFailed(context.getString(R.string.print_error_layout)) }
+        } catch(error:Exception) { AppDiagnostics.report("print_layout",error); if(cancellationSignal.isCanceled) callback.onLayoutCancelled() else callback.onLayoutFailed(context.getString(R.string.print_error_layout)) }
     }
     override fun onWrite(requested:Array<out PageRange>,destination:ParcelFileDescriptor,cancellationSignal:CancellationSignal,callback:WriteResultCallback) {
         val gate=PrintCallbackGate()
@@ -78,7 +79,7 @@ class JumloPrintAdapter(
                 val ranges=PrintRanges.compact(selected).map {PageRange(it.first,it.last)}.toTypedArray()
                 result(PrintCallbackGate.Result.SUCCESS,ranges=ranges)
             } catch(_:CancellationException) {result(PrintCallbackGate.Result.CANCELED)}
-            catch(_:Exception) {result(PrintCallbackGate.Result.FAILURE,message=context.getString(R.string.print_error_write))}
+            catch(error:Exception) {AppDiagnostics.report("print_write",error);result(PrintCallbackGate.Result.FAILURE,message=context.getString(R.string.print_error_write))}
             finally {temporary?.delete();runCatching {destination.close()}}
         }
         operation.invokeOnCompletion { cause ->

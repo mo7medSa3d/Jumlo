@@ -2,8 +2,10 @@ package com.jumlo.app.core
 
 /** Shared bounds and placement math for the preview and both watermark exporters. */
 object OverlayStylePolicy {
-    fun requireFont(font: String) { require(font in setOf("sans", "serif", "mono")) { "INVALID_WATERMARK_FONT" } }
-    fun requireColor(color: String) { require(Regex("^#[0-9A-Fa-f]{6}$").matches(color)) { "INVALID_WATERMARK_COLOR" } }
+    private val ALLOWED_FONTS = setOf("sans", "serif", "mono")
+    private val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
+    fun requireFont(font: String) { require(font in ALLOWED_FONTS) { "INVALID_WATERMARK_FONT" } }
+    fun requireColor(color: String) { require(HEX_COLOR.matches(color)) { "INVALID_WATERMARK_COLOR" } }
     fun rgb(color: String): FloatArray {
         requireColor(color)
         val value = color.substring(1).toInt(16)

@@ -23,6 +23,11 @@ object Html5MediaDiscovery {
     )
     private val jsonLdScript = Regex("""<script\b([^>]{0,4096})>([\s\S]{0,32768}?)</script\s*>""", RegexOption.IGNORE_CASE)
     private val jsonContent = Regex(""""contentUrl"\s*:\s*"((?:\\.|[^"\\]){1,4096})"""", RegexOption.IGNORE_CASE)
+    private val downloadAttr = Regex("""\bdownload(?:\s|=|>)""", RegexOption.IGNORE_CASE)
+    private val numericHost = Regex("[0-9.]+")
+    private val jsonUnicode = Regex("""\\u([0-9a-fA-F]{4})""")
+    private val titleTag = Regex("""<title\b[^>]*>([^<]{1,1024})</title\s*>""", RegexOption.IGNORE_CASE)
+    private val htmlEntity = Regex("""&(#x[0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt);""")
     private val metaTypes = setOf("og:video", "og:video:url", "og:video:secure_url", "og:audio",
         "og:audio:url", "twitter:player:stream")
 
@@ -49,7 +54,7 @@ object Html5MediaDiscovery {
             val attributes = attributes(match.value)
             val candidate = when (kind) {
                 "video", "audio", "source" -> attributes["src"] ?: attributes["data-src"]
-                "a" -> attributes["href"]?.takeIf { Regex("""\bdownload(?:\s|=|>)""", RegexOption.IGNORE_CASE).containsMatchIn(match.value) }
+                "a" -> attributes["href"]?.takeIf { downloadAttr.containsMatchIn(match.value) }
                 "meta" -> attributes["content"]?.takeIf {
                     attributes["property"]?.lowercase(Locale.ROOT) in metaTypes || attributes["name"]?.lowercase(Locale.ROOT) in metaTypes
                 }
@@ -92,7 +97,7 @@ object Html5MediaDiscovery {
         if (value.isBlank() || value == "localhost" || value.endsWith(".localhost") ||
             value.endsWith(".local") || value.endsWith(".internal") || ':' in value) return false
         // Never let embedded metadata probe IP literals or a local admin service.
-        if (value.matches(Regex("[0-9.]+"))) return false
+        if (value.matches(numericHost)) return false
         val labels = value.split('.')
         if (labels.size < 2 || labels.any { it.isEmpty() } || labels.last().all { it.isDigit() } ||
             labels.all { it.all(Char::isDigit) || it.startsWith("0x") }) return false
@@ -100,8 +105,7 @@ object Html5MediaDiscovery {
     }
 
     private fun unescapeJsonString(value: String): String {
-        val unicode = Regex("""\\u([0-9a-fA-F]{4})""")
-        val decoded = unicode.replace(value) { match ->
+        val decoded = jsonUnicode.replace(value) { match ->
             val point = match.groupValues[1].toInt(16)
             if (point in 32..0xd7ff || point in 0xe000..0xffff) point.toChar().toString() else match.value
         }
@@ -118,7 +122,7 @@ object Html5MediaDiscovery {
                 if (text.isNotBlank()) return text
             }
         }
-        val t = Regex("""<title\b[^>]*>([^<]{1,1024})</title\s*>""",RegexOption.IGNORE_CASE).find(html)?.groupValues?.get(1)
+        val t = titleTag.find(html)?.groupValues?.get(1)
         return t?.let(::unescape)?.trim()?.take(180)?.takeIf(String::isNotBlank)
     }
 
@@ -130,7 +134,7 @@ object Html5MediaDiscovery {
         }
     }
 
-    private fun unescape(text: String): String = Regex("""&(#x[0-9a-fA-F]+|#[0-9]+|amp|quot|apos|lt|gt);""").replace(text) { match ->
+    private fun unescape(text: String): String = htmlEntity.replace(text) { match ->
         val key = match.groupValues[1]
         when (key.lowercase(Locale.ROOT)) {
             "amp" -> "&"; "quot" -> "\""; "apos" -> "'"; "lt" -> "<"; "gt" -> ">"

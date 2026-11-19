@@ -44,12 +44,17 @@ private tailrec fun Context.hostActivity():Activity?=when(this) {
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     var rootPosition by remember {mutableStateOf(androidx.compose.ui.geometry.Offset.Zero)}
     Layout(content=content,modifier=Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).onGloballyPositioned {
-        rootPosition=it.positionInWindow()
+        val pos=it.positionInWindow()
+        if(pos.x.isFinite() && pos.y.isFinite()) rootPosition=pos
     }) {children,constraints->
-        val root=PixelBounds(rootPosition.x.roundToInt(),rootPosition.y.roundToInt(),rootPosition.x.roundToInt()+constraints.maxWidth,rootPosition.y.roundToInt()+constraints.maxHeight)
+        val width=if(constraints.hasBoundedWidth) constraints.maxWidth else constraints.minWidth
+        val height=if(constraints.hasBoundedHeight) constraints.maxHeight else constraints.minHeight
+        val rx=rootPosition.x.roundToInt()
+        val ry=rootPosition.y.roundToInt()
+        val root=PixelBounds(rx,ry,rx+width,ry+height)
         val viewport=safeViewport(root,hinges,rtl)
         val measured=children.map {it.measure(Constraints.fixed(viewport.width,viewport.height))}
-        layout(constraints.maxWidth,constraints.maxHeight) {
+        layout(width,height) {
             // place(), not placeRelative(): the geometry is already in physical window coordinates.
             measured.forEach {it.place(viewport.left-root.left,viewport.top-root.top)}
         }

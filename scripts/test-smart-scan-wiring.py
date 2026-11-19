@@ -35,7 +35,7 @@ class SmartScannerWiring(unittest.TestCase):
         self.assertEqual(keys(en),keys(ar))
         self.assertEqual(6,len(keys(en)))
     def test_library_is_real_dependency(self):
-        gradle=(ROOT/"app/build.gradle.kts").read_text()
+        gradle=(ROOT/"app/build.gradle.kts").read_text(encoding="utf-8")
         self.assertIn("play-services-mlkit-document-scanner:16.0.0",gradle)
 
 if __name__=="__main__":unittest.main(verbosity=2)

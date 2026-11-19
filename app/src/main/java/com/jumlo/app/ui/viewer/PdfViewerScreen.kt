@@ -8,6 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -44,8 +46,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
@@ -63,6 +68,7 @@ import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.rounded.*
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +113,7 @@ private fun PdfViewerContent(
     modifier: Modifier
 ) {
     val context = LocalContext.current
+    val reducedMotion = LocalReducedMotion.current
     val scope = rememberCoroutineScope()
     val list = rememberLazyListState()
     var restoredPage by remember(uri) { mutableStateOf(false) }
@@ -159,8 +166,9 @@ private fun PdfViewerContent(
         finally { opened?.close() }
     }
 
+    val currentPage by remember { derivedStateOf { list.firstVisibleItemIndex } }
     LaunchedEffect(uri) { wake() }
-    LaunchedEffect(list.firstVisibleItemIndex) { wake() }
+    LaunchedEffect(currentPage) { wake() }
 
     LaunchedEffect(infoOpen, uri) {
         if (infoOpen && info.isEmpty() && !infoError) {
@@ -202,18 +210,18 @@ private fun PdfViewerContent(
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {
         AnimatedVisibility(
             visible = chromeVisible,
-            enter = fadeIn() + slideInVertically { -it },
-            exit = fadeOut() + slideOutVertically { -it }
+            enter = if (reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { -it },
+            exit = if (reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { -it }
         ) {
             Surface(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                 Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { onBack(); menuOpen = false }, modifier = Modifier.testTag("pdf.back")) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.reader_back))
                     }
-                    Text(title, Modifier.weight(1f).padding(horizontal = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+                    Text(title, Modifier.weight(1f).padding(horizontal = 8.dp).semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
                     document?.let { doc ->
                         TextButton(onClick = { jumpOpen = true; wake() }, modifier = Modifier.testTag("pdf.page.indicator")) {
-                            Text(stringResource(R.string.reader_page_indicator, list.firstVisibleItemIndex + 1, doc.pageCount))
+                            Text(stringResource(R.string.reader_page_indicator, if (doc.pageCount > 0) (currentPage + 1).coerceIn(1, doc.pageCount) else 0, doc.pageCount))
                         }
                         IconButton(onClick = { menuOpen = !menuOpen; wake() }, modifier = Modifier.testTag("pdf.menu")) {
                             Icon(Icons.Rounded.MoreVert, stringResource(R.string.reader_menu))
@@ -234,29 +242,32 @@ private fun PdfViewerContent(
         if (document == null) {
             Box(Modifier.weight(1f).fillMaxWidth().clickable { wake() }) {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-                    if (failure == null) {
+                    val currentFailure = failure
+                    if (currentFailure == null) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.reader_loading))
                     } else {
-                        Text(stringResource(userMessageResource(failure!!)), color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(userMessageResource(currentFailure)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                         Button(onClick = { retry++ }) { Text(stringResource(R.string.reader_retry)) }
                     }
                 }
             }
         } else {
-            LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("pdf.pages"), state = list, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("pdf.pages"), state = list,
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp + navBottom),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(document.pageCount, key = { it }) { page -> ReaderPage(document, page, nightMode, ::toggleChrome) }
+                items(document.pageCount, key = { it }, contentType = { "pdf-page" }) { page -> ReaderPage(document, page, nightMode, ::toggleChrome) }
             }
         }
     }
 
     if (document != null) {
         if (thumbsOpen) {
-            ThumbnailsSheet(document, list.firstVisibleItemIndex, { page -> scope.launch { list.animateScrollToItem(page) } }, { thumbsOpen = false })
+            ThumbnailsSheet(document, currentPage, { page -> scope.launch { list.animateScrollToItem(page) } }, { thumbsOpen = false })
         }
         if (jumpOpen) {
-            JumpDialog(document.pageCount, list.firstVisibleItemIndex + 1, { page -> scope.launch { list.animateScrollToItem(page - 1) }; jumpOpen = false }, { jumpOpen = false })
+            JumpDialog(document.pageCount, currentPage + 1, { page -> if (document.pageCount > 0) scope.launch { list.animateScrollToItem((page - 1).coerceIn(0, document.pageCount - 1)) }; jumpOpen = false }, { jumpOpen = false })
         }
         if (searchOpen) {
             SearchSheet(
@@ -277,7 +288,7 @@ private fun PdfViewerContent(
                         }
                     }
                 },
-                onJump = { page -> scope.launch { list.animateScrollToItem(page - 1) } },
+                onJump = { page -> if (document.pageCount > 0) scope.launch { list.animateScrollToItem((page - 1).coerceIn(0, document.pageCount - 1)) } },
                 onDismiss = { searchOpen = false }
             )
         }
@@ -294,11 +305,11 @@ private fun ThumbnailsSheet(document: PdfReaderSession, selected: Int, onJump: (
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = MaterialTheme.colorScheme.surfaceContainerLow, content = {
         Column(Modifier.fillMaxWidth().heightIn(max = 340.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.reader_thumbnails), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.reader_thumbnails), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
                 IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, stringResource(R.string.reader_close)) }
             }
             LazyRow(Modifier.fillMaxWidth().heightIn(max = 256.dp), contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(document.pageCount, key = { it }) { page -> ReaderThumbnail(document, page, page == selected, { onJump(page) }) }
+                items(document.pageCount, key = { it }, contentType = { "pdf-thumb" }) { page -> ReaderThumbnail(document, page, page == selected, { onJump(page) }) }
             }
         }
     })
@@ -310,10 +321,10 @@ private fun JumpDialog(count: Int, current: Int, onJump: (Int) -> Unit, onDismis
     var page by rememberSaveable { mutableIntStateOf(current.coerceIn(1, safeCount)) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.reader_jump_title)) },
+        title = { Text(stringResource(R.string.reader_jump_title), modifier = Modifier.semantics { heading() }) },
         text = {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Slider(value = page.toFloat(), valueRange = 1f..safeCount.toFloat(), onValueChange = { page = it.toInt() }, modifier = Modifier.fillMaxWidth())
+                if (safeCount > 1) Slider(value = page.toFloat(), valueRange = 1f..safeCount.toFloat(), onValueChange = { page = it.toInt() }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(page.toString(), { value -> page = value.toIntOrNull()?.coerceIn(1, safeCount) ?: page },
                     label = { Text(stringResource(R.string.reader_jump_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Text(stringResource(R.string.reader_page_indicator, page, safeCount), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -337,18 +348,20 @@ private fun SearchSheet(
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = MaterialTheme.colorScheme.surfaceContainerLow, content = {
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().imePadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.reader_menu_search), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.reader_menu_search), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
                 IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, stringResource(R.string.reader_close)) }
             }
             OutlinedTextField(searchText, onSearchText, label = { Text(stringResource(R.string.reader_search_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp))
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
                 TextButton(onClick = { onSearch(searchText) }, enabled = !busy) { Text(if (busy) stringResource(R.string.reader_loading) else stringResource(R.string.reader_menu_search)) }
             }
-            Column(Modifier.fillMaxWidth().heightIn(max = 240.dp).padding(horizontal = 20.dp, vertical = 4.dp)) {
-                if (results.isEmpty() && !busy) Text(stringResource(R.string.reader_search_no_results), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                results.forEach { page ->
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 240.dp).padding(horizontal = 20.dp, vertical = 4.dp)) {
+                if (results.isEmpty() && !busy) item("empty") {
+                    Text(stringResource(R.string.reader_search_no_results), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(results, key = { it }, contentType = { "search-result" }) { page ->
                     TextButton(onClick = { onJump(page) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.reader_page, page)) }
                 }
             }
@@ -363,12 +376,12 @@ private fun InfoSheet(info: Map<String, String>, error: Boolean, title: String, 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = MaterialTheme.colorScheme.surfaceContainerLow, content = {
         Column(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.reader_menu_info), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.reader_menu_info), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
                 IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, stringResource(R.string.reader_close)) }
             }
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(title, style = MaterialTheme.typography.bodyLarge)
-                if (error && info.isEmpty()) Text(stringResource(R.string.reader_info_error), color = MaterialTheme.colorScheme.error)
+                if (error && info.isEmpty()) Text(stringResource(R.string.reader_info_error), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 info.forEach { (label, value) -> InfoRow(label, value) }
             }
         }
@@ -431,7 +444,7 @@ private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, onT
                 }, contentScale = ContentScale.Fit, colorFilter = filter)
             }
             if (frame == null && failure == null) CircularProgressIndicator(Modifier.size(32.dp))
-            failure?.let { Text(stringResource(userMessageResource(it)), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
+            failure?.let { Text(stringResource(userMessageResource(it)), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite }) }
         }
     }
 }
@@ -506,7 +519,7 @@ private suspend fun pdfInfo(context: Context, uri: String): Map<String, String> 
                 put("Pages", doc.numberOfPages.toString())
             }
         }
-    } catch (_: Exception) { emptyMap() } finally { file.delete() }
+    } catch (cancel: CancellationException) { throw cancel } catch (_: Exception) { emptyMap() } finally { file.delete() }
 }
 
 private suspend fun searchPdf(context: Context, uri: String, query: String): List<Int> = withContext(Dispatchers.IO) {
@@ -523,5 +536,5 @@ private suspend fun searchPdf(context: Context, uri: String, query: String): Lis
             }
             matches
         }
-    } catch (_: Exception) { emptyList() } finally { file.delete() }
+    } catch (cancel: CancellationException) { throw cancel } catch (_: Exception) { emptyList() } finally { file.delete() }
 }

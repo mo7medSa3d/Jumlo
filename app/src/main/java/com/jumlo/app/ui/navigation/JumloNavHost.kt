@@ -1,9 +1,9 @@
 package com.jumlo.app.ui.navigation
 
 import android.Manifest
-import android.accounts.AccountManager
 import android.app.Activity
 import android.content.ContextWrapper
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
@@ -12,6 +12,7 @@ import android.provider.DocumentsContract
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.EnterTransition
@@ -214,7 +215,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             tabHistory=tabHistory.filterNot {it==originTab.name}
             switchTab(originTab,recordHistory=false)
         } else if (route in rootRoutes && tabHistory.isNotEmpty()) {
-            val previous = DockTab.valueOf(tabHistory.last())
+            val previous = DockTab.entries.firstOrNull { it.name == tabHistory.last() } ?: DockTab.HOME
             tabHistory = tabHistory.dropLast(1)
             switchTab(previous, recordHistory = false)
         } else if (!navController.popBackStack()) switchTab(DockTab.HOME, recordHistory = false)
@@ -268,10 +269,12 @@ fun JumloNavHost(viewModel:AppViewModel) {
         val currentMsg=message ?: return@LaunchedEffect
         val targetUndo=undoTrashIds
         val renameUndo=undoRename
+        val hasUndo=targetUndo.isNotEmpty() || renameUndo!=null
         val result=snackbar.showSnackbar(
             message=context.getString(userMessageResource(currentMsg)),
-            actionLabel=if(targetUndo.isNotEmpty() || renameUndo!=null) undoLabel else null,
-            duration=SnackbarDuration.Short
+            actionLabel=if(hasUndo) undoLabel else null,
+            // An Undo action needs time to reach; Short (4s) is too tight for TalkBack/motor users.
+            duration=if(hasUndo) SnackbarDuration.Long else SnackbarDuration.Short
         )
         if(result==SnackbarResult.ActionPerformed && targetUndo.isNotEmpty()) {
             viewModel.restoreOutputs(targetUndo)
@@ -297,8 +300,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val printPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==Activity.RESULT_OK) collectProviderIntake(result.data)?.let(viewModel::importForPrint)
     }
+    fun <T> ActivityResultLauncher<T>.safeLaunch(input: T) {
+        try { launch(input) } catch (_: ActivityNotFoundException) { viewModel.notifyMessage("NO_COMPATIBLE_APP_OR_ACCESS_LOST") }
+    }
     fun importPrintDocument() {
-        printPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        printPicker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE); type="*/*"
             putExtra(Intent.EXTRA_MIME_TYPES,arrayOf("application/pdf","image/*"))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
@@ -322,97 +328,18 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val errorLogExportPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         viewModel.exportErrorLog(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
     }
-    var pendingGoogleAccount by rememberSaveable { mutableStateOf<android.accounts.Account?>(null) }
-    lateinit var fetchGoogleDriveToken: (android.accounts.Account, Boolean) -> Unit
-    val googleConsentLauncher=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val account = pendingGoogleAccount
-        pendingGoogleAccount = null
-        if(result.resultCode==Activity.RESULT_OK && account!=null) {
-            fetchGoogleDriveToken(account, false)
-        } else {
-            viewModel.notifyMessage("DRIVE_SIGNIN_CANCELLED")
-        }
-    }
-    fetchGoogleDriveToken = { account, allowConsent ->
-        val activity = hostActivity
-        if(activity!=null && !activity.isFinishing && !activity.isDestroyed) {
-            AccountManager.get(activity).getAuthToken(
-                account,
-                "oauth2:https://www.googleapis.com/auth/drive.file",
-                null,
-                activity,
-                { future ->
-                    runCatching {
-                        val bundle=future.result
-                        val token=bundle.getString(AccountManager.KEY_AUTHTOKEN)
-                        @Suppress("DEPRECATION")
-                        val consentIntent=bundle.getParcelable<Intent>(AccountManager.KEY_INTENT)
-                        when {
-                            !token.isNullOrBlank() -> {
-                                pendingGoogleAccount = null
-                                viewModel.updateForm { it.copy(secret1=token) }
-                            }
-                            consentIntent!=null && allowConsent && !activity.isFinishing && !activity.isDestroyed -> {
-                                pendingGoogleAccount=account
-                                googleConsentLauncher.launch(consentIntent)
-                            }
-                            else -> {
-                                pendingGoogleAccount = null
-                                viewModel.notifyMessage("LOGIN_REQUIRED")
-                            }
-                        }
-                    }.onFailure {
-                        pendingGoogleAccount = null
-                        viewModel.notifyMessage(
-                            if (it is android.accounts.OperationCanceledException) "DRIVE_SIGNIN_CANCELLED"
-                            else "LOGIN_REQUIRED"
-                        )
-                    }
-                },
-                android.os.Handler(android.os.Looper.getMainLooper())
-            )
-        } else {
-            pendingGoogleAccount = null
-            viewModel.notifyMessage("LOGIN_REQUIRED")
-        }
-    }
-    val googleAccountPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if(result.resultCode==Activity.RESULT_OK) {
-            val accountName=result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
-            val accountType=result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE)
-            if(!accountName.isNullOrBlank() && !accountType.isNullOrBlank()) {
-                val account=android.accounts.Account(accountName,accountType)
-                pendingGoogleAccount=account
-                fetchGoogleDriveToken(account, true)
-            } else {
-                viewModel.notifyMessage("LOGIN_REQUIRED")
-            }
-        } else {
-            // A cancelled picker used to leave the token field blank with
-            // no message at all, so the next submit failed with a 401 toast
-            // that looked like the link itself had failed.
-            viewModel.notifyMessage("DRIVE_SIGNIN_CANCELLED")
-        }
-    }
-    fun launchGoogleSignIn() {
-        try {
-            @Suppress("DEPRECATION")
-            val intent=AccountManager.newChooseAccountIntent(null,null,arrayOf("com.google"),false,null,null,null,null)
-            googleAccountPicker.launch(intent)
-        } catch(_:Exception) { viewModel.notifyMessage("LOGIN_REQUIRED") }
-    }
     fun importFiles() {
         val mime=when(form.toolId) { "pdf_02","img_01","img_02","img_03","img_04"->"image/*";"pdf_01","pdf_03","pdf_07","pdf_to_docx","pdf_to_pptx","pdf_compress","pdf_ocr"->"application/pdf";"file_08"->"application/zip";else->"*/*" }
-        picker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=mime;putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
+        picker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=mime;putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
     }
     fun importLibraryFiles() {
-        libraryPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type="*/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
+        libraryPicker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type="*/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
     }
     fun pickFolder(initial:String?=null) {
-        folderPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);if(initial!=null) putExtra(DocumentsContract.EXTRA_INITIAL_URI,Uri.parse(initial)) })
+        folderPicker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply { addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);if(initial!=null) putExtra(DocumentsContract.EXTRA_INITIAL_URI,Uri.parse(initial)) })
     }
     fun pickDownloadDestination() {
-        downloadFolderPicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+        downloadFolderPicker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         })
     }
@@ -440,7 +367,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     fun exportOutput(output:OutputRecord) {
         viewModel.prepareExport(output)
-        exportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=output.mimeType;putExtra(Intent.EXTRA_TITLE,output.displayName) })
+        exportPicker.safeLaunch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=output.mimeType;putExtra(Intent.EXTRA_TITLE,output.displayName) })
     }
     fun openTool(tool:UtilityTool) {
         if(!CapabilityRegistry.visible(tool.id) || !CapabilityRegistry.enabled(tool.id)) {
@@ -449,7 +376,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         when(tool.id) {
             "scan_doc" -> navigateTo("scan")
             "dl_settings" -> {viewModel.recordToolOpen(tool.id);navigateTo("settings")}
-            "file_02", "file_trash" -> {viewModel.recordToolOpen(tool.id);navigateTo("files_overview")}
+            "file_02" -> {viewModel.recordToolOpen(tool.id);navigateTo("files_overview")}
             else -> if(viewModel.chooseTool(tool.id)) navigateTo("workspace")
         }
     }
@@ -465,7 +392,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         com.jumlo.app.ui.adaptive.HingeSafeViewport {
         Scaffold(
             snackbarHost={SnackbarHost(snackbar)},
-            bottomBar={if(showDock) QuietFloatingDock(selectedTab=tab,language=settings.language,onSelectTab=::navigateTab)},
+            bottomBar={if(showDock) JumloNavigationBar(selectedTab=tab,language=settings.language,onSelectTab=::navigateTab)},
             contentWindowInsets=WindowInsets(0,0,0,0)
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding).testTag("route.$shellRoute").graphicsLayer {
@@ -539,7 +466,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 modifier=Modifier.padding(bottom=QuietTheme.spacing.listBottomBuffer))
                             "settings", "settings_detail" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
                                 onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
-                                onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
+                                onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.safeLaunch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
                                 onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()},
                                 onShowGuide={showGuide=true},onOpenStorage={navigateTo("storage")})
                             "storage" -> com.jumlo.app.ui.settings.StorageScreen(viewModel,::pickDownloadDestination,::openSavedFolder)
@@ -571,7 +498,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
                                 ) else if(form.toolId in setOf("dl_media","dl_02")) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
-                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},::launchGoogleSignIn,onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
+                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.safeLaunch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,jobId,{openOutput(it)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
                         }

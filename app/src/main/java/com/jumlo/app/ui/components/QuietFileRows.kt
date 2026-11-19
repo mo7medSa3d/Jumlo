@@ -1,6 +1,5 @@
 package com.jumlo.app.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -49,12 +47,12 @@ private fun fileTint(extension: String): Pair<Color, Color> {
 fun QuietFileRow(
     file: ManagedFileItem,
     language: AppLanguage,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     showCheckbox: Boolean = false,
     onToggleSelect: (() -> Unit)? = null,
-    onClick: () -> Unit,
     trailingActionText: String? = null,
-    onTrailingAction: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onTrailingAction: (() -> Unit)? = null
 ) {
     val (tint, container) = fileTint(file.extension)
     val isRtl = language.isRtl
@@ -70,10 +68,8 @@ fun QuietFileRow(
     val haptics=rememberAppHaptics()
 
     Surface(
-        modifier = modifier.pressFeedback()
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
-            .clickable { haptics.actionClick(); onClick() },
+        onClick = { haptics.actionClick(); onClick() },
+        modifier = modifier.pressFeedback().fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
         color = if (selected) QuietTheme.pillars.activePillContainer else MaterialTheme.colorScheme.surfaceContainerLow
     ) {

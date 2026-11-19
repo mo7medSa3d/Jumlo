@@ -4,14 +4,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// ============================================================================
 // Jumlo color systems, 2026: the four systems in ColorSystems.kt own every
 // semantic role. This file keeps only what is system-independent: the pillar
 // color shape, and the settings/account row icons, whose colors are fixed
 // per row by an explicit request and never follow the chosen system.
 // Never tint document previews or real paper: the chroma belongs to the UI,
 // not the file content.
-// ============================================================================
 
 @Immutable
 data class PillarColors(
@@ -62,6 +60,7 @@ val LightSettingsIconStyles = mapOf(
     "app-color" to SettingsIconStyle(Color(0xFF9C3D1E), Color(0xFFFBE3D3)),
     "language" to SettingsIconStyle(Color(0xFF0E7A6B), Color(0xFFD8F1EB)),
     "haptics" to SettingsIconStyle(Color(0xFFBE185D), Color(0xFFFCE7F3)),
+    "sounds" to SettingsIconStyle(Color(0xFFBE185D), Color(0xFFFCE7F3)),
     "text-size" to SettingsIconStyle(Color(0xFFB45309), Color(0xFFFDF0D2)),
     "notifications" to SettingsIconStyle(Color(0xFFC22733), Color(0xFFFDE5E4)),
     "video-quality" to SettingsIconStyle(Color(0xFF2563EB), Color(0xFFDBEAFE)),
@@ -80,6 +79,7 @@ val DarkSettingsIconStyles = mapOf(
     "app-color" to SettingsIconStyle(Color(0xFFF0A882), Color(0xFF6E2C10)),
     "language" to SettingsIconStyle(Color(0xFF5EEAD4), Color(0xFF042F2B)),
     "haptics" to SettingsIconStyle(Color(0xFFF9A8D4), Color(0xFF500724)),
+    "sounds" to SettingsIconStyle(Color(0xFFF9A8D4), Color(0xFF500724)),
     "text-size" to SettingsIconStyle(Color(0xFFFBBF24), Color(0xFF451A03)),
     "notifications" to SettingsIconStyle(Color(0xFFFF7A85), Color(0xFF450B08)),
     "video-quality" to SettingsIconStyle(Color(0xFF93C5FD), Color(0xFF172554)),

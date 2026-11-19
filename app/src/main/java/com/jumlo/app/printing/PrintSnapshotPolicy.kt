@@ -27,12 +27,13 @@ class PrintSnapshotPolicy(private val directory:File) {
         directory.listFiles()?.forEach {file ->
             // Do not follow/delete foreign entries or originals. Partial files are protected by
             // the lease for their eventual .bin destination until copying has really terminated.
-            if(!file.name.matches(Regex("[0-9a-f-]{36}\\.bin(?:\\.part)?"))) return@forEach
+            if(!file.name.matches(SNAPSHOT_FILE_PATTERN)) return@forEach
             val destination=file.canonicalPath.removeSuffix(".part")
             if(destination !in keep && file.canonicalFile.parentFile==directory.canonicalFile) file.delete()
         }
     }
     companion object {
+        private val SNAPSHOT_FILE_PATTERN=Regex("[0-9a-f-]{36}\\.bin(?:\\.part)?")
         /** Retain every known active job; bound inactive history separately. */
         fun retain(history:List<PrintHistoryEntry>):List<PrintHistoryEntry> = history.filter {PrintHistoryPolicy.canCancel(it.state)}+
             history.filterNot {PrintHistoryPolicy.canCancel(it.state)}.take(100)

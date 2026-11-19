@@ -9,14 +9,21 @@ set -euo pipefail
 
 jdk="${JAVA_HOME:-}"
 if [ -z "$jdk" ] || [ ! -x "$jdk/bin/java" ]; then
-  jdk=$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")
+  java_bin=$(command -v java || true)
+  if [ -z "$java_bin" ]; then
+    echo "Jumlo requires JDK 17 or 21, but no java binary was found on PATH or JAVA_HOME." >&2
+    exit 1
+  fi
+  jdk=$(dirname "$(dirname "$(readlink -f "$java_bin")")")
 fi
-version=$("$jdk/bin/java" -version 2>&1 | head -1 | sed -E 's/.*"([0-9]+)\.([0-9]+).*/\1 \2/')
-major=${version%% *}
+raw_version=$("$jdk/bin/java" -version 2>&1)
+first_line=${raw_version%%$'\n'*}
+full_version=$(printf '%s\n' "$first_line" | sed -E 's/.*"(.*)".*/\1/')
+major=$(printf '%s\n' "$full_version" | sed -E 's/^([0-9]+).*/\1/')
 if [ -n "$major" ] && [ "$major" -gt 21 ] 2>/dev/null; then
   cat >&2 <<MSG
 Jumlo must be built with JDK 17 or 21.
-Gradle is running on JDK $($jdk/bin/java -version 2>&1 | head -1 | sed -E 's/.*"(.*)".*/\1/').
+Gradle is running on JDK ${full_version}.
 Gradle 8.14 compiles the build scripts with an embedded Kotlin that cannot parse a
 JDK newer than 21, so the build fails before it starts.
 
@@ -26,4 +33,4 @@ and run scripts/check-build-env.sh again.
 MSG
   exit 1
 fi
-echo "build environment OK: $($jdk/bin/java -version 2>&1 | head -1 | sed -E 's/.*"(.*)".*/JDK \1/')"
+echo "build environment OK: JDK ${full_version}"

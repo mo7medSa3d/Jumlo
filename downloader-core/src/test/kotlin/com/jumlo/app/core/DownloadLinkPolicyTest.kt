@@ -1,7 +1,9 @@
 package com.jumlo.app.core
 
+import com.jumlo.app.core.media.MediaLinks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -53,5 +55,15 @@ class DownloadLinkPolicyTest {
         assertTrue(DownloadLinkPolicy.isDirect("https://example.com/media/clip.mp4"))
         assertFalse(DownloadLinkPolicy.isDirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
         assertFalse(DownloadLinkPolicy.isDirect("https://vm.tiktok.com/ZMxxxxxx/"))
+    }
+
+    @Test
+    fun mediaLinksRejectsOctalIpv4LoopbackAndPrivateHosts() {
+        assertThrows(IllegalArgumentException::class.java) {
+            MediaLinks.normalize("https://0177.0.0.1/secret", allowHttp = true)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            MediaLinks.normalize("https://012.0.0.1/internal", allowHttp = true)
+        }
     }
 }

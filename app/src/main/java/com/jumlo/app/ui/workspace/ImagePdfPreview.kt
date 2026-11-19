@@ -12,6 +12,7 @@ import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -42,6 +43,8 @@ import kotlin.math.roundToInt
 
 /** The three settings this preview owns. Kept apart from the rest of the draft on purpose. */
 private data class PreviewSettings(val margin:String,val orientation:String,val fill:Boolean)
+private val ORIENTATION_OPTIONS = listOf("AUTO" to R.string.upgrade_orientation_auto,"PORTRAIT" to R.string.upgrade_orientation_portrait,"LANDSCAPE" to R.string.upgrade_orientation_landscape)
+private val SCALE_OPTIONS = listOf(false to R.string.upgrade_scale_fit,true to R.string.upgrade_scale_fill)
 
 /** Output-faithful paper geometry with one local update per gesture and synchronized secondary fields. */
 @Composable
@@ -93,7 +96,7 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
         Text(stringResource(R.string.upgrade_image_to_pdf_preview),style=QuietTheme.typography.sectionTitle)
         when {
             frame==null -> LinearProgressIndicator(Modifier.fillMaxWidth())
-            image==null -> TextButton(onClick={retry++}) {Text(stringResource(R.string.upgrade_preview_unavailable))}
+            image==null || image.bitmap.isRecycled -> TextButton(onClick={retry++}) {Text(stringResource(R.string.upgrade_preview_unavailable))}
             else -> {
                 val page=runCatching {PdfPageGeometry.resolve(image.width,image.height,draft.paperMode,
                     WorkspaceDraft.normalizeDigits(draft.paperWidth).toIntOrNull() ?: 595,WorkspaceDraft.normalizeDigits(draft.paperHeight).toIntOrNull() ?: 842,draft.orientation)}.getOrNull()
@@ -101,7 +104,9 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
                 if(placement==null) Text(stringResource(R.string.upgrade_invalid_paper),color=MaterialTheme.colorScheme.error)
                 else {
                     val guide=MaterialTheme.colorScheme.primary
-                    val bitmap=image.bitmap.asImageBitmap()
+                    val density=LocalDensity.current
+                    val guideStroke=remember(density) {Stroke(with(density) {1.5.dp.toPx()})}
+                    val bitmap=remember(image.bitmap) {image.bitmap.asImageBitmap()}
                     val hint=stringResource(R.string.upgrade_margin_drag)
                     Canvas(Modifier.fillMaxWidth().height(310.dp).testTag("preview.bitmap").clip(QuietTheme.shapes.thumbnail)
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
@@ -112,6 +117,7 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
                             detectDragGestures(onDragStart={point ->
                                 beforeDrag=margin
                                 val scale=minOf((size.width-32.dp.toPx())/placement.pageWidthPt,(size.height-32.dp.toPx())/placement.pageHeightPt)
+                                if(scale<=0f) return@detectDragGestures
                                 val left=(size.width-placement.pageWidthPt*scale)/2f;val top=(size.height-placement.pageHeightPt*scale)/2f
                                 val x=(point.x-left)/scale;val y=(point.y-top)/scale
                                 val distances=listOf(x,y,placement.pageWidthPt-x,placement.pageHeightPt-y)
@@ -120,6 +126,7 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
                             },onDrag={change,_->
                                 change.consume()
                                 val scale=minOf((size.width-32.dp.toPx())/placement.pageWidthPt,(size.height-32.dp.toPx())/placement.pageHeightPt)
+                                if(scale<=0f) return@detectDragGestures
                                 val x=(change.position.x-(size.width-placement.pageWidthPt*scale)/2f)/scale
                                 val y=(change.position.y-(size.height-placement.pageHeightPt*scale)/2f)/scale
                                 val distance=listOf(x,y,placement.pageWidthPt-x,placement.pageHeightPt-y)[edge]
@@ -131,6 +138,7 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
                                 onDragCancel={margin=beforeDrag})
                         }) {
                         val s=minOf((size.width-32.dp.toPx())/placement.pageWidthPt,(size.height-32.dp.toPx())/placement.pageHeightPt)
+                        if(s<=0f) return@Canvas
                         val x=(size.width-placement.pageWidthPt*s)/2;val y=(size.height-placement.pageHeightPt*s)/2
                         val w=placement.pageWidthPt*s;val h=placement.pageHeightPt*s;val m=placement.marginPt*s
                         drawRect(Color.White,Offset(x,y),Size(w,h))
@@ -138,10 +146,10 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
                             drawImage(bitmap,dstOffset=IntOffset((x+placement.leftPt*s).roundToInt(),(y+placement.topPt*s).roundToInt()),
                                 dstSize=IntSize((placement.widthPt*s).roundToInt().coerceAtLeast(1),(placement.heightPt*s).roundToInt().coerceAtLeast(1)),filterQuality=FilterQuality.High)
                         }
-                        drawRect(guide,Offset(x+m,y+m),Size(w-2*m,h-2*m),style=Stroke(1.5.dp.toPx()))
-                        listOf(Offset(x+m,y+h/2),Offset(x+w-m,y+h/2),Offset(x+w/2,y+m),Offset(x+w/2,y+h-m)).forEach {
-                            drawCircle(guide.copy(alpha=.15f),24.dp.toPx(),it);drawCircle(guide,5.dp.toPx(),it)
-                        }
+                        drawRect(guide,Offset(x+m,y+m),Size(w-2*m,h-2*m),style=guideStroke)
+                        val haloR=24.dp.toPx();val dotR=5.dp.toPx();val haloColor=guide.copy(alpha=.15f)
+                        fun drawHandle(cx:Float,cy:Float) {val p=Offset(cx,cy);drawCircle(haloColor,haloR,p);drawCircle(guide,dotR,p)}
+                        drawHandle(x+m,y+h/2);drawHandle(x+w-m,y+h/2);drawHandle(x+w/2,y+m);drawHandle(x+w/2,y+h-m)
                     }
                 }
             }
@@ -152,12 +160,12 @@ internal fun ImagePdfPreview(vm:AppViewModel,sourceId:String,draft:WorkspaceDraf
             modifier=Modifier.semantics {contentDescription=marginLabel},
             onValueChangeFinished={apply(PreviewSettings(margin.roundToInt().toString(),draft.orientation,draft.fill));haptics.sliderTick()})
         if(draft.paperMode!="AUTO") LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(listOf("AUTO" to R.string.upgrade_orientation_auto,"PORTRAIT" to R.string.upgrade_orientation_portrait,"LANDSCAPE" to R.string.upgrade_orientation_landscape)) {option->
+            items(ORIENTATION_OPTIONS,key={it.first},contentType={"orientation-chip"}) {option->
                 QuietChip(draft.orientation==option.first,{apply(PreviewSettings(draft.margin,option.first,draft.fill))},stringResource(option.second))
             }
         }
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(listOf(false to R.string.upgrade_scale_fit,true to R.string.upgrade_scale_fill)) {option->
+            items(SCALE_OPTIONS,key={it.first},contentType={"scale-chip"}) {option->
                 QuietChip(draft.fill==option.first,{apply(PreviewSettings(draft.margin,draft.orientation,option.first))},stringResource(option.second))
             }
         }

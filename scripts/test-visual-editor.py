@@ -5,29 +5,25 @@ import unittest
 from source_paths import source_path
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SRC=ROOT/'app/src/main/java/com/jumlo/app'
-def code(p):return source_path(p).read_text()
+def code(p):return source_path(p).read_text(encoding="utf-8")
 class VisualEditorContract(unittest.TestCase):
     def test_real_workspace_wiring(self):
         workspace=code('ui/workspace/WorkspaceScreen.kt')
-        self.assertIn('VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id)',workspace)
-        self.assertIn('pdf_image',workspace)
-        # Adjustment now has its own real before/after preview, rather than a flag
-        # on the generic input pager (which is excluded for the adjustment tool).
+        self.assertIn('VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm)',workspace)
         self.assertIn('ImageResultPreview(vm,ids,form)',workspace)
         result_preview=code('ui/workspace/ImageResultPreview.kt')
-        self.assertIn('ImageComparisonPreview(original,shown.bitmap)',result_preview)
+        self.assertIn('CollagePlacementPreview(shown.bitmap,cells)',result_preview)
+        self.assertIn('R.string.visual_show_original',result_preview)
         self.assertIn('renderSinglePreview(source,logo,draft)',result_preview)
         self.assertIn('VisualImageSettings(form,vm::updateForm)',workspace)
     def test_engine_preserves_editing_contract(self):
         model=code('model/WorkspaceDraft.kt')
-        for tool in ('img_02','img_03','pdf_crop','pdf_signature','pdf_annotate','img_adjust'):
+        for tool in ('img_02','img_03','pdf_crop','pdf_signature'):
             self.assertIn('"'+tool+'"',model)
         editor=code('ui/workspace/VisualDocumentEditor.kt')
-        self.assertIn('cropLeft=safe.left.serialized()',editor)
-        self.assertIn('cropRight=safe.right.serialized()',editor)
-        self.assertIn('vm.preview(overlayId,1)',editor)
+        self.assertIn('cropLeft = safe.left.serialized()',editor)
+        self.assertIn('cropRight = safe.right.serialized()',editor)
         self.assertIn('VisualRect.fitAspect(',editor)
-        self.assertIn('pdf_annotate',editor)
         self.assertIn('detectDragGestures(',editor)
         self.assertIn('hitHandle(',editor)
     def test_compression_reduction_and_safety_contracts(self):
@@ -53,10 +49,8 @@ class VisualEditorContract(unittest.TestCase):
         self.assertIn('Files.move(ready.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING)',runner)
         compress_body=runner[runner.index('fun compress('):runner.index('private fun open(')]
         self.assertIn('finally {\n            directory.deleteRecursively()',compress_body)
-        self.assertIn('PDFormXObject',backend)
+        self.assertIn('PDFormXObject',image_compressor)
         self.assertIn('decodeSubsampling(',policy)
-        self.assertIn('pdf_image',catalog)
-        self.assertIn('"overlayImage" ->',compressor)
         # The image work goes through a byte-level codec seam, so the same code
         # runs on the host and the scan case has CI coverage.
         self.assertIn('fun interface PdfImageCodec',image_codec)
@@ -85,7 +79,7 @@ class VisualEditorContract(unittest.TestCase):
             self.assertIn(name,editor)
         # A drag commits as recordEdit(beforeDrag, active) then saves the active box;
         # move/size buttons record recordEdit(rect, next) before saveRect(next).
-        self.assertIn('recordEdit(it,active)',editor)
+        self.assertIn('recordEdit(it, active)',editor)
         self.assertIn('saveRect(active)',editor)
         self.assertIn('saveRect(next)',editor)
 
@@ -102,16 +96,12 @@ class VisualEditorContract(unittest.TestCase):
     def test_pdf_image_overlay_preview_matches_real_pdf_geometry(self):
         geometry=code('core/PdfOverlaySourcePolicy.kt')
         renderer=code('data/pdf/PdfBoxBackend.kt')
-        editor=code('ui/workspace/VisualDocumentEditor.kt')
         backend=code('data/processing/PdfOperationHandler.kt')
         self.assertIn('object PdfOverlaySourcePolicy',geometry)
         self.assertIn('object PdfImagePlacementPolicy',geometry)
         self.assertIn('PdfImagePlacementPolicy.fit(',renderer)
         self.assertIn('placement.width,placement.height',renderer)
-        self.assertIn('contentScale=ContentScale.Fit)',editor)
-        # Image watermarks add a third consumer; a global count cannot establish
-        # that each image-bearing operation orders PDF/image inputs correctly.
-        for operation,next_operation in (('stamp','annotate'),('overlayImage','signature'),('signature','clean')):
+        for operation,next_operation in (('stamp','signature'),('signature','protect')):
             branch=backend.split('"'+operation+'" ->',1)[1].split('"'+next_operation+'" ->',1)[0]
             with self.subTest(operation=operation):
                 self.assertIn('PdfOverlaySourcePolicy.ordered(',branch)
@@ -124,8 +114,8 @@ class VisualEditorContract(unittest.TestCase):
 
     def test_separate_native_geometry_regressions(self):
         test=ROOT/'app/src/test/java/com/jumlo/app/ui/workspace/VisualEditGeometryTest.kt'
-        self.assertIn('cornersNeverCrossAndAlwaysStayOnDocument',test.read_text())
-        self.assertIn('aspectPresetUsesOriginalSourceDimensions',test.read_text())
+        self.assertIn('cornersNeverCrossAndAlwaysStayOnDocument',test.read_text(encoding="utf-8"))
+        self.assertIn('aspectPresetUsesOriginalSourceDimensions',test.read_text(encoding="utf-8"))
     def test_arabic_and_english(self):
         from xml.etree import ElementTree as ET
         en=ET.parse(ROOT/'app/src/main/res/values/visual_editor.xml')

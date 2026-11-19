@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.documentfile.provider.DocumentFile
 import com.jumlo.app.core.AutoOutputName
@@ -92,7 +93,7 @@ interface PublicOutputPublisher {
             resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                 arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
                 "${MediaStore.MediaColumns.RELATIVE_PATH}=?",arrayOf(path),null)?.use { cursor ->
-                while(cursor.moveToNext()) existing+=cursor.getString(0)
+                while(cursor.moveToNext()) cursor.getString(0)?.let { existing+=it }
             }
         }
         val filename=StoragePaths.uniqueName(name,existing)
@@ -123,7 +124,10 @@ interface PublicOutputPublisher {
     override fun deleteIfOwned(publicUri:String?) {
         if(publicUri.isNullOrBlank()) return
         val parsed=Uri.parse(publicUri)
-        if(parsed.scheme=="content") app.contentResolver.delete(parsed,null,null)
+        if(parsed.scheme=="content") {
+            if(DocumentsContract.isDocumentUri(app,parsed)) DocumentFile.fromSingleUri(app,parsed)?.delete()
+            else app.contentResolver.delete(parsed,null,null)
+        }
         else if(parsed.scheme=="file") {
             val root=app.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.canonicalFile ?: return
             val file=File(parsed.path.orEmpty()).canonicalFile

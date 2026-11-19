@@ -15,6 +15,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -48,18 +52,18 @@ internal fun OcrWorkspacePanel(vm:AppViewModel,sourceId:String,onExport:()->Unit
             @Composable fun Page(modifier:Modifier) {
                 Surface(modifier,shape=QuietTheme.shapes.thumbnail,color=MaterialTheme.colorScheme.surfaceContainerLow) {
                     Box(Modifier.height(340.dp),contentAlignment=Alignment.Center) {
-                        frame?.getOrNull()?.let {Image(it.bitmap.asImageBitmap(),stringResource(R.string.jumlo_page_label,page),Modifier.fillMaxSize().testTag("ocr.page"),contentScale=ContentScale.Fit)}
-                            ?: if(frame?.isFailure==true) Text(stringResource(R.string.msg_preview_unavailable)) else CircularProgressIndicator()
+                        frame?.getOrNull()?.takeUnless {it.bitmap.isRecycled}?.let {Image(it.bitmap.asImageBitmap(),stringResource(R.string.jumlo_page_label,page),Modifier.fillMaxSize().testTag("ocr.page"),contentScale=ContentScale.Fit)}
+                            ?: if(frame?.isFailure==true) Text(stringResource(R.string.msg_preview_unavailable),modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite }) else CircularProgressIndicator()
                     }
                 }
             }
             @Composable fun TextPanel(modifier:Modifier) {
                 Surface(modifier,shape=QuietTheme.shapes.card,color=MaterialTheme.colorScheme.surfaceContainerLow) {
                     Column(Modifier.heightIn(min=220.dp,max=340.dp).padding(16.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Text(stringResource(R.string.studio_ocr_text),style=QuietTheme.typography.metadataStrong)
+                        Text(stringResource(R.string.studio_ocr_text),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
                         when {
                             attempts==0->QuietStateCard(stringResource(R.string.studio_ocr_text),stringResource(R.string.studio_ocr_hint),stringResource(R.string.studio_ocr_recognize),{attempts++})
-                            recognized==null->{LinearProgressIndicator(Modifier.fillMaxWidth());Text(stringResource(R.string.studio_ocr_wait))}
+                            recognized==null->{LinearProgressIndicator(Modifier.fillMaxWidth());Text(stringResource(R.string.studio_ocr_wait),modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
                             recognized?.isFailure==true->QuietStateCard(stringResource(userMessageResource(stableError(recognized!!.exceptionOrNull()!!))),
                                 stringResource(R.string.rebuild_ocr_note),stringResource(R.string.interactive_preview_retry),{attempts++},isError=true)
                             recognized?.getOrNull().isNullOrBlank()->QuietStateCard(stringResource(R.string.studio_ocr_empty),stringResource(R.string.rebuild_ocr_note),stringResource(R.string.studio_ocr_recognize),{attempts++})

@@ -17,7 +17,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'app/src/media/assets/media'
 ARCHIVE = Path(os.environ.get('JUMLO_EXTRACTOR_ARCHIVE', ASSETS / 'yt-dlp'))
-PINNED_VERSION = '2026.10.21'
+PINNED_VERSION = '2026.10.26'
 
 
 class PackagedExtractorTests(unittest.TestCase):
@@ -39,7 +39,7 @@ class PackagedExtractorTests(unittest.TestCase):
 
     def test_bundled_bytes_match_the_published_pin(self):
         properties = dict(line.split('=', 1) for line in
-                          (ASSETS / 'extractor.properties').read_text().splitlines()
+                          (ASSETS / 'extractor.properties').read_text(encoding="utf-8").splitlines()
                           if line and not line.startswith('#'))
         self.assertEqual(PINNED_VERSION, properties['version'])
         self.assertEqual(properties['sha256'], hashlib.sha256(ARCHIVE.read_bytes()).hexdigest())
@@ -66,7 +66,7 @@ class PackagedExtractorTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory(prefix='jumlo-metadata-') as work:
             metadata = Path(work) / 'fixture.info.json'
-            metadata.write_text(json.dumps(fixture))
+            metadata.write_text(json.dumps(fixture), encoding="utf-8")
             result = self.launch('--load-info-json', str(metadata), '--simulate',
                                  '--format', "best*[format_id='137']+best*[format_id='140']",
                                  '--print', '%(requested_formats.:.format_id)j')

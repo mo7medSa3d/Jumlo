@@ -13,17 +13,19 @@ fun safeViewport(root:PixelBounds,hinges:List<HingeBounds>,rtl:Boolean):PixelBou
     var pane=root
     for(feature in hinges) {
         val h=feature.bounds
-        if(feature.vertical) {
+        val candidate=if(feature.vertical) {
             if(h.bottom<=pane.top || h.top>=pane.bottom || h.right<=pane.left || h.left>=pane.right) continue
             val left=pane.copy(right=h.left.coerceIn(pane.left,pane.right))
             val right=pane.copy(left=h.right.coerceIn(pane.left,pane.right))
-            pane=when {left.area>right.area->left;right.area>left.area->right;rtl->right;else->left}
+            when {left.area>right.area->left;right.area>left.area->right;rtl->right;else->left}
         } else {
             if(h.right<=pane.left || h.left>=pane.right || h.bottom<=pane.top || h.top>=pane.bottom) continue
             val top=pane.copy(bottom=h.top.coerceIn(pane.top,pane.bottom))
             val bottom=pane.copy(top=h.bottom.coerceIn(pane.top,pane.bottom))
-            pane=if(top.area>=bottom.area) top else bottom
+            if(top.area>=bottom.area) top else bottom
         }
+        // Never collapse to an empty pane if a hinge fully occludes a narrow multi-window viewport.
+        if(candidate.area>0L) pane=candidate
     }
     return pane
 }

@@ -6,7 +6,7 @@ import re
 import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
-registry = (root / 'app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt').read_text()
+registry = (root / 'app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt').read_text(encoding="utf-8")
 # pdf_compare, pdf_redact and office_to_pdf are mapped in ToolIcons.kt / ModernToolIcons
 # using existing shared vectors (see test-new-tools.py).
 ids = [id for id in re.findall(r'UtilityTool\("([^\"]+)"', registry) if id not in ('pdf_compare', 'pdf_redact', 'office_to_pdf')]
@@ -24,7 +24,7 @@ for id in ids:
     digest = hashlib.sha256(geometry.encode()).hexdigest()
     assert digest not in paths, f'{id} shares geometry with {paths.get(digest)}'
     paths[digest] = id
-mapping = (root / 'app/src/main/java/com/jumlo/app/ui/components/ToolIcons.kt').read_text()
+mapping = (root / 'app/src/main/java/com/jumlo/app/ui/components/ToolIcons.kt').read_text(encoding="utf-8")
 for id in ids:
     assert f'"{id}" to R.drawable.ic_tool_{id}' in mapping, f'Missing icon mapping: {id}'
 assert (root / 'app/src/main/assets/licenses/material-symbols-Apache-2.0.txt').exists()

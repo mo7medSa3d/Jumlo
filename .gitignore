@@ -86,7 +86,6 @@ signing/
 
 # Captures
 captures/
-graphify-out
 desing_ex
 
 # IDE / local tooling

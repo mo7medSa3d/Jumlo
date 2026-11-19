@@ -18,7 +18,7 @@ data class PdfWatermarkStyle(
         require(fontSizePt in 12..90) { "INVALID_WATERMARK_SIZE" }
         require(opacityPercent in 5..100) { "INVALID_WATERMARK_OPACITY" }
         require(rotationDegrees in -180..180) { "INVALID_WATERMARK_ROTATION" }
-        require(Regex("^#[0-9A-Fa-f]{6}$").matches(colorHex)) { "INVALID_WATERMARK_COLOR" }
+        OverlayStylePolicy.requireColor(colorHex)
         OverlayStylePolicy.requireFont(fontFamily)
         require(imageScale.isFinite() && imageScale in .1..3.0) { "INVALID_WATERMARK_SIZE" }
     }

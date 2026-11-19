@@ -17,16 +17,16 @@ BASE = ROOT / 'app/src/main/java/com/jumlo/app'
 class CurrentNativeTransportContracts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.runtime=(BASE/'data/media/NativeDirectMediaRuntime.kt').read_text()
-        cls.view_model=(MAIN/'ui/downloads/MediaViewModel.kt').read_text()
-        cls.handler=(MAIN/'data/media/MediaOperationHandler.kt').read_text()
-        cls.html=source_path('core/media/Html5MediaDiscovery.kt').read_text()
+        cls.runtime=(BASE/'data/media/NativeDirectMediaRuntime.kt').read_text(encoding="utf-8")
+        cls.view_model=(MAIN/'ui/downloads/MediaViewModel.kt').read_text(encoding="utf-8")
+        cls.handler=(MAIN/'data/media/MediaOperationHandler.kt').read_text(encoding="utf-8")
+        cls.html=source_path('core/media/Html5MediaDiscovery.kt').read_text(encoding="utf-8")
 
     def test_removed_python_runtime_is_not_a_startup_dependency(self):
         self.assertFalse((ROOT/'app/src/main/assets/media/network_guard.py').exists())
         self.assertFalse((ROOT/'app/src/main/assets/media/bootstrap.py').exists())
         self.assertIn('NativeDirectMediaRuntime',self.runtime)
-        base_factory=(ROOT/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text()
+        base_factory=(ROOT/'app/src/base/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text(encoding="utf-8")
         self.assertIn('NativeDirectMediaRuntime',base_factory)
         self.assertIn('StreamTransfer(',self.runtime)
 
@@ -71,7 +71,7 @@ class CurrentNativeTransportContracts(unittest.TestCase):
                 self.assertNotIn(obsolete, values)
 
     def test_download_workspace_does_not_expose_cookie_browser_or_header_editor(self):
-        ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text()
+        ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text(encoding="utf-8")
         self.assertNotIn('PlatformSessionSheet(',ui)
         self.assertNotIn('showSessionSheet',ui)
         self.assertNotIn('media_session_btn',ui)
@@ -79,7 +79,7 @@ class CurrentNativeTransportContracts(unittest.TestCase):
         self.assertIn('media_restricted_hint',ui)
 
     def test_actual_transfer_uses_compatible_profile_and_stops_on_denial(self):
-        downloader=(MAIN/'data/processing/DownloadOperationHandler.kt').read_text()
+        downloader=(MAIN/'data/processing/DownloadOperationHandler.kt').read_text(encoding="utf-8")
         self.assertIn('BrowserProfilePolicy.tryNext(',downloader)
         self.assertIn('response.close()',downloader)
         self.assertIn('compatibilityAttempt = profileIndex',downloader)

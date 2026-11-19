@@ -6,6 +6,7 @@ import java.util.Locale
 import java.util.zip.*
 
 object Hashing {
+    private val SHA256_HEX = Regex("[0-9a-f]{64}")
     fun sha256(file: File): String = file.inputStream().use { sha256(it) }
     fun sha256(input: InputStream, checkCancel: () -> Unit = {}): String {
         val digest=MessageDigest.getInstance("SHA-256"); val buffer=ByteArray(64*1024)
@@ -14,7 +15,7 @@ object Hashing {
     }
     fun matches(file: File, digest: String): Boolean {
         val expected=digest.trim().lowercase(Locale.ROOT)
-        require(Regex("[0-9a-f]{64}").matches(expected)) { "INVALID_SHA256" }
+        require(SHA256_HEX.matches(expected)) { "INVALID_SHA256" }
         return MessageDigest.isEqual(sha256(file).toByteArray(Charsets.US_ASCII),expected.toByteArray(Charsets.US_ASCII))
     }
 }
@@ -31,9 +32,10 @@ object ArchiveCore {
      * Opening a ZIP or counting its central entries alone does not verify its file bytes. */
     fun verify(input: File, limits: ArchiveLimits, checkCancel: () -> Unit = {}): ArchiveSummary {
         require(input.isFile && input.length() > 0L) { "INVALID_ARCHIVE_REQUEST" }
-        val root = File(input.parentFile, "archive-validation-root")
+        val root = File(input.absoluteFile.parentFile, "archive-validation-root")
         val central = linkedMapOf<String, Pair<Long, Long>>()
         val folded = HashSet<String>()
+        var declaredBytes = 0L
         ZipFile(input).use { archive ->
             require(archive.size() in 1..limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
             val entries = archive.entries()
@@ -42,7 +44,9 @@ object ArchiveCore {
                 val entry = entries.nextElement()
                 val path = SafeNames.entry(root, entry.name, limits.maxDepth).path
                 require(folded.add(path.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
-                require(entry.size >= 0L && entry.size <= limits.maxBytes && entry.crc >= 0L) { "ARCHIVE_VERIFICATION_FAILED" }
+                require(entry.size >= 0L && entry.crc >= 0L) { "ARCHIVE_VERIFICATION_FAILED" }
+                require(entry.size <= limits.maxBytes - declaredBytes) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
+                declaredBytes += entry.size
                 require(!entry.isDirectory || entry.size == 0L) { "ARCHIVE_DIRECTORY_PAYLOAD" }
                 central[entry.name] = entry.size to entry.crc
             }
@@ -82,21 +86,22 @@ object ArchiveCore {
 
     fun create(out: File, inputs: List<ArchiveInput>, level: Int, limits: ArchiveLimits, checkCancel: () -> Unit = {}) {
         require(!out.exists() && inputs.isNotEmpty() && inputs.size<=limits.maxEntries && level in 0..9) { "INVALID_ARCHIVE_REQUEST" }
+        val parentDir = out.absoluteFile.parentFile
         val names=HashSet<String>()
         inputs.forEach { input ->
-            val normalized=SafeNames.entry(out.parentFile,input.name,limits.maxDepth).path
+            val normalized=SafeNames.entry(parentDir,input.name,limits.maxDepth).path
             require(names.add(normalized.lowercase(Locale.ROOT))) { "DUPLICATE_ARCHIVE_ENTRY" }
         }
-        out.parentFile.mkdirs()
+        parentDir.mkdirs()
         var total=0L
         try {
             FileOutputStream(out).use { file ->
                 ZipOutputStream(BufferedOutputStream(file)).use { zip ->
                     zip.setLevel(level)
+                    val buf=ByteArray(64*1024)
                     inputs.forEach { input ->
                         checkCancel(); zip.putNextEntry(ZipEntry(input.name))
                         input.open().use { source ->
-                            val buf=ByteArray(64*1024)
                             while(true) {
                                 checkCancel(); val n=source.read(buf); if(n<0) break
                                 require(n.toLong() <= limits.maxBytes-total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
@@ -155,6 +160,7 @@ object ArchiveCore {
             // catch deletes the partial output and rethrows.
             try {
             ZipInputStream(BufferedInputStream(input.inputStream())).use { zip ->
+                val buf=ByteArray(64*1024)
                 while(true) {
                     checkCancel(); val e=zip.nextEntry ?: break
                     count++; require(count<=limits.maxEntries) { "ARCHIVE_ENTRY_BUDGET_EXCEEDED" }
@@ -169,7 +175,6 @@ object ArchiveCore {
                         require(target.parentFile.mkdirs() || target.parentFile.isDirectory) { "OUTPUT_CREATE_FAILED" }
                         require(!target.exists()) { "ARCHIVE_COLLISION" }
                         FileOutputStream(target).use { sink ->
-                            val buf=ByteArray(64*1024)
                             while(true) {
                                 checkCancel(); val n=zip.read(buf); if(n<0) break
                                 require(n.toLong()<=limits.maxBytes-total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }

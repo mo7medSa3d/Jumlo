@@ -1,14 +1,11 @@
 package com.jumlo.app.pdf
 
-import com.jumlo.app.data.pdf.FormEntry
 import com.jumlo.app.data.pdf.OrganizeOp
 import com.jumlo.app.data.pdf.PageGroup
 import com.jumlo.app.data.pdf.PdfBoxBackend
-import com.jumlo.app.data.pdf.RedactRegion
 import com.jumlo.app.data.pdf.PdfInput
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.After
 import org.junit.Test
@@ -233,79 +230,6 @@ class PdfStructureCoreTest {
         assertTrue(rejected)
     }
 
-    @Test fun fill_form_and_flatten() {
-        val flat = File(dir, "form-flat.pdf")
-        PdfBoxBackend.open(PdfFixtures.formDoc(File(dir, "form.pdf")), null).use { doc ->
-            PdfBoxBackend.fillForm(doc, mapOf("name" to FormEntry.Text("Mo"), "agree" to FormEntry.Check(true)))
-            assertEquals("Mo", PdfBoxBackend.listFormFields(doc).first { it.startsWith("name|") }.substringAfter('|').substringAfter('|'))
-            PdfBoxBackend.flattenForm(doc, flat)
-        }
-        PdfBoxBackend.open(flat, null).use { flattened ->
-            assertTrue("fields must be gone after flatten", PdfBoxBackend.listFormFields(flattened).isEmpty())
-            val text = PdfBoxBackend.pageTexts(flattened).joinToString(" ")
-            assertTrue("flattened value must be visible", text.contains("Mo"))
-        }
-    }
-
-    @Test fun parserPreservesPrimitiveLookingTextAndUsesActualCheckboxType() {
-        for(raw in listOf("name=42\nagree=true", "{\"name\":\"42\",\"agree\":true}", "{\"name\":42,\"agree\":\"true\"}")) {
-            PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"input-${raw.hashCode()}.pdf")),null).use { doc ->
-                PdfBoxBackend.fillForm(doc,com.jumlo.app.data.pdf.FormInputParser.parse(raw))
-                assertEquals("42",doc.documentCatalog.acroForm.getField("name").valueAsString)
-                assertTrue((doc.documentCatalog.acroForm.getField("agree") as com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox).isChecked)
-            }
-        }
-        for(raw in listOf("name=true", "{\"name\":\"true\"}", "{\"name\":true}")) {
-            PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"bool-${raw.hashCode()}.pdf")),null).use { doc ->
-                PdfBoxBackend.fillForm(doc,com.jumlo.app.data.pdf.FormInputParser.parse(raw))
-                assertEquals("true",doc.documentCatalog.acroForm.getField("name").valueAsString)
-            }
-        }
-    }
-
-    @Test fun flattenRegeneratesExistingTextAndFindsWidgetWithoutPagePointer() {
-        val flat=File(dir,"missing-page-flat.pdf")
-        PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"existing.pdf")),null).use { doc ->
-            PdfBoxBackend.fillForm(doc,mapOf("name" to FormEntry.Text("Existing 42")))
-            val widget=doc.documentCatalog.acroForm.getField("name").widgets.single()
-            widget.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.P)
-            widget.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.AP)
-            PdfBoxBackend.flattenForm(doc,flat)
-        }
-        PdfBoxBackend.open(flat,null).use { assertTrue(PdfBoxBackend.pageTexts(it).single().contains("Existing 42")) }
-    }
-
-    @Test fun unresolvedWidgetFailsBeforeRemovingFieldsOrAnnotations() {
-        val flat=File(dir,"must-not-flatten.pdf")
-        PdfBoxBackend.open(PdfFixtures.formDoc(File(dir,"unresolved.pdf")),null).use { doc ->
-            val acro=doc.documentCatalog.acroForm
-            val widget=acro.getField("name").widgets.single()
-            widget.cosObject.removeItem(com.tom_roush.pdfbox.cos.COSName.P)
-            doc.getPage(0).annotations=doc.getPage(0).annotations.filter { it.cosObject !== widget.cosObject }
-            val before=doc.getPage(0).annotations.size
-            try { PdfBoxBackend.flattenForm(doc,flat); throw AssertionError("missing page must fail") }
-            catch(expected:IllegalArgumentException) { assertEquals("FORM_WIDGET_PAGE_MISSING",expected.message) }
-            assertTrue(doc.documentCatalog.acroForm.cosObject === acro.cosObject)
-            assertEquals(2,acro.fields.size)
-            assertEquals(before,doc.getPage(0).annotations.size)
-            assertFalse(flat.exists())
-        }
-    }
-
-    @Test fun redactRoutesEveryTouchedPageThroughFullPageRasterization() {
-        PdfBoxBackend.open(docFile("redact", 3), null).use { doc ->
-            val result = PdfBoxBackend.redact(
-                doc,
-                mapOf(
-                    0 to listOf(RedactRegion(0.05, 0.10, 0.45, 0.25)),
-                    2 to listOf(RedactRegion(0.50, 0.70, 0.90, 0.90))
-                )
-            )
-            assertEquals(listOf(0, 2), result.pageFallbacks)
-            assertTrue(result.leftoverText.isEmpty())
-            assertEquals("redact page 1", PdfBoxBackend.pageTexts(doc)[0])
-        }
-    }
 
     @Test fun compress_keeps_text_and_shrinks_images() {
         val source = PdfFixtures.imageDoc(File(dir, "big.pdf"), textPage = true)

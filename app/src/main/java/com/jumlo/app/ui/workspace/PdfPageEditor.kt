@@ -14,11 +14,13 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronLeft
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
 import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.automirrored.rounded.Redo
@@ -33,14 +35,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.jumlo.app.R
@@ -49,6 +49,7 @@ import com.jumlo.app.core.PdfPageEdit
 import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
+import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 
 /** Bounded lazy thumbnails; page actions write into the existing durable workspace draft. */
@@ -77,7 +78,7 @@ internal fun PdfPageEditor(
     }
     if (count == 0) {
         Column {
-            Text(stringResource(R.string.msg_preview_unavailable), color=MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.msg_preview_unavailable), color=MaterialTheme.colorScheme.error, modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             TextButton(onClick={retry++}) {Text(stringResource(R.string.print_preview_retry))}
         }
         return
@@ -110,17 +111,19 @@ internal fun PdfPageEditor(
             if(fromDraft!=history.current) { history=history.commit(fromDraft);selectedIds=emptyList() }
         }
     }
-    val selected: Set<Int> = if (organize) pages.filter { it.instanceId in selectedIds }.map { it.sourcePage }.toSet()
+    val selectedIdSet = remember(selectedIds) { selectedIds.toSet() }
+    val selected: Set<Int> = remember(organize, pages, selectedIdSet, draft.toolId, draft.flag1, boundaryMode, draft.pages, total) {
+        if (organize) pages.filter { it.instanceId in selectedIdSet }.map { it.sourcePage }.toSet()
         else if (draft.toolId == "pdf_05" && draft.flag1) emptySet()
         else if (boundaryMode) runCatching { if(draft.pages.isBlank()) emptySet() else PageSelection.parse(draft.pages,total).toSet() }.getOrDefault(emptySet())
         else selectedPageNumbers(draft.pages,total)
+    }
     val haptics = rememberAppHaptics()
     val listState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val scope=rememberCoroutineScope()
     var edgeScroll by remember { mutableFloatStateOf(0f) }
     var draggedId by remember { mutableStateOf<String?>(null) }
     var viewport by remember { mutableStateOf(Rect.Zero) }
-    val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
     var dragPoint by remember { mutableStateOf(Offset.Zero) }
     var selectionAnchor by remember { mutableStateOf<Int?>(null) }
     var selectionAtStart by remember { mutableStateOf(emptySet<Int>()) }
@@ -162,7 +165,7 @@ internal fun PdfPageEditor(
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically, horizontalArrangement=Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.jumlo_page_editor_title), style=QuietTheme.typography.sectionTitle)
+                Text(stringResource(R.string.jumlo_page_editor_title), style=QuietTheme.typography.sectionTitle, modifier=Modifier.semantics { heading() })
                 Text(stringResource(when {
                     boundaryMode -> R.string.jumlo_split_marker_hint
                     draft.toolId == "pdf_04" -> R.string.jumlo_page_editor_hint
@@ -172,18 +175,18 @@ internal fun PdfPageEditor(
             Text(stringResource(R.string.jumlo_page_count,total), style=QuietTheme.typography.metadata)
         }
         if(organize && selectedIds.isNotEmpty()) Surface(
-            color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()
+            color=MaterialTheme.colorScheme.secondaryContainer,shape=RoundedCornerShape(JumloRadii.field),modifier=Modifier.fillMaxWidth()
         ) {
             Column(Modifier.padding(horizontal=8.dp,vertical=4.dp)) {
                 Text(stringResource(R.string.neon_selection_count,selectedIds.size),
                     style=QuietTheme.typography.metadataStrong,modifier=Modifier.padding(horizontal=8.dp,vertical=4.dp))
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                item { TextButton(onClick={persist(history.delete(selectedIds.toSet()));selectedIds=emptyList()},enabled=selectedIds.size<pages.size) {
+                item(key="remove",contentType="action") { TextButton(onClick={persist(history.delete(selectedIdSet));selectedIds=emptyList()},enabled=selectedIds.size<pages.size) {
                     Icon(Icons.Rounded.DeleteOutline,null,Modifier.size(18.dp));Text(stringResource(R.string.action_remove)) } }
-                item { TextButton(onClick={persist(history.rotate(selectedIds.toSet()))}) {
+                item(key="rotate",contentType="action") { TextButton(onClick={persist(history.rotate(selectedIdSet))}) {
                     Icon(Icons.AutoMirrored.Rounded.RotateRight,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_rotate_selection)) } }
-                item { TextButton(onClick={persist(history.duplicate(selectedIds.toSet()))}) { Text(stringResource(R.string.editor_duplicate)) } }
-                if(printEnabled) item { TextButton(onClick={onPrint(pages.filter { it.instanceId in selectedIds }.map { it.sourcePage to it.rotationDegrees })}) { Text(stringResource(R.string.editor_print_selected)) } }
+                item(key="duplicate",contentType="action") { TextButton(onClick={persist(history.duplicate(selectedIdSet))}) { Text(stringResource(R.string.editor_duplicate)) } }
+                if(printEnabled) item(key="print",contentType="action") { TextButton(onClick={onPrint(pages.filter { it.instanceId in selectedIdSet }.map { it.sourcePage to it.rotationDegrees })}) { Text(stringResource(R.string.editor_print_selected)) } }
             }
             }
         }
@@ -192,11 +195,11 @@ internal fun PdfPageEditor(
             val focusIndex=pages.indexOf(focusedPage)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center) {
                 IconButton(enabled=focusIndex>0,onClick={focusedId=pages[focusIndex-1].instanceId}) {
-                    Icon(if(rtl) Icons.Rounded.ChevronRight else Icons.Rounded.ChevronLeft,stringResource(R.string.action_previous))
+                    Icon(Icons.AutoMirrored.Rounded.ChevronLeft,stringResource(R.string.action_previous))
                 }
                 Text(stringResource(R.string.ui_page_indicator,focusIndex+1,pages.size),style=QuietTheme.typography.metadataStrong)
                 IconButton(enabled=focusIndex<pages.lastIndex,onClick={focusedId=pages[focusIndex+1].instanceId}) {
-                    Icon(if(rtl) Icons.Rounded.ChevronLeft else Icons.Rounded.ChevronRight,stringResource(R.string.action_next))
+                    Icon(Icons.AutoMirrored.Rounded.ChevronRight,stringResource(R.string.action_next))
                 }
             }
         }
@@ -204,9 +207,8 @@ internal fun PdfPageEditor(
             modifier=Modifier.fillMaxWidth().height(420.dp).onGloballyPositioned {viewport=it.boundsInRoot()},
             state=listState,horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp),
             contentPadding=PaddingValues(vertical=4.dp)) {
-            gridItems(pages,key={ it.instanceId }) { entry ->
-                val index=pages.indexOf(entry)
-                PdfPageTile(vm,sourceId,entry.sourcePage,if(organize) entry.instanceId in selectedIds else entry.sourcePage in selected,organize,
+            gridItemsIndexed(pages,key={ _,it -> it.instanceId },contentType={ _,_ -> "page-tile" }) { index, entry ->
+                PdfPageTile(vm,sourceId,entry.sourcePage,if(organize) entry.instanceId in selectedIdSet else entry.sourcePage in selected,organize,
                     rotation=entry.rotationDegrees,instanceId=entry.instanceId,position=index+1,totalPages=pages.size,canMoveEarlier=index>0,canMoveLater=index<pages.lastIndex,
                     onSelect={
                         focusedId=entry.instanceId
@@ -250,12 +252,12 @@ internal fun PdfPageEditor(
         }
         if (organize) {
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                item { TextButton(onClick={persist(history.undo());selectedIds=emptyList()},enabled=history.past.isNotEmpty()) {
+                item(key="undo",contentType="action") { TextButton(onClick={persist(history.undo());selectedIds=emptyList()},enabled=history.past.isNotEmpty()) {
                     Icon(Icons.AutoMirrored.Rounded.Undo,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_undo)) } }
-                item { TextButton(onClick={persist(history.redo());selectedIds=emptyList()},enabled=history.future.isNotEmpty()) {
+                item(key="redo",contentType="action") { TextButton(onClick={persist(history.redo());selectedIds=emptyList()},enabled=history.future.isNotEmpty()) {
                     Icon(Icons.AutoMirrored.Rounded.Redo,null,Modifier.size(18.dp));Text(stringResource(R.string.jumlo_redo)) } }
-                item { TextButton(onClick={selectedIds=pages.map { it.instanceId }}) { Text(stringResource(R.string.jumlo_select_all)) } }
-                item { TextButton(onClick={selectedIds=emptyList()},enabled=selectedIds.isNotEmpty()) { Text(stringResource(R.string.editor_clear_selection)) } }
+                item(key="select-all",contentType="action") { TextButton(onClick={selectedIds=pages.map { it.instanceId }}) { Text(stringResource(R.string.jumlo_select_all)) } }
+                item(key="clear-selection",contentType="action") { TextButton(onClick={selectedIds=emptyList()},enabled=selectedIds.isNotEmpty()) { Text(stringResource(R.string.editor_clear_selection)) } }
             }
         } else if (split) {
             val every=(WorkspaceDraft.normalizeDigits(draft.num1).toIntOrNull() ?: 1).coerceIn(1,minOf(total,1000))
@@ -291,13 +293,14 @@ internal fun PdfPageEditor(
                     Text(stringResource(R.string.jumlo_clear_markers))
                 }
                 if(selected.isEmpty()) Text(stringResource(R.string.interactive_split_choose_boundary),
-                    style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
             val groups=runCatching { previewSplitGroups(total,draft.flag1,boundaryMode,draft.pages,every) }.getOrNull()
             if(groups!=null) {
                 Text(stringResource(R.string.jumlo_split_parts_preview,groups.size),style=QuietTheme.typography.metadataStrong)
+                val visibleGroups=remember(groups) { groups.take(60) }
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    items(groups.take(60)) { group ->
+                    items(visibleGroups,key={ "${it.first}-${it.last}" },contentType={ "split-group" }) { group ->
                         SuggestionChip(onClick={scope.launch {listState.animateScrollToItem(group.first-1)}},
                             label={Text(stringResource(R.string.interactive_part_pages,
                                 if(group.first==group.last) group.first.toString() else "${group.first}–${group.last}"))})
@@ -307,10 +310,10 @@ internal fun PdfPageEditor(
         } else {
             Text(stringResource(R.string.interactive_pages_selected,selected.size,total),style=QuietTheme.typography.metadataStrong)
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                item { TextButton(onClick={updateSelection(initialOrder.toSet())}) {Text(stringResource(R.string.jumlo_select_all))} }
-                item { TextButton(onClick={updateSelection(initialOrder.filter { it%2==1 }.toSet())}) {Text(stringResource(R.string.interactive_odd_pages))} }
-                if(total>1) item { TextButton(onClick={updateSelection(initialOrder.filter { it%2==0 }.toSet())}) {Text(stringResource(R.string.interactive_even_pages))} }
-                item { TextButton(onClick={updateSelection(initialOrder.toSet()-selected)},enabled=selected.size<total) {Text(stringResource(R.string.interactive_invert_pages))} }
+                item(key="select-all",contentType="action") { TextButton(onClick={updateSelection(initialOrder.toSet())}) {Text(stringResource(R.string.jumlo_select_all))} }
+                item(key="odd",contentType="action") { TextButton(onClick={updateSelection(initialOrder.filter { it%2==1 }.toSet())}) {Text(stringResource(R.string.interactive_odd_pages))} }
+                if(total>1) item(key="even",contentType="action") { TextButton(onClick={updateSelection(initialOrder.filter { it%2==0 }.toSet())}) {Text(stringResource(R.string.interactive_even_pages))} }
+                item(key="invert",contentType="action") { TextButton(onClick={updateSelection(initialOrder.toSet()-selected)},enabled=selected.size<total) {Text(stringResource(R.string.interactive_invert_pages))} }
             }
             Text(stringResource(R.string.interactive_keep_one_page),style=QuietTheme.typography.metadata,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -341,7 +344,6 @@ private fun PdfPageTile(
     val pageDescription=stringResource(R.string.editor_page_instance,page,position,totalPages,rotation)
     val earlierDescription=stringResource(R.string.jumlo_move_earlier)
     val laterDescription=stringResource(R.string.jumlo_move_later)
-    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     var displacement by remember(page) { mutableFloatStateOf(0f) }
     Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
         Column(
@@ -359,7 +361,7 @@ private fun PdfPageTile(
                         }
                     )
                 } else Modifier)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(JumloRadii.indicator))
                 .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
                 .semantics {
                     this.selected=selected;contentDescription=pageDescription
@@ -379,20 +381,20 @@ private fun PdfPageTile(
                     Image(frame!!.bitmap.asImageBitmap(),contentDescription=stringResource(R.string.jumlo_page_label,page),
                         modifier=Modifier.fillMaxSize().testTag("preview.bitmap").graphicsLayer {
                             rotationZ=rotation.toFloat()
-                            if(rotation%180!=0) {val fit=minOf(size.width/size.height,size.height/size.width);scaleX=fit;scaleY=fit}
+                            if(rotation%180!=0 && size.width>0f && size.height>0f) {val fit=minOf(size.width/size.height,size.height/size.width);scaleX=fit;scaleY=fit}
                         })
                 else if (frameState == null) CircularProgressIndicator(Modifier.size(22.dp),strokeWidth=2.dp)
                 else Text(stringResource(R.string.msg_preview_unavailable),
-                    color=MaterialTheme.colorScheme.error, style=QuietTheme.typography.metadata)
+                    color=MaterialTheme.colorScheme.error, style=QuietTheme.typography.metadata, modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
             Text(stringResource(R.string.jumlo_page_label,page),style=QuietTheme.typography.metadata)
         }
         if(reorder) Row(horizontalArrangement=Arrangement.spacedBy(2.dp)) {
             IconButton(onClick={onMove(-1)},enabled=canMoveEarlier,modifier=Modifier.size(48.dp)) {
-                Icon(if(rtl) Icons.Rounded.ChevronRight else Icons.Rounded.ChevronLeft,stringResource(R.string.jumlo_move_earlier))
+                Icon(Icons.AutoMirrored.Rounded.ChevronLeft,stringResource(R.string.jumlo_move_earlier))
             }
             IconButton(onClick={onMove(1)},enabled=canMoveLater,modifier=Modifier.size(48.dp)) {
-                Icon(if(rtl) Icons.Rounded.ChevronLeft else Icons.Rounded.ChevronRight,stringResource(R.string.jumlo_move_later))
+                Icon(Icons.AutoMirrored.Rounded.ChevronRight,stringResource(R.string.jumlo_move_later))
             }
         }
     }
@@ -414,7 +416,7 @@ private fun PdfFocusedPagePreview(vm:AppViewModel,sourceId:String,page:Int,rotat
     val zoomLabel=stringResource(R.string.print_preview_zoom,(zoomState.scale*100).toInt())
     val pageLabel=stringResource(R.string.jumlo_page_label,page)
     val frame=result?.getOrNull()
-    BoxWithConstraints(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(16.dp))
+    BoxWithConstraints(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(JumloRadii.field))
         .background(MaterialTheme.colorScheme.surfaceContainerLowest)
         .semantics {
             contentDescription=pageLabel;stateDescription=zoomLabel
@@ -424,12 +426,12 @@ private fun PdfFocusedPagePreview(vm:AppViewModel,sourceId:String,page:Int,rotat
         when {
             result==null -> CircularProgressIndicator(Modifier.size(28.dp))
             frame==null || frame.bitmap.isRecycled -> Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                Text(stringResource(R.string.msg_preview_unavailable),color=MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.msg_preview_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 TextButton(onClick={retry++}) {Text(stringResource(R.string.print_preview_retry))}
             }
             else -> {
                 val turned=rotation%180!=0
-                val sourceAspect=frame.bitmap.width.toFloat()/frame.bitmap.height.coerceAtLeast(1)
+                val sourceAspect=frame.bitmap.width.coerceAtLeast(1).toFloat()/frame.bitmap.height.coerceAtLeast(1)
                 val aspect=if(turned) 1f/sourceAspect else sourceAspect
                 val displayWidth=minOf(maxWidth,maxHeight*aspect)
                 val displayHeight=displayWidth/aspect

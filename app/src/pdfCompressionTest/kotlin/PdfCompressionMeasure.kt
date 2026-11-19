@@ -63,7 +63,7 @@ fun main(args: Array<String>) {
                 val saved = 100.0 * (1.0 - output.length().toDouble() / before)
                 println(
                     "| ${file.name} | $pages | $name ($dpi dpi / q$quality) | $before | ${output.length()} | " +
-                        "${"%.1f".format(saved)}% | ${"%.1f".format(seconds)} |"
+                        "${"%.1f".format(java.util.Locale.US, saved)}% | ${"%.1f".format(java.util.Locale.US, seconds)} |"
                 )
             }
         }

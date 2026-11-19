@@ -56,10 +56,10 @@ Most document work is local. Some scanner/OCR components require an initial Play
 
 ## Visual assets and publication gates
 
-Use actual reviewed app captures in `SCREENSHOTS/`, with synthetic/owned sample documents. Select 6–8 representative store images: Home, Tools, Files, Scan, document studio, signature/watermark, and the metadata-first download flow. Prepare Arabic and English assets independently, include both themes in the complete repository matrix, and keep readable UI text at store presentation size. Do not use a rendered mockup as evidence of app execution.
+Store screenshot assets are not present in this repository. Produce and owner-review 6–8 captures from the actual app, using synthetic/owned sample documents: Home, Tools, Files, Scan, document studio, signature/watermark, and the metadata-first download flow. Prepare Arabic and English assets independently, include both themes in the complete repository matrix, and keep readable UI text at store presentation size. Do not use a rendered mockup as evidence of app execution.
 
 The icon/feature graphic should use Jumlo's own branding. Do not imply affiliation with a platform or use its branding without the required rights. A feature graphic still needs a separate final export and owner review; the repository's application icon is not automatically a completed Play feature graphic.
 
-Before upload: fill contact/policy fields, verify actual character limits in Console, confirm target audience/content rating, review all listed functions against TEST_REPORT.md, and obtain the necessary content/platform permissions.
+Before upload: fill contact/policy fields, verify actual character limits in Console, confirm target audience/content rating, re-verify all listed functions against fresh release-candidate evidence (the former `TEST_REPORT.md` was intentionally removed and must not be reconstructed from history), and obtain the necessary content/platform permissions.
 
-> WP05: Google Drive import/export is source-implemented and can upload selected files, so avoid categorical no-cloud/offline claims. Actual account/device qualification and final Play policy declarations are still required.
+> Google Drive: the authenticated Drive v3 import/export tool is retired and absent from the current build; public Google Drive share links pasted into the downloader are fetched as ordinary direct downloads. Do not advertise cloud-account import/export. Some scanner/OCR components and an optional extractor service still use the network, so avoid categorical offline/no-cloud claims; final Play policy declarations remain an owner gate.

@@ -250,6 +250,7 @@ internal class RemoteExtractorRuntime(
             old.getProperty("etag").isNullOrBlank())) {
             require(partial.delete()) { "MEDIA_WORKSPACE_LIMIT" }
             journal.delete()
+            old.clear()
         }
         val request = TransferRequest(
             url = streamUrl,
@@ -286,8 +287,8 @@ internal class RemoteExtractorRuntime(
         if (result.bytes <= 0L) throw OperationFailure("MEDIA_DOWNLOAD_EMPTY")
         check()
         val reported = result.contentDisposition?.let {
-            Regex("filename\\s*=\\s*\"?media\\.([a-z0-9]+)(?:\"|;|$)", RegexOption.IGNORE_CASE)
-                .find(it)?.groupValues?.get(1)?.lowercase()
+            CONTENT_DISPOSITION_EXT_REGEX
+                .find(it)?.groupValues?.get(1)?.lowercase(Locale.ROOT)
         }
         val extension = reported ?: if (mode == "audio" && format == "best")
             throw OperationFailure("MEDIA_OUTPUT_MISSING") else if (mode == "audio") format else choice.container
@@ -318,6 +319,10 @@ internal class RemoteExtractorRuntime(
             json.parseToJsonElement(payload).jsonObject["ytdlp"]?.jsonPrimitive?.content
         }.getOrNull()
         return version?.takeIf { it.isNotBlank() } ?: "MEDIA_RUNTIME_UNAVAILABLE"
+    }
+
+    private companion object {
+        val CONTENT_DISPOSITION_EXT_REGEX = Regex("filename\\s*=\\s*\"?media\\.([a-z0-9]+)(?:\"|;|$)", RegexOption.IGNORE_CASE)
     }
 }
 
@@ -359,7 +364,11 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
                 if (firstError == null && code != "MEDIA_SITE_UNSUPPORTED") {
                     firstError = failure
                 }
-                if (code in setOf("MEDIA_RATE_LIMITED", "MEDIA_NETWORK_ERROR", "MEDIA_SESSION_REQUIRED", "CLEARTEXT_CONSENT_REQUIRED")) {
+                // Access-control answers are terminal: asking another engine is an attempt
+                // around the refusal, not a compatibility fallback.
+                if (code in setOf("MEDIA_RATE_LIMITED", "MEDIA_NETWORK_ERROR", "MEDIA_SESSION_REQUIRED",
+                        "CLEARTEXT_CONSENT_REQUIRED", "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED",
+                        "MEDIA_GEO_BLOCKED", "MEDIA_ENCRYPTED_SOURCE", "MEDIA_SOURCE_REJECTED")) {
                     throw failure
                 }
             }

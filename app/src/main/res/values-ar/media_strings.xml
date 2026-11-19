@@ -4,7 +4,7 @@
     <string name="media_analyze">تحليل الرابط والجودات</string>
     <string name="media_update_extractor">تحديث المحرك</string>
     <string name="media_cancel">إلغاء</string>
-    <string name="media_analyzing">جارٍ التحقق من المصدر وملفات الوسائط المتاحة...</string>
+    <string name="media_analyzing">جارٍ التحقق من المصدر وملفات الوسائط المتاحة…</string>
     <string name="media_video">ملف فيديو</string>
     <string name="media_audio_only">صوت فقط</string>
     <string name="media_duration">المدة: %1$d ثانية</string>
@@ -22,7 +22,7 @@
     <string name="media_unmetered">شبكة غير محدودة فقط</string>
     <string name="media_http">السماح باتصالات HTTP غير مشفرة لهذه المهمة</string>
     <string name="media_direct_instead">تنزيل كملف مباشر</string>
-    <string name="media_queueing">جاري بدء التنزيل...</string>
+    <string name="media_queueing">جاري بدء التنزيل…</string>
     <string name="media_download_selected">تنزيل بالجودة المختارة</string>
     <string name="media_found">الروابط (%1$d)</string>
     <string name="media_error_url">أدخل رابط HTTP أو HTTPS كاملًا وواحدًا.</string>
@@ -43,7 +43,7 @@
     <string name="media_error_extractor_changed">غيّر المصدر طريقة تقديم الوسائط، فتعذّر على المحرك قراءتها. حدّث المحرك وحلّل الرابط من جديد.</string>
     <string name="media_error_drm">هذا المحتوى محمي بتشفير إدارة الحقوق الرقمية (DRM).</string>
     <string name="media_error_session">المصدر يتطلب التوثيق. هذه الصفحة لا تطلب كلمات مرور أو استيراد كوكيز من المتصفح.</string>
-    <string name="media_error_rate">المصدر يحد من عدد الطلبات. حاول لاحقًا؛ تكرار تغيير المتصفح لن يمنح صلاحيات وصول.</string>
+    <string name="media_error_rate">يحد المصدر من عدد الطلبات حاليًا. انتظر بضع دقائق قبل إعادة المحاولة.</string>
     <string name="media_error_network">تعذر الاتصال بالمصدر بسبب خطأ في الشبكة. تحقق من الاتصال وحاول مجدداً.</string>
     <string name="media_error_format">الجودة المختارة تغيرت أو غير متاحة. حلل الرابط من جديد.</string>
     <string name="media_error_no_media">لم يتم العثور على مقطع فيديو أو صوت قابل للتنزيل في هذا الرابط. تأكد من أن المنشور يحتوي على فيديو.</string>

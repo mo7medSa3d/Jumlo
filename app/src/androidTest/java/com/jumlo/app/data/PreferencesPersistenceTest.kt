@@ -23,7 +23,7 @@ class PreferencesPersistenceTest {
         try {
             preferences.setThemeMode(ThemeMode.DARK)
             preferences.setLanguage(AppLanguage.ARABIC)
-            preferences.setColorSystem("VIOLA")
+            preferences.setColorSystem("AMETHYST")
             preferences.setDefaultVideoQuality("720")
             preferences.setDefaultAudioQuality(128)
             preferences.setFileViewMode(FileViewMode.LIST)
@@ -35,12 +35,12 @@ class PreferencesPersistenceTest {
             assertTrue(restored.isLoaded)
             assertEquals(ThemeMode.DARK, restored.themeMode)
             assertEquals(AppLanguage.ARABIC, restored.language)
-            assertEquals("VIOLA", restored.colorSystem)
+            assertEquals("AMETHYST", restored.colorSystem)
             try {
                 preferences.setColorSystem("NOT-A-SYSTEM")
                 fail("Invalid color system must fail")
             } catch (_: IllegalArgumentException) {
-                assertEquals("VIOLA", UserPreferencesRepository(context).settingsFlow.first().colorSystem)
+                assertEquals("AMETHYST", UserPreferencesRepository(context).settingsFlow.first().colorSystem)
             }
             assertEquals("720", restored.defaultVideoQuality)
             assertEquals(128, restored.defaultAudioQuality)

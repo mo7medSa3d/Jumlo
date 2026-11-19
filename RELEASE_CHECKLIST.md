@@ -16,7 +16,7 @@
 - [ ] Verify new Settings haptic Off/Light/Medium/Strong and Reduce motion on API 26–36 devices: persistence across process recreation, actual haptic feedback, system motion preference dominance and RTL/large-font accessibility. Run `PreferencesPersistenceTest` on Android; CI JVM tests alone do not establish physical-device behavior.
 
 
-This is a release gate, not a claim of Play approval. Consult the current [TEST_REPORT.md](TEST_REPORT.md) for executed commands and artifact hashes. Unchecked gates remain release blockers even when an APK builds.
+This is a release gate, not a claim of Play approval. The former `TEST_REPORT.md` evidence file was intentionally removed from this tree; executed commands and artifact hashes must be regenerated for the release candidate and must not be restored from history. Unchecked gates remain release blockers even when an APK builds.
 
 ## Owner and signing
 
@@ -39,11 +39,23 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 - [ ] Run drag/pinch/rotation, alpha-channel signature, AcroForm overlay, crop, page reorder, cache, grant-loss and public-save recovery instrumentation tests.
 - [ ] Validate final nested native ELF payloads with `scripts/inspect-media-artifact.py` and execute them on an actual ARM64 device, including 16 KB page-size coverage.
 
+## Pre-Release Dependency & Schema Gate
+
+- [ ] **OkHttp `4.12.0` → `4.12.1` (still 4.12.0 in `gradle/libs.versions.toml`)**: 4.12.1 blocks eight compromised eMudhra intermediate CAs on JVM/AOSP clients; Google Play Services already auto-blocked them on GMS devices. Do not attribute `CVE-2026-129482` to this upgrade: that CVE is a CertificatePinner trailing-dot hostname bypass (affects OkHttp through 5.5.1, fix pending upstream), and a source scan found no `CertificatePinner` use in this app. Re-check if pinning is introduced before release signing.
+- [ ] **Room upgrade candidate (`2.7.2` → `2.8.3`)**: Evaluate and validate `androidx.room` `2.8.3` to pick up the auto-close `Flow` deadlock fix (`b/446643789`) and Cursor JNI performance improvements; re-run DAO and migration instrumentation tests after upgrading.
+- [ ] **Zip4j CVE verification (`2.11.5`)**: Confirm `net.lingala.zip4j:zip4j` remains at `2.11.5` or newer (verified past `CVE-2023-22899`).
+- [ ] **Room v2 schema export**: Run `./gradlew :app:kspDebugKotlin` to regenerate and commit `app/schemas/com.jumlo.app.data.local.AppDatabase/2.json`, then verify `python3 -B scripts/test-source-static.py` passes `test_current_room_schema_and_legacy_structural_fixture_are_packaged`.
+- [ ] **Android 16 (API 36) compliance verification**: Confirm on an API 36 device/emulator:
+  - Mandatory edge-to-edge rendering with proper window insets across all tabs, dialogs, and RTL/200% font layouts.
+  - Predictive back gestures and state preservation across root tabs and nested studios.
+  - 16 KB ELF page-size alignment for all packaged ARM64 native libraries and nested media runtimes.
+  - Foreground service (FGS) 6-hour `dataSync` / media-processing timeout handling, graceful pause/resume, and user-visible recovery.
+
 ## Device and performance gates
 
 - [ ] Complete the minimum-supported Android 8/9 and Android 14+ matrices on an emulator and at least one authorized physical device. Add current Android 15/16 timeout/quota checks for the target API.
 - [ ] Reproduce the originally reported paste crash with its exact input/device, preserve sanitized logcat, confirm a causal fix, and repeat after rotation/recreation. A safe error boundary is not proof of the original cause.
-- [ ] Run all seven downloader platforms against owner-authorized fixtures: video, audio, actual quality choices, invalid/private/removed/age-limited links, offline state, pause/resume/cancel and process-kill recovery. Record unsupported source capabilities honestly.
+- [ ] Run the seven live-qualification platforms (YouTube, TikTok, Instagram, Facebook, LinkedIn, Google Drive and direct links) against owner-authorized fixtures: video, audio, actual quality choices, invalid/private/removed/age-limited links, offline state, pause/resume/cancel and process-kill recovery. Other routed platforms remain unqualified; record unsupported source capabilities honestly.
 - [ ] Run each file tool on ordinary, >50 MB, >100-page, encrypted and corrupt inputs where applicable. Confirm input hashes are unchanged, output can be reopened, partial stages are removed and no empty file is published.
 - [ ] Capture a measured app-specific Baseline Profile on a supported rooted/profile-generation environment and package it; comments or historical rules are not a measured profile.
 - [ ] Run `:benchmark:connectedBenchmarkAndroidTest` on a declared mid-range physical device. Cold-start gate: under 2 seconds. Record frame timing while scrolling both Tools and populated Files; an empty list or software-emulator timing is not the requested performance evidence.
@@ -51,7 +63,7 @@ This is a release gate, not a claim of Play approval. Consult the current [TEST_
 
 ## Manual smoke checklist
 
-- [ ] WP14: Confirm current tool matrix covers every registered ID × four scenarios (45×4), with 160 processing NOT_RUN and 20 navigation N/A until real evidence. Run authorized Drive transfer cases; never count the archived IDs or N/A cases as PASS.
+- [ ] Confirm the tool matrix covers every registered ID × four scenarios (30×4 = 120 cases: 100 processing NOT_RUN, 20 navigation N/A) until real evidence exists. The authenticated Drive transfer cases are retired; never count archived IDs or N/A cases as PASS.
 
 - [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
 

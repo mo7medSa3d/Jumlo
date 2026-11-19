@@ -42,6 +42,7 @@ object PrintGeometry {
 }
 object PrintRanges {
     const val MAX_PAGES=10000
+    private val PAGE_RANGE_PATTERN=Regex("([0-9]+)(?:\\s*-\\s*([0-9]+))?")
     fun sourcePages(ordered:List<PrintPage>,count:Int):List<PrintPage> {
         require(count in 1..MAX_PAGES && ordered.size<=MAX_PAGES) { "PRINT_PAGE_COUNT" }
         return (ordered.ifEmpty {(1..count).map {PrintPage(it)}}).map {
@@ -63,7 +64,7 @@ object PrintRanges {
         if(normalized.isBlank() || normalized.equals("all",true) || normalized in setOf("الكل","كل الصفحات")) return (0 until count).toList()
         val selected=sortedSetOf<Int>()
         normalized.split(',').forEach { raw ->
-            val match=Regex("([0-9]+)(?:\\s*-\\s*([0-9]+))?").matchEntire(raw.trim()) ?: errorRange()
+            val match=PAGE_RANGE_PATTERN.matchEntire(raw.trim()) ?: errorRange()
             val first=match.groupValues[1].toIntOrNull() ?: errorRange()
             val last=match.groupValues[2].takeIf {it.isNotEmpty()}?.toIntOrNull() ?: if(match.groupValues[2].isEmpty()) first else errorRange()
             require(first in 1..count && last in first..count) { "PRINT_RANGE" }

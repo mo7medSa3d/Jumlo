@@ -29,7 +29,7 @@ import com.jumlo.app.model.WorkspaceDraft
     var name by rememberSaveable { mutableStateOf("") }
     var confirmation by remember { mutableStateOf<ProcessingPreset?>(null) }
     var deleting by remember { mutableStateOf<ProcessingPreset?>(null) }
-    val owned=presets.filter { it.toolId == form.toolId }
+    val owned=remember(presets,form.toolId) { presets.filter { it.toolId == form.toolId } }
     Column(Modifier.fillMaxWidth().testTag("workspace.presets"),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
             Icon(Icons.Rounded.Bookmarks,null,tint=MaterialTheme.colorScheme.primary)
@@ -44,7 +44,7 @@ import com.jumlo.app.model.WorkspaceDraft
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         } else LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(owned,key={it.name}) { preset ->
+            items(owned,key={it.name},contentType={"preset-item"}) { preset ->
                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
                     AssistChip(onClick={onApply(preset)},label={Text(preset.name)},border=null,
                         modifier=Modifier.heightIn(min=48.dp))

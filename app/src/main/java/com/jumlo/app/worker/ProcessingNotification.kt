@@ -20,7 +20,7 @@ object ProcessingNotification {
     fun create(context:Context,jobId:String):ForegroundInfo {
         require(UUID.fromString(jobId).toString()==jobId) { "INVALID_JOB_ID" }
         val channel="file_processing"
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+        context.getSystemService(NotificationManager::class.java)?.createNotificationChannel(
             NotificationChannel(channel,context.getString(R.string.processing_channel),NotificationManager.IMPORTANCE_LOW)
         )
         val cancel=PendingIntent.getBroadcast(context,0,

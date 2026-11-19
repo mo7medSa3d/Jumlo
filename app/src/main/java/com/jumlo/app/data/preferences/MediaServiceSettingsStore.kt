@@ -130,6 +130,8 @@ internal class MediaServiceSettingsStore(
                     mutableState.value = next
                     if (replacementFailed) throw OperationFailure("MEDIA_SERVICE_CREDENTIALS_UNAVAILABLE")
                     next
+                } catch (cancel: CancellationException) {
+                    throw cancel
                 } catch (error: Exception) {
                     mutableState.value = MediaServiceSettings()
                     throw error

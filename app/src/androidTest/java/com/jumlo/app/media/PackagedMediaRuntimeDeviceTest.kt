@@ -115,7 +115,7 @@ class PackagedMediaRuntimeDeviceTest {
                 File(app.noBackupFilesDir, "youtubedl-android/yt-dlp/yt-dlp").absolutePath,
                 "--no-plugin-dirs", "--js-runtimes", "quickjs:${File(native, "libqjs.so").absolutePath}",
                 "--ffmpeg-location", ffmpeg)
-            assertEquals("2026.10.21", run(command + listOf("--ignore-config", "--version")))
+            assertEquals("2026.10.26", run(command + listOf("--ignore-config", "--version")))
             assertEquals("42", nativeCommand(listOf(File(native, "libqjs.so").absolutePath, "-e", "print(6*7)")))
 
             val metadata = File(directory, "fixture.info.json").apply { writeText("""

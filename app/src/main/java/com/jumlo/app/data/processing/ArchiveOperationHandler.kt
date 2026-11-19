@@ -22,7 +22,6 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
         when(request.toolId) {
             "file_07" -> create(request,context)
             "file_08" -> extract(request,context)
-            "sha256" -> hashes(request,context)
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }
@@ -96,31 +95,6 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
                 }
             }
         } finally { directory.deleteRecursively() }
-        return outcomes
-    }
-    private suspend fun hashes(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
-        val settings=Json.decodeFromString<HashSettings>(job.settingsJson)
-        val expected=settings.expectedSha256?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
-        require(expected==null || Regex("[0-9a-f]{64}").matches(expected)) { "INVALID_SHA256" }
-        val outcomes=mutableListOf<ItemOutcome>()
-        for ((index, id) in job.sourceIds.withIndex()) {
-            val key="sha256:$index"
-            ctx.checkCancellation()
-            val existing=ctx.outputs.find(job.id,key)
-            if(existing!=null) { outcomes+=ItemOutcome(key,ItemStatus.CREATED,existing.id);continue }
-            try {
-                val source=ctx.sources.get(id)
-                val digest=ctx.sources.openRead(id).use { Hashing.sha256(it,ctx.checkCancellation) }
-                if(expected!=null && expected!=digest) throw OperationFailure("SHA256_MISMATCH")
-                val base=SafeNames.fromDisplayName(source.displayName,"file-${index+1}")
-                val ticket=ctx.outputs.reserve(job.id,key,SafeNames.basename("$base.sha256"),"text/plain")
-                FileOutputStream(ticket.stageFile).use { stream -> stream.write("$digest  $base\n".toByteArray(Charsets.UTF_8)); stream.fd.sync() }
-                val result=ctx.outputs.publish(ticket) { OutputMetadata() }
-                ctx.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),job.sourceIds.size.toLong()))
-                outcomes+=ItemOutcome(key,ItemStatus.CREATED,result.id)
-            } catch(cancel:CancellationException) { throw cancel }
-            catch(error:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(error)) }
-        }
         return outcomes
     }
 }

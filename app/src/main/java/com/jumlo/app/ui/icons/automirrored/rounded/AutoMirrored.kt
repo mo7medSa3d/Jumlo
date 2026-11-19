@@ -6,6 +6,8 @@ import com.jumlo.app.ui.icons.curatedIcon
 
 val Icons.AutoMirrored.Rounded.ArrowBack: ImageVector get() = curatedIcon("arrow_back", mirrored = true)
 val Icons.AutoMirrored.Rounded.ArrowForward: ImageVector get() = curatedIcon("arrow_forward", mirrored = true)
+val Icons.AutoMirrored.Rounded.ChevronLeft: ImageVector get() = curatedIcon("chevron_left", mirrored = true)
+val Icons.AutoMirrored.Rounded.ChevronRight: ImageVector get() = curatedIcon("chevron_right", mirrored = true)
 val Icons.AutoMirrored.Rounded.NavigateBefore: ImageVector get() = curatedIcon("chevron_left", mirrored = true)
 val Icons.AutoMirrored.Rounded.NavigateNext: ImageVector get() = curatedIcon("chevron_right", mirrored = true)
 val Icons.AutoMirrored.Rounded.Redo: ImageVector get() = curatedIcon("redo", mirrored = true)

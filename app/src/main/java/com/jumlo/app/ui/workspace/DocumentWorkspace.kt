@@ -12,6 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.core.PdfCompressionPolicy
@@ -37,12 +41,12 @@ import com.jumlo.app.data.processing.PdfCompressSettings
 
 @Composable internal fun ViewerWorkspace(vm:AppViewModel,sources:List<SourceRef>,onImport:()->Unit,onBack:()->Unit = {},onOpenFile:()->Unit = onImport) {
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
-    val pdfs=sources.filter { it.mimeType=="application/pdf" }
+    val pdfs=remember(sources) { sources.filter { it.mimeType=="application/pdf" } }
     val source=pdfs.firstOrNull {it.id==selected} ?: pdfs.firstOrNull()
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.fillMaxWidth().padding(horizontal=20.dp))
         if(pdfs.size>1) LazyRow(contentPadding=PaddingValues(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(pdfs,key={it.id}) { item -> QuietChip(item.id==source?.id,{selected=item.id},item.displayName) }
+            items(pdfs,key={it.id},contentType={"pdf-chip"}) { item -> QuietChip(item.id==source?.id,{selected=item.id},item.displayName) }
         }
         if(source==null) QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body),stringResource(R.string.import_device_files),onImport,modifier=Modifier.padding(20.dp))
         else {
@@ -56,7 +60,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
             Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
                 when {
                     uri!=null -> PdfViewerScreen(uri!!,source.displayName,onBack,onOpenFile,{u,_->vm.importForPrint(com.jumlo.app.ui.intake.Intake(listOf(u),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},Modifier.fillMaxSize())
-                    error!=null -> Text(stringResource(userMessageResource(error!!)),modifier=Modifier.padding(24.dp))
+                    error!=null -> Text(stringResource(userMessageResource(error!!)),modifier=Modifier.padding(24.dp).semantics { liveRegion = LiveRegionMode.Polite })
                     else -> CircularProgressIndicator()
                 }
             }
@@ -87,7 +91,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
                 Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(stringResource(listOf(R.string.studio_compress_low,R.string.studio_compress_medium,R.string.studio_compress_high)[index]),style=QuietTheme.typography.sectionTitle)
+                            Text(stringResource(listOf(R.string.studio_compress_low,R.string.studio_compress_medium,R.string.studio_compress_high)[index]),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                             Text(stringResource(listOf(R.string.studio_compress_low_detail,R.string.studio_compress_medium_detail,R.string.studio_compress_high_detail)[index]),style=QuietTheme.typography.metadata)
                         }
                         RadioButton(selected=selected,onClick=null)
@@ -97,7 +101,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
                             Text(stringResource(R.string.rebuild_compression_before,formatBytes(profile.originalBytes)),style=QuietTheme.typography.metadata)
                             Text(stringResource(R.string.studio_compression_after,formatBytes(profile.measuredBytes!!)),style=QuietTheme.typography.metadataStrong)
                         }
-                        measured[preset]?.isFailure==true -> Text(stringResource(R.string.msg_preview_unavailable),style=QuietTheme.typography.metadata)
+                        measured[preset]?.isFailure==true -> Text(stringResource(R.string.msg_preview_unavailable),style=QuietTheme.typography.metadata,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                         else -> { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(stringResource(R.string.studio_compression_measuring),style=QuietTheme.typography.metadata) }
                     }
                 }
@@ -114,7 +118,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
                 } catch(cancel:CancellationException) {throw cancel} catch(error:Exception) {Result.failure(error)}
             }
             QuietCard {
-                Text(stringResource(R.string.studio_compression_custom),style=QuietTheme.typography.metadataStrong)
+                Text(stringResource(R.string.studio_compression_custom),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
                 when {
                     profile==null -> {LinearProgressIndicator(Modifier.fillMaxWidth());Text(stringResource(R.string.studio_compression_measuring))}
                     profile?.getOrNull()?.measuredBytes!=null -> {
@@ -122,7 +126,7 @@ import com.jumlo.app.data.processing.PdfCompressSettings
                         Text(stringResource(R.string.rebuild_compression_before,formatBytes(value.originalBytes)))
                         Text(stringResource(R.string.studio_compression_after,formatBytes(value.measuredBytes!!)))
                     }
-                    else -> Text(stringResource(R.string.msg_preview_unavailable))
+                    else -> Text(stringResource(R.string.msg_preview_unavailable),modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
             }
         }

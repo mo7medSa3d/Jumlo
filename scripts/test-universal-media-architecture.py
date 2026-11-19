@@ -7,7 +7,7 @@ MAIN = ROOT/'app/src/main/java/com/jumlo/app'
 
 class UniversalMediaArchitecture(unittest.TestCase):
     def test_ci_verifies_default_media_artifact_and_explicit_lite_build(self):
-        workflow=(ROOT/'.github/workflows/ci.yml').read_text()
+        workflow=(ROOT/'.github/workflows/ci.yml').read_text(encoding="utf-8")
         self.assertIn('inputs.lite_build',workflow)
         self.assertIn('-PextendedMedia=true',workflow)
         self.assertIn('-PextendedMedia=false',workflow)
@@ -16,7 +16,7 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertIn('scripts/inspect-standard-artifact.py',workflow)
     def test_downloader_copy_matches_optional_engine_without_false_claims(self):
         import xml.etree.ElementTree as ET
-        ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text()
+        ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text(encoding="utf-8")
         self.assertIn('BuildConfig.EXTENDED_MEDIA', ui)
         self.assertIn('media_supported_platforms_extended', ui)
         for folder in ('values', 'values-ar'):
@@ -25,7 +25,7 @@ class UniversalMediaArchitecture(unittest.TestCase):
             self.assertNotIn('lightweight build', values['media_error_conversion'].lower())
             self.assertNotIn('النسخة الخفيفة', values['media_error_conversion'])
     def test_runtime_is_included_by_default_and_direct_build_is_preserved(self):
-        build=(ROOT/'app/build.gradle.kts').read_text()
+        build=(ROOT/'app/build.gradle.kts').read_text(encoding="utf-8")
         self.assertIn('extendedMedia',build)
         self.assertIn('orElse(true).get()',build)
         self.assertIn('src/media/java',build)
@@ -34,9 +34,9 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertIn('ffmpeg:0.18.1',build)
         self.assertIn('if (extendedMedia)',build)
     def test_provider_runtime_falls_back_to_original_direct_engine(self):
-        media=(ROOT/'app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text()
-        shared=(MAIN/'data/media/NativeDirectMediaRuntime.kt').read_text()
-        router=(MAIN/'data/media/RemoteExtractorRuntime.kt').read_text()
+        media=(ROOT/'app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text(encoding="utf-8")
+        shared=(MAIN/'data/media/NativeDirectMediaRuntime.kt').read_text(encoding="utf-8")
+        router=(MAIN/'data/media/RemoteExtractorRuntime.kt').read_text(encoding="utf-8")
         self.assertIn('NativeDirectMediaRuntime(client, sessions)',media)
         self.assertIn('PackagedMediaRuntime(',media)
         # The engines are tried in order and only an unsupported site falls through.
@@ -47,7 +47,7 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertIn('StreamTransfer(',shared)
         self.assertNotIn('updateYoutubeDL(',media)
     def test_extractor_enforces_private_workspace_and_integrity(self):
-        media=(ROOT/'app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text()
+        media=(ROOT/'app/src/media/java/com/jumlo/app/data/media/MediaRuntimeFactory.kt').read_text(encoding="utf-8")
         self.assertIn('MediaLinks.normalize(',media)
         self.assertIn('MediaArguments.probe(',media)
         self.assertIn('MediaArguments.download(',media)
@@ -57,13 +57,13 @@ class UniversalMediaArchitecture(unittest.TestCase):
         self.assertIn('AtomicFile(',media)
         self.assertIn('MediaProcessSpec(',media)
     def test_bundle_disables_cookie_browser_and_debug_bypasses(self):
-        bootstrap=(ROOT/'app/src/media/assets/media/bootstrap.py').read_text()
+        bootstrap=(ROOT/'app/src/media/assets/media/bootstrap.py').read_text(encoding="utf-8")
         self.assertNotIn('UU_COOKIES_FILE', bootstrap)
         self.assertNotIn('UU_EXTRA_HEADERS', bootstrap)
         self.assertNotIn('--no-check-certificates',bootstrap)
         self.assertNotIn('updateYoutubeDL(',bootstrap)
     def test_build_documentation_discloses_packaging_and_provider_limits(self):
-        doc=(ROOT/'docs/media/UNIVERSAL_ENGINE.md').read_text()
+        doc=(ROOT/'docs/media/UNIVERSAL_ENGINE.md').read_text(encoding="utf-8")
         for word in ('Unlicense','GPL-3.0','Play','yt-dlp','APK','PyInstaller'):
             self.assertIn(word, doc)
         self.assertRegex(doc, r'(?i)16[ -]+KB')

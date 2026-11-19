@@ -29,6 +29,7 @@ import com.jumlo.app.R
 import com.jumlo.app.model.SourceRef
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
+import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
 
@@ -39,7 +40,8 @@ internal fun SourceOrderStrip(vm:AppViewModel,sources:List<SourceRef>,selectedId
     val latestSources by rememberUpdatedState(sources)
     val latestMove by rememberUpdatedState(onMove)
     val rtl=LocalLayoutDirection.current==LayoutDirection.Rtl
-    val pageCount by produceState<Result<Int>?>(null,sources.map {it.id}) {
+    val sourceIds=remember(sources) {sources.map {it.id}}
+    val pageCount by produceState<Result<Int>?>(null,sourceIds) {
         value=null
         if(sources.isNotEmpty() && sources.all {it.mimeType=="application/pdf"}) {
             value=try {Result.success(sources.sumOf {source ->
@@ -52,7 +54,7 @@ internal fun SourceOrderStrip(vm:AppViewModel,sources:List<SourceRef>,selectedId
     Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.interactive_input_order),style=QuietTheme.typography.sectionTitle)
         Text(stringResource(R.string.interactive_input_order_help),style=QuietTheme.typography.metadata)
-        if(sources.all {it.mimeType=="application/pdf"}) {
+        if(sources.isNotEmpty() && sources.all {it.mimeType=="application/pdf"}) {
             when {
                 pageCount==null -> Text(stringResource(R.string.studio_merge_counting),style=QuietTheme.typography.metadata)
                 pageCount?.isSuccess==true -> Text(stringResource(R.string.studio_merge_pages,sources.size,pageCount!!.getOrThrow()),style=QuietTheme.typography.metadataStrong)
@@ -60,7 +62,7 @@ internal fun SourceOrderStrip(vm:AppViewModel,sources:List<SourceRef>,selectedId
             }
         }
         LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            itemsIndexed(sources,key={_,source->source.id}) {index,source ->
+            itemsIndexed(sources,key={_,source->source.id},contentType={_,_->"source-card"}) {index,source ->
                 val description=stringResource(R.string.interactive_source_position,index+1,sources.size,source.displayName)
                 val frame by produceState<PreviewFrame?>(null,source.id) {
                     value=null
@@ -73,7 +75,7 @@ internal fun SourceOrderStrip(vm:AppViewModel,sources:List<SourceRef>,selectedId
                 var displacement by remember(source.id) {mutableFloatStateOf(0f)}
                 val dragDescription=stringResource(R.string.studio_drag_reorder,source.displayName)
                 Column(Modifier.width(148.dp).animateItem().graphicsLayer {translationX=displacement},horizontalAlignment=Alignment.CenterHorizontally) {
-                    Surface(onClick={onSelect(source.id)},shape=RoundedCornerShape(16.dp),
+                    Surface(onClick={onSelect(source.id)},shape=RoundedCornerShape(JumloRadii.field),
                         color=if(selectedId==source.id) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
                         modifier=Modifier.fillMaxWidth().semantics {contentDescription=description;selected=selectedId==source.id}) {
                         Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {

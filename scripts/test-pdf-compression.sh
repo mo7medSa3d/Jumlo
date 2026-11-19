@@ -37,14 +37,19 @@ done
 
 compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-2.0.21.jar' 2>/dev/null | head -1 || true)
 [ -n "$compiler" ] || compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
-stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name 'kotlin-stdlib-*.jar' 2>/dev/null | grep -v sources | grep -v -- '-jdk' | sort | tail -1 || true)
+[ -n "$compiler" ] || { echo 'BLOCKED: no Kotlin compiler available' >&2; exit 2; }
+kver=$(basename "$compiler" | sed -E 's/^kotlin-compiler-embeddable-(.+)\.jar$/\1/')
+stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name "kotlin-stdlib-${kver}.jar" 2>/dev/null | head -1 || true)
+[ -n "$stdlib" ] || stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name 'kotlin-stdlib-*.jar' 2>/dev/null | grep -v sources | grep -v -- '-jdk' | sort | tail -1 || true)
 coroutines=$(find "$caches" -name 'kotlinx-coroutines-core-jvm-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
 trove=$(find "$caches" -iname '*trove4j*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
 annotations=$(find "$caches" -name 'annotations-13.0.jar' 2>/dev/null | sort | tail -1 || true)
-daemon=$(find "$caches" -name 'kotlin-daemon-embeddable-*.jar' 2>/dev/null | sort | tail -1 || true)
-script=$(find "$caches" -name 'kotlin-script-runtime-*.jar' 2>/dev/null | sort | tail -1 || true)
-reflect=$(find "$caches" -name 'kotlin-reflect-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
-[ -n "$compiler" ] || { echo 'BLOCKED: no Kotlin compiler available' >&2; exit 2; }
+daemon=$(find "$caches" -name "kotlin-daemon-embeddable-${kver}.jar" 2>/dev/null | head -1 || true)
+[ -n "$daemon" ] || daemon=$(find "$caches" -name 'kotlin-daemon-embeddable-*.jar' 2>/dev/null | sort | tail -1 || true)
+script=$(find "$caches" -name "kotlin-script-runtime-${kver}.jar" 2>/dev/null | head -1 || true)
+[ -n "$script" ] || script=$(find "$caches" -name 'kotlin-script-runtime-*.jar' 2>/dev/null | sort | tail -1 || true)
+reflect=$(find "$caches" -name "kotlin-reflect-${kver}.jar" 2>/dev/null | head -1 || true)
+[ -n "$reflect" ] || reflect=$(find "$caches" -name 'kotlin-reflect-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
 
 "$jdk/bin/java" -cp "$compiler:$stdlib:$coroutines:$trove:$annotations:$daemon:$script:$reflect" \
   org.jetbrains.kotlin.cli.jvm.K2JVMCompiler "${SOURCES[@]}" -jvm-target 17 \

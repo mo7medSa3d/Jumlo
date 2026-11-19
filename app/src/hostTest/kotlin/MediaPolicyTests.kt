@@ -188,6 +188,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         val args=MediaArguments.probe("https://example.test/watch?v=hello&x=world")
         check("--dump-single-json" in args && "--skip-download" in args && "--ignore-config" in args)
         check(args.takeLast(2)==listOf("--","https://example.test/watch?v=hello&x=world"))
+        check(args[args.indexOf("--extractor-args")+1]=="youtube:player_client=web_embedded")
         check(args.none { it in listOf("--exec","--no-check-certificates","--allow-unplayable-formats","--ignore-errors") })
     }
     test("selected video format is exact without silent best-quality fallback") {
@@ -197,6 +198,7 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         check("--abort-on-unavailable-fragments" in args && "--continue" in args && "--no-overwrites" in args)
         check("--no-continue" !in args && "--force-overwrites" !in args)
         check(args[args.indexOf("--output")+1]=="media.%(ext)s")
+        check(args[args.indexOf("--extractor-args")+1]=="youtube:player_client=web_embedded")
     }
     test("MP3 M4A and Opus audio choices invoke real extraction options") {
         val c=MediaCatalog.choices(asset,MediaMode.AUDIO).first()

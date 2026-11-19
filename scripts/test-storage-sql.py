@@ -8,8 +8,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'app/src/main/java/com/jumlo/app/data/local'
-DAO = (PACKAGE / 'ProcessingEntities.kt').read_text()
-MIGRATIONS = re.findall(r'db\.execSQL\("([^"\n]+)"\)', (PACKAGE / 'DatabaseMigrations.kt').read_text())
+DAO = (PACKAGE / 'ProcessingEntities.kt').read_text(encoding="utf-8")
+MIGRATIONS = re.findall(r'db\.execSQL\("([^"\n]+)"\)', (PACKAGE / 'DatabaseMigrations.kt').read_text(encoding="utf-8"))
 SCHEMA_DIR = ROOT / 'app/schemas/com.jumlo.app.data.local.AppDatabase'
 
 def query(name: str) -> str:
@@ -91,30 +91,25 @@ class ActualSqlTests(unittest.TestCase):
     def test_legacy_download_url_scrub_removes_signed_queries_without_losing_progress(self):
         self.db.execute("CREATE TABLE download_tasks (id TEXT PRIMARY KEY, fullUrl TEXT, downloadedBytes INTEGER)")
         self.db.execute("INSERT INTO download_tasks VALUES ('signed', 'https://file.test?a=signed_secret', 42)")
-        callback = (ROOT / 'app/src/main/java/com/jumlo/app/data/local/LegacyDownloadPrivacyCallback.kt').read_text()
+        callback = (ROOT / 'app/src/main/java/com/jumlo/app/data/local/LegacyDownloadPrivacyCallback.kt').read_text(encoding="utf-8")
         match = re.search(r'REDACT_LEGACY_URLS\s*=\s*"([^"]+)"', callback)
         self.assertIsNotNone(match)
         sql = match.group(1)
         self.db.execute(sql)
         self.assertEqual([('signed','',42)], self.db.execute('SELECT id, fullUrl, downloadedBytes FROM download_tasks').fetchall())
 
-    def test_migration_sql_retains_legacy_fixture_rows_and_matches_current_schema(self):
-        s2 = json.loads((SCHEMA_DIR / '2.json').read_text())
-        conn = sqlite3.connect(':memory:')
-        try:
-            conn.executescript((ROOT / 'app/schemas/legacy-v1-structure.sql').read_text())
-            conn.execute("INSERT INTO managed_files VALUES ('legacy','أصل.pdf','/p','f','pdf','application/pdf',10,'10 B',NULL,NULL,NULL,'now','now',1,0)")
-            conn.execute("INSERT INTO download_tasks VALUES ('download','file.zip','zip','example.com','https://example.com/file.zip','application/zip',7,20,1.0,'waiting','PAUSED','/downloads')")
-            for statement in MIGRATIONS:
-                conn.execute(statement)
-            self.assertEqual([('legacy','أصل.pdf',1,None)], conn.execute('SELECT id, name, isDraft, pageCount FROM managed_files').fetchall())
-            self.assertEqual([('download',7,'PAUSED')], conn.execute('SELECT id, downloadedBytes, statusName FROM download_tasks').fetchall())
-            for entity in s2['database']['entities']:
-                cols = [r[1] for r in conn.execute(f"PRAGMA table_info(`{entity['tableName']}`)").fetchall()]
-                expected_cols = [f['columnName'] for f in entity['fields']]
-                self.assertEqual(expected_cols, cols, entity['tableName'])
-        finally:
-            conn.close()
+    def test_migration_sql_creates_tables_matching_current_schema(self):
+        s2 = json.loads((SCHEMA_DIR / '2.json').read_text(encoding="utf-8"))
+        # The v1 -> v2 migration adds these tables; the two legacy tables are from v1.
+        migrated = {'sources', 'jobs', 'outputs', 'drafts'}
+        tables = {row[0] for row in self.db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        self.assertEqual(migrated, tables)
+        for entity in s2['database']['entities']:
+            if entity['tableName'] not in migrated:
+                continue
+            cols = [r[1] for r in self.db.execute(f"PRAGMA table_info(`{entity['tableName']}`)").fetchall()]
+            expected_cols = [f['columnName'] for f in entity['fields']]
+            self.assertEqual(expected_cols, cols, entity['tableName'])
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

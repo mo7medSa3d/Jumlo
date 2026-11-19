@@ -78,6 +78,7 @@
         <receiver android:name=".worker.CancelJobReceiver" android:exported="false" />
 
         <service android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:exported="false"
             android:foregroundServiceType="dataSync" tools:node="merge" />
 
         <!-- Secure FileProvider for Sharing Exports & Opening Documents -->

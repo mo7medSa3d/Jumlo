@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jumlo.app.diagnostics.AppDiagnostics
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.intake.IntakeController
 import com.jumlo.app.ui.navigation.JumloNavHost
@@ -79,11 +80,14 @@ class MainActivity : AppCompatActivity() {
         // A third-party share can carry a malformed Parcelable or revoked URI.
         // Keep the Activity alive and present the failure through the normal UI.
         try {
-            appViewModel.openNotificationJob(incoming.getStringExtra("job_id"))
+            if (incoming.action == "${packageName}.OPEN_JOB") {
+                appViewModel.openNotificationJob(incoming.getStringExtra("job_id"))
+            }
             if (incoming.action in setOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)) {
                 appViewModel.intake(IntakeController.collect(incoming), externalShare = true)
             }
-        } catch (_: RuntimeException) {
+        } catch (error: RuntimeException) {
+            AppDiagnostics.report("intent_intake", error)
             appViewModel.notifyMessage("INVALID_SHARED_CONTENT")
         }
     }

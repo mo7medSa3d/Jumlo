@@ -89,8 +89,10 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
         when {
             current!=null -> {
                 val image=signature?.bitmap
-                val objects=if(image==null) emptyList() else placements.filter {it.page==page}.map {p->
-                    PreviewObject(p.id,image,p.left.toFloat(),p.top.toFloat(),p.right.toFloat(),p.bottom.toFloat(),p.rotationDegrees)
+                val objects=remember(image,placements,page) {
+                    if(image==null || image.isRecycled) emptyList() else placements.filter {it.page==page}.map {p->
+                        PreviewObject(p.id,image,p.left.toFloat(),p.top.toFloat(),p.right.toFloat(),p.bottom.toFloat(),p.rotationDegrees)
+                    }
                 }
                 TransformablePagePreview(current,objects,selectedId,{selectedId=it},onTransform={obj->
                     if(gestureBefore==null) gestureBefore=latestDraft.signaturePlacements
@@ -108,7 +110,7 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
         }
         if(signatureId!=null) {
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(placements,key={_,it->it.id}) {index,placement->
+                itemsIndexed(placements,key={_,it->it.id},contentType={_,_->"placement-chip"}) {index,placement->
                     FilterChip(border=null,selected=selectedId==placement.id,onClick={page=placement.page;selectedId=placement.id},
                         label={Text(stringResource(R.string.studio_signature_instance,index+1,placement.page))})
                 }
@@ -130,8 +132,8 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
                     updatePlacement(item.id) {it.copy(rotationDegrees=rotation.toFloat())}
                 }
                 InteractiveIntSlider(stringResource(R.string.watermark_size),((item.right-item.left)*100).roundToInt(),5,90,35) {percent->
-                    val width=percent/100.0;val ratio=(item.bottom-item.top)/(item.right-item.left)
-                    val height=(width*ratio).coerceAtMost(.95);val actualWidth=height/ratio
+                    val width=percent/100.0;val ratio=((item.bottom-item.top).coerceAtLeast(0.01)/(item.right-item.left).coerceAtLeast(0.01)).coerceIn(0.05,20.0)
+                    val height=(width*ratio).coerceIn(0.02,.95);val actualWidth=(height/ratio).coerceIn(0.02,.95)
                     val cx=((item.left+item.right)/2).coerceIn(actualWidth/2,1-actualWidth/2)
                     val cy=((item.top+item.bottom)/2).coerceIn(height/2,1-height/2)
                     updatePlacement(item.id) {it.copy(left=cx-actualWidth/2,right=cx+actualWidth/2,top=cy-height/2,bottom=cy+height/2)}

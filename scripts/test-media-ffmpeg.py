@@ -9,26 +9,37 @@ from pathlib import Path
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "ffmpeg/ffprobe required")
 class MediaFfmpegHostTests(unittest.TestCase):
+    @classmethod
+    def _run_ffmpeg_cmd(cls, args):
+        cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y"] + args
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+        if res.returncode != 0:
+            raise AssertionError(f"FFmpeg failed: {res.stderr}")
+
+    @classmethod
+    def setUpClass(cls):
+        # Read-only synthetic fixtures are shared across tests to avoid re-encoding libx264/aac per test method.
+        cls._fixtures_dir = Path(tempfile.mkdtemp(prefix="jumlo-ffmpeg-fixtures-"))
+        cls.addClassCleanup(shutil.rmtree, cls._fixtures_dir, ignore_errors=True)
+        cls.video = cls._fixtures_dir / "video.mp4"
+        cls.audio = cls._fixtures_dir / "audio.m4a"
+        cls._run_ffmpeg_cmd([
+            "-f", "lavfi", "-i", "testsrc=size=1280x720:rate=15", "-t", "1",
+            "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(cls.video)
+        ])
+        cls._run_ffmpeg_cmd([
+            "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "1",
+            "-vn", "-c:a", "aac", str(cls.audio)
+        ])
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="jumlo-ffmpeg-"))
-        self.video = self.tmp / "video.mp4"
-        self.audio = self.tmp / "audio.m4a"
-        self._run_ffmpeg([
-            "-f", "lavfi", "-i", "testsrc=size=1280x720:rate=15", "-t", "1",
-            "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(self.video)
-        ])
-        self._run_ffmpeg([
-            "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "1",
-            "-vn", "-c:a", "aac", str(self.audio)
-        ])
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _run_ffmpeg(self, args):
-        cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y"] + args
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
-        self.assertEqual(0, res.returncode, f"FFmpeg failed: {res.stderr}")
+        self._run_ffmpeg_cmd(args)
 
     def _probe_streams(self, path: Path) -> str:
         cmd = [
@@ -85,7 +96,7 @@ class MediaFfmpegHostTests(unittest.TestCase):
 
     def test_malformed_input_fails_without_valid_output(self):
         bad = self.tmp / "corrupt.bin"
-        bad.write_text("not a media container")
+        bad.write_text("not a media container", encoding="utf-8")
         out = self.tmp / "rejected.mp4"
         res = subprocess.run(
             ["ffmpeg", "-v", "error", "-nostdin", "-i", str(bad), str(out)],

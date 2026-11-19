@@ -54,7 +54,7 @@ import javax.inject.Singleton
                 stream.write(cipher.iv)
                 stream.write(encrypted)
                 atomic.finishWrite(stream)
-            } catch (error: Exception) { atomic.failWrite(stream); throw error }
+            } catch (error: Throwable) { atomic.failWrite(stream); throw error }
         } finally {
             plain.fill(0)
             if (encoded.hasArray()) encoded.array().fill(0)

@@ -154,6 +154,20 @@ class RepackTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     repack.LinkUniverse(str(root)).closure()
 
+    def test_zip_slip_entry_names_are_rejected(self):
+        for bad_name in ('../evil.so', '/etc/passwd', 'usr/lib/../../evil.so', 'usr\\lib\\evil.so'):
+            with self.subTest(name=bad_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = io.BytesIO()
+                with zipfile.ZipFile(source, 'w') as archive:
+                    archive.writestr(bad_name, b'payload')
+                raw = source.getvalue()
+                (root / 'libpython.zip.so').write_bytes(raw)
+                with self.assertRaises(ValueError):
+                    repack.LinkUniverse(str(root))
+                with self.assertRaises(ValueError):
+                    repack.repack_bytes(raw, set())
+
     def test_unused_capture_alias_and_its_unlinked_target_are_removed_together(self):
         # The upstream V4L capture helpers require an absent execinfo backport.
         # Shipped FFmpeg does not link them; an unused alias must not turn them

@@ -59,20 +59,17 @@
           {
             "fieldPath": "pageCount",
             "columnName": "pageCount",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "dimensions",
             "columnName": "dimensions",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "itemCount",
             "columnName": "itemCount",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "modifiedLabelEn",
@@ -104,9 +101,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "download_tasks",
@@ -190,9 +185,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "sources",
@@ -219,14 +212,12 @@
           {
             "fieldPath": "mimeType",
             "columnName": "mimeType",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "sizeBytes",
             "columnName": "sizeBytes",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "readable",
@@ -249,14 +240,12 @@
           {
             "fieldPath": "modifiedAtEpochMs",
             "columnName": "modifiedAtEpochMs",
-            "affinity": "INTEGER",
-            "notNull": false
+            "affinity": "INTEGER"
           },
           {
             "fieldPath": "cachedPath",
             "columnName": "cachedPath",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -275,8 +264,7 @@
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_sources_uri` ON `${TABLE_NAME}` (`uri`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "jobs",
@@ -309,8 +297,7 @@
           {
             "fieldPath": "leaseOwner",
             "columnName": "leaseOwner",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "leaseUntil",
@@ -330,9 +317,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "outputs",
@@ -380,8 +365,7 @@
             "orders": [],
             "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_outputs_jobId_itemKey` ON `${TABLE_NAME}` (`jobId`, `itemKey`)"
           }
-        ],
-        "foreignKeys": []
+        ]
       },
       {
         "tableName": "drafts",
@@ -405,12 +389,9 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       }
     ],
-    "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
       "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1c7241abd5b8ab41f5c26f14eef8d64f')"

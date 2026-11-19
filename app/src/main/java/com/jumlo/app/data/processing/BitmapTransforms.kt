@@ -266,10 +266,11 @@ object BitmapTransforms {
 
 /** Expansion transforms: watermark, join/stitch, adjustments, codec matrix. */
 object BitmapExtras {
+    private val WHITESPACE_REGEX=Regex("\\s+")
     /** Bounded transparent text raster shared by the interactive studio and final image export. */
     fun watermarkTextBitmap(text:String,fontFamily:String,colorHex:String,budget:Long=2L*1024*1024):Bitmap {
         OverlayStylePolicy.requireFont(fontFamily);OverlayStylePolicy.requireColor(colorHex)
-        val clean=text.trim().replace(Regex("\\s+")," ")
+        val clean=text.trim().replace(WHITESPACE_REGEX," ")
         require(clean.isNotEmpty() && clean.length<=512) { "WATERMARK_CONTENT_REQUIRED" }
         val paint=Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
             textSize=84f
@@ -358,59 +359,5 @@ object BitmapExtras {
     fun drawJoinPart(canvas: Canvas, bitmap: Bitmap, placement: ImagePlacement) {
         canvas.drawBitmap(bitmap,Rect(0,placement.trimTop,bitmap.width,bitmap.height),
             Rect(placement.x,placement.y,placement.x+bitmap.width,placement.y+bitmap.height-placement.trimTop),null)
-    }
-    fun adjust(source:Bitmap,brightness:Int,contrastPercent:Int,saturationPercent:Int,padPx:Int,budget:Long):Bitmap {
-        val pad=padPx.coerceIn(0,2000)
-        require(source.width <= Int.MAX_VALUE-pad*2 && source.height <= Int.MAX_VALUE-pad*2) { "IMAGE_DIMENSIONS_UNREPRESENTABLE" }
-        ImageWorkPolicy.requireFits(source.width+pad*2,source.height+pad*2,source.allocationByteCount.toLong(),budget)
-        val out=Bitmap.createBitmap(source.width+pad*2,source.height+pad*2,Bitmap.Config.ARGB_8888)
-        try { val canvas=Canvas(out); canvas.drawColor(Color.WHITE)
-            val c=contrastPercent.coerceIn(0,300)/100f; val s=saturationPercent.coerceIn(0,300)/100f; val b=brightness.coerceIn(-100,100)*1.27f
-            val matrix=ColorMatrix(floatArrayOf(c,0f,0f,0f,b, 0f,c,0f,0f,b, 0f,0f,c,0f,b, 0f,0f,0f,1f,0f))
-            matrix.postConcat(ColorMatrix().apply{ setSaturation(s) })
-            canvas.drawBitmap(source,pad.toFloat(),pad.toFloat(),Paint(Paint.FILTER_BITMAP_FLAG).apply{ colorFilter=ColorMatrixColorFilter(matrix) }); return out
-        } catch(t:Throwable){ out.recycle(); throw t }
-    }
-    /** Mean absolute per-pixel difference 0..255 between same-size images (else -1). */
-    fun meanDifference(a:Bitmap,b:Bitmap,budget:Long=Long.MAX_VALUE):Double {
-        if(a.width!=b.width||a.height!=b.height) return -1.0
-        val resident=a.allocationByteCount.toLong()+b.allocationByteCount.toLong()
-        require(resident<=budget && a.width.toLong()*8L<=budget-resident) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
-        val pa=IntArray(a.width); val pb=IntArray(b.width)
-        var sum=0L
-        for(y in 0 until a.height) {
-            a.getPixels(pa,0,a.width,0,y,a.width,1);b.getPixels(pb,0,b.width,0,y,b.width,1)
-            for(i in pa.indices) sum+=abs(Color.red(pa[i])-Color.red(pb[i]))+abs(Color.green(pa[i])-Color.green(pb[i]))+abs(Color.blue(pa[i])-Color.blue(pb[i]))+abs(Color.alpha(pa[i])-Color.alpha(pb[i]))
-        }
-        return sum.toDouble()/a.width/a.height/4.0
-    }
-    /**
-     * Visual difference map: identical pixels become grey, changed pixels become the
-     * accent red. Returns null when the images differ in size or the map does not fit
-     * the memory budget, so the text report is still produced.
-     */
-    fun diffMap(a:Bitmap,b:Bitmap,budget:Long):Bitmap? {
-        if(a.width!=b.width||a.height!=b.height) return null
-        val resident=a.allocationByteCount.toLong()+b.allocationByteCount.toLong()
-        val outBytes=ImageWorkPolicy.bytes(a.width,a.height)
-        if(resident+outBytes>budget) return null
-        val out=Bitmap.createBitmap(a.width,a.height,Bitmap.Config.ARGB_8888)
-        try {
-            val rowA=IntArray(a.width); val rowB=IntArray(b.width); val rowOut=IntArray(a.width)
-            for(y in 0 until a.height) {
-                a.getPixels(rowA,0,a.width,0,y,a.width,1)
-                b.getPixels(rowB,0,b.width,0,y,b.width,1)
-                for(x in 0 until a.width) {
-                    val pa=rowA[x]; val pb=rowB[x]
-                    val delta=abs(Color.red(pa)-Color.red(pb))+abs(Color.green(pa)-Color.green(pb))+abs(Color.blue(pa)-Color.blue(pb))+abs(Color.alpha(pa)-Color.alpha(pb))
-                    rowOut[x]=if(delta==0) {
-                        val grey=(Color.red(pa)*30+Color.green(pa)*59+Color.blue(pa)*11)/100
-                        Color.argb(255,grey,grey,grey)
-                    } else Color.argb(255,255,32,96)
-                }
-                out.setPixels(rowOut,0,a.width,0,y,a.width,1)
-            }
-            return out
-        } catch(t:Throwable) { out.recycle(); throw t }
     }
 }

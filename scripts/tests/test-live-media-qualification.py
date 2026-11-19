@@ -97,7 +97,7 @@ class QualificationRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as work:
             path = Path(work) / 'input.json'
             url = 'https://example.org/video?q=$(uname)&name=a%20b'
-            path.write_text(json.dumps({'schema': 1, 'platforms': {'direct': {'video_url': url}}}))
+            path.write_text(json.dumps({'schema': 1, 'platforms': {'direct': {'video_url': url}}}), encoding="utf-8")
             result = subprocess.run([sys.executable, str(SCRIPT), 'intent', '--manifest', str(path),
                                      '--platform', 'direct', '--serial', 'emulator-5554'],
                                     text=True, capture_output=True, timeout=5)
@@ -147,15 +147,15 @@ if sys.argv[1] == 'timeout':
                                                      directory, {}, timeout=0.5 if mode == 'timeout' else 3)
                     self.assertEqual('HOST_TIMEOUT' if mode == 'timeout' else None, result['failure'])
                     self.assertTrue((directory / 'child.ready').is_file(), 'Fixture child did not start')
-                    before = (directory / 'heartbeat').read_text()
+                    before = (directory / 'heartbeat').read_text(encoding="utf-8")
                     time.sleep(0.15)
-                    self.assertEqual(before, (directory / 'heartbeat').read_text(),
+                    self.assertEqual(before, (directory / 'heartbeat').read_text(encoding="utf-8"),
                                      'A descendant is still executing after run_bounded returned')
                 finally:
                     # Clean the deliberately leaked red-test process group as well.
                     if (directory / 'parent.pid').is_file():
                         try:
-                            os.killpg(int((directory / 'parent.pid').read_text()), signal.SIGKILL)
+                            os.killpg(int((directory / 'parent.pid').read_text(encoding="utf-8")), signal.SIGKILL)
                         except ProcessLookupError:
                             pass
 
@@ -170,10 +170,10 @@ if sys.argv[1] == 'timeout':
     def test_manifest_typo_is_rejected_and_partial_manifest_is_expanded(self):
         with tempfile.TemporaryDirectory() as work:
             path = Path(work) / 'input.json'
-            path.write_text(json.dumps({'schema': 1, 'platforms': {'youtube': {'video_url': 'https://example.org/video'}}}))
+            path.write_text(json.dumps({'schema': 1, 'platforms': {'youtube': {'video_url': 'https://example.org/video'}}}), encoding="utf-8")
             parsed = self.runner.load_manifest(path)
             self.assertEqual(set(self.runner.PLATFORMS), set(parsed['platforms']))
-            path.write_text(json.dumps({'schema': 1, 'platforms': {'youtub': {}}}))
+            path.write_text(json.dumps({'schema': 1, 'platforms': {'youtub': {}}}), encoding="utf-8")
             with self.assertRaises(ValueError):
                 self.runner.load_manifest(path)
 

@@ -24,9 +24,9 @@ class AppearanceColorPickerTest {
     @Test
     fun `picker renders all four color systems`() {
         compose.setContent {
-            AppearanceColorPicker(current = "SUNSET", onDismiss = {}, onSelect = {})
+            AppearanceColorPicker(current = "COBALT", onDismiss = {}, onSelect = {})
         }
-        listOf("Luigi", "Aurora", "Viola", "Sunset").forEach { name ->
+        listOf("Cobalt", "Emerald", "Sapphire", "Amethyst").forEach { name ->
             compose.onAllNodes(hasText(name)).assertCountEquals(1)
         }
     }
@@ -35,31 +35,31 @@ class AppearanceColorPickerTest {
     fun `selecting a color system emits its stable key`() {
         var selected: String? = null
         compose.setContent {
-            AppearanceColorPicker(current = "SUNSET", onDismiss = {}, onSelect = { selected = it })
+            AppearanceColorPicker(current = "COBALT", onDismiss = {}, onSelect = { selected = it })
         }
-        compose.onAllNodes(hasText("Aurora"))[0].performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals("AURORA", selected)
+        compose.onAllNodes(hasText("Sapphire"))[0].performSemanticsAction(SemanticsActions.OnClick)
+        assertEquals("SAPPHIRE", selected)
     }
 
     @Test
     fun `selecting the default system emits its stable key`() {
         var selected: String? = null
         compose.setContent {
-            AppearanceColorPicker(current = "AURORA", onDismiss = {}, onSelect = { selected = it })
+            AppearanceColorPicker(current = "SAPPHIRE", onDismiss = {}, onSelect = { selected = it })
         }
-        compose.onAllNodes(hasText("Sunset"))[0].performSemanticsAction(SemanticsActions.OnClick)
-        assertEquals("SUNSET", selected)
+        compose.onAllNodes(hasText("Cobalt"))[0].performSemanticsAction(SemanticsActions.OnClick)
+        assertEquals("COBALT", selected)
     }
 
     @Test
     fun `arabic app language displays Arabic system names on an English device`() {
         compose.setContent {
             AppearanceColorPicker(
-                current = "SUNSET", onDismiss = {}, onSelect = {},
+                current = "COBALT", onDismiss = {}, onSelect = {},
                 language = AppLanguage.ARABIC
             )
         }
-        compose.onAllNodes(hasText("لويجي")).assertCountEquals(1)
-        compose.onAllNodes(hasText("أخضر منعش")).assertCountEquals(1)
+        compose.onAllNodes(hasText("كوبالت")).assertCountEquals(1)
+        compose.onAllNodes(hasText("نيلي مميز")).assertCountEquals(1)
     }
 }

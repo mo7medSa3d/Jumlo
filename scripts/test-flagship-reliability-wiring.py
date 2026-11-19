@@ -5,7 +5,7 @@ import re
 import unittest
 R=Path(__file__).resolve().parents[1]
 SRC=R/'app/src/main/java/com/jumlo/app'
-def source(path): return (SRC/path).read_text()
+def source(path): return (SRC/path).read_text(encoding="utf-8")
 class FlagshipReliabilityWiringTests(unittest.TestCase):
     def test_split_every_page_chip_selects_every_mode(self):
         editor=source('ui/workspace/PdfPageEditor.kt')

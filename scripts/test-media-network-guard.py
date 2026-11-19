@@ -2,7 +2,10 @@
 """Tests the actual packaged Python network policy with no internet access."""
 import importlib.util
 from pathlib import Path
+import sys
 import unittest
+
+sys.dont_write_bytecode = True
 path=Path(__file__).resolve().parents[1]/'app/src/media/assets/media/network_guard.py'
 spec=importlib.util.spec_from_file_location('jumlo_network_guard',path)
 module=importlib.util.module_from_spec(spec)

@@ -6,8 +6,6 @@ import com.jumlo.app.core.PdfDisplayCoordinates
 import com.jumlo.app.core.PdfDisplayFrame
 import com.jumlo.app.core.PdfWatermarkStyle
 import com.jumlo.app.core.OverlayStylePolicy
-import com.tom_roush.pdfbox.cos.COSArray
-import com.tom_roush.pdfbox.cos.COSDictionary
 import com.tom_roush.pdfbox.cos.COSName
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility
@@ -20,13 +18,6 @@ import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import com.tom_roush.pdfbox.util.Matrix
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
-import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject
-import com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation
-import com.tom_roush.pdfbox.pdmodel.interactive.form.PDCheckBox
-import com.tom_roush.pdfbox.pdmodel.interactive.form.PDPushButton
-import com.tom_roush.pdfbox.pdmodel.interactive.form.PDRadioButton
-import com.tom_roush.pdfbox.pdmodel.interactive.form.PDTextField
-import com.tom_roush.pdfbox.pdmodel.interactive.form.PDTerminalField
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.io.File
 
@@ -49,54 +40,14 @@ val DEFAULT_MAX_BITMAP_BYTES: Long = minOf(Runtime.getRuntime().maxMemory() / 2,
 data class OrganizeOp(val sourceIndex: Int, val rotationDegrees: Int = 0)
 data class PageGroup(val first: Int, val count: Int)
 
-/** Normalized rectangle with a TOP-LEFT origin; converted once at the PDF boundary. */
-class RedactRegion(val left: Double, val top: Double, val right: Double, val bottom: Double) {
-    init { require(left in 0.0..1.0 && top in 0.0..1.0 && right in 0.0..1.0 && bottom in 0.0..1.0 && left < right && top < bottom) { "INVALID_REDACT_REGION" } }
-}
-
-sealed interface FormEntry {
-    data class Input(val value: String) : FormEntry
-    data class Text(val value: String) : FormEntry
-    data class Check(val on: Boolean) : FormEntry
-    data class Radio(val index: Int) : FormEntry
-}
-
-/** Read-only discovery for typed form controls; names match AcroForm.getField(). */
-data class PdfFormFieldInfo(
-    val name: String,
-    val kind: String,
-    val value: String,
-    val readOnly: Boolean,
-    val choices: List<String> = emptyList(),
-    val selectedIndex: Int = -1,
-    val checked: Boolean = false,
-    val widgets: List<PdfFormWidgetInfo> = emptyList()
-)
-
-/** Visible, upright CropBox coordinates; page is one based, widgetIndex preserves radio choice order. */
-data class PdfFormWidgetInfo(val page: Int, val left: Double, val top: Double, val right: Double, val bottom: Double, val widgetIndex: Int)
-
 data class PdfImageOverlay(val pageIndex: Int, val left: Double, val top: Double, val right: Double, val bottom: Double, val rotationDegrees: Float = 0f)
-
-enum class CompareVerdict { SAME, DIFFERENT }
-data class CompareResult(val pageCountA: Int, val pageCountB: Int, val verdict: CompareVerdict, val firstDifferentPage: Int?)
-
-data class RedactResult(
-    val removedTextChunks: Int,
-    val removedImages: Int,
-    val removedAnnotations: Int,
-    val pageFallbacks: List<Int>,
-    val leftoverText: Map<Int, List<String>>
-)
 
 /** Declared capabilities of this backend; drives UI gating and the support matrix. */
 object PdfCapabilityPolicy {
     val capabilities: Set<String> = setOf(
         "MERGE", "SPLIT", "EXTRACT", "REORDER", "ROTATE", "DELETE", "INSERT",
         "CROP_BOX", "METADATA", "PROTECT_STANDARD", "REMOVE_PROTECTION",
-        "COMPRESS_IMAGE_DOWNSCALE", "COMPARE_TEXT", "REDACT_FULL_PAGE_RASTER",
-        "FORM_FILL_TEXT_CHECKBOX_RADIO", "FORM_FLATTEN", "FORM_LIST",
-        "STAMP_TEXT", "STAMP_IMAGE", "ANNOTATION_TEXT", "OCR_INVISIBLE_TEXT"
+        "COMPRESS_IMAGE_DOWNSCALE", "STAMP_TEXT", "STAMP_IMAGE", "OCR_INVISIBLE_TEXT"
     )
 }
 
@@ -105,6 +56,7 @@ object PdfCapabilityPolicy {
  * the caller is UI text; passwords are session-only via EphemeralSecretStore handles.
  */
 object PdfBoxBackend {
+    private val WHITESPACE_REGEX = Regex("\\s+")
 
     fun open(file: File, password: CharArray?): PDDocument =
         PDDocument.load(file, password?.let { String(it) } ?: "", MemoryUsageSetting.setupTempFileOnly())
@@ -202,25 +154,6 @@ object PdfBoxBackend {
         }
     }
 
-    private fun writeAssembled(ordered: List<Pair<PDPage, Int>>, out: File): File {
-        PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { target ->
-            val cloner = com.tom_roush.pdfbox.multipdf.PDFCloneUtility(target)
-            ordered.forEach { (page, degrees) ->
-                // importPage creates a distinct root dictionary on every invocation,
-                // including repeated source pages. Materialize inherited resources;
-                // the PDFBox port otherwise drops resources inherited from /Pages.
-                val imported = target.importPage(page)
-                require(imported.cosObject !== page.cosObject) { "PDF_PAGE_IMPORT_FAILED" }
-                page.resources?.let { resources ->
-                    imported.resources = com.tom_roush.pdfbox.pdmodel.PDResources(cloner.cloneForNewDocument(resources) as COSDictionary)
-                }
-                imported.rotation = ((page.rotation + degrees) % 360 + 360) % 360
-            }
-            target.save(out)
-        }
-        return out
-    }
-
     private fun rotateInside(page: PDPage, degrees: Int) {
         if (degrees % 360 == 0) return
         page.rotation = ((page.rotation + degrees) % 360 + 360) % 360
@@ -287,170 +220,6 @@ object PdfBoxBackend {
         doc.save(out)
     }
 
-    fun formFields(doc: PDDocument): List<PdfFormFieldInfo> {
-        // Discovery must not run PDFBox's default fixup, which can add fonts and
-        // change form dictionaries simply by opening the configuration screen.
-        val acro = doc.documentCatalog.getAcroForm(null) ?: return emptyList()
-        val pages=doc.pages.toList()
-        val widgetPages=java.util.IdentityHashMap<COSDictionary,Int>()
-        val pageIndexes=java.util.IdentityHashMap<COSDictionary,Int>()
-        pages.forEachIndexed { index,page ->
-            pageIndexes[page.cosObject]=index
-            page.annotations.forEach {widgetPages[it.cosObject]=index}
-        }
-        return acro.fieldTree.filterIsInstance<PDTerminalField>().map { field ->
-            val type = when (field) {
-                is PDRadioButton -> "radio"
-                is PDCheckBox -> "checkbox"
-                is PDPushButton -> "button"
-                is PDTextField -> "text"
-                else -> "other"
-            }
-            val value = try { field.valueAsString } catch (_: Exception) { "" }
-            PdfFormFieldInfo(
-                name = field.fullyQualifiedName,
-                kind = type,
-                value = value,
-                readOnly = field.isReadOnly,
-                choices = if (field is PDRadioButton) radioChoices(field) else emptyList(),
-                selectedIndex = if (field is PDRadioButton) field.selectedIndex else -1,
-                checked = field is PDCheckBox && field.isChecked,
-                widgets = field.widgets.mapIndexedNotNull { widgetIndex,widget ->
-                    val pageIndex=widgetPages[widget.cosObject] ?: widget.page?.let {pageIndexes[it.cosObject]} ?: return@mapIndexedNotNull null
-                    val rect=widget.rectangle ?: return@mapIndexedNotNull null
-                    if(listOf(rect.lowerLeftX,rect.lowerLeftY,rect.upperRightX,rect.upperRightY).any {!it.isFinite()} || rect.width<=0 || rect.height<=0) return@mapIndexedNotNull null
-                    val frame=displayFrame(pages[pageIndex]);val matrix=frame.displayToPage
-                    val determinant=matrix.a*matrix.d-matrix.b*matrix.c
-                    fun normalized(x:Double,y:Double):Pair<Double,Double> {
-                        val dx=x-matrix.e;val dy=y-matrix.f
-                        return ((matrix.d*dx-matrix.c*dy)/determinant/frame.widthPt) to
-                            (1.0-(-matrix.b*dx+matrix.a*dy)/determinant/frame.heightPt)
-                    }
-                    val corners=listOf(normalized(rect.lowerLeftX.toDouble(),rect.lowerLeftY.toDouble()),
-                        normalized(rect.upperRightX.toDouble(),rect.lowerLeftY.toDouble()),
-                        normalized(rect.lowerLeftX.toDouble(),rect.upperRightY.toDouble()),
-                        normalized(rect.upperRightX.toDouble(),rect.upperRightY.toDouble()))
-                    val left=corners.minOf {it.first}.coerceIn(0.0,1.0);val right=corners.maxOf {it.first}.coerceIn(0.0,1.0)
-                    val top=corners.minOf {it.second}.coerceIn(0.0,1.0);val bottom=corners.maxOf {it.second}.coerceIn(0.0,1.0)
-                    if(left>=right || top>=bottom) null else PdfFormWidgetInfo(pageIndex+1,left,top,right,bottom,widgetIndex)
-                }
-            )
-        }
-    }
-
-    fun listFormFields(doc: PDDocument): List<String> = formFields(doc).map {
-        listOf(it.name, it.kind, it.value).joinToString("|")
-    }
-
-    private fun radioChoices(field: PDRadioButton): List<String> {
-        val exports = field.exportValues
-        if (exports.isNotEmpty()) return exports
-        // /Opt is optional. Most radio forms instead name their on-state in
-        // each widget's normal appearance. Keep widget order for visual choice.
-        return field.widgets.map { widget ->
-            widget.appearance?.normalAppearance?.subDictionary?.keys
-                ?.filter { it.name != "Off" }?.map { it.name }?.sorted()?.firstOrNull().orEmpty()
-        }
-    }
-
-    private fun selectRadio(field: PDRadioButton, index: Int) {
-        val choices = radioChoices(field)
-        require(index in choices.indices && choices[index].isNotBlank()) { "FORM_FIELD_TYPE_MISMATCH" }
-        if (field.exportValues.isNotEmpty()) field.setValue(index)
-        else field.setValue(choices[index])
-    }
-
-    fun fillForm(doc: PDDocument, values: Map<String, FormEntry>) {
-        val acro = doc.documentCatalog.acroForm ?: throw IllegalArgumentException("NO_ACROFORM")
-        values.forEach { (name, entry) ->
-            val field = acro.getField(name) ?: throw IllegalArgumentException("FORM_FIELD_NOT_FOUND")
-            require(!field.isReadOnly) { "FORM_FIELD_READ_ONLY" }
-            when (entry) {
-                is FormEntry.Input -> when (field) {
-                    is PDTextField -> field.setValue(entry.value)
-                    is PDCheckBox -> {
-                        require(entry.value.equals("true",true) || entry.value.equals("false",true)) { "FORM_FIELD_TYPE_MISMATCH" }
-                        if(entry.value.equals("true",true)) field.check() else field.unCheck()
-                    }
-                    is PDRadioButton -> {
-                        val index=entry.value.toIntOrNull() ?: throw IllegalArgumentException("FORM_FIELD_TYPE_MISMATCH")
-                        selectRadio(field,index)
-                    }
-                    else -> throw IllegalArgumentException("FORM_FIELD_TYPE_MISMATCH")
-                }
-                is FormEntry.Text -> {
-                    require(field is PDTextField) { "FORM_FIELD_TYPE_MISMATCH" }
-                    field.setValue(entry.value)
-                }
-                is FormEntry.Check -> {
-                    require(field is PDCheckBox) { "FORM_FIELD_TYPE_MISMATCH" }
-                    if (entry.on) field.check() else field.unCheck()
-                }
-                is FormEntry.Radio -> {
-                    require(field is PDRadioButton) { "FORM_FIELD_TYPE_MISMATCH" }
-                    selectRadio(field,entry.index)
-                }
-            }
-        }
-    }
-
-    /** Preflight every appearance and page before any widget or form is removed. */
-    fun flattenForm(doc: PDDocument, out: File) {
-        val acro = doc.documentCatalog.acroForm ?: throw IllegalArgumentException("NO_ACROFORM")
-        require(!acro.hasXFA()) { "FORM_FLATTEN_UNSUPPORTED" }
-        val fields=acro.fieldTree.toList()
-        val values=fields.associate { it.fullyQualifiedName to it.valueAsString }
-        try { acro.refreshAppearances() } catch (e: Exception) {
-            throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE",e)
-        }
-        require(fields.all { values[it.fullyQualifiedName] == it.valueAsString }) { "FORM_VALUE_CHANGED" }
-        data class PaintWidget(val page: PDPage,val widget: PDAnnotation,val appearance: PDFormXObject,val sx: Double,val sy: Double,val tx: Double,val ty: Double)
-        val pages=doc.pages.toList()
-        val plans=mutableListOf<PaintWidget>()
-        fields.forEach { field -> field.widgets.forEach { widget ->
-            val declaredPage=widget.page
-            val page=pages.firstOrNull { candidate -> candidate.annotations.any { it.cosObject === widget.cosObject } }
-                ?: pages.firstOrNull { it.cosObject === declaredPage?.cosObject }
-                ?: throw IllegalArgumentException("FORM_WIDGET_PAGE_MISSING")
-            val appearance=widget.getNormalAppearanceStream() ?: throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE")
-            val rect=widget.rectangle ?: throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE")
-            val bbox=appearance.bBox ?: throw IllegalArgumentException("FORM_APPEARANCE_UNAVAILABLE")
-            val matrix=appearance.matrix
-            // Compute the appearance's transformed bounds without Android PointF,
-            // so the same code and fixtures also execute on the JVM backend.
-            val corners=listOf(bbox.lowerLeftX to bbox.lowerLeftY,bbox.lowerLeftX to bbox.upperRightY,bbox.upperRightX to bbox.lowerLeftY,bbox.upperRightX to bbox.upperRightY)
-            val xs=corners.map { (x,y) -> x*matrix.scaleX+y*matrix.shearX+matrix.translateX }
-            val ys=corners.map { (x,y) -> x*matrix.shearY+y*matrix.scaleY+matrix.translateY }
-            val minX=xs.minOrNull()!!; val minY=ys.minOrNull()!!
-            val width=xs.maxOrNull()!!-minX; val height=ys.maxOrNull()!!-minY
-            require(rect.width>0f && rect.height>0f && width>0f && height>0f &&
-                xs.all { it.isFinite() } && ys.all { it.isFinite() } &&
-                listOf(rect.lowerLeftX,rect.lowerLeftY,rect.upperRightX,rect.upperRightY).all { it.isFinite() }) { "FORM_APPEARANCE_UNAVAILABLE" }
-            if(field.valueAsString.isNotBlank() && field.valueAsString != "Off") {
-                require(appearance.contents.use { it.read() } >= 0) { "FORM_APPEARANCE_UNAVAILABLE" }
-            }
-            val sx=rect.width.toDouble()/width; val sy=rect.height.toDouble()/height
-            plans+=PaintWidget(page,widget,appearance,sx,sy,rect.lowerLeftX-sx*minX,rect.lowerLeftY-sy*minY)
-        } }
-        // Paint all appearances first. A missing/invalid widget above fails with
-        // the original AcroForm and page annotations still attached.
-        plans.forEach { plan ->
-            PDPageContentStream(doc,plan.page,PDPageContentStream.AppendMode.APPEND,true,true).use { cs ->
-                cs.concatenate2CTM(plan.sx,0.0,0.0,plan.sy,plan.tx,plan.ty)
-                cs.drawForm(plan.appearance)
-            }
-        }
-        pages.forEach { page ->
-            val widgets=plans.filter { it.page.cosObject === page.cosObject }.map { it.widget.cosObject }
-            page.annotations=page.annotations.filter { ann -> widgets.none { it === ann.cosObject } }
-        }
-        doc.documentCatalog.acroForm=null
-        doc.save(out)
-        open(out,null).use { verified ->
-            require(verified.numberOfPages==doc.numberOfPages && verified.documentCatalog.acroForm==null) { "PDF_VERIFY_FAILED" }
-        }
-    }
-
     /**
      * Compress the images of [doc] and return how many were re-encoded.
      *
@@ -506,7 +275,7 @@ object PdfBoxBackend {
         addPageNumbers: Boolean, style: PdfWatermarkStyle = PdfWatermarkStyle(), checkCancellation: () -> Unit = {}
     ) {
         require(zeroBasedPages.all { it in 0 until doc.numberOfPages }) { "INVALID_PAGE_INDEX" }
-        val text = watermarkText.trim().replace(Regex("\\s+"), " ")
+        val text = watermarkText.trim().replace(WHITESPACE_REGEX, " ")
         require(text.length <= 120) { "WATERMARK_TEXT_TOO_LONG" }
         if (text.isNotEmpty() && zeroBasedPages.isNotEmpty()) {
             checkCancellation()
@@ -622,7 +391,10 @@ object PdfBoxBackend {
                 cs.beginText()
                 cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA, fontSize)
                 if(colorHex.isBlank()) cs.setNonStrokingColor(gray,gray,gray)
-                else cs.setNonStrokingColor(OverlayStylePolicy.rgb(colorHex))
+                else {
+                    val rgb = OverlayStylePolicy.rgb(colorHex)
+                    cs.setNonStrokingColor(rgb[0], rgb[1], rgb[2])
+                }
                 cs.newLineAtOffset((xNorm*frame.widthPt).toFloat(), ((1.0-yNormTop)*frame.heightPt).toFloat())
                 cs.showText(safeText)
                 cs.endText()
@@ -705,45 +477,6 @@ object PdfBoxBackend {
         page.annotations=page.annotations.toMutableList().also { it.add(annotation) }
     }
 
-    fun compareText(a: PDDocument, b: PDDocument): CompareResult = compare(a, b)
-
-    fun compare(a: PDDocument, b: PDDocument): CompareResult {
-        val countA = a.numberOfPages
-        val countB = b.numberOfPages
-        if (countA != countB) return CompareResult(countA,countB,CompareVerdict.DIFFERENT,null)
-        val first = PageTextComparison.firstMismatch(countA,
-            left = { pageText(a,it) }, right = { pageText(b,it) })
-        return CompareResult(countA,countB,if(first == null) CompareVerdict.SAME else CompareVerdict.DIFFERENT,first)
-    }
-
-    /**
-     * Security-first redaction: every page containing a redaction region is returned
-     * for full-page rasterization by the Android handler. The prior operator parser
-     * estimated glyph bounds and could miss content emitted by unsupported PDF
-     * operators. Never publish that partially inspected content stream.
-     *
-     * A fresh image-only page is the only output for each touched page. Unmasked
-     * pages remain eligible for structural import by the handler.
-     */
-    fun redact(doc: PDDocument, regionsByPage: Map<Int, List<RedactRegion>>): RedactResult {
-        val targets = regionsByPage.filterValues { it.isNotEmpty() }
-        val regionCount = targets.values.sumOf { it.size }
-        require(regionCount in 1..1_000) { "INVALID_REDACT_REGION" }
-        targets.keys.forEach { pageIndex ->
-            require(pageIndex in 0 until doc.numberOfPages) { "INVALID_PAGE_INDEX" }
-        }
-        val flattenedAnnotations = targets.keys.sumOf { pageIndex ->
-            runCatching { doc.getPage(pageIndex).annotations.size }.getOrDefault(0)
-        }
-        return RedactResult(
-            removedTextChunks = 0,
-            removedImages = 0,
-            removedAnnotations = flattenedAnnotations,
-            pageFallbacks = targets.keys.sorted(),
-            leftoverText = emptyMap()
-        )
-    }
-
     fun embeddedImageSummary(doc: PDDocument): Pair<Long, Long> {
         var bytes = 0L
         var pixels = 0L
@@ -772,11 +505,12 @@ object PdfBoxBackend {
         keys.forEach { key ->
             val name = key.name
             if (name.equals("Trapped", ignoreCase = true)) return@forEach
-            if (keepTitle && name.lowercase() in contentKeys) return@forEach
-            removed += if (name.lowercase() in contentKeys) "content:$name" else name
+            val lower = name.lowercase(java.util.Locale.ROOT)
+            if (keepTitle && lower in contentKeys) return@forEach
+            removed += if (lower in contentKeys) "content:$name" else name
         }
         keys.forEach { key ->
-            if (!(keepTitle && key.name.lowercase() in contentKeys)) cos.removeItem(key)
+            if (!(keepTitle && key.name.lowercase(java.util.Locale.ROOT) in contentKeys)) cos.removeItem(key)
         }
         val catalog = doc.documentCatalog
         val metadataStream = catalog.getCOSObject().getDictionaryObject(com.tom_roush.pdfbox.cos.COSName.METADATA)
@@ -786,161 +520,6 @@ object PdfBoxBackend {
         }
         return removed.distinct().sorted()
     }
-
-    fun addAnnotation(
-        doc: PDDocument, zeroBasedPage: Int, kind: com.jumlo.app.core.PdfAnnotationKind,
-        left: Double, top: Double, right: Double, bottom: Double, contents: String = "", colorHex: String = "", thicknessPt: Float = 2f
-    ) {
-        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
-        require(left.isFinite() && top.isFinite() && right.isFinite() && bottom.isFinite()
-            && left in 0.0..1.0 && right in 0.0..1.0 && top in 0.0..1.0 && bottom in 0.0..1.0
-            && left < right && top < bottom) { "INVALID_ANNOTATION" }
-        val page = doc.getPage(zeroBasedPage)
-        val frame = displayFrame(page)
-        require(thicknessPt.isFinite() && thicknessPt in .5f..20f) { "INVALID_ANNOTATION" }
-        val rect = PdfDisplayCoordinates.normalizedRectangle(frame, left, top, right, bottom)
-        val annotation: com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotation = when (kind) {
-            com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT ->
-                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
-                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup.SUB_TYPE_HIGHLIGHT)
-            com.jumlo.app.core.PdfAnnotationKind.UNDERLINE ->
-                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
-                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup.SUB_TYPE_UNDERLINE)
-            com.jumlo.app.core.PdfAnnotationKind.STRIKETHROUGH ->
-                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
-                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup.SUB_TYPE_STRIKEOUT)
-            com.jumlo.app.core.PdfAnnotationKind.SQUARE ->
-                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle(
-                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle.SUB_TYPE_SQUARE)
-            com.jumlo.app.core.PdfAnnotationKind.CIRCLE ->
-                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle(
-                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquareCircle.SUB_TYPE_CIRCLE)
-            com.jumlo.app.core.PdfAnnotationKind.TEXTBOX ->
-                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationTextMarkup(
-                    com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup.SUB_TYPE_FREETEXT)
-            else -> com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationText()
-        }
-        annotation.rectangle = PDRectangle(rect.x, rect.y, rect.width, rect.height)
-        if (annotation is com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup) {
-            val corners = PdfDisplayCoordinates.normalizedCorners(frame, left, top, right, bottom)
-            annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.QUADPOINTS,
-                com.tom_roush.pdfbox.cos.COSArray().apply { corners.forEach { add(com.tom_roush.pdfbox.cos.COSFloat(it)) } })
-        }
-        if (kind == com.jumlo.app.core.PdfAnnotationKind.SQUARE || kind == com.jumlo.app.core.PdfAnnotationKind.CIRCLE) {
-            annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.C,
-                rgbColor(0.10f, 0.30f, 0.70f))
-        } else if (kind.isMarkup) {
-            val tint = when (kind) {
-                com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT -> Triple(1f, .92f, .23f)
-                com.jumlo.app.core.PdfAnnotationKind.UNDERLINE -> Triple(.10f, .60f, .30f)
-                else -> Triple(.85f, .20f, .20f)
-            }
-            annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.C, rgbColor(tint.first, tint.second, tint.third))
-        }
-        if(colorHex.isNotBlank()) annotation.color=com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(OverlayStylePolicy.rgb(colorHex),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB.INSTANCE)
-        annotation.cosObject.setItem(COSName.BS,com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary().apply {width=thicknessPt/page.userUnit})
-        if (contents.isNotBlank()) annotation.contents = contents
-        annotation.isPrinted=true
-        annotation.setPage(page)
-        if(kind.isMarkup) {
-            // PDFBox's rounded highlight generator expands /Rect beyond the selected box.
-            // An explicit appearance keeps the visible quad and editable bounds aligned.
-            val appearance=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream(doc).apply {
-                bBox=PDRectangle(rect.width,rect.height)
-                resources=com.tom_roush.pdfbox.pdmodel.PDResources()
-            }
-            val quad=PdfDisplayCoordinates.normalizedCorners(frame,left,top,right,bottom)
-            fun x(index:Int)=quad[index*2]-rect.x
-            fun y(index:Int)=quad[index*2+1]-rect.y
-            PDPageContentStream(doc,appearance).use {stream ->
-                stream.setNonStrokingColor(annotation.color);stream.setStrokingColor(annotation.color)
-                if(kind==com.jumlo.app.core.PdfAnnotationKind.HIGHLIGHT) {
-                    stream.setGraphicsStateParameters(com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState().apply {
-                        nonStrokingAlphaConstant=.35f
-                        blendMode=com.tom_roush.pdfbox.pdmodel.graphics.blend.BlendMode.MULTIPLY
-                    })
-                    stream.moveTo(x(0),y(0));stream.lineTo(x(1),y(1));stream.lineTo(x(3),y(3));stream.lineTo(x(2),y(2))
-                    stream.closePath();stream.fill()
-                } else {
-                    val thickness=thicknessPt/page.userUnit
-                    val fraction=if(kind==com.jumlo.app.core.PdfAnnotationKind.UNDERLINE)
-                        minOf(.5f,thickness/(2*kotlin.math.hypot(x(0)-x(2),y(0)-y(2)))) else .5f
-                    stream.setLineWidth(thickness)
-                    stream.moveTo(x(2)+(x(0)-x(2))*fraction,y(2)+(y(0)-y(2))*fraction)
-                    stream.lineTo(x(3)+(x(1)-x(3))*fraction,y(3)+(y(1)-y(3))*fraction)
-                    stream.stroke()
-                }
-            }
-            annotation.appearance=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary().apply {setNormalAppearance(appearance)}
-        } else annotation.constructAppearances(doc)
-        page.annotations = page.annotations.toMutableList().also { it.add(annotation) }
-    }
-
-    fun addInkAnnotation(doc: PDDocument, zeroBasedPage: Int, points: List<com.jumlo.app.core.PdfInkPoint>, contents: String = "") {
-        addInkStrokes(doc,zeroBasedPage,listOf(points),contents)
-    }
-
-    fun addInkStrokes(doc: PDDocument, zeroBasedPage: Int, strokes: List<List<com.jumlo.app.core.PdfInkPoint>>, contents: String = "", colorHex: String = "", thicknessPt: Float = com.jumlo.app.core.PdfInkDrawing.STROKE_WIDTH_PT) {
-        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_ANNOTATION" }
-        require(thicknessPt.isFinite() && thicknessPt in .5f..20f) { "INVALID_ANNOTATION" }
-        require(strokes.isNotEmpty() && strokes.size<=com.jumlo.app.core.PdfInkDrawing.MAX_STROKES) { "INVALID_ANNOTATION" }
-        var total=0L
-        strokes.forEach {points ->
-            require(points.size in 2..com.jumlo.app.core.PdfInkDrawing.MAX_POINTS_PER_STROKE &&
-                points.all {it.x.isFinite() && it.y.isFinite() && it.x in 0.0..1.0 && it.y in 0.0..1.0}) { "INVALID_ANNOTATION" }
-            total+=points.size
-            require(total<=com.jumlo.app.core.PdfInkDrawing.MAX_TOTAL_POINTS) { "INVALID_ANNOTATION" }
-        }
-        val page = doc.getPage(zeroBasedPage)
-        val frame = displayFrame(page)
-        val mapped = strokes.map {points -> points.map { point ->
-                val x = point.x * frame.widthPt
-                val y = (1.0 - point.y) * frame.heightPt
-                frame.displayToPage.map(x, y).also {(px,py) ->
-                    require(px.toFloat().isFinite() && py.toFloat().isFinite()) { "INVALID_ANNOTATION" }
-                }
-            }
-        }
-        val inkList=com.tom_roush.pdfbox.cos.COSArray()
-        mapped.forEach {points ->
-            val stroke=com.tom_roush.pdfbox.cos.COSArray()
-            points.forEach {(x,y) ->
-                stroke.add(com.tom_roush.pdfbox.cos.COSFloat(x.toFloat()))
-                stroke.add(com.tom_roush.pdfbox.cos.COSFloat(y.toFloat()))
-            }
-            inkList.add(stroke)
-        }
-        // TextMarkup only constructs highlight/underline appearances. Generic markup
-        // dispatches Ink to PDFBox's actual stroke appearance generator.
-        val annotation = com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup().apply {
-            cosObject.setName(COSName.SUBTYPE,com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationMarkup.SUB_TYPE_INK)
-        }
-        annotation.cosObject.setItem(com.tom_roush.pdfbox.cos.COSName.INKLIST,
-            inkList)
-        val xs = mapped.flatMap {points->points.map {it.first}}
-        val ys = mapped.flatMap {points->points.map {it.second}}
-        val minX = xs.min()
-        val minY = ys.min()
-        val strokeWidth=thicknessPt/page.userUnit
-        require(strokeWidth.isFinite() && strokeWidth>0f) { "INVALID_ANNOTATION" }
-        // Include the painted stroke on both axes, including perfectly straight paths.
-        val padding=strokeWidth*2f
-        val bounds=PDRectangle((minX-padding).toFloat(),(minY-padding).toFloat(),
-            (xs.max()-minX+padding*2).toFloat(),(ys.max()-minY+padding*2).toFloat())
-        require(listOf(bounds.lowerLeftX,bounds.lowerLeftY,bounds.upperRightX,bounds.upperRightY).all {it.isFinite()} &&
-            bounds.width>0f && bounds.height>0f) { "INVALID_ANNOTATION" }
-        annotation.rectangle=bounds
-        annotation.color=if(colorHex.isBlank()) com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(floatArrayOf(0f),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceGray.INSTANCE)
-            else com.tom_roush.pdfbox.pdmodel.graphics.color.PDColor(OverlayStylePolicy.rgb(colorHex),com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB.INSTANCE)
-        annotation.borderStyle=com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary().apply {width=strokeWidth}
-        annotation.isPrinted=true
-        if (contents.isNotBlank()) annotation.contents = contents
-        annotation.setPage(page)
-        annotation.constructAppearances(doc)
-        require(annotation.normalAppearanceStream!=null) { "INVALID_ANNOTATION" }
-        page.annotations = page.annotations.toMutableList().also { it.add(annotation) }
-    }
-
 
     fun split(source: File, groups: List<PageGroup>, destinations: List<File>): List<File> {
         val pageCount = PDDocument.load(source, "", MemoryUsageSetting.setupTempFileOnly()).use { it.numberOfPages }
@@ -967,13 +546,6 @@ object PdfBoxBackend {
     fun insert(base: File, other: PdfInput, atZeroIndex: Int, out: File) =
         open(base, null).use { insert(it, other, atZeroIndex, out) }
 
-
-    private fun rgbColor(r: Float, g: Float, b: Float): com.tom_roush.pdfbox.cos.COSArray =
-        com.tom_roush.pdfbox.cos.COSArray().apply {
-            add(com.tom_roush.pdfbox.cos.COSFloat(r))
-            add(com.tom_roush.pdfbox.cos.COSFloat(g))
-            add(com.tom_roush.pdfbox.cos.COSFloat(b))
-        }
 
     private fun assemble(source: File, out: File, pages: List<Pair<Int, Int>>) {
         require(pages.isNotEmpty()) { "NO_PAGES" }

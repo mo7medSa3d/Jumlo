@@ -35,10 +35,17 @@ case "$MODE" in
         app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk \
         app/build/outputs/bundle/release/*.aab --output "$LOG_DIR/standard-content.json"
     fi
+    sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+    zipalign_bin="$sdk/build-tools/36.0.0/zipalign"
+    if [[ -z "$sdk" || ! -x "$zipalign_bin" ]]; then
+      echo "ERROR: zipalign not found at $zipalign_bin; set ANDROID_HOME" >&2
+      exit 1
+    fi
     : > "$LOG_DIR/apk-zip-alignment.log"
     for apk in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
+      [[ -f "$apk" ]] || { echo "ERROR: expected built APK missing: $apk" >&2; exit 1; }
       printf 'Checking %s\n' "$apk" | tee -a "$LOG_DIR/apk-zip-alignment.log"
-      "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}/build-tools/36.0.0/zipalign" -c -P 16 4 "$apk" 2>&1 | tee -a "$LOG_DIR/apk-zip-alignment.log"
+      "$zipalign_bin" -c -P 16 4 "$apk" 2>&1 | tee -a "$LOG_DIR/apk-zip-alignment.log"
       printf 'PASS\n' | tee -a "$LOG_DIR/apk-zip-alignment.log"
     done
     run_task benchmark-compile :app:assembleBenchmark :benchmark:assembleBenchmark

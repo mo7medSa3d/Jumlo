@@ -32,34 +32,42 @@ class JumloPrintAdapterTest {
     @Test fun repeatedSubsetWritesReportOriginalLogicalRangesAndCloseDestination() {
         val engine=FixtureEngine()
         val adapter=JumloPrintAdapter(context,source,options,info,engine)
+        var firstFile:File?=null;var secondFile:File?=null
         try {
             val firstLayout=layout(adapter,engine)
             assertEquals(3,firstLayout.pageCount)
-            val first=write(adapter,arrayOf(PageRange(1,2)))
+            val first=write(adapter,arrayOf(PageRange(1,2))).also {firstFile=it.first}
             assertEquals(listOf(PrintPage(2),PrintPage(5,180)),engine.writes[0])
             assertEquals(listOf(1..2),first.second.map {it.start..it.end})
             PDDocument.load(first.first).use {assertEquals(2,it.numberOfPages)}
-            val second=write(adapter,arrayOf(PageRange(0,0)))
+            val second=write(adapter,arrayOf(PageRange(0,0))).also {secondFile=it.first}
             assertEquals(listOf(PrintPage(5,90)),engine.writes[1])
             PDDocument.load(second.first).use {assertEquals(1,it.numberOfPages)}
-            first.first.delete();second.first.delete()
-        } finally {instrumentation.runOnMainSync {adapter.onFinish()}}
+        } finally {
+            instrumentation.runOnMainSync {adapter.onFinish()}
+            firstFile?.delete();secondFile?.delete()
+        }
     }
     @Test fun writeBeforeLayoutFailsOnceAndDoesNotRender() {
         val engine=FixtureEngine();val adapter=JumloPrintAdapter(context,source,options,info,engine)
         val output=File.createTempFile("adapter-no-layout-",".pdf",context.cacheDir)
         val latch=CountDownLatch(1);val outcomes=CopyOnWriteArrayList<String>()
         val fd=ParcelFileDescriptor.open(output,ParcelFileDescriptor.MODE_WRITE_ONLY or ParcelFileDescriptor.MODE_TRUNCATE)
-        instrumentation.runOnMainSync {
-            adapter.onWrite(arrayOf(PageRange.ALL_PAGES),fd,CancellationSignal(),PrintAdapterHelper.createWriteCallback(object:PrintAdapterHelper.WriteCallback {
-                override fun onWriteFinished(pages:Array<out PageRange>) {outcomes+="success";latch.countDown()}
-                override fun onWriteFailed(error:CharSequence?) {outcomes+="failure";latch.countDown()}
-            }))
+        try {
+            instrumentation.runOnMainSync {
+                adapter.onWrite(arrayOf(PageRange.ALL_PAGES),fd,CancellationSignal(),PrintAdapterHelper.createWriteCallback(object:PrintAdapterHelper.WriteCallback {
+                    override fun onWriteFinished(pages:Array<out PageRange>) {outcomes+="success";latch.countDown()}
+                    override fun onWriteFailed(error:CharSequence?) {outcomes+="failure";latch.countDown()}
+                }))
+            }
+            assertTrue(latch.await(10,TimeUnit.SECONDS));instrumentation.waitForIdleSync()
+            assertEquals(listOf("failure"),outcomes.toList());assertTrue(engine.writes.isEmpty())
+            assertFalse(fd.fileDescriptor.valid())
+        } finally {
+            runCatching {fd.close()}
+            instrumentation.runOnMainSync {adapter.onFinish()}
+            output.delete()
         }
-        assertTrue(latch.await(10,TimeUnit.SECONDS));instrumentation.waitForIdleSync()
-        assertEquals(listOf("failure"),outcomes.toList());assertTrue(engine.writes.isEmpty())
-        assertFalse(fd.fileDescriptor.valid())
-        instrumentation.runOnMainSync {adapter.onFinish()};output.delete()
     }
     private fun layout(adapter:JumloPrintAdapter,engine:FixtureEngine):FrameworkDocumentInfo {
         val latch=CountDownLatch(1);var document:FrameworkDocumentInfo?=null;var failure:CharSequence?=null

@@ -44,7 +44,7 @@ def parse_systems(text):
     constants = {k: v.upper() for k, v in
                  re.findall(r'private val (\w+) = Color\(0xFF([0-9A-Fa-f]{6})\)', text)}
     systems = {}
-    for key in ('LUIGI', 'AURORA', 'VIOLA', 'SUNSET'):
+    for key in ('COBALT', 'EMERALD', 'SAPPHIRE', 'AMETHYST'):
         start = text.index(f'val {key} = ColorSystem(')
         nxt = re.search(r'\n    val [A-Z]+ = ColorSystem\(', text[start + 10:])
         block = text[start:start + 10 + nxt.start()] if nxt else text[start:]
@@ -89,7 +89,7 @@ class PrismSourceContracts(unittest.TestCase):
                 self.assertGreaterEqual(
                     contrast(modes['dark']['primary'], modes['dark']['onPrimary']), 4.5, key)
         theme = read('ui/theme/Theme.kt')
-        self.assertIn('colorSystem: String = "SUNSET"',theme)
+        self.assertIn('colorSystem: String = "COBALT"',theme)
         self.assertNotIn('useDynamicColor',theme)
         self.assertNotIn('seeded',theme)
 

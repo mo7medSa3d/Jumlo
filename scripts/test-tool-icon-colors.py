@@ -62,8 +62,8 @@ class ToolIconColorContracts(unittest.TestCase):
         ordered = re.search(r'private val ORDERED = listOf\((.*?)\n    \)',
                             code, re.S).group(1)
         tools = re.findall(r'"([^"]+)"', ordered)
-        self.assertEqual(len(tools), 47, tools)
-        self.assertEqual(len(set(tools)), 47, 'duplicate tool id in ORDERED')
+        self.assertEqual(len(tools), 30, tools)
+        self.assertEqual(len(set(tools)), 30, 'duplicate tool id in ORDERED')
         colors = {}
         for index, tool_id in enumerate(tools):
             hexv = icon_hex(tool_id, index)

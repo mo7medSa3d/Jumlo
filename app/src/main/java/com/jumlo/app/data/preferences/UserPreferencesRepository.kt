@@ -67,6 +67,10 @@ class UserPreferencesRepository @Inject constructor(
         val MEDIA_RIGHTS_ACCEPTED = booleanPreferencesKey("media_rights_accepted")
     }
 
+    private companion object {
+        val TOOL_ID_PATTERN = Regex("[a-z0-9_]{1,64}")
+    }
+
     /**
      * The user must confirm they have the rights to the content before a media
      * download is queued. The answer is remembered so it is asked once, and it can
@@ -101,7 +105,7 @@ class UserPreferencesRepository @Inject constructor(
         if(raw.isNullOrBlank()) return emptyList()
         return Json.decodeFromString<List<ProcessingPreset>>(raw).also { items ->
             require(items.size <= 16 && items.all { it.version==1 &&
-                it.name.trim().length in 1..48 && it.toolId.matches(Regex("[a-z0-9_]{1,64}"))
+                it.name.trim().length in 1..48 && it.toolId.matches(TOOL_ID_PATTERN)
             }) { "PRESET_INVALID" }
         }
     }
@@ -131,7 +135,7 @@ class UserPreferencesRepository @Inject constructor(
         val counts = prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull { value ->
             val id = value.substringBefore('=')
             val count = value.substringAfter('=', "").toIntOrNull()
-            if (id.matches(Regex("[a-z0-9_]{1,64}")) && count != null && count > 0) id to count else null
+            if (id.matches(TOOL_ID_PATTERN) && count != null && count > 0) id to count else null
         }.toMap()
         val rankedTools = ToolUsagePolicy.ranked(counts, com.jumlo.app.data.jobs.CapabilityRegistry.tools.map { it.id })
         AppSettingsState(
@@ -149,11 +153,11 @@ class UserPreferencesRepository @Inject constructor(
             defaultAudioQuality = (prefs[Keys.DEFAULT_AUDIO_QUALITY] ?: 192).takeIf { it in setOf(320, 192, 128) } ?: 192,
             wifiOnlyDefault = false,
             fileViewMode = FileViewMode.fromStored(prefs[Keys.FILE_VIEW_MODE]),
-            colorSystem = (prefs[Keys.COLOR_SYSTEM] ?: "SUNSET").takeIf { isValidColorSystem(it) } ?: "SUNSET",
+            colorSystem = migrateColorSystem(prefs[Keys.COLOR_SYSTEM]),
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in setOf("SMALL","NORMAL","LARGE") } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
             quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: AppSettingsState().quickActionIds,
-            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter { it.matches(Regex("[a-z0-9_]{1,64}")) }.orEmpty(),
+            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter { it.matches(TOOL_ID_PATTERN) }.orEmpty(),
             mostUsedToolIds = rankedTools,
             rankedToolIds = rankedTools,
             favoriteOutputIds = OutputFavorites.sanitize(
@@ -171,13 +175,13 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun recordToolOpen(id:String) {
-        if(!id.matches(Regex("[a-z0-9_]{1,64}"))) return
+        if(!id.matches(TOOL_ID_PATTERN)) return
         context.dataStore.edit {prefs ->
             val oldRecent=prefs[Keys.RECENT_TOOLS].orEmpty().split('|').filter(String::isNotBlank)
             prefs[Keys.RECENT_TOOLS]=ToolUsagePolicy.recent(oldRecent,id).joinToString("|")
             val oldCounts=prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull {entry ->
                 val key=entry.substringBefore('='); val count=entry.substringAfter('=',"").toIntOrNull()
-                if(key.matches(Regex("[a-z0-9_]{1,64}")) && count!=null) key to count else null
+                if(key.matches(TOOL_ID_PATTERN) && count!=null) key to count else null
             }.toMap()
             prefs[Keys.TOOL_COUNTS]=ToolUsagePolicy.count(oldCounts,id).entries.joinToString("|") { "${it.key}=${it.value}" }
         }
@@ -201,7 +205,7 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setQuickActionIds(ids: List<String>) {
-        val safe=ids.filter { Regex("[a-z0-9_]{1,64}").matches(it) }.distinct().take(4)
+        val safe=ids.filter { TOOL_ID_PATTERN.matches(it) }.distinct().take(4)
         context.dataStore.edit { it[Keys.QUICK_ACTION_IDS] = safe.joinToString("|") }
     }
 
@@ -276,7 +280,16 @@ class UserPreferencesRepository @Inject constructor(
         context.dataStore.edit { it[Keys.NOTIFICATIONS_GRANTED] = granted }
     }
 
-    /** Exactly four color systems exist; anything else falls back to SUNSET. */
+    /** Maps legacy palette keys seamlessly into the four Cobalt-led studio systems. */
+    private fun migrateColorSystem(value: String?): String = when (value) {
+        "COBALT", "SUNSET" -> "COBALT"
+        "EMERALD", "LUIGI" -> "EMERALD"
+        "SAPPHIRE", "AURORA" -> "SAPPHIRE"
+        "AMETHYST", "VIOLA" -> "AMETHYST"
+        else -> "COBALT"
+    }
+
+    /** Exactly four color systems exist; anything else falls back to COBALT. */
     private fun isValidColorSystem(value: String): Boolean =
-        value in setOf("LUIGI", "AURORA", "VIOLA", "SUNSET")
+        value in setOf("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
 }

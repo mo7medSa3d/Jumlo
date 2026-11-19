@@ -60,7 +60,7 @@ def inspect_elf64(data, abi, label='ELF'):
 def inspect(path, expected=None, native_expected=None):
     path = Path(path)
     if expected is None:
-        expected = properties((ROOT / 'app/src/media/assets/media/extractor.properties').read_text())
+        expected = properties((ROOT / 'app/src/media/assets/media/extractor.properties').read_text(encoding='utf-8'))
     with zipfile.ZipFile(path) as apk:
         members = {entry.filename: entry for entry in apk.infolist()}
         if len(members) != len(apk.infolist()):
@@ -106,7 +106,7 @@ def inspect(path, expected=None, native_expected=None):
         overrides = {}
         if any(abi in ELF_MACHINES for abi in abis):
             if native_expected is None:
-                native_expected = properties((ROOT / 'app/src/media/assets/media/native-overrides/manifest.properties').read_text())
+                native_expected = properties((ROOT / 'app/src/media/assets/media/native-overrides/manifest.properties').read_text(encoding='utf-8'))
             native_manifest = properties(apk.read(NATIVE_OVERRIDE_ROOT + 'manifest.properties').decode())
             if native_manifest != native_expected:
                 raise ValueError('Packaged native repair metadata differs from source pin')

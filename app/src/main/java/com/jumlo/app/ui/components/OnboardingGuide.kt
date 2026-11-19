@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.jumlo.app.R
+import com.jumlo.app.ui.theme.JumloRadii
 
 /** Local-only first-use guide. No fake accounts, premium status or cloud promises. */
 @Composable
@@ -30,7 +31,7 @@ fun OnboardingGuide(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(JumloRadii.sheet),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             tonalElevation = 8.dp,
             modifier = Modifier.fillMaxWidth().testTag("onboarding.guide")

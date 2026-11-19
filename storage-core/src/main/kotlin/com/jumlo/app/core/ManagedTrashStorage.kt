@@ -3,6 +3,7 @@ package com.jumlo.app.core
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.StandardCopyOption
 import java.util.Properties
 import java.util.UUID
@@ -12,6 +13,7 @@ data class TrashRecovery(val entry:TrashEntry,val restored:Boolean)
 
 /** App-private trash transactions. Metadata never shares the payload's filename. */
 class ManagedTrashStorage(private val root:File) {
+    companion object { private val SHA256_HEX = Regex("[0-9a-f]{64}") }
     private val trash=File(root,"trash").apply { mkdirs() }
     private fun folder(id:String):File {
         require(runCatching { UUID.fromString(id).toString()==id }.getOrDefault(false)) { "INVALID_OUTPUT_IDENTITY" }
@@ -21,7 +23,7 @@ class ManagedTrashStorage(private val root:File) {
     }
     private fun validate(e:TrashEntry) {
         folder(e.id);require(SafeNames.basename(e.displayName)==e.displayName) { "INVALID_FILENAME" }
-        require(e.sizeBytes>=0 && Regex("[0-9a-f]{64}").matches(e.sha256) && Regex("[0-9a-f]{64}").matches(e.journalKey)) { "INVALID_TRASH_RECORD" }
+        require(e.sizeBytes>=0 && SHA256_HEX.matches(e.sha256) && SHA256_HEX.matches(e.journalKey)) { "INVALID_TRASH_RECORD" }
         require(e.recordJson.length<=1000000) { "INVALID_TRASH_RECORD" }
     }
     private fun active(e:TrashEntry):File {
@@ -65,7 +67,7 @@ class ManagedTrashStorage(private val root:File) {
         val backup=File(folder(e.id),"journal.properties")
         val from=if(restore) backup else live;val to=if(restore) live else backup
         if(from.exists()) {
-            require(!to.exists() && !Files.isSymbolicLink(from.toPath())) { "TRASH_JOURNAL_COLLISION" }
+            require(!Files.exists(to.toPath(), LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(from.toPath())) { "TRASH_JOURNAL_COLLISION" }
             to.parentFile.mkdirs();Files.move(from.toPath(),to.toPath(),StandardCopyOption.ATOMIC_MOVE)
         }
     }

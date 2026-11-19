@@ -33,8 +33,9 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('if (next == DockTab.DOWNLOADS)', nav)
         self.assertIn('MainDockTabs.forEach', dock)
         self.assertIn('destination == selectedTab', dock)
-        self.assertIn('.testTag("nav.indicator.${tab.name}")', dock)
-        self.assertIn('.selectable(selected = active, role = Role.Tab', dock)
+        self.assertIn('.testTag("nav.indicator.${destination.name}")', dock)
+        self.assertIn('NavigationBarItem(', dock)
+        self.assertIn('JumloAppIconBadge(', dock)
         self.assertIn('DownloadsRoute', nav)
         self.assertIn('com.jumlo.app.ui.downloads.DownloadsScreen', nav)
 

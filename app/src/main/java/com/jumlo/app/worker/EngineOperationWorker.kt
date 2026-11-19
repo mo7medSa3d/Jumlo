@@ -19,9 +19,12 @@ import kotlinx.coroutines.CancellationException
         val id=inputData.getString("job_id") ?: return Result.failure()
         return try {
             // WorkManager owns the foreground service lifecycle and OS stop handling.
-            // Do not start a long transfer if the OS denied foreground promotion.
-            // The failure is recorded below; cancellation must propagate to WorkManager.
-            setForeground(ProcessingNotification.create(applicationContext,id))
+            // On API 31-36, background retries or FGS quota limits can throw
+            // ForegroundServiceStartNotAllowedException (a subclass of IllegalStateException).
+            // Degrade to normal WorkManager execution instead of failing the job.
+            try { setForeground(ProcessingNotification.create(applicationContext,id)) }
+            catch(cancel:CancellationException) { throw cancel }
+            catch(error:IllegalStateException) { AppDiagnostics.report("worker_foreground_degraded",error) }
             if(jobs.execute(id,dispatcher)) Result.success() else Result.retry()
         }
         catch(cancel:CancellationException) { throw cancel }

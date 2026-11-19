@@ -86,8 +86,8 @@
     <string name="search_title">Search Tools &amp; Files</string>
     <string name="search_matching_utilities">Matching Utilities</string>
     <string name="search_suggested_tools">Suggested Tools</string>
-    <string name="search_recent_matching_files">Recent matching files in sandbox</string>
-    <string name="search_local_index_notice">Searches installed offline tools and granted sandbox locations. No web scraping or remote indexing.</string>
+    <string name="search_recent_matching_files">Recent matching files</string>
+    <string name="search_local_index_notice">Searches local tools and your files on this device. Nothing is sent online.</string>
 
     <!-- Choose Source Import (import_01) -->
     <string name="import_title">Import Intake</string>
@@ -150,7 +150,7 @@
 
     <!-- File Tools -->
     <string name="tool_browse_storage">Browse Storage</string>
-    <string name="tool_browse_storage_sub">Inspect internal &amp; granted SAF folders</string>
+    <string name="tool_browse_storage_sub">Browse app storage and linked folders</string>
     <string name="tool_create_zip">Create ZIP Archive</string>
     <string name="tool_create_zip_sub">Package files into compressed archive</string>
     <string name="tool_extract_zip">Extract ZIP Archive</string>
@@ -198,8 +198,8 @@
 
     <!-- Workspace & Tool Fields -->
     <string name="home_resume_workspace">Resume active workspace (%1$d)</string>
-    <string name="candidate_debug_notice">Candidate build: processing tools enabled in this debug build only. Not release-approved until the Android test and device matrix is green.</string>
-    <string name="candidate_release_notice">Candidate build: processing is disabled in non-debug builds until the Android test and device matrix is green.</string>
+    <string name="candidate_debug_notice">Preview build: processing tools are active in this test build.</string>
+    <string name="candidate_release_notice">Processing tools are unavailable in this build.</string>
     <string name="downloads_empty_title">No direct downloads yet</string>
     <string name="downloads_empty_sub">Queue a direct HTTPS file URL to download with progress, cancellation, and SHA-256 verification.</string>
     <string name="files_snapshots_title">Imported Source Snapshots</string>
@@ -298,7 +298,7 @@
     <string name="field_insert_at_page">Insert second PDF before page (1-based, when 2 PDFs selected)</string>
     <string name="field_forms_json">Field values (key=value per line)</string>
     <string name="field_flatten_form">Flatten form fields into static page content</string>
-    <string name="field_ocr_note">Runs on-device ML Kit text recognition to export .txt and a searchable PDF copy.</string>
+    <string name="field_ocr_note">Recognizes text on this device to export a .txt file and a searchable PDF.</string>
     <string name="field_output_format">Output format</string>
     <string name="field_target_width">Target width px</string>
     <string name="field_target_height">Target height px</string>
@@ -330,7 +330,7 @@
     <string name="field_rename_pattern">Pattern ({n} = index, {name} = base name)</string>
     <string name="field_rename_note">Publishes renamed copies of the selected files using the pattern and starting number.</string>
     <string name="field_duplicates_note">Computes SHA-256 across selected files and reports exact duplicate groups.</string>
-    <string name="field_trash_note">Lists items currently in Managed Trash and purges expired temporary staging files.</string>
+    <string name="field_trash_note">Lists items in Trash and removes expired temporary files.</string>
     <string name="field_drive_export_mode">Export selected files to Google Drive (otherwise Import)</string>
     <string name="field_drive_file_id">Google Drive file URL or ID</string>
     <string name="field_drive_folder_id">Destination folder ID (optional)</string>
@@ -355,7 +355,7 @@
     <string name="account_privacy_status">Documents on device • Downloads use the network</string>
     <string name="account_storage_stats">Engine Storage &amp; Space</string>
     <string name="account_clear_cache_btn">Clear Temporary Cache</string>
-    <string name="account_clear_cache_success">Temporary cache and staging cleared</string>
+    <string name="account_clear_cache_success">Temporary files cleared</string>
     <string name="account_preferences_header">Display &amp; Experience</string>
     <string name="home_greeting">Welcome back to Jumlo</string>
     <string name="home_greeting_sub">Private on-device powerhouse for media &amp; documents</string>
@@ -377,7 +377,7 @@
     <string name="files_workflow_size">The selected files may exceed available device storage. Free up space and try again; originals are unchanged.</string>
     <string name="files_workflow_invalid">Some selected files could not be prepared. Refresh Files and choose accessible files again.</string>
     <string name="files_workflow_limit">Select up to 1,000 files in one batch. Larger sets can be processed in more than one job.</string>
-    <string name="files_workflow_duplicates">The same file was selected twice. Please choose unique results.</string>
+    <string name="files_workflow_duplicates">The same file was selected twice. Choose distinct files.</string>
     <string name="files_favorites">Favorites</string>
     <string name="files_mark_favorite">Add to favorites</string>
     <string name="files_unmark_favorite">Remove from favorites</string>

@@ -75,18 +75,20 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
     var expanded by remember {mutableStateOf(false)}
     val haptics=rememberAppHaptics()
     val rowColors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     Surface(
         modifier = if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
             onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
             onLongClick=onLongClick
         ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier,
         shape = QuietTheme.shapes.card,
-        color = if(selection==true) rowColors.primaryContainer else rowColors.surfaceContainerLow,
+        color = if(selection==true) rowColors.primaryContainer else pillars.cardSurface,
         border = BorderStroke(
             1.dp,
-            if(selection==true) rowColors.primary.copy(alpha = 0.42f)
-            else rowColors.outlineVariant.copy(alpha = 0.54f)
-        )
+            if(selection==true) rowColors.primary.copy(alpha = 0.55f)
+            else pillars.cardBorder
+        ),
+        shadowElevation = 1.dp
     ) {
         Row(Modifier.fillMaxWidth().padding(start=12.dp,end=4.dp,top=10.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             if(selection!=null) Checkbox(selection,onCheckedChange=null)

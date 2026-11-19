@@ -26,7 +26,7 @@ class ErrorLog(private val file: File, private val maxBytes: Long = 256L * 1024)
         synchronized(lock) {
             file.parentFile?.mkdirs()
             if (file.exists() && file.length() > maxBytes) rotate()
-            file.appendText(line)
+            file.appendText(line, Charsets.UTF_8)
         }
     }
 
@@ -34,8 +34,8 @@ class ErrorLog(private val file: File, private val maxBytes: Long = 256L * 1024)
     // content is ever sent or exported without the user's explicit action.
     fun read(): String = synchronized(lock) {
         val archived = File(file.parentFile, file.name + ".1")
-        (if (archived.isFile) archived.readText() else "") +
-            (if (file.isFile) file.readText() else "")
+        (if (archived.isFile) archived.readText(Charsets.UTF_8) else "") +
+            (if (file.isFile) file.readText(Charsets.UTF_8) else "")
     }
 
     // Clearing diagnostics must also clear the previous rotation. Keeping .1
@@ -49,7 +49,7 @@ class ErrorLog(private val file: File, private val maxBytes: Long = 256L * 1024)
     private fun rotate() {
         val archive = File(file.parentFile, file.name + ".1")
         if (archive.exists()) archive.delete()
-        file.renameTo(archive)
+        if (!file.renameTo(archive)) file.delete()
     }
 
     companion object {
@@ -61,8 +61,6 @@ class ErrorLog(private val file: File, private val maxBytes: Long = 256L * 1024)
         fun sanitize(raw: String?): String? {
             val candidate = raw?.trim()?.uppercase(Locale.ROOT) ?: return null
             if (!CODE.matches(candidate)) return null
-            // Defense in depth: reject anything that looks like a URL or key=value payload.
-            if (candidate.contains("HTTP") && candidate.contains("://")) return null
             return candidate
         }
     }

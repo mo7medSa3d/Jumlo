@@ -4,6 +4,7 @@
 Usage: pdf-image-diagnostics.py INPUT.pdf [OUTPUT.md]
 """
 import sys, json, re, os
+from pathlib import Path
 from pypdf import PdfReader
 
 def norm_filter(v):
@@ -156,10 +157,11 @@ def main():
     if len(sys.argv) >= 3:
         outp = sys.argv[2]
         os.makedirs(os.path.dirname(outp) or ".", exist_ok=True)
-        with open(outp, "w") as f:
+        with open(outp, "w", encoding="utf-8") as f:
             f.write(md)
         # also write json sidecar
-        with open(outp.replace(".md",".json"), "w") as f:
+        json_out = Path(outp).with_suffix(".json")
+        with open(json_out, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
         print(f"wrote {outp}")
     else:

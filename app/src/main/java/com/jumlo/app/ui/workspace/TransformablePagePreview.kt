@@ -58,9 +58,17 @@ internal fun TransformablePagePreview(
     val latestCommit by rememberUpdatedState(onCommit)
     val latestAllowTranslation by rememberUpdatedState(allowTranslation)
     val accent=MaterialTheme.colorScheme.primary.toArgb()
+    val bitmapPaint=remember {Paint(Paint.FILTER_BITMAP_FLAG)}
+    val objectPaint=remember {Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)}
+    val strokePaint=remember(accent) {Paint(Paint.ANTI_ALIAS_FLAG).apply {color=accent;style=Paint.Style.STROKE}}
+    val fillPaint=remember(accent) {Paint(Paint.ANTI_ALIAS_FLAG).apply {color=accent}}
+    val pageNumberPaint=remember {Paint(Paint.ANTI_ALIAS_FLAG).apply {textSize=10f;color=android.graphics.Color.rgb(102,102,102)}}
+    val pageDstRect=remember {RectF()}
+    val objectDstRect=remember {RectF()}
     Column(horizontalAlignment=Alignment.CenterHorizontally) {
         BoxWithConstraints(Modifier.fillMaxWidth().testTag("preview.bitmap").clipToBounds(),contentAlignment=Alignment.Center) {
-            val aspect=frame.width.toFloat()/frame.height
+            val safeW=frame.width.coerceAtLeast(1);val safeH=frame.height.coerceAtLeast(1)
+            val aspect=safeW.toFloat()/safeH
             val width=minOf(maxWidth,560.dp,560.dp*aspect)
             Canvas(Modifier.size(width,width/aspect).testTag(tag).semantics {contentDescription=description}
                 .graphicsLayer {scaleX=pageZoom;scaleY=pageZoom;translationX=pagePan.x;translationY=pagePan.y}
@@ -97,6 +105,7 @@ internal fun TransformablePagePreview(
                             if(current!=null) {
                                 var center=current.center
                                 var w=current.width;var h=current.height;var angle=current.rotation
+                                if(size.width<=0 || size.height<=0) continue
                                 if(pressed>1) {
                                     if(latestAllowTranslation) center+=Offset(pan.x/size.width,pan.y/size.height)
                                     val scale=zoom.coerceIn(.5f,2f);w*=scale;h*=scale
@@ -119,7 +128,8 @@ internal fun TransformablePagePreview(
                                 }
                                 val scale=minOf(1f/w.coerceAtLeast(.001f),1f/h.coerceAtLeast(.001f),1f)
                                 w=(w*scale).coerceAtLeast(.025f);h=(h*scale).coerceAtLeast(.025f)
-                                if(latestAllowTranslation) center=Offset(center.x.coerceIn(w/2,1-w/2),center.y.coerceIn(h/2,1-h/2))
+                                val halfW=(w/2f).coerceAtMost(.5f);val halfH=(h/2f).coerceAtMost(.5f)
+                                if(latestAllowTranslation) center=Offset(center.x.coerceIn(halfW,1f-halfW),center.y.coerceIn(halfH,1f-halfH))
                                 updated=current.transform(center,w,h,angle)
                                 if(updated!=current) {latestTransform(requireNotNull(updated));changed=true}
                                 event.changes.forEach {it.consume()}
@@ -137,29 +147,36 @@ internal fun TransformablePagePreview(
                     val canvas=compose.nativeCanvas
                     canvas.save()
                     try {
-                        canvas.scale(size.width/frame.width,size.height/frame.height)
-                        canvas.drawBitmap(frame.bitmap,null,RectF(0f,0f,frame.width.toFloat(),frame.height.toFloat()),Paint(Paint.FILTER_BITMAP_FLAG))
+                        canvas.scale(size.width/safeW,size.height/safeH)
+                        if(!frame.bitmap.isRecycled) {
+                            pageDstRect.set(0f,0f,safeW.toFloat(),safeH.toFloat())
+                            canvas.drawBitmap(frame.bitmap,null,pageDstRect,bitmapPaint)
+                        }
                         objects.forEach {obj ->
-                            if(!obj.bitmap.isRecycled) {
-                                val boxW=obj.width*frame.width;val boxH=obj.height*frame.height
+                            if(!obj.bitmap.isRecycled && obj.bitmap.width>0 && obj.bitmap.height>0) {
+                                val boxW=obj.width*safeW;val boxH=obj.height*safeH
                                 val fit=minOf(boxW/obj.bitmap.width,boxH/obj.bitmap.height)
                                 val w=obj.bitmap.width*fit;val h=obj.bitmap.height*fit
-                                canvas.save();canvas.translate(obj.center.x*frame.width,obj.center.y*frame.height);canvas.rotate(obj.rotation)
-                                canvas.drawBitmap(obj.bitmap,null,RectF(-w/2,-h/2,w/2,h/2),Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {alpha=(obj.opacity.coerceIn(0f,1f)*255).roundToInt()})
+                                canvas.save();canvas.translate(obj.center.x*safeW,obj.center.y*safeH);canvas.rotate(obj.rotation)
+                                objectDstRect.set(-w/2,-h/2,w/2,h/2)
+                                objectPaint.alpha=(obj.opacity.coerceIn(0f,1f)*255).roundToInt()
+                                canvas.drawBitmap(obj.bitmap,null,objectDstRect,objectPaint)
                                 if(obj.id==selectedId) {
-                                    val unit=frame.width/size.width
-                                    val stroke=Paint(Paint.ANTI_ALIAS_FLAG).apply {color=accent;style=Paint.Style.STROKE;strokeWidth=2.dp.toPx()*unit}
-                                    val fill=Paint(Paint.ANTI_ALIAS_FLAG).apply {color=accent}
-                                    canvas.drawRect(-boxW/2,-boxH/2,boxW/2,boxH/2,stroke)
-                                    listOf(-boxW/2 to -boxH/2,boxW/2 to -boxH/2,-boxW/2 to boxH/2,boxW/2 to boxH/2).forEach {(x,y)->canvas.drawCircle(x,y,6.dp.toPx()*unit,fill)}
+                                    val unit=safeW/size.width.coerceAtLeast(1f)
+                                    strokePaint.strokeWidth=2.dp.toPx()*unit
+                                    canvas.drawRect(-boxW/2,-boxH/2,boxW/2,boxH/2,strokePaint)
+                                    val cornerR=6.dp.toPx()*unit
+                                    canvas.drawCircle(-boxW/2,-boxH/2,cornerR,fillPaint)
+                                    canvas.drawCircle(boxW/2,-boxH/2,cornerR,fillPaint)
+                                    canvas.drawCircle(-boxW/2,boxH/2,cornerR,fillPaint)
+                                    canvas.drawCircle(boxW/2,boxH/2,cornerR,fillPaint)
                                     val top=-boxH/2-28.dp.toPx()*unit
-                                    canvas.drawLine(0f,-boxH/2,0f,top,stroke);canvas.drawCircle(0f,top,7.dp.toPx()*unit,fill)
+                                    canvas.drawLine(0f,-boxH/2,0f,top,strokePaint);canvas.drawCircle(0f,top,7.dp.toPx()*unit,fillPaint)
                                 }
                                 canvas.restore()
                             }
                         }
-                        pageNumber?.let {number->canvas.drawText(number.toString(),frame.width*.47f,frame.height*.96f,
-                            Paint(Paint.ANTI_ALIAS_FLAG).apply {textSize=10f;color=android.graphics.Color.rgb(102,102,102)})}
+                        pageNumber?.let {number->canvas.drawText(number.toString(),frame.width*.47f,frame.height*.96f,pageNumberPaint)}
                     } finally {canvas.restore()}
                 }
             }

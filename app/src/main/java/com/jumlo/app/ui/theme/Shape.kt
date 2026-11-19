@@ -13,31 +13,31 @@ import androidx.compose.ui.unit.dp
  *  thumbnails all read from here, so this single change restyles Home, Tools, Files,
  *  Settings, workspaces, viewer and print together. */
 object JumloRadii {
-    val thumbnail = 16.dp
-    val field = 20.dp
-    val card = 28.dp
-    val sheet = 32.dp
-    val indicator = 21.dp
+    val extraSmall = 8.dp
+    val thumbnail = 12.dp
+    val field = 16.dp
+    val card = 20.dp
+    val dock = 24.dp
+    val sheet = 28.dp
+    val indicator = 14.dp
 }
 
 @Immutable
 data class QuietPrecisionElevation(
     val flat: Dp = 0.dp,
     val raised: Dp = 2.dp,
-    val floating: Dp = 8.dp,
-    val overlay: Dp = 14.dp
+    val floating: Dp = 10.dp,
+    val overlay: Dp = 16.dp
 )
 
 /**
- * Jumlo 2026 shape language: expressive controls without oversized stacked cards.
- * Field names remain stable so all routes share the same hierarchy.
+ * Jumlo Studio shape language: crisp architectural radii with disciplined hierarchy.
  *
- * - Thumbnails and tags: 16dp
- * - Inputs and search: 20dp
- * - Buttons: 20dp
- * - Cards and tiles: 28dp
- * - Sheets and overlays: 32dp top radius
- * - Floating navigation: 32dp pill
+ * - Thumbnails and tags: 12dp
+ * - Inputs, search, and buttons: 16dp
+ * - Cards and tiles: 20dp
+ * - Sheets and overlays: 28dp top radius
+ * - Floating navigation dock: 24dp rounded pill
  */
 @Immutable
 data class QuietPrecisionShapes(
@@ -46,7 +46,7 @@ data class QuietPrecisionShapes(
     val button: RoundedCornerShape = RoundedCornerShape(JumloRadii.field),
     val card: RoundedCornerShape = RoundedCornerShape(JumloRadii.card),
     val modalSheetTop: RoundedCornerShape = RoundedCornerShape(topStart = JumloRadii.sheet, topEnd = JumloRadii.sheet),
-    val dockPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.sheet),
+    val dockPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.dock),
     val activeIndicatorPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.indicator)
 )
 
@@ -59,30 +59,30 @@ data class QuietPrecisionSpacing(
     val xl: Dp = 28.dp,
     val canvasGutterCompact: Dp = 20.dp,
     val canvasGutterMedium: Dp = 28.dp,
-    val cardInteriorPadding: Dp = 20.dp,
-    val interCardGap: Dp = 14.dp,
-    val sectionGap: Dp = 32.dp,
+    val cardInteriorPadding: Dp = 18.dp,
+    val interCardGap: Dp = 12.dp,
+    val sectionGap: Dp = 28.dp,
     val dockWidth: Dp = 400.dp,
-    val dockHeight: Dp = 72.dp,
-    val dockBottomOffset: Dp = 14.dp,
-    val listBottomBuffer: Dp = 24.dp,
-    val primaryButtonHeight: Dp = 56.dp,
+    val dockHeight: Dp = 70.dp,
+    val dockBottomOffset: Dp = 12.dp,
+    val listBottomBuffer: Dp = 36.dp,
+    val primaryButtonHeight: Dp = 54.dp,
     val tonalButtonHeight: Dp = 48.dp,
-    val fileRowStandardHeight: Dp = 76.dp,
+    val fileRowStandardHeight: Dp = 74.dp,
     val fileRowCompactHeight: Dp = 60.dp,
     val touchTarget: Dp = 48.dp
 )
 
-/** Icon tiles and avatars use full circles / squircles from here. */
-val IconTileShape = RoundedCornerShape(14.dp)
+/** Icon tiles and avatars use crisp squircles / circles from here. */
+val IconTileShape = RoundedCornerShape(JumloRadii.thumbnail)
 val AvatarShape = CircleShape
 
 val Material3Shapes = Shapes(
-    extraSmall = RoundedCornerShape(10.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(18.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(JumloRadii.extraSmall),
+    small = RoundedCornerShape(JumloRadii.thumbnail),
+    medium = RoundedCornerShape(JumloRadii.field),
+    large = RoundedCornerShape(JumloRadii.card),
+    extraLarge = RoundedCornerShape(JumloRadii.sheet)
 )
 
 val LocalQuietShapes = staticCompositionLocalOf { QuietPrecisionShapes() }

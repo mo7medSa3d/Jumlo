@@ -11,7 +11,7 @@ private var passed = 0
 private var failed = 0
 private fun test(name: String, block: () -> Unit) {
     try { block(); passed++; println("PASS $name") }
-    catch (e: Throwable) { failed++; println("FAIL $name: ${e.javaClass.simpleName}: ${e.message}"); e.printStackTrace() }
+    catch (e: Throwable) { failed++; println("FAIL $name: ${e.javaClass.simpleName}: ${e.message}"); e.stackTrace.take(5).forEach { println("  at $it") } }
 }
 private inline fun <reified T : Throwable> rejects(block: () -> Unit) {
     try { block() } catch (e: Throwable) { check(e is T) { "Expected ${T::class}, got ${e.javaClass}" }; return }
@@ -398,14 +398,14 @@ fun main() {
         check(Capabilities.isEnabled("dl_media"))
         check(CapabilityPolicy.canProcess("dl_media"))
     }
-    test("file_drive enabled; removed dead tools stay unavailable") {
-        check(Capabilities.isEnabled("file_drive")) { "file_drive must be enabled" }
-        check(!Capabilities.isEnabled("webpage_pdf")) { "webpage_pdf must stay unavailable" }
-        check(!Capabilities.isEnabled("xf_05")) { "xf_05 must stay unavailable" }
+    test("retired tools stay unavailable") {
+        for (id in listOf("file_drive", "pdf_clean", "file_trash", "pdf_compare", "pdf_redact", "img_compare", "sha256", "webpage_pdf", "xf_05")) {
+            check(!Capabilities.isEnabled(id)) { "$id must stay unavailable" }
+        }
     }
     test("implemented document and encrypted archive capabilities are available in the catalog") {
         // Real PDF and authenticated AES fixture suites cover these backends.
-        for (id in listOf("pdf_protect", "pdf_clean", "file_encrypted_zip", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx")) {
+        for (id in listOf("pdf_protect", "file_encrypted_zip", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf")) {
             check(Capabilities.isEnabled(id)) { "$id must be available" }
             check(CapabilityPolicy.canProcess(id)) { "$id must be processable" }
         }
@@ -502,7 +502,7 @@ fun main() {
         check(StoragePaths.uniqueName("work.pdf",setOf("work.pdf","work (2).pdf"))=="work (3).pdf")
         rejects<IllegalArgumentException> { StoragePaths.uniqueName("../../escape.pdf",emptySet()) }
     }
-    test("navigation-only download settings is a supported capability") { check(Capabilities.isEnabled("dl_settings")) }
+    test("navigation-only scanner is a supported capability") { check(Capabilities.isEnabled("scan_doc")) }
     test("publication normalizes names once before journal recovery") { tmp { root ->
         val p=DurablePublication(root)
         val ticket=p.reserve(UUID.randomUUID().toString(),"unicode","cafe\u0301.bin","application/octet-stream")
@@ -512,7 +512,7 @@ fun main() {
         check(DurablePublication(root).reconcile().single().file.readText()=="original bytes")
     } }
     test("navigation routes can never enter the processing dispatcher policy") {
-        for (id in listOf("dl_settings", "file_02", "pdf_01", "file_trash")) {
+        for (id in listOf("pdf_01", "scan_doc")) {
             check(CapabilityPolicy.availability(id).visible)
             check(!CapabilityPolicy.canProcess(id))
         }

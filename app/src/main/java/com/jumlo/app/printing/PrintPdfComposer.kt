@@ -205,8 +205,10 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
     override fun preview(file:File,index:Int,maxEdge:Int):Bitmap {
         ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRendererFactory.open(fd, context.cacheDir).use { renderer ->
             renderer.openPage(index).use { page ->
-                val scale=min(maxEdge.toDouble()/page.width,maxEdge.toDouble()/page.height)
-                val bitmap=Bitmap.createBitmap((page.width*scale).roundToInt().coerceAtLeast(1),(page.height*scale).roundToInt().coerceAtLeast(1),Bitmap.Config.ARGB_8888)
+                val edge=maxEdge.coerceIn(64,2400).toDouble()
+                val pw=page.width.coerceAtLeast(1);val ph=page.height.coerceAtLeast(1)
+                val scale=min(edge/pw,edge/ph)
+                val bitmap=Bitmap.createBitmap((pw*scale).roundToInt().coerceAtLeast(1),(ph*scale).roundToInt().coerceAtLeast(1),Bitmap.Config.ARGB_8888)
                 try {bitmap.eraseColor(Color.WHITE);page.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);return bitmap}
                 catch(t:Throwable) {bitmap.recycle();throw t}
             }

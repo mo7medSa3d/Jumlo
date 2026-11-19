@@ -348,7 +348,7 @@ data class MediaUiState(
                     url,customName,s.wifiOnly,s.unmetered,s.allowHttp
                 )
                 val now = System.currentTimeMillis()
-                if(signature==lastSignature && lastJob!=null && now - lastSubmissionTime < 1500L) { onQueued(lastJob!!);return@launch }
+                val previousJob=lastJob; if(signature==lastSignature && previousJob!=null && now - lastSubmissionTime < 1500L) { onQueued(previousJob);return@launch }
                 lastSubmissionTime = now
                 val request=submissions.existing(signature) ?: run {
                     val chars=url.toCharArray()

@@ -54,27 +54,15 @@ dl = read("data/processing/DownloadOperationHandler.kt")
 check("dl direct: networkPolicy still enforces wifiOnly", "if(settings.wifiOnly" in dl)
 check("dl direct: networkPolicy still enforces unmeteredOnly", "if(settings.unmeteredOnly" in dl)
 
-# 2. Annotate / overlayImage must fail on out-of-range pages.
+# 2. PdfOperationHandler must never silently clamp out-of-range pages.
 pdf = read("data/processing/PdfOperationHandler.kt")
 check(
-    "annotate: no silent page clamp",
-    '.coerceIn(1,doc.numberOfPages' not in pdf,
-)
-check(
-    "annotate: out-of-range page fails with INVALID_PAGE_INDEX",
-    'require(page in 1..doc.numberOfPages) { "INVALID_PAGE_INDEX" }' in pdf,
-)
-check(
-    "overlayImage: no silent target clamp",
-    ".coerceIn(0,(doc.numberOfPages-1)" not in pdf,
-)
-check(
-    "overlayImage: out-of-range target fails with INVALID_PAGE_INDEX",
-    'require(target in 0 until doc.numberOfPages) { "INVALID_PAGE_INDEX" }' in pdf,
-)
-check(
-    "no other numberOfPages/pageCount coerceIn clamps remain in PdfOperationHandler",
+    "no silent numberOfPages/pageCount coerceIn clamps remain in PdfOperationHandler",
     "coerceIn(1,doc.numberOfPages" not in pdf and "coerceIn(0,(doc.numberOfPages" not in pdf,
+)
+check(
+    "retired annotate and overlayImage operations are absent from PdfOperationHandler",
+    '"annotate" ->' not in pdf and '"overlayImage" ->' not in pdf,
 )
 
 # 3. KDoc must describe insertion order, not sorted output.
@@ -84,11 +72,11 @@ check(
     "returns a sorted list" not in pure and "NOT sorted" in pure,
 )
 
-# 4. Dead branch removed.
+# 4. Retired pdf_annotate branch removed cleanly.
 draft = read("model/WorkspaceDraft.kt")
 check(
     "pdf_annotate dead branch removed",
-    "if(kind.carriesText) text1 else text1" not in draft and "val body=text1" in draft,
+    "if(kind.carriesText) text1 else text1" not in draft and '"pdf_annotate"' not in draft,
 )
 
 # 5. formatBytes covers TB and PB.

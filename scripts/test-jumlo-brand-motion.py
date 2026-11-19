@@ -12,7 +12,7 @@ JAVA=ROOT/'app/src/main/java/com/jumlo/app'
 RES=ROOT/'app/src/main/res'
 BRAND=ROOT/'brand'
 
-def code(path): return (JAVA/path).read_text()
+def code(path): return (JAVA/path).read_text(encoding="utf-8")
 def lum(value):
     rgb=[int(value[i:i+2],16)/255 for i in (0,2,4)]
     parts=[c/12.92 if c<=0.04045 else ((c+0.055)/1.055)**2.4 for c in rgb]
@@ -26,13 +26,13 @@ class JumloBrandMotionChecks(unittest.TestCase):
         for locale in ('values','values-ar'):
             values={e.attrib.get('name'):e.text for e in ET.parse(RES/locale/'strings.xml').getroot() if e.tag=='string'}
             self.assertEqual(values['app_name'],'Jumlo')
-        self.assertIn('@string/app_name',(ROOT/'app/src/main/AndroidManifest.xml').read_text())
+        self.assertIn('@string/app_name',(ROOT/'app/src/main/AndroidManifest.xml').read_text(encoding="utf-8"))
         self.assertIn('jumlo-errors.txt',code('ui/navigation/JumloNavHost.kt'))
     def test_upgrade_identity_preserved(self):
-        manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
+        manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text(encoding="utf-8")
         self.assertIn('android:scheme="jumlo"',manifest)
         self.assertIn('android:host="workspace"',manifest)
-        self.assertIn('applicationId = "com.jumlo.app"',(ROOT/'app/build.gradle.kts').read_text())
+        self.assertIn('applicationId = "com.jumlo.app"',(ROOT/'app/build.gradle.kts').read_text(encoding="utf-8"))
     def test_all_icon_sources_are_parseable_svg(self):
         expected=['jumlo-icon-light.svg','jumlo-icon-dark.svg','jumlo-icon-tinted.svg','jumlo-adaptive-foreground.svg','jumlo-monochrome.svg']
         for name in expected:
@@ -42,7 +42,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
                 self.assertIn('viewBox',root.attrib)
     def test_ios_icon_exports_are_present_without_claiming_ios_app(self):
         folder=BRAND/'ios/JumloAppIcon.appiconset'
-        manifest=json.loads((folder/'Contents.json').read_text())
+        manifest=json.loads((folder/'Contents.json').read_text(encoding="utf-8"))
         self.assertEqual(3,len(manifest['images']))
         for record in manifest['images']:
             data=(folder/record['filename']).read_bytes()
@@ -59,7 +59,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
         """
         import struct
         folder=BRAND/'ios/JumloAppIcon.appiconset'
-        manifest=json.loads((folder/'Contents.json').read_text())
+        manifest=json.loads((folder/'Contents.json').read_text(encoding="utf-8"))
         for record in manifest['images']:
             with self.subTest(filename=record['filename']):
                 data=(folder/record['filename']).read_bytes()
@@ -71,7 +71,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_ios_icon_sources_are_full_bleed_with_no_own_corner_mask(self):
         for variant in ('light','dark','tinted'):
             with self.subTest(variant=variant):
-                text=(BRAND/'svg'/f'jumlo-ios-icon-{variant}.svg').read_text()
+                text=(BRAND/'svg'/f'jumlo-ios-icon-{variant}.svg').read_text(encoding="utf-8")
                 self.assertNotIn('rx="106"',text,'the iOS tile must not round its own corners')
                 root=ET.parse(BRAND/'svg'/f'jumlo-ios-icon-{variant}.svg').getroot()
                 self.assertEqual('0 0 512 512',root.attrib['viewBox'])
@@ -106,7 +106,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
         h=code('ui/util/AppHaptics.kt')
         for part in ('HapticIntensity.STRONG','HapticIntensity.LIGHT','VibrationEffect.createWaveform','HAPTIC_FEEDBACK_ENABLED','Event.SUCCESS','Event.ERROR','Event.DELETE'):
             self.assertIn(part,h)
-        self.assertIn('android.permission.VIBRATE',(ROOT/'app/src/main/AndroidManifest.xml').read_text())
+        self.assertIn('android.permission.VIBRATE',(ROOT/'app/src/main/AndroidManifest.xml').read_text(encoding="utf-8"))
     def test_haptics_use_persisted_preferences_and_live_composition(self):
         repo=code('data/preferences/UserPreferencesRepository.kt')
         settings=code('ui/settings/SettingsScreen.kt')
@@ -123,11 +123,11 @@ class JumloBrandMotionChecks(unittest.TestCase):
         self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',main)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
-        for key in ('animateColorAsState','animateFloatAsState','MainDockTabs.forEach',
+        for key in ('NavigationBar(','NavigationBarItem(','NavigationBarDefaults.windowInsets',
+                    'JumloAppIconBadge(','animateFloatAsState','MainDockTabs.forEach',
                     'destination == selectedTab','if (language.isRtl) destination.labelAr else destination.labelEn',
-                    '.selectable(selected = active, role = Role.Tab','navigationTab()',
-                    'contentDescription = label','Modifier.fillMaxWidth(.88f).widthIn(max = 64.dp)',
-                    '.clip(RoundedCornerShape(14.dp)).background(indicatorColor)'):
+                    'navigationTab()','contentDescription = label',
+                    'indicatorColor = colors.primaryContainer'):
             self.assertIn(key,dock)
         self.assertIn('listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)',dock)
     def test_system_and_user_reduce_motion_are_combined(self):
@@ -161,7 +161,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_semantic_color_pairs_meet_aa_text_contrast(self):
         text=code('ui/theme/ColorSystems.kt')
         constants={k:v.upper() for k,v in re.findall(r'private val (\w+) = Color\(0xFF([A-Fa-f0-9]{6})\)',text)}
-        for key in ('LUIGI','AURORA','VIOLA','SUNSET'):
+        for key in ('COBALT','EMERALD','SAPPHIRE','AMETHYST'):
             start=text.index(f'val {key} = ColorSystem(')
             nxt=re.search(r'\n    val [A-Z]+ = ColorSystem\(',text[start+10:])
             block=text[start:start+10+nxt.start()] if nxt else text[start:]

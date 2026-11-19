@@ -111,19 +111,12 @@ class FailureFixContracts(unittest.TestCase):
         self.assertIn('vm.imported', home)
         self.assertIn('sourceName', home)
 
-    def test_drive_split_sites(self):
-        client = read(APP / 'data/files/GoogleDriveClient.kt')
-        self.assertIn('401 -> "DRIVE_TOKEN_EXPIRED"', client)
-        handler = read(APP / 'data/processing/FileExtrasHandler.kt')
-        self.assertGreaterEqual(handler.count('DRIVE_TOKEN_MISSING'), 2,
-                                'lost handle and empty token are both missing-token')
-        view_model = read(APP / 'ui/AppViewModel.kt')
-        self.assertIn('DRIVE_TOKEN_MISSING', view_model)
+    def test_retired_drive_client_removed(self):
+        self.assertFalse((APP / 'data/files/GoogleDriveClient.kt').exists(),
+                         'retired GoogleDriveClient.kt must remain removed')
         store = read(APP / 'data/jobs/JobStore.kt')
         self.assertIn('DRIVE_TOKEN_MISSING', store)
         self.assertIn('DRIVE_TOKEN_EXPIRED', store)
-        nav = read(APP / 'ui/navigation/JumloNavHost.kt')
-        self.assertIn('DRIVE_SIGNIN_CANCELLED', nav)
 
     def test_no_duplicate_string_names(self):
         # Within one file, and across files of the same qualifier: a

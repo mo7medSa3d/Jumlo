@@ -136,14 +136,14 @@ object MediaCatalog {
 }
 
 object MediaLinks {
+    private val URL_PATTERN = Regex("https?://[^\\s<>\"\\u0000-\\u001f]+", RegexOption.IGNORE_CASE)
     /** Share intents often contain captions and several links. Return only validated, unique
      * HTTP(S) URLs in their original order. Do not resolve DNS, execute page scripts, or
      * interpret arbitrary prose as a URL. Transfer-time consent remains enforced separately. */
     fun sharedUrls(text: String): List<String> {
         require(text.length <= 100000) { "INVALID_DOWNLOAD_LIST" }
         val seen = LinkedHashSet<String>()
-        val pattern = Regex("https?://[^\\s<>\\\"\\u0000-\\u001f]+", RegexOption.IGNORE_CASE)
-        for (match in pattern.findAll(text)) {
+        for (match in URL_PATTERN.findAll(text)) {
             val candidate = match.value.trimEnd('.', ',', ';', ')', ']', '!').substringBefore('#')
             val uri = runCatching { HttpPolicy.url(candidate, cleartext = true) }.getOrNull() ?: continue
             if (privateSharedHost(uri.host.orEmpty())) continue
@@ -162,6 +162,7 @@ object MediaLinks {
         val parts = host.split('.')
         val ipv4 = parts.map { it.toIntOrNull() }
         if (ipv4.size == 4 && ipv4.all { it != null && it in 0..255 }) {
+            if (parts.any { it.length > 1 && it.startsWith('0') }) return true
             val a = ipv4[0]!!; val b = ipv4[1]!!
             return a == 0 || a == 10 || a == 127 || a >= 224 ||
                 (a == 169 && b == 254) || (a == 172 && b in 16..31) ||
@@ -177,7 +178,7 @@ object MediaLinks {
         require(text.length <= 32768) { "INVALID_URL" }
         val trimmed = text.trim()
         val direct = trimmed.takeIf { (it.startsWith("https://", true) || it.startsWith("http://", true)) && it.none(Char::isWhitespace) }
-        val urls = direct?.let(::listOf) ?: Regex("https?://[^\\s<>\"\\u0000-\\u001f]+", RegexOption.IGNORE_CASE).findAll(trimmed).map { it.value.trimEnd('.', ',', ')', ']') }.toList()
+        val urls = direct?.let(::listOf) ?: URL_PATTERN.findAll(trimmed).map { it.value.trimEnd('.', ',', ')', ']') }.toList()
         require(urls.isNotEmpty()) { "INVALID_URL" }
         require(urls.size == 1) { "MULTIPLE_MEDIA_LINKS" }
         val candidate = urls.single().substringBefore('#')
@@ -192,13 +193,13 @@ object MediaArguments {
     fun probe(url: String, allowHttp: Boolean = false): List<String> = common() + listOf(
         "--skip-download", "--dump-single-json", "--no-warnings", "--flat-playlist",
         "--compat-options", "no-youtube-unavailable-videos",
-        "--extractor-args", "youtube:player_client=android_vr,android,web",
+        "--extractor-args", "youtube:player_client=web_embedded",
         "--", MediaLinks.normalize(url, allowHttp)
     )
     fun download(url: String, choice: MediaChoice, audio: AudioOutput = AudioOutput.ORIGINAL, bitrate: Int = 192, allowHttp: Boolean = false): List<String> {
         require(bitrate in setOf(64, 96, 128, 160, 192, 256, 320)) { "INVALID_AUDIO_BITRATE" }
         val args = common().toMutableList()
-        args += listOf("--extractor-args", "youtube:player_client=android_vr,android,web", "--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
+        args += listOf("--extractor-args", "youtube:player_client=web_embedded", "--format", MediaCatalog.validateSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
         if (choice.mode == MediaMode.AUDIO) {
             args += listOf("--extract-audio", "--audio-format", if (audio == AudioOutput.ORIGINAL) "best" else audio.name.lowercase(Locale.ROOT))
             if (audio != AudioOutput.ORIGINAL) args += listOf("--audio-quality", "${bitrate}K")
@@ -212,6 +213,8 @@ object MediaArguments {
 }
 
 object MediaOutputPolicy {
+    private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
+    private val WHITESPACE = Regex("\\s+")
     private val mime = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "mov" to "video/quicktime", "mkv" to "video/x-matroska", "webm" to "video/webm", "m4a" to "audio/mp4", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "opus" to "audio/ogg", "flac" to "audio/flac", "wav" to "audio/wav", "aac" to "audio/aac", "ts" to "video/mp2t")
     fun finishedFile(root: File): File {
         val files = root.listFiles()?.filter { it.name.startsWith("media.") && it.extension.lowercase(Locale.ROOT) in mime.keys } ?: emptyList()
@@ -246,21 +249,22 @@ object MediaOutputPolicy {
     }
     fun displayName(title: String, extension: String): String {
         require(extension in mime) { "INVALID_MEDIA_EXTENSION" }
-        var clean = title.replace(Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]"), " ").replace(Regex("\\s+"), " ").trim(' ', '.')
+        var clean = title.replace(INVALID_NAME_CHARS, " ").replace(WHITESPACE, " ").trim(' ', '.')
         val sourceExtension = clean.substringAfterLast('.', "").lowercase(Locale.ROOT)
         if(sourceExtension in mime) clean=clean.dropLast(sourceExtension.length+1).trimEnd(' ', '.')
         if (clean.isBlank()) clean = "media"
         val limit = 198 - extension.toByteArray(Charsets.UTF_8).size
         while (clean.toByteArray(Charsets.UTF_8).size > limit) clean = clean.dropLast(if (clean.length >= 2 && Character.isLowSurrogate(clean.last()) && Character.isHighSurrogate(clean[clean.lastIndex-1])) 2 else 1)
-        return SafeNames.basename("${clean.trimEnd(' ', '.')}.$extension")
+        return SafeNames.basename("${clean.trimEnd(' ', '.').ifBlank { "media" }}.$extension")
     }
 }
 
 object MediaProgressParser {
+    private val FORMAT_ID = Regex("[A-Za-z0-9_.+-]{1,200}")
     fun parse(line: String): MediaProgress? {
         if (!line.startsWith("UU_PROGRESS:") || line.length > 512) return null
         val fields = line.removePrefix("UU_PROGRESS:").split('|')
-        if (fields.size != 6 || !Regex("[A-Za-z0-9_.+-]{1,200}").matches(fields[0])) return null
+        if (fields.size != 6 || !FORMAT_ID.matches(fields[0])) return null
         fun nonNegative(value: String) = value.toLongOrNull()?.takeIf { it >= 0 }
         val done = nonNegative(fields[1]) ?: return null
         val total = nonNegative(fields[2])?.takeIf { it >= done }

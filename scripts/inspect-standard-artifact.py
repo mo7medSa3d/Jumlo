@@ -65,7 +65,7 @@ for artifact in args.artifacts:
     row['passed'] = not row['forbidden_markers'] and not row['elf64_alignment_failures']
     results.append(row)
 args.output.parent.mkdir(parents=True, exist_ok=True)
-args.output.write_text(json.dumps({'scope': 'Known extended-media filenames/DEX markers and ELF64 PT_LOAD alignment >=16KB. Pair with dependency graph and APK zipalign check. Not a full license audit or 16KB runtime/RELRO/device qualification.', 'artifacts': results}, indent=2) + '\n')
+args.output.write_text(json.dumps({'scope': 'Known extended-media filenames/DEX markers and ELF64 PT_LOAD alignment >=16KB. Pair with dependency graph and APK zipalign check. Not a full license audit or 16KB runtime/RELRO/device qualification.', 'artifacts': results}, indent=2) + '\n', encoding='utf-8')
 for row in results:
     print(('PASS' if row['passed'] else 'FAIL'), row['path'], row['sha256'], 'native_entries=' + str(len(row['native_entries'])))
 sys.exit(0 if all(row['passed'] for row in results) else 1)

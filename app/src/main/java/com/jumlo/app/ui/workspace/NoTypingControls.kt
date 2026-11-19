@@ -20,7 +20,7 @@ import java.security.SecureRandom
 @Composable
 internal fun PresetChipsRow(presets: List<String>, selected: String, onSelect: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(presets, key = { it }) { preset ->
+        items(presets, key = { it }, contentType = { "preset-chip" }) { preset ->
             FilterChip(selected = preset == selected, onClick = { onSelect(preset) }, border = null,
                 label = { Text(preset) })
         }
@@ -73,28 +73,30 @@ internal fun PasteButton(onPaste: (String) -> Unit) {
  * Returns null for "all"/blank, the expanded count otherwise, -1 if unparseable.
  */
 internal fun countSelectedPages(spec: String): Int? {
-    val s = spec.trim()
+    val s = com.jumlo.app.model.WorkspaceDraft.normalizeDigits(spec).trim()
     if (s.isEmpty() || s.equals("all", true)) return null
-    var count = 0
+    var count = 0L
     for (part in s.split(",")) {
         val p = part.trim()
         if (p.isEmpty()) continue
         val range = p.split("-")
         when (range.size) {
             1 -> {
-                range[0].toIntOrNull() ?: return -1
+                val a = range[0].toIntOrNull() ?: return -1
+                if (a < 1) return -1
                 count++
             }
             2 -> {
                 val a = range[0].trim().toIntOrNull() ?: return -1
                 val b = range[1].trim().toIntOrNull() ?: return -1
-                if (b < a) return -1
-                count += b - a + 1
+                if (a < 1 || b < a) return -1
+                count += b.toLong() - a.toLong() + 1L
             }
             else -> return -1
         }
+        if (count > Int.MAX_VALUE) return -1
     }
-    return count
+    return count.toInt()
 }
 
 @Composable

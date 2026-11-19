@@ -14,6 +14,7 @@ class UiSoundPlayer(private val context: Context) {
         AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build()
     private val loaded=mutableSetOf<Int>()
+    @Volatile private var released=false
     private val soundIds: Map<Cue,Int>
     init {
         pool.setOnLoadCompleteListener { _,sampleId,status ->
@@ -29,10 +30,14 @@ class UiSoundPlayer(private val context: Context) {
         )
     }
     fun play(cue:Cue, enabled:Boolean) {
+        if(released) return
         val manager=audio ?: return
         if(!enabled || manager.ringerMode!=AudioManager.RINGER_MODE_NORMAL || manager.getStreamVolume(AudioManager.STREAM_SYSTEM)==0) return
         val sample=soundIds[cue] ?: return
-        if(synchronized(loaded) {sample in loaded}) pool.play(sample,.22f,.22f,1,0,1f)
+        if(synchronized(loaded) {sample in loaded}) runCatching { pool.play(sample,.22f,.22f,1,0,1f) }
     }
-    fun release() = pool.release()
+    fun release() {
+        released=true
+        runCatching { pool.release() }
+    }
 }

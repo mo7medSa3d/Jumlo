@@ -14,7 +14,6 @@ object ImageOutputEncoder {
     fun outputSettings(toolId:String,settings:ImageConversionSettings):ImageConversionSettings = when(toolId) {
         "img_01" -> settings
         "img_04" -> if(settings.format=="PNG") settings.copy(format="WEBP") else settings
-        "img_target" -> settings.copy(format="JPEG")
         else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
     }
 
@@ -27,12 +26,6 @@ object ImageOutputEncoder {
         checkCancel()
         val result=when(toolId) {
             "img_04" -> BitmapTransforms.encodeGuaranteedSmallerWithResult(bitmap,destination,originalBytes,effective,budget,checkCancel)
-            "img_target" -> {
-                require(targetBytes>0L && targetBytes<Long.MAX_VALUE) { "INVALID_IMAGE_SIZE_BOUND" }
-                BitmapTransforms.encodeGuaranteedSmallerWithResult(bitmap,destination,targetBytes+1L,effective,budget,checkCancel).also {
-                    require(it.sizeBytes in 1..targetBytes) { "IMAGE_SIZE_BOUND_UNMET" }
-                }
-            }
             else -> BitmapTransforms.encodeWithResult(bitmap,destination,effective,budget,checkCancel)
         }
         checkCancel()
@@ -68,11 +61,9 @@ object ImageEncodingPreview {
         checkCancel()
         require(maxEdge in 1..1600 && maxBitmapBytes>=12L) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
         require(minFreeBytes>=0L) { "DISK_BUDGET_EXCEEDED" }
-        val target=if(toolId=="img_target") Json.decodeFromString<ImageTargetSettings>(settingsJson) else null
         val output=when(toolId) {
             "img_01" -> Json.decodeFromString<ImageConversionSettings>(settingsJson)
             "img_04" -> Json.decodeFromString<ImageCompressionSettings>(settingsJson).output
-            "img_target" -> requireNotNull(target).output
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
         require(output.stripMetadata) { "METADATA_PRESERVATION_UNQUALIFIED" }
@@ -98,14 +89,14 @@ object ImageEncodingPreview {
             val input=decoded.bitmap.also {before=it}
             check()
             val candidate=File(directory,"encoded.tmp")
-            val result=ImageOutputEncoder.encode(input,candidate,toolId,output,source.length(),workingBudget,target?.targetBytes ?: 0L,check)
+            val result=ImageOutputEncoder.encode(input,candidate,toolId,output,source.length(),workingBudget,0L,check)
             check()
             val encoded=BitmapTransforms.decode(candidate,workingBudget-input.allocationByteCount.toLong()).bitmap.also {after=it}
             require(encoded.width==result.width && encoded.height==result.height) { "IMAGE_VERIFY_FAILED" }
             check()
             val preview=EncodedImagePreview(input,encoded,source.length(),info.normalizedWidth,info.normalizedHeight,
                 result.sizeBytes,result.width,result.height,result.format,result.quality,
-                input.width!=info.normalizedWidth || input.height!=info.normalizedHeight,target?.targetBytes)
+                input.width!=info.normalizedWidth || input.height!=info.normalizedHeight,null)
             before=null;after=null
             return preview
         } catch(error:ImageSizeBoundException) {

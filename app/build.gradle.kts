@@ -51,7 +51,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        resourceConfigurations += listOf("en", "ar")
+    }
+
+    androidResources {
+        localeFilters += listOf("en", "ar")
     }
 
     // pdfbox-android keeps standard-14 font metrics in AAR assets (loaded via
@@ -59,10 +62,20 @@ android {
     sourceSets["test"].resources.srcDir(layout.buildDirectory.dir("generated/pdfboxTestAssets/assets"))
 
     signingConfigs {
-        // AGP owns the default debug configuration and creates its local keystore.
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             if (releaseSigningReady) {
-                storeFile = rootProject.file(releaseStorePath)
+                val resolvedStore = rootProject.file(releaseStorePath)
+                if (releaseKeyAlias.equals("androiddebugkey", ignoreCase = true) ||
+                    resolvedStore.name.equals("debug.keystore", ignoreCase = true)) {
+                    throw GradleException("A debug signing key or debug.keystore cannot sign a release build.")
+                }
+                storeFile = resolvedStore
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
@@ -72,6 +85,10 @@ android {
 
     buildTypes {
         debug {
+            // CI checkouts have no gitignored debug.keystore; use AGP's default key then.
+            if (rootProject.file("debug.keystore").isFile) {
+                signingConfig = signingConfigs.getByName("debugConfig")
+            }
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
@@ -150,7 +167,7 @@ android {
         abi { enableSplit = true }
         density { enableSplit = true }
         // Standalone APKs include both locales; Play distributes the declared locale splits for AABs.
-        // resourceConfigurations above restricts the payload to Arabic and English.
+        // localeFilters above restricts the payload to Arabic and English.
         language { enableSplit = true }
     }
 
@@ -181,6 +198,8 @@ android {
             // classic BC surface only; R8 strips the PQC classes, so these data
             // files are dead weight (measured ~4.1 MB compressed).
             excludes += "org/bouncycastle/pqc/**"
+            // Defense-in-depth: never package Python bytecode even if a local script runs without -B.
+            excludes += setOf("**/__pycache__/**", "**/*.pyc")
         }
     }
 }
@@ -271,7 +290,7 @@ dependencies {
 }
 
 val extractPdfboxTestAssets by tasks.registering(Copy::class) {
-    from(pdfboxAar.map { zipTree(it) })
+    from(pdfboxAar.elements.map { files -> files.map { zipTree(it.asFile) } })
     include("assets/**")
     into(layout.buildDirectory.dir("generated/pdfboxTestAssets"))
 }

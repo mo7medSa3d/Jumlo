@@ -43,10 +43,10 @@ class MediaArtifactTest(unittest.TestCase):
         self.apk = Path(self.temp.name) / 'app.apk'
         payload = io.BytesIO()
         with zipfile.ZipFile(payload, 'w') as archive:
-            archive.writestr('yt_dlp/version.py', "__version__ = '2026.10.21'\n")
+            archive.writestr('yt_dlp/version.py', "__version__ = '2026.10.26'\n")
             archive.writestr('yt_dlp_ejs/__init__.py', '')
         self.payload = payload.getvalue()
-        self.expected = {'version': '2026.10.21', 'sha256': hashlib.sha256(self.payload).hexdigest()}
+        self.expected = {'version': '2026.10.26', 'sha256': hashlib.sha256(self.payload).hexdigest()}
         self.entries = {
             'classes.dex': b'dex\n',
             'assets/media/yt-dlp': self.payload,
@@ -84,7 +84,7 @@ class MediaArtifactTest(unittest.TestCase):
     def test_complete_engine_passes(self):
         result = self.inspect()
         self.assertEqual(['arm64-v8a'], result['abis'])
-        self.assertEqual('2026.10.21', result['extractor_version'])
+        self.assertEqual('2026.10.26', result['extractor_version'])
 
     def test_missing_javascript_runtime_is_rejected(self):
         del self.entries['lib/arm64-v8a/libqjs.so']

@@ -11,6 +11,7 @@ import argparse
 from collections import Counter
 from dataclasses import asdict, dataclass
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -24,6 +25,12 @@ SOURCE_ROOTS = (
     "downloader-core/src/main",
     "document-core/src/main",
     "storage-core/src/main",
+)
+CORE_PREFIXES = (
+    "core-common/",
+    "downloader-core/",
+    "document-core/",
+    "storage-core/",
 )
 
 PATTERNS = {
@@ -42,6 +49,30 @@ PATTERNS = {
     ),
 }
 
+# Exact literal substrings required for each pattern to match; avoids full-file regex scans on non-matching files.
+_FAST_ANY_TOKEN: dict[str, tuple[str, ...]] = {
+    "todo_marker": (
+        "TODO",
+        "FIXME",
+        "HACK",
+        "XXX",
+        "NotImplementedError",
+        "UnsupportedOperationException",
+    ),
+    "empty_callback": (
+        "onClick",
+        "onCheckedChange",
+        "onValueChange",
+        "onDismissRequest",
+        "onLongClick",
+    ),
+    "android_import_in_core": ("android",),
+}
+_FAST_ALL_TOKENS: dict[str, tuple[str, ...]] = {
+    "hardcoded_color": ("0x", "Color"),
+    "hardcoded_ui_text": ("Text", '"'),
+}
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -55,16 +86,22 @@ def scan_source(path: str, content: str) -> list[Finding]:
     """Return all candidate source patterns with exact 1-based line references."""
     if not path.endswith((".kt", ".java")):
         return []
-    lines = content.splitlines()
+    lines: list[str] | None = None
     found: list[Finding] = []
     for kind, pattern in PATTERNS.items():
         if kind == "hardcoded_color" and "/ui/theme/" in f"/{path}":
             continue  # Literal token *definitions* are centralized, not UI bypasses.
-        if kind == "android_import_in_core" and not path.startswith((
-            "core-common/", "downloader-core/", "document-core/", "storage-core/"
-        )):
+        if kind == "android_import_in_core" and not path.startswith(CORE_PREFIXES):
             continue  # Android belongs in app adapters, never these pure JVM modules.
+        required_all = _FAST_ALL_TOKENS.get(kind)
+        if required_all and not all(tok in content for tok in required_all):
+            continue
+        required_any = _FAST_ANY_TOKEN.get(kind)
+        if required_any and not any(tok in content for tok in required_any):
+            continue
         for match in pattern.finditer(content):
+            if lines is None:
+                lines = content.splitlines()
             number = content.count("\n", 0, match.start()) + 1
             snippet = lines[number - 1].strip()[:180] if number <= len(lines) else ""
             found.append(Finding(kind, path, number, snippet))
@@ -76,7 +113,11 @@ def source_files(root: Path) -> list[Path]:
     for relative in SOURCE_ROOTS:
         location = root / relative
         if location.is_dir():
-            files.extend(p for p in location.rglob("*") if p.is_file() and p.suffix in {".kt", ".java"})
+            for dirpath, _, filenames in os.walk(location):
+                base = Path(dirpath)
+                for name in filenames:
+                    if name.endswith((".kt", ".java")):
+                        files.append(base / name)
     return sorted(set(files))
 
 

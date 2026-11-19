@@ -12,7 +12,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
@@ -31,6 +34,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private val WATERMARK_PRESETS = listOf(R.string.watermark_preset_confidential,R.string.watermark_preset_draft,R.string.watermark_preset_copy)
+private val WATERMARK_FONTS = listOf("sans" to R.string.studio_font_sans,"serif" to R.string.studio_font_serif,"mono" to R.string.studio_font_mono)
+private val WATERMARK_COLORS = listOf("#FFFFFF" to R.string.studio_ink_white,"#111111" to R.string.studio_ink_black,"#64748B" to R.string.watermark_color_slate,
+    "#1746A2" to R.string.studio_ink_blue,"#B42332" to R.string.studio_ink_red,"#145D4C" to R.string.studio_ink_green)
+private val WATERMARK_ANGLES = listOf(-90,-45,0,45,90)
+private val WATERMARK_PLACEMENTS = listOf(Triple(R.string.studio_top_left,.2f,.2f),Triple(R.string.studio_top_right,.8f,.2f),Triple(R.string.studio_center,.5f,.5f),
+    Triple(R.string.studio_bottom_left,.2f,.8f),Triple(R.string.studio_bottom_right,.8f,.8f))
 
 /** Shared interactive PDF/image watermark controls use the exact serialized production geometry. */
 @Composable
@@ -76,7 +87,7 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
     val color=draft.text3.ifBlank {if(imageTool) "#FFFFFF" else "#64748B"}
     fun position(x:Float,y:Float) {edit {it.copy(num2=x.toString(),num3=y.toString())}}
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.watermark_title),style=QuietTheme.typography.sectionTitle)
+        Text(stringResource(R.string.watermark_title),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
         Text(stringResource(if(tiled) R.string.studio_watermark_tile_hint else R.string.studio_watermark_gesture),style=QuietTheme.typography.metadata)
         val frame=result?.getOrNull()
         when {
@@ -87,7 +98,7 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
                         onScaleRotation={size,angle->edit {it.copy(num1=size.toString(),text4=angle.toString())}})
                 } else {
                     val bitmap=if(useImage) logo?.getOrNull()?.bitmap else textBitmap
-                    val objects=if(bitmap==null || !applies) emptyList() else {
+                    val objects=if(bitmap==null || bitmap.isRecycled || !applies || frame.width<=0 || frame.height<=0) emptyList() else {
                         val dimensions=OverlayStylePolicy.size(frame.width.toDouble(),frame.height.toDouble(),bitmap.width.toDouble(),bitmap.height.toDouble(),draft.watermarkScale)
                         val w=(dimensions.first/frame.width).toFloat();val h=(dimensions.second/frame.height).toFloat()
                         OverlayStylePolicy.centers(centerX.toDouble(),centerY.toDouble(),tiled).mapIndexed {index,(x,y)->
@@ -106,7 +117,7 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
                     if(useImage && logo?.isFailure==true) QuietStateCard(stringResource(R.string.msg_preview_unavailable),stringResource(R.string.ui_watermark_logo_required),
                         stringResource(R.string.interactive_preview_retry),{retry++},isError=true)
                 }
-                if(!applies) Text(stringResource(R.string.interactive_page_not_selected),style=QuietTheme.typography.metadata)
+                if(!applies) Text(stringResource(R.string.interactive_page_not_selected),style=QuietTheme.typography.metadata,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 if(!imageTool) DocumentPageControls(page,frame.count) {page=it}
             }
             result?.isFailure==true -> QuietStateCard(stringResource(R.string.watermark_preview_error),stringResource(R.string.msg_preview_unavailable),
@@ -125,21 +136,20 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
             TextField(draft.text1,{text->edit {it.copy(text1=text.take(120))}},label={Text(stringResource(R.string.watermark_text))},
                 modifier=Modifier.fillMaxWidth(),maxLines=2,shape=QuietTheme.shapes.inputField,colors=borderlessFieldColors())
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                items(listOf(R.string.watermark_preset_confidential,R.string.watermark_preset_draft,R.string.watermark_preset_copy)) {labelId->
+                items(WATERMARK_PRESETS,key={it},contentType={"preset-chip"}) {labelId->
                     val label=stringResource(labelId)
                     FilterChip(border=null,selected=draft.text1==label,onClick={edit {it.copy(text1=label)}},label={Text(label)})
                 }
             }
-            Text(stringResource(R.string.studio_font),style=QuietTheme.typography.metadataStrong)
+            Text(stringResource(R.string.studio_font),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                items(listOf("sans" to R.string.studio_font_sans,"serif" to R.string.studio_font_serif,"mono" to R.string.studio_font_mono)) {(font,label)->
+                items(WATERMARK_FONTS,key={it.first},contentType={"font-chip"}) {(font,label)->
                     FilterChip(border=null,selected=draft.watermarkFont==font,onClick={edit {it.copy(watermarkFont=font)}},label={Text(stringResource(label))})
                 }
             }
-            Text(stringResource(R.string.watermark_colors),style=QuietTheme.typography.metadataStrong)
+            Text(stringResource(R.string.watermark_colors),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
             LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                items(listOf("#FFFFFF" to R.string.studio_ink_white,"#111111" to R.string.studio_ink_black,"#64748B" to R.string.watermark_color_slate,
-                    "#1746A2" to R.string.studio_ink_blue,"#B42332" to R.string.studio_ink_red,"#145D4C" to R.string.studio_ink_green)) {(hex,label)->
+                items(WATERMARK_COLORS,key={it.first},contentType={"color-swatch"}) {(hex,label)->
                     val name=stringResource(label);val chosen=color.equals(hex,true)
                     Surface(onClick={edit {it.copy(text3=hex)}},shape=CircleShape,color=Color(android.graphics.Color.parseColor(hex)),
                         modifier=Modifier.size(48.dp).semantics {contentDescription=name;this.selected=chosen},shadowElevation=2.dp) {
@@ -155,17 +165,16 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
         else InteractiveIntSlider(stringResource(R.string.watermark_size),draftNumber(draft.num1,42),12,90,42) {v->edit {it.copy(num1=v.toString())}}
         InteractiveIntSlider(stringResource(R.string.watermark_rotation),rotation,-180,180,if(imageTool) 0 else -35) {v->edit {it.copy(text4=v.toString())}}
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(listOf(-90,-45,0,45,90)) {angle->FilterChip(border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})}
+            items(WATERMARK_ANGLES,key={it},contentType={"angle-chip"}) {angle->FilterChip(border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             FilterChip(border=null,selected=!tiled,onClick={edit {it.copy(text2="SINGLE")}},label={Text(stringResource(R.string.watermark_single))})
             FilterChip(border=null,selected=tiled,onClick={edit {it.copy(text2="TILE")}},label={Text(stringResource(R.string.watermark_tile))})
         }
         if(!tiled) {
-            Text(stringResource(R.string.studio_watermark_placement),style=QuietTheme.typography.metadataStrong)
+            Text(stringResource(R.string.studio_watermark_placement),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                items(listOf(Triple(R.string.studio_top_left,.2f,.2f),Triple(R.string.studio_top_right,.8f,.2f),Triple(R.string.studio_center,.5f,.5f),
-                    Triple(R.string.studio_bottom_left,.2f,.8f),Triple(R.string.studio_bottom_right,.8f,.8f))) {(label,x,y)->
+                items(WATERMARK_PLACEMENTS,key={it.first},contentType={"placement-chip"}) {(label,x,y)->
                     FilterChip(border=null,selected=abs(centerX-x)<.01f && abs(centerY-y)<.01f,onClick={position(x,y)},label={Text(stringResource(label))})
                 }
             }

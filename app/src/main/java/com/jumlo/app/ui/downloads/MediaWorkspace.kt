@@ -8,11 +8,16 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,6 +55,8 @@ import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.components.QuietStateCard
 import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.components.userMessageResource
+import com.jumlo.app.ui.theme.JumloRadii
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
@@ -78,6 +85,7 @@ import kotlin.math.roundToInt
     }
     val clipboard=LocalClipboardManager.current
     val haptics=rememberAppHaptics()
+    val reducedMotion=LocalReducedMotion.current
     var clipboardEmpty by remember { mutableStateOf(false) }
     var showAdvanced by rememberSaveable(sessionEpoch) { mutableStateOf(false) }
     val readClipboard = remember(clipboard) {
@@ -100,6 +108,11 @@ import kotlin.math.roundToInt
     }
     LaunchedEffect(state.error) { if(state.error!=null) haptics.error() }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
+    val supportedPlatforms = remember {
+        listOf("TikTok", "YouTube", "Instagram", "Facebook", "LinkedIn", "X (Twitter)", "Pinterest", "Google Drive")
+    }
+    val audioBitrates = remember { listOf(320, 256, 192, 128, 96, 64) }
+    val choiceRows = remember(state.choices) { state.choices.chunked(2) }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(
             modifier=Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
@@ -111,7 +124,7 @@ import kotlin.math.roundToInt
                     shape = RoundedCornerShape(26.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
-                    modifier = Modifier.fillMaxWidth().animateContentSize()
+                    modifier = Modifier.fillMaxWidth().then(if (reducedMotion) Modifier else Modifier.animateContentSize())
                 ) {
                     Column(
                         Modifier.padding(20.dp),
@@ -124,7 +137,7 @@ import kotlin.math.roundToInt
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp)),
+                                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(JumloRadii.indicator)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -139,7 +152,8 @@ import kotlin.math.roundToInt
                                     stringResource(R.string.redesign_download_hero),
                                     style = QuietTheme.typography.screenTitle,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.semantics { heading() }
                                 )
                             }
                         }
@@ -152,12 +166,9 @@ import kotlin.math.roundToInt
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding = PaddingValues(top = 2.dp)
                         ) {
-                            items(listOf(
-                                "TikTok", "YouTube", "Instagram", "Facebook",
-                                "LinkedIn", "X (Twitter)", "Pinterest", "Google Drive"
-                            )) { platform ->
+                            items(supportedPlatforms, key = { it }, contentType = { "platform-chip" }) { platform ->
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RoundedCornerShape(JumloRadii.thumbnail),
                                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
                                 ) {
@@ -190,7 +201,7 @@ import kotlin.math.roundToInt
                         shape = RoundedCornerShape(22.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                         border = BorderStroke(1.dp, if (state.platformBadge != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.62f)),
-                        modifier = Modifier.fillMaxWidth().animateContentSize()
+                        modifier = Modifier.fillMaxWidth().then(if (reducedMotion) Modifier else Modifier.animateContentSize())
                     ) {
                         Column(Modifier.padding(6.dp)) {
                             TextField(
@@ -232,7 +243,7 @@ import kotlin.math.roundToInt
                                                     viewModel.analyze()
                                                 }
                                             },
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                         ) {
                                             Icon(Icons.Rounded.ContentPaste, stringResource(R.string.action_paste), Modifier.size(18.dp))
                                         }
@@ -246,7 +257,11 @@ import kotlin.math.roundToInt
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        AnimatedVisibility(visible = state.platformBadge != null, enter = fadeIn(), exit = fadeOut()) {
+                        AnimatedVisibility(
+                            visible = state.platformBadge != null,
+                            enter = if (reducedMotion) EnterTransition.None else fadeIn(),
+                            exit = if (reducedMotion) ExitTransition.None else fadeOut()
+                        ) {
                             state.platformBadge?.let { badge ->
                                 QuietBadge(
                                     text = badge,
@@ -259,7 +274,7 @@ import kotlin.math.roundToInt
                         if (state.url.isNotBlank() && !state.analyzing) {
                             FilledTonalButton(
                                 onClick = { haptics.actionClick(); viewModel.analyze() },
-                                shape = RoundedCornerShape(14.dp)
+                                shape = RoundedCornerShape(JumloRadii.indicator)
                             ) {
                                 Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
@@ -278,7 +293,8 @@ import kotlin.math.roundToInt
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     QuietShimmerSkeleton(Modifier.fillMaxWidth())
                     Text(stringResource(R.string.media_analyzing),style=QuietTheme.typography.metadata,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        color=MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     TextButton(onClick=viewModel::cancelAnalysis) {
                         Text(stringResource(R.string.action_cancel))
                     }
@@ -296,14 +312,12 @@ import kotlin.math.roundToInt
                     }),
                     actionLabel=if(restricted || unsupported) null else stringResource(R.string.media_analyze),
                     onAction=if(restricted || unsupported) null else ({ viewModel.analyze() }),
-                    isError=true
+                    isError=true,
+                    modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                 )
             }}
 
 
-            // =========================================================================
-            // CASE 1: DIRECT FILE / PDF / IMAGE / GOOGLE DRIVE LINK
-            // =========================================================================
             state.direct?.let { preview ->
                 item("direct-preview") {
                     Surface(
@@ -404,9 +418,6 @@ import kotlin.math.roundToInt
                 }
             }
 
-            // =========================================================================
-            // CASE 2: EXTRACTED MEDIA WITH THE SOURCE'S AVAILABLE FORMATS
-            // =========================================================================
             state.asset?.let { asset ->
                 item("media-preview") {
                     Surface(
@@ -440,7 +451,6 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 1. Download Type Selector (Video vs Audio Only) — Visible directly!
                 item("media-type-selector") {
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.media_select_type),style=QuietTheme.typography.sectionTitle)
@@ -469,7 +479,6 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 2. If Audio Mode is active: Audio Format (MP3, M4A, OPUS, ORIGINAL) + Bitrate (320..64 kbps)
                 if (state.mode == MediaMode.AUDIO) {
                     item("audio-format-controls") {
                         Surface(
@@ -491,7 +500,7 @@ import kotlin.math.roundToInt
                                     listOf(AudioOutput.ORIGINAL to originalAudioLabel)
                                 }
                                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                    items(audioFormats, key={it.first.name}) { (fmt, label) ->
+                                    items(audioFormats, key={it.first.name}, contentType={"audio-format-chip"}) { (fmt, label) ->
                                         FilterChip(
                                             border=null,
                                             selected=state.audio==fmt,
@@ -503,12 +512,12 @@ import kotlin.math.roundToInt
                                 if (state.audio != AudioOutput.ORIGINAL) {
                                     Text(stringResource(R.string.media_encoding_bitrate),style=QuietTheme.typography.metadataStrong)
                                     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                        items(listOf(320, 256, 192, 128, 96, 64), key={it}) { kbps ->
+                                        items(audioBitrates, key={it}, contentType={"bitrate-chip"}) { kbps ->
                                             FilterChip(
                                                 border=null,
                                                 selected=state.bitrate==kbps,
                                                 onClick={haptics.selectionToggle();viewModel.bitrate(kbps)},
-                                                label={Text("$kbps kbps",style=QuietTheme.typography.metadataStrong)}
+                                                label={Text(stringResource(R.string.modern_audio_bitrate, kbps),style=QuietTheme.typography.metadataStrong)}
                                             )
                                         }
                                     }
@@ -518,9 +527,7 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                // 3. Quality & Resolution Grid — Advanced only. By default the
-                // ViewModel already auto-selects the best format (see
-                // MediaViewModel analyze/mode), so most users never need this grid.
+                // ViewModel auto-selects the best format by default; manual quality selection is Advanced-only.
                 if (showAdvanced) item("media-quality-header") {
                     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle)
@@ -528,7 +535,7 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                if (showAdvanced) items(state.choices.chunked(2), key={row -> row.joinToString("-") { it.key }}) { row ->
+                if (showAdvanced) items(choiceRows, key={row -> row.joinToString("-") { it.key }}, contentType={"quality-row"}) { row ->
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp),modifier=Modifier.fillMaxWidth()) {
                         row.forEach { choice ->
                             val selected = state.selectedKey == choice.key
@@ -551,7 +558,7 @@ import kotlin.math.roundToInt
                             }
                             Surface(
                                 onClick={haptics.selectionToggle();viewModel.select(choice.key)},
-                                shape=RoundedCornerShape(20.dp),
+                                shape=RoundedCornerShape(JumloRadii.card),
                                 color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                                 modifier=Modifier.weight(1f).heightIn(min=96.dp).pressFeedback()
                                     .semantics {this.selected=selected;role=Role.RadioButton}
@@ -636,14 +643,11 @@ import kotlin.math.roundToInt
             if (showAdvanced && (state.asset != null || state.direct != null)) item("filename") {
                 TextField(value=state.name,onValueChange=viewModel::name,
                     singleLine=true,label={Text(stringResource(R.string.media_filename))},
-                    modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(16.dp),
+                    modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(JumloRadii.field),
                     colors=TextFieldDefaults.colors(focusedIndicatorColor=Color.Transparent,
                         unfocusedIndicatorColor=Color.Transparent,disabledIndicatorColor=Color.Transparent))
             }
 
-            // Network policy for this job. These setters existed in MediaViewModel
-            // but had no UI callers, so the enforcement in the download handlers
-            // was unreachable from the app. They are now Advanced options.
             if (showAdvanced && (state.asset != null || state.direct != null)) item("network-wifi") {
                 Row(Modifier.fillMaxWidth().heightIn(min=56.dp)
                     .toggleable(value=state.wifiOnly, role=Role.Switch, onValueChange={haptics.selectionToggle();viewModel.wifi(it)})
@@ -714,7 +718,7 @@ private fun ModeSelectionCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(JumloRadii.card),
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier.heightIn(min = 64.dp).pressFeedback()
             .semantics {this.selected=selected;role=Role.RadioButton}

@@ -3,7 +3,7 @@
 **2026-10-28 WP11 redirect hardening:** User-entered custom media HTTP headers may contain account-specific values. Their scope is limited to the origin of the initially requested resource; a redirect changing scheme, hostname or effective port cannot inherit them. Normal browser headers remain; cookie jar queries are scoped to the actual target URL. This is source policy, not a guarantee against malicious servers at the original origin.
 
 
-Review date: 23 October 2026. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
+Review date: 23 October 2026. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates have no current evidence file in this tree (the former `TEST_REPORT.md` was intentionally removed); regenerate them for the release candidate. The full media engine remains included.
 
 ## Manifest permissions
 
@@ -11,13 +11,13 @@ The merged debug manifest was inspected during this execution. Release must be c
 
 | Permission | Purpose and request point | Scope / qualification |
 | --- | --- | --- |
-| `INTERNET` | User-requested downloads, remote thumbnails, optional extractor service, Play-services scanner/OCR model installation, explicitly selected Drive operations | No background clipboard polling or analytics upload is configured. Network providers still receive the request and connection IP. |
+| `INTERNET` | User-requested downloads, remote thumbnails, optional extractor service, Play-services scanner/OCR model installation, and user-pasted public Google Drive share-link downloads | No background clipboard polling or analytics upload is configured. Network providers still receive the request and connection IP. |
 | `ACCESS_NETWORK_STATE` | Actionable transfer status and scheduling | Normal permission; a stale connectivity snapshot must not reject completed local muxing/publication. |
 | `POST_NOTIFICATIONS` | Progress and cancellation controls for background jobs on Android 13+ | Runtime request is tied to the relevant notification setting/flow. Denial must be tested on Android 14+. |
 | `FOREGROUND_SERVICE` | WorkManager foreground jobs | The merged `SystemForegroundService` declares `dataSync`. |
 | `FOREGROUND_SERVICE_DATA_SYNC` | Transfers and user-requested file import/export/processing on Android 14+ | Must match the Play Console foreground-service declaration and demonstration video. |
 | `CAMERA` | CameraX document-scanning fallback | Requested only when entering the fallback. The primary Play-services document scanner does not need this app permission. Camera hardware is optional. Denial retains gallery/file import. |
-| `VIBRATE` | System haptic feedback on supported actions | No user-facing haptic intensity/toggle is retained. |
+| `VIBRATE` | System haptic feedback on supported actions | A Settings control selects haptic intensity (Off/Light/Medium/Strong); vibration follows that preference. |
 | `WAKE_LOCK` | Added by WorkManager for scheduled work | Normal permission; avoid additional application-owned indefinite wake locks. |
 | `RECEIVE_BOOT_COMPLETED` | Added by WorkManager to reconcile persisted work | Does not grant permission to start unrestricted foreground services at boot. Verify scheduling/timeout behavior on current Android. |
 | `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | AndroidX-generated signature permission for internal receiver isolation | Not a user data permission. |
@@ -52,7 +52,7 @@ The structured crash record contains a timestamp, fixed operation scope, excepti
 | Display a remote media thumbnail | The thumbnail host receives its image request and connection IP. |
 | Configure and use an optional extractor backend | The configured server receives the submitted media URL and bearer token and processes the requested media. Its operator must specify retention, hosting and deletion policies. No server was deployed in this delivery. |
 | First scanner/OCR use | Google Play services may retrieve models/UI components. Document processing uses the selected Android/ML Kit APIs; consult their current data disclosures. |
-| Explicit export/share or Drive handoff | Only the files/URIs selected by the user go to the chosen provider/application. The legacy Drive tool remains blocked pending its own OAuth/privacy qualification. |
+| Explicit export/share or public Drive links | Only the files/URIs selected by the user go to the chosen provider/application. The authenticated `file_drive` / Google Drive v3 client is retired and removed; public Google Drive direct-download URLs remain handled by the generic downloader. |
 
 Generic cleartext HTTP file downloads remain a deliberate compatibility path controlled by transfer policy; there is no global HTTP/HTTPS preference or separate per-job HTTP-consent dialog. HTTP requests and their contents are not encrypted in transit. HTTPS must not silently downgrade, and bearer credentials must not cross origins. Optional production extractor backends require HTTPS. The broad Android network-security setting needed for generic HTTP links is not evidence that every network caller may use HTTP.
 
@@ -65,7 +65,7 @@ Generic cleartext HTTP file downloads remain a deliberate compatibility path con
 | Target API | `compileSdk=36`, `targetSdk=36`, `minSdk=26` | Recheck Play requirements at upload. Current requirement for ordinary new apps/updates is API 36. |
 | Native runtime and 16 KB pages | Pinned full ARM64 native payload; repacker and `inspect-media-artifact.py` validate nested ELF alignment/closure | Final artifact inspection plus actual ARM64 16 KB device execution. Static ELF checks do not establish runtime compatibility. |
 | Data safety and privacy policy | Local-first processing, minimal permissions, encrypted credentials, no default analytics/crash upload | Publish an owner-completed privacy URL and complete the Console form against the actual shipped SDKs, providers and optional service configuration. |
-| Unqualified legacy tools | Existing Webpage→PDF, Drive and vault entries remain blocked rather than being described as tested | Security/privacy/backend qualification is required before enabling them. This change did not remove previously enabled functionality. |
+| Retired legacy tools | Webpage→PDF, authenticated Drive (`file_drive`), and vault entries are removed from the current 30-tool registry | Any future re-introduction requires full security, privacy, and backend qualification. |
 
 Primary policy references, checked on the review date:
 
@@ -78,9 +78,7 @@ Primary policy references, checked on the review date:
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
 
-Review date: 28 October 2026. Updated to match the current enabled `file_drive` registry and Drive v3 client instead of the older blocked-Drive description. This is a source and policy review, not a Play approval. Runtime results and unresolved release gates are in [TEST_REPORT.md](TEST_REPORT.md). The full media engine remains included.
-| Explicit export/share or Drive handoff | Files selected for export/share are transmitted to the chosen provider/application. The registered `file_drive` path is enabled and uses Google Drive v3 with user-supplied, ephemeral access credentials; uploading selected files sends their contents and metadata to Google. This capability remains NOT DEVICE/ACCOUNT QUALIFIED and must not be called verified. |
-| Unqualified/external integrations | Drive import/export is present and enabled (token-gated), while Webpage→PDF and the vault expansion were removed as unimplemented routes in the current registry. | Device/account/authorization and Play policy qualification is still required; enabling source code does not establish provider acceptance. |
+Revision note: Updated to match the current 30-tool codebase where `file_drive` (`GoogleDriveClient.kt`), `webpage_pdf`, and `xf_05` are retired and absent. Runtime results and unresolved release gates have no current evidence file in this tree; regenerate them for the release candidate.
 
 ## 2026-10-28 — Reader bookmarks
 

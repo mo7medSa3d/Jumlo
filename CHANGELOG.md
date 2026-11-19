@@ -1,5 +1,9 @@
 # Changelog — current production-hardening candidate
 
+## Documentation status (2026-11-19 audit)
+
+Older entries below are historical and describe their own point in time. Several files they reference were intentionally removed from this tree and must not be recreated from history: `TEST_REPORT.md`, `docs/AUDIT_2.md`, `docs/PROGRESS.md`, `DECISIONS.md`, `AUDIT.md`, `HANDOFF_AR.md`, `ICON_MAP.md`, `IMPLEMENTATION_PLAN.md`, `PRODUCTION_BRIEF.md`, `ROUTES.md`, `TOOL_UI_SPEC.md`, `iOS_PLAN.md` and `SCREENSHOTS/`. Those references are provenance, not live links; regenerate release evidence for the release candidate. Current tree values are a 30-tool registry, four bottom tabs and the restored 60,000,000-byte full-media APK cap.
+
 ## 2026-11-01 — SaaS-style copy + design-system refresh + tool-wiring gate (local, no GitHub push)
 
 - **SaaS-style copy, no invented features:** all 45 tool subtitles rewritten benefit-led in English and Arabic (`CapabilityRegistry`), plus the splash tagline, Home hero, quick-start guide, media intro, scan chooser/hint, workspace input hint, About body and store listing. Nothing claims cloud sync, accounts, a Pro tier or universal downloads — Jumlo stays on-device, and the unsupported-site message now says so plainly and points to a direct file link instead.

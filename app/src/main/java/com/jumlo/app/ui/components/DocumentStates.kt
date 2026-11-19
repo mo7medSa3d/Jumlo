@@ -22,7 +22,8 @@ import com.jumlo.app.ui.theme.QuietTheme
 fun DocumentLoadState(status:DataLoadStatus,onRetry:()->Unit) {
     if(status==DataLoadStatus.ERROR) {
         QuietStateCard(stringResource(R.string.upgrade_loading_failed),"",
-            stringResource(R.string.action_retry_failed),onRetry,isError=true)
+            stringResource(R.string.action_retry_failed),onRetry,isError=true,
+            modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })
     } else if(status==DataLoadStatus.LOADING) {
         val label=stringResource(R.string.upgrade_loading_documents)
         val reduced=LocalReducedMotion.current

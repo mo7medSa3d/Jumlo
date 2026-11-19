@@ -38,4 +38,16 @@ class ResumePolicyContractTest {
             ResumePolicy.validate(0, null, null, null, 206, emptyMap())
         }
     }
+
+    @Test fun validatesMixedCaseHeadersAndRejectsCompressedResume() {
+        val mixedCase = mapOf(
+            "ETag" to "\"unchanged\"",
+            "Content-Range" to "bytes 10-19/30",
+            "Content-Length" to "10",
+            "Content-Encoding" to "gzip"
+        )
+        assertThrows(RestartRequired::class.java) {
+            ResumePolicy.validate(10, "\"unchanged\"", null, 30, 206, mixedCase)
+        }
+    }
 }

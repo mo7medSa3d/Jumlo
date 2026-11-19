@@ -51,7 +51,13 @@ internal object BundledFfmpegLibraries {
             if (!it.matches(Regex("[a-f0-9]{64}"))) invalid()
         }
         // Refuse to apply an ABI contract to a different upstream dependency payload.
-        val archiveHash = File(native, "libffmpeg.zip.so").inputStream().use { Hashing.sha256(it) }
+        val archiveHash = try {
+            File(native, "libffmpeg.zip.so").inputStream().use { Hashing.sha256(it) }
+        } catch (e: FileNotFoundException) {
+            throw OperationFailure("MEDIA_NATIVE_ABI_UNAVAILABLE")
+        } catch (e: IOException) {
+            invalid()
+        }
         if (archiveHash != expected("$abi.ffmpegArchive.sha256")) invalid()
         val directory = File(context.noBackupFilesDir, "youtubedl-android/packages/ffmpeg/usr/lib")
         if (!(directory.isDirectory && !Files.isSymbolicLink(directory.toPath()))) invalid()
@@ -63,6 +69,8 @@ internal object BundledFfmpegLibraries {
                 context.assets.open("media/native-overrides/$abi/$name").use { it.readBytes() }
             } catch (e: FileNotFoundException) {
                 unavailable()
+            } catch (e: IOException) {
+                invalid()
             }
             if (!(bytes.size in 1..2 * 1024 * 1024 &&
                 Hashing.sha256(ByteArrayInputStream(bytes)) == checksum)) invalid()
@@ -73,12 +81,14 @@ internal object BundledFfmpegLibraries {
             }
             val installed = File(directory, name)
             if (Files.isSymbolicLink(installed.toPath())) invalid()
-            val same = installed.isFile && installed.inputStream().use { Hashing.sha256(it) } == checksum
+            val same = installed.isFile && runCatching {
+                installed.inputStream().use { Hashing.sha256(it) } == checksum
+            }.getOrDefault(false)
             if (same) continue
             val sink = AtomicFile(installed)
             val output = sink.startWrite()
             try { output.write(bytes); sink.finishWrite(output) }
-            catch (error: Exception) { sink.failWrite(output); throw error }
+            catch (error: Throwable) { sink.failWrite(output); throw error }
         }
     }
 }

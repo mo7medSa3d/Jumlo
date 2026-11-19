@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
@@ -45,9 +47,11 @@ fun SettingsScreen(
     val dark = isDarkTheme(settings.themeMode)
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().testTag("settings.screen"),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
+        modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer + navBottom),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item("appearance-heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
@@ -61,9 +65,14 @@ fun SettingsScreen(
             Icons.Rounded.Language, { panel = "language" }, Modifier.testTag("settings.language"),
             iconStyle = settingsIconStyleFor("language", dark)) }
         item("sounds") {
-            PreferenceToggleRow(stringResource(R.string.settings_ui_sounds),
-                settings.soundsEnabled, viewModel::setSoundsEnabled,
-                Modifier.testTag("settings.sounds"))
+            PreferenceToggleRow(
+                stringResource(R.string.settings_ui_sounds),
+                settings.soundsEnabled,
+                viewModel::setSoundsEnabled,
+                Modifier.testTag("settings.sounds"),
+                icon = Icons.Rounded.Audiotrack,
+                iconStyle = settingsIconStyleFor("sounds", dark)
+            )
         }
         item("text-size") { PreferenceRow(stringResource(R.string.pref_text_size),
             textSizeLabel(settings.fontScale), Icons.Rounded.FormatSize, { panel = "text-size" },
@@ -102,6 +111,7 @@ fun SettingsScreen(
         item("about") { PreferenceRow(stringResource(R.string.modern_about), stringResource(R.string.settings_about_summary), Icons.Rounded.Info,
             { panel = "about" }, Modifier.testTag("settings.about"), iconStyle = settingsIconStyleFor("about", dark)) }
     }
+    }
     when (panel) {
         "theme" -> ChoiceDialog(stringResource(R.string.pref_theme), ThemeMode.entries.map { themeLabel(it) },
             settings.themeMode.ordinal, { viewModel.setThemeMode(ThemeMode.entries[it]); panel = null }, { panel = null })
@@ -136,7 +146,7 @@ fun SettingsScreen(
         "storage" -> StorageOverviewDialog(storage, { panel = null },
             onClean = { panel = null; viewModel.cleanTemporary() }, outputFiles = outputs)
         "about" -> AlertDialog(onDismissRequest = { panel = null },
-            title = { Text(stringResource(R.string.modern_about)) },
+            title = { Text(stringResource(R.string.modern_about), modifier = Modifier.semantics { heading() }) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.modern_about_body, com.jumlo.app.BuildConfig.VERSION_NAME))
                 TextButton(onClick = { panel = null; onShowGuide() }) { Text(stringResource(R.string.quick_start_replay)) }
@@ -145,7 +155,7 @@ fun SettingsScreen(
             } }, confirmButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.account_done)) } })
         "privacy" -> PrivacyDialog { panel = null }
         "cache" -> AlertDialog(onDismissRequest = { panel = null },
-            title = { Text(stringResource(R.string.modern_clear_cache)) },
+            title = { Text(stringResource(R.string.modern_clear_cache), modifier = Modifier.semantics { heading() }) },
             text = { Text(stringResource(R.string.pref_clear_temporary_body)) },
             confirmButton = { TextButton(enabled = !busy, onClick = { panel = null; viewModel.cleanTemporary() }) {
                 Text(stringResource(R.string.pref_clear)) } },
@@ -176,7 +186,7 @@ internal fun colorSystemLabel(system: String, language: AppLanguage): String {
 
 @Composable private fun ChoiceDialog(title: String, labels: List<String>, selected: Int,
     onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(title, modifier = Modifier.semantics { heading() }) }, text = {
         Column(Modifier.selectableGroup()) {
             labels.forEachIndexed { index, label ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)

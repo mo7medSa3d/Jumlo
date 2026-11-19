@@ -36,6 +36,9 @@ import com.jumlo.app.ui.PreviewFrame
 import kotlin.math.*
 
 private data class WatermarkRaster(val image: Bitmap, val textSize: Float)
+private val WHITESPACE_REGEX = Regex("\\s+")
+private val HEX_COLOR_REGEX = Regex("^#[0-9A-Fa-f]{6}$")
+private val TILED_WATERMARK_SPOTS = listOf(.18f, .5f, .82f).flatMap { y -> listOf(.18f, .5f, .82f).map { x -> x to y } }
 
 /** Exact text rasterization and PDF-point sizing, with selection, handles and independent page zoom. */
 @Composable
@@ -44,8 +47,8 @@ internal fun PdfWatermarkPreview(
     centerX: Float, centerY: Float, onPosition: (Float, Float) -> Unit, onCommit: () -> Unit,
     onScaleRotation: (Int, Int) -> Unit = { _, _ -> }
 ) {
-    val text = draft.text1.trim().replace(Regex("\\s+"), " ").take(120)
-    val color = draft.text3.takeIf { Regex("^#[0-9A-Fa-f]{6}$").matches(it) } ?: "#64748B"
+    val text = draft.text1.trim().replace(WHITESPACE_REGEX, " ").take(120)
+    val color = draft.text3.takeIf { HEX_COLOR_REGEX.matches(it) } ?: "#64748B"
     val opacity = draftNumber(draft.num4, 28).coerceIn(5, 100)
     val fontSize = draftNumber(draft.num1, 42).coerceIn(12, 90)
     val rotation = draftNumber(draft.text4, -35).coerceIn(-180, 180)
@@ -54,6 +57,12 @@ internal fun PdfWatermarkPreview(
     var pageZoom by rememberSaveable(page) { mutableFloatStateOf(1f) }
     var pagePan by remember(page) { mutableStateOf(Offset.Zero) }
     val accent = MaterialTheme.colorScheme.primary.toArgb()
+    val bitmapPaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
+    val outlinePaint = remember(accent) { Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = accent; style = Paint.Style.STROKE } }
+    val handlePaint = remember(accent) { Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = accent } }
+    val pageNumberPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 10f; this.color = android.graphics.Color.rgb(102,102,102); typeface = Typeface.create("sans-serif", Typeface.NORMAL) } }
+    val pageDstRect = remember { RectF() }
+    val overlayDstRect = remember { RectF() }
     val raster = remember(text, color, opacity, draft.watermarkFont) { if (text.isBlank()) null else {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             isFilterBitmap = true; textSize = 84f; typeface = Typeface.create(when(draft.watermarkFont) {"serif"->"serif";"mono"->"monospace";else->"sans-serif"}, Typeface.BOLD)
@@ -79,7 +88,8 @@ internal fun PdfWatermarkPreview(
     val objectDescription = stringResource(R.string.studio_watermark_object)
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         BoxWithConstraints(Modifier.fillMaxWidth().testTag("preview.bitmap").clipToBounds(), contentAlignment = Alignment.Center) {
-            val aspect = frame.width.toFloat() / frame.height
+            val safeW = frame.width.coerceAtLeast(1); val safeH = frame.height.coerceAtLeast(1)
+            val aspect = safeW.toFloat() / safeH
             val width = minOf(maxWidth, 560.dp, 560.dp * aspect)
             val height = width / aspect
             Canvas(Modifier.size(width, height).testTag("watermark.canvas")
@@ -95,8 +105,8 @@ internal fun PdfWatermarkPreview(
                             if (overlay == null) return 0f to 0f
                             val rawW = overlay.image.width * (pointSize / overlay.textSize)
                             val rawH = overlay.image.height * (pointSize / overlay.textSize)
-                            val fit = minOf(1f, frame.width * (if (tiled) .36f else .8f) / rawW)
-                            return rawW * fit / frame.width * size.width to rawH * fit / frame.height * size.height
+                            val fit = minOf(1f, safeW * (if (tiled) .36f else .8f) / rawW.coerceAtLeast(1f))
+                            return rawW * fit / safeW * size.width to rawH * fit / safeH * size.height
                         }
                         fun local(point: Offset): Offset {
                             val delta = point - Offset(x * size.width, y * size.height)
@@ -125,6 +135,7 @@ internal fun PdfWatermarkPreview(
                             val zoom = event.calculateZoom()
                             val turn = event.calculateRotation()
                             if (editing) {
+                                if (size.width <= 0 || size.height <= 0) continue
                                 if (pressed > 1) {
                                     x = (x + pan.x / size.width).coerceIn(0f, 1f)
                                     y = (y + pan.y / size.height).coerceIn(0f, 1f)
@@ -168,36 +179,40 @@ internal fun PdfWatermarkPreview(
                     val canvas = compose.nativeCanvas
                     canvas.save()
                     try {
-                        canvas.scale(size.width / frame.width, size.height / frame.height)
-                        canvas.drawBitmap(frame.bitmap, null, RectF(0f, 0f, frame.width.toFloat(), frame.height.toFloat()), Paint(Paint.FILTER_BITMAP_FLAG))
+                        canvas.scale(size.width / safeW, size.height / safeH)
+                        if (!frame.bitmap.isRecycled) {
+                            pageDstRect.set(0f, 0f, safeW.toFloat(), safeH.toFloat())
+                            canvas.drawBitmap(frame.bitmap, null, pageDstRect, bitmapPaint)
+                        }
                         if (applies) {
-                            raster?.let { overlay ->
+                            raster?.takeUnless { it.image.isRecycled }?.let { overlay ->
                                 val rawW = overlay.image.width * (fontSize / overlay.textSize)
                                 val rawH = overlay.image.height * (fontSize / overlay.textSize)
-                                val fit = minOf(1f, frame.width * (if (tiled) .36f else .8f) / rawW)
+                                val fit = minOf(1f, safeW * (if (tiled) .36f else .8f) / rawW.coerceAtLeast(1f))
                                 val w = rawW * fit; val h = rawH * fit
-                                val spots = if (tiled) listOf(.18f, .5f, .82f).flatMap { y -> listOf(.18f, .5f, .82f).map { x -> x to y } }
-                                    else listOf(centerX to centerY)
-                                spots.forEach { (x, y) ->
-                                    canvas.save(); canvas.translate(x * frame.width, y * frame.height); canvas.rotate(rotation.toFloat())
-                                    canvas.drawBitmap(overlay.image, null, RectF(-w/2, -h/2, w/2, h/2), Paint(Paint.FILTER_BITMAP_FLAG))
+                                overlayDstRect.set(-w/2, -h/2, w/2, h/2)
+                                fun drawSpot(x: Float, y: Float) {
+                                    canvas.save(); canvas.translate(x * safeW, y * safeH); canvas.rotate(rotation.toFloat())
+                                    canvas.drawBitmap(overlay.image, null, overlayDstRect, bitmapPaint)
                                     if (selected && !tiled) {
-                                        val unit = frame.width / size.width
-                                        val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = accent; style = Paint.Style.STROKE; strokeWidth = 2.dp.toPx() * unit }
-                                        canvas.drawRect(-w/2, -h/2, w/2, h/2, outline)
-                                        val handle = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = accent }
-                                        listOf(-w/2 to -h/2, w/2 to -h/2, -w/2 to h/2, w/2 to h/2).forEach { (hx, hy) ->
-                                            canvas.drawCircle(hx, hy, 6.dp.toPx() * unit, handle)
-                                        }
+                                        val unit = safeW / size.width.coerceAtLeast(1f)
+                                        outlinePaint.strokeWidth = 2.dp.toPx() * unit
+                                        canvas.drawRect(-w/2, -h/2, w/2, h/2, outlinePaint)
+                                        val cornerR = 6.dp.toPx() * unit
+                                        canvas.drawCircle(-w/2, -h/2, cornerR, handlePaint)
+                                        canvas.drawCircle(w/2, -h/2, cornerR, handlePaint)
+                                        canvas.drawCircle(-w/2, h/2, cornerR, handlePaint)
+                                        canvas.drawCircle(w/2, h/2, cornerR, handlePaint)
                                         val top = -h/2 - 24.dp.toPx() * unit
-                                        canvas.drawLine(0f, -h/2, 0f, top, outline)
-                                        canvas.drawCircle(0f, top, 7.dp.toPx() * unit, handle)
+                                        canvas.drawLine(0f, -h/2, 0f, top, outlinePaint)
+                                        canvas.drawCircle(0f, top, 7.dp.toPx() * unit, handlePaint)
                                     }
                                     canvas.restore()
                                 }
+                                if (tiled) TILED_WATERMARK_SPOTS.forEach { (x, y) -> drawSpot(x, y) }
+                                else drawSpot(centerX, centerY)
                             }
-                            if (draft.flag1) canvas.drawText(page.toString(), frame.width * .47f, frame.height * .96f,
-                                Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 10f; this.color = android.graphics.Color.rgb(102,102,102); typeface = Typeface.create("sans-serif", Typeface.NORMAL) })
+                            if (draft.flag1) canvas.drawText(page.toString(), frame.width * .47f, frame.height * .96f, pageNumberPaint)
                         }
                     } finally { canvas.restore() }
                 }

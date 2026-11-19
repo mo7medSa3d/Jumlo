@@ -63,7 +63,7 @@ class MediaOperationHandler @Inject constructor(
         }
         fun checkNetwork() {
             checkLocal()
-            val cm = app.getSystemService(ConnectivityManager::class.java)
+            val cm = app.getSystemService(ConnectivityManager::class.java) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
             val network = cm.getNetworkCapabilities(cm.activeNetwork) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
             if(settings.wifiOnly && !network.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) throw OperationFailure("WIFI_REQUIRED")
             if(settings.unmeteredOnly && !network.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) throw OperationFailure("UNMETERED_NETWORK_REQUIRED")
@@ -155,10 +155,9 @@ class MediaOperationHandler @Inject constructor(
                 // Accept all valid video dimensions (landscape, vertical 9:16 TikTok/Reels/Shorts, square, custom platform ratios)
                 require(height != null && height > 0 && width != null && width > 0) { "MEDIA_VIDEO_MISSING" }
                 val expected = choice.expectedHeight
-                if (expected != null && height != null) {
+                if (expected != null) {
                     val matchesHeight = abs(height - expected) <= 32
-                    val matchesWidth = width != null && abs(width - expected) <= 32
-                    // Log or verify reasonable resolution while guaranteeing successful user output
+                    val matchesWidth = abs(width - expected) <= 32
                     if (!matchesHeight && !matchesWidth && height < 120 && width < 120) {
                         throw OperationFailure("MEDIA_QUALITY_MISMATCH")
                     }

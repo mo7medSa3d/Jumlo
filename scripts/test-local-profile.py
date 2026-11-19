@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from xml.etree import ElementTree as ET
 ROOT=Path(__file__).resolve().parents[1]
-S=(ROOT/"app/src/main/java/com/jumlo/app/ui/settings/SettingsScreen.kt").read_text()
+S=(ROOT/"app/src/main/java/com/jumlo/app/ui/settings/SettingsScreen.kt").read_text(encoding="utf-8")
 class LocalProfile(unittest.TestCase):
     def test_settings_routes_to_real_storage_and_about_instead_of_fake_profile(self):
         self.assertIn('onOpenStorage?.invoke()',S)
@@ -13,7 +13,7 @@ class LocalProfile(unittest.TestCase):
         self.assertIn('com.jumlo.app.BuildConfig.VERSION_NAME',S)
         self.assertIn('onShowGuide()',S)
         self.assertNotIn('panel="profile"',S)
-        nav=(ROOT/"app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt").read_text()
+        nav=(ROOT/"app/src/main/java/com/jumlo/app/ui/navigation/JumloNavHost.kt").read_text(encoding="utf-8")
         self.assertIn('composable<StorageRoute>',nav)
         self.assertNotIn('AccountHubModal(',nav)
     def test_no_fabricated_plan_or_identity(self):

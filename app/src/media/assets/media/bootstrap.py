@@ -11,5 +11,16 @@ from network_guard import install
 install(os.environ.get('UU_ALLOW_HTTP') == '1')
 import yt_dlp
 
+# Defend against CVE-2026-26331 class .netrc / --netrc-cmd loading.
+# yt-dlp has no --no-netrc flag (netrc is opt-in); block netrc/config flags and disable config files.
+args = sys.argv[2:]
+for arg in args:
+    if arg == '--':
+        break
+    if arg in ('-n', '--netrc', '--netrc-location', '--netrc-cmd', '--config-location', '--config-locations') or arg.startswith(
+        ('--netrc-location=', '--netrc-cmd=', '--config-location=', '--config-locations=')
+    ):
+        raise SystemExit('MEDIA_FORBIDDEN_NETRC_OPTION')
+
 # Every option and the final URL originate from checked Kotlin policy, not webpage text.
-yt_dlp.main(sys.argv[2:])
+yt_dlp.main(['--ignore-config', '--no-config-locations', *args])

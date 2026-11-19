@@ -71,7 +71,7 @@ data class PdfPageEdit(
 
     fun selectRange(first: Int, last: Int): PdfPageEdit {
         require(first <= last && first in order && last in order) { "INVALID_PAGE_INDEX" }
-        return copy(selected = selected + (first..last))
+        return copy(selected = selected + (first..last).filter { it in order })
     }
 
     fun selectAll(): PdfPageEdit = copy(selected = order.toSet())
@@ -185,6 +185,7 @@ object PdfCompressionPolicy {
     fun sliderStep(position: Float): Pair<Int, Int> {
         val steps = sliderSteps()
         if (steps.isEmpty()) return 150 to 70
+        if (!position.isFinite()) return 150 to 70
         val index = (position.coerceIn(0f, 1f) * (steps.size - 1)).roundToInt()
         return steps[index]
     }

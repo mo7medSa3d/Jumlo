@@ -10,7 +10,7 @@ import kotlin.math.*
 object PageSelection {
     private val rangePattern = Regex("^\\s*([0-9]+)\\s*(?:-\\s*([0-9]+)\\s*)?$")
 
-    private fun parseRanges(value: String, count: Int): List<IntRange> {
+    private fun parseRanges(value: String, count: Int, enforceExpandedLimit: Boolean): List<IntRange> {
         require(count > 0) { "INVALID_PAGE_COUNT" }
         val normalized = normalize(value)
         require(normalized.isNotBlank() && normalized.length <= 100000) { "INVALID_PAGE_RANGE" }
@@ -27,14 +27,17 @@ object PageSelection {
             val last = if (endpoint.isEmpty()) first else endpoint.toIntOrNull()
             require(first != null && last != null && first in 1..count && last >= first) { "INVALID_PAGE_RANGE" }
             val boundedEnd = minOf(last, count)
-            expandedPages += boundedEnd.toLong() - first + 1L
-            require(expandedPages <= maxExpandedPages) { "PAGE_SELECTION_LIMIT" }
+            if (enforceExpandedLimit) {
+                expandedPages += boundedEnd.toLong() - first + 1L
+                require(expandedPages <= maxExpandedPages) { "PAGE_SELECTION_LIMIT" }
+            }
             first..boundedEnd
         }
     }
 
     /** Contiguous ranges stay together: "1-3,5" yields [[1,2,3],[5]]. */
-    fun groups(value: String, count: Int): List<List<Int>> = parseRanges(value, count).map { it.toList() }
+    fun groups(value: String, count: Int): List<List<Int>> =
+        parseRanges(value, count, enforceExpandedLimit = true).map { it.toList() }
 
     private fun normalize(value: String): String = value.map { c -> when (c) {
         in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
@@ -44,8 +47,17 @@ object PageSelection {
     } }.joinToString("")
 
     fun parse(value: String, count: Int): List<Int> {
+        val maxUniquePages = 100_000
         val result = linkedSetOf<Int>()
-        for (range in parseRanges(value, count)) result.addAll(range)
+        val seenRanges = HashSet<IntRange>()
+        for (range in parseRanges(value, count, enforceExpandedLimit = false)) {
+            if (!seenRanges.add(range)) continue
+            for (page in range) {
+                if (result.add(page)) {
+                    require(result.size <= maxUniquePages) { "PAGE_SELECTION_LIMIT" }
+                }
+            }
+        }
         return result.toList()
     }
     fun groups(count: Int, every: Int): List<List<Int>> {
@@ -195,11 +207,16 @@ object HttpPolicy {
         val u = try { URI(url.trim()) } catch (_: Exception) { throw IllegalArgumentException("INVALID_URL") }
         val scheme=u.scheme?.lowercase(Locale.ROOT)
         require(scheme == "https" || (scheme == "http" && cleartext)) { "HTTPS_REQUIRED" }
-        require(!u.host.isNullOrBlank() && u.rawUserInfo == null && u.fragment == null && u.port in -1..65535) { "INVALID_URL" }
+        require(!u.host.isNullOrBlank() && u.rawUserInfo == null && u.fragment == null && (u.port == -1 || u.port in 1..65535)) { "INVALID_URL" }
         require(url.none { it < ' ' || it == '\u007f' }) { "INVALID_URL" }
         return URI(scheme + ":" + u.rawSchemeSpecificPart)
     }
-    fun origin(u: URI): String = "${u.scheme.lowercase(Locale.ROOT)}://${u.host.lowercase(Locale.ROOT)}:${if(u.port>=0) u.port else if(u.scheme.equals("https",true)) 443 else 80}"
+    fun origin(u: URI): String {
+        val scheme = requireNotNull(u.scheme) { "INVALID_URL" }.lowercase(Locale.ROOT)
+        val host = requireNotNull(u.host) { "INVALID_URL" }.lowercase(Locale.ROOT)
+        val port = if (u.port > 0) u.port else if (scheme == "https") 443 else 80
+        return "$scheme://$host:$port"
+    }
 }
 
 /** Compatibility facade. Standard availability is defined solely by CapabilityPolicy. */

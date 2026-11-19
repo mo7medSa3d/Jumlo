@@ -24,12 +24,13 @@ internal fun draftNumber(value:String,fallback:Int):Int =
 /** Visible values, reset and accessibility semantics for every numeric slider. */
 @Composable
 internal fun InteractiveIntSlider(label:String,current:Int,minimum:Int,maximum:Int,reset:Int,onChange:(Int)->Unit) {
-    val safe=current.coerceIn(minimum,maximum)
+    val upper=maximum.coerceAtLeast(minimum)
+    val safe=current.coerceIn(minimum,upper)
     val haptics=rememberAppHaptics()
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
         Text(label,modifier=Modifier.weight(1f),style=QuietTheme.typography.metadataStrong)
         Text(safe.toString(),style=QuietTheme.typography.metadataStrong)
-        TextButton(onClick={onChange(reset.coerceIn(minimum,maximum))}) { Text(stringResource(R.string.visual_edit_reset)) }
+        TextButton(onClick={onChange(reset.coerceIn(minimum,upper))}) { Text(stringResource(R.string.visual_edit_reset)) }
     }
     if(maximum>minimum) Slider(value=safe.toFloat(),valueRange=minimum.toFloat()..maximum.toFloat(),
         steps=if(maximum-minimum<=20) (maximum-minimum-1).coerceAtLeast(0) else 0,
@@ -49,7 +50,8 @@ internal fun InteractiveToggle(label:String,checked:Boolean,onChange:(Boolean)->
 /** For counts with a large range, adjacent buttons avoid an imprecise million-step slider. */
 @Composable
 internal fun InteractiveCounter(label:String,value:Int,minimum:Int,maximum:Int,onChange:(Int)->Unit) {
-    val safe=value.coerceIn(minimum,maximum)
+    val upper=maximum.coerceAtLeast(minimum)
+    val safe=value.coerceIn(minimum,upper)
     val decrease=stringResource(R.string.interactive_decrease,label)
     val increase=stringResource(R.string.interactive_increase,label)
     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -57,6 +59,6 @@ internal fun InteractiveCounter(label:String,value:Int,minimum:Int,maximum:Int,o
         IconButton(onClick={onChange(safe-1)},enabled=safe>minimum) {Icon(Icons.Rounded.Remove,decrease)}
         Text(safe.toString(),style=QuietTheme.typography.metadataStrong,
             modifier=Modifier.semantics {contentDescription=label;stateDescription=safe.toString()})
-        IconButton(onClick={onChange(safe+1)},enabled=safe<maximum) {Icon(Icons.Rounded.Add,increase)}
+        IconButton(onClick={onChange(safe+1)},enabled=safe<upper) {Icon(Icons.Rounded.Add,increase)}
     }
 }

@@ -5,7 +5,7 @@ import unittest
 from source_paths import source_path
 ROOT=Path(__file__).resolve().parents[1]
 K=ROOT/'app/src/main/java/com/jumlo/app'
-def code(file): return source_path(file).read_text()
+def code(file): return source_path(file).read_text(encoding="utf-8")
 class RedesignWiringTests(unittest.TestCase):
     def test_tool_switch_is_new_empty_session(self):
         vm=code('ui/AppViewModel.kt')
@@ -34,7 +34,7 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('rememberUpdatedState(onDragStep)',editor)
         self.assertIn('detectDragGesturesAfterLongPress',editor)
         self.assertIn('asset.extractor in setOf("DirectMedia", "Html5")',code('ui/downloads/MediaWorkspace.kt'))
-        errors=(ROOT/'app/src/main/res/values/error_messages.xml').read_text()
+        errors=(ROOT/'app/src/main/res/values/error_messages.xml').read_text(encoding="utf-8")
         self.assertNotIn('Optimizing large files automatically to fit device memory.',errors)
 
     def test_download_is_extractor_or_real_direct_file(self):
@@ -79,8 +79,8 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietStates.kt'))
         self.assertIn('LocalReducedMotion.current',code('ui/components/QuietButtons.kt'))
     def test_english_and_arabic_redesign_strings(self):
-        en=(ROOT/'app/src/main/res/values/redesign.xml').read_text()
-        ar=(ROOT/'app/src/main/res/values-ar/redesign.xml').read_text()
+        en=(ROOT/'app/src/main/res/values/redesign.xml').read_text(encoding="utf-8")
+        ar=(ROOT/'app/src/main/res/values-ar/redesign.xml').read_text(encoding="utf-8")
         for key in ('redesign_custom_saved_path','redesign_save_fallback'):
             self.assertIn(f'name="{key}"',en)
             self.assertIn(f'name="{key}"',ar)

@@ -1,82 +1,102 @@
 # Jumlo Android
 
-Android utilities application in Kotlin: PDF tools, document conversion, files, printing and internet downloads. This source accompanies the 1.6-tools rebuild. Read **TEST_REPORT.md** for the executed results and remaining release gates; implemented code is not a claim that every website or device has been qualified.
+Kotlin Android utilities application for PDF tools, document conversion, file management, printing, and on-device media/internet downloads. Built with Jetpack Compose, Material 3, Hilt, Room, DataStore, and WorkManager, backed by four JVM core modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) and an optional Python media extraction service (`tools/media-service`).
 
-## Build
+## Requirements
 
-Use JDK 17, Python 3, Android SDK platform 36 and build-tools 36.0.0. The checked-in Gradle wrapper pins Gradle 8.14 and verifies its distribution checksum. SDK licenses must be accepted in your development environment. Set `ANDROID_HOME` or create a local `local.properties` containing `sdk.dir=...`.
+- **JDK 17** (or JDK 21; Gradle 8.14 rejects JDK 22+)
+- **Android SDK** Platform 36 and Build-Tools `36.0.0` (with accepted licenses)
+- **Python 3.11+** (for verification scripts and optional `tools/media-service`)
+- **Docker** (optional, for containerized `tools/media-service` deployment)
+- **Android emulator or authorized ARM64/x86_64 device** (for instrumentation tests)
+
+## Setup
+
+1. Configure the Android SDK via `ANDROID_HOME` or an untracked `local.properties` containing `sdk.dir=/path/to/android-sdk`.
+2. Copy `.env.example` to `.env` for local environment and media-service variables.
+3. For signed release builds, copy `keystore.properties.example` to `keystore.properties` (gitignored) or export the signing environment variables below.
+
+## Configuration
+
+| Variable / Property | Source | Purpose |
+|---|---|---|
+| `ANDROID_HOME` / `sdk.dir` | Env / `local.properties` | Path to local Android SDK |
+| `JUMLO_KEYSTORE_PATH` / `storeFile` | Env / `keystore.properties` | Path to release signing keystore (`.jks`) |
+| `JUMLO_STORE_PASSWORD` / `storePassword` | Env / `keystore.properties` | Release keystore password |
+| `JUMLO_KEY_ALIAS` / `keyAlias` | Env / `keystore.properties` | Release signing key alias |
+| `JUMLO_KEY_PASSWORD` / `keyPassword` | Env / `keystore.properties` | Release signing key password |
+| `JUMLO_KEYSTORE_BASE64` | GitHub Actions secret | Base64-encoded release keystore for CI owner-signed builds |
+| `JUMLO_SERVICE_TOKEN` | `.env` / Env | Shared bearer secret for `tools/media-service` (`Authorization` header) |
+| `-PversionCode` / `-PversionName` | Gradle property | Override release version values from `gradle.properties` |
+| `-PextendedMedia=false` | Gradle property | Dev-only direct-file build without bundled social-media extractor (rejected by release size gates) |
+| `mediaProcessTimeoutMillis` | Instrumentation arg | Override native media timeout during slow emulator runs |
+
+Environment variables take precedence over `keystore.properties`. See `.env.example` and `keystore.properties.example` for templates; never commit real secrets or keystores.
+
+## Build, Run & Test
 
 ```sh
+# Debug APK, JVM unit tests, and instrumentation test APK
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest
-./gradlew :app:verifyReleaseApkSize :app:verifyCompactApkSize :app:bundleRelease
-./gradlew :app:lintRelease
+
+# Size gates (60,000,000-byte ARM64 cap), Play bundle, and release lint
+./gradlew :app:verifyCompactApkSize :app:verifyReleaseApkSize :app:bundleRelease :app:lintRelease
+
+# Full signed release verification (requires release signing credentials)
+./gradlew :app:verifyPublishableRelease
+
+# Connected device / emulator tests (see verification/current/device/preflight-source/README.md first)
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-The last command requires a booted emulator or connected, authorized device. Some media instrumentation uses real packaged native binaries and can run slowly under software emulation. A timeout override is available through the `mediaProcessTimeoutMillis` instrumentation argument. Play services provide the primary scanner and unbundled Latin OCR model. The CameraX scanner fallback supports devices where the primary scanner cannot launch; OCR still requires its supported model.
+Static and contract verification scripts:
 
-Before the unfiltered connected-test task, follow the [instrumentation preflight](verification/current/device/preflight-source/README.md). `PdfCompressionDeviceTest` requires the five `scan_01pages.pdf`, `scan_03pages.pdf`, `scan_06pages.pdf`, `scan_10pages.pdf` and `scan_30pages.pdf` inputs in the debug app's external `files/bench` directory, normally `/sdcard/Android/data/com.jumlo.app.debug/files/bench`. The corpus recipe is `scripts/test-pdf-compression.sh --measure`; it writes inputs and separate host measurements beneath the JVM temporary directory's `jumlo-compression-measure` folder. Stage only the five scan inputs, preserve their identities, and record hashes for any newly generated corpus. The preserved preflight binds the actual supplied corpus hashes and explains the generated 200-page document, simultaneous scratch files, guest free-space checks and host QCOW growth. Its 4–4.5 GiB guest planning allowance is an estimate, not a measured peak or a guarantee. Missing fixtures, SDK-filtered methods and opt-in screenshot skips must remain explicit in the results.
+```sh
+python3 -B scripts/test-tool-matrix-contract.py
+python3 -B scripts/test-universal-media-architecture.py
+python3 -B scripts/tests/test-release-apk-artifacts.py
+python3 -B scripts/tests/test-platform-matrix-parity.py
+python3 -B scripts/tests/test-live-media-qualification.py
+```
 
-| Variant | Purpose | CPU architectures | Signing |
+### Build Variants
+
+| Variant | Purpose | ABIs | Signing |
 |---|---|---|---|
-| `debug` | Development and emulator tests; application ID `com.jumlo.app.debug` | ARM64 and x86_64 | Local Android debug key |
-| `compact` | Minified, resource-shrunk installer for ARM64 testing | ARM64 | Local Android debug key; **not a production release key** |
-| `release` | Production APK / Android App Bundle | ARM64; bundle split configuration enabled | User-provided release credentials, otherwise unsigned |
-| `benchmark` | Profileable release-equivalent performance target | ARM64 | Local debug key |
+| `debug` | Development & emulator tests (`com.jumlo.app.debug`) | `arm64-v8a`, `x86_64` | Android debug key |
+| `compact` | R8-minified, resource-shrunk ARM64 test installer (<= 60 MB) | `arm64-v8a` | Android debug key (not production) |
+| `release` | Production APK / Play Store AAB | `arm64-v8a` (bundle splits enabled) | Owner release keystore |
+| `benchmark` | Profileable release-equivalent target | `arm64-v8a` | Android debug key |
 
-The full local media engine is the default. `-PextendedMedia=false` is an explicit development-only direct-file build and cannot extract social-media pages. It is rejected by both full-feature size gates. `verifyCompactApkSize` measures the actual APK and fails above 60,000,000 bytes. The requested distribution ceiling is not inferred from a dependency estimate.
+## Deployment
 
-Common extractor, pins, licenses and ARM64 repair assets live in `app/src/media/assets`. The five x86_64 repair assets live in `app/src/mediaDebug/assets` and are included only in the full-runtime debug build. ARM64 release/compact/benchmark and explicitly lightweight builds exclude that debug asset directory.
+### Android Play Store & ARM64 APK
 
-For production signing, set `JUMLO_KEYSTORE_PATH`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`, or create an untracked `keystore.properties` with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. Environment values take precedence. `verifyPublishableRelease` requires the complete optimized release, signing configuration, size and lint gates. Supply your own key securely. No production signing key is included. Release version values come from `gradle.properties`, and may be overridden with `-PversionCode=... -PversionName=...`.
+1. Confirm all gates in `RELEASE_CHECKLIST.md`, `PRIVACY_POLICY.md`, `PRIVACY_AND_PERMISSIONS.md`, and `PLAY_STORE_LISTING.md`.
+2. Build and verify the signed Play Store bundle locally:
+   ```sh
+   ./gradlew -PversionCode=10844 -PversionName="1.6-tools" :app:verifyPublishableRelease :app:bundleRelease
+   ```
+3. **GitHub Actions CI (`Android CI & APK`)**:
+   - **Optimized test installer**: Every successful `main` run publishes `Jumlo-Optimized-Installable-ARM64-*` containing `Jumlo-Optimized-ARM64.apk`, its SHA-256 checksum, and `INSTALLATION.txt`. It is R8-minified with the full local media engine (60,000,000-byte gate) and signed with the Android testing key.
+   - **Owner-signed production APK**: Configure all four GitHub Actions secrets (`JUMLO_KEYSTORE_BASE64`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`). On `main` pushes, version tags, or manual workflow dispatch, CI runs `:app:verifyPublishableRelease`, verifies the signature with `apksigner`, and uploads `Jumlo-Owner-Signed-Release-ARM64-*`.
 
-## Download a smaller installable APK from GitHub Actions
+### Optional Media Service (`tools/media-service`)
 
-Open **[Actions → Android CI & APK](https://github.com/mo7medSa3d/Jumlo/actions/workflows/ci.yml)**, select a successful `main` run, and open **Artifacts → Jumlo-Optimized-Installable-ARM64-…**. Download and extract its ZIP, then install **`Jumlo-Optimized-ARM64.apk`**. Its checksum and `INSTALLATION.txt` are bundled with it. The successful run's summary also links directly to that artifact.
+The default Android app runs its on-device extractor behind `MediaRuntime` (`docs/media/UNIVERSAL_ENGINE.md`). To deploy the optional companion extraction adapter:
 
-The optimized APK uses the complete local media engine, release-style R8 minification and resource shrinking, ARM64-only libraries, Android 8+, and the hard 60,000,000-byte gate. **It is signed with the Android testing key**, so this is an installable testing build, **not an owner-signed production release**. Its certificate may differ from an already installed production build; do not uninstall an existing app without safeguarding its data. The larger Debug APK stays in a different artifact.
+```sh
+# Local Python run
+JUMLO_SERVICE_TOKEN="replace-with-strong-secret" \
+  python3 tools/media-service/service.py --host 127.0.0.1 --port 8731
 
-For an **owner-signed production Release APK**, configure these GitHub repository Actions secrets: `JUMLO_KEYSTORE_BASE64` (base64 of the binary owner keystore), `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, and `JUMLO_KEY_PASSWORD`. On a `main` push, version tag or manual workflow run, CI will verify `:app:verifyPublishableRelease` and the APK signature, then upload **Jumlo-Owner-Signed-Release-ARM64-…** only when all four secrets exist. The owner keystore never goes into the artifact or repository. If these secrets are absent, no unsigned APK is advertised as installable; only the compact testing installer is published. Confirm the signer fingerprint against your known key before distributing an official release.
+# Docker build and run (using .env copied from .env.example)
+docker build -t jumlo-media-service ./tools/media-service
+docker run --rm --env-file .env -p 8731:8731 jumlo-media-service
+```
 
-## Architecture
+## Operational Docs & Known Limits
 
-The existing Compose / Material 3 / typed Navigation / Hilt / Room / DataStore / WorkManager architecture is retained. WorkManager foreground work declares `dataSync`. Download and file jobs keep their durable ownership in Room; publication uses verified private files plus a MediaStore or persisted SAF destination.
-
-Four actual Kotlin/JVM modules separate reusable logic from Android adapters:
-
-| Module | Responsibility |
-|---|---|
-| `core-common` | Validation, names, catalogs, budgets and shared policies |
-| `downloader-core` | Media selection/routing, transfer/resume and process contracts |
-| `document-core` | PDF geometry/text policies, image policies and OOXML packages |
-| `storage-core` | Verified file copies, paths, publication and cleanup policies |
-
-These modules have no Android imports, but use JVM APIs. They are **not Kotlin Multiplatform/iOS binaries**. See `iOS_PLAN.md` for the required ports and native adapters.
-
-The on-device extractor remains behind `MediaRuntime`; direct files use OkHttp. The repository's optional service adapter is a development option and is not a deployed backend. Native payload repacking validates upstream and output hashes, checks ELF dependencies, and preserves retained compressed ZIP records without host-dependent recompression. Details are in `docs/media/UNIVERSAL_ENGINE.md`.
-
-Treat payload-size figures in the media architecture note as historical. The [preserved artifact inventory](verification/current/artifact-checkpoints/checkpoint-1/final-release-packaging.json) distinguishes raw archive bytes from compressed APK entries for that checkpoint; final-candidate measurements and signing status belong in `TEST_REPORT.md` after the fresh build and inspection.
-
-## Documents and limits
-
-- `AUDIT.md`: source inventory and the decisions behind retained, hidden and removed items.
-- `docs/AUDIT_2.md`: 2026-10-28 evidence-backed capability inventory and release gap register.
-- `docs/AUDIT_2_SOURCE_SCAN.md`: 244-file Kotlin/Java source lexical candidate scan with file:line locations; not Android-runtime evidence.
-- `ROUTES.md`: typed routes, entry points, tab ownership and back behavior.
-- `CHANGELOG.md`: concrete implementation changes.
-- `TEST_REPORT.md`: measured builds, sizes, tests and outstanding device/platform checks.
-- `iOS_PLAN.md`: practical reuse and porting plan.
-- `TOOL_UI_SPEC.md` / `ICON_MAP.md`: per-tool interaction contract and official icon provenance.
-- `PRIVACY_AND_PERMISSIONS.md`, `PRIVACY_POLICY.md`, `PLAY_STORE_LISTING.md`: reviewed data flows and owner-completed publication drafts.
-- `RELEASE_CHECKLIST.md`: signing, device, performance and Play gates.
-- `SCREENSHOTS/`: actual captured UI states and an explicit coverage/blocker manifest.
-
-PDF to Word produces basic paragraphs, detected headings and page breaks; it does not reconstruct complex tables or page layout. Textless pages request Latin OCR. Arabic text already embedded in a PDF is preserved as Unicode, but scanned Arabic recognition is not supported by the selected recognizer. PDF to PowerPoint uses a page image with an editable extracted-text layer, not reconstructed presentation shapes. OCR model/scanner installation may require a first network connection.
-
-The fonts are OFL-licensed subsets of IBM Plex Sans and IBM Plex Sans Arabic, internally renamed Jumlo Sans and Jumlo Sans Arabic. The license is bundled in `app/src/main/assets/licenses/IBM-Plex-OFL.txt`. `tools/subset-fonts.py` reproduces the subsets from the original upstream fonts using fontTools. It is not needed for ordinary builds. Third-party native licenses and notices remain in the media assets.
-
-On Android 10+ default public copies use MediaStore; a selected SAF folder persists its URI grant. On Android 8–9 the default copy is in the app-specific external Downloads directory; choose a SAF folder for a durable shared location. Clearing cache leaves source documents, published outputs and active job state intact.
-
-This rebuild does not establish the original paste-crash stack trace, live provider availability, successful physical-device tests, or Microsoft Office application compatibility. Refer to the explicit evidence and pending matrix in `TEST_REPORT.md` before shipping.
-
-Before the unfiltered connected-test task, follow the [instrumentation preflight](verification/current/device/preflight-source/README.md). `PdfCompressionDeviceTest` requires the five `scan_01pages.pdf`, `scan_03pages.pdf`, `scan_06pages.pdf`, `scan_10pages.pdf` and `scan_30pages.pdf` inputs in the debug app's external `files/bench` directory, normally `/sdcard/Android/data/com.jumlo.app.debug/files/bench`. The corpus recipe is `scripts/test-pdf-compression.sh --measure`; it writes inputs and separate host measurements beneath the JVM temporary directory's `jumlo-compression-measure` folder. Stage only the five scan inputs, preserve their identities, and record hashes for any newly generated corpus. The restored preflight gives a reproducible recipe to generate the five scan PDFs, record new input hashes per run, and stage Android fixtures. No fixed hashes or device results are bundled. Its 4–4.5 GiB guest planning allowance is an estimate, not a measured peak or a guarantee. Missing fixtures, SDK-filtered methods and opt-in screenshot skips must remain explicit in the results.
+- **Release & Policy**: `CHANGELOG.md`, `RELEASE_CHECKLIST.md`, `PRIVACY_POLICY.md`, `PRIVACY_AND_PERMISSIONS.md`, `PLAY_STORE_LISTING.md`
+- **Media & Testing Specs**: `docs/media/UNIVERSAL_ENGINE.md`, `docs/media/NATIVE_16KB_REPAIR.md`, `docs/testing/TOOL_QUALIFICATION.md`, `docs/testing/LIVE_MEDIA_QUALIFICATION.md`
+- **Document & Storage Notes**: PDF-to-Word emits paragraphs, headings, and page breaks (not complex table/layout reconstruction); OCR uses unbundled Latin ML Kit models (embedded Arabic Unicode text is preserved, scanned Arabic OCR is unsupported); PDF-to-PowerPoint pairs page images with an editable text layer. Public outputs use MediaStore on Android 10+ (or persisted SAF grants) and app-specific external Downloads on Android 8–9. Bundled Jumlo Sans fonts are OFL-licensed IBM Plex subsets (`app/src/main/assets/licenses/IBM-Plex-OFL.txt`).

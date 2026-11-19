@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,11 +43,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jumlo.app.ui.theme.JumloRadii
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
 
@@ -68,7 +73,7 @@ fun QuietSectionTitle(
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).semantics { heading() }
         )
         if (trailingText != null && onTrailingClick != null) {
             TextButton(onClick = onTrailingClick, modifier = Modifier.sizeIn(minHeight = 48.dp)) {
@@ -82,33 +87,34 @@ fun QuietSectionTitle(
 fun QuietHero(
     title: String,
     subtitle: String,
-    icon: ImageVector = Icons.Rounded.Bolt,
     modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Rounded.Bolt,
     onClick: (() -> Unit)? = null
 ) {
-    val colors = MaterialTheme.colorScheme
-    val brush = Brush.linearGradient(listOf(colors.primary, colors.tertiary))
+    val system = com.jumlo.app.ui.theme.LocalColorSystem.current
+    val brush = Brush.linearGradient(listOf(system.splashStart, system.splashMid, system.splashEnd))
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(QuietTheme.shapes.card)
             .background(brush)
-            .then(if (onClick != null) Modifier.pressFeedback().clickable(onClick = onClick) else Modifier)
-            .padding(QuietTheme.spacing.cardInteriorPadding + 6.dp)
+            .then(if (onClick != null) Modifier.pressFeedback().clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .padding(QuietTheme.spacing.cardInteriorPadding + 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = title,
                     style = QuietTheme.typography.screenTitle,
-                    color = colors.onPrimary,
+                    color = Color.White,
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { heading() }
                 )
                 Text(
                     text = subtitle,
                     style = QuietTheme.typography.metadata,
-                    color = colors.onPrimary.copy(alpha = 0.85f),
+                    color = Color.White.copy(alpha = 0.88f),
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -116,12 +122,12 @@ fun QuietHero(
             Spacer(modifier = Modifier.width(12.dp))
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(colors.onPrimary.copy(alpha = 0.18f)),
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(JumloRadii.field))
+                    .background(Color.White.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = colors.onPrimary, modifier = Modifier.size(32.dp))
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
             }
         }
     }
@@ -166,11 +172,14 @@ fun QuietStateCard(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     isError: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Rounded.Info
 ) {
     val colors = MaterialTheme.colorScheme
     QuietCard(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (isError) Modifier.semantics { liveRegion = LiveRegionMode.Polite } else Modifier),
         containerColor = if (isError) colors.errorContainer else QuietTheme.pillars.cardSurface,
         borderColor = if (isError) colors.error.copy(alpha = 0.65f) else QuietTheme.pillars.cardBorder
     ) {
@@ -179,7 +188,7 @@ fun QuietStateCard(
             if (compact) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     QuietIconTile(
-                        icon = if (isError) Icons.Rounded.Warning else Icons.Rounded.Info,
+                        icon = if (isError) Icons.Rounded.Warning else icon,
                         tint = if (isError) colors.onErrorContainer else colors.primary,
                         container = if (isError) colors.errorContainer else colors.primaryContainer,
                         size = 44.dp
@@ -193,7 +202,7 @@ fun QuietStateCard(
             } else {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     QuietIconTile(
-                        icon = if (isError) Icons.Rounded.Warning else Icons.Rounded.Info,
+                        icon = if (isError) Icons.Rounded.Warning else icon,
                         tint = if (isError) colors.onErrorContainer else colors.primary,
                         container = if (isError) colors.errorContainer else colors.primaryContainer,
                         size = 44.dp
@@ -229,20 +238,34 @@ fun QuietCard(
 ) {
     val shape = QuietTheme.shapes.card
     val haptics = rememberAppHaptics()
-    val clickModifier = if (onClick != null) Modifier.clip(shape).clickable(onClick = {
-        haptics.toolSelect()
-        onClick()
-    }) else Modifier
-    Surface(
-        modifier = modifier.then(clickModifier),
-        shape = shape,
-        color = containerColor,
-        shadowElevation = 2.dp
-    ) {
+    val body: @Composable () -> Unit = {
         Column(
             modifier = Modifier.padding(contentPadding),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content
+        )
+    }
+    if (onClick != null) {
+        Surface(
+            onClick = {
+                haptics.toolSelect()
+                onClick()
+            },
+            modifier = modifier,
+            shape = shape,
+            color = containerColor,
+            border = BorderStroke(1.dp, borderColor),
+            shadowElevation = 1.dp,
+            content = body
+        )
+    } else {
+        Surface(
+            modifier = modifier,
+            shape = shape,
+            color = containerColor,
+            border = BorderStroke(1.dp, borderColor),
+            shadowElevation = 1.dp,
+            content = body
         )
     }
 }
@@ -257,9 +280,9 @@ fun QuietBadge(
 ) {
     Row(
         modifier = modifier
-            .clip(QuietTheme.shapes.activeIndicatorPill)
+            .clip(RoundedCornerShape(10.dp))
             .background(containerColor)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {

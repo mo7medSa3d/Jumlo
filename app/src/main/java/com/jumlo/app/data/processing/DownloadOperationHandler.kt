@@ -188,7 +188,7 @@ class DownloadOperationHandler @Inject constructor(
                     val customName=settings.displayName.trim().takeUnless { it.isEmpty() || it=="download.bin" || it=="download" }
                     val baseName=if(customName!=null) DownloadLinkPolicy.cleanName(customName,null,result.mimeType) else derived
                     val name=if(urls.size==1) baseName else "${index+1}-$baseName"
-                    val resolvedMime=result.mimeType?.takeIf { Regex("[a-zA-Z0-9!#$&^_.+-]+/[a-zA-Z0-9!#$&^_.+-]+").matches(it) } ?: "application/octet-stream"
+                    val resolvedMime=result.mimeType?.takeIf { MIME_TYPE_REGEX.matches(it) } ?: "application/octet-stream"
                     val fileKind=DownloadLinkPolicy.classifyDirectFile(name, resolvedMime)
 
                     val processDownloaded: suspend () -> Unit = {
@@ -398,9 +398,13 @@ class DownloadOperationHandler @Inject constructor(
     }
 
     private fun networkPolicy(settings:DownloadSettings) {
-        val manager=app.getSystemService(ConnectivityManager::class.java)
+        val manager=app.getSystemService(ConnectivityManager::class.java) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
         val capabilities=manager.getNetworkCapabilities(manager.activeNetwork) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
         if(settings.wifiOnly && !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) throw OperationFailure("WIFI_REQUIRED")
         if(settings.unmeteredOnly && !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) throw OperationFailure("UNMETERED_NETWORK_REQUIRED")
+    }
+
+    private companion object {
+        val MIME_TYPE_REGEX=Regex("[a-zA-Z0-9!#$&^_.+-]+/[a-zA-Z0-9!#$&^_.+-]+")
     }
 }

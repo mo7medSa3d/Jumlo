@@ -48,9 +48,9 @@ Contact **[privacy contact]** for requests concerning information held by the op
 
 **[Owner: specify the intended audience and any required children's-privacy terms after completing the Play target-audience review.]** Do not publish an unsupported age/audience claim. Material policy changes will be described at **[public policy URL]**, with an updated effective date and any notice required for the release.
 
-## Explicit Google Drive import/export
+## Google Drive links (retired transfer tool)
 
-Jumlo includes an enabled, user-initiated Google Drive v3 transfer tool. When you select a Drive import, Google receives a request for that file and your provided access token; an import copies the selected file to the device. When you select Drive export, Google receives the contents and metadata of the selected files and the provided access token. The token is held through an ephemeral secret handle for the transfer, and the app removes it from the transfer secret store after the operation. Google controls its own retention, access and privacy practices for cloud copies. The presence of this feature is **not** a claim that its account/device integrations have passed final acceptance.
+The authenticated Google Drive v3 import/export tool (`file_drive` / `GoogleDriveClient`) has been retired and removed from the current build. Public Google Drive share links pasted into the downloader are resolved as direct file downloads; Google receives the standard download request and connection IP for those user-requested links.
 
 ## PDF reading position (2026-10-28 source revision)
 

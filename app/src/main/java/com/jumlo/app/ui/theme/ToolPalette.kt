@@ -18,7 +18,7 @@ object ToolPalette {
             toolId.startsWith("pdf_") -> 0
             toolId.startsWith("img_") -> 1
             toolId.startsWith("dl_") -> 2
-            toolId.startsWith("file_") || toolId == "sha256" -> 3
+            toolId.startsWith("file_") -> 3
             toolId.startsWith("xf_") -> 4
             else -> (toolId.hashCode() and Int.MAX_VALUE) % accents.size
         }

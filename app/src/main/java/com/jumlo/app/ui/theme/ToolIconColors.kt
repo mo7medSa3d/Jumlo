@@ -12,30 +12,25 @@ import androidx.compose.ui.graphics.Color
  * Hue plan: each family has a center hue (PDF red-orange, scanner teal,
  * images green, files violet, downloads blue, organize amber, other
  * magenta) and each tool steps 37 degrees inside a 90-degree window
- * around it. 37 and 90 are coprime, so all 47 catalogue tools land on
+ * around it. 37 and 90 are coprime, so all 30 catalogue tools land on
  * distinct hues. Saturation 0.85 / lightness 0.55 keeps every tile vivid;
  * glyphOn picks black or white by WCAG contrast (worst pair 4.82).
  * Unknown ids fall back to a hash step so no tool ever renders colorless.
  */
 object ToolIconColors {
     private val ORDERED = listOf(
-        // PDF workspace, catalogue order (primary then merged).
+        // PDF workspace, catalogue order.
         "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_ocr", "pdf_02",
         "pdf_03", "pdf_05", "pdf_04", "pdf_compress", "pdf_07", "pdf_signature",
-        "pdf_clean", "pdf_06", "pdf_crop", "pdf_image", "pdf_forms", "pdf_annotate",
-        "pdf_stamp", "pdf_metadata", "pdf_protect", "pdf_compare", "pdf_redact", "pdf_01",
+        "pdf_06", "pdf_crop", "pdf_stamp", "pdf_protect", "pdf_01",
         // Scanner.
         "scan_doc",
         // Images workspace.
         "img_03", "img_02", "img_04", "img_01", "img_join", "img_watermark",
-        "img_adjust", "img_target", "img_stitch", "img_exif",
         // Files workspace.
-        "file_07", "file_duplicates", "file_batch_rename", "file_08",
-        "file_encrypted_zip", "file_drive", "sha256",
+        "file_07", "file_batch_rename", "file_08", "file_encrypted_zip",
         // Downloads workspace.
-        "dl_media", "dl_02", "dl_03",
-        // Hidden / search-only specialists.
-        "img_compare", "file_trash", "file_02"
+        "dl_media", "dl_02", "dl_03"
     )
 
     private val INDEX = ORDERED.withIndex().associate { it.value to it.index }
@@ -45,7 +40,7 @@ object ToolIconColors {
         toolId.startsWith("pdf_") || toolId == "office_to_pdf" -> 12f
         toolId.startsWith("img_") -> 150f
         toolId.startsWith("dl_") -> 220f
-        toolId.startsWith("file_") || toolId == "sha256" -> 275f
+        toolId.startsWith("file_") -> 275f
         toolId.startsWith("xf_") -> 45f
         else -> 320f
     }

@@ -10,14 +10,14 @@ SRC=ROOT/'app/src/main/java/com/jumlo/app'
 
 class WatermarkStudioContracts(unittest.TestCase):
     def test_real_tool_routes_to_visual_editor(self):
-        workspace=(SRC/'ui/workspace/WorkspaceScreen.kt').read_text()
+        workspace=(SRC/'ui/workspace/WorkspaceScreen.kt').read_text(encoding="utf-8")
         self.assertIn('VisualWatermarkEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id,onPhotos)',workspace)
         self.assertIn('VisualWatermarkEditor(vm,queue.first().id,form,vm::updateForm,queue.getOrNull(1)?.id?.takeIf {form.flag1},onPhotos)',workspace)
         self.assertIn('pdf_stamp',workspace)
     def test_styles_are_serialized_and_consumed(self):
-        draft=(SRC/'model/WorkspaceDraft.kt').read_text()
-        handler=(SRC/'data/processing/PdfOperationHandler.kt').read_text()
-        backend=(SRC/'data/pdf/PdfBoxBackend.kt').read_text()
+        draft=(SRC/'model/WorkspaceDraft.kt').read_text(encoding="utf-8")
+        handler=(SRC/'data/processing/PdfOperationHandler.kt').read_text(encoding="utf-8")
+        backend=(SRC/'data/pdf/PdfBoxBackend.kt').read_text(encoding="utf-8")
         for key in ('style.centerX','style.centerY','style.opacityPercent','style.rotationDegrees','style.colorHex',
                     'style.fontFamily','style.imageScale','watermarkUseImage'):
             self.assertIn(key,draft)
@@ -29,8 +29,8 @@ class WatermarkStudioContracts(unittest.TestCase):
         self.assertIn('bitmap.recycle()',backend)
         self.assertIn('zeroBasedPages.forEach',backend)
     def test_no_raw_numeric_fields_or_fake_document_preview(self):
-        ui=(SRC/'ui/workspace/VisualWatermarkEditor.kt').read_text()
-        preview=(SRC/'ui/workspace/PdfWatermarkPreview.kt').read_text()
+        ui=(SRC/'ui/workspace/VisualWatermarkEditor.kt').read_text(encoding="utf-8")
+        preview=(SRC/'ui/workspace/PdfWatermarkPreview.kt').read_text(encoding="utf-8")
         self.assertIn('vm.preview(sourceId,if(imageTool) 1 else page)',ui)
         self.assertIn('vm.preview(overlayId,1)',ui)
         self.assertIn('PdfWatermarkPreview(',ui)

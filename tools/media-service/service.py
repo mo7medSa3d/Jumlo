@@ -17,17 +17,23 @@ yt-dlp and ffmpeg installed.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import hashlib
+import hmac
+import ipaddress
 import json
+import math
 import os
 import re
 import shutil
+import signal
+import socket
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 import threading
 import time
+from pathlib import Path
 import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -71,6 +77,150 @@ ERROR_CODES = {
     "disk full": "MEDIA_STORAGE_FULL",
 }
 
+_SECURITY_HEADERS = (
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "DENY"),
+    ("Cache-Control", "no-store"),
+    ("Referrer-Policy", "no-referrer"),
+)
+_VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
+
+def _is_loopback_host(host: str) -> bool:
+    normalized = (host or "").strip().lower().strip("[]")
+    if normalized == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def _parse_int_range(raw: str, name: str, minimum: int, maximum: int | None = None) -> int:
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+    if value < minimum or (maximum is not None and value > maximum):
+        bounds = f"between {minimum} and {maximum}" if maximum is not None else f">= {minimum}"
+        raise ValueError(f"{name} must be {bounds}")
+    return value
+
+
+def parse_config(argv: list[str] | None = None, environ: dict[str, str] | None = None) -> argparse.Namespace:
+    env = os.environ if environ is None else environ
+    parser = argparse.ArgumentParser(description="Jumlo media extraction service")
+    parser.add_argument("--host", default=env.get("JUMLO_MEDIA_HOST", "127.0.0.1"))
+    parser.add_argument("--port", default=env.get("JUMLO_MEDIA_PORT", "8787"))
+    parser.add_argument(
+        "--token",
+        default=env.get("JUMLO_MEDIA_TOKEN") or env.get("JUMLO_SERVICE_TOKEN", ""),
+        help="shared secret required in the Authorization header",
+    )
+    parser.add_argument("--rate-limit", default=env.get("JUMLO_MEDIA_RATE_LIMIT", "60"))
+    parser.add_argument("--max-concurrent", default=env.get("JUMLO_MEDIA_MAX_CONCURRENT", "8"))
+    parser.add_argument("--log-level", default=env.get("JUMLO_MEDIA_LOG_LEVEL", "INFO"))
+    parser.add_argument(
+        "--allow-unauthenticated",
+        action="store_true",
+        help="allow binding to a non-loopback address without JUMLO_MEDIA_TOKEN",
+    )
+    args = parser.parse_args(argv)
+
+    args.port = _parse_int_range(str(args.port), "JUMLO_MEDIA_PORT", 1, 65535)
+    args.rate_limit = _parse_int_range(str(args.rate_limit), "JUMLO_MEDIA_RATE_LIMIT", 1)
+    args.max_concurrent = _parse_int_range(str(args.max_concurrent), "JUMLO_MEDIA_MAX_CONCURRENT", 1)
+    args.log_level = str(args.log_level or "INFO").strip().upper()
+    if args.log_level not in _VALID_LOG_LEVELS:
+        raise ValueError(f"JUMLO_MEDIA_LOG_LEVEL must be one of {', '.join(_VALID_LOG_LEVELS)}")
+    if not _is_loopback_host(args.host) and not args.token and not args.allow_unauthenticated:
+        raise ValueError(
+            "JUMLO_MEDIA_TOKEN is required when binding to a non-loopback host "
+            "(or pass --allow-unauthenticated)"
+        )
+    return args
+
+
+class _RateLimiter:
+    """Thread-safe per-IP sliding-window rate limiter."""
+
+    def __init__(self, limit: int, window: float = 60.0) -> None:
+        self.limit = limit
+        self.window = window
+        self._lock = threading.Lock()
+        self._hits: dict[str, deque[float]] = {}
+
+    def allow(self, key: str) -> tuple[bool, int]:
+        now = time.monotonic()
+        cutoff = now - self.window
+        with self._lock:
+            bucket = self._hits.get(key)
+            if bucket is None:
+                bucket = deque()
+                self._hits[key] = bucket
+            while bucket and bucket[0] <= cutoff:
+                bucket.popleft()
+            if len(bucket) >= self.limit:
+                retry_after = max(1, math.ceil(bucket[0] + self.window - now))
+                return False, retry_after
+            bucket.append(now)
+            # shortcut: prune idle buckets only past 1024 keys; upgrade to LRU if exposed to wide bot traffic
+            if len(self._hits) > 1024:
+                for stale_key in [k for k, q in self._hits.items() if not q or q[-1] <= cutoff]:
+                    del self._hits[stale_key]
+            return True, 0
+
+
+class _HttpOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urllib.parse.urlsplit(newurl).scheme.lower() not in ("http", "https"):
+            raise ValueError("MEDIA_SITE_UNSUPPORTED")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_HTTP_OPENER = urllib.request.build_opener(
+    urllib.request.HTTPHandler(),
+    urllib.request.HTTPSHandler(),
+    _HttpOnlyRedirectHandler(),
+)
+
+
+def _is_public_web_url(url: str) -> bool:
+    """Validate that url is a public http/https URL without credentials or private/loopback targets."""
+    if not isinstance(url, str) or not url or len(url) > 65536:
+        return False
+    if any(ord(c) < 33 or ord(c) == 127 for c in url):
+        return False
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme.lower() not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
+        return False
+    try:
+        port = parsed.port
+    except ValueError:
+        return False
+    if port is not None and not 1 <= port <= 65535:
+        return False
+    hostname = parsed.hostname.lower().rstrip(".")
+    if not hostname or any(c in hostname for c in ("\\", "%", "/", "\x00")):
+        return False
+    if hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal")):
+        return False
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        try:
+            address = ipaddress.IPv4Address(socket.inet_aton(hostname))
+        except (OSError, ValueError):
+            address = None
+    if address is not None and not address.is_global:
+        return False
+    return True
+
+
+def _safe_filename(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(name or ""))
+    return cleaned or "media"
+
 
 def classify(message: str) -> str:
     """Map an upstream failure onto the app's error vocabulary."""
@@ -81,13 +231,38 @@ def classify(message: str) -> str:
     return "MEDIA_EXTRACTION_FAILED"
 
 
+_FORBIDDEN_YTDLP_OPTS = ("-n", "--netrc", "--netrc-location", "--netrc-cmd", "--config-location", "--config-locations")
+_FORBIDDEN_YTDLP_PREFIXES = ("--netrc-location=", "--netrc-cmd=", "--config-location=", "--config-locations=")
+
+
 def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["yt-dlp", "--ignore-config", "--no-plugin-dirs", "--no-playlist", "--geo-bypass",
-         "--extractor-args", "youtube:player_client=android_vr,android,web",
-         "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "2", *args],
-        capture_output=True, text=True, timeout=timeout, check=False,
+    for arg in args:
+        if arg == "--":
+            break
+        if arg in _FORBIDDEN_YTDLP_OPTS or arg.startswith(_FORBIDDEN_YTDLP_PREFIXES):
+            raise RuntimeError("MEDIA_FORBIDDEN_NETRC_OPTION")
+    cmd = [
+        "yt-dlp", "--ignore-config", "--no-config-locations", "--no-plugin-dirs", "--no-playlist", "--geo-bypass",
+        "--extractor-args", "youtube:player_client=web_embedded",
+        "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "2", *args,
+    ]
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
     )
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except OSError:
+            proc.kill()
+        proc.communicate()
+        raise
+    return subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
 
 
 def ytdlp_version() -> str:
@@ -144,13 +319,14 @@ def to_format(entry: dict) -> dict:
 
 def extract(url: str) -> dict:
     """Return the formats for a public URL, or an error code."""
-    parsed = urllib.parse.urlsplit(url)
-    if parsed.scheme.lower() not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
+    if not _is_public_web_url(url):
         return {"error": "MEDIA_SITE_UNSUPPORTED"}
     try:
         result = run_ytdlp(["-J", "--", url], timeout=120)
     except subprocess.TimeoutExpired:
         return {"error": "MEDIA_NETWORK_ERROR"}
+    except FileNotFoundError:
+        return {"error": "MEDIA_EXTRACTION_FAILED"}
     if result.returncode != 0:
         return {"error": classify(result.stderr or result.stdout)}
     try:
@@ -196,8 +372,7 @@ def resolve_stream(url: str, mode: str, fmt: str, bitrate: int,
     Printing URLs cannot merge adaptive tracks and also drops extractor-required
     headers. Let yt-dlp download, merge or extract audio using its own metadata.
     """
-    parsed = urllib.parse.urlsplit(url)
-    if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password:
+    if not _is_public_web_url(url):
         raise RuntimeError('MEDIA_SITE_UNSUPPORTED')
     if mode not in ('audio', 'video') or bitrate not in (0, 64, 96, 128, 160, 192, 256, 320):
         raise RuntimeError('INVALID_MEDIA_FORMAT')
@@ -221,7 +396,10 @@ def resolve_stream(url: str, mode: str, fmt: str, bitrate: int,
     work = tempfile.mkdtemp(prefix='jumlo-media-')
     try:
         args += ['-o', os.path.join(work, 'media.%(ext)s'), '--', url]
-        result = run_ytdlp(args, timeout=3600)
+        try:
+            result = run_ytdlp(args, timeout=3600)
+        except FileNotFoundError as error:
+            raise RuntimeError('MEDIA_EXTRACTION_FAILED') from error
         if result.returncode != 0:
             raise RuntimeError(classify(result.stderr or result.stdout))
         files = [path for path in Path(work).glob('media.*')
@@ -238,6 +416,26 @@ def resolve_stream(url: str, mode: str, fmt: str, bitrate: int,
 
 
 class MediaHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(
+        self,
+        server_address,
+        RequestHandlerClass,
+        bind_and_activate=True,
+        token: str = "",
+        rate_limit: int = 60,
+        max_concurrent: int = 8,
+        log_level: str = "INFO",
+    ):
+        self.expected_authorization = f"Bearer {token}" if token else None
+        self.rate_limiter = _RateLimiter(rate_limit)
+        self.concurrency_semaphore = threading.BoundedSemaphore(max_concurrent)
+        self.shutting_down = False
+        self.log_level = log_level
+        super().__init__(server_address, RequestHandlerClass, bind_and_activate=bind_and_activate)
+
     def handle_error(self, request, client_address):
         # socketserver's fallback prints the client address and raw traceback.
         # A request can fail before Handler's guarded logging path is reached.
@@ -252,13 +450,69 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "JumloMediaService/1.0"
     protocol_version = "HTTP/1.1"
 
+    def setup(self) -> None:
+        self.request.settimeout(30)
+        super().setup()
+
+    def end_headers(self) -> None:
+        for name, value in _SECURITY_HEADERS:
+            self.send_header(name, value)
+        super().end_headers()
+
+    def _authorized(self) -> bool:
+        expected = getattr(getattr(self, "server", None), "expected_authorization", None)
+        if not expected:
+            return True
+        actual = self.headers.get("Authorization") or ""
+        if not hmac.compare_digest(actual.encode("utf-8"), expected.encode("utf-8")):
+            self._error("MEDIA_SOURCE_REJECTED", 401)
+            return False
+        return True
+
+    def _check_rate_limit(self) -> bool:
+        limiter = getattr(getattr(self, "server", None), "rate_limiter", None)
+        if limiter is None:
+            return True
+        client_address = getattr(self, "client_address", None)
+        client_ip = client_address[0] if client_address else "unknown"
+        allowed, retry_after = limiter.allow(client_ip)
+        if not allowed:
+            self._error("MEDIA_RATE_LIMITED", 429, extra_headers={"Retry-After": str(retry_after)})
+            return False
+        return True
+
+    def _acquire_concurrency(self) -> bool:
+        server = getattr(self, "server", None)
+        if server is None:
+            return True
+        if getattr(server, "shutting_down", False):
+            self._error("MEDIA_SERVICE_UNAVAILABLE", 503)
+            return False
+        semaphore = getattr(server, "concurrency_semaphore", None)
+        if semaphore is None:
+            return True
+        if not semaphore.acquire(blocking=False):
+            self._error("MEDIA_SERVICE_BUSY", 503, extra_headers={"Retry-After": "1"})
+            return False
+        return True
+
+    def _release_concurrency(self) -> None:
+        semaphore = getattr(getattr(self, "server", None), "concurrency_semaphore", None)
+        if semaphore is not None:
+            semaphore.release()
+
     def log_request(self, code="-", size="-"):
         # BaseHTTPRequestHandler's default formatter includes the full request line
         # and client address. /stream carries a signed source URL in its query.
         # Only a fixed route vocabulary and numeric status may cross this boundary.
         path = getattr(self, "path", "").split("?", 1)[0]
-        route = path if path in ("/extract", "/stream", "/health") else "unknown"
+        route = path if path in ("/extract", "/stream", "/health", "/ready") else "unknown"
         status = int(code) if str(code).isdigit() and 100 <= int(code) <= 599 else None
+        level = getattr(getattr(self, "server", None), "log_level", "INFO")
+        if level == "ERROR" and (status is None or status < 500):
+            return
+        if level == "WARNING" and (status is None or status < 400):
+            return
         sys.stderr.write(json.dumps({"event": "http_request", "route": route, "status": status}) + "\n")
 
     def log_message(self, fmt, *args):
@@ -266,25 +520,47 @@ class Handler(BaseHTTPRequestHandler):
         # authorization data and user content. Request status is recorded above.
         sys.stderr.write('{"event":"http_server_event"}\n')
 
-    def _json(self, status: int, payload: dict) -> None:
+    def _json(self, status: int, payload: dict, extra_headers: dict[str, str] | None = None) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        if extra_headers:
+            for name, value in extra_headers.items():
+                self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
-    def _error(self, code: str, status: int = 422) -> None:
-        self._json(status, {"error": code})
+    def _error(self, code: str, status: int = 422, extra_headers: dict[str, str] | None = None) -> None:
+        self._json(status, {"error": code}, extra_headers=extra_headers)
 
     def do_GET(self) -> None:
+        if not self._authorized():
+            return
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         if parsed.path == "/health":
             self._json(200, {"ok": True, "ytdlp": ytdlp_version(), "ffmpeg": bool(shutil.which("ffmpeg"))})
             return
+        if parsed.path == "/ready":
+            shutting_down = bool(getattr(getattr(self, "server", None), "shutting_down", False))
+            version = ytdlp_version()
+            ytdlp_ready = version not in ("unavailable", "unknown", "")
+            ready = (not shutting_down) and ytdlp_ready
+            self._json(
+                200 if ready else 503,
+                {"ready": ready, "shutting_down": shutting_down, "ytdlp": version, "ffmpeg": bool(shutil.which("ffmpeg"))},
+            )
+            return
+        if not self._check_rate_limit():
+            return
         if parsed.path == "/stream":
-            self._stream(query)
+            if not self._acquire_concurrency():
+                return
+            try:
+                self._stream(query)
+            finally:
+                self._release_concurrency()
             return
         self._error("MEDIA_SITE_UNSUPPORTED", 404)
 
@@ -316,12 +592,15 @@ class Handler(BaseHTTPRequestHandler):
         if os.path.isfile(direct):
             self._proxy_file(direct, name, content_type)
             return
+        if urllib.parse.urlsplit(direct).scheme.lower() not in ("http", "https"):
+            self._error("MEDIA_SITE_UNSUPPORTED", 422)
+            return
         start = 0
         end = None
         ranged = False
         range_header = self.headers.get("Range")
         if range_header:
-            match = re.match(r"bytes=(\d+)-(\d*)", range_header.strip())
+            match = re.fullmatch(r"bytes=(\d+)-(\d*)", range_header.strip())
             if match:
                 ranged = True
                 start = int(match.group(1))
@@ -334,13 +613,14 @@ class Handler(BaseHTTPRequestHandler):
             request.add_header("Range", f"bytes={start}-" + (str(end) if end is not None else ""))
             if self.headers.get('If-Range'):
                 request.add_header('If-Range', self.headers['If-Range'])
+        safe_name = _safe_filename(name)
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with _HTTP_OPENER.open(request, timeout=60) as response:
                 total = response.headers.get("Content-Length")
                 status = 206 if response.status == 206 else 200
                 self.send_response(status)
                 self.send_header("Content-Type", response.headers.get("Content-Type") or content_type)
-                self.send_header("Content-Disposition", f'attachment; filename="{name}"')
+                self.send_header("Content-Disposition", f'attachment; filename="{safe_name}"')
                 if total:
                     self.send_header("Content-Length", total)
                 self.send_header("Accept-Ranges", "bytes")
@@ -361,53 +641,63 @@ class Handler(BaseHTTPRequestHandler):
 
     def _proxy_file(self, path: str, name: str, content_type: str) -> None:
         """Stream a file the service produced itself, such as a converted track."""
-        size = os.path.getsize(path)
-        digest = hashlib.sha256()
-        with open(path, 'rb') as source:
-            for chunk in iter(lambda: source.read(1024 * 1024), b''):
-                digest.update(chunk)
-        etag = '"' + digest.hexdigest() + '"'
-        start = 0
-        end = size - 1
-        status = 200
-        range_header = self.headers.get("Range")
         try:
-            if range_header and self.headers.get('If-Range', etag) == etag:
-                match = re.fullmatch(r'bytes=(\d+)-(\d*)', range_header.strip())
-                if match:
-                    start = int(match.group(1))
-                    end = min(int(match.group(2)), size - 1) if match.group(2) else size - 1
-                if not match or start >= size or end < start:
-                    self.send_response(416)
-                    self.send_header('Content-Range', f'bytes */{size}')
-                    self.send_header('Content-Length', '0')
-                    self.send_header('ETag', etag)
-                    self.end_headers()
-                    return
-                status = 206
-            self.send_response(status)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Disposition", f'attachment; filename="{name}"')
-            self.send_header("Content-Length", str(end - start + 1))
-            self.send_header("Accept-Ranges", "bytes")
-            self.send_header("ETag", etag)
-            if status == 206:
-                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
-            self.end_headers()
             with open(path, "rb") as handle:
-                handle.seek(start)
-                remaining = end - start + 1
-                while remaining > 0:
-                    chunk = handle.read(min(256 * 1024, remaining))
-                    if not chunk:
-                        break
-                    self.wfile.write(chunk)
-                    remaining -= len(chunk)
+                size = os.fstat(handle.fileno()).st_size
+                if size <= 0:
+                    self._error("MEDIA_OUTPUT_MISSING", 422)
+                    return
+                in_memory = handle.read() if size <= 1024 * 1024 else None
+                if in_memory is not None:
+                    etag = '"' + hashlib.sha256(in_memory).hexdigest() + '"'
+                else:
+                    etag = '"' + hashlib.file_digest(handle, "sha256").hexdigest() + '"'
+                start = 0
+                end = size - 1
+                status = 200
+                range_header = self.headers.get("Range")
+                if range_header and self.headers.get('If-Range', etag) == etag:
+                    match = re.fullmatch(r'bytes=(\d+)-(\d*)', range_header.strip())
+                    if match:
+                        start = int(match.group(1))
+                        end = min(int(match.group(2)), size - 1) if match.group(2) else size - 1
+                    if not match or start >= size or end < start:
+                        self.send_response(416)
+                        self.send_header('Content-Range', f'bytes */{size}')
+                        self.send_header('Content-Length', '0')
+                        self.send_header('ETag', etag)
+                        self.end_headers()
+                        return
+                    status = 206
+                self.send_response(status)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Disposition", f'attachment; filename="{_safe_filename(name)}"')
+                self.send_header("Content-Length", str(end - start + 1))
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("ETag", etag)
+                if status == 206:
+                    self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+                self.end_headers()
+                if in_memory is not None:
+                    self.wfile.write(in_memory[start:end + 1])
+                else:
+                    handle.seek(start)
+                    remaining = end - start + 1
+                    while remaining > 0:
+                        chunk = handle.read(min(1024 * 1024, remaining))
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        remaining -= len(chunk)
         finally:
             # The converted file only exists for this one download.
             shutil.rmtree(os.path.dirname(path), ignore_errors=True)
 
     def do_POST(self) -> None:
+        if not self._authorized():
+            return
+        if not self._check_rate_limit():
+            return
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path != "/extract":
             self._error("MEDIA_SITE_UNSUPPORTED", 404)
@@ -431,39 +721,44 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(payload, dict):
             self._error("MEDIA_SITE_UNSUPPORTED", 400)
             return
-        url = str(payload.get("url") or "")
-        result = extract(url)
-        if "error" in result:
-            self._error(result["error"])
+        if not self._acquire_concurrency():
             return
-        self._json(200, result)
+        try:
+            url = str(payload.get("url") or "")
+            result = extract(url)
+            if "error" in result:
+                self._error(result["error"])
+                return
+            self._json(200, result)
+        finally:
+            self._release_concurrency()
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Jumlo media extraction service")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8731)
-    parser.add_argument("--token", default=os.environ.get("JUMLO_SERVICE_TOKEN", ""),
-                        help="shared secret required in the Authorization header")
-    args = parser.parse_args()
+def main(argv: list[str] | None = None) -> None:
+    try:
+        args = parse_config(argv)
+    except ValueError as exc:
+        sys.stderr.write(json.dumps({"event": "startup_config_invalid", "error": str(exc)}) + "\n")
+        sys.exit(2)
 
-    if args.token:
-        expected = f"Bearer {args.token}"
-        original = Handler.do_GET
-        original_post = Handler.do_POST
+    server = MediaHTTPServer(
+        (args.host, args.port),
+        Handler,
+        token=args.token,
+        rate_limit=args.rate_limit,
+        max_concurrent=args.max_concurrent,
+        log_level=args.log_level,
+    )
 
-        def guard(func):
-            def wrapper(self):
-                if self.headers.get("Authorization") != expected:
-                    self._error("MEDIA_SOURCE_REJECTED", 401)
-                    return
-                func(self)
-            return wrapper
+    def _shutdown_handler(_signum, _frame):
+        if not server.shutting_down:
+            server.shutting_down = True
+            threading.Thread(target=server.shutdown, daemon=True).start()
 
-        Handler.do_GET = guard(original)
-        Handler.do_POST = guard(original_post)
+    if threading.current_thread() is threading.main_thread():
+        signal.signal(signal.SIGTERM, _shutdown_handler)
+        signal.signal(signal.SIGINT, _shutdown_handler)
 
-    server = MediaHTTPServer((args.host, args.port), Handler)
     version = ytdlp_version()
     safe_version = version if re.fullmatch(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:[.-][A-Za-z0-9.]{1,32})?", version) else "unknown"
     print(json.dumps({"event": "server_started", "extractor_version": safe_version}), flush=True)
@@ -472,6 +767,7 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
+        server.shutting_down = True
         server.server_close()
 
 
