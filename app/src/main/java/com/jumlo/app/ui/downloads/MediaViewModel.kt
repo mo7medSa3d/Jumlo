@@ -256,6 +256,9 @@ data class MediaUiState(
         if(_state.value.submitting) return
         if(!CapabilityRegistry.enabled("dl_media")) { _state.update { it.copy(error=CapabilityRegistry.reason("dl_media")) };return }
         val snapshot=_state.value
+        // A delayed auto-analysis can fire just after the user cleared the field; an empty
+        // URL is not an error state, it is simply nothing to analyze.
+        if(snapshot.url.isBlank()) return
         if(automatic && lastAnalysisInput==snapshot.url) return
         lastAnalysisInput=snapshot.url
         val token=++generation
