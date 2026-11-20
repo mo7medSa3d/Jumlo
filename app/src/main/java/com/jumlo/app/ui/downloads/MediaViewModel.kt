@@ -342,7 +342,8 @@ data class MediaUiState(
             } catch(cancel:CancellationException) { throw cancel }
             catch(e:Exception) {
                 AppDiagnostics.report("media_analysis",e)
-                if(token==generation) _state.update { it.copy(error=stableError(e)) }
+                // A late failure from a URL the user already cleared must not repaint its error.
+                if(token==generation && _state.value.url==snapshot.url) _state.update { it.copy(error=stableError(e)) }
             }
             finally { if(token==generation) _state.update { it.copy(analyzing=false) } }
         }
