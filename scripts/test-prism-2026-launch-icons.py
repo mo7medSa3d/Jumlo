@@ -111,7 +111,8 @@ class Prism2026LaunchIconChecks(unittest.TestCase):
     def test_live_workspace_bindings_are_not_replaced_with_mock_actions(self):
         tools=read('ui/tools/ToolsScreen.kt')
         home=read('ui/home/HomeScreen.kt')
-        self.assertIn('onClick = { haptics.actionClick(); onClick() }',tools)
+        self.assertIn('val click: () -> Unit = { haptics.actionClick(); onClick() }',tools)
+        self.assertIn('onLongClick = { haptics.longPress(); onPin() }',tools)
         self.assertIn('onClick = { haptics.actionClick(); onClick() }',read('ui/components/NeonUi.kt'))
         self.assertIn('CapabilityRegistry.enabled(id)',home)
         self.assertIn('CapabilityRegistry.tools.firstOrNull { it.id == id }?.let(onTool)',home)

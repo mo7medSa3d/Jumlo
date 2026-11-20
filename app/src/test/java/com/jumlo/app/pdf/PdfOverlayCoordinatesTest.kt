@@ -95,7 +95,10 @@ class PdfOverlayCoordinatesTest {
         try {
             val rotations=listOf(0,90,180,270)
             val centers=listOf(130.0 to 520.0,160.0 to 240.0,370.0 to 280.0,340.0 to 560.0)
-            val baselines=listOf(241.0 to 216.0,388.0 to 388.0,259.0 to 584.0,112.0 to 412.0)
+            // Page numbers are centered on the visible frame using the measured glyph width
+            // (HELVETICA "1" = 5.56pt at 10pt), so the baseline shifts 7.61pt from the old
+            // fixed-normalized placement.
+            val baselines=listOf(248.61 to 216.0,388.0 to 398.61,251.39 to 584.0,112.0 to 401.39)
             val horizontalVectors=listOf(50.0 to 0.0,0.0 to 50.0,-50.0 to 0.0,0.0 to -50.0)
             rotations.forEachIndexed { i,rotation ->
                 val source=PdfFixtures.imageDoc(File(folder,"source-$rotation.pdf"),false)

@@ -123,7 +123,8 @@ private fun PdfViewerContent(
     var failure by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
 
-    var chromeVisible by remember { mutableStateOf(true) }
+    var chromeVisible by remember { mutableStateOf(false) }
+    var pageObserved by remember { mutableStateOf(false) }
     var nightMode by rememberSaveable { mutableStateOf(false) }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var thumbsOpen by rememberSaveable { mutableStateOf(false) }
@@ -169,8 +170,8 @@ private fun PdfViewerContent(
     }
 
     val currentPage by remember { derivedStateOf { list.firstVisibleItemIndex } }
-    LaunchedEffect(uri) { wake() }
-    LaunchedEffect(currentPage) { wake() }
+    // Skip the first emission so the document opens full-screen; real scrolling still reveals chrome.
+    LaunchedEffect(currentPage) { if (pageObserved) wake() else pageObserved = true }
 
     LaunchedEffect(infoOpen, uri) {
         if (infoOpen && info.isEmpty() && !infoError) {
@@ -209,9 +210,32 @@ private fun PdfViewerContent(
             withContext(Dispatchers.IO) { ReaderPositionStore.save(context, uri, page) }
         }
     }
-    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {
+    Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {
+        if (document == null) {
+            Box(Modifier.fillMaxSize().clickable { wake() }) {
+                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                    val currentFailure = failure
+                    if (currentFailure == null) {
+                        CircularProgressIndicator()
+                        Text(stringResource(R.string.reader_loading))
+                    } else {
+                        Text(stringResource(userMessageResource(currentFailure)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        Button(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
+                    }
+                }
+            }
+        } else {
+            val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            LazyColumn(Modifier.fillMaxSize().testTag("pdf.pages").background(MaterialTheme.colorScheme.surfaceContainer), state = list,
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp + navBottom),
+                verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                items(document.pageCount, key = { it }, contentType = { "pdf-page" }) { page -> ReaderPage(document, page, nightMode, defaultEdge, ::toggleChrome) }
+            }
+        }
+        // Chrome overlays the document instead of consuming layout space, so pages never get cut off.
         AnimatedVisibility(
             visible = chromeVisible,
+            modifier = Modifier.align(Alignment.TopCenter),
             enter = if (reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { -it },
             exit = if (reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { -it }
         ) {
@@ -239,27 +263,6 @@ private fun PdfViewerContent(
                         }
                     }
                 }
-            }
-        }
-        if (document == null) {
-            Box(Modifier.weight(1f).fillMaxWidth().clickable { wake() }) {
-                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-                    val currentFailure = failure
-                    if (currentFailure == null) {
-                        CircularProgressIndicator()
-                        Text(stringResource(R.string.reader_loading))
-                    } else {
-                        Text(stringResource(userMessageResource(currentFailure)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                        Button(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
-                    }
-                }
-            }
-        } else {
-            val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("pdf.pages"), state = list,
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp + navBottom),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(document.pageCount, key = { it }, contentType = { "pdf-page" }) { page -> ReaderPage(document, page, nightMode, defaultEdge, ::toggleChrome) }
             }
         }
     }
@@ -436,36 +439,41 @@ private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, def
     }
     val pageLabel = stringResource(R.string.reader_page, page + 1)
     val fitLabel = stringResource(R.string.ui_preview_reset_zoom)
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(pageLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = ::reset, enabled = scale > 1.01f, modifier = Modifier.heightIn(min = 48.dp)) { Text("${(scale * 100).toInt()}% · $fitLabel") }
-        }
-        val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.firstPageRatio).takeIf { it.isFinite() && it > 0f } ?: 0.707f
-        Box(Modifier.fillMaxWidth().aspectRatio(pageRatio)
-            .clip(QuietTheme.shapes.thumbnail).background(if (dark) Color.Black else Color.White).clipToBounds()
-            .onSizeChanged { viewport = it }.testTag("pdf.page.$page")
-            .pointerInput(page) { detectTapGestures(onTap = { latestOnTap() }, onDoubleTap = { if (scale > 1.01f) reset() else scale = 2.5f }) }
-            .semantics {
-                contentDescription = pageLabel
-                stateDescription = "${(scale * 100).toInt()}%"
-                customActions = listOf(CustomAccessibilityAction(fitLabel) { reset(); true })
+    val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.firstPageRatio).takeIf { it.isFinite() && it > 0f } ?: 0.707f
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth()) {
+            Box(Modifier.fillMaxWidth().aspectRatio(pageRatio)
+                .clip(QuietTheme.shapes.thumbnail).background(if (dark) Color.Black else Color.White).clipToBounds()
+                .onSizeChanged { viewport = it }.testTag("pdf.page.$page")
+                .pointerInput(page) { detectTapGestures(onTap = { latestOnTap() }, onDoubleTap = { if (scale > 1.01f) reset() else scale = 2.5f }) }
+                .semantics {
+                    contentDescription = pageLabel
+                    stateDescription = "${(scale * 100).toInt()}%"
+                    customActions = listOf(CustomAccessibilityAction(fitLabel) { reset(); true })
+                }
+                .transformable(transform, canPan = { scale > 1f }), contentAlignment = Alignment.Center) {
+                frame?.takeUnless { it.bitmap.isRecycled }?.let { rendered ->
+                    val imageBitmap = remember(rendered.bitmap) { rendered.bitmap.asImageBitmap() }
+                    Image(imageBitmap, null, Modifier.fillMaxSize().testTag("pdf.page.image.$page").graphicsLayer {
+                        scaleX = scale; scaleY = scale; translationX = pan.x; translationY = pan.y
+                    }, contentScale = ContentScale.Fit, colorFilter = if (dark) NightModeColorFilter else null)
+                }
+                if (frame == null && failure == null) CircularProgressIndicator(Modifier.size(32.dp))
+                failure?.let {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(userMessageResource(it)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                        TextButton(onClick = { pageRetry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
+                    }
+                }
             }
-            .transformable(transform, canPan = { scale > 1f }), contentAlignment = Alignment.Center) {
-            frame?.takeUnless { it.bitmap.isRecycled }?.let { rendered ->
-                val imageBitmap = remember(rendered.bitmap) { rendered.bitmap.asImageBitmap() }
-                Image(imageBitmap, null, Modifier.fillMaxSize().testTag("pdf.page.image.$page").graphicsLayer {
-                    scaleX = scale; scaleY = scale; translationX = pan.x; translationY = pan.y
-                }, contentScale = ContentScale.Fit, colorFilter = if (dark) NightModeColorFilter else null)
-            }
-            if (frame == null && failure == null) CircularProgressIndicator(Modifier.size(32.dp))
-            failure?.let {
-                Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(userMessageResource(it)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                    TextButton(onClick = { pageRetry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
+            if (scale > 1.01f) {
+                FilledTonalButton(onClick = ::reset, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).heightIn(min = 40.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                    Text("${(scale * 100).toInt()}% · $fitLabel", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
+        Text(pageLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

@@ -426,7 +426,7 @@ import kotlin.math.roundToInt
 
     private suspend fun imagesToPdf(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         val settings=Json.decodeFromString<ImagesToPdfSettings>(request.settingsJson)
-        require(request.sourceIds.isNotEmpty() && settings.marginMm in 0..200 &&
+        require(request.sourceIds.isNotEmpty() && settings.marginMm in 0..200 && settings.quality in 1..100 &&
             settings.pageMode in setOf("AUTO", "A4", "LETTER", "CUSTOM")) { "INVALID_PDF_SETTINGS" }
         context.outputs.find(request.id,"document")?.let { return listOf(ItemOutcome("document",ItemStatus.CREATED,it.id)) }
         val firstSourceName = runCatching { context.sources.get(request.sourceIds.first()).displayName }.getOrNull()
@@ -452,7 +452,10 @@ import kotlin.math.roundToInt
                         val pdPage=PDPage(PDRectangle(w,h))
                         outDoc.addPage(pdPage)
                         if (settings.fill) {
-                            val renderScale=minOf(2048f/maxOf(w,h), 2.5f).coerceAtLeast(1f)
+                            // Lossless keeps every source pixel; the 2048px ceiling is a lossy-only default.
+                            val renderScale=if(settings.lossless)
+                                maxOf(bitmap.width.toFloat()/placement.widthPt,bitmap.height.toFloat()/placement.heightPt).coerceAtLeast(1f)
+                            else minOf(2048f/maxOf(w,h), 2.5f).coerceAtLeast(1f)
                             val canvasW=(w*renderScale).roundToInt().coerceAtLeast(64)
                             val canvasH=(h*renderScale).roundToInt().coerceAtLeast(64)
                             ImageWorkPolicy.requireFits(canvasW,canvasH,bitmap.allocationByteCount.toLong(),context.budget.maxBitmapBytes)
@@ -468,7 +471,9 @@ import kotlin.math.roundToInt
                                 canvas.clipRect(mPx,mPx,canvasW-mPx,canvasH-mPx)
                                 canvas.drawBitmap(bitmap,null,RectF(left,top,left+dw,top+dh),Paint(Paint.FILTER_BITMAP_FLAG))
                                 canvas.restore()
-                                val pdImage=JPEGFactory.createFromImage(outDoc,pageBmp,0.85f)
+                                val pdImage=if(settings.lossless)
+                                    com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(outDoc,pageBmp)
+                                else JPEGFactory.createFromImage(outDoc,pageBmp,settings.quality/100f)
                                 PDPageContentStream(outDoc,pdPage).use { cs ->
                                     cs.drawImage(pdImage,0f,0f,w.toFloat(),h.toFloat())
                                 }
@@ -476,7 +481,9 @@ import kotlin.math.roundToInt
                         } else {
                             val dw=placement.widthPt; val dh=placement.heightPt
                             val x=placement.leftPt; val y=h-placement.topPt-dh
-                            val pdImage=JPEGFactory.createFromImage(outDoc,bitmap,0.85f)
+                            val pdImage=if(settings.lossless)
+                                com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(outDoc,bitmap)
+                            else JPEGFactory.createFromImage(outDoc,bitmap,settings.quality/100f)
                             PDPageContentStream(outDoc,pdPage).use { cs ->
                                 cs.drawImage(pdImage,x,y,dw,dh)
                             }

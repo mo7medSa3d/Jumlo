@@ -11,6 +11,7 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.jumlo.app.JumloApplication
 import com.jumlo.app.MainActivity
 import com.jumlo.app.R
+import com.jumlo.app.core.ToolCatalogue
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.model.AppLanguage
@@ -174,12 +175,12 @@ class ToolScreenshotMatrixTest {
         open("pdf_01")
 
         // Capture all empty routes before importing the real fixture library.
-        for (tool in CapabilityRegistry.tools) capture(tool.id, "empty") {
+        for (tool in CapabilityRegistry.tools.filter { ToolCatalogue.isListed(it.id) }) capture(tool.id, "empty") {
             open(tool.id)
         }
 
         val fixtures = importFixtures()
-        for (tool in CapabilityRegistry.tools) capture(tool.id, "loaded") {
+        for (tool in CapabilityRegistry.tools.filter { ToolCatalogue.isListed(it.id) }) capture(tool.id, "loaded") {
             val keys = fixtureKeys(tool.id)
             open(tool.id)
             when (tool.id) {
@@ -206,7 +207,7 @@ class ToolScreenshotMatrixTest {
         tool == "signature_pad" -> null
         !CapabilityRegistry.visible(tool) || !CapabilityRegistry.enabled(tool) -> "CAPABILITY_UNAVAILABLE"
         tool == "scan_doc" -> "EXTERNAL_ML_KIT_SCANNER_REQUIRES_DEVICE"
-        state == "loaded" && tool in setOf("dl_media", "dl_02") -> "REAL_NETWORK_METADATA_FIXTURE_REQUIRED"
+        state == "loaded" && tool == "dl_media" -> "REAL_NETWORK_METADATA_FIXTURE_REQUIRED"
         hostPdfUnavailable && state == "loaded" && fixtureKeys(tool).any { it.startsWith("pdf") } -> "HOST_PDF_RENDERER_UNAVAILABLE"
         else -> null
     }

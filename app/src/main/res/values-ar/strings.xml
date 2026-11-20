@@ -247,6 +247,9 @@
     <string name="field_clockwise_rotation">التدوير باتجاه عقارب الساعة</string>
     <string name="field_max_image_dpi">أقصى دقة للصور المضمنة DPI (72..300)</string>
     <string name="field_quality">جودة الصورة (1–100)</string>
+    <string name="field_pdf_quality">جودة صور PDF (1–100)</string>
+    <string name="field_pdf_lossless">الجودة الأصلية / بدون فقدان</string>
+    <string name="field_pdf_lossless_note">تُضمَّن البكسلات الأصلية دون إعادة ترميز JPEG. الملفات الناتجة أكبر حجماً، وقد تتجاوز الصور الكبيرة جداً ميزانية الذاكرة في الجهاز.</string>
     <string name="field_target_size_mb">الحجم المستهدف (ميغابايت)</string>
     <string name="field_target_size_note">عند تحديد حجم مستهدف، يخفض Jumlo الدقة والجودة حتى يصل الملف إليه، ويعرض الحجم الذي تحقق فعليًا.</string>
     <string name="field_remove_title">إزالة العنوان والموضوع والكلمات المفتاحية أيضًا</string>

@@ -110,6 +110,11 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 InteractiveIntSlider(stringResource(R.string.field_paper_width),draftNumber(draft.paperWidth,595),72,1440,595) {v->edit {it.copy(paperWidth=v.toString())}}
                 InteractiveIntSlider(stringResource(R.string.field_paper_height),draftNumber(draft.paperHeight,842),72,1440,842) {v->edit {it.copy(paperHeight=v.toString())}}
             }
+            if(tool=="pdf_02") {
+                InteractiveToggle(stringResource(R.string.field_pdf_lossless),draft.flag1) {v->edit {it.copy(flag1=v)}}
+                if(draft.flag1) Text(stringResource(R.string.field_pdf_lossless_note),style=QuietTheme.typography.metadata)
+                else InteractiveIntSlider(stringResource(R.string.field_pdf_quality),draftNumber(draft.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
+            }
             val imageOutput=tool.startsWith("img_")
             if(imageOutput) {
                 Text(stringResource(R.string.field_output_format),style=QuietTheme.typography.metadataStrong)

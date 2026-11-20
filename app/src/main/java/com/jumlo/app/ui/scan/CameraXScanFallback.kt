@@ -463,8 +463,8 @@ internal fun CameraXScanFallback(
             }
             val guideColor = Color.White.copy(alpha = 0.35f)
             Canvas(Modifier.matchParentSize()) {
-                val frameInset = 24.dp.toPx()
-                inset(left = frameInset, right = frameInset, top = 88.dp.toPx(), bottom = 196.dp.toPx()) {
+                val frameInset = 16.dp.toPx()
+                inset(left = frameInset, right = frameInset, top = 64.dp.toPx(), bottom = 96.dp.toPx()) {
                     drawRoundRect(
                         color = guideColor,
                         cornerRadius = CornerRadius(16.dp.toPx()),
@@ -535,108 +535,64 @@ internal fun CameraXScanFallback(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.72f))
+                    .background(Color.Black.copy(alpha = 0.42f))
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 if (busy || externalBusy) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        onClick = {
-                            haptics.selectionToggle()
-                            flashMode = when (flashMode) {
-                                ImageCapture.FLASH_MODE_AUTO -> ImageCapture.FLASH_MODE_ON
-                                ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_OFF
-                                else -> ImageCapture.FLASH_MODE_AUTO
-                            }
-                        },
-                        shape = CircleShape,
-                        color = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.White else Color(0xFF23252A),
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Rounded.Bolt,
-                                contentDescription = stringResource(R.string.studio_camera_fallback),
-                                tint = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.Black else Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    Surface(
-                        onClick = { haptics.actionClick(); launchGallery() },
-                        enabled = initialized && !busy && !externalBusy && pagePaths.size < 100,
-                        shape = CircleShape,
-                        color = Color(0xFF23252A),
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Rounded.Image,
-                                contentDescription = stringResource(R.string.import_photo_gallery),
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                }
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-                        val lastPath = pagePaths.lastOrNull()
-                        if (lastPath != null) {
-                            val thumb by produceState<Bitmap?>(null, lastPath) {
-                                value = withContext(Dispatchers.IO) {
-                                    try { BitmapTransforms.decodeSampled(File(lastPath), 4L * 1024 * 1024, maxEdge = 160).bitmap }
-                                    catch (cancel: CancellationException) { throw cancel }
-                                    catch (_: Exception) { null }
-                                    catch (_: OutOfMemoryError) { null }
-                                }
-                            }
-                            DisposeOwnedPreviewBitmap(thumb)
-                            Box(
-                                Modifier
-                                    .size(50.dp)
-                                    .clickable { haptics.actionClick(); reviewIndex = pagePaths.lastIndex }
-                            ) {
-                                Surface(
-                                    shape = QuietTheme.shapes.badge,
-                                    color = Color(0xFF1C1E22),
-                                    border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.75f)),
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    thumb?.takeUnless { it.isRecycled }?.let { decoded ->
-                                        val imageBitmap = remember(decoded) { decoded.asImageBitmap() }
-                                        Image(imageBitmap, stringResource(R.string.studio_scan_page_count, pagePaths.size), Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    Box(Modifier.weight(1f)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                onClick = {
+                                    haptics.selectionToggle()
+                                    flashMode = when (flashMode) {
+                                        ImageCapture.FLASH_MODE_AUTO -> ImageCapture.FLASH_MODE_ON
+                                        ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_OFF
+                                        else -> ImageCapture.FLASH_MODE_AUTO
                                     }
+                                },
+                                shape = CircleShape,
+                                color = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.White else Color(0xFF23252A),
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Rounded.Bolt,
+                                        contentDescription = stringResource(R.string.studio_camera_fallback),
+                                        tint = if (flashMode == ImageCapture.FLASH_MODE_ON) Color.Black else Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
                                 }
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.align(Alignment.TopEnd)
-                                ) {
-                                    Text(
-                                        text = pagePaths.size.toString(),
-                                        style = QuietTheme.typography.badge,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            }
+                            Surface(
+                                onClick = { haptics.actionClick(); launchGallery() },
+                                enabled = initialized && !busy && !externalBusy && pagePaths.size < 100,
+                                shape = CircleShape,
+                                color = Color(0xFF23252A),
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Rounded.Image,
+                                        contentDescription = stringResource(R.string.import_photo_gallery),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                 }
                             }
                         }
                     }
-
                     val captureLabel = stringResource(R.string.studio_capture_page)
                     Surface(
                         onClick = ::captureNow,
@@ -654,19 +610,65 @@ internal fun CameraXScanFallback(
                                 .background(Color.White)
                         )
                     }
-
-                    // Trailing slot: Save JPG if enabled, else spacer for optical symmetry
-                    Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-                        if (jpegOutput && pagePaths.isNotEmpty()) {
-                            Surface(
-                                onClick = { haptics.actionClick(); saveAsJpegs() },
-                                enabled = !busy && !externalBusy,
-                                shape = QuietTheme.shapes.pill,
-                                color = Color(0xFF23252A),
-                                modifier = Modifier.heightIn(min = 44.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 10.dp)) {
-                                    Text("JPG", style = QuietTheme.typography.badge, color = Color.White)
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+                                val lastPath = pagePaths.lastOrNull()
+                                if (lastPath != null) {
+                                    val thumb by produceState<Bitmap?>(null, lastPath) {
+                                        value = withContext(Dispatchers.IO) {
+                                            try { BitmapTransforms.decodeSampled(File(lastPath), 4L * 1024 * 1024, maxEdge = 160).bitmap }
+                                            catch (cancel: CancellationException) { throw cancel }
+                                            catch (_: Exception) { null }
+                                            catch (_: OutOfMemoryError) { null }
+                                        }
+                                    }
+                                    DisposeOwnedPreviewBitmap(thumb)
+                                    Box(
+                                        Modifier
+                                            .size(50.dp)
+                                            .clickable { haptics.actionClick(); reviewIndex = pagePaths.lastIndex }
+                                    ) {
+                                        Surface(
+                                            shape = QuietTheme.shapes.badge,
+                                            color = Color(0xFF1C1E22),
+                                            border = BorderStroke(1.5.dp, Color.White.copy(alpha = 0.75f)),
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            thumb?.takeUnless { it.isRecycled }?.let { decoded ->
+                                                val imageBitmap = remember(decoded) { decoded.asImageBitmap() }
+                                                Image(imageBitmap, stringResource(R.string.studio_scan_page_count, pagePaths.size), Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                                            }
+                                        }
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.align(Alignment.TopEnd)
+                                        ) {
+                                            Text(
+                                                text = pagePaths.size.toString(),
+                                                style = QuietTheme.typography.badge,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            if (jpegOutput && pagePaths.isNotEmpty()) {
+                                Surface(
+                                    onClick = { haptics.actionClick(); saveAsJpegs() },
+                                    enabled = !busy && !externalBusy,
+                                    shape = QuietTheme.shapes.pill,
+                                    color = Color(0xFF23252A),
+                                    modifier = Modifier.heightIn(min = 48.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 10.dp)) {
+                                        Text("JPG", style = QuietTheme.typography.badge, color = Color.White)
+                                    }
                                 }
                             }
                         }

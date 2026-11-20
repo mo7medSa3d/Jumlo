@@ -2,6 +2,8 @@ package com.jumlo.app.ui.tools
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as rowItems
@@ -34,6 +36,7 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.UtilityTool
 import com.jumlo.app.ui.AppViewModel
+import com.jumlo.app.ui.home.HomeActionPolicy
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
@@ -54,7 +57,8 @@ fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     } }
     ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
         settings.quickActionIds, settings.recentToolIds, search, { search = it },
-        showAllTools, { showAllTools = !showAllTools }, onTool)
+        showAllTools, { showAllTools = !showAllTools }, onTool,
+        onPin = { tool -> vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) })
 }
 
 /** One catalogue group: a header and the tool IDs it contains. */
@@ -75,7 +79,7 @@ private val toolSections = listOf(
     ToolSection("optimize", "Optimize", "التحسين",
         setOf("pdf_compress", "img_02", "img_03", "img_04", "img_join", "img_watermark")),
     ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect")),
-    ToolSection("download", "Download", "التنزيل", setOf("dl_media", "dl_02", "dl_03")),
+    ToolSection("download", "Download", "التنزيل", setOf("dl_media")),
     ToolSection("files", "Files", "الملفات",
         setOf("file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
 )
@@ -119,7 +123,8 @@ internal fun ToolsCatalogue(
     onSearch: (String) -> Unit,
     showAllTools: Boolean = false,
     onToggleShowAll: () -> Unit = {},
-    onTool: (UtilityTool) -> Unit
+    onTool: (UtilityTool) -> Unit,
+    onPin: (UtilityTool) -> Unit = {}
 ) {
     val byId = remember(tools) { tools.associateBy { it.id } }
     val specialistCount = remember(tools) { tools.count { ToolCatalogue.isListed(it.id) && !ToolCatalogue.isPrimary(it.id) } }
@@ -145,7 +150,7 @@ internal fun ToolsCatalogue(
     }
     val recent = remember(tools, recentToolIds, pinned) {
         val pinnedIds = pinned.map { it.id }.toSet()
-        recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds && ToolCatalogue.isListed(it.id) }.take(8)
+        recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds && ToolCatalogue.isListed(it.id) }.take(3)
     }
     val featuredIds = remember(pinned, recent) { (pinned.map { it.id } + recent.map { it.id }).toSet() }
     var selectedSectionKey by rememberSaveable { mutableStateOf<String?>(null) }
@@ -244,7 +249,7 @@ internal fun ToolsCatalogue(
                         icon = Icons.Rounded.Search)
                 }
                 items(filtered, key = { it.id }, contentType = { "tool" }) { tool ->
-                    ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
+                    ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
                 }
             } else {
                 val activeSection = effectiveSectionKey
@@ -253,7 +258,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_pinned), pinned.size)
                     }
                     items(pinned, key = { "pinned:" + it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
                     }
                 }
                 if (activeSection == null && recent.isNotEmpty()) {
@@ -261,7 +266,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_recent), recent.size)
                     }
                     items(recent, key = { "recent:" + it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
                     }
                 }
                 for ((section, sectionTools) in sectionedTools) {
@@ -269,7 +274,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(sectionTitle(section, language), sectionTools.size)
                     }
                     items(sectionTools, key = { it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
                     }
                 }
                 if (ungroupedTools.isNotEmpty()) {
@@ -277,7 +282,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_all), ungroupedTools.size)
                     }
                     items(ungroupedTools, key = { it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics)
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
                     }
                 }
                 if (specialistCount > 0) {
@@ -299,7 +304,8 @@ internal fun ToolsCatalogue(
  * ToolIconColors), never the theme accent — in a warm system every tile
  * used to read as the same orange. Text stays neutral in every theme. */
 @Composable
-internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier, appHaptics: AppHaptics? = null) {
+internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier,
+    appHaptics: AppHaptics? = null, onPin: (() -> Unit)? = null) {
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     val isDark = colors.background.luminance() < 0.5f
@@ -308,9 +314,13 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
     val tileColor = pillars.cardSurface
     val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn
     val haptics = appHaptics ?: rememberAppHaptics()
+    val click: () -> Unit = { haptics.actionClick(); onClick() }
+    val tileModifier = modifier.fillMaxWidth().heightIn(min = 126.dp).pressFeedback().testTag("tool.${tool.id}")
     Surface(
-        onClick = { haptics.actionClick(); onClick() },
-        modifier = modifier.fillMaxWidth().heightIn(min = 126.dp).pressFeedback().testTag("tool.${tool.id}"),
+        modifier = if (onPin == null) tileModifier.clickable(onClick = click) else tileModifier.combinedClickable(
+            onClick = click,
+            onLongClick = { haptics.longPress(); onPin() }
+        ),
         shape = QuietTheme.shapes.card,
         color = tileColor,
         contentColor = colors.onSurface,

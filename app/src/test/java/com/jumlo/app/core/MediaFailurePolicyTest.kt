@@ -24,6 +24,11 @@ class MediaFailurePolicyTest {
         examples.forEach { (message, expected) -> assertEquals(expected, MediaFailurePolicy.extractorMessage(message)) }
     }
 
+    @Test fun pageFetchRejectionsAreNotReportedAsConnectionFailures() {
+        assertEquals("MEDIA_SOURCE_REJECTED", MediaFailurePolicy.extractorMessage("ERROR: Unable to download webpage: HTTP Error 403: Forbidden"))
+        assertEquals("MEDIA_NETWORK_ERROR", MediaFailurePolicy.extractorMessage("ERROR: Unable to download webpage: Connection reset by peer"))
+    }
+
     @Test fun serviceStatusWorksWhenAnErrorBodyIsMissing() {
         assertEquals("MEDIA_RATE_LIMITED", MediaFailurePolicy.httpStatus(429))
         assertEquals("MEDIA_REMOVED", MediaFailurePolicy.httpStatus(410))

@@ -80,9 +80,10 @@ object ToolCatalogue {
         ),
         WorkspaceEntry(
             ToolWorkspace.DOWNLOADS,
-            // One download manager covers a direct link, a batch of links and media.
+            // One download tool covers direct links, batches and media. dl_02/dl_03 stay
+            // registered for internal direct/batch job routing but are not user-facing.
             primary = listOf("dl_media"),
-            merged = listOf("dl_02", "dl_03")
+            merged = emptyList()
         )
     )
 
@@ -106,7 +107,7 @@ object ToolCatalogue {
     fun workspaceOf(toolId: String): ToolWorkspace? =
         entries.firstOrNull { toolId in it.primary || toolId in it.merged }?.workspace
 
-    private val hidden: Set<String> = emptySet()
+    private val hidden: Set<String> = setOf("dl_02", "dl_03")
     private val searchOnly: Set<String> = emptySet()
 
     /** True when the tool should be offered in the catalogue at all. */

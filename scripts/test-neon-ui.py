@@ -35,7 +35,9 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('destination == selectedTab', dock)
         self.assertIn('.testTag("nav.indicator.${destination.name}")', dock)
         self.assertIn('NavigationBarItem(', dock)
-        self.assertIn('JumloAppIconBadge(', dock)
+        self.assertIn('painterResource(icon(destination))', dock)
+        self.assertIn('DockTab.HOME -> R.drawable.ic_prism_home', dock)
+        self.assertIn('shadowElevation = 0.dp', dock)
         self.assertIn('DownloadsRoute', nav)
         self.assertIn('com.jumlo.app.ui.downloads.DownloadsScreen', nav)
 

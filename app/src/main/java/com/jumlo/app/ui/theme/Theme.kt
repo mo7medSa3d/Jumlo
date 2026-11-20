@@ -183,7 +183,9 @@ fun JumloTheme(
         SideEffect {
             val window = view.context.findActivity()?.window
             if (window != null) {
-                val controller = WindowCompat.getInsetsController(window, view)
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                WindowCompat.setDecorFitsSystemWindows(window, false)
                 controller.isAppearanceLightStatusBars = !darkTheme
                 controller.isAppearanceLightNavigationBars = !darkTheme
             }

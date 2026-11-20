@@ -124,7 +124,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
         for key in ('NavigationBar(','NavigationBarItem(','NavigationBarDefaults.windowInsets',
-                    'JumloAppIconBadge(','animateFloatAsState','MainDockTabs.forEach',
+                    'painterResource(icon(destination))', 'DockTab.HOME -> R.drawable.ic_prism_home', 'shadowElevation = 0.dp','animateFloatAsState','MainDockTabs.forEach',
                     'destination == selectedTab','if (language.isRtl) destination.labelAr else destination.labelEn',
                     'navigationTab()','contentDescription = label',
                     'indicatorColor = colors.primaryContainer'):

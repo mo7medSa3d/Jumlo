@@ -247,6 +247,9 @@
     <string name="field_clockwise_rotation">Clockwise rotation</string>
     <string name="field_max_image_dpi">Max embedded image DPI (72..300)</string>
     <string name="field_quality">Image quality (1–100)</string>
+    <string name="field_pdf_quality">PDF image quality (1–100)</string>
+    <string name="field_pdf_lossless">Original / lossless quality</string>
+    <string name="field_pdf_lossless_note">Embeds the original pixels without JPEG re-encoding. Files are larger, and very large photos may exceed the device memory budget.</string>
     <string name="field_target_size_mb">Target size (MB)</string>
     <string name="field_target_size_note">With a target set, Jumlo lowers resolution and quality until the file reaches it, and reports the size it actually achieved.</string>
     <string name="field_remove_title">Also remove the title, subject and keywords</string>

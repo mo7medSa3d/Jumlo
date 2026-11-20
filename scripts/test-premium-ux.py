@@ -181,7 +181,9 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('NavigationBar(',dock)
         self.assertIn('NavigationBarItem(',dock)
         self.assertIn('NavigationBarDefaults.windowInsets',dock)
-        self.assertIn('JumloAppIconBadge(',dock)
+        self.assertIn('painterResource(icon(destination))',dock)
+        self.assertIn('DockTab.HOME -> R.drawable.ic_prism_home',dock)
+        self.assertIn('shadowElevation = 0.dp',dock)
         self.assertNotIn('.offset(',dock)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):

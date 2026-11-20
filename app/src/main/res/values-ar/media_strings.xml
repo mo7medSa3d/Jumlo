@@ -52,7 +52,7 @@
     <string name="media_error_native_repair">إصلاح الوسائط المدمج لا يطابق هذا الإصدار. حدّث جملو ثم حاول مجددًا.</string>
     <string name="media_error_native_repair_unavailable">إصلاح الوسائط المدمج لمعالج هذا الجهاز غير موجود. حدّث جملو ثم حاول مجددًا.</string>
     <string name="media_error_live">لا يمكن تنزيل البث المباشر لأنه بلا نهاية بعد. حاول بعد انتهاء البث أو استخدم فيديو مكتملًا.</string>
-    <string name="media_error_generic">تعذر تنزيل الوسائط. تحقق من الرابط والاتصال وحاول مجددًا.</string>
+    <string name="media_error_generic">تعذرت قراءة هذه الوسائط أو تنزيلها. قد لا يكون الموقع أو المحتوى مدعومًا — جرّب رابط ملف مباشرًا من المصدر.</string>
     <string name="media_candidates_note">حلل الرابط لعرض جميع جوداته المتاحة.</string>
     <string name="media_no_candidates">لم يتم اكتشاف رابط وسائط بعد.</string>
     <string name="media_new_copy">إنشاء نسخة إضافية عند التنزيل التالي</string>

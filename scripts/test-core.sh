@@ -20,7 +20,7 @@ run_with_cli() {
   java -jar "$BUILD/core-tests.jar"
 }
 run_with_embedded() {
-  local caches compiler kver stdlib coroutines trove annotations daemon script reflect jdk
+  local caches compiler kver stdlib coroutines trove annotations daemon script reflect jdk serialization_core serialization_json
   caches="${GRADLE_USER_HOME:-$HOME/.gradle}/caches"
   # The project's own Kotlin version first, then whatever else is cached.
   compiler=$(find "$caches" -name 'kotlin-compiler-embeddable-2.0.21.jar' 2>/dev/null | head -1 || true)
@@ -31,6 +31,9 @@ run_with_embedded() {
   stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name "kotlin-stdlib-${kver}.jar" 2>/dev/null | head -1 || true)
   [ -n "$stdlib" ] || stdlib=$(find "$caches" -path '*kotlin-stdlib/*' -name 'kotlin-stdlib-*.jar' 2>/dev/null | grep -v sources | grep -v -- '-jdk' | sort | tail -1 || true)
   coroutines=$(find "$caches" -name 'kotlinx-coroutines-core-jvm-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
+  serialization_core=$(find "$caches" -name 'kotlinx-serialization-core-jvm-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
+  serialization_json=$(find "$caches" -name 'kotlinx-serialization-json-jvm-*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
+  [ -n "$serialization_core" ] && [ -n "$serialization_json" ] || { echo 'BLOCKED: kotlinx-serialization jars not found' >&2; return 2; }
   trove=$(find "$caches" -iname '*trove4j*.jar' 2>/dev/null | grep -v sources | sort | tail -1 || true)
   annotations=$(find "$caches" -name 'annotations-13.0.jar' 2>/dev/null | sort | tail -1 || true)
   daemon=$(find "$caches" -name "kotlin-daemon-embeddable-${kver}.jar" 2>/dev/null | head -1 || true)
@@ -51,10 +54,10 @@ run_with_embedded() {
     jdk="$(dirname "$(dirname "$(readlink -f "$java_bin")")")"
   fi
   local compiler_cp="" runtime_cp="" jar
-  for jar in "$compiler" "$stdlib" "$coroutines" "$trove" "$annotations" "$daemon" "$script" "$reflect"; do
+  for jar in "$compiler" "$stdlib" "$coroutines" "$trove" "$annotations" "$daemon" "$script" "$reflect" "$serialization_core" "$serialization_json"; do
     [ -n "$jar" ] && compiler_cp="${compiler_cp:+${compiler_cp}:}$jar"
   done
-  for jar in "$stdlib" "$coroutines"; do
+  for jar in "$stdlib" "$coroutines" "$serialization_core" "$serialization_json"; do
     [ -n "$jar" ] && runtime_cp="${runtime_cp:+${runtime_cp}:}$jar"
   done
   "$jdk/bin/java" -cp "$compiler_cp" \

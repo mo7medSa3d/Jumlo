@@ -412,8 +412,10 @@ class DownloadOperationHandler @Inject constructor(
     }
 
     private fun networkPolicy(settings:DownloadSettings) {
-        val manager=app.getSystemService(ConnectivityManager::class.java) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
-        val capabilities=manager.getNetworkCapabilities(manager.activeNetwork) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
+        // A null capabilities snapshot cannot answer Wi-Fi/unmetered; the real HTTP I/O
+        // is authoritative. Never fail every transfer with a misleading NETWORK_UNAVAILABLE.
+        val manager=app.getSystemService(ConnectivityManager::class.java) ?: return
+        val capabilities=manager.getNetworkCapabilities(manager.activeNetwork) ?: return
         if(settings.wifiOnly && !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) throw OperationFailure("WIFI_REQUIRED")
         if(settings.unmeteredOnly && !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) throw OperationFailure("UNMETERED_NETWORK_REQUIRED")
     }

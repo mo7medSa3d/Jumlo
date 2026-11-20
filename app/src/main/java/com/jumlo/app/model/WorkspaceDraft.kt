@@ -53,7 +53,7 @@ import kotlinx.serialization.json.Json
             }
             "img_03" -> { val l=fraction(cropLeft);val t=fraction(cropTop);val r=fraction(cropRight);val b=fraction(cropBottom); require(l<r && t<b) { "INVALID_CROP" }; Json.encodeToString(ImageCropSettings(l,t,r,b,turns,flipX,flipY,converted)) }
             "img_04" -> Json.encodeToString(ImageCompressionSettings(converted))
-            "pdf_02" -> Json.encodeToString(ImagesToPdfSettings(SafeNames.basename(outputName),number(paperWidth,72,14400),number(paperHeight,72,14400),orientation,number(margin,0,200),fill,paperMode))
+            "pdf_02" -> Json.encodeToString(ImagesToPdfSettings(SafeNames.basename(outputName),number(paperWidth,72,14400),number(paperHeight,72,14400),orientation,number(margin,0,200),fill,paperMode,number(quality,1,100),flag1))
             "pdf_07" -> Json.encodeToString(PdfImagesSettings(pages.trim().ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),if(format=="JPEG") "JPEG" else "PNG",if(format=="JPEG") number(quality,1,100) else 85,grayscale,outputName.trim()))
             "file_07","file_08" -> Json.encodeToString(ArchiveSettings(SafeNames.basename(outputName),number(zipLevel,0,9)))
             "pdf_03" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMergeSettings(SafeNames.basename(outputName)))

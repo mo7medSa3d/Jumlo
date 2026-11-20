@@ -7,6 +7,7 @@ import com.jumlo.app.core.StoragePaths
 import com.jumlo.app.data.processing.ImageResizeSettings
 import com.jumlo.app.data.processing.ImageConversionSettings
 import com.jumlo.app.data.processing.PdfImagesSettings
+import com.jumlo.app.data.processing.ImagesToPdfSettings
 import com.jumlo.app.data.processing.PdfSplitSettings
 import com.jumlo.app.data.processing.ImageWatermarkSettings
 import com.jumlo.app.data.processing.PdfStampSettings
@@ -29,6 +30,35 @@ class WorkspaceSettingsTest {
         assertTrue(settings.allowModify)
         assertFalse(settings.allowAnnotations)
         assertFalse(settings.allowForms)
+    }
+
+    @Test fun pdfQualityAndLosslessChoiceReachTheImmutableRequest() {
+        val draft=WorkspaceDraft.forTool("pdf_02",listOf("img")).copy(quality="92",flag1=true)
+        val restored=Json.decodeFromString<WorkspaceDraft>(Json.encodeToString(WorkspaceDraft.serializer(),draft))
+        val settings=Json.decodeFromString<ImagesToPdfSettings>(restored.executionSettings())
+        assertEquals(92,settings.quality)
+        assertTrue(settings.lossless)
+    }
+
+    @Test(expected=IllegalArgumentException::class)
+    fun pdfRejectsQualityAboveRange() {
+        WorkspaceDraft.forTool("pdf_02",listOf("img")).copy(quality="101").executionSettings()
+    }
+
+    @Test(expected=IllegalArgumentException::class)
+    fun pdfRejectsQualityBelowRange() {
+        WorkspaceDraft.forTool("pdf_02",listOf("img")).copy(quality="0").executionSettings()
+    }
+
+    @Test(expected=IllegalArgumentException::class)
+    fun pdfRejectsNonNumericQuality() {
+        WorkspaceDraft.forTool("pdf_02",listOf("img")).copy(quality="abc").executionSettings()
+    }
+
+    @Test fun oldPdfSettingsJsonWithoutQualityStillUsesDefaults() {
+        val settings=Json.decodeFromString<ImagesToPdfSettings>("""{"displayName":"Images.pdf"}""")
+        assertEquals(85,settings.quality)
+        assertFalse(settings.lossless)
     }
 
     @Test fun oldProtectionDraftsRetainTheirEstablishedPermissionDefaults() {

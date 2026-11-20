@@ -57,8 +57,11 @@ class MediaOperationHandler @Inject constructor(
         }
         fun checkNetwork() {
             checkLocal()
-            val cm = app.getSystemService(ConnectivityManager::class.java) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
-            val network = cm.getNetworkCapabilities(cm.activeNetwork) ?: throw OperationFailure("NETWORK_UNAVAILABLE")
+            // A null capabilities snapshot (VPN, transient loss, some OEM ROMs) cannot answer
+            // the Wi-Fi/unmetered question. Let the real transport I/O decide instead of
+            // rejecting every inspection with a misleading NETWORK_UNAVAILABLE.
+            val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
+            val network = cm.getNetworkCapabilities(cm.activeNetwork) ?: return
             if(settings.wifiOnly && !network.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) throw OperationFailure("WIFI_REQUIRED")
             if(settings.unmeteredOnly && !network.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) throw OperationFailure("UNMETERED_NETWORK_REQUIRED")
         }

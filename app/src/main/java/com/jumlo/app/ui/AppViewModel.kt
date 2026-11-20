@@ -910,7 +910,9 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     } }
     fun setQuickActionIds(ids:List<String>) = savePreference {
         val eligible=CapabilityRegistry.tools.filter {CapabilityRegistry.visible(it.id) && CapabilityRegistry.canProcess(it.id)}.map {it.id}
-        preferences.setQuickActionIds(com.jumlo.app.ui.home.HomeActionPolicy.resolve(ids,eligible))
+        // An explicit empty list means the user unpinned everything; do not refill defaults.
+        preferences.setQuickActionIds(if (ids.isEmpty()) emptyList()
+            else com.jumlo.app.ui.home.HomeActionPolicy.resolve(ids,eligible))
     }
     fun setThemeMode(mode:ThemeMode) = savePreference { preferences.setThemeMode(mode) }
     fun setLanguage(language:AppLanguage) = savePreference { preferences.setLanguage(language) }

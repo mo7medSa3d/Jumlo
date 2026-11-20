@@ -50,6 +50,14 @@ class CapabilityContractTest {
         }
     }
 
+    @Test fun internalDownloadIdsRemainExecutableAfterCatalogueDedup() {
+        // dl_02/dl_03 are no longer user-visible tiles but their handlers stay live
+        // for direct-link and batch job routing in AppViewModel.
+        listOf("dl_media", "dl_02", "dl_03").forEach { id ->
+            assertTrue("$id must remain executable", CapabilityRegistry.canProcess(id))
+        }
+    }
+
     @Test fun representativeRealOperationsRemainEnabled() {
         listOf("pdf_03", "pdf_protect", "pdf_to_docx", "file_encrypted_zip",
             "dl_media", "dl_02", "img_04", "img_join").forEach { id ->

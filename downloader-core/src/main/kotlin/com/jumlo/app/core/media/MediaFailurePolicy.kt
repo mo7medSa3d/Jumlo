@@ -52,9 +52,10 @@ object MediaFailurePolicy {
             }
             contains("drm", "encrypted") -> "MEDIA_ENCRYPTED_SOURCE"
             contains("sign in", "login", "log in", "logged-in", "cookies", "not a bot", "authentication is required") -> "MEDIA_SESSION_REQUIRED"
+            // An explicit HTTP rejection is a source/content problem, not a connection problem.
+            contains("403", "401") -> "MEDIA_SOURCE_REJECTED"
             contains("timed out", "connection reset", "network is unreachable", "unable to download webpage", "name or service not known") -> "MEDIA_NETWORK_ERROR"
             contains("no space left", "disk full") -> "MEDIA_STORAGE_FULL"
-            contains("403", "401") -> "MEDIA_SOURCE_REJECTED"
             else -> "MEDIA_EXTRACTION_FAILED"
         }
     }

@@ -389,7 +389,9 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
         progress: (MediaProgress) -> Unit
     ) {
         check()
-        val engine = answered[url] ?: engines.firstOrNull() ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
+        // Download must not guess an engine: the choice was validated against one engine's
+        // analysis. A fresh analysis populates `answered` again before every transfer.
+        val engine = answered[url] ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
         guardMediaRuntime { engine.download(url, choice, audio, bitrate, allowHttp, directory, check, progress) }
     }
 

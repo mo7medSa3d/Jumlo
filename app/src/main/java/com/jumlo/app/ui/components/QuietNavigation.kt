@@ -1,6 +1,5 @@
 package com.jumlo.app.ui.components
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
@@ -25,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -63,7 +61,6 @@ fun JumloNavigationBar(
     val haptics = rememberAppHaptics()
     val reduced = LocalReducedMotion.current
     val showLabels = LocalDensity.current.fontScale < 1.6f
-    val isDark = colors.background.luminance() < 0.5f
     // Reference NavigationBarDefaults.windowInsets for system inset parity inside the floating host.
     val navInsets = NavigationBarDefaults.windowInsets
 
@@ -79,9 +76,9 @@ fun JumloNavigationBar(
                 .widthIn(max = 460.dp)
                 .fillMaxWidth(),
             shape = QuietTheme.shapes.dockPill,
-            color = pillars.dockSurface,
+            color = pillars.dockSurface.copy(alpha = 0.72f),
             border = BorderStroke(1.dp, pillars.dockBorder),
-            shadowElevation = if (isDark) 6.dp else 4.dp
+            shadowElevation = 0.dp
         ) {
             NavigationBar(
                 modifier = Modifier
@@ -111,11 +108,6 @@ fun JumloNavigationBar(
                         ),
                         label = "nav-icon-lift-${destination.name}"
                     )
-                    val brandAlphaState = animateFloatAsState(
-                        targetValue = if (active) 1f else 0.76f,
-                        animationSpec = if (reduced) snap() else spring(stiffness = Spring.StiffnessMedium),
-                        label = "nav-brand-alpha-${destination.name}"
-                    )
 
                     NavigationBarItem(
                         selected = active,
@@ -139,32 +131,18 @@ fun JumloNavigationBar(
                                 modifier = Modifier.testTag("nav.indicator.${destination.name}"),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (destination == DockTab.HOME) {
-                                    JumloAppIconBadge(
-                                        size = 24.dp,
-                                        shape = MaterialTheme.shapes.extraSmall,
-                                        modifier = Modifier.graphicsLayer {
+                                Icon(
+                                    painter = painterResource(icon(destination)),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .graphicsLayer {
                                             val s = iconScaleState.value
                                             scaleX = s
                                             scaleY = s
                                             translationY = iconLiftState.value
-                                            alpha = brandAlphaState.value
                                         }
-                                    )
-                                } else {
-                                    Icon(
-                                        painter = painterResource(icon(destination)),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(22.dp)
-                                            .graphicsLayer {
-                                                val s = iconScaleState.value
-                                                scaleX = s
-                                                scaleY = s
-                                                translationY = iconLiftState.value
-                                            }
-                                    )
-                                }
+                                )
                             }
                         },
                         label = if (showLabels) {

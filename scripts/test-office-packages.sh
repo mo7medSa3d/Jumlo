@@ -26,6 +26,7 @@ STDLIB=$(find "$KOTLIN_LIB" -name 'kotlin-stdlib-*.jar' 2>/dev/null | grep -v so
 [ -n "$STDLIB" ] || { echo 'BLOCKED: kotlin-stdlib jar not found in JUMLO_KOTLIN_LIB' >&2; exit 2; }
 "$jdk/bin/java" -cp "$KOTLIN_LIB/*" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler \
   "$ROOT/document-core/src/main/kotlin/com/jumlo/app/core/office/OfficeDocument.kt" \
+  "$ROOT/document-core/src/main/kotlin/com/jumlo/app/core/office/OfficeDocumentReader.kt" \
   "$ROOT/document-core/src/main/kotlin/com/jumlo/app/core/office/OfficePackageWriter.kt" \
   "$ROOT/document-core/src/main/kotlin/com/jumlo/app/core/office/DocumentRenderPolicy.kt" \
   "$ROOT/document-core/src/main/kotlin/com/jumlo/app/core/office/OfficeTextLayout.kt" \

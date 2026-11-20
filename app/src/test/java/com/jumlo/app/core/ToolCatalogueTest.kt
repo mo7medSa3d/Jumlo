@@ -77,6 +77,15 @@ class ToolCatalogueTest {
         }
     }
 
+    @Test fun downloadsHaveOneUserVisibleTool() {
+        val downloads = ToolCatalogue.entry(ToolWorkspace.DOWNLOADS)!!
+        assertEquals(listOf("dl_media"), downloads.primary)
+        assertTrue("direct/batch tools must not be tiles", downloads.merged.isEmpty())
+        assertTrue(ToolCatalogue.isListed("dl_media"))
+        assertTrue("direct/batch ids must stay internal-only", !ToolCatalogue.isListed("dl_02") && !ToolCatalogue.isListed("dl_03"))
+        assertTrue("direct/batch ids must stay out of search", !ToolCatalogue.isSearchable("dl_02") && !ToolCatalogue.isSearchable("dl_03"))
+    }
+
     @Test fun theScannerIsItsOwnWorkspace() {
         assertEquals(ToolWorkspace.SCANNER, ToolCatalogue.workspaceOf("scan_doc"))
         assertTrue("the scanner must be a primary entry", ToolCatalogue.isPrimary("scan_doc"))

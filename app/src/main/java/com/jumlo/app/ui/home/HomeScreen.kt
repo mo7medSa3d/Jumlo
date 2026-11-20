@@ -53,7 +53,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     val frequent = remember(settings.rankedToolIds) {
         settings.rankedToolIds.mapNotNull { id ->
             CapabilityRegistry.tools.firstOrNull { it.id == id && CapabilityRegistry.enabled(id) }
-        }.take(4)
+        }.take(3)
     }
     val active = remember(jobs) { jobs.filter { it.isActive() }.take(2) }
     val sourceNamesById = remember(sources) { sources.associate { it.id to it.displayName } }
@@ -119,7 +119,8 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                         action = stringResource(R.string.modern_all_tools), onAction = onTools)
                     frequentRows.forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            row.forEach { tool -> ToolTile(tool, settings.language, { onTool(tool) }, Modifier.weight(1f)) }
+                            row.forEach { tool -> ToolTile(tool, settings.language, { onTool(tool) }, Modifier.weight(1f),
+                                onPin = { vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) }) }
                             repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
@@ -299,7 +300,8 @@ private val ConvertSheetOptions = listOf(
     ) {
         Column(
             Modifier.fillMaxWidth().padding(13.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 Modifier
