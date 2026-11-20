@@ -339,7 +339,7 @@ object MediaOutputPolicy {
     private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
     private val WHITESPACE = Regex("\\s+")
     private val mime = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "mov" to "video/quicktime", "mkv" to "video/x-matroska", "webm" to "video/webm", "m4a" to "audio/mp4", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "opus" to "audio/ogg", "flac" to "audio/flac", "wav" to "audio/wav", "aac" to "audio/aac", "ts" to "video/mp2t")
-    private val FRAGMENT_SUFFIX = Regex("^media\.f[A-Za-z0-9_-]+\.")
+    private val FRAGMENT_SUFFIX = Regex("^media\\.f[A-Za-z0-9_-]+\\.")
     fun finishedFile(root: File): File {
         val all = root.listFiles()?.filter { it.name.startsWith("media.") && it.extension.lowercase(Locale.ROOT) in mime.keys && it.isFile && it.length() > 0 } ?: emptyList()
         require(all.isNotEmpty()) { "MEDIA_OUTPUT_MISSING" }

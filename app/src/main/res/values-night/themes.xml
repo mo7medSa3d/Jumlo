@@ -6,5 +6,4 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
-    <color name="jumlo_launch_background">#000000</color>
 </resources>
