@@ -124,39 +124,39 @@ fun JumloTheme(
             background = Color.Black,
             surface = Color.Black,
             surfaceDim = Color.Black,
-            surfaceBright = Color(0xFF1C1F24),
-            surfaceContainerLowest = Color.Black,
-            surfaceContainerLow = Color(0xFF15161A),
-            surfaceContainer = Color(0xFF16181C),
-            surfaceContainerHigh = Color(0xFF1C1F24),
-            surfaceContainerHighest = Color(0xFF242830),
-            outlineVariant = Color(0xFF262930)
+            surfaceBright = Color(0xFF26272E),
+            surfaceContainerLowest = Color(0xFF000000),
+            surfaceContainerLow = Color(0xFF0F0F0F),
+            surfaceContainer = Color(0xFF181818),
+            surfaceContainerHigh = Color(0xFF1F2128),
+            surfaceContainerHighest = Color(0xFF26272E),
+            outlineVariant = Color(0xFF26272E)
         )
         if (isAmoled) oledDark
         else if (darkTheme) oledDark
         else baseScheme.copy(
-            background = Color(0xFFF2F2F7),
-            surface = Color(0xFFF2F2F7),
-            surfaceDim = Color(0xFFECEEF2),
-            surfaceBright = Color.White,
-            surfaceContainerLowest = Color.White,
-            surfaceContainerLow = Color.White,
-            surfaceContainer = Color(0xFFF2F4F7),
-            surfaceContainerHigh = Color(0xFFE9ECF1),
-            surfaceContainerHighest = Color(0xFFE1E5EC),
-            outlineVariant = Color(0xFFE2E5EC)
+            background = Color(0xFFFCFCFC),
+            surface = Color(0xFFFCFCFC),
+            surfaceDim = Color(0xFFF2F2F2),
+            surfaceBright = Color(0xFFFFFFFF),
+            surfaceContainerLowest = Color(0xFFFFFFFF),
+            surfaceContainerLow = Color(0xFFFAFAFA),
+            surfaceContainer = Color(0xFFF3F4F6),
+            surfaceContainerHigh = Color(0xFFECEEEF),
+            surfaceContainerHighest = Color(0xFFE7E4E4),
+            outlineVariant = Color(0xFFE7E4E4)
         )
     }
 
     val pillarColors: PillarColors = remember(system, darkTheme, colorScheme) {
         val basePillars = pillarColors(system, darkTheme)
         basePillars.copy(
-            cardSurface = if (darkTheme) Color(0xFF15161A) else Color.White,
-            cardBorder = Color.Transparent,
+            cardSurface = if (darkTheme) Color(0xFF0F0F0F) else Color(0xFFFAFAFA),
+            cardBorder = if (darkTheme) Color(0xFF26272E) else Color(0xFFE7E4E4),
             primaryActionBackground = colorScheme.primary,
             primaryActionText = colorScheme.onPrimary,
-            dockSurface = if (darkTheme) Color(0xFF141518) else Color.White,
-            dockBorder = if (darkTheme) Color(0xFF23252C) else Color(0xFFE5E5EA),
+            dockSurface = if (darkTheme) Color(0xFF121216) else Color(0xFFFFFFFF),
+            dockBorder = if (darkTheme) Color(0xFF26272E) else Color(0xFFE7E4E4),
             activePillContainer = colorScheme.primaryContainer,
             activePillContent = colorScheme.onPrimaryContainer
         )
@@ -183,8 +183,15 @@ fun JumloTheme(
         SideEffect {
             val window = view.context.findActivity()?.window
             if (window != null) {
-                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                val controller = WindowCompat.getInsetsController(window, view)
+                @Suppress("DEPRECATION")
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    window.isStatusBarContrastEnforced = false
+                    window.isNavigationBarContrastEnforced = false
+                }
                 WindowCompat.setDecorFitsSystemWindows(window, false)
                 controller.isAppearanceLightStatusBars = !darkTheme
                 controller.isAppearanceLightNavigationBars = !darkTheme

@@ -1,12 +1,12 @@
 package com.jumlo.app.data.processing
 import kotlinx.serialization.Serializable
 
-@Serializable data class ImageConversionSettings(val format:String="JPEG",val quality:Int=85,val matteArgb:Int=-1,val stripMetadata:Boolean=true,val namePrefix:String="converted_",val customOutputName:String="")
-@Serializable data class ImageResizeSettings(val width:Int=1600,val height:Int=1600,val percentage:Int?=null,val longestEdge:Int?=null,val fit:String="FIT",val allowUpscaling:Boolean=false,val output:ImageConversionSettings=ImageConversionSettings(namePrefix="resized_"))
-@Serializable data class ImageCropSettings(val left:Double=0.0,val top:Double=0.0,val right:Double=1.0,val bottom:Double=1.0,val rotationQuarterTurns:Int=0,val flipX:Boolean=false,val flipY:Boolean=false,val output:ImageConversionSettings=ImageConversionSettings(namePrefix="cropped_"))
+@Serializable data class ImageConversionSettings(val format:String="JPEG",val quality:Int=95,val matteArgb:Int=-1,val stripMetadata:Boolean=true,val namePrefix:String="converted_",val customOutputName:String="")
+@Serializable data class ImageResizeSettings(val width:Int=1600,val height:Int=1600,val percentage:Int?=null,val longestEdge:Int?=null,val fit:String="FIT",val allowUpscaling:Boolean=false,val output:ImageConversionSettings=ImageConversionSettings(quality=98,namePrefix="resized_"))
+@Serializable data class ImageCropSettings(val left:Double=0.0,val top:Double=0.0,val right:Double=1.0,val bottom:Double=1.0,val rotationQuarterTurns:Int=0,val flipX:Boolean=false,val flipY:Boolean=false,val output:ImageConversionSettings=ImageConversionSettings(quality=98,namePrefix="cropped_"))
 @Serializable data class ImageCompressionSettings(val output:ImageConversionSettings=ImageConversionSettings(quality=75,namePrefix="compressed_"))
-@Serializable data class ImagesToPdfSettings(val displayName:String="Images.pdf",val paperWidthPt:Int=595,val paperHeightPt:Int=842,val orientation:String="AUTO",val marginMm:Int=10,val fill:Boolean=false,val pageMode:String="AUTO",val quality:Int=85,val lossless:Boolean=false)
-@Serializable data class PdfImagesSettings(val pages:String="all",val dpi:Int=144,val format:String="PNG",val quality:Int=90,val grayscale:Boolean=false,val displayName:String="")
+@Serializable data class ImagesToPdfSettings(val displayName:String="Images.pdf",val paperWidthPt:Int=595,val paperHeightPt:Int=842,val orientation:String="AUTO",val marginMm:Int=10,val fill:Boolean=false,val pageMode:String="AUTO",val quality:Int=95,val lossless:Boolean=false)
+@Serializable data class PdfImagesSettings(val pages:String="all",val dpi:Int=200,val format:String="PNG",val quality:Int=95,val grayscale:Boolean=false,val displayName:String="")
 @Serializable data class ArchiveSettings(val displayName:String="Archive.zip",val compressionLevel:Int=6)
 @Serializable data class DownloadSettings(
     val urlSecretHandle:String,
@@ -34,7 +34,7 @@ import kotlinx.serialization.Serializable
     val allowAnnotations:Boolean=true, val allowForms:Boolean=true
 )
 @Serializable data class OfficeToPdfSettings(val displayName:String="Document.pdf")
-@Serializable data class ImageWatermarkSettings(val text:String="", val opacityPercent:Int=40, val useLogo:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(namePrefix="watermarked_"), val centerX:Double=0.5, val centerY:Double=0.5, val scale:Double=1.0, val rotationDegrees:Int=0, val tiled:Boolean=false, val colorHex:String="#FFFFFF", val fontFamily:String="sans")
+@Serializable data class ImageWatermarkSettings(val text:String="", val opacityPercent:Int=40, val useLogo:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(quality=98,namePrefix="watermarked_"), val centerX:Double=0.5, val centerY:Double=0.5, val scale:Double=1.0, val rotationDegrees:Int=0, val tiled:Boolean=false, val colorHex:String="#FFFFFF", val fontFamily:String="sans")
 @Serializable data class ImageJoinSettings(val layout:String="GRID2", val gapPx:Int=8, val overlapPx:Int=0, val output:ImageConversionSettings=ImageConversionSettings(format="PNG", namePrefix="joined_"))
 @Serializable data class BatchRenameSettings(val pattern:String="file-{n}", val startAt:Int=1, val date:String="")
 @Serializable data class EncryptedArchiveSettings(val displayName:String="Archive.zip", val secretHandle:String="", val extract:Boolean=false)

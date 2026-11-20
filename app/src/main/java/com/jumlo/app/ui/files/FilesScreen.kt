@@ -13,6 +13,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
@@ -212,30 +213,53 @@ import com.jumlo.app.model.*
             }
     ) {
     val paneWidth = minOf(maxWidth.value, 980f)
-    val columns=((paneWidth-40f)/(if(density.fontScale>=1.5f) 240f else 160f)).toInt().coerceIn(1,4)
+    val columns = when {
+        paneWidth >= 600f -> if (density.fontScale >= 1.5f) 2 else 3
+        density.fontScale >= 1.5f -> 1
+        else -> 2
+    }
     val groupedRows = remember(grouped, columns) { grouped.mapValues { (_, files) -> files.chunked(columns) } }
     LazyColumn(
         modifier=Modifier.widthIn(max=980.dp).fillMaxSize().align(Alignment.TopCenter),
-        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=16.dp,
-            bottom=QuietTheme.spacing.listBottomBuffer + if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) 96.dp else 0.dp),
+        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=10.dp,
+            bottom=QuietTheme.spacing.listBottomBuffer + if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) 88.dp else 0.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)
     ) {
-        item("heading") { Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            if(selecting && section=="outputs") {
+        if(selecting && section=="outputs") {
+            item("heading") {
                 Text(stringResource(R.string.neon_selection_count,selected.size),
                     style=QuietTheme.typography.sectionTitle,
                     color=colors.primary,
                     modifier=Modifier.semantics { heading() })
             }
-            QuietPrimaryButton(text=stringResource(R.string.import_device_files), onClick=onImport,
-                modifier=Modifier.fillMaxWidth(),leadingIcon=Icons.Rounded.Add)
-        } }
-        item("search") {QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})}
+        }
+        item("search") {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(Modifier.weight(1f)) {
+                    QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})
+                }
+                FilledIconButton(
+                    onClick = { haptics.actionClick(); onImport() },
+                    modifier = Modifier.size(48.dp).pressFeedback(),
+                    shape = QuietTheme.shapes.inputField,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.import_device_files), modifier = Modifier.size(22.dp))
+                }
+            }
+        }
         item("sections") {
             Surface(
                 shape = QuietTheme.shapes.inputField,
-                color = colors.surfaceContainerLow,
-                border = BorderStroke(1.dp, pillars.cardBorder.copy(alpha = 0.75f)),
+                color = colors.surfaceContainer,
+                border = null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -394,7 +418,7 @@ import com.jumlo.app.model.*
                     items(groupedRows[groupKey].orEmpty(),key={it.joinToString("-") {f->f.id}},contentType={"tileRow"}) {row->
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.fillMaxWidth()) {
                             row.forEach {output->
-                                val cardHeight=288.dp
+                                val cardHeight=206.dp
                                 val isDragged = output.id in dragState.draggingIds
                                 val gridDragMod = if (canDrag) Modifier
                                     .alpha(if (isDragged) 0.45f else 1f)
@@ -424,9 +448,9 @@ import com.jumlo.app.model.*
                                     ),
                                     shadowElevation=0.dp
                                 ) {
-                                    Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                                    Column(Modifier.fillMaxWidth().padding(10.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                                         Box(Modifier.fillMaxWidth()
-                                            .height(140.dp)) {
+                                            .height(104.dp)) {
                                             NeonOutputPreview(output, Modifier.fillMaxSize())
                                             if(selecting) Icon(
                                                 if(output.id in selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
@@ -436,7 +460,7 @@ import com.jumlo.app.model.*
                                             )
                                         }
                                         Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                                            Text(output.displayName,style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold,textDirection=TextDirection.Content),maxLines=2,overflow=TextOverflow.Ellipsis)
+                                            Text(output.displayName,style=QuietTheme.typography.bodyMedium.copy(fontWeight=FontWeight.SemiBold,textDirection=TextDirection.Content),maxLines=1,overflow=TextOverflow.Ellipsis)
                                             val originalBytes=output.metadata.originalSizeBytes
                                             val savedPercent=if(originalBytes!=null && originalBytes>output.sizeBytes && originalBytes>0L)
                                                 (((originalBytes-output.sizeBytes).toDouble()*100.0)/originalBytes).toInt().coerceIn(0,99)
@@ -587,16 +611,17 @@ import com.jumlo.app.model.*
         }
         Surface(
             modifier=Modifier.align(Alignment.BottomCenter)
+                .navigationBarsPadding()
                 .widthIn(max=520.dp)
-                .padding(start=16.dp,end=16.dp,bottom=12.dp),
-            color=pillars.dockSurface,
+                .padding(start=16.dp,end=16.dp,bottom=82.dp),
+            color=pillars.dockSurface.copy(alpha=0.94f),
             shape=QuietTheme.shapes.dockPill,
             border=BorderStroke(1.dp,pillars.dockBorder),
             shadowElevation=10.dp
         ) {
-            Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=7.dp),
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal=12.dp,vertical=7.dp),
                 verticalAlignment=Alignment.CenterVertically,
-                horizontalArrangement=Arrangement.SpaceEvenly) {
+                horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 NeonBatchAction(Icons.Rounded.Share,stringResource(R.string.action_share),{
                     haptics.actionClick()
                     shareOutputList(selectedOutputs)
@@ -778,7 +803,7 @@ private fun RowScope.NeonBatchAction(
     onAction: () -> Unit,
     destructive: Boolean = false
 ) {
-    Column(Modifier.weight(1f).pressFeedback(),
+    Column(Modifier.widthIn(min = 68.dp).pressFeedback(),
         horizontalAlignment = Alignment.CenterHorizontally) {
         IconButton(onClick = onAction) {
             Icon(icon, label, Modifier.size(23.dp),

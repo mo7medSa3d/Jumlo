@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-ARG YTDLP_VERSION=2025.03.31
+ARG YTDLP_VERSION=2026.10.26
 
 RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir "yt-dlp==${YTDLP_VERSION}"

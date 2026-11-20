@@ -34,10 +34,10 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('MainDockTabs.forEach', dock)
         self.assertIn('destination == selectedTab', dock)
         self.assertIn('.testTag("nav.indicator.${destination.name}")', dock)
-        self.assertIn('NavigationBarItem(', dock)
+        self.assertIn('role = Role.Tab', dock)
         self.assertIn('painterResource(icon(destination))', dock)
         self.assertIn('DockTab.HOME -> R.drawable.ic_prism_home', dock)
-        self.assertIn('shadowElevation = 0.dp', dock)
+        self.assertIn('shape = CircleShape', dock)
         self.assertIn('DownloadsRoute', nav)
         self.assertIn('com.jumlo.app.ui.downloads.DownloadsScreen', nav)
 
@@ -50,7 +50,7 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('open("pdf_compress")', home)
         self.assertIn('open("dl_media")', home)
         self.assertIn('NeonOutputPreview(output', home)
-        self.assertIn('items(outputs.take(8)', home)
+        self.assertIn('items(outputs.take(6)', home)
         self.assertNotIn('HomeActionEditor(', home)
         self.assertNotIn('QuietSearchBar(', home)
         self.assertIn('fileDateLabel(output.createdAtEpochMs)', home)
@@ -86,7 +86,7 @@ class NeonReferenceRedesign(unittest.TestCase):
                      'onOutputWorkflow(selectedOutputs,"pdf_02")',
                      'vm.trashOutputs(', 'vm.restoreOutput(', 'vm.purgeTrashIds(',
                      'vm.setFileViewMode(', 'onImport()',
-                     'QuietPrimaryButton(text=stringResource(R.string.import_device_files)'):
+                     'contentDescription = stringResource(R.string.import_device_files)'):
             with self.subTest(item=text):
                 self.assertIn(text, files)
         self.assertIn('selectedOutputs.isNotEmpty()', files)

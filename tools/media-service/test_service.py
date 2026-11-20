@@ -1196,7 +1196,7 @@ class ExtractionEdgeCasesTest(unittest.TestCase):
 
         for yt_cmd in captured_cmds[:2]:
             self.assertIn("--extractor-args", yt_cmd)
-            self.assertEqual("youtube:player_client=default,web_embedded", yt_cmd[yt_cmd.index("--extractor-args") + 1])
+            self.assertEqual("youtube:player_client=android_vr,tv_embedded,web_safari,default", yt_cmd[yt_cmd.index("--extractor-args") + 1])
         for other_cmd in captured_cmds[2:]:
             self.assertNotIn("--extractor-args", other_cmd)
 

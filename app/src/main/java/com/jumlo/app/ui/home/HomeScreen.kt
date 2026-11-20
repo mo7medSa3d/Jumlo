@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -169,22 +170,25 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                         stringResource(R.string.modern_recent_empty_body), stringResource(R.string.modern_scan), onScan,
                         icon = Icons.Rounded.DocumentScanner)
                     else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(outputs.take(8), key = { it.id }, contentType = { "recent-output" }) { output ->
+                        items(outputs.take(6), key = { it.id }, contentType = { "recent-output" }) { output ->
                             Surface(
                                 onClick = { onOutput(output) },
-                                modifier = Modifier.width(184.dp).pressFeedback(),
+                                modifier = Modifier.width(156.dp).height(196.dp).pressFeedback(),
                                 shape = QuietTheme.shapes.card,
                                 color = pillars.cardSurface,
                                 shadowElevation = 0.dp
                             ) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    NeonOutputPreview(output, Modifier.fillMaxWidth().height(136.dp))
-                                    Text(output.displayName, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    NeonOutputPreview(output, Modifier.fillMaxWidth().height(104.dp))
+                                    Text(output.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                         style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, textDirection = TextDirection.Content))
-                                    Text(formatOutputSizeSummary(output), style = QuietTheme.typography.metadata,
-                                        color = colors.onSurfaceVariant, maxLines = 1)
-                                    Text(fileDateLabel(output.createdAtEpochMs), style = QuietTheme.typography.metadata,
-                                        color = colors.onSurfaceVariant)
+                                    Text(
+                                        formatOutputSizeSummary(output) + " · " + fileDateLabel(output.createdAtEpochMs),
+                                        style = QuietTheme.typography.metadata,
+                                        color = colors.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
@@ -292,32 +296,34 @@ private val ConvertSheetOptions = listOf(
     }
     Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 92.dp).pressFeedback(),
+        modifier = modifier.height(88.dp).pressFeedback(),
         shape = QuietTheme.shapes.inputField,
         color = pillars.cardSurface,
         contentColor = colors.onSurface,
         shadowElevation = 0.dp
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(13.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 Modifier
-                    .size(46.dp)
+                    .size(44.dp)
                     .clip(QuietTheme.shapes.iconTile)
                     .background(badgeBg),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(painterResource(icon), null, Modifier.size(24.dp), tint = badgeTint)
+                Icon(painterResource(icon), null, Modifier.size(22.dp), tint = badgeTint)
             }
             Text(
                 label,
-                style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = QuietTheme.typography.metadataStrong,
                 color = colors.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

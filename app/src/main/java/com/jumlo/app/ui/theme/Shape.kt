@@ -20,9 +20,9 @@ object JumloRadii {
     val iconTile = 15.dp
     val field = 16.dp
     val surface = 18.dp
-    val card = 20.dp
+    val card = 21.dp
     val hero = 24.dp
-    val dock = 24.dp
+    val dock = 999.dp
     val sheet = 28.dp
     val splashIcon = 38.dp
 }
@@ -61,7 +61,7 @@ data class QuietPrecisionShapes(
     val innerPanel: RoundedCornerShape = RoundedCornerShape(JumloRadii.surface),
     val card: RoundedCornerShape = RoundedCornerShape(JumloRadii.card),
     val heroCard: RoundedCornerShape = RoundedCornerShape(JumloRadii.hero),
-    val dockPill: RoundedCornerShape = RoundedCornerShape(JumloRadii.dock),
+    val dockPill: RoundedCornerShape = RoundedCornerShape(percent = 50),
     val modalSheetTop: RoundedCornerShape = RoundedCornerShape(topStart = JumloRadii.sheet, topEnd = JumloRadii.sheet),
     val pill: RoundedCornerShape = RoundedCornerShape(percent = 50),
     val splashIcon: RoundedCornerShape = RoundedCornerShape(JumloRadii.splashIcon)
@@ -82,7 +82,7 @@ data class QuietPrecisionSpacing(
     val dockWidth: Dp = 400.dp,
     val dockHeight: Dp = 70.dp,
     val dockBottomOffset: Dp = 12.dp,
-    val listBottomBuffer: Dp = 36.dp,
+    val listBottomBuffer: Dp = 104.dp,
     val primaryButtonHeight: Dp = 54.dp,
     val tonalButtonHeight: Dp = 48.dp,
     val fileRowStandardHeight: Dp = 74.dp,

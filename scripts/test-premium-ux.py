@@ -64,7 +64,7 @@ class PremiumUxContracts(unittest.TestCase):
     def test_brand_palette_is_four_systems_with_reference_ramps(self):
         # Source-of-truth design tokens: four Cobalt-led studio systems.
         expected = {
-            'COBALT': ['E0E7FF', '83F5D2', '8658F4', '3837BC'],
+            'COBALT': ['FAFAFA', '00EEBA', '2E67FF', '0E142B'],
             'EMERALD': ['D1FAE5', '34D399', '10B981', '047857'],
             'SAPPHIRE': ['DBEAFE', '38BDF8', '2563EB', '1D4ED8'],
             'AMETHYST': ['F3E8FF', 'C084FC', '9333EA', '6B21A8'],
@@ -134,8 +134,8 @@ class PremiumUxContracts(unittest.TestCase):
         for label, icon in [('scan','scan'),('convert','document'),('compress','compress'),('download','download')]:
             self.assertIn(f'Triple(R.string.modern_{label}, R.drawable.ic_prism_{icon}',code)
         self.assertIn('HomeQuickAction(',code)
-        self.assertIn('heightIn(min = 92.dp)',code)
-        self.assertIn('maxLines = 2',code)
+        self.assertIn('height(88.dp)',code)
+        self.assertIn('maxLines = 1',code)
         self.assertNotIn('QuietSearchBar(',code)
 
     def test_old_color_system_is_gone_and_transparency_kept(self):
@@ -178,12 +178,12 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('LocalReducedMotion.current',dock)
         self.assertIn('if (reduced) snap()',dock)
         self.assertIn('animateFloatAsState(',dock)
-        self.assertIn('NavigationBar(',dock)
-        self.assertIn('NavigationBarItem(',dock)
-        self.assertIn('NavigationBarDefaults.windowInsets',dock)
+        self.assertIn('JumloNavigationBar(',dock)
+        self.assertIn('role = Role.Tab',dock)
+        self.assertIn('navigationBarsPadding()',dock)
         self.assertIn('painterResource(icon(destination))',dock)
         self.assertIn('DockTab.HOME -> R.drawable.ic_prism_home',dock)
-        self.assertIn('shadowElevation = 0.dp',dock)
+        self.assertIn('shape = CircleShape',dock)
         self.assertNotIn('.offset(',dock)
 
     def test_downloads_offer_contextual_one_tap_pause_and_resume(self):
@@ -218,11 +218,10 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_file_import_is_distinct_primary_action(self):
         code = source('files/FilesScreen.kt')
-        heading = code[code.index('item("heading")'):code.index('item("search")')]
-        self.assertIn('QuietPrimaryButton(', heading)
-        self.assertIn('onClick=onImport', heading)
-        self.assertIn('QuietPrimaryButton(text=stringResource(R.string.import_device_files)', heading)
-        self.assertIn('onImport',heading)
+        search_block = code[code.index('item("search")'):code.index('item("sections")')]
+        self.assertIn('FilledIconButton(', search_block)
+        self.assertIn('onImport()', search_block)
+        self.assertIn('import_device_files', search_block)
 
     def test_media_workspace_is_readable_on_large_displays_and_uses_url_keyboard(self):
         code = source('downloads/MediaWorkspace.kt')
@@ -247,7 +246,7 @@ class PremiumUxContracts(unittest.TestCase):
     def test_dock_keeps_screen_reader_labels_without_clipping_large_fonts(self):
         code = source('components/QuietNavigation.kt')
         self.assertIn('fontScale < 1.6f', code)
-        self.assertIn('alwaysShowLabel = showLabels', code)
+        self.assertIn('if (showLabels)', code)
         self.assertIn('contentDescription = label', code)
         self.assertIn('NavigationBar(', code)
 

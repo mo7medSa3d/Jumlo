@@ -105,7 +105,7 @@ def parse_pillars(text, systems):
 
 
 EXPECTED_RAMPS = {
-    'COBALT': ['E0E7FF', '83F5D2', '8658F4', '3837BC'],
+    'COBALT': ['FAFAFA', '00EEBA', '2E67FF', '0E142B'],
     'EMERALD': ['D1FAE5', '34D399', '10B981', '047857'],
     'SAPPHIRE': ['DBEAFE', '38BDF8', '2563EB', '1D4ED8'],
     'AMETHYST': ['F3E8FF', 'C084FC', '9333EA', '6B21A8'],
@@ -243,7 +243,7 @@ class ColorSystemsContracts(unittest.TestCase):
         lines = [ln for ln in out.splitlines() if 'ColorPresets.kt' not in ln and 'build/' not in ln]
         self.assertEqual(lines, [], f'ColorPresets still referenced: {lines}')
         themes = (ROOT / 'app/src/main/res/values/themes.xml').read_text(encoding='utf-8')
-        self.assertIn('#F4F6FB', themes)
+        self.assertIn('#FCFCFC', themes)
         self.assertNotIn('#FBF7F0', themes)
 
 

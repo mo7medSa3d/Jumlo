@@ -426,4 +426,7 @@
     <string name="files_move_to_folder">Move to folder</string>
     <string name="files_move_out_of_folder">Move to All files</string>
     <string name="files_move_no_folders">Create a folder first to organize files.</string>
+    <string name="tools_pin_action">Pin to top</string>
+    <string name="tools_unpin_action">Unpin tool</string>
+    <string name="tools_open_action">Open tool</string>
 </resources>

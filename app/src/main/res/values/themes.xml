@@ -4,8 +4,9 @@
         <item name="android:windowBackground">@color/jumlo_launch_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
-    <color name="jumlo_launch_background">#F4F6FB</color>
+    <color name="jumlo_launch_background">#FCFCFC</color>
     <style name="Theme.Jumlo.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/jumlo_launch_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>

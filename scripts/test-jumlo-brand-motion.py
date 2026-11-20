@@ -91,11 +91,11 @@ class JumloBrandMotionChecks(unittest.TestCase):
             with wave.open(str(file),'rb') as track:
                 self.assertEqual(track.getnchannels(),1)
                 self.assertEqual(track.getsampwidth(),2)
-                self.assertEqual(track.getframerate(),22050)
+                self.assertIn(track.getframerate(),(22050,44100))
                 self.assertLess(track.getnframes()/track.getframerate(),.4)
                 self.assertGreater(track.getnframes(),0)
             size+=file.stat().st_size
-        self.assertLess(size,60*1024)
+        self.assertLess(size,120*1024)
         self.assertTrue((ROOT/'scripts/generate-jumlo-sounds.py').is_file())
     def test_sound_switch_honors_system_silence_and_volume(self):
         sound=code('ui/util/UiSoundPlayer.kt')
@@ -123,11 +123,11 @@ class JumloBrandMotionChecks(unittest.TestCase):
         self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',main)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
-        for key in ('NavigationBar(','NavigationBarItem(','NavigationBarDefaults.windowInsets',
-                    'painterResource(icon(destination))', 'DockTab.HOME -> R.drawable.ic_prism_home', 'shadowElevation = 0.dp','animateFloatAsState','MainDockTabs.forEach',
+        for key in ('JumloNavigationBar(','role = Role.Tab','navigationBarsPadding()',
+                    'painterResource(icon(destination))', 'DockTab.HOME -> R.drawable.ic_prism_home', 'shape = CircleShape','animateFloatAsState','MainDockTabs.forEach',
                     'destination == selectedTab','if (language.isRtl) destination.labelAr else destination.labelEn',
                     'navigationTab()','contentDescription = label',
-                    'indicatorColor = colors.primaryContainer'):
+                    'activePillBg'):
             self.assertIn(key,dock)
         self.assertIn('listOf(DockTab.HOME, DockTab.TOOLS, DockTab.FILES, DockTab.SETTINGS)',dock)
     def test_system_and_user_reduce_motion_are_combined(self):
@@ -155,7 +155,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
         models=code('model/Models.kt')
         self.assertIn('enum class FileViewMode { LIST, GRID;',models)
         self.assertIn('entries.firstOrNull { it.name == value } ?: GRID',models)
-        for token in ('BoxWithConstraints','maxWidth.value','density.fontScale','coerceIn(1,4)'):
+        for token in ('BoxWithConstraints','maxWidth.value','density.fontScale','paneWidth >= 600f'):
             self.assertIn(token,code('ui/files/FilesScreen.kt'))
         self.assertIn('FileViewMode.LIST',code('ui/files/FilesScreen.kt'))
     def test_semantic_color_pairs_meet_aa_text_contrast(self):

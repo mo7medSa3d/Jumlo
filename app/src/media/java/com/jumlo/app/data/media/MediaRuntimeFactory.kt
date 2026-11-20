@@ -225,12 +225,24 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         return result.stdout
     }
 
+    private val retryableExtractorCodes = setOf(
+        "MEDIA_EXTRACTION_FAILED", "MEDIA_EXTRACTOR_CHANGED", "MEDIA_SOURCE_REJECTED",
+        "MEDIA_REANALYSIS_REQUIRED", "MEDIA_NO_USABLE_FORMAT"
+    )
+
     override fun inspect(url: String, allowHttp: Boolean, check: () -> Unit): MediaAsset {
         val normalized = MediaLinks.normalize(url, allowHttp)
         val root = File(context.cacheDir, "media-probes").apply { require(isDirectory || mkdirs()) }
         val dir = File(root, UUID.randomUUID().toString()).apply { require(mkdir()) }
         return try {
-            val raw=execute(normalized, MediaArguments.probe(normalized, allowHttp), dir, allowHttp, true, check)
+            val raw = try {
+                execute(normalized, MediaArguments.probe(normalized, allowHttp), dir, allowHttp, true, check)
+            } catch (primaryError: OperationFailure) {
+                if (primaryError.code !in retryableExtractorCodes) throw primaryError
+                val fallbackArgs = MediaArguments.probeFallback(normalized, allowHttp)
+                if (fallbackArgs == MediaArguments.probe(normalized, allowHttp)) throw primaryError
+                execute(normalized, fallbackArgs, dir, allowHttp, true, check)
+            }
             val asset=MediaMetadata.parse(raw)
             val format=asset.formats.singleOrNull()
             if(asset.extractor.equals("generic",true) && format!=null && !format.hasVideo && !format.hasAudio) {
@@ -265,11 +277,27 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         finally { dir.deleteRecursively() }
     }
 
+    private fun cleanStaleMediaFiles(directory: File) {
+        directory.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.startsWith("media.")) {
+                runCatching { file.delete() }
+            }
+        }
+    }
+
     override fun download(url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,
         allowHttp: Boolean, directory: File, check: () -> Unit, progress: (MediaProgress) -> Unit) {
         val normalized = MediaLinks.normalize(url, allowHttp)
-        execute(normalized, MediaArguments.download(normalized, choice, audio, bitrate, allowHttp),
-            directory, allowHttp, false, check, progress)
+        try {
+            execute(normalized, MediaArguments.download(normalized, choice, audio, bitrate, allowHttp),
+                directory, allowHttp, false, check, progress)
+        } catch (primaryError: OperationFailure) {
+            if (primaryError.code !in retryableExtractorCodes) throw primaryError
+            // Primary format/client failed (e.g. rotating CDN or client restriction); wipe partials and retry with universal MP4/M4A ladder.
+            cleanStaleMediaFiles(directory)
+            execute(normalized, MediaArguments.downloadFallback(normalized, choice, audio, bitrate, allowHttp),
+                directory, allowHttp, false, check, progress)
+        }
     }
 
 }

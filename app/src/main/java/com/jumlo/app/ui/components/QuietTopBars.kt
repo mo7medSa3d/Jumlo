@@ -57,29 +57,22 @@ fun QuietRootTopBar(
                 Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(vertical = 10.dp)
+                    .padding(top = 6.dp, bottom = 6.dp)
                     .padding(horizontal = QuietTheme.spacing.canvasGutterCompact),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (titleContent != null) {
                     Box(Modifier.weight(1f).semantics { heading() }) { titleContent() }
                 } else {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        JumloAppIconBadge(size = 30.dp)
-                        Text(
-                            title,
-                            style = QuietTheme.typography.screenTitle.copy(fontWeight = FontWeight.Bold),
-                            color = colors.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false).semantics { heading() }
-                        )
-                    }
+                    Text(
+                        title,
+                        style = QuietTheme.typography.screenTitle.copy(fontWeight = FontWeight.Bold),
+                        color = colors.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).semantics { heading() }
+                    )
                 }
                 badgeText?.let { QuietBadge(it, colors.primaryContainer, colors.onPrimaryContainer) }
                 if (showSettings) QuietTonalIconButton(

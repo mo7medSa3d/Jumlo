@@ -81,10 +81,10 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
                             val page = pages[index] - 1
                             val text = PdfPageText.extract(doc, page, context.checkCancellation)
                             val size = raster().pageSize(page)
-                            val bitmap = raster().render(page, 2000, minOf(context.budget.maxBitmapBytes / 2, 24L * 1024 * 1024))
+                            val bitmap = raster().render(page, 2400, minOf(context.budget.maxBitmapBytes / 2, 32L * 1024 * 1024))
                             val jpeg = try {
                                 ByteArrayOutputStream().use { bytes ->
-                                    require(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) { "OFFICE_IMAGE_INVALID" }
+                                    require(bitmap.compress(Bitmap.CompressFormat.JPEG, 95, bytes)) { "OFFICE_IMAGE_INVALID" }
                                     bytes.toByteArray()
                                 }
                             } finally { bitmap.recycle() }

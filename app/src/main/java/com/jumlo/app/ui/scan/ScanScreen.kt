@@ -43,6 +43,7 @@ import com.jumlo.app.R
 import com.jumlo.app.ui.components.QuietPrimaryButton
 import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
@@ -69,21 +70,34 @@ fun ScanScreen(
     onBack: () -> Unit, externalBusy: Boolean = false
 ) {
     var format by rememberSaveable { mutableStateOf<String?>(null) }
+    var useAutoScanner by rememberSaveable { mutableStateOf(false) }
     if (format == null) {
-        Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-            Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
-            Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { format = "pdf" },
-                enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
-            QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { format = "jpg" },
-                enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
-            // Back navigation is handled cleanly by QuietWorkspaceTopBar.
+        Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.TopStart).padding(12.dp).size(48.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.scan_back))
+            }
+            Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)) {
+                Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
+                Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { useAutoScanner = false; format = "pdf" },
+                    enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
+                QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { useAutoScanner = false; format = "jpg" },
+                    enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
+            }
         }
-    } else {
+    } else if (useAutoScanner) {
         SmartDocumentScanLauncher(
+            onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,
+            jpegOutput = format == "jpg", onBack = onBack, externalBusy = externalBusy
+        )
+    } else {
+        CameraXScanFallback(
             onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,
             jpegOutput = format == "jpg", onBack = onBack, externalBusy = externalBusy
         )

@@ -115,10 +115,10 @@ internal fun CameraXScanFallback(
             scaleType = PreviewView.ScaleType.FILL_CENTER
         }
     }
-    @Suppress("DEPRECATION")
     val capture = remember {
         ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .setJpegQuality(95)
             .setFlashMode(ImageCapture.FLASH_MODE_AUTO)
             .build()
     }

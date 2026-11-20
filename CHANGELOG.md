@@ -1,5 +1,18 @@
 # Changelog — current production-hardening candidate
 
+## [1.6.1] - 2026-11-21
+
+### Fixed
+- Hardened multi-platform media downloads across `MediaPolicies.kt`, `PackagedMediaRuntime`, `RoutingMediaRuntime`, `MediaOperationHandler.kt`, and `tools/media-service/service.py` (modern YouTube client ladder `android_vr,tv_embedded,web_safari,default`, 2-stage fallback retry with stale partial cleanup, tolerant fragment filtering, and resilient `MediaExtractor` track validation).
+- Fixed white status bar icons on light themes via reactive `enableEdgeToEdge(statusBarStyle, navigationBarStyle)` in `MainActivity.kt` and `values-night/themes.xml`.
+- Eliminated hidden background image quality downgrades on resize, crop, and watermark tools (`Settings.kt`).
+- Added missing `.env.example` template and pinned `tools/media-service/Dockerfile` to `yt-dlp==2026.10.26`.
+
+### Changed
+- Applied the Electric Blue (`#2E67FF`) / Deep Navy (`#0E142B`) / OLED Black (`#000000`) / Crisp Light (`#FCFCFC`) color system across app surfaces, adaptive launcher icons, splash themes, and brand assets.
+- Rebuilt the bottom navigation bar as a floating translucent oval capsule overlaid over pass-through content, slimmed root top bars, centered Home quick-action icons, and compacted uniform file cards.
+- Upgraded full-screen high-resolution `CameraX` scanning (`CAPTURE_MODE_MAXIMIZE_QUALITY`, JPEG 95%), 216 DPI Office-to-PDF rendering, 44.1 kHz tactile UI sounds, snappy spring motion, and an interactive long-press Pin/Unpin bottom sheet on Tools.
+
 ## 2026-11-20 — Production Hardening, Media Deduplication, iOS UI Polish & Observability
 
 - **Production hardening & release docs:** Aligned `.env.example` and `README.md` with all `tools/media-service` (`JUMLO_MEDIA_HOST`, `JUMLO_MEDIA_PORT`, `JUMLO_MEDIA_TOKEN`, `JUMLO_MEDIA_RATE_LIMIT`, `JUMLO_MEDIA_MAX_CONCURRENT`, `JUMLO_MEDIA_LOG_LEVEL`, `JUMLO_MEDIA_CORS_ORIGIN`) and Android release signing (`JUMLO_KEYSTORE_PATH`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`) variables with safe defaults, and verified CI/repo cleanliness.

@@ -39,9 +39,9 @@ import com.jumlo.app.ui.theme.QuietTheme
  * (`ic_launcher_foreground.xml`).
  */
 private val LauncherIconGradient = Brush.linearGradient(
-    colors = listOf(Color(0xFF3837BC), Color(0xFF8658F4)),
-    start = Offset(0f, Float.POSITIVE_INFINITY),
-    end = Offset(Float.POSITIVE_INFINITY, 0f)
+    colors = listOf(Color(0xFF2E67FF), Color(0xFF0E142B)),
+    start = Offset(0f, 0f),
+    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
 )
 
 @Composable
@@ -86,28 +86,22 @@ fun JumloWordmark(modifier: Modifier = Modifier) {
         Row(
             modifier = modifier,
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            JumloAppIconBadge(size = 34.dp)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                Text(
-                    "Jumlo",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 21.sp,
-                    letterSpacing = if (isRtl) 0.sp else (-0.5).sp,
-                    maxLines = 1
-                )
-                Box(
-                    Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-            }
+            Text(
+                "Jumlo",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 22.sp,
+                letterSpacing = if (isRtl) 0.sp else (-0.6).sp,
+                maxLines = 1
+            )
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
         }
     }
 }

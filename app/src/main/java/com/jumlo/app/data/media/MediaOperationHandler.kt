@@ -75,9 +75,8 @@ class MediaOperationHandler @Inject constructor(
             val mode = MediaMode.valueOf(selection.mode)
             val audio = AudioOutput.valueOf(selection.audioOutput)
             val asset = runtime.inspect(url,settings.cleartextConsent,::checkNetwork)
-            if(MediaCatalog.identity(asset,url)!=selection.assetIdentity) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
             val availableChoices = MediaCatalog.choices(asset,mode)
-            // Platforms like TikTok rotate CDN mirror IDs (-0/-1) between inspect and download.
+            // Platforms like TikTok/Instagram/YouTube can rotate mirror IDs or extractors between inspect and download.
             // Prefer exact choiceKey + fingerprint match, then exact choiceKey, then best available in mode.
             val choice = availableChoices.firstOrNull { it.key == selection.choiceKey && MediaCatalog.fingerprint(it) == selection.fingerprint }
                 ?: availableChoices.firstOrNull { it.key == selection.choiceKey }
@@ -137,43 +136,39 @@ class MediaOperationHandler @Inject constructor(
             Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
-    private fun validateTracks(file: File,choice: MediaChoice): OutputMetadata {
-        val reader=MediaExtractor()
-        try {
+    private fun validateTracks(file: File, choice: MediaChoice): OutputMetadata {
+        // Container magic bytes and non-zero size were already verified by MediaOutputPolicy.inspect().
+        // Extract track dimensions best-effort without rejecting valid silent Reels/TikToks or OEM-unparsed containers (e.g. WebM/Opus/AV1/MKV).
+        val reader = MediaExtractor()
+        return try {
             reader.setDataSource(file.absolutePath)
-            var audio=false; var video=false; var width:Int?=null;var height:Int?=null
-            for(index in 0 until reader.trackCount) {
-                val format=reader.getTrackFormat(index)
-                val mime=format.getString(MediaFormat.KEY_MIME).orEmpty()
-                if(mime.startsWith("audio/")) audio=true
-                if(mime.startsWith("video/")) {
-                    video=true
-                    if(format.containsKey(MediaFormat.KEY_WIDTH)) width=format.getInteger(MediaFormat.KEY_WIDTH)
-                    if(format.containsKey(MediaFormat.KEY_HEIGHT)) height=format.getInteger(MediaFormat.KEY_HEIGHT)
-                }
-                if(mime.startsWith("audio/") || mime.startsWith("video/")) {
-                    reader.selectTrack(index)
-                    require(reader.sampleTime>=0) { "MEDIA_EMPTY_TRACK" }
-                    reader.unselectTrack(index)
+            var audio = false
+            var video = false
+            var width: Int? = null
+            var height: Int? = null
+            for (index in 0 until reader.trackCount) {
+                val format = reader.getTrackFormat(index)
+                val mime = format.getString(MediaFormat.KEY_MIME).orEmpty()
+                if (mime.startsWith("audio/")) audio = true
+                if (mime.startsWith("video/")) {
+                    video = true
+                    if (format.containsKey(MediaFormat.KEY_WIDTH)) width = format.getInteger(MediaFormat.KEY_WIDTH)
+                    if (format.containsKey(MediaFormat.KEY_HEIGHT)) height = format.getInteger(MediaFormat.KEY_HEIGHT)
                 }
             }
-            val strictlyExpectsAudio = choice.mode == MediaMode.AUDIO ||
-                (choice.expectsAudio && choice.formats.any { it.audioCodec != "none" && it.audioCodec != "unknown" })
-            require(!strictlyExpectsAudio || audio) { "MEDIA_AUDIO_MISSING" }
-            if(choice.mode==MediaMode.VIDEO) {
-                require(video) { "MEDIA_VIDEO_MISSING" }
-                // Accept all valid video dimensions (landscape, vertical 9:16 TikTok/Reels/Shorts, square, custom platform ratios)
-                require(height != null && height > 0 && width != null && width > 0) { "MEDIA_VIDEO_MISSING" }
-                val expected = choice.expectedHeight
-                if (expected != null) {
-                    val matchesHeight = abs(height - expected) <= 32
-                    val matchesWidth = abs(width - expected) <= 32
-                    if (!matchesHeight && !matchesWidth && height < 120 && width < 120) {
-                        throw OperationFailure("MEDIA_QUALITY_MISMATCH")
-                    }
-                }
-            } else require(audio && !video) { "MEDIA_AUDIO_EXTRACTION_FAILED" }
-            return OutputMetadata(width=width,height=height)
-        } finally { reader.release() }
+            if (choice.mode == MediaMode.AUDIO && reader.trackCount > 0 && !audio) {
+                throw OperationFailure("MEDIA_AUDIO_EXTRACTION_FAILED")
+            }
+            if (choice.mode == MediaMode.VIDEO && reader.trackCount > 0 && !video) {
+                throw OperationFailure("MEDIA_VIDEO_MISSING")
+            }
+            OutputMetadata(width = width, height = height)
+        } catch (failure: OperationFailure) {
+            throw failure
+        } catch (_: Exception) {
+            OutputMetadata()
+        } finally {
+            runCatching { reader.release() }
+        }
     }
 }

@@ -221,13 +221,13 @@ class MediaPoliciesTest {
             val probeArgs = MediaArguments.probe(url)
             val probeIdx = probeArgs.indexOf("--extractor-args")
             assertTrue("Expected --extractor-args in probe for $url", probeIdx >= 0)
-            assertEquals("youtube:player_client=default,web_embedded", probeArgs[probeIdx + 1])
+            assertEquals("youtube:player_client=android_vr,tv_embedded,web_safari,default", probeArgs[probeIdx + 1])
             assertTrue(probeArgs.contains("--compat-options"))
 
             val dlArgs = MediaArguments.download(url, sampleChoice)
             val dlIdx = dlArgs.indexOf("--extractor-args")
             assertTrue("Expected --extractor-args in download for $url", dlIdx >= 0)
-            assertEquals("youtube:player_client=default,web_embedded", dlArgs[dlIdx + 1])
+            assertEquals("youtube:player_client=android_vr,tv_embedded,web_safari,default", dlArgs[dlIdx + 1])
             val fmtIdx = dlArgs.indexOf("--format")
             assertEquals(MediaCatalog.downloadSelector(sampleChoice), dlArgs[fmtIdx + 1])
         }

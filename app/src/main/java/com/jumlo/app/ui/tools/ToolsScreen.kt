@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.Star
 import com.jumlo.app.ui.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -112,6 +113,7 @@ private fun SectionHeader(title: String, count: Int? = null) {
 }
 
 /** Stateless UI boundary lets interaction tests exercise the real catalogue without a database. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ToolsCatalogue(
     tools: List<UtilityTool>,
@@ -154,6 +156,8 @@ internal fun ToolsCatalogue(
     }
     val featuredIds = remember(pinned, recent) { (pinned.map { it.id } + recent.map { it.id }).toSet() }
     var selectedSectionKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var actionSheetTool by remember { mutableStateOf<UtilityTool?>(null) }
+    val pinnedSet = remember(pinnedToolIds) { pinnedToolIds.toSet() }
     val haptics = rememberAppHaptics()
     val colors = MaterialTheme.colorScheme
     val availableSections = remember(filtered) {
@@ -249,7 +253,7 @@ internal fun ToolsCatalogue(
                         icon = Icons.Rounded.Search)
                 }
                 items(filtered, key = { it.id }, contentType = { "tool" }) { tool ->
-                    ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
+                    ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { actionSheetTool = tool }, isPinned = tool.id in pinnedSet)
                 }
             } else {
                 val activeSection = effectiveSectionKey
@@ -258,7 +262,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_pinned), pinned.size)
                     }
                     items(pinned, key = { "pinned:" + it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { actionSheetTool = tool }, isPinned = true)
                     }
                 }
                 if (activeSection == null && recent.isNotEmpty()) {
@@ -266,7 +270,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_recent), recent.size)
                     }
                     items(recent, key = { "recent:" + it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { actionSheetTool = tool }, isPinned = tool.id in pinnedSet)
                     }
                 }
                 for ((section, sectionTools) in sectionedTools) {
@@ -274,7 +278,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(sectionTitle(section, language), sectionTools.size)
                     }
                     items(sectionTools, key = { it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { actionSheetTool = tool }, isPinned = tool.id in pinnedSet)
                     }
                 }
                 if (ungroupedTools.isNotEmpty()) {
@@ -282,7 +286,7 @@ internal fun ToolsCatalogue(
                         SectionHeader(stringResource(R.string.tools_section_all), ungroupedTools.size)
                     }
                     items(ungroupedTools, key = { it.id }, contentType = { "tool" }) { tool ->
-                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { onPin(tool) })
+                        ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { actionSheetTool = tool }, isPinned = tool.id in pinnedSet)
                     }
                 }
                 if (specialistCount > 0) {
@@ -298,6 +302,56 @@ internal fun ToolsCatalogue(
             }
         }
     }
+    actionSheetTool?.let { target ->
+        val pinnedNow = target.id in pinnedSet
+        ModalBottomSheet(
+            onDismissRequest = { actionSheetTool = null },
+            shape = QuietTheme.shapes.modalSheetTop,
+            containerColor = colors.surface
+        ) {
+            Column(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    shortToolLabel(target, language),
+                    style = QuietTheme.typography.sectionTitle,
+                    color = colors.onSurface,
+                    modifier = Modifier.semantics { heading() }
+                )
+                Button(
+                    onClick = {
+                        haptics.selectionToggle()
+                        onPin(target)
+                        actionSheetTool = null
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                    shape = QuietTheme.shapes.button
+                ) {
+                    Icon(Icons.Rounded.Star, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(if (pinnedNow) R.string.tools_unpin_action else R.string.tools_pin_action),
+                        style = QuietTheme.typography.button
+                    )
+                }
+                FilledTonalButton(
+                    onClick = {
+                        haptics.actionClick()
+                        actionSheetTool = null
+                        onTool(target)
+                    },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    shape = QuietTheme.shapes.button
+                ) {
+                    Text(
+                        stringResource(R.string.tools_open_action),
+                        style = QuietTheme.typography.metadataStrong
+                    )
+                }
+            }
+        }
+    }
 }
 
 /** Fixed-icon tile: the icon color is the tool's own vivid color (see
@@ -305,7 +359,7 @@ internal fun ToolsCatalogue(
  * used to read as the same orange. Text stays neutral in every theme. */
 @Composable
 internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier,
-    appHaptics: AppHaptics? = null, onPin: (() -> Unit)? = null) {
+    appHaptics: AppHaptics? = null, onPin: (() -> Unit)? = null, isPinned: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     val isDark = colors.background.luminance() < 0.5f
@@ -324,25 +378,39 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
         shape = QuietTheme.shapes.card,
         color = tileColor,
         contentColor = colors.onSurface,
-        border = null,
+        border = BorderStroke(1.dp, pillars.cardBorder.copy(alpha = 0.7f)),
         shadowElevation = 0.dp
     ) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Surface(
-                shape = QuietTheme.shapes.iconTile,
-                color = accent,
-                modifier = Modifier.size(48.dp)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    shape = QuietTheme.shapes.iconTile,
+                    color = accent,
+                    modifier = Modifier.size(46.dp)
                 ) {
-                    ToolIcon(
-                        tool.id, iconForeground,
-                        Modifier.size(24.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
+                    Box(
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ToolIcon(
+                            tool.id, iconForeground,
+                            Modifier.size(23.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
+                        )
+                    }
+                }
+                if (isPinned) {
+                    Icon(
+                        Icons.Rounded.Star,
+                        contentDescription = null,
+                        tint = colors.primary.copy(alpha = 0.78f),
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }

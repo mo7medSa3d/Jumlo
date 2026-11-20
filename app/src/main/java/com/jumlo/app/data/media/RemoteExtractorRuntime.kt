@@ -367,11 +367,12 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
                 if (firstError == null && code != "MEDIA_SITE_UNSUPPORTED") {
                     firstError = failure
                 }
-                // Access-control answers are terminal: asking another engine is an attempt
-                // around the refusal, not a compatibility fallback.
-                if (code in setOf("MEDIA_RATE_LIMITED", "MEDIA_NETWORK_ERROR", "MEDIA_SESSION_REQUIRED",
-                        "CLEARTEXT_CONSENT_REQUIRED", "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED",
-                        "MEDIA_GEO_BLOCKED", "MEDIA_ENCRYPTED_SOURCE", "MEDIA_SOURCE_REJECTED")) {
+                // Hard access-control or consent refusals are terminal; extractor/client
+                // compatibility errors (e.g. site layout change or 403 on one client) fall through
+                // to the next configured engine (remote media-service or direct HTML5 extractor).
+                if (code in setOf("MEDIA_RATE_LIMITED", "CLEARTEXT_CONSENT_REQUIRED",
+                        "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED",
+                        "MEDIA_GEO_BLOCKED", "MEDIA_ENCRYPTED_SOURCE")) {
                     throw failure
                 }
             }
@@ -389,9 +390,7 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
         progress: (MediaProgress) -> Unit
     ) {
         check()
-        // Download must not guess an engine: the choice was validated against one engine's
-        // analysis. A fresh analysis populates `answered` again before every transfer.
-        val engine = answered[url] ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
+        val engine = answered[url] ?: engines.firstOrNull() ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
         guardMediaRuntime { engine.download(url, choice, audio, bitrate, allowHttp, directory, check, progress) }
     }
 

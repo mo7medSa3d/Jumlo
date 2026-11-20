@@ -262,10 +262,10 @@ object MediaLinks {
 }
 
 object MediaArguments {
-    private val commonArgs = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--geo-bypass", "--socket-timeout", "30", "--retries", "3", "--extractor-retries", "3", "--fragment-retries", "3", "--abort-on-error")
+    private val commonArgs = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--geo-bypass", "--socket-timeout", "30", "--retries", "5", "--extractor-retries", "5", "--fragment-retries", "10", "--abort-on-error")
     private val probeFlags = listOf("--skip-download", "--dump-single-json", "--no-warnings", "--flat-playlist")
-    private val youtubeProbeArgs = listOf("--compat-options", "no-youtube-unavailable-videos", "--extractor-args", "youtube:player_client=default,web_embedded")
-    private val youtubeDownloadArgs = listOf("--extractor-args", "youtube:player_client=default,web_embedded")
+    private val youtubeProbeArgs = listOf("--compat-options", "no-youtube-unavailable-videos", "--extractor-args", "youtube:player_client=android_vr,tv_embedded,web_safari,default")
+    private val youtubeDownloadArgs = listOf("--extractor-args", "youtube:player_client=android_vr,tv_embedded,web_safari,default")
     private val allowedAudioBitrates = setOf(64, 96, 128, 160, 192, 256, 320)
     private val muxContainers = setOf("mp4", "webm", "mkv")
     private fun isYouTubeUrl(url: String): Boolean {
@@ -282,6 +282,14 @@ object MediaArguments {
         args += listOf("--", normalized)
         return args
     }
+    /** Universal fallback probe without pinned player clients when primary extraction fails. */
+    fun probeFallback(url: String, allowHttp: Boolean = false): List<String> {
+        val normalized = MediaLinks.normalize(url, allowHttp)
+        val args = commonArgs.toMutableList()
+        args += probeFlags
+        args += listOf("--", normalized)
+        return args
+    }
     fun download(url: String, choice: MediaChoice, audio: AudioOutput = AudioOutput.ORIGINAL, bitrate: Int = 192, allowHttp: Boolean = false): List<String> {
         require(bitrate in allowedAudioBitrates) { "INVALID_AUDIO_BITRATE" }
         val normalized = MediaLinks.normalize(url, allowHttp)
@@ -292,13 +300,35 @@ object MediaArguments {
         if (choice.mode == MediaMode.VIDEO) {
             args += listOf("--format-sort", "res,vcodec:h264,acodec:m4a")
         }
-        args += listOf("--format", MediaCatalog.downloadSelector(choice), "--output", "media.%(ext)s", "--continue", "--no-overwrites", "--abort-on-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
+        args += listOf("--format", MediaCatalog.downloadSelector(choice), "--output", "media.%(ext)s", "--continue", "--force-overwrites", "--skip-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
         if (choice.mode == MediaMode.AUDIO) {
             args += listOf("--extract-audio", "--audio-format", if (audio == AudioOutput.ORIGINAL) "best" else audio.name.lowercase(Locale.ROOT))
             if (audio != AudioOutput.ORIGINAL) args += listOf("--audio-quality", "${bitrate}K")
-        } else if (choice.requiresMux) {
-            require(choice.container in muxContainers) { "INVALID_MEDIA_CONTAINER" }
-            args += listOf("--merge-output-format", choice.container)
+        } else {
+            val container = choice.container.takeIf { it in muxContainers } ?: "mp4"
+            args += listOf("--merge-output-format", container)
+        }
+        args += listOf("--", normalized)
+        return args
+    }
+    /** Resilient fallback download using universal MP4/M4A format selection and default client ladder. */
+    fun downloadFallback(url: String, choice: MediaChoice, audio: AudioOutput = AudioOutput.ORIGINAL, bitrate: Int = 192, allowHttp: Boolean = false): List<String> {
+        require(bitrate in allowedAudioBitrates) { "INVALID_AUDIO_BITRATE" }
+        val normalized = MediaLinks.normalize(url, allowHttp)
+        val args = commonArgs.toMutableList()
+        val selector = if (choice.mode == MediaMode.AUDIO) {
+            "bestaudio/best"
+        } else {
+            val h = choice.expectedHeight?.takeIf { it > 0 }
+            if (h != null) "bestvideo[height<=$h][ext=mp4]+bestaudio[ext=m4a]/best[height<=$h][ext=mp4]/bestvideo[height<=$h]+bestaudio/best[height<=$h]/best"
+            else "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/bestvideo+bestaudio/best"
+        }
+        args += listOf("--format", selector, "--output", "media.%(ext)s", "--force-overwrites", "--skip-unavailable-fragments", "--hls-prefer-native", "--downloader", "native", "--concurrent-fragments", "4", "--newline", "--progress", "--progress-delta", "0.2", "--progress-template", "download:UU_PROGRESS:%(info.format_id)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s")
+        if (choice.mode == MediaMode.AUDIO) {
+            args += listOf("--extract-audio", "--audio-format", if (audio == AudioOutput.ORIGINAL) "best" else audio.name.lowercase(Locale.ROOT))
+            if (audio != AudioOutput.ORIGINAL) args += listOf("--audio-quality", "${bitrate}K")
+        } else {
+            args += listOf("--merge-output-format", "mp4")
         }
         args += listOf("--", normalized)
         return args
@@ -309,11 +339,14 @@ object MediaOutputPolicy {
     private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
     private val WHITESPACE = Regex("\\s+")
     private val mime = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "mov" to "video/quicktime", "mkv" to "video/x-matroska", "webm" to "video/webm", "m4a" to "audio/mp4", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "opus" to "audio/ogg", "flac" to "audio/flac", "wav" to "audio/wav", "aac" to "audio/aac", "ts" to "video/mp2t")
+    private val FRAGMENT_SUFFIX = Regex("^media\.f[A-Za-z0-9_-]+\.")
     fun finishedFile(root: File): File {
-        val files = root.listFiles()?.filter { it.name.startsWith("media.") && it.extension.lowercase(Locale.ROOT) in mime.keys } ?: emptyList()
-        require(files.isNotEmpty()) { "MEDIA_OUTPUT_MISSING" }
-        require(files.size == 1) { "MEDIA_OUTPUT_AMBIGUOUS" }
-        val file = files.single()
+        val all = root.listFiles()?.filter { it.name.startsWith("media.") && it.extension.lowercase(Locale.ROOT) in mime.keys && it.isFile && it.length() > 0 } ?: emptyList()
+        require(all.isNotEmpty()) { "MEDIA_OUTPUT_MISSING" }
+        // Ignore leftover intermediate yt-dlp stream files (e.g. media.f137.mp4) when a merged media.<ext> exists.
+        val merged = all.filterNot { FRAGMENT_SUFFIX.containsMatchIn(it.name) }
+        val candidates = merged.ifEmpty { all }
+        val file = if (candidates.size == 1) candidates.single() else candidates.maxBy { it.length() }
         require(file.isFile && !Files.isSymbolicLink(file.toPath()) && file.canonicalFile.parentFile == root.canonicalFile && file.length() > 0) { "INVALID_MEDIA_OUTPUT" }
         return file
     }

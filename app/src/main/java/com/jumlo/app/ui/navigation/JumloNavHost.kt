@@ -400,8 +400,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             LocalToolTransitionOrigin provides if(root) shellRoute else transitionOrigin) {
         com.jumlo.app.ui.adaptive.HingeSafeViewport {
         Scaffold(
-            snackbarHost={SnackbarHost(snackbar)},
-            bottomBar={if(showDock) JumloNavigationBar(selectedTab=tab,language=settings.language,onSelectTab=::navigateTab)},
+            snackbarHost={SnackbarHost(snackbar, modifier=Modifier.padding(bottom=if(showDock) 84.dp else 0.dp))},
             contentWindowInsets=WindowInsets(0,0,0,0)
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding).testTag("route.$shellRoute").graphicsLayer {
@@ -417,7 +416,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             else if(settings.language.isRtl) tab.labelAr else tab.labelEn,
                         titleContent=if(shellRoute=="home") {{ JumloWordmark() }} else null,
                         onSettingsClick={navigateTab(DockTab.SETTINGS)},showSettings=false
-                    ) else if(shellRoute!="viewer") QuietWorkspaceTopBar(
+                    ) else if(shellRoute!="viewer" && shellRoute!="scan") QuietWorkspaceTopBar(
                         title=when(shellRoute) {
                             "workspace" -> headerTool?.let {title(it,settings.language)} ?: stringResource(R.string.workspace_title)
                             "activity" -> stringResource(R.string.activity_title)
@@ -513,6 +512,14 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         }
 
                     }
+                }
+                if (showDock) {
+                    JumloNavigationBar(
+                        selectedTab = tab,
+                        language = settings.language,
+                        onSelectTab = ::navigateTab,
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
+                    )
                 }
             }
         }

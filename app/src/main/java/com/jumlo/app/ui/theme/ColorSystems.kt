@@ -76,66 +76,66 @@ data class ColorSystem(
     fun tools(dark: Boolean): List<Color> = if (dark) darkTools else lightTools
 }
 
-private val LightError = Color(0xFFB3261E)
+private val LightError = Color(0xFFC23B0A)
 private val LightOnError = Color(0xFFFFFFFF)
-private val LightErrorContainer = Color(0xFFFDE6E0)
-private val LightOnErrorContainer = Color(0xFF6E150C)
-private val DarkError = Color(0xFFFFB4A6)
-private val DarkOnError = Color(0xFF5E0E08)
-private val DarkErrorContainer = Color(0xFF7A1F16)
-private val DarkOnErrorContainer = Color(0xFFFDE6E0)
+private val LightErrorContainer = Color(0xFFFFE8DF)
+private val LightOnErrorContainer = Color(0xFF7A2300)
+private val DarkError = Color(0xFFFF6C35)
+private val DarkOnError = Color(0xFF0E142B)
+private val DarkErrorContainer = Color(0xFF4A1806)
+private val DarkOnErrorContainer = Color(0xFFFFD6C7)
 
 object ColorSystems {
-    /** Signature Jumlo palette — mirrors the Cobalt-Indigo, Violet & Mint launcher icon. */
+    /** Signature Jumlo palette — Electric Blue (#2E67FF), Deep Navy (#0E142B), crisp #FCFCFC light & true OLED #000000 dark. */
     val COBALT = ColorSystem(
         key = "COBALT", nameEn = "Cobalt", nameAr = "كوبالت",
-        taglineEn = "Signature indigo", taglineAr = "نيلي مميز",
-        ramp = listOf(Color(0xFFE0E7FF), Color(0xFF83F5D2), Color(0xFF8658F4), Color(0xFF3837BC)),
+        taglineEn = "Electric blue", taglineAr = "أزرق ملكي",
+        ramp = listOf(Color(0xFFFAFAFA), Color(0xFF00EEBA), Color(0xFF2E67FF), Color(0xFF0E142B)),
         light = SystemScheme(
-            background = Color(0xFFF4F6FB), surface = Color(0xFFFFFFFF),
-            surfaceDim = Color(0xFFEAEEF7), surfaceBright = Color(0xFFFFFFFF),
-            surfaceLowest = Color(0xFFFFFFFF), surfaceLow = Color(0xFFFFFFFF),
-            surfaceContainer = Color(0xFFECEFF8), surfaceHigh = Color(0xFFE2E7F4),
-            surfaceHighest = Color(0xFFD6DDEF),
-            onSurface = Color(0xFF0F172A), onSurfaceVariant = Color(0xFF475569),
-            outline = Color(0xFF64748B), outlineVariant = Color(0xFFD8DFEE),
-            primary = Color(0xFF3837BC), onPrimary = Color(0xFFFFFFFF),
-            primaryContainer = Color(0xFFE4E7FF), onPrimaryContainer = Color(0xFF1F1E7A),
-            secondary = Color(0xFF0F766E), onSecondary = Color(0xFFFFFFFF),
-            secondaryContainer = Color(0xFFCCFBF1), onSecondaryContainer = Color(0xFF114E48),
-            tertiary = Color(0xFF6D28D9), onTertiary = Color(0xFFFFFFFF),
-            tertiaryContainer = Color(0xFFEDE9FE), onTertiaryContainer = Color(0xFF4C1D95),
+            background = Color(0xFFFCFCFC), surface = Color(0xFFFCFCFC),
+            surfaceDim = Color(0xFFF2F2F2), surfaceBright = Color(0xFFFFFFFF),
+            surfaceLowest = Color(0xFFFFFFFF), surfaceLow = Color(0xFFFAFAFA),
+            surfaceContainer = Color(0xFFF3F4F6), surfaceHigh = Color(0xFFECEEEF),
+            surfaceHighest = Color(0xFFE7E4E4),
+            onSurface = Color(0xFF0E142B), onSurfaceVariant = Color(0xFF4B5268),
+            outline = Color(0xFFCCCCCC), outlineVariant = Color(0xFFE7E4E4),
+            primary = Color(0xFF2E67FF), onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFFE8F0FF), onPrimaryContainer = Color(0xFF0E142B),
+            secondary = Color(0xFF0E142B), onSecondary = Color(0xFFFFFFFF),
+            secondaryContainer = Color(0xFFEDF1F8), onSecondaryContainer = Color(0xFF0E142B),
+            tertiary = Color(0xFF007A79), onTertiary = Color(0xFFFFFFFF),
+            tertiaryContainer = Color(0xFFD8F7F7), onTertiaryContainer = Color(0xFF004E4E),
             error = LightError, onError = LightOnError,
             errorContainer = LightErrorContainer, onErrorContainer = LightOnErrorContainer
         ),
         dark = SystemScheme(
-            background = Color(0xFF0B0E17), surface = Color(0xFF111625),
-            surfaceDim = Color(0xFF0B0E17), surfaceBright = Color(0xFF28324F),
-            surfaceLowest = Color(0xFF0E1320), surfaceLow = Color(0xFF151B2C),
-            surfaceContainer = Color(0xFF1B2237), surfaceHigh = Color(0xFF222A42),
-            surfaceHighest = Color(0xFF2B3552),
-            onSurface = Color(0xFFF1F5F9), onSurfaceVariant = Color(0xFFA3B1C6),
-            outline = Color(0xFF8B99B0), outlineVariant = Color(0xFF2A344D),
-            primary = Color(0xFF8C8FFF), onPrimary = Color(0xFF111047),
-            primaryContainer = Color(0xFF272A72), onPrimaryContainer = Color(0xFFE4E7FF),
-            secondary = Color(0xFF5EEAD4), onSecondary = Color(0xFF042F2E),
-            secondaryContainer = Color(0xFF134E4A), onSecondaryContainer = Color(0xFFCCFBF1),
-            tertiary = Color(0xFFC4B5FD), onTertiary = Color(0xFF2E1065),
-            tertiaryContainer = Color(0xFF4C1D95), onTertiaryContainer = Color(0xFFEDE9FE),
+            background = Color(0xFF000000), surface = Color(0xFF000000),
+            surfaceDim = Color(0xFF000000), surfaceBright = Color(0xFF26272E),
+            surfaceLowest = Color(0xFF000000), surfaceLow = Color(0xFF0F0F0F),
+            surfaceContainer = Color(0xFF181818), surfaceHigh = Color(0xFF1F2128),
+            surfaceHighest = Color(0xFF26272E),
+            onSurface = Color(0xFFFFFFFF), onSurfaceVariant = Color(0xFF8A8E9E),
+            outline = Color(0xFF323E62), outlineVariant = Color(0xFF26272E),
+            primary = Color(0xFF2B65FF), onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFF000E39), onPrimaryContainer = Color(0xFFB3C9FF),
+            secondary = Color(0xFFFFFFFF), onSecondary = Color(0xFF0E142B),
+            secondaryContainer = Color(0xFF162151), onSecondaryContainer = Color(0xFFFFFFFF),
+            tertiary = Color(0xFF00EEBA), onTertiary = Color(0xFF0E142B),
+            tertiaryContainer = Color(0xFF003329), onTertiaryContainer = Color(0xFF00EEBA),
             error = DarkError, onError = DarkOnError,
             errorContainer = DarkErrorContainer, onErrorContainer = DarkOnErrorContainer
         ),
         lightTools = listOf(
-            Color(0xFF3837BC), Color(0xFF0F766E), Color(0xFF6D28D9),
-            Color(0xFF2563EB), Color(0xFF4F46E5), Color(0xFF0E7490)
+            Color(0xFF2E67FF), Color(0xFF007A79), Color(0xFF0E142B),
+            Color(0xFF1D4ED8), Color(0xFF047857), Color(0xFFC23B0A)
         ),
         darkTools = listOf(
-            Color(0xFF8C8FFF), Color(0xFF5EEAD4), Color(0xFFC4B5FD),
-            Color(0xFF7DD3FC), Color(0xFFA5B4FC), Color(0xFF67E8F9)
+            Color(0xFF2B65FF), Color(0xFF00CDCC), Color(0xFF00EEBA),
+            Color(0xFF5B8CFF), Color(0xFF7CA6FF), Color(0xFFFF6C35)
         ),
-        splashStart = Color(0xFF1A1B5C), splashMid = Color(0xFF3837BC), splashEnd = Color(0xFF6741D9),
-        splashGlow1 = Color(0xFF83F5D2), splashGlow2 = Color(0xFF8658F4), splashOrbit = Color(0xFFE0E7FF),
-        splashLogoStart = Color(0xFF3837BC), splashLogoEnd = Color(0xFF8658F4), splashTag = Color(0xFF83F5D2)
+        splashStart = Color(0xFF000000), splashMid = Color(0xFF0E142B), splashEnd = Color(0xFF2E67FF),
+        splashGlow1 = Color(0xFF00EEBA), splashGlow2 = Color(0xFF2E6AFF), splashOrbit = Color(0xFFE8F0FF),
+        splashLogoStart = Color(0xFF2E67FF), splashLogoEnd = Color(0xFF0E142B), splashTag = Color(0xFF00EEBA)
     )
 
     val EMERALD = ColorSystem(
