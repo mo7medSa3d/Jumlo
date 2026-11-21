@@ -36,10 +36,10 @@ private val ByteUnits = listOf("KiB", "MiB", "GiB", "TiB")
 
 fun formatBytes(value:Long?):String {
     if(value==null) return "—"
-    if(value<1024) return "⁦$value B⁩"
+    if(value<1024) return "\u2066$value B\u2069"
     var n=value.toDouble()/1024; var index=0
     while(n>=1024 && index<ByteUnits.lastIndex) {n/=1024;index++}
-    return "⁦${String.format(Locale.ROOT,"%.1f %s",n,ByteUnits[index])}⁩"
+    return "\u2066${String.format(Locale.ROOT,"%.1f %s",n,ByteUnits[index])}\u2069"
 }
 
 @Composable
