@@ -29,13 +29,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +45,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.jumlo.app.R
 import com.jumlo.app.model.FileFolder
 import com.jumlo.app.model.OutputRecord
@@ -121,6 +121,7 @@ fun FolderShelf(
                     Surface(
                         modifier = Modifier
                             .graphicsLayer { scaleX = scale; scaleY = scale }
+                            .clip(QuietTheme.shapes.card)
                             .fileDropTarget(folder.id, dragState)
                             .pressFeedback()
                             .combinedClickable(
@@ -284,14 +285,18 @@ fun FolderActionsSheet(
     val pdfs = remember(folderOutputs) { folderOutputs.filter { it.mimeType == "application/pdf" } }
     val images = remember(folderOutputs) { folderOutputs.filter { it.mimeType.startsWith("image/") } }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = QuietTheme.shapes.modalSheetTop
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = QuietTheme.shapes.heroCard,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, QuietTheme.pillars.cardBorder),
+            shadowElevation = 16.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
@@ -355,7 +360,7 @@ fun FolderActionsSheet(
                 destructive = true,
                 onClick = { onDismiss(); onDelete() }
             )
-            Spacer(Modifier.size(20.dp))
+        }
         }
     }
 }
@@ -370,14 +375,18 @@ fun PageQuickActionsSheet(
     onStartSelect: () -> Unit,
     onOpenSort: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = QuietTheme.shapes.modalSheetTop
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = QuietTheme.shapes.heroCard,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, QuietTheme.pillars.cardBorder),
+            shadowElevation = 16.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
@@ -409,7 +418,7 @@ fun PageQuickActionsSheet(
                 title = stringResource(R.string.files_page_action_sort),
                 onClick = { onDismiss(); onOpenSort() }
             )
-            Spacer(Modifier.size(20.dp))
+        }
         }
     }
 }

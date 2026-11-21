@@ -20,7 +20,6 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import javax.inject.Inject
-import kotlin.math.abs
 
 class MediaOperationHandler @Inject constructor(
     @ApplicationContext private val app: Context, private val runtime: MediaRuntime,

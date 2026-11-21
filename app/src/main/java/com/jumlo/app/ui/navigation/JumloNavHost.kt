@@ -391,7 +391,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools") {
         var scanPublishing by remember(entryId) { mutableStateOf(false) }
         val root = shellRoute in ROOT_ROUTES
-        val showDock = root || shellRoute in setOf("downloads", "workspace", "activity")
+        val showDock = root
         val headerToolId=entryToolId ?: form.toolId
         val headerTool=remember(shellRoute, headerToolId) {
             if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null

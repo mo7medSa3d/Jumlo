@@ -44,7 +44,7 @@ class FilesFoldersAndDragDropTests(unittest.TestCase):
     def test_files_screen_wires_drag_drop_page_long_press_and_smart_workflows(self):
         screen = (APP / "ui/files/FilesScreen.kt").read_text(encoding="utf-8")
         for token in ("rememberFileDragDropState()", "detectTapGestures(", "pageActionsOpen = true",
-                      "FolderShelf(", "FolderBreadcrumbBar(", "FolderActionsSheet(",
+                      "fileDropTarget(folder.id", "FolderBreadcrumbBar(", "FolderActionsSheet(",
                       "PageQuickActionsSheet(", "MoveToFolderDialog(", "FloatingDragGhost(",
                       "fileDragSource(", '"file_07"', '"pdf_03"', '"pdf_02"', '"img_04"'):
             self.assertIn(token, screen)

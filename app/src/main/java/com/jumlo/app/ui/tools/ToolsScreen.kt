@@ -29,7 +29,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.core.ToolCatalogue
@@ -304,13 +306,16 @@ internal fun ToolsCatalogue(
     }
     actionSheetTool?.let { target ->
         val pinnedNow = target.id in pinnedSet
-        ModalBottomSheet(
-            onDismissRequest = { actionSheetTool = null },
-            shape = QuietTheme.shapes.modalSheetTop,
-            containerColor = colors.surface
-        ) {
+        Dialog(onDismissRequest = { actionSheetTool = null }) {
+            Surface(
+                shape = QuietTheme.shapes.heroCard,
+                color = colors.surface,
+                border = BorderStroke(1.dp, QuietTheme.pillars.cardBorder),
+                shadowElevation = 16.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
             Column(
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                Modifier.fillMaxWidth().padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
@@ -350,6 +355,7 @@ internal fun ToolsCatalogue(
                     )
                 }
             }
+            }
         }
     }
 }
@@ -369,7 +375,7 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
     val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn
     val haptics = appHaptics ?: rememberAppHaptics()
     val click: () -> Unit = { haptics.actionClick(); onClick() }
-    val tileModifier = modifier.fillMaxWidth().heightIn(min = 126.dp).pressFeedback().testTag("tool.${tool.id}")
+    val tileModifier = modifier.fillMaxWidth().heightIn(min = 126.dp).clip(QuietTheme.shapes.card).pressFeedback().testTag("tool.${tool.id}")
     Surface(
         modifier = if (onPin == null) tileModifier.clickable(onClick = click) else tileModifier.combinedClickable(
             onClick = click,

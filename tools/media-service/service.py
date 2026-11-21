@@ -364,7 +364,7 @@ def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProces
         if arg in _FORBIDDEN_YTDLP_OPTS or arg.startswith(_FORBIDDEN_YTDLP_PREFIXES):
             raise RuntimeError("MEDIA_FORBIDDEN_NETRC_OPTION")
     target_url = args[-1] if len(args) >= 2 and args[-2] == "--" else ""
-    yt_args = ["--extractor-args", "youtube:player_client=android_vr,tv_embedded,web_safari,default"] if _is_youtube_url(target_url) else []
+    yt_args = ["--extractor-args", "youtube:player_client=android_vr,web"] if _is_youtube_url(target_url) else []
     cmd = [
         "yt-dlp", "--ignore-config", "--no-config-locations", "--no-plugin-dirs", "--no-playlist", "--geo-bypass",
         *yt_args,

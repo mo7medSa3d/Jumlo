@@ -135,24 +135,24 @@ fun JumloTheme(
         if (isAmoled) oledDark
         else if (darkTheme) oledDark
         else baseScheme.copy(
-            background = Color(0xFFFCFCFC),
-            surface = Color(0xFFFCFCFC),
-            surfaceDim = Color(0xFFF2F2F2),
+            background = Color(0xFFF2F4F8),
+            surface = Color(0xFFF2F4F8),
+            surfaceDim = Color(0xFFE6EAF2),
             surfaceBright = Color(0xFFFFFFFF),
             surfaceContainerLowest = Color(0xFFFFFFFF),
-            surfaceContainerLow = Color(0xFFFAFAFA),
-            surfaceContainer = Color(0xFFF3F4F6),
-            surfaceContainerHigh = Color(0xFFECEEEF),
-            surfaceContainerHighest = Color(0xFFE7E4E4),
-            outlineVariant = Color(0xFFE7E4E4)
+            surfaceContainerLow = Color(0xFFFFFFFF),
+            surfaceContainer = Color(0xFFE8ECF4),
+            surfaceContainerHigh = Color(0xFFDFE4EE),
+            surfaceContainerHighest = Color(0xFFD5DCE8),
+            outlineVariant = Color(0xFFDFE3EC)
         )
     }
 
     val pillarColors: PillarColors = remember(system, darkTheme, colorScheme) {
         val basePillars = pillarColors(system, darkTheme)
         basePillars.copy(
-            cardSurface = if (darkTheme) Color(0xFF0F0F0F) else Color(0xFFFAFAFA),
-            cardBorder = if (darkTheme) Color(0xFF26272E) else Color(0xFFE7E4E4),
+            cardSurface = if (darkTheme) Color(0xFF0F0F0F) else Color(0xFFFFFFFF),
+            cardBorder = if (darkTheme) Color(0xFF26272E) else Color(0xFFDFE3EC),
             primaryActionBackground = colorScheme.primary,
             primaryActionText = colorScheme.onPrimary,
             dockSurface = if (darkTheme) Color(0xFF121216) else Color(0xFFFFFFFF),

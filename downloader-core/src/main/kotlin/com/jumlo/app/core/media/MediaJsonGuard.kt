@@ -2,7 +2,7 @@ package com.jumlo.app.core.media
 
 /** A linear resource guard, not a JSON parser. Syntax remains the JSON library's job. */
 object MediaJsonGuard {
-    private const val MAX_SIZE = 4 * 1024 * 1024
+    private const val MAX_SIZE = 12 * 1024 * 1024
     private const val MAX_DEPTH = 64
 
     fun check(text: String) {

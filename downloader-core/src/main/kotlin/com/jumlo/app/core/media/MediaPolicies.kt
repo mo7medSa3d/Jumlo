@@ -264,13 +264,19 @@ object MediaLinks {
 object MediaArguments {
     private val commonArgs = listOf("--ignore-config", "--no-cache-dir", "--no-playlist", "--geo-bypass", "--socket-timeout", "30", "--retries", "5", "--extractor-retries", "5", "--fragment-retries", "10", "--abort-on-error")
     private val probeFlags = listOf("--skip-download", "--dump-single-json", "--no-warnings", "--flat-playlist")
-    private val youtubeProbeArgs = listOf("--compat-options", "no-youtube-unavailable-videos", "--extractor-args", "youtube:player_client=android_vr,tv_embedded,web_safari,default")
-    private val youtubeDownloadArgs = listOf("--extractor-args", "youtube:player_client=android_vr,tv_embedded,web_safari,default")
+    private val youtubeProbeArgs = listOf("--compat-options", "no-youtube-unavailable-videos", "--extractor-args", "youtube:player_client=android_vr,web")
+    private val youtubeFallbackArgs = listOf("--compat-options", "no-youtube-unavailable-videos", "--extractor-args", "youtube:player_client=tv_embedded,web_safari")
+    private val youtubeDownloadArgs = listOf("--extractor-args", "youtube:player_client=android_vr,web")
+    private val tiktokFallbackArgs = listOf("--extractor-args", "tiktok:api_hostname=api22-normal-c-useast2a.tiktokv.com")
     private val allowedAudioBitrates = setOf(64, 96, 128, 160, 192, 256, 320)
     private val muxContainers = setOf("mp4", "webm", "mkv")
     private fun isYouTubeUrl(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
         return host == "youtu.be" || host == "youtube.com" || host.endsWith(".youtube.com") || host.endsWith(".youtube-nocookie.com")
+    }
+    private fun isTikTokUrl(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
+        return host == "tiktok.com" || host.endsWith(".tiktok.com")
     }
     fun probe(url: String, allowHttp: Boolean = false): List<String> {
         val normalized = MediaLinks.normalize(url, allowHttp)
@@ -282,11 +288,15 @@ object MediaArguments {
         args += listOf("--", normalized)
         return args
     }
-    /** Universal fallback probe without pinned player clients when primary extraction fails. */
+    /** Platform-aware fallback probe when primary client extraction fails. */
     fun probeFallback(url: String, allowHttp: Boolean = false): List<String> {
         val normalized = MediaLinks.normalize(url, allowHttp)
         val args = commonArgs.toMutableList()
         args += probeFlags
+        when {
+            isYouTubeUrl(normalized) -> args += youtubeFallbackArgs
+            isTikTokUrl(normalized) -> args += tiktokFallbackArgs
+        }
         args += listOf("--", normalized)
         return args
     }
@@ -339,7 +349,7 @@ object MediaOutputPolicy {
     private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
     private val WHITESPACE = Regex("\\s+")
     private val mime = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "mov" to "video/quicktime", "mkv" to "video/x-matroska", "webm" to "video/webm", "m4a" to "audio/mp4", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "opus" to "audio/ogg", "flac" to "audio/flac", "wav" to "audio/wav", "aac" to "audio/aac", "ts" to "video/mp2t")
-    private val FRAGMENT_SUFFIX = Regex("^media\\.f[A-Za-z0-9_-]+\\.")
+    private val FRAGMENT_SUFFIX = Regex("^media\.f[A-Za-z0-9_-]+\.")
     fun finishedFile(root: File): File {
         val all = root.listFiles()?.filter { it.name.startsWith("media.") && it.extension.lowercase(Locale.ROOT) in mime.keys && it.isFile && it.length() > 0 } ?: emptyList()
         require(all.isNotEmpty()) { "MEDIA_OUTPUT_MISSING" }

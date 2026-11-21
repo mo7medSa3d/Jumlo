@@ -211,7 +211,7 @@ private class PackagedMediaRuntime(private val context: Context,private val clie
         val result = try {
             runner.run(MediaProcessSpec(command, directory, environment,
                 timeoutMillis = if (probe) 90_000L else 6 * 60 * 60 * 1000L,
-                stdoutLimit = if (probe) 4 * 1024 * 1024 else 64 * 1024, tailOutput = !probe), check) { line ->
+                stdoutLimit = if (probe) 12 * 1024 * 1024 else 64 * 1024, tailOutput = !probe), check) { line ->
                     MediaProgressParser.parse(line)?.let(progress)
                 }
         } catch (error: com.jumlo.app.core.media.MediaProcessException) {

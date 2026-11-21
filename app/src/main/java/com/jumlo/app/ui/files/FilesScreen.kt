@@ -237,14 +237,27 @@ import com.jumlo.app.model.*
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Box(Modifier.weight(1f)) {
                     QuietSearchBar(search,stringResource(R.string.ui_search_files),{search=it;selected=emptySet()},{search="";selected=emptySet()})
                 }
+                if (section == "outputs" && activeFolder == null) {
+                    FilledTonalIconButton(
+                        onClick = { haptics.actionClick(); folderNameInput = ""; createFolderOpen = true },
+                        modifier = Modifier.size(48.dp).clip(QuietTheme.shapes.inputField).pressFeedback(),
+                        shape = QuietTheme.shapes.inputField,
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = colors.surfaceContainer,
+                            contentColor = colors.primary
+                        )
+                    ) {
+                        Icon(Icons.Rounded.Folder, contentDescription = stringResource(R.string.files_folder_create_title), modifier = Modifier.size(21.dp))
+                    }
+                }
                 FilledIconButton(
                     onClick = { haptics.actionClick(); onImport() },
-                    modifier = Modifier.size(48.dp).pressFeedback(),
+                    modifier = Modifier.size(48.dp).clip(QuietTheme.shapes.inputField).pressFeedback(),
                     shape = QuietTheme.shapes.inputField,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = colors.primary,
@@ -342,20 +355,65 @@ import com.jumlo.app.model.*
                             onOpenFolderActions = { haptics.actionClick(); folderMenuTarget = activeFolder }
                         )
                     }
-                } else {
-                    item("folder-shelf") {
-                        FolderShelf(
-                            folders = settings.fileFolders,
-                            folderCounts = folderCounts,
-                            dragState = dragState,
-                            onCreateFolder = { haptics.actionClick(); folderNameInput = ""; createFolderOpen = true },
-                            onOpenFolder = { folder -> haptics.actionClick(); activeFolderId = folder.id; selected = emptySet(); selecting = false },
-                            onFolderMenu = { folder -> haptics.longPress(); folderMenuTarget = folder }
-                        )
+                } else if (settings.fileFolders.isNotEmpty() && search.isBlank() && type == "all") {
+                    val folderRows = settings.fileFolders.chunked(columns)
+                    items(folderRows, key = { "folder-row-" + it.joinToString("-") { f -> f.id } }, contentType = { "folderRow" }) { fRow ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            fRow.forEach { folder ->
+                                val count = folderCounts[folder.id] ?: 0
+                                val isHovered = dragState.isDragging && dragState.hoveredTargetId == folder.id
+                                Surface(
+                                    modifier = Modifier.weight(1f)
+                                        .clip(QuietTheme.shapes.card)
+                                        .fileDropTarget(folder.id, dragState)
+                                        .pressFeedback()
+                                        .combinedClickable(
+                                            onClick = { haptics.actionClick(); activeFolderId = folder.id; selected = emptySet(); selecting = false },
+                                            onLongClick = { haptics.longPress(); folderMenuTarget = folder }
+                                        ),
+                                    shape = QuietTheme.shapes.card,
+                                    color = if (isHovered) colors.primaryContainer else pillars.cardSurface,
+                                    border = BorderStroke(if (isHovered) 2.dp else 1.dp, if (isHovered) colors.primary else pillars.cardBorder),
+                                    shadowElevation = 0.dp
+                                ) {
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        JumloFolderIcon(
+                                            hasItems = count > 0,
+                                            isHovered = isHovered,
+                                            accent = if (isHovered) colors.primary else pillars.filesPrimary,
+                                            modifier = Modifier.size(38.dp)
+                                        )
+                                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                folder.name,
+                                                style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, textDirection = TextDirection.Content),
+                                                color = if (isHovered) colors.onPrimaryContainer else colors.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                if (count == 0) stringResource(R.string.files_folder_empty_short) else stringResource(R.string.files_folder_count_items, count),
+                                                style = QuietTheme.typography.metadata,
+                                                color = colors.onSurfaceVariant,
+                                                maxLines = 1
+                                            )
+                                        }
+                                        IconButton(onClick = { haptics.actionClick(); folderMenuTarget = folder }, modifier = Modifier.size(40.dp)) {
+                                            Icon(Icons.Rounded.MoreVert, stringResource(R.string.files_folder_actions_title), tint = colors.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            }
+                            repeat(columns - fRow.size) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
                 if(outputLoad!=DataLoadStatus.READY) item("outputs-state") { DocumentLoadState(outputLoad,vm::reloadSavedData) }
-                if(outputLoad==DataLoadStatus.READY && visible.isEmpty()) item("empty") {
+                if(outputLoad==DataLoadStatus.READY && visible.isEmpty() && (activeFolder != null || settings.fileFolders.isEmpty() || search.isNotEmpty() || type != "all")) item("empty") {
                     val filtered=search.isNotEmpty() || type!="all"
                     when {
                         activeFolder != null && !filtered -> QuietStateCard(
@@ -433,6 +491,7 @@ import com.jumlo.app.model.*
                                     ) else Modifier
                                 Surface(
                                     modifier=Modifier.weight(1f).heightIn(min=cardHeight)
+                                        .clip(QuietTheme.shapes.card)
                                         .then(gridDragMod)
                                         .pressFeedback()
                                         .combinedClickable(onClick={haptics.actionClick();if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},

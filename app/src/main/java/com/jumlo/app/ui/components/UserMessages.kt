@@ -77,7 +77,7 @@ import com.jumlo.app.R
     code in setOf("MEDIA_RUNTIME_INITIALIZATION_FAILED","MEDIA_BUILD_NOT_ENABLED") -> R.string.media_error_runtime
     code=="LIVE_MEDIA_NOT_FINITE" -> R.string.media_error_live
     code in setOf("PLAYLIST_REQUIRES_ITEM_SELECTION","MULTIPLE_MEDIA_LINKS") -> R.string.media_error_url
-    code in setOf("MEDIA_EXTRACTION_FAILED","MEDIA_AUDIO_EXTRACTION_FAILED","MEDIA_AUDIO_MISSING","MEDIA_VIDEO_MISSING","MEDIA_EMPTY_TRACK","MEDIA_QUALITY_MISMATCH") -> R.string.media_error_generic
+    code in setOf("MEDIA_EXTRACTION_FAILED","MEDIA_AUDIO_EXTRACTION_FAILED","MEDIA_AUDIO_MISSING","MEDIA_VIDEO_MISSING","MEDIA_EMPTY_TRACK","MEDIA_QUALITY_MISMATCH","MEDIA_OUTPUT_LIMIT","MEDIA_METADATA_LIMIT","MEDIA_METADATA_DEPTH","MEDIA_PROCESS_HANDSHAKE") -> R.string.media_error_generic
     code=="SECRET_EXPIRED" -> R.string.ui_sensitive_draft_note
     code=="HTTP_401" || code=="LOGIN_REQUIRED" || code=="GOOGLE_DRIVE_TOKEN_REQUIRED" -> R.string.msg_http_401
     code=="DRIVE_TOKEN_MISSING" -> R.string.msg_drive_token_missing

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.data.jobs.CapabilityRegistry
@@ -198,13 +199,16 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
             // Tools tab in the bottom navigation bar and section header already provide instant access.
         }
     }
-    if (showConvert) ModalBottomSheet(
-        onDismissRequest = { showConvert = false },
-        shape = QuietTheme.shapes.modalSheetTop,
-        containerColor = colors.surface
-    ) {
+    if (showConvert) Dialog(onDismissRequest = { showConvert = false }) {
+        Surface(
+            shape = QuietTheme.shapes.heroCard,
+            color = colors.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, pillars.cardBorder),
+            shadowElevation = 16.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            Modifier.fillMaxWidth().padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
@@ -267,6 +271,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                     }
             }
         }
+        }
     }
 }
 
@@ -296,14 +301,15 @@ private val ConvertSheetOptions = listOf(
     }
     Surface(
         onClick = onClick,
-        modifier = modifier.height(88.dp).pressFeedback(),
+        modifier = modifier.heightIn(min = 96.dp).clip(QuietTheme.shapes.inputField).pressFeedback(),
         shape = QuietTheme.shapes.inputField,
         color = pillars.cardSurface,
         contentColor = colors.onSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, pillars.cardBorder.copy(alpha = 0.65f)),
         shadowElevation = 0.dp
     ) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

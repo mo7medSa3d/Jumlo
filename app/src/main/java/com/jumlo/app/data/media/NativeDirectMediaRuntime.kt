@@ -153,7 +153,69 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         throw OperationFailure("TOO_MANY_REDIRECTS")
     }
 
+    private fun isTikTokHost(url: String): Boolean {
+        val host = runCatching { URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
+        return host == "tiktok.com" || host.endsWith(".tiktok.com")
+    }
+
+    /** Direct HTTPS fallback for TikTok public links when the embedded yt-dlp extractor is blocked. */
+    private fun inspectTikTokFallback(url: String, check: () -> Unit): Inspection? {
+        if (!isTikTokHost(url)) return null
+        val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+        val req = Request.Builder()
+            .url("https://www.tikwm.com/api/?url=$encoded&hd=1")
+            .header("Accept", "application/json")
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36")
+            .get()
+            .build()
+        val bodyText = try {
+            http.executeCancellable(req, check).use { resp ->
+                if (resp.code !in 200..299) return null
+                val input = resp.body?.byteStream() ?: return null
+                val buf = ByteArray(8192)
+                val out = ByteArrayOutputStream()
+                while (true) {
+                    check()
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    val take = minOf(n, 262144 - out.size())
+                    if (take > 0) out.write(buf, 0, take)
+                    if (out.size() >= 262144) break
+                }
+                out.toString(Charsets.UTF_8.name())
+            }
+        } catch (cancel: java.util.concurrent.CancellationException) {
+            throw cancel
+        } catch (_: Exception) {
+            return null
+        }
+        val root = runCatching { org.json.JSONObject(bodyText) }.getOrNull() ?: return null
+        if (root.optInt("code", -1) != 0) return null
+        val data = root.optJSONObject("data") ?: return null
+        val title = data.optString("title").trim().take(180).ifBlank { "TikTok video" }
+        val thumb = data.optString("cover").takeIf { it.startsWith("https://") && it.length <= 4096 }
+        val streams = mutableListOf<Remote>()
+        fun addIfHttps(rawUrl: String, ext: String, sizeKey: String) {
+            val clean = rawUrl.trim()
+            if (clean.startsWith("https://") && runCatching { MediaLinks.normalize(clean, false) }.isSuccess) {
+                val sz = data.optLong(sizeKey, 0L).takeIf { it > 0L }
+                streams += Remote(clean, ext, title, sz)
+            }
+        }
+        val hd = data.optString("hdplay")
+        val sd = data.optString("play")
+        if (hd.isNotBlank()) addIfHttps(hd, "mp4", "hd_size")
+        else if (sd.isNotBlank()) addIfHttps(sd, "mp4", "size")
+        val music = data.optString("music")
+        if (music.isNotBlank()) addIfHttps(music, "mp3", "music_size")
+        if (streams.isEmpty()) return null
+        return Inspection(title, "Html5", streams, thumbnailUrl = thumb)
+    }
+
     private fun inspectCandidates(url: String, allowHttp: Boolean, check: () -> Unit): Inspection {
+        if (isTikTokHost(url)) {
+            inspectTikTokFallback(url, check)?.let { return it }
+        }
         val direct = try { inspectDirect(url, allowHttp, check) }
         catch (error: OperationFailure) {
             if (error.message != "MEDIA_SITE_UNSUPPORTED") throw error

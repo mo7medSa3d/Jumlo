@@ -134,7 +134,7 @@ class PremiumUxContracts(unittest.TestCase):
         for label, icon in [('scan','scan'),('convert','document'),('compress','compress'),('download','download')]:
             self.assertIn(f'Triple(R.string.modern_{label}, R.drawable.ic_prism_{icon}',code)
         self.assertIn('HomeQuickAction(',code)
-        self.assertIn('height(88.dp)',code)
+        self.assertIn('heightIn(min = 96.dp)',code)
         self.assertIn('maxLines = 1',code)
         self.assertNotIn('QuietSearchBar(',code)
 
