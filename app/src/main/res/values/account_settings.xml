@@ -8,6 +8,7 @@
     <string name="account_storage">Storage usage</string>
     <string name="account_privacy">Privacy</string>
     <string name="account_help_about">Help &amp; about</string>
+    <string name="account_language_system">Use device setting</string>
     <string name="account_language_en">English</string>
     <string name="account_language_ar">العربية</string>
     <string name="account_done">Done</string>

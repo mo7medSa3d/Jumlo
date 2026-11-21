@@ -8,7 +8,7 @@ object PdfCropCoordinates {
         mediaX: Float, mediaY: Float, mediaWidth: Float, mediaHeight: Float,
         left: Double, top: Double, right: Double, bottom: Double
     ): PdfCropRect {
-        require(listOf(mediaX, mediaY, mediaWidth, mediaHeight).all(Float::isFinite) &&
+        require(mediaX.isFinite() && mediaY.isFinite() && mediaWidth.isFinite() && mediaHeight.isFinite() &&
             mediaWidth > 0f && mediaHeight > 0f) { "INVALID_PDF_PAGE_BOX" }
         Box(left, top, right, bottom).normalized()
         return PdfCropRect(

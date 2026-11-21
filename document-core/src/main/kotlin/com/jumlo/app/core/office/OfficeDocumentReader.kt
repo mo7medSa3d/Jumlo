@@ -402,8 +402,11 @@ object OfficeDocumentReader {
     private fun imageExtension(target: String): String =
         target.substringAfterLast('.', "").lowercase(Locale.ROOT)
 
+    private val RASTER_IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "bmp", "webp")
+    private val EXCEL_BUILTIN_DATE_FORMATS = setOf(14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47, 50, 57)
+
     private fun isRasterImage(extension: String): Boolean =
-        extension in setOf("png", "jpg", "jpeg", "gif", "bmp", "webp")
+        extension in RASTER_IMAGE_EXTENSIONS
 
     private fun readDocx(zip: ZipFile, map: Map<String, ZipEntry>, maxImageBytes: Long, checkCancel: () -> Unit): OfficeDocument {
         val main = "word/document.xml"
@@ -748,10 +751,9 @@ object OfficeDocumentReader {
                 }
             }
         }) }
-        val builtInDates = setOf(14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47, 50, 57)
         return cellFormats.indices.filter { index ->
             val id = cellFormats[index]
-            id in builtInDates || formats[id]?.let { code ->
+            id in EXCEL_BUILTIN_DATE_FORMATS || formats[id]?.let { code ->
                 val lower = code.lowercase(Locale.ROOT)
                 ('y' in lower && ('m' in lower || 'd' in lower)) || 'h' in lower
             } ?: false

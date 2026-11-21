@@ -67,7 +67,7 @@ fun main() {
         check(OutputWorkflowPolicy.validate(files, "pdf_03").map { it.name } == listOf("a.pdf", "b.pdf"))
         check(OutputWorkflowPolicy.validate(files, "file_07").size == 2)
         check(OutputWorkflowPolicy.reuseTool("application/pdf") == "pdf_04")
-        check(OutputWorkflowPolicy.reuseTool("image/jpeg") == "img_01")
+        check(OutputWorkflowPolicy.reuseTool("image/jpeg") == "img_04")
         check(OutputWorkflowPolicy.reuseTool("application/zip") == "file_08")
         check(OutputWorkflowPolicy.reuseTool("video/mp4") == "file_07")
     }

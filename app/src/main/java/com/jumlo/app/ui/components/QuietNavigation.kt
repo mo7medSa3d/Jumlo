@@ -1,10 +1,11 @@
 package com.jumlo.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +23,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -38,6 +41,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,6 +74,9 @@ fun JumloNavigationBar(
     val haptics = rememberAppHaptics()
     val reduced = LocalReducedMotion.current
     val showLabels = LocalDensity.current.fontScale < 1.6f
+    val navTypography = QuietTheme.typography.navigation
+    val activeLabelStyle = remember(navTypography) { navTypography.copy(fontWeight = FontWeight.Bold) }
+    val inactiveLabelStyle = remember(navTypography) { navTypography.copy(fontWeight = FontWeight.Medium) }
 
     // Translucent frosted capsule without any full-width backdrop so touches outside pass straight through.
     val capsuleColor = pillars.dockSurface.copy(alpha = if (isDark) 0.80f else 0.84f)
@@ -121,14 +128,22 @@ fun JumloNavigationBar(
                     label = "nav-icon-lift-${destination.name}"
                 )
                 val interactionSource = remember { MutableInteractionSource() }
-                val tint = if (active) colors.primary else colors.onSurfaceVariant
-
+                val tintState = animateColorAsState(
+                    targetValue = if (active) pillars.activePillContent else colors.onSurfaceVariant,
+                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs),
+                    label = "nav-tint-${destination.name}"
+                )
+                val pillBgState = animateColorAsState(
+                    targetValue = if (active) activePillBg else Color.Transparent,
+                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs),
+                    label = "nav-pill-${destination.name}"
+                )
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp)
                         .clip(CircleShape)
-                        .background(if (active) activePillBg else Color.Transparent)
+                        .drawBehind { drawRect(pillBgState.value) }
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
@@ -145,43 +160,64 @@ fun JumloNavigationBar(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.testTag("nav.indicator.${destination.name}"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(icon(destination)),
-                                contentDescription = null,
-                                tint = tint,
-                                modifier = Modifier
-                                    .size(21.dp)
-                                    .graphicsLayer {
-                                        val s = iconScaleState.value
-                                        scaleX = s
-                                        scaleY = s
-                                        translationY = iconLiftState.value
-                                    }
-                            )
-                        }
-                        if (showLabels) {
-                            Text(
-                                text = label,
-                                color = tint,
-                                style = QuietTheme.typography.navigation.copy(
-                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.clearAndSetSemantics {}
-                            )
-                        }
-                    }
+                    NavigationTabContent(
+                        destination = destination,
+                        label = label,
+                        showLabels = showLabels,
+                        labelStyle = if (active) activeLabelStyle else inactiveLabelStyle,
+                        tintState = tintState,
+                        iconScaleState = iconScaleState,
+                        iconLiftState = iconLiftState
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NavigationTabContent(
+    destination: DockTab,
+    label: String,
+    showLabels: Boolean,
+    labelStyle: TextStyle,
+    tintState: State<Color>,
+    iconScaleState: State<Float>,
+    iconLiftState: State<Float>
+) {
+    // Scope tintState.value reads to this tab cell so color animation frames do not recompose JumloNavigationBar.
+    val tint = tintState.value
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Box(
+            modifier = Modifier.testTag("nav.indicator.${destination.name}"),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(icon(destination)),
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier
+                    .size(21.dp)
+                    .graphicsLayer {
+                        val s = iconScaleState.value
+                        scaleX = s
+                        scaleY = s
+                        translationY = iconLiftState.value
+                    }
+            )
+        }
+        if (showLabels) {
+            Text(
+                text = label,
+                color = tint,
+                style = labelStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clearAndSetSemantics {}
+            )
         }
     }
 }

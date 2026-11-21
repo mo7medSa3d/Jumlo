@@ -182,7 +182,11 @@ class LinkUniverse:
                 if is_symlink(info):
                     if info.file_size > 4096:
                         raise ValueError(f'Oversized symlink target: {node}')
-                    target = archive.read(info).decode('utf8', 'strict')
+                    with archive.open(info) as stream:
+                        raw_target = stream.read(4097)
+                    if len(raw_target) > 4096:
+                        raise ValueError(f'Oversized symlink target: {node}')
+                    target = raw_target.decode('utf8', 'strict')
                     if not target or '\x00' in target or '\\' in target or posixpath.isabs(target):
                         raise ValueError(f'Invalid symlink target: {node}')
                     resolved = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))

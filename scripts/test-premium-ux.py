@@ -119,7 +119,7 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('SectionHeader(', code)
         self.assertIn('items(filtered, key = { it.id }, contentType = { "tool" })', code)
         self.assertIn('LocalDensity.current.fontScale >= 1.6f', code)
-        self.assertRegex(code, r'largeText\s*->\s*1')
+        self.assertRegex(code, r'largeText\s*->\s*3')
         self.assertNotIn('primary.chunked(', code)
         self.assertIn('widthIn(max = 1000.dp)', code)
         self.assertIn('maxWidth >= 600.dp', code)
@@ -134,7 +134,7 @@ class PremiumUxContracts(unittest.TestCase):
         for label, icon in [('scan','scan'),('convert','document'),('compress','compress'),('download','download')]:
             self.assertIn(f'Triple(R.string.modern_{label}, R.drawable.ic_prism_{icon}',code)
         self.assertIn('HomeQuickAction(',code)
-        self.assertIn('heightIn(min = 96.dp)',code)
+        self.assertIn('.size(54.dp)',code)
         self.assertIn('maxLines = 1',code)
         self.assertNotIn('QuietSearchBar(',code)
 
@@ -218,7 +218,7 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_file_import_is_distinct_primary_action(self):
         code = source('files/FilesScreen.kt')
-        search_block = code[code.index('item("search")'):code.index('item("sections")')]
+        search_block = code[code.index('item("search")'):code.index('item("sub-section-header")')]
         self.assertIn('FilledIconButton(', search_block)
         self.assertIn('onImport()', search_block)
         self.assertIn('import_device_files', search_block)

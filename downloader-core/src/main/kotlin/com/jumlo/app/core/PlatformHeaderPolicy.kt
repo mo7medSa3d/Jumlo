@@ -14,6 +14,7 @@ object PlatformHeaderPolicy {
         "origin", "referer", "user-agent", "dnt", "x-requested-with"
     )
     private val headerName = Regex("[A-Za-z0-9-]{1,64}")
+    private val httpSchemes = setOf("http", "https")
 
     /**
      * Extra user-supplied headers (including Origin and Referer) belong only
@@ -31,7 +32,7 @@ object PlatformHeaderPolicy {
         }
         val aScheme = initial.scheme?.lowercase(Locale.ROOT)
         val bScheme = request.scheme?.lowercase(Locale.ROOT)
-        return aScheme in setOf("http", "https") &&
+        return aScheme in httpSchemes &&
             aScheme == bScheme &&
             !initial.host.isNullOrBlank() &&
             initial.host.equals(request.host, ignoreCase = true) &&
@@ -50,7 +51,7 @@ object PlatformHeaderPolicy {
     ): Map<String, String> {
         val uri = runCatching { URI(url) }.getOrNull()
             ?: throw IllegalArgumentException("INVALID_URL")
-        require(uri.scheme?.lowercase(Locale.ROOT) in setOf("https", "http") &&
+        require(uri.scheme?.lowercase(Locale.ROOT) in httpSchemes &&
             !uri.host.isNullOrBlank() && uri.rawUserInfo == null) { "INVALID_URL" }
 
         val allowOriginExtras = sameOrigin(customHeaderOrigin, url)

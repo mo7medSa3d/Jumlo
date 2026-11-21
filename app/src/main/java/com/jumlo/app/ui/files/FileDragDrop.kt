@@ -107,7 +107,7 @@ class FileDragDropState {
     }
 
     private fun hitTest(point: Offset): String? =
-        dropTargets.entries.firstOrNull { (_, rect) -> rect.inflate(14f).contains(point) }?.key
+        dropTargets.entries.firstOrNull { (_, rect) -> rect.inflate(48f).contains(point) }?.key
 }
 
 @Composable

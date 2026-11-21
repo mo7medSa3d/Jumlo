@@ -4,6 +4,7 @@ package com.jumlo.app.core
 object OverlayStylePolicy {
     private val ALLOWED_FONTS = setOf("sans", "serif", "mono")
     private val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
+    private val TILED_CENTERS = listOf(.18, .5, .82).flatMap { cy -> listOf(.18, .5, .82).map { cx -> cx to cy } }
     fun requireFont(font: String) { require(font in ALLOWED_FONTS) { "INVALID_WATERMARK_FONT" } }
     fun requireColor(color: String) { require(HEX_COLOR.matches(color)) { "INVALID_WATERMARK_COLOR" } }
     fun rgb(color: String): FloatArray {
@@ -13,11 +14,11 @@ object OverlayStylePolicy {
     }
     fun centers(x: Double, y: Double, tiled: Boolean): List<Pair<Double, Double>> {
         require(x.isFinite() && y.isFinite() && x in 0.0..1.0 && y in 0.0..1.0) { "INVALID_WATERMARK_POSITION" }
-        return if (tiled) listOf(.18, .5, .82).flatMap { cy -> listOf(.18, .5, .82).map { cx -> cx to cy } } else listOf(x to y)
+        return if (tiled) TILED_CENTERS else listOf(x to y)
     }
     /** Width starts at 30% of the canvas; aspect is preserved, height capped at 90%. */
     fun size(canvasWidth: Double, canvasHeight: Double, contentWidth: Double, contentHeight: Double, scale: Double): Pair<Double, Double> {
-        require(listOf(canvasWidth, canvasHeight, contentWidth, contentHeight, scale).all { it.isFinite() && it > 0 }) { "INVALID_WATERMARK_SIZE" }
+        require(canvasWidth.isFinite() && canvasWidth > 0 && canvasHeight.isFinite() && canvasHeight > 0 && contentWidth.isFinite() && contentWidth > 0 && contentHeight.isFinite() && contentHeight > 0 && scale.isFinite() && scale > 0) { "INVALID_WATERMARK_SIZE" }
         require(scale in .1..3.0) { "INVALID_WATERMARK_SIZE" }
         val width = canvasWidth * .3 * scale
         val height = width * contentHeight / contentWidth

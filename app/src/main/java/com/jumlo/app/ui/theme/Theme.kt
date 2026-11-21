@@ -161,7 +161,7 @@ fun JumloTheme(
             activePillContent = colorScheme.onPrimaryContainer
         )
     }
-    val layoutDirection = if (language == AppLanguage.ARABIC) LayoutDirection.Rtl else LayoutDirection.Ltr
+    val layoutDirection = if (language.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
 
     val fontFamily = if (language.isRtl) IbmPlexSansArabicFont else IbmPlexSansFont
     val quietTypography = remember(fontFamily, language.isRtl) {

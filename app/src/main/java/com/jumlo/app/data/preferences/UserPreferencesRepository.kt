@@ -140,8 +140,7 @@ class UserPreferencesRepository @Inject constructor(
 
     val settingsFlow: Flow<AppSettingsState> = combine(context.dataStore.data, mediaServiceSettings.state) { prefs, media ->
         val themeStr = prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name
-        val defaultLanguage = if (java.util.Locale.getDefault().language == "ar") AppLanguage.ARABIC else AppLanguage.ENGLISH
-        val langStr = prefs[Keys.LANGUAGE] ?: defaultLanguage.name
+        val langStr = prefs[Keys.LANGUAGE] ?: AppLanguage.SYSTEM.name
         val counts = prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull { value ->
             val id = value.substringBefore('=')
             val count = value.substringAfter('=', "").toIntOrNull()
@@ -162,7 +161,7 @@ class UserPreferencesRepository @Inject constructor(
         AppSettingsState(
             hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
             themeMode = runCatching { ThemeMode.valueOf(themeStr) }.getOrDefault(ThemeMode.SYSTEM),
-            language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(defaultLanguage),
+            language = runCatching { AppLanguage.valueOf(langStr) }.getOrDefault(AppLanguage.SYSTEM),
             respectReducedMotion = prefs[Keys.RESPECT_REDUCED_MOTION] ?: false,
             hapticFeedbackOnCommit = prefs[Keys.HAPTIC_ON_COMMIT] ?: true,
             hapticIntensity = if(prefs[Keys.HAPTIC_ON_COMMIT]==false) HapticIntensity.OFF else

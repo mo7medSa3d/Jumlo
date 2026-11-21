@@ -181,8 +181,7 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
                     FilterChip(border=null,selected=abs(centerX-x)<.01f && abs(centerY-y)<.01f,onClick={position(x,y)},label={Text(stringResource(label))})
                 }
             }
-            InteractiveIntSlider(stringResource(R.string.editor_horizontal_position),(centerX*100).roundToInt(),0,100,50) {v->position(v/100f,centerY)}
-            InteractiveIntSlider(stringResource(R.string.editor_vertical_position),(centerY*100).roundToInt(),0,100,50) {v->position(centerX,v/100f)}
+            // Position is adjusted directly on the preview canvas or with the placement chips above.
         }
         if(!imageTool) {
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {

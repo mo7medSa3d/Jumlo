@@ -1,9 +1,13 @@
 package com.jumlo.app.ui.settings
 
 import com.jumlo.app.model.AppLanguage
+import com.jumlo.app.model.AppSettingsState
 import com.jumlo.app.ui.theme.ColorSystems
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class ColorSystemLocalizationTest {
     @Test fun arabicPreferenceUsesArabicSystemName() {
@@ -32,5 +36,27 @@ class ColorSystemLocalizationTest {
         assertEquals(ColorSystems.AMETHYST.nameEn, colorSystemLabel("VIOLA", AppLanguage.ENGLISH))
         assertEquals(ColorSystems.DEFAULT.nameEn, colorSystemLabel("CLAY", AppLanguage.ENGLISH))
         assertEquals(ColorSystems.DEFAULT.nameEn, colorSystemLabel("#3478CC", AppLanguage.ENGLISH))
+    }
+
+    @Test fun settingsDefaultToSystemLanguage() {
+        assertEquals(AppLanguage.SYSTEM, AppSettingsState().language)
+        assertEquals("", AppLanguage.SYSTEM.code)
+        assertTrue(AppLanguage.ARABIC.isRtl)
+        assertFalse(AppLanguage.ENGLISH.isRtl)
+    }
+
+    @Test fun systemLanguageFollowsDeviceLocaleRtlAndLabels() {
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("ar"))
+            assertTrue(AppLanguage.SYSTEM.isRtl)
+            assertEquals(ColorSystems.COBALT.nameAr, colorSystemLabel("COBALT", AppLanguage.SYSTEM))
+
+            Locale.setDefault(Locale.US)
+            assertFalse(AppLanguage.SYSTEM.isRtl)
+            assertEquals(ColorSystems.COBALT.nameEn, colorSystemLabel("COBALT", AppLanguage.SYSTEM))
+        } finally {
+            Locale.setDefault(previous)
+        }
     }
 }

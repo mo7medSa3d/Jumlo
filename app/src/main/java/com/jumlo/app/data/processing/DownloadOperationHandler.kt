@@ -231,7 +231,7 @@ class DownloadOperationHandler @Inject constructor(
                                                 bmp.eraseColor(Color.WHITE)
                                                 page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
                                                 context.checkCancellation()
-                                                BitmapTransforms.encode(bmp, target, ImageConversionSettings(format = "PNG", quality = 90), context.budget.maxBitmapBytes)
+                                                BitmapTransforms.encode(bmp, target, ImageConversionSettings(format = "PNG", quality = 90), context.budget.maxBitmapBytes, context.checkCancellation)
                                             } finally { bmp.recycle() }
                                         }
                                     }
@@ -243,33 +243,36 @@ class DownloadOperationHandler @Inject constructor(
                                         } else {
                                             val display = SafeNames.fromDisplayName("$pdfFolder - images.zip", "PDF images.zip")
                                             val ticket = context.outputs.reserve(request.id, archiveKey, display, "application/zip")
-                                            val inputs = (0 until totalPages).map { pageIdx ->
-                                                val pageNum = pageIdx + 1
-                                                ArchiveInput(AutoOutputName.pageImageName(pdfFolder, pageNum, "png")) {
-                                                    context.checkCancellation()
-                                                    val temp = File.createTempFile("dl-render-page-", ".png", ticket.stageFile.parentFile)
-                                                    try {
-                                                        renderPageTo(pageIdx, temp)
-                                                        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                                                        BitmapFactory.decodeFile(temp.path, options)
-                                                        require(options.outWidth > 0 && options.outHeight > 0) { "IMAGE_VERIFY_FAILED" }
-                                                        object : FilterInputStream(FileInputStream(temp)) {
-                                                            override fun close() {
-                                                                try { super.close() } finally {
-                                                                    temp.delete()
-                                                                    runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong())) }
+                                            val rec = try {
+                                                if (ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
+                                                val inputs = (0 until totalPages).map { pageIdx ->
+                                                    val pageNum = pageIdx + 1
+                                                    ArchiveInput(AutoOutputName.pageImageName(pdfFolder, pageNum, "png")) {
+                                                        context.checkCancellation()
+                                                        val temp = File.createTempFile("dl-render-page-", ".png", ticket.stageFile.parentFile)
+                                                        try {
+                                                            renderPageTo(pageIdx, temp)
+                                                            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                                                            BitmapFactory.decodeFile(temp.path, options)
+                                                            require(options.outWidth > 0 && options.outHeight > 0) { "IMAGE_VERIFY_FAILED" }
+                                                            object : FilterInputStream(FileInputStream(temp)) {
+                                                                override fun close() {
+                                                                    try { super.close() } finally {
+                                                                        temp.delete()
+                                                                        runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong())) }
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                    } catch (t: Throwable) { temp.delete(); throw t }
+                                                        } catch (t: Throwable) { temp.delete(); throw t }
+                                                    }
                                                 }
-                                            }
-                                            ArchiveCore.create(ticket.stageFile, inputs, 6, ArchiveLimits(Long.MAX_VALUE, inputs.size, 1)) {
-                                                context.checkCancellation()
-                                                if (requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace < context.budget.minFreeBytes)
-                                                    throw OperationFailure("DISK_BUDGET_EXCEEDED")
-                                            }
-                                            val rec = context.outputs.publish(ticket) { context.outputs.inspect(it, "application/zip", subfolder = pdfFolder) }
+                                                ArchiveCore.create(ticket.stageFile, inputs, 6, ArchiveLimits(Long.MAX_VALUE, inputs.size, 1)) {
+                                                    context.checkCancellation()
+                                                    if (requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace < context.budget.minFreeBytes)
+                                                        throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                                                }
+                                                context.outputs.publish(ticket) { context.outputs.inspect(it, "application/zip", subfolder = pdfFolder) }
+                                            } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                                             outcomes += ItemOutcome(archiveKey, ItemStatus.CREATED, rec.id)
                                         }
                                     } else {
@@ -283,8 +286,10 @@ class DownloadOperationHandler @Inject constructor(
                                             } else {
                                                 val imgName = AutoOutputName.pageImageName(pdfFolder, pageNum, "png")
                                                 val ticket = context.outputs.reserve(request.id, pageKey, imgName, "image/png")
-                                                renderPageTo(pageIdx, ticket.stageFile)
-                                                val rec = context.outputs.publish(ticket) { context.outputs.inspect(it, "image/png", subfolder = pdfFolder) }
+                                                val rec = try {
+                                                    renderPageTo(pageIdx, ticket.stageFile)
+                                                    context.outputs.publish(ticket) { context.outputs.inspect(it, "image/png", subfolder = pdfFolder) }
+                                                } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                                                 outcomes += ItemOutcome(pageKey, ItemStatus.CREATED, rec.id)
                                             }
                                             context.report(JobProgress(JobStage.RUNNING, pageNum.toLong(), totalPages.toLong()))

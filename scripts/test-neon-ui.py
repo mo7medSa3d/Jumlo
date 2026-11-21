@@ -50,7 +50,7 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('open("pdf_compress")', home)
         self.assertIn('open("dl_media")', home)
         self.assertIn('NeonOutputPreview(output', home)
-        self.assertIn('items(outputs.take(6)', home)
+        self.assertIn('remember(outputs) { outputs.take(6) }', home); self.assertIn('items(recentOutputs', home)
         self.assertNotIn('HomeActionEditor(', home)
         self.assertNotIn('QuietSearchBar(', home)
         self.assertIn('fileDateLabel(output.createdAtEpochMs)', home)

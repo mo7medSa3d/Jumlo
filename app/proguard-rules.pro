@@ -51,3 +51,10 @@
 -dontwarn org.apache.commons.compress.**
 -keep class org.apache.commons.io.** { *; }
 -dontwarn org.apache.commons.io.**
+
+# Strip verbose/debug/info logs in release builds; keep Log.w/e/wtf intact
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}

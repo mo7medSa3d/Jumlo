@@ -14,12 +14,14 @@ object BrowserProfilePolicy {
     private val mobile = BrowserProfile("android", "Mozilla/5.0 (Linux; Android 15; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
     private val desktop = BrowserProfile("desktop", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
     private val mobileFirst = setOf("tiktok.com", "instagram.com", "facebook.com", "fb.com", "threads.net")
+    private val mobileOrder = listOf(mobile, desktop)
+    private val desktopOrder = listOf(desktop, mobile)
 
     fun forUrl(url: String, preferDesktop: Boolean = true): List<BrowserProfile> {
         val uri = runCatching { URI(url) }.getOrNull()
         val host = uri?.host?.lowercase(Locale.ROOT).orEmpty()
-        return if (mobileFirst.any { host == it || host.endsWith(".$it") } || !preferDesktop) listOf(mobile, desktop)
-            else listOf(desktop, mobile)
+        return if (mobileFirst.any { host == it || host.endsWith(".$it") } || !preferDesktop) mobileOrder
+            else desktopOrder
     }
 
     /** A successful public HTML page without playable candidates may have a
@@ -29,5 +31,5 @@ object BrowserProfilePolicy {
 
     /** A 401/403/429 means denied/throttled: profile rotation must not bypass it. */
     fun tryNext(responseCode: Int, attempt: Int, profileCount: Int): Boolean =
-        responseCode in setOf(406, 415) && attempt >= 0 && attempt + 1 < profileCount
+        (responseCode == 406 || responseCode == 415) && attempt >= 0 && attempt + 1 < profileCount
 }

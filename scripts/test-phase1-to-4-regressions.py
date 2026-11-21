@@ -44,7 +44,6 @@ class SourceRegressionContracts(unittest.TestCase):
         self.assertIn('previewId by rememberSaveable(tool, form.sourceIds)', workspace)
         self.assertIn('selectedSourceId by rememberSaveable(tool, form.sourceIds)', workspace)
         self.assertIn('renamePreviewOpen by rememberSaveable(tool, form.sourceIds)', workspace)
-        self.assertIn('advanced by rememberSaveable(tool)', workspace)
         self.assertNotIn('previewId by rememberSaveable {', workspace)
         self.assertNotIn('renamePreviewOpen by rememberSaveable {', workspace)
 

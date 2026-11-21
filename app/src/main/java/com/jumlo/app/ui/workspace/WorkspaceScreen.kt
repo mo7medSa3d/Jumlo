@@ -1,6 +1,5 @@
 package com.jumlo.app.ui.workspace
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,13 +42,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
@@ -73,6 +70,22 @@ import kotlinx.serialization.json.Json
 private data class RenamePreviewInput(val names:List<String>,val settings:BatchRenameSettings)
 private data class RenamePreviewState(val input:RenamePreviewInput,val result:Result<List<String>>)
 
+private val VISUAL_PAGE_SELECTION_TOOLS = setOf("pdf_04","pdf_05","pdf_06","pdf_07","pdf_crop","pdf_stamp","pdf_ocr","pdf_to_docx","pdf_to_pptx")
+private val PDF_OVERLAY_TOOLS = setOf("pdf_signature","pdf_stamp")
+private val MULTI_SOURCE_MINIMUM_TOOLS = setOf("pdf_03","pdf_signature","img_join")
+private val ZIP_MIME_TYPES = setOf("application/zip","application/x-zip-compressed")
+private val PHOTO_GALLERY_TOOLS = setOf("pdf_02","pdf_signature","pdf_stamp","pdf_ocr")
+private val PRESET_SUPPORTED_TOOLS = setOf("pdf_compress","pdf_02","pdf_07","pdf_stamp","img_01","img_02","img_04","img_watermark")
+private val CONVERSION_SCOPE_TOOLS = setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")
+private val DEDICATED_PREVIEW_TOOLS = setOf("img_01","img_03","img_02","img_04","img_join","img_watermark","pdf_crop","pdf_signature","pdf_stamp","pdf_02","pdf_ocr")
+private val SINGLE_PDF_EDITOR_TOOLS = setOf("pdf_04", "pdf_05", "pdf_06")
+private val GEOMETRY_EDITOR_TOOLS = setOf("img_03","pdf_crop")
+private val TRANSFORMED_IMAGE_TOOLS = setOf("img_02","img_join")
+private val ENCODED_IMAGE_TOOLS = setOf("img_01","img_04")
+private val VISUAL_IMAGE_SETTINGS_TOOLS = setOf("pdf_compress","pdf_07","pdf_02")
+private val PRIMARY_FIELDS_TOOLS = setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect")
+private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
+
 /** Retains the original public call shape, including positional and trailing-lambda callers. */
 @Composable fun WorkspaceScreen(
     vm:AppViewModel,form:WorkspaceDraft,imported:List<SourceRef>,busy:Boolean,urls:String,reduceMotion:Boolean,
@@ -90,10 +103,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
     val processingPresets by vm.processingPresets.collectAsStateWithLifecycle()
     val download=tool.startsWith("dl_")
     val viewer=tool=="pdf_01"
-    val hasInlineFields=tool in setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect")
-    val hasAdvanced=!viewer && !hasInlineFields
     var previewId by rememberSaveable(tool, form.sourceIds) {mutableStateOf<String?>(null)}
-    var advanced by rememberSaveable(tool) {mutableStateOf(false)}
     var renamePreviewOpen by rememberSaveable(tool, form.sourceIds) {mutableStateOf(false)}
 
     // Populate smart defaults on tool entry so no manual typing is required on the main workspace.
@@ -117,14 +127,14 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         queue.firstOrNull {it.id==selectedSourceId && (it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf")}
             ?: queue.firstOrNull {it.mimeType?.startsWith("image/")==true || it.mimeType=="application/pdf"}
     }
-    val visualPageSelection=tool in setOf("pdf_04","pdf_05","pdf_06","pdf_07","pdf_crop","pdf_stamp","pdf_ocr","pdf_to_docx","pdf_to_pptx")
+    val visualPageSelection=tool in VISUAL_PAGE_SELECTION_TOOLS
     val editorSource=remember(tool,queue,preview) {
-        if(tool in setOf("pdf_signature","pdf_stamp")) queue.firstOrNull { it.mimeType=="application/pdf" } else preview
+        if(tool in PDF_OVERLAY_TOOLS) queue.firstOrNull { it.mimeType=="application/pdf" } else preview
     }
     val overlayImage=remember(tool,queue) {
-        if(tool in setOf("pdf_signature","pdf_stamp")) queue.firstOrNull { it.mimeType?.startsWith("image/")==true } else null
+        if(tool in PDF_OVERLAY_TOOLS) queue.firstOrNull { it.mimeType?.startsWith("image/")==true } else null
     }
-    val minimum=if(tool in setOf("pdf_03","pdf_signature","img_join") ||
+    val minimum=if(tool in MULTI_SOURCE_MINIMUM_TOOLS ||
         (tool=="img_watermark" && form.flag1) || (tool=="pdf_stamp" && form.watermarkUseImage)) 2 else 1
     val inputMismatch=remember(tool,queue,form.watermarkUseImage) { queue.any {source->
         val mime=source.mimeType
@@ -136,7 +146,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
             tool=="pdf_ocr" -> mime!="application/pdf" && !mime.startsWith("image/")
             tool=="pdf_02" || tool.startsWith("img_") -> !mime.startsWith("image/")
             tool.startsWith("pdf_") -> mime!="application/pdf"
-            tool=="file_08" -> mime !in setOf("application/zip","application/x-zip-compressed")
+            tool=="file_08" -> mime !in ZIP_MIME_TYPES
             else -> false
         }
     }}
@@ -194,57 +204,11 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
         (tool!="file_batch_rename" || proposedNames!=null) &&
         (tool!="pdf_signature" || form.signaturePlacements.isNotEmpty()) &&
         (if(download) urls.isNotBlank() else queue.size>=minimum)
-    val pillars = QuietTheme.pillars
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
-                if(!viewer) item(key="step-bar",contentType="step-bar") {
-                    val activeStep = when {
-                        busy -> 3
-                        queue.isEmpty() -> 1
-                        else -> 2
-                    }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            1 to stringResource(R.string.workspace_step_1),
-                            2 to stringResource(R.string.workspace_step_2),
-                            3 to stringResource(R.string.workspace_step_3)
-                        ).forEach { (step, label) ->
-                            val current = step == activeStep
-                            val done = step < activeStep
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                shape = QuietTheme.shapes.thumbnail,
-                                color = when {
-                                    current -> MaterialTheme.colorScheme.primaryContainer
-                                    done -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-                                    else -> pillars.cardSurface
-                                },
-                                border = BorderStroke(
-                                    1.dp,
-                                    when {
-                                        current -> MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-                                        done -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                                        else -> pillars.cardBorder
-                                    }
-                                )
-                            ) {
-                                Text(
-                                    label,
-                                    style = QuietTheme.typography.metadataStrong,
-                                    color = if (current) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+                // Top step breadcrumb removed for a calm, uncluttered tool workspace.
                 if(queue.isEmpty()) {
                     item(key="empty-inputs",contentType="state-card") {
                         QuietStateCard(
@@ -254,7 +218,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                             onImport
                         )
                     }
-                    if(tool in setOf("pdf_02","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_")) {
+                    if(tool in PHOTO_GALLERY_TOOLS || tool.startsWith("img_")) {
                         item(key="inputs-photos",contentType="action-button") {
                             QuietTonalButton(stringResource(R.string.import_photo_gallery), onPhotos, Modifier.fillMaxWidth())
                         }
@@ -263,19 +227,19 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                     item(key="inputs",contentType="action-row") {
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
-                            if(tool in setOf("pdf_02","pdf_signature","pdf_stamp","pdf_ocr") || tool.startsWith("img_"))
+                            if(tool in PHOTO_GALLERY_TOOLS || tool.startsWith("img_"))
                                 QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
                         }
                     }
                 }
-                val supportsPresets = processingPresets.isNotEmpty() || tool in setOf("pdf_compress","pdf_02","pdf_07","pdf_stamp","img_01","img_02","img_04","img_watermark")
+                val supportsPresets = processingPresets.isNotEmpty() || tool in PRESET_SUPPORTED_TOOLS
                 if(!viewer && queue.isNotEmpty() && supportsPresets) item(key="processing-presets",contentType="presets") {
                     ProcessingPresetsPanel(form,processingPresets,
                         onSave=vm::saveProcessingPreset,
                         onApply=vm::applyProcessingPreset,
                         onDelete=vm::deleteProcessingPreset)
                 }
-                if(tool in setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")) item(key="conversion-scope",contentType="notice") {
+                if(tool in CONVERSION_SCOPE_TOOLS) item(key="conversion-scope",contentType="notice") {
                     Text(stringResource(when(tool) { "pdf_to_docx" -> R.string.rebuild_word_note; "pdf_to_pptx" -> R.string.rebuild_slides_note; "office_to_pdf" -> R.string.rebuild_office_note; else -> R.string.rebuild_ocr_note }),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -284,9 +248,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                         if(tool=="img_watermark" && form.flag1) queue.getOrNull(1)?.id else null,
                         onSelect={selectedSourceId=it},onMove=vm::moveSource,renamed=proposedNames)
                 }
-                if(preview!=null && tool !in setOf(
-                    "img_01","img_03","img_02","img_04","img_join","img_watermark","pdf_crop","pdf_signature","pdf_stamp","pdf_02","pdf_ocr"
-                ) && !(tool in setOf("pdf_04", "pdf_05", "pdf_06") && queue.size==1))
+                if(preview!=null && tool !in DEDICATED_PREVIEW_TOOLS && !(tool in SINGLE_PDF_EDITOR_TOOLS && queue.size==1))
                     item(key="preview-${preview.id}",contentType="preview") {
                         InputPreview(vm,preview.id,reduceMotion,isFullViewer=viewer,
                             raster=if(tool=="pdf_07") form else null)
@@ -294,7 +256,7 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 if(pagePickerSource!=null)
                     item(key="pdf-visual-editor-${pagePickerSource.id}",contentType="pdf-editor") { PdfPageEditor(vm,pagePickerSource.id,form,vm::updateForm,
                         onPrint={pages->onPrintPages?.invoke(pagePickerSource.id,pages)},printEnabled=onPrintPages!=null) }
-                if(editorSource!=null && tool in setOf("img_03","pdf_crop")) {
+                if(editorSource!=null && tool in GEOMETRY_EDITOR_TOOLS) {
                     item(key="visual-geometry-editor",contentType="geometry-editor") {
                         VisualDocumentEditor(vm,editorSource.id,form,vm::updateForm)
                     }
@@ -317,14 +279,14 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 if(tool=="img_watermark" && queue.isNotEmpty() && !inputMismatch) item(key="image-watermark-editor",contentType="watermark-editor") {
                     VisualWatermarkEditor(vm,queue.first().id,form,vm::updateForm,queue.getOrNull(1)?.id?.takeIf {form.flag1},onPhotos)
                 }
-                if(tool in setOf("img_02","img_join") && preview!=null && !inputMismatch) item(key="transformed-image-preview",contentType="image-preview") {
+                if(tool in TRANSFORMED_IMAGE_TOOLS && preview!=null && !inputMismatch) item(key="transformed-image-preview",contentType="image-preview") {
                     val ids=remember(tool,queue,preview.id) { if(tool=="img_join") queue.map {it.id} else listOf(preview.id) }
                     ImageResultPreview(vm,ids,form)
                 }
-                if(tool in setOf("img_01","img_04") && preview!=null && !inputMismatch) item(key="encoded-image-preview",contentType="encoded-preview") {
+                if(tool in ENCODED_IMAGE_TOOLS && preview!=null && !inputMismatch) item(key="encoded-image-preview",contentType="encoded-preview") {
                     EncodedImagePreviewPanel(vm,preview.id,form)
                 }
-                if(tool.startsWith("img_") || tool in setOf("pdf_compress","pdf_07","pdf_02")) {
+                if(tool.startsWith("img_") || tool in VISUAL_IMAGE_SETTINGS_TOOLS) {
                     item(key="visual-intuitive-controls",contentType="settings") {
                         VisualImageSettings(form,vm::updateForm)
                     }
@@ -332,13 +294,11 @@ private data class RenamePreviewState(val input:RenamePreviewInput,val result:Re
                 if(tool=="pdf_02" && preview!=null) item(key="paper-preview",contentType="paper-preview") {
                     ImagePdfPreview(vm,preview.id,form,vm::updateForm)
                 }
-                if(tool=="pdf_compress" && queue.size==1) item(key="compression-estimate",contentType="estimate") {
-                    CompressionEstimate(vm,queue.single().id,form)
-                }
+                // Background PDF compression pre-calculation disabled to avoid CPU drain; user controls strength directly (1-100).
                 if(tool=="pdf_ocr" && queue.size==1 && !inputMismatch) item(key="ocr-result-panel",contentType="ocr-panel") {
                     OcrWorkspacePanel(vm,queue.single().id,onExecute,ready)
                 }
-                if(tool in setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect")) item(key="primary-tool-settings",contentType="settings") {
+                if(tool in PRIMARY_FIELDS_TOOLS) item(key="primary-tool-settings",contentType="settings") {
                     WorkspaceFields(form,vm::updateForm)
                 }
                 if(queue.isNotEmpty()) item(key="input-count",contentType="metadata") {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })}
@@ -816,43 +776,15 @@ internal fun passwordStrength(value:String):Int = when {
                 "pdf_04" -> { Text(stringResource(R.string.ui_pages_edit_visual),style=QuietTheme.typography.metadata); Options(stringResource(R.string.field_rotate_degrees),listOf("0","90","180","270"),f.num1) {v->edit {it.copy(num1=v,pageEdits=emptyList())}} }
                 "pdf_crop" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }
                 "pdf_compress" -> {
-                    // Presets are the primary control; DPI and quality stay as the
-                    // advanced inputs underneath them.
-                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        items(PdfCompressionPolicy.Preset.entries,key={it.name},contentType={"compression-preset"}) { preset ->
-                            QuietChip(
-                                selected = f.num2.isBlank() && f.num1==preset.dpi.toString() && f.quality==preset.quality.toString(),
-                                onClick = { edit { it.copy(num1=preset.dpi.toString(),quality=preset.quality.toString(),num2="") } },
-                                label = stringResource(
-                                    when(preset) {
-                                        PdfCompressionPolicy.Preset.STRONG -> R.string.visual_compress_strong
-                                        PdfCompressionPolicy.Preset.SMALL_FILE -> R.string.visual_compress_small
-                                        PdfCompressionPolicy.Preset.BALANCED -> R.string.visual_compress_balanced
-                                        PdfCompressionPolicy.Preset.BEST_QUALITY -> R.string.visual_compress_best
-                                    })
-                            )
-                        }
+                    val dpi = f.num1.toIntOrNull() ?: 150
+                    val quality = f.quality.toIntOrNull() ?: 75
+                    val strength = (PdfCompressionPolicy.sliderPosition(dpi, quality) * 100f).toInt().coerceIn(1, 100)
+                    val sliderLabel = stringResource(R.string.field_compress_slider, strength)
+                    InteractiveIntSlider(sliderLabel, strength, 1, 100, 50) { v ->
+                        val step = PdfCompressionPolicy.sliderStep(v / 100f)
+                        edit { it.copy(num1 = step.first.toString(), quality = step.second.toString(), num2 = "") }
                     }
-                    InteractiveToggle(stringResource(R.string.interactive_compression_target),f.num2.isNotBlank()) {v->edit {it.copy(num2=if(v) "5" else "")}}
-                    if(f.num2.isNotBlank()) InteractiveIntSlider(stringResource(R.string.field_target_size_mb),draftNumber(f.num2,5),1,100,5) {v->edit {it.copy(num2=v.toString())}}
-                    if(f.num2.isNotBlank()) Text(stringResource(R.string.field_target_size_note),style=QuietTheme.typography.metadata)
-                    // The slider replaces the typed DPI and quality: the user chooses a
-                    // trade-off and sees the estimated result before committing.
-                    val dpi=f.num1.toIntOrNull()?:150
-                    val quality=f.quality.toIntOrNull()?:70
-                    val position=PdfCompressionPolicy.sliderPosition(dpi,quality)
-                    val sliderLabel=stringResource(R.string.field_compress_slider,position.times(100).toInt())
-                    Slider(
-                        value=position,
-                        onValueChange={ p ->
-                            val step=PdfCompressionPolicy.sliderStep(p)
-                            edit { it.copy(num1=step.first.toString(),quality=step.second.toString()) }
-                        },
-                        valueRange=0f..1f,
-                        modifier=Modifier.semantics { contentDescription=sliderLabel;stateDescription=sliderLabel }
-                    )
-                    Text(sliderLabel,style=QuietTheme.typography.metadataStrong)
-                    Text(stringResource(R.string.field_compress_note),style=QuietTheme.typography.metadata)
+                    Text(stringResource(R.string.field_compress_note), style = QuietTheme.typography.metadata)
                 }
                 "pdf_stamp" -> {
                     ContentToolSettings(f,edit)
@@ -897,7 +829,7 @@ internal fun passwordStrength(value:String):Int = when {
                     PresetChipsRow(listOf("{name}_{n}","{date}_{name}","{name}"),f.text1,{v->edit {it.copy(text1=v)}})
                     Text(stringResource(R.string.studio_rename_patterns),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        items(listOf("{name}","{n}","{date}"),key={it},contentType={"token-chip"}) { token ->
+                        items(RENAME_TOKEN_CHIPS,key={it},contentType={"token-chip"}) { token ->
                             FilterChip(selected=false,border=null,onClick={edit {it.copy(text1=(it.text1+token).take(512))}},label={Text(token)})
                         }
                     }

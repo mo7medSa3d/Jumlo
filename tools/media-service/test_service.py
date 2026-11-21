@@ -627,6 +627,55 @@ class ProductionHardeningTest(unittest.TestCase):
         finally:
             unauth.exception.close()
 
+    def test_security_headers_are_emitted_on_extract_success_and_stream_range_response(self):
+        _, port = self._start_server()
+        expected = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+            "Content-Security-Policy": "default-src 'none'",
+            "Permissions-Policy": "interest-cohort=()",
+        }
+        extract_payload = {
+            "id": "demo-1",
+            "extractor": "generic",
+            "title": "Demo",
+            "formats": [{"id": "18", "ext": "mp4", "vcodec": "h264", "acodec": "aac"}],
+        }
+        with patch.object(service, "extract", return_value=extract_payload):
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/extract",
+                data=b'{"url": "https://example.org/watch"}',
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                self.assertEqual(200, resp.status)
+                for name, value in expected.items():
+                    self.assertEqual(value, resp.headers.get(name))
+                self.assertEqual("demo-1", json.loads(resp.read())["id"])
+
+        work = tempfile.mkdtemp(prefix="jumlo-sec-range-")
+        self.addCleanup(shutil.rmtree, work, ignore_errors=True)
+        media = Path(work) / "media.mp4"
+        media.write_bytes(b"0123456789" * 4)
+        with patch.object(service, "resolve_stream", return_value=(str(media), "media.mp4", "video/mp4")):
+            stream_url = (
+                f"http://127.0.0.1:{port}/stream?url="
+                + urllib.parse.quote("https://example.org/watch")
+                + "&mode=video&format=18"
+            )
+            req = urllib.request.Request(stream_url, headers={"Range": "bytes=0-9"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                self.assertEqual(206, resp.status)
+                self.assertEqual("bytes", resp.headers.get("Accept-Ranges"))
+                self.assertEqual("bytes 0-9/40", resp.headers.get("Content-Range"))
+                self.assertTrue(resp.headers.get("ETag"))
+                for name, value in expected.items():
+                    self.assertEqual(value, resp.headers.get(name))
+                self.assertEqual(b"0123456789", resp.read())
+
     def test_health_endpoint_caches_probe_within_ttl_and_refreshes_after_expiry(self):
         clock = [100.0]
         versions = ["2026.10.26", "2026.11.01"]
@@ -919,6 +968,41 @@ class ProductionHardeningTest(unittest.TestCase):
             with self.subTest(bad_env=bad_env):
                 with self.assertRaises(ValueError):
                     service.parse_config([], environ=bad_env)
+
+    def test_startup_env_validation_fails_fast_with_clear_errors(self):
+        cases = (
+            ({"JUMLO_MEDIA_HOST": "", "JUMLO_MEDIA_TOKEN": "secret"}, "JUMLO_MEDIA_HOST"),
+            ({"JUMLO_MEDIA_HOST": "   ", "JUMLO_MEDIA_TOKEN": "secret"}, "JUMLO_MEDIA_HOST"),
+            ({"JUMLO_MEDIA_HOST": "http://127.0.0.1", "JUMLO_MEDIA_TOKEN": "secret"}, "JUMLO_MEDIA_HOST"),
+            ({"JUMLO_MEDIA_HOST": "bad host", "JUMLO_MEDIA_TOKEN": "secret"}, "JUMLO_MEDIA_HOST"),
+            ({"JUMLO_MEDIA_HOST": "0.0.0.0", "JUMLO_MEDIA_TOKEN": "   "}, "JUMLO_MEDIA_TOKEN"),
+            ({"JUMLO_MEDIA_TOKEN": "secret\r\nX-Evil: 1"}, "JUMLO_MEDIA_TOKEN"),
+            ({"JUMLO_MEDIA_TOKEN": "bad token"}, "JUMLO_MEDIA_TOKEN"),
+            ({"JUMLO_MEDIA_PORT": "0"}, "JUMLO_MEDIA_PORT"),
+            ({"JUMLO_MEDIA_PORT": "65536"}, "JUMLO_MEDIA_PORT"),
+            ({"JUMLO_MEDIA_PORT": "abc"}, "JUMLO_MEDIA_PORT"),
+            ({"JUMLO_MEDIA_RATE_LIMIT": "abc"}, "JUMLO_MEDIA_RATE_LIMIT"),
+            ({"JUMLO_MEDIA_RATE_LIMIT": "1.5"}, "JUMLO_MEDIA_RATE_LIMIT"),
+            ({"JUMLO_MEDIA_RATE_LIMIT": "-5"}, "JUMLO_MEDIA_RATE_LIMIT"),
+            ({"JUMLO_MEDIA_RATE_LIMIT": ""}, "JUMLO_MEDIA_RATE_LIMIT"),
+            ({"JUMLO_MEDIA_MAX_CONCURRENT": "abc"}, "JUMLO_MEDIA_MAX_CONCURRENT"),
+            ({"JUMLO_MEDIA_MAX_CONCURRENT": "-2"}, "JUMLO_MEDIA_MAX_CONCURRENT"),
+            ({"JUMLO_MEDIA_MAX_CONCURRENT": ""}, "JUMLO_MEDIA_MAX_CONCURRENT"),
+            ({"JUMLO_MEDIA_LOG_LEVEL": "VERBOSE"}, "JUMLO_MEDIA_LOG_LEVEL"),
+            ({"JUMLO_MEDIA_CORS_ORIGIN": "ftp://example.com"}, "JUMLO_MEDIA_CORS_ORIGIN"),
+        )
+        for bad_env, expected_field in cases:
+            with self.subTest(bad_env=bad_env):
+                with self.assertRaises(ValueError) as ctx:
+                    service.parse_config([], environ=bad_env)
+                self.assertIn(expected_field, str(ctx.exception))
+                captured = io.StringIO()
+                with patch.dict(os.environ, bad_env, clear=True), redirect_stderr(captured), self.assertRaises(SystemExit) as exited:
+                    service.main([])
+                self.assertEqual(2, exited.exception.code)
+                event = json.loads(captured.getvalue())
+                self.assertEqual("startup_config_invalid", event["event"])
+                self.assertIn(expected_field, event["error"])
 
     def test_cors_config_validation_accepts_valid_origins_and_rejects_invalid(self):
         default_cfg = service.parse_config([], environ={})
@@ -1337,6 +1421,68 @@ class SecurityHardeningRegressionTest(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 with self.assertRaisesRegex(RuntimeError, "MEDIA_FORBIDDEN_NETRC_OPTION"):
                     service.run_ytdlp([forbidden, "--", "https://example.org/watch"])
+
+
+    def test_ipv6_nat64_and_siit_ssrf_targets_are_blocked_while_public_ipv6_is_allowed(self):
+        for bad_url in (
+            "http://[64:ff9b::127.0.0.1]/admin",
+            "http://[64:ff9b::169.254.169.254]/latest/meta-data/",
+            "http://[::ffff:0:127.0.0.1]/admin",
+        ):
+            with self.subTest(url=bad_url):
+                self.assertFalse(service._is_public_web_url(bad_url))
+        fake_nat64 = [(service.socket.AF_INET6, service.socket.SOCK_STREAM, 6, "", ("64:ff9b::10.0.0.1", 443, 0, 0))]
+        with patch.object(service.socket, "getaddrinfo", return_value=fake_nat64):
+            self.assertFalse(service._is_public_web_url("https://nat64.example.org/video"))
+        self.assertTrue(service._is_public_web_url("https://[2606:2800:220:1:248:1893:25c8:1946]/video"))
+
+    def test_post_enforces_uri_length_limit(self):
+        handler = service.Handler.__new__(service.Handler)
+        handler.path = "/extract?" + ("a" * 9000)
+        handler.headers = {"Content-Length": "2"}
+        handler.rfile = io.BytesIO(b"{}")
+        handler.wfile = io.BytesIO()
+        captured = {}
+        handler.send_response = lambda code: captured.update(status=code)
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        handler.do_POST()
+        self.assertEqual(414, captured["status"])
+        self.assertTrue(handler.close_connection)
+
+    def test_run_ytdlp_kills_process_group_on_non_timeout_interrupt(self):
+        killed = []
+        reaped = []
+
+        class _InterruptProc:
+            pid = 43210
+            returncode = -9
+
+            def communicate(self, timeout=None):
+                if timeout is not None:
+                    raise KeyboardInterrupt("cancelled")
+                reaped.append(True)
+                return ("", "")
+
+            def kill(self):
+                killed.append(("kill", self.pid))
+
+        with patch.object(service.subprocess, "Popen", return_value=_InterruptProc()), \
+                patch.object(service.os, "killpg", side_effect=lambda pid, sig: killed.append((pid, sig))):
+            with self.assertRaises(KeyboardInterrupt):
+                service.run_ytdlp(["-J", "--", "https://example.org/watch"])
+        self.assertEqual([(43210, service.signal.SIGKILL)], killed)
+        self.assertEqual([True], reaped)
+
+    def test_classify_handles_linkedin_http_999_and_login_required(self):
+        self.assertEqual(
+            "MEDIA_SOURCE_REJECTED",
+            service.classify("ERROR: [LinkedIn] 123: Unable to download webpage: HTTP Error 999: Request denied"),
+        )
+        self.assertEqual(
+            "MEDIA_SESSION_REQUIRED",
+            service.classify("ERROR: [Instagram] Login required to view this post"),
+        )
 
 
 if __name__ == "__main__":

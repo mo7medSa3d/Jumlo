@@ -64,11 +64,11 @@ import com.jumlo.app.ui.intake.Intake
 import com.jumlo.app.ui.util.rememberAppHaptics
 import com.jumlo.app.ui.intake.IntakeController
 import com.jumlo.app.ui.theme.LocalReducedMotion
-import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
 private val ROOT_ROUTES = setOf("home", "tools", "files", "settings")
+private val DOCK_CHILD_ROUTES = setOf("downloads", "workspace", "activity")
 private val DROP_TARGET_ROUTES = setOf("files", "workspace")
 private val MEDIA_WORKSPACE_TOOLS = setOf("dl_media", "dl_02")
 
@@ -87,7 +87,7 @@ private fun subtitle(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) t
 @Serializable @SerialName("tools/scan") data class ScanRoute(val transitionOrigin: String = "tools")
 @Serializable @SerialName("tools/run") data class ToolRoute(val toolId: String, val transitionOrigin: String = "tools")
 @Serializable @SerialName("files/viewer") data class ViewerRoute(val uri: String, val title: String, val returnTab: String? = null)
-@Serializable @SerialName("downloads/job") data class JobRoute(val jobId: String)
+@Serializable @SerialName("downloads/job") data class JobRoute(val jobId: String, val returnTab: String? = null)
 @Serializable @SerialName("workspace") object WorkspaceRoute // Compatibility deep link.
 @Serializable @SerialName("downloads/activity") object ActivityRoute
 
@@ -179,6 +179,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             entry.destination.hasRoute<ToolRoute>() -> entry.toRoute<ToolRoute>().transitionOrigin
             entry.destination.hasRoute<ScanRoute>() -> entry.toRoute<ScanRoute>().transitionOrigin
             entry.destination.hasRoute<ViewerRoute>() -> entry.toRoute<ViewerRoute>().returnTab
+            entry.destination.hasRoute<JobRoute>() -> entry.toRoute<JobRoute>().returnTab
             else -> null
         }
     }
@@ -202,7 +203,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                 if (tab != DockTab.TOOLS) switchTab(DockTab.TOOLS)
                 navController.navigate(ScanRoute(origin)) { launchSingleTop = true }
             }
-            "activity" -> navController.navigate(selectedJob?.let(::JobRoute) ?: ActivityRoute) { launchSingleTop = true }
+            "activity" -> navController.navigate(selectedJob?.let { JobRoute(it) } ?: ActivityRoute) { launchSingleTop = true }
             "files", "files_overview" -> switchTab(DockTab.FILES)
             "tools", "tools_catalog" -> switchTab(DockTab.TOOLS)
             "downloads" -> switchTab(DockTab.DOWNLOADS)
@@ -250,11 +251,21 @@ fun JumloNavHost(viewModel:AppViewModel) {
     LaunchedEffect(viewModel, navController) {
         viewModel.openPrintRequests.collect { navController.navigate(PrintRoute) { launchSingleTop = true } }
     }
-    LaunchedEffect(viewModel, navController) {
-        viewModel.jobOpenRequests.collect { id ->
-            selectedJob = id
-            navController.navigate(JobRoute(id)) { launchSingleTop = true }
+    fun openCompletedJob(id: String) {
+        selectedJob = id
+        val origin = currentToolOrigin()
+        val fromToolRoute = navController.currentDestination?.hasRoute<ToolRoute>() == true
+        val fromWorkspaceRoute = navController.currentDestination?.hasRoute<WorkspaceRoute>() == true
+        val fromWorkspace = fromToolRoute || fromWorkspaceRoute
+        if (fromWorkspace) viewModel.closeToolSession()
+        navController.navigate(JobRoute(id, returnTab = if (fromWorkspace) origin else null)) {
+            if (fromToolRoute) popUpTo<ToolRoute> { inclusive = true }
+            else if (fromWorkspaceRoute) popUpTo<WorkspaceRoute> { inclusive = true }
+            launchSingleTop = true
         }
+    }
+    LaunchedEffect(viewModel, navController) {
+        viewModel.jobOpenRequests.collect { id -> openCompletedJob(id) }
     }
 
     var deleteEntry by remember { mutableStateOf<DocumentEntry?>(null) }
@@ -361,10 +372,12 @@ fun JumloNavHost(viewModel:AppViewModel) {
     fun launchExternal(uri:String,mime:String?,share:Boolean) {
         try {
             val content=Uri.parse(uri)
-            val intent=if(share) Intent(Intent.ACTION_SEND).apply { type=mime ?: "application/octet-stream";putExtra(Intent.EXTRA_STREAM,content) }
+            val intent=if(share) Intent(Intent.ACTION_SEND).apply { type=mime ?: "*/*";putExtra(Intent.EXTRA_STREAM,content) }
                 else Intent(Intent.ACTION_VIEW).setDataAndType(content,mime ?: "application/octet-stream")
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);intent.clipData=ClipData.newRawUri("document",content)
-            context.startActivity(if(share) Intent.createChooser(intent,null) else intent)
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.clipData=ClipData.newUri(context.contentResolver,"document",content)
+            val target=if(share) Intent.createChooser(intent,null).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) else intent
+            context.startActivity(target)
         } catch(_:Exception) { viewModel.notifyMessage("NO_COMPATIBLE_APP_OR_ACCESS_LOST") }
     }
     fun openOutput(output: OutputRecord) {
@@ -391,7 +404,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools") {
         var scanPublishing by remember(entryId) { mutableStateOf(false) }
         val root = shellRoute in ROOT_ROUTES
-        val showDock = root || shellRoute in setOf("downloads", "workspace", "activity")
+        val showDock = root || shellRoute in DOCK_CHILD_ROUTES
         val headerToolId=entryToolId ?: form.toolId
         val headerTool=remember(shellRoute, headerToolId) {
             if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null
@@ -505,8 +518,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     subtitle=stringResource(R.string.ui_unavailable_body),
                                     actionLabel=stringResource(R.string.ui_choose_tool),
                                     onAction={goBack()},modifier=Modifier.padding(20.dp)
-                                ) else if(form.toolId in MEDIA_WORKSPACE_TOOLS) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{selectedJob=it;navigateTo("activity")},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
-                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.safeLaunch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {selectedJob=it;navigateTo("activity")}}
+                                ) else if(form.toolId in MEDIA_WORKSPACE_TOOLS) com.jumlo.app.ui.downloads.MediaWorkspace(urls,sessionEpoch,{openCompletedJob(it)},{viewModel.chooseTool("dl_02");viewModel.setUrls(it);navigateTo("workspace")},defaultVideoQuality=settings.defaultVideoQuality,defaultAudioQuality=settings.defaultAudioQuality,onEditedUrl=viewModel::setUrls)
+                                else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.safeLaunch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {openCompletedJob(it)}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,jobId,{openOutput(it)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
                         }

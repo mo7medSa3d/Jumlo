@@ -60,11 +60,11 @@ class ScreenConfigSemanticsTest {
 
     @Test
     fun lightArabicRtl_rendersAndCapturesMainScreens() =
-        renderAndVerify(ThemeMode.LIGHT, LayoutDirection.Rtl, "Jumlo", "أدوات ملفات قوية", "استيراد")
+        renderAndVerify(ThemeMode.LIGHT, LayoutDirection.Rtl, "جملو", "أدوات ملفات قوية", "استيراد")
 
     @Test
     fun darkArabicRtl_rendersAndCapturesMainScreens() =
-        renderAndVerify(ThemeMode.DARK, LayoutDirection.Rtl, "Jumlo", "أدوات ملفات قوية", "استيراد")
+        renderAndVerify(ThemeMode.DARK, LayoutDirection.Rtl, "جملو", "أدوات ملفات قوية", "استيراد")
 
     @Test
     fun fontScale200Percent_holdsLayoutInEnglish() {

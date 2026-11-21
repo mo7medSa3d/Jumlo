@@ -108,7 +108,7 @@ class PrismSourceContracts(unittest.TestCase):
         tools = read('ui/tools/ToolsScreen.kt')
         picker = read('ui/settings/AppearanceColorPicker.kt')
         self.assertIn('heightIn(min = if (compact) 116.dp else 126.dp)',neon)
-        self.assertTrue('heightIn(min = 126.dp)' in tools or 'heightIn(min = 122.dp)' in tools or 'heightIn(min = 176.dp)' in tools)
+        self.assertIn('.size(54.dp)',tools)
         self.assertIn('maxLines = 2',neon)
         self.assertIn('maxLines = 2',tools)
         self.assertIn('onSelect(system.key)',picker)

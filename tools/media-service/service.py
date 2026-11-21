@@ -61,6 +61,7 @@ ERROR_CODES = {
     "cookies": "MEDIA_SESSION_REQUIRED",
     "not a bot": "MEDIA_SESSION_REQUIRED",
     "only works when logged-in": "MEDIA_SESSION_REQUIRED",
+    "login required": "MEDIA_SESSION_REQUIRED",
     "not available in your country": "MEDIA_GEO_BLOCKED",
     "geo-restricted": "MEDIA_GEO_BLOCKED",
     "geo restricted": "MEDIA_GEO_BLOCKED",
@@ -82,6 +83,7 @@ ERROR_CODES = {
     "network is unreachable": "MEDIA_NETWORK_ERROR",
     "403": "MEDIA_SOURCE_REJECTED",
     "401": "MEDIA_SOURCE_REJECTED",
+    "http error 999": "MEDIA_SOURCE_REJECTED",
     "404": "MEDIA_REMOVED",
     "410": "MEDIA_REMOVED",
     "not found": "MEDIA_REMOVED",
@@ -103,6 +105,7 @@ _MAX_URL_LENGTH = 8192
 _MAX_QUERY_FIELDS = 32
 _ERROR_CODE_RE = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
 _VERSION_RE = re.compile(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:[.-][A-Za-z0-9.]{1,32})?")
+_HOST_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.?")
 
 
 def _safe_ytdlp_version(version: str) -> str:
@@ -123,6 +126,21 @@ def _is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(normalized).is_loopback
     except ValueError:
         return False
+
+
+def _validate_host(raw: str) -> str:
+    host = str(raw or "").strip()
+    if not host or len(host) > 253 or any(ord(c) <= 32 or ord(c) >= 127 for c in host):
+        raise ValueError("JUMLO_MEDIA_HOST must be a valid hostname or IP address")
+    candidate = host[1:-1] if host.startswith("[") and host.endswith("]") else host
+    try:
+        ipaddress.ip_address(candidate)
+        return candidate
+    except ValueError:
+        pass
+    if not _HOST_RE.fullmatch(host):
+        raise ValueError("JUMLO_MEDIA_HOST must be a valid hostname or IP address")
+    return host
 
 
 def _validate_cors_origin(raw: str) -> str:
@@ -184,6 +202,7 @@ def parse_config(argv: list[str] | None = None, environ: dict[str, str] | None =
     )
     args = parser.parse_args(argv)
 
+    args.host = _validate_host(args.host)
     args.port = _parse_int_range(str(args.port), "JUMLO_MEDIA_PORT", 1, 65535)
     args.rate_limit = _parse_int_range(str(args.rate_limit), "JUMLO_MEDIA_RATE_LIMIT", 1)
     args.max_concurrent = _parse_int_range(str(args.max_concurrent), "JUMLO_MEDIA_MAX_CONCURRENT", 1)
@@ -191,6 +210,8 @@ def parse_config(argv: list[str] | None = None, environ: dict[str, str] | None =
     if args.log_level not in _VALID_LOG_LEVELS:
         raise ValueError(f"JUMLO_MEDIA_LOG_LEVEL must be one of {', '.join(_VALID_LOG_LEVELS)}")
     args.cors_origin = _validate_cors_origin(args.cors_origin)
+    if args.token and (not _is_safe_header_value(args.token, max_len=1024) or any(c.isspace() for c in args.token)):
+        raise ValueError("JUMLO_MEDIA_TOKEN must be printable ASCII without whitespace")
     if not _is_loopback_host(args.host) and not args.token and not args.allow_unauthenticated:
         raise ValueError(
             "JUMLO_MEDIA_TOKEN is required when binding to a non-loopback host "
@@ -263,11 +284,11 @@ _HTTP_OPENER = urllib.request.build_opener(
 
 
 def _is_public_ip(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    if not address.is_global or address.is_multicast:
+    if not address.is_global or address.is_multicast or address.is_reserved:
         return False
     if isinstance(address, ipaddress.IPv6Address):
         for embedded in (address.ipv4_mapped, address.sixtofour):
-            if embedded is not None and (not embedded.is_global or embedded.is_multicast):
+            if embedded is not None and (not embedded.is_global or embedded.is_multicast or embedded.is_reserved):
                 return False
     return True
 
@@ -379,7 +400,7 @@ def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProces
     )
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
+    except BaseException:
         try:
             os.killpg(proc.pid, signal.SIGKILL)
         except OSError:
@@ -992,6 +1013,10 @@ class Handler(BaseHTTPRequestHandler):
                 shutil.rmtree(parent, ignore_errors=True)
 
     def do_POST(self) -> None:
+        if len(self.path) > _MAX_URL_LENGTH:
+            self.close_connection = True
+            self._error("MEDIA_OUTPUT_LIMIT", 414)
+            return
         if not self._authorized():
             return
         if not self._check_rate_limit():

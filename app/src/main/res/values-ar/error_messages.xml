@@ -33,7 +33,7 @@
     <string name="msg_failed">تعذر إكمال هذا الإجراء. تحقق من المدخلات وأعد المحاولة.</string>
     <string name="msg_one_file">اختر ملفًا واحدًا فقط لهذه الأداة.</string>
     <string name="msg_unsupported_social_platform">لا يمكن تنزيل الفيديو من هذه الصفحة باستخدام المحرك المتاح. جرّب رابط وسائط مباشرًا أو مصدرًا آخر مدعومًا.</string>
-    <string name="msg_http_401">هذا الرابط يتطلب تسجيل الدخول أو صلاحية وصول (HTTP 401). استخدم رابطًا عامًا أو نزّل الملف عبر Google Drive.</string>
+    <string name="msg_http_401">هذا الرابط يتطلب تسجيل الدخول (HTTP 401). استخدم رابطًا عامًا أو فعّل مشاركة الرابط، ثم أعد المحاولة.</string>
     <string name="msg_drive_token_missing">سجّل الدخول بحساب Google أو الصق رمز الوصول أولًا — تنزيل Drive يحتاج حسابًا. والملف العام (أي شخص لديه الرابط) يمكن تنزيله أيضًا بأداة التنزيلات.</string>
     <string name="msg_drive_token_expired">انتهت صلاحية تسجيل الدخول إلى Google أو تم رفضه. سجّل الدخول مجددًا ثم حاول مرة أخرى.</string>
     <string name="msg_drive_signin_cancelled">تم إلغاء تسجيل الدخول إلى Google، فلم يتم تنزيل شيء. سجّل الدخول أو الصق رمزًا ثم حاول مجددًا.</string>

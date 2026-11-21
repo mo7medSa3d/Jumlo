@@ -60,8 +60,7 @@ object ToolCatalogue {
             primary = listOf(
                 "img_03",        // crop, rotate, flip
                 "img_02",        // resize
-                "img_04",        // compress
-                "img_01",        // convert
+                "img_04",        // compress & convert
                 "img_join",      // join and collage
                 "img_watermark"  // watermark
             ),
@@ -107,7 +106,7 @@ object ToolCatalogue {
     fun workspaceOf(toolId: String): ToolWorkspace? =
         entries.firstOrNull { toolId in it.primary || toolId in it.merged }?.workspace
 
-    private val hidden: Set<String> = setOf("dl_02", "dl_03")
+    private val hidden: Set<String> = setOf("dl_02", "dl_03", "img_01")
     private val searchOnly: Set<String> = emptySet()
 
     /** True when the tool should be offered in the catalogue at all. */

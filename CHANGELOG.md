@@ -1,5 +1,18 @@
 # Changelog — current production-hardening candidate
 
+## 2026-11-21 — Production Release Hardening
+
+### Changed & Hardened
+- **API 35+ edge-to-edge themes:** Added dedicated `values-v35/themes.xml` and `values-night-v35/themes.xml` definitions alongside reactive `enableEdgeToEdge` system-bar styling.
+- **Tools UI & localization:** Updated the Tools grid to a cardless iOS-style 4-column layout and localized the Arabic app name to `"جملو"` (`values-ar/strings.xml`).
+- **Media extraction & security:** Hardened LinkedIn (`linkedin.com`, `lnkd.in`) and TikTok (`tiktok.com`, `vm.tiktok.com`, fallback API hostname) extraction paths, stripped release `Log.v`/`Log.d`/`Log.i` calls via R8 `-assumenosideeffects` (`app/proguard-rules.pro`), and blocked IPv6/NAT64/SIIT SSRF targets across `MediaPolicies.kt` and `tools/media-service/service.py`.
+- **Release & repo hygiene:** Fixed the unreferenced `.gitignore` typo (`desing_ex` -> `design_ex/`), verified `.env.example` parity, and synced `README.md` build/test configuration docs.
+
+### Verified
+- Standalone Python contract/static suite (`scripts/test-*.py`, `scripts/tests/test*.py`): **56/56 PASS** (`PYTHONDONTWRITEBYTECODE=1`).
+- Companion media service unit suite (`tools/media-service/test_service.py`): **66/66 PASS**.
+- Gradle/Android builds and connected device tests remain subject to CI / Android SDK execution.
+
 ## [1.6.1] - 2026-11-21
 
 ### Fixed

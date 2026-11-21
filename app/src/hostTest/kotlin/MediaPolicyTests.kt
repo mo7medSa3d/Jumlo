@@ -270,6 +270,28 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
             check(MediaOutputPolicy.inspect(f).mimeType=="video/mp4")
         } finally { root.deleteRecursively() }
     }
+    test("document and image container inspection verifies PDF, JPEG, and PNG magic bytes") {
+        val root=Files.createTempDirectory("uu-media-doc-img-").toFile()
+        try {
+            val pdf=File(root,"media.pdf")
+            pdf.writeBytes("%PDF-1.7\n".toByteArray(Charsets.US_ASCII))
+            check(MediaOutputPolicy.inspect(pdf).mimeType=="application/pdf")
+            pdf.writeText("<html>Not a PDF</html>")
+            fail("INVALID_MEDIA_CONTAINER") { MediaOutputPolicy.inspect(pdf) }
+
+            val jpg=File(root,"media.jpg")
+            jpg.writeBytes(byteArrayOf(0xFF.toByte(),0xD8.toByte(),0xFF.toByte(),0xE0.toByte()))
+            check(MediaOutputPolicy.inspect(jpg).mimeType=="image/jpeg")
+            jpg.writeText("<html>Not a JPEG</html>")
+            fail("INVALID_MEDIA_CONTAINER") { MediaOutputPolicy.inspect(jpg) }
+
+            val png=File(root,"media.png")
+            png.writeBytes(byteArrayOf(0x89.toByte(),0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A))
+            check(MediaOutputPolicy.inspect(png).mimeType=="image/png")
+            png.writeText("<html>Not a PNG</html>")
+            fail("INVALID_MEDIA_CONTAINER") { MediaOutputPolicy.inspect(png) }
+        } finally { root.deleteRecursively() }
+    }
     test("remote titles cannot control output directories or exceed UTF8 limits") {
         val name=MediaOutputPolicy.displayName("../bad/path: title\n"+"\u0627".repeat(300),"mp4")
         check('/' !in name && '\\' !in name && ':' !in name && name.toByteArray().size<=200 && name.endsWith(".mp4"))

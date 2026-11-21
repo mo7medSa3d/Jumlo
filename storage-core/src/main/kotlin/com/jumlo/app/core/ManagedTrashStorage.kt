@@ -60,7 +60,7 @@ class ManagedTrashStorage(private val root:File) {
         val size=requireNotNull(field("size").toLongOrNull()) { "INVALID_TRASH_RECORD" }
         val e=TrashEntry(field("id"),field("name"),size,field("sha256"),field("record"),field("journal"))
         validate(e);require(e.id==id) { "INVALID_TRASH_RECORD" }
-        val state=field("state");require(state in setOf("TRASH","RESTORE")) { "INVALID_TRASH_RECORD" }
+        val state=field("state");require(state == "TRASH" || state == "RESTORE") { "INVALID_TRASH_RECORD" }
         return TrashRecovery(e,state=="RESTORE")
     }
     private fun moveVerified(from:File,to:File,e:TrashEntry) {
@@ -126,7 +126,7 @@ class ManagedTrashStorage(private val root:File) {
     private fun ids()=trash.listFiles().orEmpty().filter { it.isDirectory && runCatching { UUID.fromString(it.name).toString()==it.name }.getOrDefault(false) }.map { it.name }.sorted()
     @Synchronized fun purge(ids:Set<String>):Int {
         // Validate the entire confirmation snapshot before any deletion.
-        val candidates=ids.map { id -> folder(id);read(id) }.filterNotNull()
+        val candidates=ids.mapNotNull { id -> folder(id);read(id) }
         candidates.forEach { r ->
             require(!r.restored && !active(r.entry).exists()) { "TRASH_STATE_CONFLICT" }
             verify(payload(r.entry),r.entry)

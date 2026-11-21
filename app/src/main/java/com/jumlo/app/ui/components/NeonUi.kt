@@ -170,12 +170,12 @@ fun NeonOutputPreview(
             else -> "DOC"
         }
     }
-    val (tileAccent, tileBg) = when {
-        isPdf -> pillars.pdfPrimary to pillars.pdfContainer
-        isImage -> pillars.imagesPrimary to pillars.imagesContainer
-        isZip -> pillars.filesPrimary to pillars.filesContainer
-        isVideo || isAudio -> pillars.downloadsPrimary to pillars.downloadsContainer
-        else -> colors.primary to colors.primaryContainer
+    val (tileAccent, tileBg, tileIconTint) = when {
+        isPdf -> Triple(pillars.pdfPrimary, pillars.pdfContainer, pillars.pdfOnContainer)
+        isImage -> Triple(pillars.imagesPrimary, pillars.imagesContainer, pillars.imagesOnContainer)
+        isZip -> Triple(pillars.filesPrimary, pillars.filesContainer, pillars.filesOnContainer)
+        isVideo || isAudio -> Triple(pillars.downloadsPrimary, pillars.downloadsContainer, pillars.downloadsOnContainer)
+        else -> Triple(colors.primary, colors.primaryContainer, colors.onPrimaryContainer)
     }
 
     val pdfBitmap by produceState<Bitmap?>(null, output.uri, isPdf) {
@@ -244,7 +244,7 @@ fun NeonOutputPreview(
                             else -> Icons.Rounded.InsertDriveFile
                         },
                         contentDescription = output.displayName,
-                        tint = tileAccent,
+                        tint = tileIconTint,
                         modifier = Modifier.size(30.dp)
                     )
                 }

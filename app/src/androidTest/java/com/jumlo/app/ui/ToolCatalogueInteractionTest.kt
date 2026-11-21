@@ -36,7 +36,6 @@ class ToolCatalogueInteractionTest {
         compose.onNodeWithText(context.getString(R.string.tools_show_more, 1)).performClick()
         compose.onNodeWithTag("tool.icon.pdf_crop", useUnmergedTree = true).assertExists()
         compose.onNodeWithText(shortToolLabel(tool, AppLanguage.ENGLISH)).assertExists()
-        compose.onNodeWithText(tool.subtitleEn).assertExists()
         compose.onNodeWithTag("tool.pdf_crop").assertHasClickAction().performClick()
         compose.runOnIdle { assertEquals("pdf_crop", selected) }
     }
@@ -50,7 +49,7 @@ class ToolCatalogueInteractionTest {
         }
         val first = compose.onNodeWithTag("tool.img_02").fetchSemanticsNode().boundsInRoot
         val last = compose.onNodeWithTag("tool.img_03").fetchSemanticsNode().boundsInRoot
-        // A two-column Arabic (RTL) grid puts the first-ranked tool on the
+        // A multi-column Arabic (RTL) grid puts the first-ranked tool on the
         // right of the same row. Rank is row-major, not strictly top-to-bottom.
         assertTrue("Ranked img_02 must precede img_03 in RTL grid",
             first.top < last.top - 1f ||

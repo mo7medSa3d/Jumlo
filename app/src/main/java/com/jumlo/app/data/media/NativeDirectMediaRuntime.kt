@@ -29,14 +29,22 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     private val http = client.newBuilder().followRedirects(false).followSslRedirects(false)
         .cookieJar(CookieJar.NO_COOKIES)
         .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).writeTimeout(15, TimeUnit.SECONDS).build()
-    private val audioExt = setOf("m4a", "mp3", "ogg", "opus", "flac", "wav", "aac")
-    private val videoExt = setOf("mp4", "m4v", "mov", "webm", "mkv", "ts")
-    private val mimeToExt = mapOf(
-        "video/mp4" to "mp4", "video/quicktime" to "mov", "video/webm" to "webm",
-        "video/x-matroska" to "mkv", "video/mp2t" to "ts", "audio/mp4" to "m4a",
-        "audio/mpeg" to "mp3", "audio/ogg" to "ogg", "audio/opus" to "opus",
-        "audio/flac" to "flac", "audio/wav" to "wav", "audio/aac" to "aac"
-    )
+    private companion object {
+        val AUDIO_EXT = setOf("m4a", "mp3", "ogg", "opus", "flac", "wav", "aac")
+        val VIDEO_EXT = setOf("mp4", "m4v", "mov", "webm", "mkv", "ts")
+        val MIME_TO_EXT = mapOf(
+            "video/mp4" to "mp4", "video/quicktime" to "mov", "video/webm" to "webm",
+            "video/x-matroska" to "mkv", "video/mp2t" to "ts", "audio/mp4" to "m4a",
+            "audio/mpeg" to "mp3", "audio/ogg" to "ogg", "audio/opus" to "opus",
+            "audio/flac" to "flac", "audio/wav" to "wav", "audio/aac" to "aac"
+        )
+        val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+        val RANGE_FALLBACK_CODES = setOf(400, 403, 405, 501)
+        val HTML_MIMES = setOf("text/html", "application/xhtml+xml")
+        val LINKEDIN_VIDEO_REGEX = Regex("https://dms\\.licdn\\.com/playlist/vid/[^\\s\"'<>\\\\]+")
+        val LINKEDIN_DOC_REGEX = Regex("https://media\\.licdn\\.com/dms/document/[^\\s\"'<>\\\\]+")
+        val LINKEDIN_IMG_REGEX = Regex("https://media\\.licdn\\.com/dms/image/[^\\s\"'<>\\\\]+(?:feedshare|article-cover)[^\\s\"'<>\\\\]*")
+    }
     private data class Remote(val url: String, val extension: String, val title: String, val size: Long?)
     private data class Inspection(val name: String, val extractor: String, val streams: List<Remote>, val thumbnailUrl: String? = null)
     private data class PageRead(val url: String, val html: String, val profileIndex: Int)
@@ -68,7 +76,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         repeat(14) { hop ->
             check()
             http.executeCancellable(request(current.toString(), rangeGet, profileIndex, initialOrigin),check).use { response ->
-                if (response.code in setOf(301, 302, 303, 307, 308)) {
+                if (response.code in REDIRECT_CODES) {
                     if (hop >= 10) throw OperationFailure("TOO_MANY_REDIRECTS")
                     val location = response.header("Location") ?: throw OperationFailure("INVALID_REDIRECT")
                     val next = HttpPolicy.url(MediaLinks.normalize(current.resolve(location).toString(),allowHttp),allowHttp)
@@ -81,18 +89,18 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                     profileIndex++
                     return@repeat
                 }
-                if (!rangeGet && response.code in setOf(400, 403, 405, 501)) {
+                if (!rangeGet && response.code in RANGE_FALLBACK_CODES) {
                     rangeGet = true
                     return@repeat
                 }
                 if (response.code !in 200..299) throw OperationFailure("HTTP_${response.code}")
                 val mime = response.header("Content-Type")?.substringBefore(';')?.trim()
                     ?.lowercase(Locale.ROOT).orEmpty()
-                if (mime in setOf("text/html", "application/xhtml+xml"))
+                if (mime in HTML_MIMES)
                     throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
                 val pathExt = current.path.orEmpty().substringAfterLast('/')
                     .substringAfterLast('.', "").lowercase(Locale.ROOT)
-                val extension = pathExt.takeIf { it in audioExt || it in videoExt } ?: mimeToExt[mime]
+                val extension = pathExt.takeIf { it in AUDIO_EXT || it in VIDEO_EXT } ?: MIME_TO_EXT[mime]
                     ?: throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
                 val filename = com.jumlo.app.core.DownloadLinkPolicy.cleanName(current.toString(),
                     response.header("Content-Disposition"), mime)
@@ -120,7 +128,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 header("Accept", "text/html,application/xhtml+xml")
             }.build()
             http.executeCancellable(req,check).use { response ->
-                if (response.code in setOf(301, 302, 303, 307, 308)) {
+                if (response.code in REDIRECT_CODES) {
                     if (hop >= 10) throw OperationFailure("TOO_MANY_REDIRECTS")
                     val location = response.header("Location") ?: throw OperationFailure("INVALID_REDIRECT")
                     val next = HttpPolicy.url(MediaLinks.normalize(current.resolve(location).toString(),allowHttp),allowHttp)
@@ -135,7 +143,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 }
                 if (response.code !in 200..299) throw OperationFailure("HTTP_${response.code}")
                 val mime = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
-                if (mime !in setOf("text/html", "application/xhtml+xml")) throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
+                if (mime !in HTML_MIMES) throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
                 val input = response.body?.byteStream() ?: throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
                 val buffer = ByteArray(8192)
                 val data = ByteArrayOutputStream()
@@ -156,6 +164,34 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     private fun isTikTokHost(url: String): Boolean {
         val host = runCatching { URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
         return host == "tiktok.com" || host.endsWith(".tiktok.com")
+    }
+
+    private fun isLinkedInHost(url: String): Boolean {
+        val host = runCatching { URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
+        return host == "lnkd.in" || host == "linkedin.com" || host.endsWith(".linkedin.com")
+    }
+
+    /** Extract public LinkedIn video streams, PDF carousel documents, and post images from page HTML. */
+    private fun extractLinkedInCandidates(pageUrl: String, html: String, allowHttp: Boolean): List<Remote> {
+        val decoded = html.replace("&quot;", "\"").replace("&amp;", "&").replace("\\u002F", "/").replace("\\/", "/")
+        val title = Html5MediaDiscovery.title(html)?.take(180)?.ifBlank { "LinkedIn media" } ?: "LinkedIn media"
+        val found = linkedMapOf<String, Remote>()
+        for (m in LINKEDIN_VIDEO_REGEX.findAll(decoded)) {
+            val u = m.value.trimEnd(',', '}', ']')
+            if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "mp4", title, null))
+        }
+        for (m in LINKEDIN_DOC_REGEX.findAll(decoded)) {
+            val u = m.value.trimEnd(',', '}', ']')
+            if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "pdf", title, null))
+        }
+        if (found.isEmpty()) {
+            for (m in LINKEDIN_IMG_REGEX.findAll(decoded)) {
+                val u = m.value.trimEnd(',', '}', ']')
+                if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "jpg", title, null))
+                if (found.size >= 8) break
+            }
+        }
+        return found.values.toList()
     }
 
     /** Direct HTTPS fallback for TikTok public links when the embedded yt-dlp extractor is blocked. */
@@ -238,10 +274,13 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 check()
                 try {
                     val stream = inspectDirect(source.url, allowHttp, check)
-                    if (stream.extension == source.extension || stream.extension in audioExt + videoExt)
+                    if (stream.extension == source.extension || stream.extension in AUDIO_EXT || stream.extension in VIDEO_EXT)
                         streams += stream
                 } catch (cancel: java.util.concurrent.CancellationException) { throw cancel }
                 catch (_: Exception) { /* One inaccessible candidate must not hide another verified resource. */ }
+            }
+            if (streams.isEmpty() && (isLinkedInHost(url) || isLinkedInHost(pageUrl))) {
+                streams += extractLinkedInCandidates(pageUrl, html, allowHttp)
             }
             if (streams.isNotEmpty()) return Inspection(
                 Html5MediaDiscovery.title(html) ?: streams.first().title, "Html5", streams,
@@ -257,7 +296,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val normalized = MediaLinks.normalize(url, allowHttp)
         val found = inspectCandidates(normalized, allowHttp, check)
         val formats = found.streams.mapIndexed { index, source ->
-            val isAudio = source.extension in audioExt
+            val isAudio = source.extension in AUDIO_EXT
             MediaFormat(id = if (found.extractor == "DirectMedia") "source" else "page_$index",
                 extension = source.extension, videoCodec = if (isAudio) "none" else "direct",
                 audioCodec = if (isAudio) "direct" else "none", bytes = source.size,
@@ -324,7 +363,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             }
         )
         check()
-        if (result.mimeType in setOf("text/html", "application/xhtml+xml")) {
+        if (result.mimeType in HTML_MIMES) {
             partial.delete(); journal.delete()
             throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
         }

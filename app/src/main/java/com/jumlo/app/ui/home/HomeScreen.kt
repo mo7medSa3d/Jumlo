@@ -1,6 +1,7 @@
 package com.jumlo.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -54,10 +55,12 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     var showConvert by rememberSaveable { mutableStateOf(false) }
     val frequent = remember(settings.rankedToolIds) {
         settings.rankedToolIds.mapNotNull { id ->
-            CapabilityRegistry.tools.firstOrNull { it.id == id && CapabilityRegistry.enabled(id) }
+            CapabilityRegistry.tools.firstOrNull { it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) }
         }.take(3)
     }
     val active = remember(jobs) { jobs.filter { it.isActive() }.take(2) }
+    val recentOutputs = remember(outputs) { outputs.take(6) }
+    val pinnedSet = remember(settings.quickActionIds) { settings.quickActionIds.toSet() }
     val sourceNamesById = remember(sources) { sources.associate { it.id to it.displayName } }
     fun open(id: String) { CapabilityRegistry.tools.firstOrNull { it.id == id }?.let(onTool) }
     val actions = remember(onScan, onTool) {
@@ -69,66 +72,60 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
         )
     }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("home.screen")) {
-        val columns = if (maxWidth >= 640.dp) 4 else 2
-        val actionRows = remember(actions, columns) { actions.chunked(columns) }
-        val frequentRows = remember(frequent, columns) { frequent.chunked(columns) }
+        val actionColumns = 4
+        val frequentColumns = if (maxWidth >= 640.dp) 4 else 3
+        val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
+        val frequentRows = remember(frequent, frequentColumns) { frequent.chunked(frequentColumns) }
         LazyColumn(Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
             verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            item("hero") {
-                Surface(
-                    shape = QuietTheme.shapes.heroCard,
-                    color = pillars.cardSurface,
-                    shadowElevation = 0.dp
-                ) {
-                    Box(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    stringResource(R.string.modern_home_title),
-                                    style = QuietTheme.typography.screenTitle,
-                                    color = colors.onSurface,
-                                    modifier = Modifier.semantics { heading() }
-                                )
-                                Text(
-                                    stringResource(R.string.modern_home_subtitle),
-                                    style = QuietTheme.typography.metadata,
-                                    color = colors.onSurfaceVariant
-                                )
-                            }
-                            actionRows.forEach { row ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    row.forEach { (label, icon, action) ->
-                                        val (tag, accentId) = when (label) {
-                                            R.string.modern_scan -> "scan" to "scan_doc"
-                                            R.string.modern_convert -> "convert" to "pdf_02"
-                                            R.string.modern_compress -> "compress" to "pdf_compress"
-                                            else -> "download" to "dl_media"
-                                        }
-                                        HomeQuickAction(stringResource(label), icon, action,
-                                            Modifier.weight(1f).testTag("home.action.$tag"),
-                                            accentToolId = accentId)
-                                    }
+            item("hero", contentType = "hero") {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            stringResource(R.string.modern_home_title),
+                            style = QuietTheme.typography.screenTitle,
+                            color = colors.onSurface,
+                            modifier = Modifier.semantics { heading() }
+                        )
+                        Text(
+                            stringResource(R.string.modern_home_subtitle),
+                            style = QuietTheme.typography.metadata,
+                            color = colors.onSurfaceVariant
+                        )
+                    }
+                    actionRows.forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { (label, icon, action) ->
+                                val (tag, accentId) = when (label) {
+                                    R.string.modern_scan -> "scan" to "scan_doc"
+                                    R.string.modern_convert -> "convert" to "pdf_02"
+                                    R.string.modern_compress -> "compress" to "pdf_compress"
+                                    else -> "download" to "dl_media"
                                 }
+                                HomeQuickAction(stringResource(label), icon, action,
+                                    Modifier.weight(1f).testTag("home.action.$tag"),
+                                    accentToolId = accentId)
                             }
                         }
                     }
                 }
             }
-            if (frequent.isNotEmpty()) item("frequent-tools") {
+            if (frequent.isNotEmpty()) item("frequent-tools", contentType = "frequent-tools") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     NeonSectionHeader(stringResource(R.string.studio_frequently_used),
                         action = stringResource(R.string.modern_all_tools), onAction = onTools)
                     frequentRows.forEach { row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             row.forEach { tool -> ToolTile(tool, settings.language, { onTool(tool) }, Modifier.weight(1f),
-                                onPin = { vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) }) }
-                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                                onPin = { vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) },
+                                isPinned = tool.id in pinnedSet) }
+                            repeat(frequentColumns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
             }
-            if (form.sourceIds.isNotEmpty()) item("draft") {
+            if (form.sourceIds.isNotEmpty()) item("draft", contentType = "draft") {
                 Surface(
                     onClick = onDraft,
                     shape = QuietTheme.shapes.card,
@@ -154,7 +151,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                 }
             }
             if (active.isNotEmpty()) {
-                item("active-heading") { NeonSectionHeader(stringResource(R.string.ui_active_tasks),
+                item("active-heading", contentType = "section-heading") { NeonSectionHeader(stringResource(R.string.ui_active_tasks),
                     action = stringResource(R.string.neon_show_all), onAction = onDownloads) }
                 items(active, key = { "job-${it.request.id}" }, contentType = { "active-job" }) { job ->
                     TransferRow(job, settings.language, { onJob(job.request.id) },
@@ -162,16 +159,16 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                         sourceName = job.request.sourceIds.singleOrNull()?.let { sourceNamesById[it] })
                 }
             }
-            item("recent-heading") { NeonSectionHeader(stringResource(R.string.neon_recent),
+            item("recent-heading", contentType = "section-heading") { NeonSectionHeader(stringResource(R.string.neon_recent),
                 action = stringResource(R.string.neon_show_all), onAction = onFiles) }
-            item("recent-files") {
+            item("recent-files", contentType = "recent-files") {
                 when {
                     outputLoad != DataLoadStatus.READY -> DocumentLoadState(outputLoad, vm::reloadSavedData)
                     outputs.isEmpty() -> QuietStateCard(stringResource(R.string.modern_recent_empty),
                         stringResource(R.string.modern_recent_empty_body), stringResource(R.string.modern_scan), onScan,
                         icon = Icons.Rounded.DocumentScanner)
                     else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(outputs.take(6), key = { it.id }, contentType = { "recent-output" }) { output ->
+                        items(recentOutputs, key = { it.id }, contentType = { "recent-output" }) { output ->
                             Surface(
                                 onClick = { onOutput(output) },
                                 modifier = Modifier.width(156.dp).height(196.dp).pressFeedback(),
@@ -219,7 +216,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
             )
             val convertOptions = remember {
                 ConvertSheetOptions.mapNotNull { (id, label) ->
-                    if (!CapabilityRegistry.enabled(id)) null
+                    if (!CapabilityRegistry.visible(id) || !CapabilityRegistry.enabled(id)) null
                     else Triple(id, label, CapabilityRegistry.tools.firstOrNull { it.id == id })
                 }
             }
@@ -281,7 +278,7 @@ private val ConvertSheetOptions = listOf(
     "pdf_to_pptx" to R.string.modern_pdf_powerpoint,
     "office_to_pdf" to R.string.modern_office_to_pdf,
     "pdf_07" to R.string.modern_pdf_images,
-    "img_01" to R.string.modern_convert_images
+    "img_04" to R.string.modern_convert_images
 )
 
 @Composable private fun HomeQuickAction(
@@ -292,45 +289,38 @@ private val ConvertSheetOptions = listOf(
     accentToolId: String? = null
 ) {
     val colors = MaterialTheme.colorScheme
-    val pillars = QuietTheme.pillars
     val badgeBg = remember(accentToolId, colors.primaryContainer) {
         accentToolId?.let { ToolIconColors.iconColorFor(it) } ?: colors.primaryContainer
     }
     val badgeTint = remember(accentToolId, badgeBg, colors.onPrimaryContainer) {
         accentToolId?.let { ToolIconColors.glyphOn(badgeBg) } ?: colors.onPrimaryContainer
     }
-    Surface(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 96.dp).clip(QuietTheme.shapes.inputField).pressFeedback(),
-        shape = QuietTheme.shapes.inputField,
-        color = pillars.cardSurface,
-        contentColor = colors.onSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, pillars.cardBorder.copy(alpha = 0.65f)),
-        shadowElevation = 0.dp
+    Column(
+        modifier = modifier
+            .clip(QuietTheme.shapes.inputField)
+            .pressFeedback()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            Modifier
+                .size(54.dp)
+                .clip(QuietTheme.shapes.iconTile)
+                .background(badgeBg),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(QuietTheme.shapes.iconTile)
-                    .background(badgeBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(icon), null, Modifier.size(22.dp), tint = badgeTint)
-            }
-            Text(
-                label,
-                style = QuietTheme.typography.metadataStrong,
-                color = colors.onSurface,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Icon(painterResource(icon), null, Modifier.size(26.dp), tint = badgeTint)
         }
+        Text(
+            label,
+            style = QuietTheme.typography.metadataStrong,
+            color = colors.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

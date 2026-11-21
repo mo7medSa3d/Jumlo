@@ -19,25 +19,25 @@ import androidx.compose.ui.input.pointer.pointerInput
 
 /** Transform/opacity-only interaction motion tuned to fluid iOS-style spring physics. */
 object JumloMotion {
-    const val fastMs = 100
-    const val standardMs = 200
-    const val exitMs = 140
-    const val stateChangeMs = 160
-    const val loadingPulseMs = 820
+    const val fastMs = 150
+    const val standardMs = 280
+    const val exitMs = 220
+    const val stateChangeMs = 240
+    const val loadingPulseMs = 960
     const val pressScale = 0.97f
     const val pressAlpha = 0.94f
     const val revealTravelPx = 14f
-    const val staggerMs = 28L
+    const val staggerMs = 32L
     const val maxStaggered = 10
-    const val pressDamping = 0.72f
-    const val enterDamping = 0.86f
-    const val indicatorDamping = 0.76f
-    const val fluidDamping = 0.82f
-    const val fluidStiffness = 460f
-    const val bouncyDamping = 0.68f
-    const val bouncyStiffness = 520f
-    const val navDamping = 0.84f
-    const val navStiffness = 480f
+    const val pressDamping = 0.78f
+    const val enterDamping = 0.88f
+    const val indicatorDamping = 0.82f
+    const val fluidDamping = 0.86f
+    const val fluidStiffness = 280f
+    const val bouncyDamping = 0.80f
+    const val bouncyStiffness = 320f
+    const val navDamping = 0.88f
+    const val navStiffness = 300f
     const val printScaleDamping = 0.9f
 
     fun <T> fluidSpring(reduced: Boolean): AnimationSpec<T> =

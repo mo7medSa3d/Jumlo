@@ -73,7 +73,8 @@ class MainActivity : AppCompatActivity() {
             }
             LaunchedEffect(settings.isLoaded, settings.language) {
                 if (settings.isLoaded) {
-                    val target = LocaleListCompat.forLanguageTags(settings.language.code)
+                    val target = if (settings.language == AppLanguage.SYSTEM) LocaleListCompat.getEmptyLocaleList()
+                        else LocaleListCompat.forLanguageTags(settings.language.code)
                     if (AppCompatDelegate.getApplicationLocales() != target) {
                         AppCompatDelegate.setApplicationLocales(target)
                     }

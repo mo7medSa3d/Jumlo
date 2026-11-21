@@ -60,6 +60,7 @@ class DownloadLinkPolicyTest {
     @Test
     fun identifiesDirectUrlsAccurately() {
         assertTrue(DownloadLinkPolicy.isDirect("https://example.com/downloads/file.pdf"))
+        assertTrue(DownloadLinkPolicy.isDirect("  https://example.com/downloads/file.pdf#page=2  "))
         assertTrue(DownloadLinkPolicy.isDirect("https://example.com/media/clip.mp4"))
         assertFalse(DownloadLinkPolicy.isDirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
         assertFalse(DownloadLinkPolicy.isDirect("https://vm.tiktok.com/ZMxxxxxx/"))

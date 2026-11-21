@@ -57,8 +57,8 @@ class Prism2026LaunchIconChecks(unittest.TestCase):
         self.assertIn('ToolIconColors.iconColorFor(tool.id)',segment)
         self.assertIn('color = pillars.cardSurface',segment)
         self.assertIn('shadowElevation = 0.dp',segment)
-        self.assertIn('else -> 2',tools)
-        self.assertTrue('heightIn(min = 126.dp)' in tools or 'heightIn(min = 122.dp)' in tools or 'heightIn(min = 176.dp)' in tools)
+        self.assertIn('else -> 4',tools)
+        self.assertIn('.size(54.dp)',tools)
         self.assertIn('CapabilityRegistry.enabled(it.id)',tools)
     def test_brand_uses_the_active_launcher_theme_and_simple_topbar(self):
         for name in ['ic_launcher_foreground.xml','ic_launcher_monochrome.xml',
@@ -68,9 +68,9 @@ class Prism2026LaunchIconChecks(unittest.TestCase):
         self.assertTrue(re.search(r'Text\(\s*title,\s*style\s*=\s*QuietTheme\.typography\.screenTitle', topbars))
         self.assertIn('title=if(shellRoute=="home") stringResource(R.string.app_name)',read('ui/navigation/JumloNavHost.kt'))
         self.assertNotIn('QuietTonalIconButton(Icons.Rounded.Search',read('ui/components/QuietTopBars.kt'))
-        for folder in ('values','values-ar'):
+        for folder, expected in (('values','Jumlo'),('values-ar','جملو')):
             values={tag.attrib['name']:tag.text for tag in ET.parse(RES/folder/'strings.xml').getroot() if tag.tag=='string'}
-            self.assertEqual(values.get('app_name'),'Jumlo')
+            self.assertEqual(values.get('app_name'),expected)
             self.assertTrue({tag.attrib['name'] for tag in ET.parse(RES/folder/'jumlo.xml').getroot()}.issuperset({'brand_splash_tagline'}))
         android='{http://schemas.android.com/apk/res/android}'
         activity=next(node for node in ET.parse(ROOT/'app/src/main/AndroidManifest.xml').getroot().findall('application/activity')

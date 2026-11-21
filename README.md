@@ -1,6 +1,6 @@
 # Jumlo Android
 
-Kotlin Android utilities application for PDF tools, document conversion, file management, printing, and on-device media/internet downloads. Built with Jetpack Compose, Material 3, Hilt, Room, DataStore, and WorkManager, backed by four JVM core modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) and an optional Python media extraction service (`tools/media-service`).
+Bilingual (EN/AR — Jumlo / جملو) Kotlin Android utilities application for PDF tools, document conversion, file management, printing, and on-device media/internet downloads. Built with Jetpack Compose, Material 3, Hilt, Room, DataStore, and WorkManager, backed by four JVM core modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) and an optional Python media extraction service (`tools/media-service`).
 
 ## Requirements
 
@@ -35,6 +35,7 @@ Kotlin Android utilities application for PDF tools, document conversion, file ma
 | `JUMLO_MEDIA_CORS_ORIGIN` | *(empty — disabled)* | Optional allowed CORS origin for `tools/media-service`; empty disables CORS headers |
 | `-PversionCode` / `-PversionName` | `gradle.properties` | Override release version values at build time |
 | `-PextendedMedia=false` | `true` | Dev-only direct-file build without bundled social-media extractor (rejected by release size gates) |
+| `-PcrashReportingEnabled=true` | `false` | Optional build flag toggling `BuildConfig.CRASH_REPORTING_ENABLED` |
 | `mediaProcessTimeoutMillis` | *(default)* | Instrumentation arg overriding native media timeout on slow emulators |
 
 Environment variables take precedence over `keystore.properties`. See `.env.example` and `keystore.properties.example` for templates; never commit real secrets or keystores.
@@ -77,8 +78,11 @@ JUMLO_MEDIA_TOKEN="replace-with-strong-random-token" \
 # Connected device / emulator tests (see verification/current/device/preflight-source/README.md first)
 ./gradlew :app:connectedDebugAndroidTest
 
-# Standalone Python contract suite (no bytecode writes)
+# Standalone Python contract suite (56 scripts, no bytecode writes)
 PYTHONDONTWRITEBYTECODE=1 bash -c 'for t in scripts/test-*.py scripts/tests/test*.py; do python3 "$t"; done'
+
+# Companion media service unit tests
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/media-service -p "test_*.py"
 ```
 
 ## Deploy

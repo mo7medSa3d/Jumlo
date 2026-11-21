@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="media_intro">Download the media you own, in the quality you choose. Everything stays on your device.</string>
-    <string name="media_link">Video, audio, document or media-page link</string>
+    <string name="media_link">Link</string>
     <string name="media_analyze">Analyze link</string>
     <string name="media_update_extractor">Update extractor</string>
     <string name="media_cancel">Cancel</string>

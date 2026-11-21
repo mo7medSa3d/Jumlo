@@ -83,16 +83,16 @@ class EncodedImagePreviewUiTest {
         }
     }
 
-    @Test fun sampledTargetPreviewLabelsSampleBytesAndDoesNotClaimFullSizeSuccess() {
+    @Test fun sampledCompressionPreviewLabelsSampleBytesAndDoesNotClaimFullSizeSuccess() {
         val directory=File(context.cacheDir,"encoded-ui-${UUID.randomUUID()}").apply {mkdirs()}
         val source=sourceImage(directory,1800,900)
         val delivered=CopyOnWriteArrayList<EncodedImagePreview>()
         var visible by mutableStateOf(true)
         try {
-            val settings=WorkspaceDraft.forTool("img_target",emptyList()).copy(num1="200000").executionSettings()
+            val settings=WorkspaceDraft.forTool("img_04",emptyList()).executionSettings()
             compose.setContent {JumloTheme(ThemeMode.DARK,AppLanguage.ENGLISH) {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if(visible) EncodedImagePreviewPanel("source","img_target",Result.success(settings)) {_,tool,json ->
+                    if(visible) EncodedImagePreviewPanel("source","img_04",Result.success(settings)) {_,tool,json ->
                         withContext(Dispatchers.IO) {ImageEncodingPreview.create(source,directory,tool,json,32L*1024*1024,0).also(delivered::add)}
                     }
                 }
@@ -100,14 +100,13 @@ class EncodedImagePreviewUiTest {
             waitForPreview()
             val result=delivered.single()
             assertTrue(result.sampled)
-            assertEquals(200000L,requireNotNull(result.requestedTargetBytes))
+            assertEquals(null,result.requestedTargetBytes)
             compose.onNodeWithTag("encoded.preview.sample").assertTextEquals(context.getString(R.string.encoded_preview_sample_notice))
             compose.onNodeWithTag("encoded.preview.exact").assertDoesNotExist()
             compose.onNodeWithTag("encoded.preview.output").assertTextEquals(context.getString(R.string.encoded_preview_sample_output,
                 result.format,PureDomainAlgorithms.formatBytes(result.encodedBytes),result.encodedWidth,result.encodedHeight))
             compose.onNodeWithTag("encoded.preview.quality").assertTextEquals(context.getString(R.string.encoded_preview_sample_quality,result.quality))
-            compose.onNodeWithTag("encoded.preview.target").assertTextEquals(context.getString(R.string.encoded_preview_target,
-                PureDomainAlgorithms.formatBytes(200000L)))
+            compose.onNodeWithTag("encoded.preview.target").assertDoesNotExist()
             compose.runOnIdle {visible=false}
             compose.runOnIdle {assertTrue(result.before.isRecycled);assertTrue(result.after.isRecycled)}
         } finally {

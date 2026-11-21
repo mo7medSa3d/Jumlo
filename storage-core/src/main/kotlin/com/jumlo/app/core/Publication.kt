@@ -114,7 +114,7 @@ class DurablePublication(private val root: File) {
     fun discardIncomplete(job: String) = locked {
         require(UUID.fromString(job).toString()==job)
         // Finish any journaled publication first; never delete the only durable candidate.
-        journal.listFiles { f -> f.extension=="properties" }.orEmpty().map(::read).filter { it.jobId==job }.forEach { r ->
+        journal.listFiles { f -> f.extension=="properties" }.orEmpty().asSequence().map(::read).filter { it.jobId==job }.forEach { r ->
             finish(r,File(File(staging,job),"${identity(job,r.itemKey)}.part"))
         }
         File(staging,job).deleteRecursively()

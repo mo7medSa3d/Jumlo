@@ -15,13 +15,13 @@ data class PdfDisplayFrame(val widthPt:Double,val heightPt:Double,val displayToP
 object PdfDisplayCoordinates {
     /** Axis-aligned raw page bounds for a rectangle in the oriented physical frame. */
     fun pageRectangle(frame:PdfDisplayFrame,xPt:Double,yPt:Double,widthPt:Double,heightPt:Double):PdfCropRect {
-        require(listOf(xPt,yPt,widthPt,heightPt).all { it.isFinite() } && widthPt>0 && heightPt>0) { "INVALID_PDF_PAGE_GEOMETRY" }
+        require(xPt.isFinite() && yPt.isFinite() && widthPt.isFinite() && heightPt.isFinite() && widthPt>0 && heightPt>0) { "INVALID_PDF_PAGE_GEOMETRY" }
         val corners=listOf(xPt to yPt,(xPt+widthPt) to yPt,xPt to (yPt+heightPt),(xPt+widthPt) to (yPt+heightPt))
             .map { (x,y) -> frame.displayToPage.map(x,y) }
         val minX=corners.minOf { it.first };val minY=corners.minOf { it.second }
         val width=corners.maxOf { it.first }-minX;val height=corners.maxOf { it.second }-minY
         val result=PdfCropRect(minX.toFloat(),minY.toFloat(),width.toFloat(),height.toFloat())
-        require(listOf(result.x,result.y,result.width,result.height).all { it.isFinite() } && result.width>0 && result.height>0) { "INVALID_PDF_PAGE_GEOMETRY" }
+        require(result.x.isFinite() && result.y.isFinite() && result.width.isFinite() && result.height.isFinite() && result.width>0 && result.height>0) { "INVALID_PDF_PAGE_GEOMETRY" }
         return result
     }
 
@@ -54,7 +54,7 @@ object PdfDisplayCoordinates {
     }
 
     fun frame(left:Double,bottom:Double,width:Double,height:Double,rotationDegrees:Int,userUnit:Double=1.0):PdfDisplayFrame {
-        require(listOf(left,bottom,width,height,userUnit).all { it.isFinite() } && width>0 && height>0 && userUnit>0) { "INVALID_PDF_PAGE_GEOMETRY" }
+        require(left.isFinite() && bottom.isFinite() && width.isFinite() && height.isFinite() && userUnit.isFinite() && width>0 && height>0 && userUnit>0) { "INVALID_PDF_PAGE_GEOMETRY" }
         require(rotationDegrees%90==0) { "INVALID_ROTATION" }
         val rotation=((rotationDegrees%360)+360)%360
         val unit=1.0/userUnit
@@ -66,7 +66,7 @@ object PdfDisplayCoordinates {
         }
         val displayedWidth=(if(rotation%180==0) width else height)*userUnit
         val displayedHeight=(if(rotation%180==0) height else width)*userUnit
-        require(displayedWidth.isFinite() && displayedHeight.isFinite() && listOf(matrix.a,matrix.b,matrix.c,matrix.d,matrix.e,matrix.f).all { it.isFinite() }) { "INVALID_PDF_PAGE_GEOMETRY" }
+        require(displayedWidth.isFinite() && displayedHeight.isFinite() && matrix.a.isFinite() && matrix.b.isFinite() && matrix.c.isFinite() && matrix.d.isFinite() && matrix.e.isFinite() && matrix.f.isFinite()) { "INVALID_PDF_PAGE_GEOMETRY" }
         return PdfDisplayFrame(displayedWidth,displayedHeight,matrix)
     }
 }

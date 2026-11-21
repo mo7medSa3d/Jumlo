@@ -154,35 +154,37 @@ import kotlin.math.roundToInt
                                 val base=AutoOutputName.cleanBaseName(firstSourceName ?: "PDF", "PDF")
                                 val display=SafeNames.fromDisplayName("$base - pages.zip", "Split pages.zip")
                                 val ticket=context.outputs.reserve(request.id,key,display,"application/zip")
-                                if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
-                                val entries=groups.mapIndexed { gi,group -> ArchiveInput(
-                                    "Part ${(gi+1).toString().padStart(6,'0')}.pdf"
-                                ) {
-                                    context.checkCancellation()
-                                    val temp=File.createTempFile("split-page-",".pdf",ticket.stageFile.parentFile)
-                                    try {
-                                        PdfBoxBackend.split(src,listOf(PageGroup(group.first,group.second)),listOf(temp),context.checkCancellation)
-                                        // CRC alone only proves ZIP integrity: validate the PDF
-                                        // structure and the expected page count BEFORE packing.
-                                        PdfBoxBackend.open(temp,null).use { part ->
-                                            require(part.numberOfPages == group.second) { "PDF_VERIFY_FAILED" }
-                                        }
-                                        object:FilterInputStream(FileInputStream(temp)) {
-                                            override fun close() {
-                                                try { super.close() } finally {
-                                                    temp.delete()
-                                                    runBlocking { context.report(JobProgress(JobStage.RUNNING,(gi+1).toLong(),groups.size.toLong())) }
+                                val rec=try {
+                                    if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
+                                    val entries=groups.mapIndexed { gi,group -> ArchiveInput(
+                                        "Part ${(gi+1).toString().padStart(6,'0')}.pdf"
+                                    ) {
+                                        context.checkCancellation()
+                                        val temp=File.createTempFile("split-page-",".pdf",ticket.stageFile.parentFile)
+                                        try {
+                                            PdfBoxBackend.split(src,listOf(PageGroup(group.first,group.second)),listOf(temp),context.checkCancellation)
+                                            // CRC alone only proves ZIP integrity: validate the PDF
+                                            // structure and the expected page count BEFORE packing.
+                                            PdfBoxBackend.open(temp,null).use { part ->
+                                                require(part.numberOfPages == group.second) { "PDF_VERIFY_FAILED" }
+                                            }
+                                            object:FilterInputStream(FileInputStream(temp)) {
+                                                override fun close() {
+                                                    try { super.close() } finally {
+                                                        temp.delete()
+                                                        runBlocking { context.report(JobProgress(JobStage.RUNNING,(gi+1).toLong(),groups.size.toLong())) }
+                                                    }
                                                 }
                                             }
-                                        }
-                                    } catch(t:Throwable) { temp.delete(); throw t }
-                                } }
-                                ArchiveCore.create(ticket.stageFile,entries,6,ArchiveLimits(Long.MAX_VALUE,groups.size,1)) {
-                                    context.checkCancellation()
-                                    if(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace<context.budget.minFreeBytes)
-                                        throw OperationFailure("DISK_BUDGET_EXCEEDED")
-                                }
-                                val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip") }
+                                        } catch(t:Throwable) { temp.delete(); throw t }
+                                    } }
+                                    ArchiveCore.create(ticket.stageFile,entries,6,ArchiveLimits(Long.MAX_VALUE,groups.size,1)) {
+                                        context.checkCancellation()
+                                        if(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace<context.budget.minFreeBytes)
+                                            throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                                    }
+                                    context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip") }
+                                } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
                                 outcomes+=ItemOutcome(key,ItemStatus.CREATED,rec.id)
                             }
                         } else {
@@ -194,12 +196,14 @@ import kotlin.math.roundToInt
                                 else {
                                     val partDisplayName = AutoOutputName.splitPartName(s.optString("displayName",""), firstSourceName, gi + 1)
                                     val ticket=context.outputs.reserve(request.id,key,partDisplayName,"application/pdf")
-                                    PdfBoxBackend.split(src,listOf(PageGroup(g.first,g.second)),listOf(ticket.stageFile),context.checkCancellation)
-                                    // Validate the published part, not just that a file exists.
-                                    PdfBoxBackend.open(ticket.stageFile,null).use { part ->
-                                        require(part.numberOfPages == g.second) { "PDF_VERIFY_FAILED" }
-                                    }
-                                    val rec=context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf") }
+                                    val rec=try {
+                                        PdfBoxBackend.split(src,listOf(PageGroup(g.first,g.second)),listOf(ticket.stageFile),context.checkCancellation)
+                                        // Validate the published part, not just that a file exists.
+                                        PdfBoxBackend.open(ticket.stageFile,null).use { part ->
+                                            require(part.numberOfPages == g.second) { "PDF_VERIFY_FAILED" }
+                                        }
+                                        context.outputs.publish(ticket){ context.outputs.inspect(it,"application/pdf") }
+                                    } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
                                     outcomes+=ItemOutcome(key,ItemStatus.CREATED,rec.id)
                                 }
                                 context.report(JobProgress(JobStage.RUNNING,(gi+1).toLong(),groups.size.toLong()))
@@ -562,33 +566,35 @@ import kotlin.math.roundToInt
                         else {
                             val display=SafeNames.fromDisplayName("$effectiveBaseName - images.zip", "PDF images.zip")
                             val ticket=context.outputs.reserve(request.id,key,display,"application/zip")
-                            if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
-                            val inputs=pages.mapIndexed { index,number ->
-                                ArchiveInput(AutoOutputName.pageImageName(effectiveBaseName,number,ext)) {
-                                    context.checkCancellation()
-                                    val temp=File.createTempFile("render-page-",".$ext",ticket.stageFile.parentFile)
-                                    try {
-                                        renderPage(number,temp)
-                                        val options=BitmapFactory.Options().apply { inJustDecodeBounds=true }
-                                        BitmapFactory.decodeFile(temp.path,options)
-                                        require(options.outWidth>0 && options.outHeight>0) { "IMAGE_VERIFY_FAILED" }
-                                        object:FilterInputStream(FileInputStream(temp)) {
-                                            override fun close() {
-                                                try { super.close() } finally {
-                                                    temp.delete()
-                                                    runBlocking { context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pages.size.toLong())) }
+                            val rec=try {
+                                if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
+                                val inputs=pages.mapIndexed { index,number ->
+                                    ArchiveInput(AutoOutputName.pageImageName(effectiveBaseName,number,ext)) {
+                                        context.checkCancellation()
+                                        val temp=File.createTempFile("render-page-",".$ext",ticket.stageFile.parentFile)
+                                        try {
+                                            renderPage(number,temp)
+                                            val options=BitmapFactory.Options().apply { inJustDecodeBounds=true }
+                                            BitmapFactory.decodeFile(temp.path,options)
+                                            require(options.outWidth>0 && options.outHeight>0) { "IMAGE_VERIFY_FAILED" }
+                                            object:FilterInputStream(FileInputStream(temp)) {
+                                                override fun close() {
+                                                    try { super.close() } finally {
+                                                        temp.delete()
+                                                        runBlocking { context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pages.size.toLong())) }
+                                                    }
                                                 }
                                             }
-                                        }
-                                    } catch(t:Throwable) { temp.delete(); throw t }
+                                        } catch(t:Throwable) { temp.delete(); throw t }
+                                    }
                                 }
-                            }
-                            ArchiveCore.create(ticket.stageFile,inputs,6,ArchiveLimits(Long.MAX_VALUE,inputs.size,1)) {
-                                context.checkCancellation()
-                                if(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace<context.budget.minFreeBytes)
-                                    throw OperationFailure("DISK_BUDGET_EXCEEDED")
-                            }
-                            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip",subfolder=originalPdfFolder) }
+                                ArchiveCore.create(ticket.stageFile,inputs,6,ArchiveLimits(Long.MAX_VALUE,inputs.size,1)) {
+                                    context.checkCancellation()
+                                    if(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace<context.budget.minFreeBytes)
+                                        throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                                }
+                                context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip",subfolder=originalPdfFolder) }
+                            } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
                             listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
                         }
                     } else {
@@ -601,8 +607,10 @@ import kotlin.math.roundToInt
                             else try {
                                 val pageFileName=AutoOutputName.pageImageName(effectiveBaseName,number,ext)
                                 val ticket=context.outputs.reserve(request.id,key,pageFileName,outputMime)
-                                renderPage(number,ticket.stageFile)
-                                val record=context.outputs.publish(ticket) { context.outputs.inspect(it,ticket.mimeType,subfolder=originalPdfFolder) }
+                                val record=try {
+                                    renderPage(number,ticket.stageFile)
+                                    context.outputs.publish(ticket) { context.outputs.inspect(it,ticket.mimeType,subfolder=originalPdfFolder) }
+                                } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
                                 outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
                             } catch(cancel:CancellationException) { throw cancel }
                             catch(e:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }

@@ -203,7 +203,7 @@ fun FolderBreadcrumbBar(
     itemCount: Int,
     dragState: FileDragDropState,
     onBackToRoot: () -> Unit,
-    onOpenFolderActions: () -> Unit,
+    onOpenFolderActions: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
@@ -255,15 +255,17 @@ fun FolderBreadcrumbBar(
                     color = if (isRootDropHovered) colors.primary else colors.onSurfaceVariant
                 )
             }
-            IconButton(
-                onClick = onOpenFolderActions,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = stringResource(R.string.files_folder_actions_title),
-                    tint = colors.primary
-                )
+            if (onOpenFolderActions != null) {
+                IconButton(
+                    onClick = onOpenFolderActions,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.files_folder_actions_title),
+                        tint = colors.primary
+                    )
+                }
             }
         }
     }

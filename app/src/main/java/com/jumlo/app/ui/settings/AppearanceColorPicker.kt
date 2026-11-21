@@ -147,12 +147,12 @@ private fun SystemCard(system: ColorSystem, language: AppLanguage, selected: Boo
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        if (language == AppLanguage.ARABIC) system.nameAr else system.nameEn,
+                        if (language.isRtl) system.nameAr else system.nameEn,
                         style = QuietTheme.typography.body.copy(fontWeight = FontWeight.SemiBold),
                         color = ink
                     )
                     Text(
-                        if (language == AppLanguage.ARABIC) system.taglineAr else system.taglineEn,
+                        if (language.isRtl) system.taglineAr else system.taglineEn,
                         style = QuietTheme.typography.metadata,
                         color = softInk
                     )

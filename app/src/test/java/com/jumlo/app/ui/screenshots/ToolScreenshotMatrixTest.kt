@@ -10,7 +10,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.jumlo.app.JumloApplication
 import com.jumlo.app.MainActivity
-import com.jumlo.app.R
 import com.jumlo.app.core.ToolCatalogue
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.data.jobs.stableError
@@ -185,8 +184,6 @@ class ToolScreenshotMatrixTest {
             open(tool.id)
             when (tool.id) {
                 "dl_03" -> compose.runOnUiThread { viewModel().setUrls("https://example.invalid/report.pdf\nhttps://example.invalid/photo.png") }
-                "file_02" -> compose.onNodeWithText(compose.activity.getString(R.string.ui_imported)).performClick()
-                "dl_settings" -> Unit
                 else -> {
                     val ids = keys.map { fixtures.getValue(it) }
                     compose.runOnUiThread { viewModel().chooseToolWithSources(tool.id, ids) }
@@ -231,7 +228,6 @@ class ToolScreenshotMatrixTest {
             } else entry.status = "COMPARED_HOST_UI"
             entry.file = target.name
             entry.detail = when (tool) {
-                "dl_settings" -> "SETTINGS_ROUTE_HAS_NO_FILE_INPUT_STATE"
                 "dl_03" -> if (state == "loaded") "INPUT_CONFIGURED_NO_NETWORK_REQUEST" else ""
                 "pdf_ocr" -> if (state == "loaded") {
                     if (hostPdfUnavailable) "IMAGE_INPUT_NO_RECOGNITION_EXECUTION" else "PDF_INPUT_NO_RECOGNITION_EXECUTION"
@@ -250,32 +246,17 @@ class ToolScreenshotMatrixTest {
     }
 
     private fun open(tool: String) {
-        when (tool) {
-            "dl_settings" -> {
-                leaveWorkspaceBeforeRootTab()
-                if (!exists("settings.screen")) compose.onNodeWithTag("nav.SETTINGS").performClick()
-                compose.waitUntil(10_000) { compose.onAllNodesWithTag("settings.screen").fetchSemanticsNodes().isNotEmpty() }
-            }
-            "file_02" -> {
-                leaveWorkspaceBeforeRootTab()
-                if (!exists("files.screen")) compose.onNodeWithTag("nav.FILES").performClick()
-                compose.waitUntil(10_000) { compose.onAllNodesWithTag("files.screen").fetchSemanticsNodes().isNotEmpty() }
-                compose.onNode(hasText(compose.activity.getString(R.string.ui_imported)) and hasClickAction()).performClick()
-            }
-            else -> {
-                compose.runOnUiThread {
-                    check(viewModel().chooseTool(tool)) { "CAPABILITY_UNAVAILABLE" }
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("jumlo://workspace"))
-                        .setClass(compose.activity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    // Robolectric records startActivity; explicitly deliver Android's warm lifecycle event.
-                    InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(compose.activity, intent)
-                }
-                compose.waitUntil(10_000) { compose.onAllNodesWithTag("route.workspace").fetchSemanticsNodes().isNotEmpty() }
-                compose.waitForIdle()
-                compose.onAllNodesWithTag("workspace.scroll").fetchSemanticsNodes().takeIf { it.isNotEmpty() }?.let {
-                    compose.onNodeWithTag("workspace.scroll").performScrollToIndex(0)
-                }
-            }
+        compose.runOnUiThread {
+            check(viewModel().chooseTool(tool)) { "CAPABILITY_UNAVAILABLE" }
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("jumlo://workspace"))
+                .setClass(compose.activity, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            // Robolectric records startActivity; explicitly deliver Android's warm lifecycle event.
+            InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(compose.activity, intent)
+        }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("route.workspace").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        compose.onAllNodesWithTag("workspace.scroll").fetchSemanticsNodes().takeIf { it.isNotEmpty() }?.let {
+            compose.onNodeWithTag("workspace.scroll").performScrollToIndex(0)
         }
         assertScreenIdentity(tool)
     }
@@ -283,54 +264,16 @@ class ToolScreenshotMatrixTest {
     private fun exists(tag: String): Boolean =
         compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
-    private fun leaveWorkspaceBeforeRootTab() {
-        val discard = compose.activity.getString(R.string.ui_discard_leave)
-        fun workspaceNodes() = compose.onAllNodesWithTag("route.workspace", useUnmergedTree = true)
-            .fetchSemanticsNodes().map { it.id }.toSet()
-        // Warm deep links can leave another real workspace below the current one. Each Back
-        // must make observable progress; a selected dock tab itself intentionally does not navigate.
-        repeat(CapabilityRegistry.tools.size + 2) {
-            compose.waitForIdle()
-            val before = workspaceNodes()
-            if (before.isEmpty()) return
-            compose.onNodeWithContentDescription(compose.activity.getString(R.string.scan_back))
-                .assertIsDisplayed().performClick()
-            compose.waitUntil(readyTimeoutMillis) {
-                workspaceNodes() != before || compose.onAllNodesWithText(discard).fetchSemanticsNodes().isNotEmpty()
-            }
-            if (compose.onAllNodesWithText(discard).fetchSemanticsNodes().isNotEmpty()) {
-                compose.onNodeWithText(discard).assertIsDisplayed().performClick()
-                compose.waitUntil(readyTimeoutMillis) { workspaceNodes() != before }
-            }
-        }
-        compose.waitForIdle()
-        check(!exists("route.workspace")) { "WORKSPACE_BACK_STACK_NOT_EXHAUSTED" }
-    }
-
     private fun assertScreenIdentity(tool: String) {
-        val activity = compose.activity
         val language = viewModel().settings.value.language
-        val (route, title) = when (tool) {
-            "dl_settings" -> "settings.screen" to com.jumlo.app.model.DockTab.SETTINGS.let {
-                if (language.isRtl) it.labelAr else it.labelEn
-            }
-            "file_02" -> "files.screen" to com.jumlo.app.model.DockTab.FILES.let {
-                if (language.isRtl) it.labelAr else it.labelEn
-            }
-            else -> {
-                val item = CapabilityRegistry.tools.single { it.id == tool }
-                "route.workspace" to if (language.isRtl) item.titleAr else item.titleEn
-            }
-        }
+        val item = CapabilityRegistry.tools.single { it.id == tool }
+        val route = "route.workspace"
+        val title = if (language.isRtl) item.titleAr else item.titleEn
         compose.waitUntil(readyTimeoutMillis) {
             exists(route) && compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag(route).assertIsDisplayed()
         compose.onAllNodesWithText(title).onFirst().assertIsDisplayed()
-        if (tool == "file_02") {
-            val section = activity.getString(R.string.ui_imported)
-            compose.onNode(hasText(section) and hasClickAction()).assertIsSelected().assertIsDisplayed()
-        }
     }
 
     private fun importFixtures(): Map<String, String> {
@@ -357,7 +300,7 @@ class ToolScreenshotMatrixTest {
         tool == "img_join" -> listOf("image", "image_second")
         tool.startsWith("img_") -> listOf("image")
         tool == "file_08" -> listOf("zip")
-        tool in setOf("dl_03", "dl_settings", "file_02") -> emptyList()
+        tool == "dl_03" -> emptyList()
         else -> listOf("text", "duplicate")
     }
 

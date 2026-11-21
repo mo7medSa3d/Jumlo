@@ -24,7 +24,7 @@ private fun JumloTokensPreview(arabic: Boolean, dark: Boolean) {
     val scheme = MaterialTheme.colorScheme
     Column(Modifier.fillMaxWidth().background(scheme.background).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(if (arabic) "أدوات جاملو" else "Jumlo tools",
+        Text(if (arabic) "أدوات جملو" else "Jumlo tools",
             style = MaterialTheme.typography.headlineMedium, color = scheme.onBackground)
         Surface(color = scheme.primary, shape = RoundedCornerShape(20.dp)) {
             Text(if (arabic) "إجراء أساسي" else "Primary action",

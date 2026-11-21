@@ -23,9 +23,9 @@ def ratio(a,b):
 
 class JumloBrandMotionChecks(unittest.TestCase):
     def test_app_brand_matches_translated_app_name(self):
-        for locale in ('values','values-ar'):
+        for locale, expected in (('values','Jumlo'),('values-ar','جملو')):
             values={e.attrib.get('name'):e.text for e in ET.parse(RES/locale/'strings.xml').getroot() if e.tag=='string'}
-            self.assertEqual(values['app_name'],'Jumlo')
+            self.assertEqual(values['app_name'],expected)
         self.assertIn('@string/app_name',(ROOT/'app/src/main/AndroidManifest.xml').read_text(encoding="utf-8"))
         self.assertIn('jumlo-errors.txt',code('ui/navigation/JumloNavHost.kt'))
     def test_upgrade_identity_preserved(self):

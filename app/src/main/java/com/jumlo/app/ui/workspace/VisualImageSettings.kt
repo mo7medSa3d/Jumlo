@@ -88,16 +88,22 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 VisualChoiceCards(JOIN_LAYOUTS,draft.text1.ifBlank {"GRID2"},paper=false) {v->edit {it.copy(text1=v)}}
                 InteractiveIntSlider(stringResource(R.string.field_gap_px),draftNumber(draft.num1,8),0,500,8) {v->edit {it.copy(num1=v.toString())}}
             }
-            if(tool=="img_watermark") InteractiveIntSlider(stringResource(R.string.field_opacity_percent),draftNumber(draft.num1,40),1,100,40) {v->edit {it.copy(num1=v.toString())}}
+            // img_watermark opacity is already controlled in VisualWatermarkEditor.
             if(tool=="pdf_compress") {
-                Text(stringResource(R.string.visual_compression_note),style=QuietTheme.typography.metadata)
-                InteractiveToggle(stringResource(R.string.interactive_compression_target),draft.num2.isNotBlank()) {enabled->
-                    edit {it.copy(num2=if(enabled) "5" else "")}
+                val dpi = draft.num1.toIntOrNull() ?: 150
+                val quality = draft.quality.toIntOrNull() ?: 75
+                val strength = (PdfCompressionPolicy.sliderPosition(dpi, quality) * 100f).toInt().coerceIn(1, 100)
+                InteractiveIntSlider(
+                    stringResource(R.string.field_compress_slider, strength),
+                    strength,
+                    1,
+                    100,
+                    50
+                ) { v ->
+                    val step = PdfCompressionPolicy.sliderStep(v / 100f)
+                    edit { it.copy(num1 = step.first.toString(), quality = step.second.toString(), num2 = "") }
                 }
-                if(draft.num2.isNotBlank()) {
-                    InteractiveIntSlider(stringResource(R.string.field_target_size_mb),draftNumber(draft.num2,5),1,100,5) {v->edit {it.copy(num2=v.toString())}}
-                    Text(stringResource(R.string.field_target_size_note),style=QuietTheme.typography.metadata)
-                }
+                Text(stringResource(R.string.field_compress_note), style = QuietTheme.typography.metadata)
             }
             if(tool=="pdf_07") {
                 PresetChoices(stringResource(R.string.field_output_format),PDF_IMAGE_FORMATS,draft.format) {v->edit {it.copy(format=v)}}

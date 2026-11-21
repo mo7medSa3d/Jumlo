@@ -12,7 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,33 +75,30 @@ fun JumloAppIconBadge(
 }
 
 /**
- * The Jumlo top-bar wordmark: pairs the exact Jumlo app launcher icon with
- * crisp architectural typography and a luminous mint signature dot.
- * Always laid out left-to-right, even in Arabic.
+ * The Jumlo top-bar wordmark: follows the active app language ("Jumlo" in EN, "جملو" in AR)
+ * and layout direction naturally (RTL in Arabic, LTR in English).
  */
 @Composable
 fun JumloWordmark(modifier: Modifier = Modifier) {
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Row(
-            modifier = modifier,
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                "Jumlo",
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 22.sp,
-                letterSpacing = if (isRtl) 0.sp else (-0.6).sp,
-                maxLines = 1
-            )
-            Box(
-                Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
-        }
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            stringResource(R.string.app_name),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 22.sp,
+            letterSpacing = if (isRtl) 0.sp else (-0.6).sp,
+            maxLines = 1
+        )
+        Box(
+            Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+        )
     }
 }

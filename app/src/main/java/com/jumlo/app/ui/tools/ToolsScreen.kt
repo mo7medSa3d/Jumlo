@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -76,7 +78,7 @@ private val toolSections = listOf(
     ToolSection("organize", "Organize PDF", "تنظيم PDF",
         setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop")),
     ToolSection("convert", "Convert", "التحويل",
-        setOf("pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_ocr", "img_01")),
+        setOf("pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_ocr")),
     ToolSection("edit", "Edit & Sign", "التحرير والتوقيع",
         setOf("pdf_signature", "pdf_stamp")),
     ToolSection("optimize", "Optimize", "التحسين",
@@ -184,26 +186,26 @@ internal fun ToolsCatalogue(
     val reduceMotion = LocalReducedMotion.current
     BoxWithConstraints(Modifier.fillMaxSize().testTag("tools.screen")) {
         val columns = when {
-            maxWidth >= 1200.dp -> if (largeText) 3 else 5
-            maxWidth >= 900.dp -> if (largeText) 2 else 4
-            maxWidth >= 600.dp -> if (largeText) 2 else 3
-            largeText -> 1
-            else -> 2
+            maxWidth >= 1200.dp -> if (largeText) 4 else 6
+            maxWidth >= 900.dp -> if (largeText) 4 else 5
+            maxWidth >= 600.dp -> if (largeText) 3 else 4
+            largeText -> 3
+            else -> 4
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(columns),
             modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp,
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp,
                 bottom = QuietTheme.spacing.listBottomBuffer),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            item("search", span = { GridItemSpan(maxLineSpan) }) {
+            item("search", span = { GridItemSpan(maxLineSpan) }, contentType = "search") {
                 QuietSearchBar(search, stringResource(R.string.neon_tools_search),
                     onSearch, { onSearch("") }, modifier=Modifier.testTag("tools.search"))
             }
             if (search.isBlank() && availableSections.isNotEmpty()) {
-                item("category-chips", span = { GridItemSpan(maxLineSpan) }) {
+                item("category-chips", span = { GridItemSpan(maxLineSpan) }, contentType = "category-chips") {
                     val pillars = QuietTheme.pillars
                     val chipColors = FilterChipDefaults.filterChipColors(
                         containerColor = pillars.cardSurface,
@@ -239,7 +241,7 @@ internal fun ToolsCatalogue(
                 }
             }
             if (search.isNotBlank()) {
-                item("search-count", span = { GridItemSpan(maxLineSpan) }) {
+                item("search-count", span = { GridItemSpan(maxLineSpan) }, contentType = "search-count") {
                     Text(
                         stringResource(R.string.tools_search_results_count, filtered.size),
                         style = QuietTheme.typography.metadataStrong,
@@ -247,7 +249,7 @@ internal fun ToolsCatalogue(
                         modifier = Modifier.padding(top = 2.dp).semantics { liveRegion = LiveRegionMode.Polite }
                     )
                 }
-                if (filtered.isEmpty()) item("empty", span = { GridItemSpan(maxLineSpan) }) {
+                if (filtered.isEmpty()) item("empty", span = { GridItemSpan(maxLineSpan) }, contentType = "empty") {
                     QuietStateCard(stringResource(R.string.tools_no_matching),
                         stringResource(R.string.tools_no_matching_sub),
                         stringResource(R.string.tools_reset_filters), { onSearch(""); selectedSectionKey = null },
@@ -260,7 +262,7 @@ internal fun ToolsCatalogue(
             } else {
                 val activeSection = effectiveSectionKey
                 if (activeSection == null && pinned.isNotEmpty()) {
-                    item("pinned", span = { GridItemSpan(maxLineSpan) }) {
+                    item("pinned", span = { GridItemSpan(maxLineSpan) }, contentType = "section-header") {
                         SectionHeader(stringResource(R.string.tools_section_pinned), pinned.size)
                     }
                     items(pinned, key = { "pinned:" + it.id }, contentType = { "tool" }) { tool ->
@@ -268,7 +270,7 @@ internal fun ToolsCatalogue(
                     }
                 }
                 if (activeSection == null && recent.isNotEmpty()) {
-                    item("recent", span = { GridItemSpan(maxLineSpan) }) {
+                    item("recent", span = { GridItemSpan(maxLineSpan) }, contentType = "section-header") {
                         SectionHeader(stringResource(R.string.tools_section_recent), recent.size)
                     }
                     items(recent, key = { "recent:" + it.id }, contentType = { "tool" }) { tool ->
@@ -276,7 +278,7 @@ internal fun ToolsCatalogue(
                     }
                 }
                 for ((section, sectionTools) in sectionedTools) {
-                    item("section:" + section.key, span = { GridItemSpan(maxLineSpan) }) {
+                    item("section:" + section.key, span = { GridItemSpan(maxLineSpan) }, contentType = "section-header") {
                         SectionHeader(sectionTitle(section, language), sectionTools.size)
                     }
                     items(sectionTools, key = { it.id }, contentType = { "tool" }) { tool ->
@@ -284,7 +286,7 @@ internal fun ToolsCatalogue(
                     }
                 }
                 if (ungroupedTools.isNotEmpty()) {
-                    item("section:all", span = { GridItemSpan(maxLineSpan) }) {
+                    item("section:all", span = { GridItemSpan(maxLineSpan) }, contentType = "section-header") {
                         SectionHeader(stringResource(R.string.tools_section_all), ungroupedTools.size)
                     }
                     items(ungroupedTools, key = { it.id }, contentType = { "tool" }) { tool ->
@@ -292,7 +294,7 @@ internal fun ToolsCatalogue(
                     }
                 }
                 if (specialistCount > 0) {
-                    item("toggle-all-tools", span = { GridItemSpan(maxLineSpan) }) {
+                    item("toggle-all-tools", span = { GridItemSpan(maxLineSpan) }, contentType = "toggle-all") {
                         OutlinedButton(
                             onClick = onToggleShowAll,
                             modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 48.dp)
@@ -367,76 +369,63 @@ internal fun ToolsCatalogue(
 internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> Unit, modifier: Modifier = Modifier,
     appHaptics: AppHaptics? = null, onPin: (() -> Unit)? = null, isPinned: Boolean = false) {
     val colors = MaterialTheme.colorScheme
-    val pillars = QuietTheme.pillars
     val isDark = colors.background.luminance() < 0.5f
     val accent = remember(tool.id) { ToolIconColors.iconColorFor(tool.id) }
     val iconForeground = remember(accent) { ToolIconColors.glyphOn(accent) }
-    val tileColor = pillars.cardSurface
-    val subtitle = if (language.isRtl) tool.subtitleAr else tool.subtitleEn
     val haptics = appHaptics ?: rememberAppHaptics()
     val click: () -> Unit = { haptics.actionClick(); onClick() }
-    val tileModifier = modifier.fillMaxWidth().heightIn(min = 126.dp).clip(QuietTheme.shapes.card).pressFeedback().testTag("tool.${tool.id}")
-    Surface(
-        modifier = if (onPin == null) tileModifier.clickable(onClick = click) else tileModifier.combinedClickable(
-            onClick = click,
-            onLongClick = { haptics.longPress(); onPin() }
-        ),
-        shape = QuietTheme.shapes.card,
-        color = tileColor,
-        contentColor = colors.onSurface,
-        border = BorderStroke(1.dp, pillars.cardBorder.copy(alpha = 0.7f)),
-        shadowElevation = 0.dp
+    val baseModifier = modifier
+        .fillMaxWidth()
+        .clip(QuietTheme.shapes.inputField)
+        .pressFeedback()
+        .testTag("tool.${tool.id}")
+    val interactiveModifier = if (onPin == null) baseModifier.clickable(onClick = click)
+        else baseModifier.combinedClickable(onClick = click, onLongClick = { haptics.longPress(); onPin() })
+    Column(
+        modifier = interactiveModifier.padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        Box(modifier = Modifier.size(58.dp), contentAlignment = Alignment.Center) {
+            Surface(
+                shape = QuietTheme.shapes.iconTile,
+                color = accent,
+                modifier = Modifier.size(54.dp)
             ) {
-                Surface(
-                    shape = QuietTheme.shapes.iconTile,
-                    color = accent,
-                    modifier = Modifier.size(46.dp)
-                ) {
-                    Box(
-                        Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ToolIcon(
-                            tool.id, iconForeground,
-                            Modifier.size(23.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
-                        )
-                    }
-                }
-                if (isPinned) {
-                    Icon(
-                        Icons.Rounded.Star,
-                        contentDescription = null,
-                        tint = colors.primary.copy(alpha = 0.78f),
-                        modifier = Modifier.size(16.dp)
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    ToolIcon(
+                        tool.id, iconForeground,
+                        Modifier.size(26.dp).toolSharedElement(tool.id).testTag("tool.icon.${tool.id}")
                     )
                 }
             }
-            Text(
-                shortToolLabel(tool, language),
-                color = colors.onSurface,
-                style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                subtitle,
-                color = colors.onSurfaceVariant,
-                style = QuietTheme.typography.metadata,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth()
-            )
+            if (isPinned) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (isDark) colors.surfaceContainerHigh else colors.surface,
+                    border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+                    modifier = Modifier.align(Alignment.TopEnd).size(19.dp)
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.Star,
+                            contentDescription = null,
+                            tint = colors.primary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+            }
         }
+        Text(
+            shortToolLabel(tool, language),
+            color = colors.onSurface,
+            style = QuietTheme.typography.metadataStrong,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

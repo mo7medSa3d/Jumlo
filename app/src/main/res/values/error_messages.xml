@@ -33,7 +33,7 @@
     <string name="msg_failed">Could not complete this action. Check your inputs and retry.</string>
     <string name="msg_one_file">Choose exactly one file for this tool.</string>
     <string name="msg_unsupported_social_platform">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
-    <string name="msg_http_401">This link requires sign-in or access permission (HTTP 401). Use a public link or download via Google Drive.</string>
+    <string name="msg_http_401">This link requires sign-in (HTTP 401). Use a public link or enable link sharing, then retry.</string>
     <string name="msg_drive_token_missing">Sign in with Google or paste an access token first — Drive downloads need an account. A public “Anyone with the link” file can also be downloaded with the Downloads tool.</string>
     <string name="msg_drive_token_expired">Your Google sign-in expired or was rejected. Sign in again, then retry.</string>
     <string name="msg_drive_signin_cancelled">Google sign-in was cancelled, so nothing was downloaded. Sign in or paste a token, then retry.</string>

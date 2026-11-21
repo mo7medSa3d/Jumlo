@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -118,21 +117,17 @@ class JumloUiTest {
         compose.onNodeWithTag("nav.SETTINGS").performClick()
         compose.onNodeWithTag("settings.screen").assertIsDisplayed()
         compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.storage"))
-        // Click the row's left edge: the floating centered dock can cover the middle of a
-        // scrolled row on edge-to-edge devices, which is not what this test exercises.
-        compose.onNodeWithTag("settings.storage").performTouchInput { click(Offset(12f, 12f)) }
-        // Assert the actual destination route, not emulator-dependent layout visibility.
+        compose.onNodeWithTag("settings.storage").performClick()
+        // Navigation animations settle asynchronously; wait for the destination to be laid out.
         compose.waitUntil(15_000) {
-            runCatching { compose.onNodeWithTag("route.storage").assertExists() }.isSuccess
+            runCatching { compose.onNodeWithTag("storage.screen").assertIsDisplayed() }.isSuccess
         }
-        compose.onNodeWithTag("route.storage").assertExists()
-        compose.onNodeWithTag("storage.screen").assertExists()
+        compose.onNodeWithTag("storage.screen").assertIsDisplayed()
         pressBack()
         compose.waitUntil(15_000) {
-            runCatching { compose.onNodeWithTag("route.settings").assertExists() }.isSuccess
+            runCatching { compose.onNodeWithTag("settings.screen").assertIsDisplayed() }.isSuccess
         }
-        compose.onNodeWithTag("route.settings").assertExists()
-        compose.onNodeWithTag("settings.screen").assertExists()
+        compose.onNodeWithTag("settings.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.SETTINGS").assertIsSelected()
     }
 

@@ -126,7 +126,7 @@ code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="ARCHIVE_ENTRY_BUDGET_EXCEEDED" -> R.string.msg_archive_entry_budget
     code=="ARCHIVE_BYTE_BUDGET_EXCEEDED" -> R.string.msg_archive_byte_budget
     code=="SHA256_MISMATCH" -> R.string.msg_sha256_mismatch
-    code in setOf("NO_ACROFORM","FORM_FIELD_NOT_FOUND","FORM_FIELD_TYPE_MISMATCH") -> R.string.msg_no_acroform
+    code in setOf("NO_ACROFORM","FORM_FIELD_NOT_FOUND") -> R.string.msg_no_acroform
     code=="ANIMATED_IMAGE_UNSUPPORTED" -> R.string.msg_animated_image_unsupported
     code in setOf("MALFORMED_IMAGE","IMAGE_DECODE_FAILED","IMAGE_ENCODE_FAILED","IMAGE_VERIFY_FAILED") -> R.string.msg_image_corrupt
     code in setOf("EMPTY_PDF","PDF_VERIFY_FAILED","INVALID_PDF_PAGE_GEOMETRY") -> R.string.msg_pdf_corrupt
@@ -143,7 +143,7 @@ code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="HTTPS_REQUIRED" || code.contains("CLEARTEXT") || code.contains("HTTP_CONSENT") -> R.string.msg_https
     code.contains("NETWORK") || code.contains("TIMEOUT") || code.startsWith("HTTP_") || code.contains("DOWNLOAD_RESTART") -> R.string.msg_network
     code=="PAGE_SELECTION_LIMIT" -> R.string.msg_page_selection_limit
-    code in setOf("INVALID_REDIRECT","INSECURE_REDIRECT") -> R.string.msg_insecure_redirect
+    code=="INVALID_REDIRECT" -> R.string.msg_insecure_redirect
     code in setOf("INVALID_URL","INVALID_DOWNLOAD_LIST","INVALID_DRIVE_FILE_ID","INVALID_NETWORK_URL") -> R.string.msg_url
     code=="INVALID_CONTENT_RANGE" -> R.string.msg_network
     code.startsWith("INVALID_MEDIA_") || code.startsWith("INVALID_AUDIO_") || code.startsWith("INVALID_VIDEO_") -> R.string.media_error_generic

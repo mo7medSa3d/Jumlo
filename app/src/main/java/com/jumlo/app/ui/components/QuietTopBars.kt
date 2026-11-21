@@ -103,10 +103,10 @@ fun QuietWorkspaceTopBar(
     val backCd = stringResource(R.string.scan_back)
     val moreCd = stringResource(R.string.action_customize)
     val (badgeBg, badgeFg) = when (pillar) {
-        PillarCategory.PDF -> pillars.pdfContainer to pillars.pdfPrimary
-        PillarCategory.IMAGES -> pillars.imagesContainer to pillars.imagesPrimary
-        PillarCategory.DOWNLOADS -> pillars.downloadsContainer to pillars.downloadsPrimary
-        PillarCategory.FILES -> pillars.filesContainer to pillars.filesPrimary
+        PillarCategory.PDF -> pillars.pdfContainer to pillars.pdfOnContainer
+        PillarCategory.IMAGES -> pillars.imagesContainer to pillars.imagesOnContainer
+        PillarCategory.DOWNLOADS -> pillars.downloadsContainer to pillars.downloadsOnContainer
+        PillarCategory.FILES -> pillars.filesContainer to pillars.filesOnContainer
         PillarCategory.VAULT -> pillars.vaultContainer to pillars.vaultPrimary
     }
 

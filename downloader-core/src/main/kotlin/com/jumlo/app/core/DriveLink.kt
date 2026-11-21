@@ -14,6 +14,7 @@ object DriveLink {
     private val CONFIRM_LINK = Regex("""<a\b[^>]{0,4096}\bhref="([^"]{0,4096}(?:confirm=|download\?id=)[^"]{0,4096})"[^>]{0,4096}>""", RegexOption.IGNORE_CASE)
     private val CONFIRM_FORM = Regex("""<form\b[^>]{0,4096}\baction="([^"]{1,4096})"[^>]{0,4096}>([\s\S]{0,32768}?)</form>""", RegexOption.IGNORE_CASE)
     private val CONFIRM_INPUT = Regex("""<input\b[^>]{0,2048}\bname="([^"]{1,256})"[^>]{0,2048}\bvalue="([^"]{0,2048})"[^>]{0,2048}>""", RegexOption.IGNORE_CASE)
+    private val QUERY_ID_PATHS = setOf("/open", "/uc", "/download")
 
     fun fileId(input: String): String {
         val value = input.trim()
@@ -26,7 +27,7 @@ object DriveLink {
         val path = uri.rawPath ?: throw IllegalArgumentException("INVALID_DRIVE_FILE_ID")
         val candidate = when (host) {
             "drive.google.com", "drive.usercontent.google.com" -> DRIVE_FILE.matchEntire(path)?.groupValues?.get(1) ?: run {
-                if (path !in setOf("/open", "/uc", "/download")) null
+                if (path !in QUERY_ID_PATHS) null
                 else uri.rawQuery?.split('&')?.mapNotNull { part ->
                     part.takeIf { it.startsWith("id=") }?.removePrefix("id=")
                 }?.singleOrNull()

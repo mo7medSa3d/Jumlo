@@ -8,6 +8,8 @@ import kotlin.math.roundToInt
 data class PdfPageSize(val widthPt: Float, val heightPt: Float)
 
 object PdfPageGeometry {
+    private val VALID_ORIENTATIONS = setOf("AUTO", "PORTRAIT", "LANDSCAPE")
+
     fun resolve(
         imageWidth: Int,
         imageHeight: Int,
@@ -17,7 +19,7 @@ object PdfPageGeometry {
         orientation: String = "AUTO"
     ): PdfPageSize {
         require(imageWidth > 0 && imageHeight > 0) { "INVALID_IMAGE_SIZE" }
-        require(orientation in setOf("AUTO", "PORTRAIT", "LANDSCAPE")) { "INVALID_PDF_SETTINGS" }
+        require(orientation in VALID_ORIENTATIONS) { "INVALID_PDF_SETTINGS" }
         if (preset == "AUTO") {
             // The longest dimension is about the length of an A4 page. Never use source pixels as points.
             val scale = 842.0 / max(imageWidth, imageHeight).toDouble()
@@ -96,13 +98,13 @@ data class PdfPageEdit(
 
     fun rotate(page: Int, degrees: Int): PdfPageEdit {
         require(page in order) { "INVALID_PAGE_INDEX" }
-        require(degrees in setOf(90, 180, 270)) { "INVALID_ROTATION" }
+        require(degrees == 90 || degrees == 180 || degrees == 270) { "INVALID_ROTATION" }
         val next = ((rotations[page] ?: 0) + degrees) % 360
         return copy(rotations = rotations + (page to next))
     }
 
     fun rotateSelected(degrees: Int): PdfPageEdit {
-        require(degrees in setOf(90, 180, 270)) { "INVALID_ROTATION" }
+        require(degrees == 90 || degrees == 180 || degrees == 270) { "INVALID_ROTATION" }
         if (selected.isEmpty()) return this
         val next = rotations.toMutableMap()
         selected.forEach { p -> next[p] = ((rotations[p] ?: 0) + degrees) % 360 }
@@ -180,9 +182,11 @@ object PdfCompressionPolicy {
      * The slider positions, from "smallest file" to "best quality".
      * Each step is a (dpi, quality) pair, so the slider and the presets agree.
      */
-    fun sliderSteps(): List<Pair<Int, Int>> = listOf(
+    private val SLIDER_STEPS = listOf(
         72 to 35, 96 to 50, 120 to 60, 150 to 70, 200 to 78, 300 to 88, 400 to 94
     )
+
+    fun sliderSteps(): List<Pair<Int, Int>> = SLIDER_STEPS
 
     /** The (dpi, quality) pair for a slider position in [0, 1]. */
     fun sliderStep(position: Float): Pair<Int, Int> {

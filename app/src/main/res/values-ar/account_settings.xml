@@ -8,6 +8,7 @@
     <string name="account_storage">استخدام التخزين</string>
     <string name="account_privacy">الخصوصية</string>
     <string name="account_help_about">المساعدة وعن التطبيق</string>
+    <string name="account_language_system">حسب إعداد الجهاز</string>
     <string name="account_language_en">English</string>
     <string name="account_language_ar">العربية</string>
     <string name="account_done">تم</string>

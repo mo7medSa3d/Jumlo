@@ -120,7 +120,7 @@ object DownloadLinkPolicy {
         requiresMediaExtractor(url) || (!isDirect(url) && !isGoogleDriveDownload(url))
 
     fun isDirect(url: String): Boolean {
-        val uri = runCatching { URI(url) }.getOrNull() ?: return false
+        val uri = runCatching { URI(url.trim().substringBefore('#')) }.getOrNull() ?: return false
         if (uri.scheme?.lowercase(Locale.ROOT) !in httpSchemes) return false
         val host = uri.host?.lowercase(Locale.ROOT) ?: return false
         val extension = uri.path.orEmpty().substringAfterLast('/').substringAfterLast('.', "").lowercase(Locale.ROOT)

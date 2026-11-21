@@ -6,6 +6,13 @@ import kotlinx.serialization.json.*
 /** Convert bounded extractor metadata, discarding every signed stream URL/header. */
 object MediaMetadata {
     private val json = Json { ignoreUnknownKeys = true }
+    private val HTTP_PROTOCOLS = setOf("http", "https")
+    private val PERMITTED_HEADERS = setOf("user-agent", "referer", "origin", "accept", "accept-language")
+    private val PLAYLIST_TYPES = setOf("playlist", "multi_video")
+    private val LIVE_STATUSES = setOf("is_live", "is_upcoming")
+    private val VIDEO_EXTENSIONS = setOf("mp4", "webm", "mov", "mkv", "m4v")
+    private val AUDIO_EXTENSIONS = setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")
+
     /** Transient probe input; signed URLs and headers never enter MediaAsset or Room. */
     internal class ProbeSource(val url:String,val headers:Map<String,String>)
     internal fun directProbeSource(text:String,formatId:String):ProbeSource? {
@@ -13,13 +20,12 @@ object MediaMetadata {
         val root=json.parseToJsonElement(text) as? JsonObject ?: return null
         val entries=(root["formats"] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: listOf(root)
         val source=entries.singleOrNull { it.string("format_id")==formatId } ?: return null
-        if(source.string("protocol").ifBlank { "https" } !in setOf("http","https")) return null
+        if(source.string("protocol").ifBlank { "https" } !in HTTP_PROTOCOLS) return null
         val url=source.string("url").takeIf(String::isNotBlank) ?: return null
-        val permitted=setOf("user-agent","referer","origin","accept","accept-language")
         val headers=((root["http_headers"] as? JsonObject).orEmpty() + (source["http_headers"] as? JsonObject).orEmpty())
             .mapNotNull { (name,value) ->
                 val content=(value as? JsonPrimitive)?.contentOrNull
-                if(name.lowercase() in permitted && content!=null && content.length<=2048 && content.none { it<' ' || it=='\u007f' }) name to content else null
+                if(name.lowercase() in PERMITTED_HEADERS && content!=null && content.length<=2048 && content.none { it<' ' || it=='\u007f' }) name to content else null
             }.toMap()
         return ProbeSource(url,headers)
     }
@@ -27,11 +33,11 @@ object MediaMetadata {
         MediaJsonGuard.check(text)
         val value = json.parseToJsonElement(text).jsonObject
         val kind = value.string("_type")
-        require(kind !in setOf("playlist", "multi_video") && value["entries"] == null) { "PLAYLIST_REQUIRES_ITEM_SELECTION" }
+        require(kind !in PLAYLIST_TYPES && value["entries"] == null) { "PLAYLIST_REQUIRES_ITEM_SELECTION" }
         // Only streams with no end yet are non-finite. A finished stream
         // (live_status "post_live") is a normal finite recording and must stay
         // downloadable; rejecting it made every past YouTube live link fail.
-        val live = value.bool("is_live") || value.string("live_status") in setOf("is_live", "is_upcoming")
+        val live = value.bool("is_live") || value.string("live_status") in LIVE_STATUSES
         require(!live) { "LIVE_MEDIA_NOT_FINITE" }
         val extractorName = value.string("extractor_key").ifBlank { value.string("extractor") }
         val rawEntries=value["formats"] as? JsonArray
@@ -51,14 +57,14 @@ object MediaMetadata {
             // and omits it for ordinary progressive videos with audio.
             val vcodec = when {
                 rawVcodec.isNotBlank() -> rawVcodec
-                (height != null || width != null) && ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
+                (height != null || width != null) && ext in VIDEO_EXTENSIONS -> "unknown"
                 else -> "none"
             }
             val acodec = when {
                 rawAcodec.isNotBlank() -> rawAcodec
-                (f.double("abr") != null || ext in setOf("mp3", "m4a", "opus", "ogg", "wav", "aac", "flac")) -> "unknown"
-                vcodec != "none" && protocol in setOf("http", "https") &&
-                    ext in setOf("mp4", "webm", "mov", "mkv", "m4v") -> "unknown"
+                (f.double("abr") != null || ext in AUDIO_EXTENSIONS) -> "unknown"
+                vcodec != "none" && protocol in HTTP_PROTOCOLS &&
+                    ext in VIDEO_EXTENSIONS -> "unknown"
                 else -> "none"
             }
             MediaFormat(

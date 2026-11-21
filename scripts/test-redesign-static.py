@@ -33,7 +33,7 @@ class RedesignWiringTests(unittest.TestCase):
         self.assertIn('msg_preview_unavailable',editor)
         self.assertIn('rememberUpdatedState(onDragPosition)',editor)
         self.assertIn('detectDragGesturesAfterLongPress',editor)
-        self.assertIn('asset.extractor in setOf("DirectMedia", "Html5")',code('ui/downloads/MediaWorkspace.kt'))
+        self.assertIn('UNPROBED_EXTRACTORS = setOf("DirectMedia", "Html5")',code('ui/downloads/MediaWorkspace.kt')); self.assertIn('asset.extractor in UNPROBED_EXTRACTORS',code('ui/downloads/MediaWorkspace.kt'))
         errors=(ROOT/'app/src/main/res/values/error_messages.xml').read_text(encoding="utf-8")
         self.assertNotIn('Optimizing large files automatically to fit device memory.',errors)
 

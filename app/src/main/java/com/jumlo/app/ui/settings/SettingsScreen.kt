@@ -30,6 +30,8 @@ import com.jumlo.app.ui.theme.ColorSystems
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.settingsIconStyleFor
 
+private val SIMPLE_THEMES = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
+
 /** Preferences that change an everyday action. Platform and scheduler policy stay out of this page. */
 @Composable
 fun SettingsScreen(
@@ -58,12 +60,12 @@ fun SettingsScreen(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        item("appearance-heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
-        item("appearance-group") {
+        item("appearance-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
+        item("appearance-group", contentType = "group") {
             PreferenceGroup {
                 PreferenceRow(
                     stringResource(R.string.pref_theme),
-                    themeLabel(if (dark) ThemeMode.DARK else ThemeMode.LIGHT),
+                    themeLabel(if (settings.themeMode == ThemeMode.AMOLED) ThemeMode.DARK else settings.themeMode),
                     Icons.Rounded.DarkMode,
                     { panel = "theme" },
                     Modifier.testTag("settings.theme"),
@@ -82,8 +84,8 @@ fun SettingsScreen(
                 )
             }
         }
-        item("save-heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
-        item("save-folder") {
+        item("save-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
+        item("save-folder", contentType = "save-folder") {
             SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
             if (settings.downloadDestinationFolder.startsWith("content://")) TextButton(
                 onClick = viewModel::resetDownloadDestinationFolder,
@@ -91,8 +93,8 @@ fun SettingsScreen(
                 Text(stringResource(R.string.modern_reset_save_folder))
             }
         }
-        item("storage-heading") { PreferenceHeading(stringResource(R.string.account_storage)) }
-        item("storage-group") {
+        item("storage-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.account_storage)) }
+        item("storage-group", contentType = "group") {
             PreferenceGroup {
                 PreferenceRow(
                     stringResource(R.string.modern_storage_usage),
@@ -116,8 +118,8 @@ fun SettingsScreen(
                 )
             }
         }
-        item("about-spacer") { Spacer(Modifier.height(10.dp)) }
-        item("about") {
+        item("about-spacer", contentType = "spacer") { Spacer(Modifier.height(10.dp)) }
+        item("about", contentType = "row") {
             PreferenceRow(
                 stringResource(R.string.modern_about),
                 stringResource(R.string.settings_about_summary),
@@ -131,13 +133,13 @@ fun SettingsScreen(
     }
     when (panel) {
         "theme" -> {
-            val simpleThemes = listOf(ThemeMode.LIGHT, ThemeMode.DARK)
-            val currentIdx = if (dark) 1 else 0
+            val effectiveTheme = if (settings.themeMode == ThemeMode.AMOLED) ThemeMode.DARK else settings.themeMode
+            val currentIdx = SIMPLE_THEMES.indexOf(effectiveTheme).coerceAtLeast(0)
             ChoiceDialog(
                 stringResource(R.string.pref_theme),
-                simpleThemes.map { themeLabel(it) },
+                SIMPLE_THEMES.map { themeLabel(it) },
                 currentIdx,
-                { viewModel.setThemeMode(simpleThemes[it]); panel = null },
+                { viewModel.setThemeMode(SIMPLE_THEMES[it]); panel = null },
                 { panel = null }
             )
         }
@@ -174,11 +176,14 @@ fun SettingsScreen(
 /** Color system display labels follow the selected in-app language, not device locale. */
 internal fun colorSystemLabel(system: String, language: AppLanguage): String {
     val found = ColorSystems.systemFor(system)
-    return if (language == AppLanguage.ARABIC) found.nameAr else found.nameEn
+    return if (language.isRtl) found.nameAr else found.nameEn
 }
 
-@Composable private fun languageLabel(language: AppLanguage): String = stringResource(
-    if (language == AppLanguage.ARABIC) R.string.account_language_ar else R.string.account_language_en)
+@Composable private fun languageLabel(language: AppLanguage): String = stringResource(when (language) {
+    AppLanguage.SYSTEM -> R.string.account_language_system
+    AppLanguage.ARABIC -> R.string.account_language_ar
+    AppLanguage.ENGLISH -> R.string.account_language_en
+})
 
 @Composable private fun ChoiceDialog(title: String, labels: List<String>, selected: Int,
     onSelected: (Int) -> Unit, onDismiss: () -> Unit) {

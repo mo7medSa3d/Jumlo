@@ -17,9 +17,17 @@ enum class ThemeMode(val labelEn: String, val labelAr: String, val subtitleEn: S
     AMOLED("AMOLED Black", "أسود OLED", "True black for OLED displays", "أسود حقيقي لشاشات OLED")
 }
 
-enum class AppLanguage(val code: String, val displayName: String, val nativeSubtitle: String, val isRtl: Boolean) {
-    ENGLISH("en-US", "English (US)", "System default layout", false),
-    ARABIC("ar", "العربية (Arabic)", "العربية - واجهة كاملة من اليمين لليسار", true)
+enum class AppLanguage(val code: String, val displayName: String, val nativeSubtitle: String) {
+    SYSTEM("", "Use device setting", "Follows device language"),
+    ENGLISH("en-US", "English (US)", "English layout"),
+    ARABIC("ar", "العربية (Arabic)", "العربية - واجهة كاملة من اليمين لليسار");
+
+    val isRtl: Boolean
+        get() = when (this) {
+            ARABIC -> true
+            ENGLISH -> false
+            SYSTEM -> java.util.Locale.getDefault().language.equals("ar", ignoreCase = true)
+        }
 }
 
 enum class FileViewMode { LIST, GRID;
@@ -113,7 +121,7 @@ data class FileFolder(
 data class AppSettingsState(
     val hasCompletedOnboarding: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val language: AppLanguage = AppLanguage.ENGLISH,
+    val language: AppLanguage = AppLanguage.SYSTEM,
     val respectReducedMotion: Boolean = false,
     val hapticFeedbackOnCommit: Boolean = true,
     val hapticIntensity: HapticIntensity = HapticIntensity.LIGHT,

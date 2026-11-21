@@ -339,4 +339,26 @@ class RepackHardeningTests(unittest.TestCase):
             self.assertEqual(b'second', target.read_bytes())
 
 
+    def test_symlink_with_spoofed_small_file_size_header_is_still_bounded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = io.BytesIO()
+            with zipfile.ZipFile(source, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+                entry = zipfile.ZipInfo('usr/lib/libalias.so')
+                entry.create_system = 3
+                entry.compress_type = zipfile.ZIP_DEFLATED
+                entry.external_attr = 0o120777 << 16
+                archive.writestr(entry, '/'.join(f'seg{i:04d}' for i in range(6000)))
+            (root / 'libpython.zip.so').write_bytes(source.getvalue())
+            orig_infolist = zipfile.ZipFile.infolist
+            def spoofed_infolist(zself):
+                infos = orig_infolist(zself)
+                for info in infos:
+                    info.file_size = 10
+                return infos
+            with patch.object(zipfile.ZipFile, 'infolist', spoofed_infolist):
+                with self.assertRaises((ValueError, zipfile.BadZipFile)):
+                    repack.LinkUniverse(str(root))
+
+
 if __name__=='__main__': unittest.main()

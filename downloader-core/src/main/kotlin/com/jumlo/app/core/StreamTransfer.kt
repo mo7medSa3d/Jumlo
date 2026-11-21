@@ -15,12 +15,16 @@ class StreamTransfer(private val transport:HttpTransport) {
         private val SET_COOKIE_SPLIT = Regex(",(?=\\s{0,64}[!#$%&'*+.^_`|~0-9A-Za-z-]{1,128}\\s{0,64}=)")
         private const val MAX_COOKIE_HEADER_LENGTH = 32768
         private const val MAX_COOKIES_PER_HOST = 64
+        private val TRANSIENT_HTTP_CODES = setOf(408,425,429,500,502,503,504)
+        private val NON_TRANSIENT_IO_MESSAGES = setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH","DOWNLOAD_NOT_A_FILE","INVALID_CONTENT_LENGTH")
+        private val REDIRECT_CODES = setOf(301,302,303,307,308)
+        private val HTML_MIME_TYPES = setOf("text/html","application/xhtml+xml")
     }
-    private fun isTransient(code:Int)=code in setOf(408,425,429,500,502,503,504)
+    private fun isTransient(code:Int)=code in TRANSIENT_HTTP_CODES
     private fun isTransientIo(e:IOException):Boolean {
         if(e is InterruptedIOException && e !is java.net.SocketTimeoutException) return false
         val msg=e.message.orEmpty()
-        if(msg in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE","OVERFLOW_HTTP_BODY","HTTP_CONTENT_LENGTH_MISMATCH","DOWNLOAD_NOT_A_FILE","INVALID_CONTENT_LENGTH")) return false
+        if(msg in NON_TRANSIENT_IO_MESSAGES) return false
         return true
     }
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferMetadata)->Unit={}):TransferResult {
@@ -116,15 +120,16 @@ class StreamTransfer(private val transport:HttpTransport) {
                         }
                     }
                 }
-                if(response.code in setOf(301,302,303,307,308)) {
+                if(response.code in REDIRECT_CODES) {
                     require(redirects<10) { "TOO_MANY_REDIRECTS" }
                     val location=header("location") ?: throw IllegalArgumentException("REDIRECT_WITHOUT_LOCATION")
-                    val next=HttpPolicy.url(current.resolve(location).toString(),request.cleartextConsent)
+                    val resolved=try { current.resolve(location.trim()).toString() } catch(_:Exception) { throw IllegalArgumentException("INVALID_URL") }
+                    val next=HttpPolicy.url(resolved,request.cleartextConsent)
                     require(current.scheme!="https" || next.scheme=="https") { "INSECURE_REDIRECT" }
                     current=next; return@repeat
                 }
                 val mimeType=header("content-type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
-                if(response.code==200 && request.offset==0L && mimeType in setOf("text/html","application/xhtml+xml") && isGoogleHost(hostKey)) {
+                if(response.code==200 && request.offset==0L && mimeType in HTML_MIME_TYPES && isGoogleHost(hostKey)) {
                     val sample=ByteArray(32768)
                     var read=0
                     while(read<sample.size) {

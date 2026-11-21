@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Jumlo</string>
+    <string name="app_name">جملو</string>
     <string name="tagline">ملفاتك. أدواتك.</string>
     <string name="tagline_subtitle">حرّر ملفات PDF والصور محلياً، مع عمليات نقل عبر الشبكة عند اختيارك.</string>
     <string name="offline_pledge_short">تحرير المستندات محلياً. تستخدم الميزات المتصلة الشبكة عند اختيارها.</string>
@@ -254,7 +254,7 @@
     <string name="field_target_size_note">عند تحديد حجم مستهدف، يخفض Jumlo الدقة والجودة حتى يصل الملف إليه، ويعرض الحجم الذي تحقق فعليًا.</string>
     <string name="field_remove_title">إزالة العنوان والموضوع والكلمات المفتاحية أيضًا</string>
     <string name="field_clean_note">يزيل اسم المؤلف وبرنامج الإنتاج وتاريخي الإنشاء والتعديل ومسار XMP المضمّن. يُحفظ الملف المنظَّف مع تقرير يسرد كل مفتاح تمت إزالته.</string>
-    <string name="field_compress_slider">الحجم والجودة: %1$d%% نحو أفضل جودة</string>
+    <string name="field_compress_slider">قوة الضغط: %1$d%%</string>
     <string name="field_compress_estimate">الحجم التقديري للناتج: %1$s</string>
     <string name="field_compress_saving">التوفير التقديري: %1$d%%</string>
     <string name="field_compress_estimate_note">تقدير مبني على الصور المضمنة. يعرض الملف المحفوظ الحجم الحقيقي.</string>
@@ -332,12 +332,6 @@
     <string name="field_rename_note">ينشر نسخاً معاداً تسميتها من الملفات المحددة باستخدام النمط ورقم البداية.</string>
     <string name="field_duplicates_note">يحسب بصمة SHA-256 للملفات المحددة ويكتشف المجموعات المتطابقة تماماً.</string>
     <string name="field_trash_note">يعرض عناصر سلة المهملات ويزيل الملفات المؤقتة المنتهية الصلاحية.</string>
-    <string name="field_drive_export_mode">تصدير الملفات المحددة إلى Google Drive (أو استيراد)</string>
-    <string name="field_drive_file_id">رابط أو معرف ملف Google Drive</string>
-    <string name="field_drive_folder_id">معرف المجلد الهدف (اختياري)</string>
-    <string name="field_drive_token">رمز وصول Google OAuth (في ذاكرة الجلسة فقط)</string>
-    <string name="field_drive_signin">تسجيل الدخول بحساب Google</string>
-    <string name="field_drive_note">يستخدم واجهة Google Drive v3 الرسمية. ينزل فقط الملفات المتاحة لحسابك، ويبقى رمز الجلسة في الذاكرة فقط.</string>
     <string name="field_split_every_n">عدد الصفحات لكل جزء</string>
     <string name="field_fill_page">ملء الصفحة (قص الزوائد)</string>
     <string name="field_grayscale">تحويل إلى تدرج الرمادي</string>
@@ -393,6 +387,7 @@
     <string name="files_folder_count_items">%1$d ملفات</string>
     <string name="files_folder_empty_short">فارغ</string>
     <string name="files_folder_create_title">مجلد جديد</string>
+    <string name="files_more_actions">المزيد</string>
     <string name="files_folder_create_hint">اسم المجلد</string>
     <string name="files_folder_create_action">إنشاء</string>
     <string name="files_folder_rename_title">إعادة تسمية المجلد</string>

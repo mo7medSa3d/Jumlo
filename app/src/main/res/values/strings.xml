@@ -254,7 +254,7 @@
     <string name="field_target_size_note">With a target set, Jumlo lowers resolution and quality until the file reaches it, and reports the size it actually achieved.</string>
     <string name="field_remove_title">Also remove the title, subject and keywords</string>
     <string name="field_clean_note">Removes the author, the producing application, the creation and modification dates and the embedded XMP trail. The cleaned file and a report listing every removed key are saved together.</string>
-    <string name="field_compress_slider">Size and quality: %1$d%% toward the best quality</string>
+    <string name="field_compress_slider">Compression strength: %1$d%%</string>
     <string name="field_compress_estimate">Estimated output: %1$s</string>
     <string name="field_compress_saving">Estimated saving: %1$d%%</string>
     <string name="field_compress_estimate_note">An estimate from the embedded images. The saved file reports the real size.</string>
@@ -332,12 +332,6 @@
     <string name="field_rename_note">Publishes renamed copies of the selected files using the pattern and starting number.</string>
     <string name="field_duplicates_note">Computes SHA-256 across selected files and reports exact duplicate groups.</string>
     <string name="field_trash_note">Lists items in Trash and removes expired temporary files.</string>
-    <string name="field_drive_export_mode">Export selected files to Google Drive (otherwise Import)</string>
-    <string name="field_drive_file_id">Google Drive file URL or ID</string>
-    <string name="field_drive_folder_id">Destination folder ID (optional)</string>
-    <string name="field_drive_token">Google OAuth access token (session memory only)</string>
-    <string name="field_drive_signin">Sign in with Google Account</string>
-    <string name="field_drive_note">Uses the official Google Drive v3 API. Downloads only files your signed-in account can access; tokens stay in session memory only.</string>
     <string name="field_split_every_n">Pages per split part</string>
     <string name="field_fill_page">Fill page (crop overflow)</string>
     <string name="field_grayscale">Convert to grayscale</string>
@@ -393,6 +387,7 @@
     <string name="files_folder_count_items">%1$d files</string>
     <string name="files_folder_empty_short">Empty</string>
     <string name="files_folder_create_title">New folder</string>
+    <string name="files_more_actions">More</string>
     <string name="files_folder_create_hint">Folder name</string>
     <string name="files_folder_create_action">Create</string>
     <string name="files_folder_rename_title">Rename folder</string>

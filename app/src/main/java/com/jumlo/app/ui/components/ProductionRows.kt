@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
@@ -35,10 +36,10 @@ private val ByteUnits = listOf("KiB", "MiB", "GiB", "TiB")
 
 fun formatBytes(value:Long?):String {
     if(value==null) return "—"
-    if(value<1024) return "$value B"
+    if(value<1024) return "⁦$value B⁩"
     var n=value.toDouble()/1024; var index=0
     while(n>=1024 && index<ByteUnits.lastIndex) {n/=1024;index++}
-    return String.format(Locale.ROOT,"%.1f %s",n,ByteUnits[index])
+    return "⁦${String.format(Locale.ROOT,"%.1f %s",n,ByteUnits[index])}⁩"
 }
 
 @Composable
@@ -70,7 +71,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
     val rowColors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
     Surface(
-        modifier = rowModifier.then(if(selection!=null || onOpen!=null) Modifier.pressFeedback().combinedClickable(
+        modifier = rowModifier.then(if(selection!=null || onOpen!=null) Modifier.pressFeedback().clip(QuietTheme.shapes.card).combinedClickable(
             onClick={haptics.actionClick();if(selection!=null) onSelect?.invoke() else onOpen?.invoke()},
             onLongClick=onLongClick
         ).semantics { if(selection!=null) { selected=selection; role=Role.Checkbox } } else Modifier),
@@ -113,7 +114,7 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
         DropdownMenuItem(text={Text(stringResource(R.string.action_open))},onClick={close();onOpen()})
         if(onFavorite!=null) DropdownMenuItem(
             text={Text(stringResource(if(isFavorite) R.string.files_unmark_favorite else R.string.files_mark_favorite))},
-            leadingIcon={Icon(if(isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,null)},
+            leadingIcon={Icon(if(isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,null,tint=if(isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)},
             onClick={close();onFavorite()})
         if(onPrint!=null) DropdownMenuItem(text={Text(stringResource(R.string.upgrade_print))},leadingIcon={Icon(Icons.Rounded.Print,null)},onClick={close();onPrint()})
         if(onMoveToFolder!=null) DropdownMenuItem(text={Text(stringResource(R.string.files_move_to_folder))},leadingIcon={Icon(Icons.Rounded.Folder,null)},onClick={close();onMoveToFolder()})

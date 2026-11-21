@@ -103,6 +103,7 @@ internal fun CameraXScanFallback(
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     var cameraReady by remember { mutableStateOf(false) }
+    var boundCamera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf(false) }
     var active by remember { mutableStateOf(true) }
@@ -124,7 +125,14 @@ internal fun CameraXScanFallback(
     }
     val mainExecutor = remember { ContextCompat.getMainExecutor(context) }
 
-    LaunchedEffect(flashMode) { capture.flashMode = flashMode }
+    LaunchedEffect(flashMode, boundCamera) {
+        capture.flashMode = flashMode
+        boundCamera?.let { cam ->
+            if (cam.cameraInfo.hasFlashUnit()) {
+                runCatching { cam.cameraControl.enableTorch(flashMode == ImageCapture.FLASH_MODE_ON) }
+            }
+        }
+    }
     LaunchedEffect(pagePaths.size, reviewIndex) {
         val idx = reviewIndex
         if (idx != null && (pagePaths.isEmpty() || idx !in pagePaths.indices)) {
@@ -172,7 +180,7 @@ internal fun CameraXScanFallback(
                         val cameraPreview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
                         preview = cameraPreview
                         capture.targetRotation = previewView.display?.rotation ?: Surface.ROTATION_0
-                        cameraProvider.bindToLifecycle(lifecycleOwner, selector, cameraPreview, capture)
+                        boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, cameraPreview, capture)
                         cameraReady = true
                     } catch (_: Exception) {
                         error = true
@@ -181,7 +189,13 @@ internal fun CameraXScanFallback(
                 }
             }, mainExecutor)
         }
-        onDispose { disposed = true; preview?.let { provider?.unbind(it, capture) }; cameraReady = false }
+        onDispose {
+            disposed = true
+            runCatching { boundCamera?.cameraControl?.enableTorch(false) }
+            boundCamera = null
+            preview?.let { provider?.unbind(it, capture) }
+            cameraReady = false
+        }
     }
 
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(100)) { uris ->
@@ -432,11 +446,15 @@ internal fun CameraXScanFallback(
                                 enabled = !busy && !externalBusy,
                                 onClick = {
                                     haptics.actionClick()
-                                    saveAsPdf()
+                                    if (jpegOutput) saveAsJpegs() else saveAsPdf()
                                 },
                                 modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Rounded.PictureAsPdf, stringResource(R.string.ui_create_pdf), tint = Color.White)
+                                Icon(
+                                    if (jpegOutput) Icons.Rounded.Image else Icons.Rounded.PictureAsPdf,
+                                    stringResource(if (jpegOutput) R.string.scan_save_jpg else R.string.ui_create_pdf),
+                                    tint = Color.White
+                                )
                             }
                             IconButton(
                                 enabled = !busy && !externalBusy,
@@ -496,14 +514,14 @@ internal fun CameraXScanFallback(
                 }
                 if (pagePaths.isNotEmpty()) {
                     Surface(
-                        onClick = { haptics.actionClick(); saveAsPdf() },
+                        onClick = { haptics.actionClick(); if (jpegOutput) saveAsJpegs() else saveAsPdf() },
                         enabled = !busy && !externalBusy,
                         shape = CircleShape,
                         color = Color.White,
                         modifier = Modifier.size(46.dp).pressFeedback()
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Check, stringResource(R.string.ui_create_pdf), tint = Color.Black, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Rounded.Check, stringResource(if (jpegOutput) R.string.scan_save_jpg else R.string.ui_create_pdf), tint = Color.Black, modifier = Modifier.size(24.dp))
                         }
                     }
                 }

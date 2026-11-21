@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="media_link">رابط فيديو أو صوت أو مستند أو صفحة وسائط</string>
+    <string name="media_link">رابط</string>
     <string name="media_analyze">تحليل الرابط والجودات</string>
     <string name="media_update_extractor">تحديث المحرك</string>
     <string name="media_cancel">إلغاء</string>

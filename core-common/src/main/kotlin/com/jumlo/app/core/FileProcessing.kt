@@ -7,11 +7,19 @@ import java.util.zip.*
 
 object Hashing {
     private val SHA256_HEX = Regex("[0-9a-f]{64}")
+    private val HEX_CHARS = "0123456789abcdef".toCharArray()
     fun sha256(file: File): String = file.inputStream().use { sha256(it) }
     fun sha256(input: InputStream, checkCancel: () -> Unit = {}): String {
         val digest=MessageDigest.getInstance("SHA-256"); val buffer=ByteArray(64*1024)
         while(true) { checkCancel(); val n=input.read(buffer); if(n<0) break; if(n>0) digest.update(buffer,0,n) }
-        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        val bytes = digest.digest()
+        val hex = CharArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xFF
+            hex[i * 2] = HEX_CHARS[v ushr 4]
+            hex[i * 2 + 1] = HEX_CHARS[v and 0x0F]
+        }
+        return String(hex)
     }
     fun matches(file: File, digest: String): Boolean {
         val expected=digest.trim().lowercase(Locale.ROOT)

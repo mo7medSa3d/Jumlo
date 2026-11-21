@@ -70,7 +70,6 @@ fun ScanScreen(
     onBack: () -> Unit, externalBusy: Boolean = false
 ) {
     var format by rememberSaveable { mutableStateOf<String?>(null) }
-    var useAutoScanner by rememberSaveable { mutableStateOf(false) }
     if (format == null) {
         Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             IconButton(
@@ -85,19 +84,14 @@ fun ScanScreen(
                 Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { useAutoScanner = false; format = "pdf" },
+                QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { format = "pdf" },
                     enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
-                QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { useAutoScanner = false; format = "jpg" },
+                QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { format = "jpg" },
                     enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
             }
         }
-    } else if (useAutoScanner) {
-        SmartDocumentScanLauncher(
-            onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,
-            jpegOutput = format == "jpg", onBack = onBack, externalBusy = externalBusy
-        )
     } else {
-        CameraXScanFallback(
+        SmartDocumentScanLauncher(
             onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,
             jpegOutput = format == "jpg", onBack = onBack, externalBusy = externalBusy
         )

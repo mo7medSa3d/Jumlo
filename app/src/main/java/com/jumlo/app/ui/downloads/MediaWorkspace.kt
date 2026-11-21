@@ -64,6 +64,7 @@ import kotlin.math.roundToInt
 private val UrlKeyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go)
 private val RESTRICTED_ERROR_CODES = setOf("MEDIA_SESSION_REQUIRED", "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED", "MEDIA_SOURCE_REJECTED", "HTTP_401", "HTTP_403")
 private val UNSUPPORTED_ERROR_CODES = setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
+private val UNPROBED_EXTRACTORS = setOf("DirectMedia", "Html5")
 private val AUDIO_BITRATES = listOf(320, 256, 192, 128, 96, 64)
 private val PDF_DIRECT_MODES = listOf(
     "ORIGINAL" to R.string.media_pdf_original,
@@ -156,7 +157,7 @@ private val IMAGE_DIRECT_MODES = listOf(
             verticalArrangement=Arrangement.spacedBy(16.dp)
         ) {
             // Top bar already displays the tool title and subtitle; start directly with link input.
-            item("input") {
+            item("input", contentType = "input") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Surface(
                         shape = QuietTheme.shapes.card,
@@ -238,14 +239,14 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
             }
-            if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard") {
+            if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard", contentType = "clipboard") {
                 val onUseSuggestion = remember(clipboardSuggestion, haptics, editUrl, viewModel) {
                     { haptics.actionClick(); editUrl(clipboardSuggestion); viewModel.analyze() }
                 }
                 SuggestionChip(onClick=onUseSuggestion,
                     label={Text(stringResource(R.string.redesign_paste_suggestion))},icon={Icon(Icons.Rounded.ContentPaste,null)})
             }
-            if(state.analyzing) item("loading") {
+            if(state.analyzing) item("loading", contentType = "loading") {
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     QuietShimmerSkeleton(Modifier.fillMaxWidth())
@@ -257,7 +258,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
             }
-            state.error?.let { code -> item("error") {
+            state.error?.let { code -> item("error", contentType = "error") {
                 val restricted = code in RESTRICTED_ERROR_CODES
                 val unsupported = code in UNSUPPORTED_ERROR_CODES
                 QuietStateCard(
@@ -276,7 +277,7 @@ private val IMAGE_DIRECT_MODES = listOf(
 
 
             state.direct?.let { preview ->
-                item("direct-preview") {
+                item("direct-preview", contentType = "direct-preview") {
                     val directMeta = remember(preview.mime, preview.sizeBytes) {
                         listOfNotNull(preview.mime, preview.sizeBytes?.let(::mediaBytes)).joinToString(" · ")
                     }
@@ -317,7 +318,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
                 if (preview.kind == DirectFileKind.PDF) {
-                    item("direct-pdf-options") {
+                    item("direct-pdf-options", contentType = "direct-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                             PDF_DIRECT_MODES.forEach { (modeKey, modeLabelRes) ->
@@ -340,7 +341,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                         }
                     }
                 } else if (preview.kind == DirectFileKind.IMAGE) {
-                    item("direct-image-options") {
+                    item("direct-image-options", contentType = "direct-options") {
                         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                             IMAGE_DIRECT_MODES.forEach { (modeKey, modeLabelRes) ->
@@ -363,7 +364,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                         }
                     }
                 } else if (preview.kind == DirectFileKind.VIDEO || preview.kind == DirectFileKind.AUDIO) {
-                    item("direct-media-switch") {
+                    item("direct-media-switch", contentType = "direct-media-switch") {
                         QuietTonalButton(
                             text=stringResource(R.string.media_switch_to_extractor),
                             onClick=onSwitchToExtractor,
@@ -374,7 +375,7 @@ private val IMAGE_DIRECT_MODES = listOf(
             }
 
             state.asset?.let { asset ->
-                item("media-preview") {
+                item("media-preview", contentType = "media-preview") {
                     Surface(
                         shape=QuietTheme.shapes.heroCard,
                         color=MaterialTheme.colorScheme.surfaceContainerLow
@@ -406,7 +407,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
 
-                item("media-type-selector") {
+                item("media-type-selector", contentType = "media-type-selector") {
                     val hasVideo = remember(asset.formats) { asset.formats.any { it.hasVideo } }
                     val hasAudio = remember(asset.formats) { asset.formats.any { it.hasAudio } }
                     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -436,7 +437,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                 }
 
                 if (state.mode == MediaMode.AUDIO) {
-                    item("audio-format-controls") {
+                    item("audio-format-controls", contentType = "audio-format-controls") {
                         Surface(
                             shape=QuietTheme.shapes.card,
                             color=MaterialTheme.colorScheme.surfaceContainerLow
@@ -498,10 +499,10 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
 
-                if (choiceRows.isNotEmpty()) item("media-quality-header") {
+                if (choiceRows.isNotEmpty()) item("media-quality-header", contentType = "section-header") {
                     Text(stringResource(R.string.media_select_quality),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                 }
-                val isUnprobedExtractor = asset.extractor in setOf("DirectMedia", "Html5")
+                val isUnprobedExtractor = asset.extractor in UNPROBED_EXTRACTORS
 
                 items(
                     choiceRows,
@@ -550,7 +551,7 @@ private val IMAGE_DIRECT_MODES = listOf(
             }
 
             if (state.asset != null && state.choices.isNotEmpty() && state.selectedKey == null) {
-                item("choose-quality-hint") {
+                item("choose-quality-hint", contentType = "notice") {
                     Text(stringResource(R.string.media_choose_quality_hint),
                         style=QuietTheme.typography.bodyMedium,
                         color=MaterialTheme.colorScheme.primary)
@@ -689,6 +690,7 @@ private fun MediaArtwork(url:String,title:String) {
             url.contains("instagram", ignoreCase = true) || url.contains("cdninstagram", ignoreCase = true) -> "https://www.instagram.com/"
             url.contains("fbcdn", ignoreCase = true) || url.contains("facebook", ignoreCase = true) -> "https://www.facebook.com/"
             url.contains("twimg", ignoreCase = true) -> "https://x.com/"
+            url.contains("licdn", ignoreCase = true) -> "https://www.linkedin.com/"
             else -> null
         }
         ImageRequest.Builder(context)
@@ -723,15 +725,19 @@ private fun formatDuration(totalSeconds: Int): String {
     val hrs = totalSeconds / 3600
     val mins = (totalSeconds % 3600) / 60
     val secs = totalSeconds % 60
-    return if (hrs > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hrs, mins, secs)
+    val raw = if (hrs > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hrs, mins, secs)
     else String.format(Locale.ROOT, "%02d:%02d", mins, secs)
+    return "⁦$raw⁩"
 }
 
-private fun mediaBytes(bytes:Long):String=when {
-    bytes>=1073741824L -> String.format(Locale.ROOT,"%.2f GiB",bytes/1073741824.0)
-    bytes>=1048576L -> String.format(Locale.ROOT,"%.1f MiB",bytes/1048576.0)
-    bytes>=1024L -> String.format(Locale.ROOT,"%.0f KiB",bytes/1024.0)
-    else -> "$bytes B"
+private fun mediaBytes(bytes:Long):String {
+    val raw = when {
+        bytes>=1073741824L -> String.format(Locale.ROOT,"%.2f GiB",bytes/1073741824.0)
+        bytes>=1048576L -> String.format(Locale.ROOT,"%.1f MiB",bytes/1048576.0)
+        bytes>=1024L -> String.format(Locale.ROOT,"%.0f KiB",bytes/1024.0)
+        else -> "$bytes B"
+    }
+    return "⁦$raw⁩"
 }
 
 @Composable private fun mediaError(code:String):String=stringResource(userMessageResource(code))

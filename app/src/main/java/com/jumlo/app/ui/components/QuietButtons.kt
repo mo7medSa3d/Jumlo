@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import com.jumlo.app.ui.icons.Icons
@@ -192,7 +193,7 @@ fun QuietSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 50.dp)
-            .then(if (onClickBar != null) Modifier.clickable(role = Role.Button, onClick = onClickBar) else Modifier),
+            .then(if (onClickBar != null) Modifier.clip(QuietTheme.shapes.inputField).clickable(role = Role.Button, onClick = onClickBar) else Modifier),
         shape = QuietTheme.shapes.inputField,
         color = pillars.cardSurface,
         shadowElevation = 0.dp
@@ -261,6 +262,7 @@ fun QuietCheckbox(
     Box(
         modifier = modifier.pressFeedback()
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .clip(CircleShape)
             .toggleable(checked, role = Role.Checkbox, onValueChange = onCheckedChange),
         contentAlignment = Alignment.Center
     ) {

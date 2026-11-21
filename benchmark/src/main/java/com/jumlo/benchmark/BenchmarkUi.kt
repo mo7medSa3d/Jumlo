@@ -91,7 +91,7 @@ internal class BenchmarkUi(private val device:UiDevice) {
         dismissOnboarding()
         await(description("nav_files"),"Files navigation is unavailable").click()
         scrollToTop()
-        await(text("ui_outputs"),"Files Results section is unavailable").click()
+        device.findObject(description("ui_outputs"))?.click()
         await(description("ui_search_files"),"Files search is unavailable").text="jumlo-benchmark-"
         device.waitForIdle()
         device.findObject(text("ui_all"))?.click()

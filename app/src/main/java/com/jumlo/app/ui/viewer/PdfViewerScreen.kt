@@ -212,7 +212,7 @@ private fun PdfViewerContent(
     }
     Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {
         if (document == null) {
-            Box(Modifier.fillMaxSize().clickable { wake() }) {
+            Box(Modifier.fillMaxSize().clickable { wake() }, contentAlignment = Alignment.Center) {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
                     val currentFailure = failure
                     if (currentFailure == null) {
@@ -372,7 +372,7 @@ private fun SearchSheet(
                 TextButton(onClick = { onSearch(searchText) }, enabled = !busy && (searchText.isNotBlank() || results.isNotEmpty()), modifier = Modifier.heightIn(min = 48.dp)) { Text(if (busy) stringResource(R.string.reader_loading) else stringResource(R.string.reader_menu_search)) }
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 240.dp).padding(horizontal = 20.dp, vertical = 4.dp)) {
-                if (results.isEmpty() && !busy) item("empty") {
+                if (results.isEmpty() && !busy) item("empty", contentType = "empty") {
                     Text(stringResource(R.string.reader_search_no_results), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
                 items(results, key = { it }, contentType = { "search-result" }) { page ->

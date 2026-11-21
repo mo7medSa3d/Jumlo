@@ -30,6 +30,7 @@ object Html5MediaDiscovery {
     private val htmlEntity = Regex("""&(#x[0-9a-fA-F]{1,8}|#[0-9]{1,8}|amp|quot|apos|lt|gt);""")
     private val metaTypes = setOf("og:video", "og:video:url", "og:video:secure_url", "og:audio",
         "og:audio:url", "twitter:player:stream")
+    private val thumbnailMetaTypes = setOf("og:image", "og:image:secure_url")
 
     fun discover(pageUrl: String, html: String, allowHttp: Boolean = false): List<Source> {
         require(html.length <= 262144) { "MEDIA_PAGE_TOO_LARGE" }
@@ -83,7 +84,7 @@ object Html5MediaDiscovery {
         for (match in tag.findAll(html).take(256)) {
             if (!match.groupValues[1].equals("meta", true)) continue
             val a = attributes(match.value)
-            if (a["property"]?.lowercase(Locale.ROOT) !in setOf("og:image", "og:image:secure_url") &&
+            if (a["property"]?.lowercase(Locale.ROOT) !in thumbnailMetaTypes &&
                 a["name"]?.lowercase(Locale.ROOT) != "twitter:image") continue
             val resolved = runCatching { base.resolve(URI(unescape(a["content"].orEmpty()))).toString() }.getOrNull() ?: continue
             val uri = runCatching { HttpPolicy.url(resolved) }.getOrNull() ?: continue
@@ -130,7 +131,7 @@ object Html5MediaDiscovery {
         val start = tag.indexOfFirst { it.isWhitespace() }
         if (start == -1) return emptyMap()
         return attr.findAll(tag.substring(start)).take(32).associate { match ->
-            match.groupValues[1].lowercase(Locale.ROOT) to (match.groupValues.drop(2).firstOrNull { it.isNotEmpty() } ?: "")
+            match.groupValues[1].lowercase(Locale.ROOT) to match.groupValues[2].ifEmpty { match.groupValues[3].ifEmpty { match.groupValues[4] } }
         }
     }
 

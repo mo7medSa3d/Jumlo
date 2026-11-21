@@ -7,6 +7,7 @@ import com.jumlo.app.core.office.OfficeTextSpan
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import java.text.Normalizer
 import com.tom_roush.pdfbox.text.TextPosition
 import java.io.File
 import java.io.IOException
@@ -15,6 +16,9 @@ import kotlin.math.roundToInt
 
 /** Page-at-a-time extraction keeps paragraph separators and fails before materializing unbounded text. */
 object PdfPageText {
+    private val ZERO_WIDTH_REGEX = Regex("[\u200B-\u200D\uFEFF]")
+    private val TRAILING_SPACES_REGEX = Regex("[ \t]+\n")
+
     fun open(file: File): PDDocument {
         val doc = try { PdfBoxBackend.open(file, null) }
         catch (error: InvalidPasswordException) { throw IllegalArgumentException("PDF_ENCRYPTED", error) }
@@ -85,6 +89,19 @@ object PdfPageText {
             paragraphEnd = "\n\n"
         }
         stripper.writeText(doc, bounded)
-        return result.toString() to spans
+        return cleanExtractedText(result.toString()) to spans
+    }
+
+    /** Normalize Arabic/Unicode presentation forms (U+FB50..U+FEFF) into standard logical characters
+     *  and strip control/replacement artifacts so extracted Arabic and multilingual text stays readable. */
+    internal fun cleanExtractedText(raw: String): String {
+        if (raw.isBlank()) return ""
+        val normalized = Normalizer.normalize(raw, Normalizer.Form.NFKC)
+        return normalized
+            .replace("\uFFFD", "")
+            .replace("\u00AD", "")
+            .replace(ZERO_WIDTH_REGEX, "")
+            .replace(TRAILING_SPACES_REGEX, "\n")
+            .trim()
     }
 }

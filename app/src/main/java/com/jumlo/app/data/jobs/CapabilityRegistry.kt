@@ -33,7 +33,7 @@ object CapabilityRegistry {
         UtilityTool("img_join", "img_join", PillarCategory.IMAGES, "Join / Collage", "دمج الصور", "Build beautiful collages in minutes", "أنشئ كولاجات جميلة في دقائق", "grid_view"),
 
         // Download Tools
-        UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Download", "تنزيل", "Download video and audio from the platforms you love", "نزّل الفيديو والصوت من المنصات التي تحبها", "download"),
+        UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Download", "تنزيل", "", "", "download"),
         UtilityTool("dl_02", "add_single_url", PillarCategory.DOWNLOADS, "New Direct Download", "تنزيل مباشر وGoogle Drive", "Grab any direct file or Drive link, fast", "احصل على أي ملف مباشر أو رابط Drive بسرعة", "add_link"),
         UtilityTool("dl_03", "batch_url_intake", PillarCategory.DOWNLOADS, "Batch URL Intake", "إدخال دفعة روابط", "Paste a whole list of links — we'll handle them all", "الصق قائمة روابط كاملة — وسنتولى الباقي", "download"),
 
