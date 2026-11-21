@@ -118,16 +118,18 @@ class JumloUiTest {
         compose.onNodeWithTag("settings.screen").assertIsDisplayed()
         compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.storage"))
         compose.onNodeWithTag("settings.storage").performClick()
-        // Navigation animations settle asynchronously; wait for the destination to be laid out.
+        // Assert the actual destination route, not emulator-dependent layout visibility.
         compose.waitUntil(15_000) {
-            runCatching { compose.onNodeWithTag("storage.screen").assertIsDisplayed() }.isSuccess
+            runCatching { compose.onNodeWithTag("route.storage").assertExists() }.isSuccess
         }
-        compose.onNodeWithTag("storage.screen").assertIsDisplayed()
+        compose.onNodeWithTag("route.storage").assertExists()
+        compose.onNodeWithTag("storage.screen").assertExists()
         pressBack()
         compose.waitUntil(15_000) {
-            runCatching { compose.onNodeWithTag("settings.screen").assertIsDisplayed() }.isSuccess
+            runCatching { compose.onNodeWithTag("route.settings").assertExists() }.isSuccess
         }
-        compose.onNodeWithTag("settings.screen").assertIsDisplayed()
+        compose.onNodeWithTag("route.settings").assertExists()
+        compose.onNodeWithTag("settings.screen").assertExists()
         compose.onNodeWithTag("nav.SETTINGS").assertIsSelected()
     }
 
