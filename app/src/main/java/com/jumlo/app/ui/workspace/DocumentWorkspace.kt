@@ -33,11 +33,11 @@ import kotlinx.coroutines.CancellationException
     val pdfs=remember(sources) { sources.filter { it.mimeType=="application/pdf" } }
     val source=remember(pdfs,selected) { pdfs.firstOrNull {it.id==selected} ?: pdfs.firstOrNull() }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.fillMaxWidth().padding(horizontal=20.dp))
+        QuietTonalButton(stringResource(R.string.import_pdf_single),onImport,Modifier.fillMaxWidth().padding(horizontal=20.dp))
         if(pdfs.size>1) LazyRow(contentPadding=PaddingValues(horizontal=20.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             items(pdfs,key={it.id},contentType={"pdf-chip"}) { item -> QuietChip(item.id==source?.id,{selected=item.id},item.displayName) }
         }
-        if(source==null) QuietStateCard(stringResource(R.string.ui_choose_inputs),stringResource(R.string.ui_choose_inputs_body),stringResource(R.string.import_device_files),onImport,modifier=Modifier.padding(20.dp))
+        if(source==null) QuietStateCard(stringResource(R.string.ui_choose_pdf_single),stringResource(R.string.ui_choose_pdf_single_body),stringResource(R.string.import_pdf_single),onImport,modifier=Modifier.padding(20.dp))
         else {
             var uri by remember(source.id) { mutableStateOf<String?>(null) }
             var error by remember(source.id) { mutableStateOf<String?>(null) }

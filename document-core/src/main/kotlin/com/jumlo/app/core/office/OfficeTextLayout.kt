@@ -1,7 +1,12 @@
 package com.jumlo.app.core.office
 
 data class OfficeTextParagraph(val text: String, val headingLevel: Int = 0)
-data class OfficeTextPage(val paragraphs: List<OfficeTextParagraph>) {
+data class OfficeTextPage(
+    val paragraphs: List<OfficeTextParagraph>,
+    val pageImageJpeg: ByteArray? = null,
+    val imageWidthPt: Double = 0.0,
+    val imageHeightPt: Double = 0.0
+) {
     val isBlank: Boolean get() = paragraphs.all { it.text.isBlank() }
 
     companion object {

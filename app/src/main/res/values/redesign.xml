@@ -1,7 +1,7 @@
 <resources>
     <string name="redesign_download_hero">Download Any Media &amp; Files</string>
     <string name="redesign_download_subtitle">Fast video and audio from TikTok, YouTube, Instagram, Facebook, LinkedIn, X, and direct links.</string>
-    <string name="redesign_link_hint">Paste link (TikTok, YouTube, Instagram, Facebook, LinkedIn, direct)…</string>
+    <string name="redesign_link_hint">Paste link</string>
     <string name="redesign_paste_suggestion">Paste copied link</string>
     <string name="redesign_ready_file">Ready to save</string>
     <string name="redesign_download_retry_hint">Check the link and try again.</string>

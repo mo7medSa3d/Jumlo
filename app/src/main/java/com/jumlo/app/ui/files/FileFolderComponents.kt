@@ -34,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +49,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.jumlo.app.R
+import androidx.compose.foundation.shape.CircleShape
+import com.jumlo.app.ui.icons.rounded.Search
 import com.jumlo.app.model.FileFolder
 import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.ui.icons.Icons
@@ -204,68 +205,108 @@ fun FolderBreadcrumbBar(
     dragState: FileDragDropState,
     onBackToRoot: () -> Unit,
     onOpenFolderActions: (() -> Unit)? = null,
+    onCreateSubfolder: (() -> Unit)? = null,
+    onImport: (() -> Unit)? = null,
+    onToggleSearch: (() -> Unit)? = null,
+    onToggleSelect: (() -> Unit)? = null,
+    selecting: Boolean = false,
+    onSelectAll: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
-    val pillars = QuietTheme.pillars
     val isRootDropHovered = dragState.isDragging && dragState.hoveredTargetId == ROOT_DROP_TARGET_ID
 
-    Surface(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .fileDropTarget(ROOT_DROP_TARGET_ID, dragState),
-        shape = QuietTheme.shapes.card,
-        color = if (isRootDropHovered) colors.primaryContainer else pillars.cardSurface,
-        border = BorderStroke(
-            width = if (isRootDropHovered) 2.dp else 1.dp,
-            color = if (isRootDropHovered) colors.primary else pillars.cardBorder
-        )
+            .fileDropTarget(ROOT_DROP_TARGET_ID, dragState)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Surface(
+            onClick = onBackToRoot,
+            shape = CircleShape,
+            color = if (isRootDropHovered) colors.primaryContainer else colors.surfaceContainer,
+            border = if (isRootDropHovered) BorderStroke(1.5.dp, colors.primary) else null,
+            modifier = Modifier.size(40.dp)
         ) {
-            IconButton(
-                onClick = onBackToRoot,
-                modifier = Modifier.size(48.dp)
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = stringResource(R.string.files_folder_all_files),
-                    tint = colors.primary
+                    tint = colors.primary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = if (isRootDropHovered) stringResource(R.string.files_folder_drop_to_root) else folder.name,
-                    style = QuietTheme.typography.sectionTitle.copy(textDirection = TextDirection.Content),
-                    color = if (isRootDropHovered) colors.onPrimaryContainer else colors.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.semantics { heading() }
-                )
-                Text(
-                    text = if (isRootDropHovered) stringResource(R.string.files_folder_all_files)
-                    else if (itemCount == 0) stringResource(R.string.files_folder_empty_short)
-                    else stringResource(R.string.files_folder_count_items, itemCount),
-                    style = QuietTheme.typography.metadata,
-                    color = if (isRootDropHovered) colors.primary else colors.onSurfaceVariant
-                )
-            }
-            if (onOpenFolderActions != null) {
-                IconButton(
-                    onClick = onOpenFolderActions,
-                    modifier = Modifier.size(48.dp)
-                ) {
+        }
+        Text(
+            text = if (isRootDropHovered) stringResource(R.string.files_folder_drop_to_root) else folder.name,
+            style = QuietTheme.typography.sectionTitle.copy(textDirection = TextDirection.Content),
+            color = if (isRootDropHovered) colors.primary else colors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).semantics { heading() }
+        )
+        if (onCreateSubfolder != null) {
+            Surface(
+                onClick = onCreateSubfolder,
+                shape = CircleShape,
+                color = colors.surfaceContainer,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.files_folder_actions_title),
-                        tint = colors.primary
+                        imageVector = Icons.Rounded.Folder,
+                        contentDescription = stringResource(R.string.files_folder_create_title),
+                        tint = colors.primary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
+            }
+        }
+        if (onImport != null) {
+            Surface(
+                onClick = onImport,
+                shape = CircleShape,
+                color = colors.primary,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = stringResource(R.string.import_device_files),
+                        tint = colors.onPrimary,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+            }
+        }
+        if (onToggleSearch != null) {
+            Surface(
+                onClick = onToggleSearch,
+                shape = CircleShape,
+                color = colors.surfaceContainer,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = stringResource(R.string.ui_search_files),
+                        tint = colors.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+        if (selecting && onSelectAll != null) {
+            TextButton(onClick = onSelectAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text(stringResource(R.string.redesign_select_all), style = QuietTheme.typography.metadataStrong)
+            }
+        }
+        if (onToggleSelect != null) {
+            TextButton(onClick = onToggleSelect, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                Text(stringResource(if (selecting) R.string.action_cancel else R.string.ui_select_files), style = QuietTheme.typography.metadataStrong)
             }
         }
     }
@@ -283,7 +324,9 @@ fun FolderActionsSheet(
     onCompressImages: () -> Unit,
     onShareAll: () -> Unit,
     onRename: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isLocked: Boolean = false,
+    onToggleLock: (() -> Unit)? = null
 ) {
     val pdfs = remember(folderOutputs) { folderOutputs.filter { it.mimeType == "application/pdf" } }
     val images = remember(folderOutputs) { folderOutputs.filter { it.mimeType.startsWith("image/") } }

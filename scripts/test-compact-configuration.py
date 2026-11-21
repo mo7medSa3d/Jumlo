@@ -25,9 +25,9 @@ class CompactConfigurationTests(unittest.TestCase):
 
     def test_full_media_compact_and_release_tasks_enforce_size_limit(self):
         self.assertIn('tasks.register("verifyCompactApkSize")', GRADLE)
-        self.assertIn('dependsOn("assembleCompact")', GRADLE)
+        self.assertIn('dependsOn("assembleDirectCompact")', GRADLE)
         self.assertIn('tasks.register("verifyReleaseApkSize")', GRADLE)
-        self.assertIn('dependsOn("assembleRelease")', GRADLE)
+        self.assertIn('dependsOn("assembleDirectRelease")', GRADLE)
         self.assertIn('maxFullMediaApkBytes = 60_000_000L', GRADLE)
         self.assertEqual(2, GRADLE.count('check(apk.length() <= maxFullMediaApkBytes)'))
         # Correctness gates retained in the release size task.

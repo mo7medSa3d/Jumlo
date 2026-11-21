@@ -76,14 +76,14 @@ private data class ToolSection(val key: String, val titleEn: String, val titleAr
 private val toolSections = listOf(
     ToolSection("scan", "Scan & Capture", "المسح والالتقاط", setOf("scan_doc")),
     ToolSection("organize", "Organize PDF", "تنظيم PDF",
-        setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop")),
+        setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop", "pdf_nup")),
     ToolSection("convert", "Convert", "التحويل",
-        setOf("pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_ocr")),
+        setOf("pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_long_image", "pdf_ocr")),
     ToolSection("edit", "Edit & Sign", "التحرير والتوقيع",
         setOf("pdf_signature", "pdf_stamp")),
     ToolSection("optimize", "Optimize", "التحسين",
         setOf("pdf_compress", "img_02", "img_03", "img_04", "img_join", "img_watermark")),
-    ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect")),
+    ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect", "pdf_privacy_redact")),
     ToolSection("download", "Download", "التنزيل", setOf("dl_media")),
     ToolSection("files", "Files", "الملفات",
         setOf("file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
@@ -197,13 +197,10 @@ internal fun ToolsCatalogue(
             modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp,
                 bottom = QuietTheme.spacing.listBottomBuffer),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item("search", span = { GridItemSpan(maxLineSpan) }, contentType = "search") {
-                QuietSearchBar(search, stringResource(R.string.neon_tools_search),
-                    onSearch, { onSearch("") }, modifier=Modifier.testTag("tools.search"))
-            }
+
             if (search.isBlank() && availableSections.isNotEmpty()) {
                 item("category-chips", span = { GridItemSpan(maxLineSpan) }, contentType = "category-chips") {
                     val pillars = QuietTheme.pillars
@@ -438,12 +435,15 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "pdf_04" -> "Organize pages" to "ترتيب الصفحات"
         "pdf_05" -> "Split" to "تقسيم"
         "pdf_06" -> "Extract pages" to "استخراج صفحات"
-        "pdf_07" -> "PDF to images" to "PDF إلى صور"
-        "pdf_to_docx" -> "PDF to Word" to "PDF إلى Word"
+        "pdf_07" -> "To Images" to "إلى صور"
+        "pdf_long_image" -> "Long Image" to "صورة طويلة"
+        "pdf_to_docx" -> "To Word" to "إلى Word"
         "pdf_to_pptx" -> "PDF to PowerPoint" to "PDF إلى PowerPoint"
-        "pdf_ocr" -> "OCR" to "استخراج النص"
+        "pdf_ocr" -> "Extract Text" to "استخراج النص"
         "pdf_compress" -> "Compress" to "ضغط"
-        "pdf_protect" -> "Password" to "كلمة المرور"
+        "pdf_protect" -> "Lock" to "قفل"
+        "pdf_nup" -> "2/4 per page" to "طباعة 2/4 في 1"
+        "pdf_privacy_redact" -> "Redact" to "طمس البيانات"
         "pdf_stamp" -> "Watermark" to "علامة مائية"
         "pdf_signature" -> "Sign" to "توقيع"
         "pdf_crop" -> "Crop pages" to "قص الصفحات"

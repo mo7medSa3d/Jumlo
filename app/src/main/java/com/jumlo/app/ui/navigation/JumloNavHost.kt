@@ -68,7 +68,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
 private val ROOT_ROUTES = setOf("home", "tools", "files", "settings")
-private val DOCK_CHILD_ROUTES = setOf("downloads", "workspace", "activity")
 private val DROP_TARGET_ROUTES = setOf("files", "workspace")
 private val MEDIA_WORKSPACE_TOOLS = setOf("dl_media", "dl_02")
 
@@ -312,8 +311,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==Activity.RESULT_OK) collectProviderIntake(result.data)?.let { viewModel.intake(it, attachToWorkspace=true) }
     }
+    var pendingImportFolderId by rememberSaveable { mutableStateOf<String?>(null) }
     val libraryPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if(result.resultCode==Activity.RESULT_OK) collectProviderIntake(result.data)?.let { viewModel.intake(it, attachToWorkspace=false) }
+        val targetFolder = pendingImportFolderId
+        pendingImportFolderId = null
+        if(result.resultCode==Activity.RESULT_OK) collectProviderIntake(result.data)?.let { viewModel.importToLibrary(it, targetFolderId = targetFolder) }
     }
     val printPicker=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==Activity.RESULT_OK) collectProviderIntake(result.data)?.let(viewModel::importForPrint)
@@ -347,10 +349,17 @@ fun JumloNavHost(viewModel:AppViewModel) {
         viewModel.exportErrorLog(if(result.resultCode==Activity.RESULT_OK) result.data?.data?.toString() else null)
     }
     fun importFiles() {
-        val mime=when(form.toolId) { "pdf_02","img_01","img_02","img_03","img_04"->"image/*";"pdf_01","pdf_03","pdf_07","pdf_to_docx","pdf_to_pptx","pdf_compress","pdf_ocr"->"application/pdf";"file_08"->"application/zip";else->"*/*" }
-        picker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=mime;putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
+        val spec = com.jumlo.app.ui.workspace.ToolInputPolicy.resolve(form.toolId, form)
+        picker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = if (spec.mimeTypes.size == 1) spec.mimeTypes.first() else "*/*"
+            if (spec.mimeTypes.size > 1) putExtra(Intent.EXTRA_MIME_TYPES, spec.mimeTypes.toTypedArray())
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, spec.allowMultiple)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        })
     }
-    fun importLibraryFiles() {
+    fun importLibraryFiles(targetFolderId:String? = null) {
+        pendingImportFolderId = targetFolderId
         libraryPicker.safeLaunch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type="*/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) })
     }
     fun pickFolder(initial:String?=null) {
@@ -403,8 +412,9 @@ fun JumloNavHost(viewModel:AppViewModel) {
 
     @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools") {
         var scanPublishing by remember(entryId) { mutableStateOf(false) }
+        var scannedOutput by remember(entryId) { mutableStateOf<OutputRecord?>(null) }
         val root = shellRoute in ROOT_ROUTES
-        val showDock = root || shellRoute in DOCK_CHILD_ROUTES
+        val showDock = root
         val headerToolId=entryToolId ?: form.toolId
         val headerTool=remember(shellRoute, headerToolId) {
             if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null
@@ -443,7 +453,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         // Every tool screen shows its benefit subtitle and its own
                         // pillar family color; previously the subtitle was dropped
                         // and every tool inherited the PDF pillar colors.
-                        subtitle=if(shellRoute=="workspace") headerTool?.let {subtitle(it,settings.language)} else null,
+                        subtitle=if(shellRoute=="workspace") headerTool?.let {subtitle(it,settings.language).takeIf { s -> s.isNotBlank() }} else null,
                         pillar=if(shellRoute=="workspace") headerTool?.pillar ?: com.jumlo.app.model.PillarCategory.PDF else com.jumlo.app.model.PillarCategory.PDF,
                         onBack=::goBack,
                         toolId=when(shellRoute) { "workspace" -> headerToolId; "scan" -> "scan_doc"; else -> null }
@@ -466,7 +476,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                             "tools" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool)
                             "downloads" -> com.jumlo.app.ui.downloads.DownloadsScreen(viewModel,::openTool,{selectedJob=it;navigateTo("activity")})
                             "files" -> com.jumlo.app.ui.files.FilesScreen(viewModel,
-                                ::importLibraryFiles, {pickFolder()}, ::openSavedFolder,
+                                {importLibraryFiles(null)}, {pickFolder()}, ::openSavedFolder,
                                 {openOutput(it)},
                                 {launchExternal(it.uri,it.mimeType,true)}, ::exportOutput,
                                 {record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },
@@ -481,7 +491,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 {chosen,toolId->viewModel.prepareOutputWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 {chosen,toolId->viewModel.prepareSourceBatchWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 onPrint=viewModel::printOutput,onPrintSource={viewModel.printSource(it)},
-                                onChangeSaveFolder=::pickDownloadDestination,onStorage={navigateTo("storage")})
+                                onChangeSaveFolder=::pickDownloadDestination,onStorage={navigateTo("storage")},onImportToFolder={importLibraryFiles(it)})
                             "print" -> com.jumlo.app.printing.PrintScreen(
                                 source=printSource,onBack=::goBack,onPickDocument=::importPrintDocument,
                                 modifier=Modifier.padding(bottom=QuietTheme.spacing.listBottomBuffer))
@@ -501,11 +511,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     }
                                 } },
                                 onScannedPdf={file -> scanPublishing=true; viewModel.publishScannedPdf(file,onFinished={scanPublishing=false}) { output ->
-                                    // Publication may finish after the user has already left Scan.
                                     if(navController.currentBackStackEntry?.id==entryId && navController.currentDestination?.hasRoute<ScanRoute>()==true) {
-                                        navController.navigate(ViewerRoute(output.uri,output.displayName,returnTab=transitionOrigin)) {
-                                            popUpTo<ScanRoute> { inclusive=true }
-                                        }
+                                        scannedOutput = output
                                     }
                                 } }, onBack=::goBack
                             )
@@ -522,6 +529,72 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 else com.jumlo.app.ui.workspace.WorkspaceScreen(viewModel,form,imported,busy,urls,reduceMotion,::importFiles,{photos.safeLaunch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))},onPrintPages={sourceId,pages->viewModel.printSource(sourceId,pages)},onBack=::goBack) {viewModel.submit {openCompletedJob(it)}}
                             }
                             "activity" -> com.jumlo.app.ui.downloads.ActivityScreen(viewModel,jobId,{openOutput(it)},{launchExternal(it.uri,it.mimeType,true)},::exportOutput,{record->viewModel.prepareOutputWorkflow(OutputWorkflowPolicy.reuseTool(record.mimeType),listOf(record)) {navigateTo("workspace")} },{selectedJob=null;viewModel.allowNewRun();navigateTo("workspace")},onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
+                        }
+                        scannedOutput?.let { output ->
+                            ModalBottomSheet(
+                                onDismissRequest = {
+                                    scannedOutput = null
+                                    navController.navigate(ViewerRoute(output.uri, output.displayName, returnTab = transitionOrigin)) {
+                                        popUpTo<ScanRoute> { inclusive = true }
+                                    }
+                                },
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            ) {
+                                Column(
+                                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).navigationBarsPadding(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Text(stringResource(R.string.scan_ready_title), style = QuietTheme.typography.sectionTitle)
+                                    Text(output.displayName, style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        QuietPrimaryButton(
+                                            stringResource(R.string.scan_next_view_sign),
+                                            onClick = {
+                                                scannedOutput = null
+                                                navController.navigate(ViewerRoute(output.uri, output.displayName, returnTab = transitionOrigin)) {
+                                                    popUpTo<ScanRoute> { inclusive = true }
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        QuietTonalButton(
+                                            stringResource(R.string.scan_next_ocr),
+                                            onClick = {
+                                                scannedOutput = null
+                                                viewModel.prepareOutputWorkflow("pdf_ocr", listOf(output)) {
+                                                    navController.popBackStack()
+                                                    navigateTo("workspace")
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        QuietTonalButton(
+                                            stringResource(R.string.scan_next_compress),
+                                            onClick = {
+                                                scannedOutput = null
+                                                viewModel.prepareOutputWorkflow("pdf_compress", listOf(output)) {
+                                                    navController.popBackStack()
+                                                    navigateTo("workspace")
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        QuietTonalButton(
+                                            stringResource(R.string.scan_next_redact),
+                                            onClick = {
+                                                scannedOutput = null
+                                                viewModel.prepareOutputWorkflow("pdf_privacy_redact", listOf(output)) {
+                                                    navController.popBackStack()
+                                                    navigateTo("workspace")
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                     }

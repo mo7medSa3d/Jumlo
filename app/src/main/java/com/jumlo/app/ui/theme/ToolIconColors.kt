@@ -21,8 +21,8 @@ object ToolIconColors {
     private val ORDERED = listOf(
         // PDF workspace, catalogue order.
         "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_ocr", "pdf_02",
-        "pdf_03", "pdf_05", "pdf_04", "pdf_compress", "pdf_07", "pdf_signature",
-        "pdf_06", "pdf_crop", "pdf_stamp", "pdf_protect", "pdf_01",
+        "pdf_03", "pdf_05", "pdf_04", "pdf_compress", "pdf_07", "pdf_long_image", "pdf_signature",
+        "pdf_06", "pdf_crop", "pdf_stamp", "pdf_protect", "pdf_nup", "pdf_privacy_redact", "pdf_01",
         // Scanner.
         "scan_doc",
         // Images workspace.

@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -64,7 +65,12 @@ import com.jumlo.app.R
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.pdf.PdfPageText
 import com.jumlo.app.data.pdf.PdfReaderSession
+import com.jumlo.app.core.PdfMarkupItem
+import com.jumlo.app.core.PdfMarkupTool
+import com.jumlo.app.core.UndoRedoStack
 import com.jumlo.app.data.pdf.ReaderPositionStore
+import com.jumlo.app.data.pdf.SavedSignature
+import com.jumlo.app.data.pdf.SavedSignatureStore
 import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
@@ -98,9 +104,10 @@ fun PdfViewerScreen(
     onBack: () -> Unit,
     onOpenFile: () -> Unit,
     onPrint: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSaveMarkup: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null
 ) {
-    key(uri) { PdfViewerContent(uri, title, onBack, onOpenFile, onPrint, modifier) }
+    key(uri) { PdfViewerContent(uri, title, onBack, onOpenFile, onPrint, modifier, onSaveMarkup) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,7 +118,8 @@ private fun PdfViewerContent(
     onBack: () -> Unit,
     onOpenFile: () -> Unit,
     onPrint: (String, String) -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
+    onSaveMarkup: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val defaultEdge = with(LocalDensity.current) { 960.dp.roundToPx() }.coerceIn(1280, 1800)
@@ -138,6 +146,22 @@ private fun PdfViewerContent(
     var searchJob by remember { mutableStateOf<Job?>(null) }
     var info by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var infoError by remember { mutableStateOf(false) }
+    var markupMode by rememberSaveable { mutableStateOf(false) }
+    var activeTool by remember { mutableStateOf(PdfMarkupTool.PEN) }
+    var activeColor by remember { mutableStateOf(Color(0xFF2E67FF)) }
+    var markupItems by remember(uri) { mutableStateOf<List<PdfMarkupItem>>(emptyList()) }
+    val history = remember(uri) { UndoRedoStack<PdfMarkupItem>() }
+    var markupSaving by remember { mutableStateOf(false) }
+    var signatureSheetOpen by remember { mutableStateOf(false) }
+    var pendingSignaturePath by remember { mutableStateOf<String?>(null) }
+    var pendingTextPos by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
+    var textInput by remember { mutableStateOf("") }
+    val sigStore = remember(context) { SavedSignatureStore(context) }
+    var savedSignatures by remember(uri) { mutableStateOf(sigStore.list()) }
+    fun commitMarkup(next: List<PdfMarkupItem>) {
+        history.push(markupItems)
+        markupItems = next
+    }
 
     val activity = remember(context) { context.findActivity() }
 
@@ -147,7 +171,7 @@ private fun PdfViewerContent(
         hideJob?.cancel()
         hideJob = scope.launch {
             delay(2000)
-            if (!thumbsOpen && !jumpOpen && !menuOpen && !searchOpen && !infoOpen) chromeVisible = false
+            if (!thumbsOpen && !jumpOpen && !menuOpen && !searchOpen && !infoOpen && !markupMode) chromeVisible = false
         }
     }
     fun toggleChrome() {
@@ -229,7 +253,41 @@ private fun PdfViewerContent(
             LazyColumn(Modifier.fillMaxSize().testTag("pdf.pages").background(MaterialTheme.colorScheme.surfaceContainer), state = list,
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp + navBottom),
                 verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                items(document.pageCount, key = { it }, contentType = { "pdf-page" }) { page -> ReaderPage(document, page, nightMode, defaultEdge, ::toggleChrome) }
+                items(document.pageCount, key = { it }, contentType = { "pdf-page" }) { page ->
+                    val pageMarkup = remember(markupItems, page) { markupItems.filter { it.pageIndex == page } }
+                    ReaderPage(
+                        document = document,
+                        page = page,
+                        dark = nightMode,
+                        defaultEdge = defaultEdge,
+                        onTap = { if (!markupMode) toggleChrome() },
+                        markupEnabled = markupMode,
+                        markupOverlay = {
+                            if (markupMode || pageMarkup.isNotEmpty()) {
+                                PdfMarkupPageLayer(
+                                    pageIndex = page,
+                                    items = pageMarkup,
+                                    activeTool = if (markupMode) activeTool else PdfMarkupTool.NONE,
+                                    activeColor = activeColor,
+                                    pendingSignaturePath = pendingSignaturePath,
+                                    onAddItem = { item -> commitMarkup(markupItems + item) },
+                                    onRequestTextAt = { p, x, y -> pendingTextPos = Triple(p, x, y); textInput = "" },
+                                    onMoveItem = { id, dx, dy ->
+                                        markupItems = markupItems.map { item ->
+                                            if (item.id != id) item else when (item) {
+                                                is PdfMarkupItem.TextBox -> item.copy(normX = (item.normX + dx).coerceIn(0f, 0.92f), normY = (item.normY + dy).coerceIn(0f, 0.94f))
+                                                is PdfMarkupItem.CheckMark -> item.copy(normX = (item.normX + dx).coerceIn(0f, 0.94f), normY = (item.normY + dy).coerceIn(0f, 0.94f))
+                                                is PdfMarkupItem.SavedSignatureStamp -> item.copy(normX = (item.normX + dx).coerceIn(0f, 0.85f), normY = (item.normY + dy).coerceIn(0f, 0.90f))
+                                                else -> item
+                                            }
+                                        }
+                                    },
+                                    onDeleteItem = { id -> commitMarkup(markupItems.filterNot { it.id == id }) }
+                                )
+                            }
+                        }
+                    )
+                }
             }
         }
         // Chrome overlays the document instead of consuming layout space, so pages never get cut off.
@@ -249,6 +307,14 @@ private fun PdfViewerContent(
                         TextButton(onClick = { jumpOpen = true; wake() }, modifier = Modifier.heightIn(min = 48.dp).testTag("pdf.page.indicator")) {
                             Text(stringResource(R.string.reader_page_indicator, if (doc.pageCount > 0) (currentPage + 1).coerceIn(1, doc.pageCount) else 0, doc.pageCount))
                         }
+                        if (onSaveMarkup != null) {
+                            IconButton(
+                                onClick = { markupMode = !markupMode; if (markupMode) chromeVisible = true },
+                                modifier = Modifier.size(48.dp).testTag("pdf.markup.toggle")
+                            ) {
+                                Icon(Icons.Rounded.Edit, stringResource(R.string.markup_toggle), tint = if (markupMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
                         IconButton(onClick = { menuOpen = !menuOpen; wake() }, modifier = Modifier.size(48.dp).testTag("pdf.menu")) {
                             Icon(Icons.Rounded.MoreVert, stringResource(R.string.reader_menu))
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -264,6 +330,37 @@ private fun PdfViewerContent(
                     }
                 }
             }
+        }
+        if (markupMode && document != null && onSaveMarkup != null) {
+            PdfMarkupFloatingBar(
+                activeTool = activeTool,
+                activeColor = activeColor,
+                canUndo = history.canUndo,
+                canRedo = history.canRedo,
+                hasEdits = markupItems.isNotEmpty(),
+                saving = markupSaving,
+                onSelectTool = { t ->
+                    activeTool = t
+                    if (t == PdfMarkupTool.HIGHLIGHTER && activeColor == Color(0xFF2E67FF)) activeColor = Color(0xFFFFD60A)
+                    if (t == PdfMarkupTool.SIGNATURE) signatureSheetOpen = true
+                },
+                onSelectColor = { activeColor = it },
+                onUndo = { history.undo(markupItems)?.let { markupItems = it } },
+                onRedo = { history.redo(markupItems)?.let { markupItems = it } },
+                onSave = {
+                    if (markupItems.isNotEmpty() && !markupSaving) {
+                        markupSaving = true
+                        onSaveMarkup(uri, title, markupItems) {
+                            markupSaving = false
+                            markupItems = emptyList()
+                            history.clear()
+                            markupMode = false
+                        }
+                    }
+                },
+                onClose = { markupMode = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 
@@ -301,6 +398,39 @@ private fun PdfViewerContent(
         }
         if (infoOpen) {
             InfoSheet(info = info, error = infoError, title = title, onDismiss = { infoOpen = false })
+        }
+        if (signatureSheetOpen) {
+            SignaturePadSheet(
+                saved = savedSignatures,
+                onPickSaved = { sig -> pendingSignaturePath = sig.file.absolutePath; signatureSheetOpen = false },
+                onSaveNew = { bytes ->
+                    val saved = runCatching { sigStore.save(bytes) }.getOrNull()
+                    if (saved != null) {
+                        savedSignatures = sigStore.list()
+                        pendingSignaturePath = saved.file.absolutePath
+                    }
+                    signatureSheetOpen = false
+                },
+                onDeleteSaved = { sig -> sigStore.delete(sig.id); savedSignatures = sigStore.list() },
+                onDismiss = { signatureSheetOpen = false }
+            )
+        }
+        pendingTextPos?.let { (pIdx, nx, ny) ->
+            AlertDialog(
+                onDismissRequest = { pendingTextPos = null },
+                title = { Text(stringResource(R.string.markup_tool_text)) },
+                text = { OutlinedTextField(value = textInput, onValueChange = { textInput = it.take(300) }, singleLine = false, maxLines = 4) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val trimmed = textInput.trim()
+                        if (trimmed.isNotEmpty()) {
+                            commitMarkup(markupItems + PdfMarkupItem.TextBox(java.util.UUID.randomUUID().toString(), pIdx, nx, ny, trimmed, activeColor.toArgb()))
+                        }
+                        pendingTextPos = null
+                    }) { Text(stringResource(R.string.action_save)) }
+                },
+                dismissButton = { TextButton(onClick = { pendingTextPos = null }) { Text(stringResource(R.string.action_cancel)) } }
+            )
         }
     }
 }
@@ -372,7 +502,7 @@ private fun SearchSheet(
                 TextButton(onClick = { onSearch(searchText) }, enabled = !busy && (searchText.isNotBlank() || results.isNotEmpty()), modifier = Modifier.heightIn(min = 48.dp)) { Text(if (busy) stringResource(R.string.reader_loading) else stringResource(R.string.reader_menu_search)) }
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 240.dp).padding(horizontal = 20.dp, vertical = 4.dp)) {
-                if (results.isEmpty() && !busy) item("empty", contentType = "empty") {
+                if (results.isEmpty() && !busy && searchText.isNotBlank()) item("empty", contentType = "empty") {
                     Text(stringResource(R.string.reader_search_no_results), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
                 items(results, key = { it }, contentType = { "search-result" }) { page ->
@@ -415,7 +545,7 @@ private val NightModeColorFilter = ColorFilter.colorMatrix(ColorMatrix(floatArra
 )))
 
 @Composable
-private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, defaultEdge: Int, onTap: () -> Unit) {
+private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, defaultEdge: Int, onTap: () -> Unit, markupEnabled: Boolean = false, markupOverlay: @Composable () -> Unit = {}) {
     var frame by remember(document, page) { mutableStateOf<PdfReaderSession.Frame?>(null) }
     var failure by remember(document, page) { mutableStateOf<String?>(null) }
     var pageRetry by remember(document, page) { mutableIntStateOf(0) }
@@ -445,19 +575,20 @@ private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, def
             Box(Modifier.fillMaxWidth().aspectRatio(pageRatio)
                 .clip(QuietTheme.shapes.thumbnail).background(if (dark) Color.Black else Color.White).clipToBounds()
                 .onSizeChanged { viewport = it }.testTag("pdf.page.$page")
-                .pointerInput(page) { detectTapGestures(onTap = { latestOnTap() }, onDoubleTap = { if (scale > 1.01f) reset() else scale = 2.5f }) }
+                .pointerInput(page, markupEnabled) { detectTapGestures(onTap = { latestOnTap() }, onDoubleTap = { if (!markupEnabled) { if (scale > 1.01f) reset() else scale = 2.5f } }) }
                 .semantics {
                     contentDescription = pageLabel
                     stateDescription = "${(scale * 100).toInt()}%"
                     customActions = listOf(CustomAccessibilityAction(fitLabel) { reset(); true })
                 }
-                .transformable(transform, canPan = { scale > 1f }), contentAlignment = Alignment.Center) {
+                .transformable(transform, enabled = !markupEnabled, canPan = { scale > 1f && !markupEnabled }), contentAlignment = Alignment.Center) {
                 frame?.takeUnless { it.bitmap.isRecycled }?.let { rendered ->
                     val imageBitmap = remember(rendered.bitmap) { rendered.bitmap.asImageBitmap() }
                     Image(imageBitmap, null, Modifier.fillMaxSize().testTag("pdf.page.image.$page").graphicsLayer {
                         scaleX = scale; scaleY = scale; translationX = pan.x; translationY = pan.y
                     }, contentScale = ContentScale.Fit, colorFilter = if (dark) NightModeColorFilter else null)
                 }
+                markupOverlay()
                 if (frame == null && failure == null) CircularProgressIndicator(Modifier.size(32.dp))
                 failure?.let {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -35,7 +35,7 @@ data class ExecutionContext(val sources:SourceStore,val outputs:OutputStore,val 
         return when(request.toolId) {
             "pdf_to_docx","pdf_to_pptx" -> office.execute(request,context)
             "office_to_pdf" -> officeToPdf.execute(request,context)
-            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_signature","pdf_protect" -> pdf.execute(request,context)
+            "pdf_02","pdf_07","pdf_03","pdf_04","pdf_05","pdf_06","pdf_crop","pdf_compress","pdf_stamp","pdf_signature","pdf_protect","pdf_nup","pdf_privacy_redact","pdf_long_image" -> pdf.execute(request,context)
             "pdf_ocr" -> ocrWeb.execute(request,context)
             "file_encrypted_zip","file_batch_rename" -> fileExtras.execute(request,context)
             "img_01","img_02","img_03","img_04","img_watermark","img_join" -> images.execute(request,context)

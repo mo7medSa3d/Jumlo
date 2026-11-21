@@ -25,6 +25,7 @@ import com.jumlo.app.R
     code=="PDF_COMPARE_DIFFERENT" -> R.string.pdf_compare_different
     code=="REDACT_PARTIAL" -> R.string.redact_partial
     code=="INVALID_REDACT_REGION" -> R.string.visual_redact_need_region
+    code=="OCR_ARABIC_MODEL_MISSING" -> R.string.msg_ocr_arabic_model_missing
     code=="OCR_MODEL_UNAVAILABLE" -> R.string.rebuild_ocr_model
     code=="OCR_NO_TEXT" -> R.string.rebuild_ocr_empty
     code=="OCR_TEXT_ONLY" -> R.string.rebuild_ocr_text_only
@@ -98,6 +99,9 @@ import com.jumlo.app.R
     code=="UNMETERED_NETWORK_REQUIRED" -> R.string.msg_unmetered_required
     code in setOf("DISK_BUDGET_EXCEEDED","INSUFFICIENT_STORAGE") -> R.string.msg_insufficient_storage
     code=="LOW_MEMORY" -> R.string.msg_low_memory
+    code in setOf("VAULT_UNAVAILABLE","VAULT_NO_BIOMETRIC") -> R.string.msg_vault_unavailable
+    code=="VAULT_AUTH_FAILED" -> R.string.msg_vault_auth_failed
+    code=="REDACT_REGION_REQUIRED" -> R.string.msg_redact_required
     code=="BUNDLE_INCOMPATIBLE_SELECTION" || code=="UNSUPPORTED_OUTPUT_WORKFLOW" -> R.string.files_workflow_incompatible
     code=="OUTPUT_NOT_AVAILABLE" || code=="PUBLICATION_INTEGRITY_ERROR" -> R.string.files_workflow_missing
     code=="BUNDLE_TOO_LARGE" -> R.string.files_workflow_size

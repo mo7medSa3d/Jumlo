@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface

@@ -53,6 +53,15 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     val pillars = QuietTheme.pillars
     val colors = MaterialTheme.colorScheme
     var showConvert by rememberSaveable { mutableStateOf(false) }
+    var homeSearch by rememberSaveable { mutableStateOf("") }
+    val searchResults = remember(homeSearch) {
+        val q = homeSearch.trim()
+        if (q.isEmpty()) emptyList()
+        else CapabilityRegistry.tools.filter { t ->
+            CapabilityRegistry.visible(t.id) && CapabilityRegistry.enabled(t.id) &&
+                (t.titleEn.contains(q, true) || t.titleAr.contains(q, true) || t.subtitleEn.contains(q, true) || t.subtitleAr.contains(q, true))
+        }.take(8)
+    }
     val frequent = remember(settings.rankedToolIds) {
         settings.rankedToolIds.mapNotNull { id ->
             CapabilityRegistry.tools.firstOrNull { it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) }
@@ -60,15 +69,20 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     }
     val active = remember(jobs) { jobs.filter { it.isActive() }.take(2) }
     val recentOutputs = remember(outputs) { outputs.take(6) }
+    val visibleRecent = remember(recentOutputs, settings.outputFolderIds, settings.lockedFolderIds) { recentOutputs.filter { out -> val fid = settings.outputFolderIds[out.id]; fid == null || fid !in settings.lockedFolderIds } }
     val pinnedSet = remember(settings.quickActionIds) { settings.quickActionIds.toSet() }
     val sourceNamesById = remember(sources) { sources.associate { it.id to it.displayName } }
     fun open(id: String) { CapabilityRegistry.tools.firstOrNull { it.id == id }?.let(onTool) }
-    val actions = remember(onScan, onTool) {
+    val actions = remember(onScan, onTool, onTools) {
         listOf(
             Triple(R.string.modern_scan, R.drawable.ic_prism_scan, onScan),
             Triple(R.string.modern_convert, R.drawable.ic_prism_document, { showConvert = true }),
             Triple(R.string.modern_compress, R.drawable.ic_prism_compress, { open("pdf_compress") }),
-            Triple(R.string.modern_download, R.drawable.ic_prism_download, { open("dl_media") })
+            Triple(R.string.modern_download, R.drawable.ic_prism_download, { open("dl_media") }),
+            Triple(R.string.home_quick_id_card, R.drawable.ic_prism_scan, onScan),
+            Triple(R.string.home_quick_ocr, R.drawable.ic_prism_ocr, { open("pdf_ocr") }),
+            Triple(R.string.modern_pdf_word, R.drawable.ic_prism_document, { open("pdf_to_docx") }),
+            Triple(R.string.modern_all_tools, R.drawable.ic_prism_document, onTools)
         )
     }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("home.screen")) {
@@ -78,21 +92,35 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
         val frequentRows = remember(frequent, frequentColumns) { frequent.chunked(frequentColumns) }
         LazyColumn(Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
-            verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item("hero", contentType = "hero") {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            stringResource(R.string.modern_home_title),
-                            style = QuietTheme.typography.screenTitle,
-                            color = colors.onSurface,
-                            modifier = Modifier.semantics { heading() }
-                        )
-                        Text(
-                            stringResource(R.string.modern_home_subtitle),
-                            style = QuietTheme.typography.metadata,
-                            color = colors.onSurfaceVariant
-                        )
+                    QuietSearchBar(
+                        query = homeSearch,
+                        placeholder = stringResource(R.string.neon_tools_search),
+                        onQueryChange = { homeSearch = it },
+                        onClear = { homeSearch = "" },
+                        modifier = Modifier.fillMaxWidth().testTag("home.search")
+                    )
+                    if (homeSearch.isNotBlank()) {
+                        if (searchResults.isEmpty()) {
+                            Text(stringResource(R.string.tools_no_matching), style = QuietTheme.typography.metadata, color = colors.onSurfaceVariant)
+                        } else {
+                            Surface(shape = QuietTheme.shapes.card, color = pillars.cardSurface, modifier = Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    searchResults.forEach { matched ->
+                                        Row(
+                                            Modifier.fillMaxWidth().clip(QuietTheme.shapes.inputField).clickable { homeSearch = ""; onTool(matched) }.padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Text(if (settings.language.isRtl) matched.titleAr else matched.titleEn, style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = colors.onSurface, modifier = Modifier.weight(1f))
+                                            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(16.dp), tint = colors.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     actionRows.forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -101,7 +129,11 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                                     R.string.modern_scan -> "scan" to "scan_doc"
                                     R.string.modern_convert -> "convert" to "pdf_02"
                                     R.string.modern_compress -> "compress" to "pdf_compress"
-                                    else -> "download" to "dl_media"
+                                    R.string.modern_download -> "download" to "dl_media"
+                                    R.string.home_quick_id_card -> "id_card" to "scan_doc"
+                                    R.string.home_quick_ocr -> "ocr" to "pdf_ocr"
+                                    R.string.modern_pdf_word -> "pdf_word" to "pdf_to_docx"
+                                    else -> "all_tools" to "pdf_01"
                                 }
                                 HomeQuickAction(stringResource(label), icon, action,
                                     Modifier.weight(1f).testTag("home.action.$tag"),
@@ -164,11 +196,11 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
             item("recent-files", contentType = "recent-files") {
                 when {
                     outputLoad != DataLoadStatus.READY -> DocumentLoadState(outputLoad, vm::reloadSavedData)
-                    outputs.isEmpty() -> QuietStateCard(stringResource(R.string.modern_recent_empty),
+                    visibleRecent.isEmpty() -> QuietStateCard(stringResource(R.string.modern_recent_empty),
                         stringResource(R.string.modern_recent_empty_body), stringResource(R.string.modern_scan), onScan,
                         icon = Icons.Rounded.DocumentScanner)
                     else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(recentOutputs, key = { it.id }, contentType = { "recent-output" }) { output ->
+                        items(recentOutputs.filter { out -> val fid = settings.outputFolderIds[out.id]; fid == null || fid !in settings.lockedFolderIds }, key = { it.id }, contentType = { "recent-output" }) { output ->
                             Surface(
                                 onClick = { onOutput(output) },
                                 modifier = Modifier.width(156.dp).height(196.dp).pressFeedback(),
@@ -278,7 +310,7 @@ private val ConvertSheetOptions = listOf(
     "pdf_to_pptx" to R.string.modern_pdf_powerpoint,
     "office_to_pdf" to R.string.modern_office_to_pdf,
     "pdf_07" to R.string.modern_pdf_images,
-    "img_04" to R.string.modern_convert_images
+    "img_01" to R.string.modern_convert_images
 )
 
 @Composable private fun HomeQuickAction(
@@ -307,11 +339,11 @@ private val ConvertSheetOptions = listOf(
         Box(
             Modifier
                 .size(54.dp)
-                .clip(QuietTheme.shapes.iconTile)
-                .background(badgeBg),
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(badgeBg.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(painterResource(icon), null, Modifier.size(26.dp), tint = badgeTint)
+            Icon(painterResource(icon), null, Modifier.size(24.dp), tint = badgeBg)
         }
         Text(
             label,

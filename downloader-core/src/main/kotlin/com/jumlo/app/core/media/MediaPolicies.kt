@@ -13,7 +13,7 @@ import kotlin.math.roundToLong
 object MediaCatalog {
     private val idPattern = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")
     private val protocols = setOf("http", "https", "m3u8", "m3u8_native", "http_dash_segments")
-    private val extensions = setOf("mp4", "m4v", "mov", "webm", "mkv", "m4a", "mp3", "ogg", "opus", "flac", "wav", "aac", "ts", "pdf", "jpg", "jpeg", "png", "webp")
+    private val extensions = setOf("mp4", "m4v", "mov", "webm", "mkv", "m4a", "mp3", "ogg", "opus", "flac", "wav", "aac", "ts", "pdf", "jpg", "jpeg", "png", "webp", "zip")
     private val mp4VideoExtensions = setOf("mp4", "m4v", "mov")
     private val mp4AudioExtensions = setOf("m4a", "mp4")
     private val webmAudioExtensions = setOf("webm", "opus", "ogg")
@@ -351,7 +351,7 @@ object MediaArguments {
 object MediaOutputPolicy {
     private val INVALID_NAME_CHARS = Regex("[\\p{Cc}\\p{Cf}/\\\\:*?\"<>|]")
     private val WHITESPACE = Regex("\\s+")
-    private val mime = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "mov" to "video/quicktime", "mkv" to "video/x-matroska", "webm" to "video/webm", "m4a" to "audio/mp4", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "opus" to "audio/ogg", "flac" to "audio/flac", "wav" to "audio/wav", "aac" to "audio/aac", "ts" to "video/mp2t", "pdf" to "application/pdf", "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "png" to "image/png", "webp" to "image/webp")
+    private val mime = mapOf("mp4" to "video/mp4", "m4v" to "video/mp4", "mov" to "video/quicktime", "mkv" to "video/x-matroska", "webm" to "video/webm", "m4a" to "audio/mp4", "mp3" to "audio/mpeg", "ogg" to "audio/ogg", "opus" to "audio/ogg", "flac" to "audio/flac", "wav" to "audio/wav", "aac" to "audio/aac", "ts" to "video/mp2t", "pdf" to "application/pdf", "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "png" to "image/png", "webp" to "image/webp", "zip" to "application/zip")
     private val FRAGMENT_SUFFIX = Regex("^media\\.f[A-Za-z0-9_-]+\\.")
     fun finishedFile(root: File): File {
         val all = root.listFiles()?.filter { it.name.startsWith("media.") && it.extension.lowercase(Locale.ROOT) in mime.keys && it.isFile && it.length() > 0 } ?: emptyList()
@@ -386,6 +386,7 @@ object MediaOutputPolicy {
             "jpg", "jpeg" -> prefix(0xFF, 0xD8, 0xFF)
             "png" -> prefix(0x89, 0x50, 0x4E, 0x47)
             "webp" -> text(0, "RIFF") && text(8, "WEBP")
+            "zip" -> prefix(0x50, 0x4B, 0x03, 0x04)
             else -> false
         }
         require(valid) { "INVALID_MEDIA_CONTAINER" }

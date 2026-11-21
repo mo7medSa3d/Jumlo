@@ -115,7 +115,8 @@ enum class UrlValidationStatus {
 data class FileFolder(
     val id: String,
     val name: String,
-    val createdAtEpochMs: Long = 0L
+    val createdAtEpochMs: Long = 0L,
+    val parentId: String? = null
 )
 
 data class AppSettingsState(
@@ -152,6 +153,7 @@ data class AppSettingsState(
     val mediaServiceToken: String = "",
     /** User-created virtual folders for drag-and-drop organization in Files. */
     val fileFolders: List<FileFolder> = emptyList(),
+    val lockedFolderIds: Set<String> = emptySet(),
     /** Maps outputId -> folderId for outputs organized into virtual folders. */
     val outputFolderIds: Map<String, String> = emptyMap()
 )

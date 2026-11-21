@@ -68,7 +68,8 @@ object PdfPageText {
 
             override fun writeString(text: String, textPositions: MutableList<TextPosition>) {
                 val start = result.length
-                super.writeString(text, textPositions)
+                val cleaned = cleanInlineText(text)
+                if (cleaned.isNotEmpty()) super.writeString(cleaned, textPositions)
                 if (structured && result.length > start && textPositions.isNotEmpty()) {
                     val fonts = textPositions.groupBy { position ->
                         val descriptor = position.font.fontDescriptor
@@ -89,11 +90,19 @@ object PdfPageText {
             paragraphEnd = "\n\n"
         }
         stripper.writeText(doc, bounded)
-        return cleanExtractedText(result.toString()) to spans
+        return (if (structured) result.toString() else cleanExtractedText(result.toString())) to spans
     }
 
     /** Normalize Arabic/Unicode presentation forms (U+FB50..U+FEFF) into standard logical characters
      *  and strip control/replacement artifacts so extracted Arabic and multilingual text stays readable. */
+    private fun cleanInlineText(raw: String): String {
+        if (raw.isEmpty()) return ""
+        return Normalizer.normalize(raw, Normalizer.Form.NFKC)
+            .replace("\uFFFD", "")
+            .replace("\u00AD", "")
+            .replace(ZERO_WIDTH_REGEX, "")
+    }
+
     internal fun cleanExtractedText(raw: String): String {
         if (raw.isBlank()) return ""
         val normalized = Normalizer.normalize(raw, Normalizer.Form.NFKC)

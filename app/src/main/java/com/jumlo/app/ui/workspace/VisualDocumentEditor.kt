@@ -381,10 +381,10 @@ internal fun VisualDocumentEditor(
             if (sourceIsPdf && pageCount > 1) {
                 DocumentPageControls(currentPage, pageCount) { page -> currentPage = page }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = draft.pages == "all", border = null, onClick = {
+                    FilterChip(selected = draft.pages == "all", shape = QuietTheme.shapes.pill, border = null, onClick = {
                         latestEdit { it.copy(pages = "all") }
                     }, label = { Text(stringResource(R.string.visual_apply_all)) })
-                    FilterChip(selected = draft.pages == currentPage.toString(), border = null, onClick = {
+                    FilterChip(selected = draft.pages == currentPage.toString(), shape = QuietTheme.shapes.pill, border = null, onClick = {
                         latestEdit { it.copy(pages = currentPage.toString()) }
                     }, label = { Text(stringResource(R.string.visual_apply_page)) })
                 }
@@ -407,7 +407,7 @@ internal fun VisualDocumentEditor(
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ASPECT_PRESETS.forEach { (label, ratio) ->
-                    FilterChip(selected = lockedAspect == ratio, border = null, onClick = {
+                    FilterChip(selected = lockedAspect == ratio, shape = QuietTheme.shapes.pill, border = null, onClick = {
                         val box = if (ratio == 0f) VisualRect.WHOLE
                         else VisualRect.fitAspect(frame.width, frame.height, sourceCropAspect(ratio, if (tool == "img_03") draft.turns else 0))
                         if (rect != box || lockedAspect != ratio) recordSnapshot()

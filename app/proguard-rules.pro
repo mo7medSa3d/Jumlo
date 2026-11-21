@@ -58,3 +58,9 @@
     public static int d(...);
     public static int i(...);
 }
+
+# Tesseract4Android / Leptonica JNI
+-keep class com.googlecode.tesseract.android.** { *; }
+-keep class com.googlecode.leptonica.android.** { *; }
+-dontwarn com.googlecode.tesseract.android.**
+-dontwarn com.googlecode.leptonica.android.**

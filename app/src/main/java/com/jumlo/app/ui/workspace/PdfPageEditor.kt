@@ -252,22 +252,22 @@ internal fun PdfPageEditor(
             val every=(WorkspaceDraft.normalizeDigits(draft.num1).toIntOrNull() ?: 1).coerceIn(1,minOf(total,1000))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 item(key="each-page",contentType="split-chip") {
-                    FilterChip(border=null, selected=(draft.flag1 && every==1) || (!draft.flag1 && !draft.flag2 && draft.pages.trim().equals("all",true)),onClick={
+                    FilterChip(shape=QuietTheme.shapes.pill,border=null, selected=(draft.flag1 && every==1) || (!draft.flag1 && !draft.flag2 && draft.pages.trim().equals("all",true)),onClick={
                         edit { it.copy(flag1=true,flag2=false,num1="1",pages="all") }
                     },label={Text(stringResource(R.string.jumlo_split_each))})
                 }
                 item(key="boundary-mode",contentType="split-chip") {
-                    FilterChip(boundaryMode,border=null,onClick={
+                    FilterChip(boundaryMode,shape=QuietTheme.shapes.pill,border=null,onClick={
                         edit { it.copy(flag1=false,flag2=true,pages="") }
                     },enabled=total>1,label={Text(stringResource(R.string.jumlo_split_markers))})
                 }
                 item(key="groups",contentType="split-chip") {
-                    FilterChip(draft.flag1 && every>1,border=null,onClick={
+                    FilterChip(draft.flag1 && every>1,shape=QuietTheme.shapes.pill,border=null,onClick={
                         edit { it.copy(flag1=true,flag2=false,num1=minOf(2,total).toString(),pages="all") }
                     },enabled=total>1,label={Text(stringResource(R.string.interactive_split_groups))})
                 }
                 item(key="selected-pages",contentType="split-chip") {
-                    FilterChip(!draft.flag1 && !draft.flag2 && !draft.pages.trim().equals("all",true),border=null,onClick={
+                    FilterChip(!draft.flag1 && !draft.flag2 && !draft.pages.trim().equals("all",true),shape=QuietTheme.shapes.pill,border=null,onClick={
                         edit { it.copy(flag1=false,flag2=false,pages="1") }
                     },label={Text(stringResource(R.string.interactive_selected_ranges))})
                 }

@@ -22,7 +22,7 @@ import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.theme.QuietTheme
 
 private val IMAGE_OUTPUT_FORMATS = listOf("JPEG","PNG","WEBP")
-private val VISUAL_PDF_TOOLS = setOf("pdf_02","pdf_07","pdf_compress")
+private val VISUAL_PDF_TOOLS = setOf("pdf_02","pdf_07","pdf_long_image","pdf_compress")
 private val SCALE_PRESETS = listOf(25,50,75,100,150,200)
 private val EDGE_PRESETS = listOf(640,1280,1920,2560,4096)
 private val FIT_STRATEGIES = listOf("FIT" to R.string.ui_fit_contain,"FILL" to R.string.ui_fit_cover,"PAD" to R.string.ui_fit_pad,"STRETCH" to R.string.ui_fit_stretch)
@@ -51,11 +51,11 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 val percentMode=draft.percentage.isNotBlank()
                 val edgeMode=draft.longestEdge.isNotBlank()
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    item(key="scale",contentType="mode-chip") {FilterChip(percentMode,border=null,onClick={edit {it.copy(percentage="75",longestEdge="")}},
+                    item(key="scale",contentType="mode-chip") {FilterChip(percentMode,shape=QuietTheme.shapes.pill,border=null,onClick={edit {it.copy(percentage="75",longestEdge="")}},
                         label={Text(stringResource(R.string.interactive_resize_scale))})}
-                    item(key="edge",contentType="mode-chip") {FilterChip(edgeMode,border=null,onClick={edit {it.copy(percentage="",longestEdge="1920")}},
+                    item(key="edge",contentType="mode-chip") {FilterChip(edgeMode,shape=QuietTheme.shapes.pill,border=null,onClick={edit {it.copy(percentage="",longestEdge="1920")}},
                         label={Text(stringResource(R.string.interactive_resize_edge))})}
-                    item(key="dimensions",contentType="mode-chip") {FilterChip(!percentMode && !edgeMode,border=null,onClick={edit {it.copy(percentage="",longestEdge="")}},
+                    item(key="dimensions",contentType="mode-chip") {FilterChip(!percentMode && !edgeMode,shape=QuietTheme.shapes.pill,border=null,onClick={edit {it.copy(percentage="",longestEdge="")}},
                         label={Text(stringResource(R.string.interactive_resize_dimensions))})}
                 }
                 when {
@@ -90,9 +90,8 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
             }
             // img_watermark opacity is already controlled in VisualWatermarkEditor.
             if(tool=="pdf_compress") {
-                val dpi = draft.num1.toIntOrNull() ?: 150
-                val quality = draft.quality.toIntOrNull() ?: 75
-                val strength = (PdfCompressionPolicy.sliderPosition(dpi, quality) * 100f).toInt().coerceIn(1, 100)
+                val quality = draft.quality.toIntOrNull() ?: 52
+                val strength = (((95 - quality.coerceIn(8, 95)) * 99.0 / 87.0).toInt() + 1).coerceIn(1, 100)
                 InteractiveIntSlider(
                     stringResource(R.string.field_compress_slider, strength),
                     strength,
@@ -100,12 +99,13 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                     100,
                     50
                 ) { v ->
-                    val step = PdfCompressionPolicy.sliderStep(v / 100f)
-                    edit { it.copy(num1 = step.first.toString(), quality = step.second.toString(), num2 = "") }
+                    val targetDpi = (300 - ((v - 1) * 264.0 / 99.0)).toInt().coerceIn(36, 300)
+                    val targetQuality = (95 - ((v - 1) * 87.0 / 99.0)).toInt().coerceIn(8, 95)
+                    edit { it.copy(num1 = targetDpi.toString(), quality = targetQuality.toString(), num2 = "") }
                 }
                 Text(stringResource(R.string.field_compress_note), style = QuietTheme.typography.metadata)
             }
-            if(tool=="pdf_07") {
+            if(tool=="pdf_07" || tool=="pdf_long_image") {
                 PresetChoices(stringResource(R.string.field_output_format),PDF_IMAGE_FORMATS,draft.format) {v->edit {it.copy(format=v)}}
                 InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(draft.dpi,144),36,600,144) {v->edit {it.copy(dpi=v.toString())}}
                 ChoiceValues(DPI_PRESETS,draftNumber(draft.dpi,144),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
@@ -126,11 +126,11 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 Text(stringResource(R.string.field_output_format),style=QuietTheme.typography.metadataStrong)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     items(IMAGE_OUTPUT_FORMATS,key={it},contentType={"format-chip"}) {format ->
-                        FilterChip(draft.format==format,border=null,onClick={edit {it.copy(format=format)}},label={Text(format)})
+                        FilterChip(draft.format==format,shape=QuietTheme.shapes.pill,border=null,onClick={edit {it.copy(format=format)}},label={Text(format)})
                     }
                 }
             }
-            if((imageOutput || tool=="pdf_07") && draft.format!="PNG")
+            if((imageOutput || tool=="pdf_07" || tool=="pdf_long_image") && draft.format!="PNG")
                 InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(draft.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
             if(tool=="img_04") Text(stringResource(R.string.interactive_compression_format_note),style=QuietTheme.typography.metadata)
         }
@@ -140,7 +140,7 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
 @Composable
 private fun ChoiceValues(values:List<Int>,selected:Int,label:(Int)->String,onSelect:(Int)->Unit) {
     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        items(values,key={it},contentType={"value-chip"}) {value->FilterChip(selected==value,border=null,onClick={onSelect(value)},label={Text(label(value))})}
+        items(values,key={it},contentType={"value-chip"}) {value->FilterChip(selected==value,shape=QuietTheme.shapes.pill,border=null,onClick={onSelect(value)},label={Text(label(value))})}
     }
 }
 
@@ -148,7 +148,7 @@ private fun ChoiceValues(values:List<Int>,selected:Int,label:(Int)->String,onSel
 internal fun PresetChoices(label:String,values:List<Pair<String,Int>>,selected:String,onSelect:(String)->Unit) {
     Text(label,style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-        items(values,key={it.first},contentType={"preset-chip"}) {(value,labelId)->FilterChip(selected==value,border=null,onClick={onSelect(value)},label={Text(stringResource(labelId))})}
+        items(values,key={it.first},contentType={"preset-chip"}) {(value,labelId)->FilterChip(selected==value,shape=QuietTheme.shapes.pill,border=null,onClick={onSelect(value)},label={Text(stringResource(labelId))})}
     }
 }
 

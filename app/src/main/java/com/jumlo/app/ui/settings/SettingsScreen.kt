@@ -47,6 +47,13 @@ fun SettingsScreen(
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val outputs by viewModel.outputs.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val proEntitlement by viewModel.proEntitlement.collectAsStateWithLifecycle()
+    var proSheetOpen by rememberSaveable { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hostActivity = remember(context) {
+        generateSequence<android.content.Context>(context) { c -> (c as? android.content.ContextWrapper)?.baseContext?.takeUnless { it === c } }
+            .filterIsInstance<android.app.Activity>().firstOrNull()
+    }
     // Row icons use fixed per-row colors, never the user accent.
     val dark = isDarkTheme(settings.themeMode)
     val totalStorageBytes = remember(storage) {
@@ -60,6 +67,35 @@ fun SettingsScreen(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        item("pro-banner", contentType = "pro") {
+            Surface(
+                onClick = { proSheetOpen = true },
+                shape = QuietTheme.shapes.card,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Rounded.VerifiedUser, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
+                            style = QuietTheme.typography.sectionTitle,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            stringResource(R.string.pro_upgrade_subtitle),
+                            style = QuietTheme.typography.metadata,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
         item("appearance-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
         item("appearance-group", contentType = "group") {
             PreferenceGroup {
@@ -162,6 +198,14 @@ fun SettingsScreen(
             confirmButton = { TextButton(enabled = !busy, onClick = { panel = null; viewModel.cleanTemporary() }) {
                 Text(stringResource(R.string.pref_clear)) } },
             dismissButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.action_cancel)) } })
+    }
+    if (proSheetOpen) {
+        com.jumlo.app.ui.pro.JumloProSheet(
+            entitlement = proEntitlement,
+            onPurchase = { productId -> hostActivity?.let { viewModel.purchasePro(it, productId) } },
+            onRestore = { viewModel.restorePurchases() },
+            onDismiss = { proSheetOpen = false }
+        )
     }
 }
 

@@ -24,7 +24,7 @@ object CapabilityPolicy {
         "file_07", "file_08", "dl_02", "dl_03",
         // PdfSecurityQualificationTest proves the AES-128 protect/unlock round trip:
         // a wrong password is rejected and the owner password is honoured.
-        "pdf_protect",
+        "pdf_protect", "pdf_nup", "pdf_privacy_redact", "pdf_long_image",
         // EncryptedZipSafetyTest and ArchiveCoreReliabilityTest exercise real
         // AES payload authentication, collisions, tampering and cancellation.
         "file_encrypted_zip"

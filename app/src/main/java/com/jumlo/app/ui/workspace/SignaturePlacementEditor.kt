@@ -38,7 +38,7 @@ private val placementsHistorySaver=listSaver<List<List<PdfSignaturePlacement>>,S
 /** Every visible instance maps to a serialized page/box/rotation consumed by the PDF engine. */
 @Composable
 internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureId:String?,draft:WorkspaceDraft,
-    edit:((WorkspaceDraft)->WorkspaceDraft)->Unit) {
+    edit:((WorkspaceDraft)->WorkspaceDraft)->Unit,onImportImage:()->Unit={}) {
     var page by rememberSaveable(sourceId) {mutableIntStateOf(draftNumber(draft.num1,1).coerceAtLeast(1))}
     var selectedId by rememberSaveable(sourceId) {mutableStateOf<String?>(null)}
     var past by rememberSaveable(sourceId,stateSaver=placementsHistorySaver) {mutableStateOf(emptyList<List<PdfSignaturePlacement>>())}
@@ -114,7 +114,7 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
         if(signatureId!=null) {
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(placements,key={_,it->it.id},contentType={_,_->"placement-chip"}) {index,placement->
-                    FilterChip(border=null,selected=selectedId==placement.id,onClick={page=placement.page;selectedId=placement.id},
+                    FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=selectedId==placement.id,onClick={page=placement.page;selectedId=placement.id},
                         label={Text(stringResource(R.string.studio_signature_instance,index+1,placement.page))})
                 }
             }
@@ -144,9 +144,18 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
             }
             TextButton(onClick={showPad=!showPad}) {Text(stringResource(R.string.studio_signature_replace))}
         }
-        if(signatureId==null || showPad) SignaturePad {file->
-            signatureId?.let(vm::removeSource)
-            vm.intakeLocalFile(file,"signature.png","image/png");showPad=false
+        if(signatureId==null || showPad) {
+            SignaturePad {file->
+                signatureId?.let(vm::removeSource)
+                vm.intakeLocalFile(file,"signature.png","image/png");showPad=false
+            }
+            FilledTonalButton(
+                onClick = onImportImage,
+                shape = QuietTheme.shapes.pill,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            ) {
+                Text(stringResource(R.string.import_signature_image))
+            }
         }
     }
 }

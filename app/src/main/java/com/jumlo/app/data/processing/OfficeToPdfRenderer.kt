@@ -629,18 +629,26 @@ object OfficeToPdfRenderer {
             }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
             require(bounds.outWidth > 0 && bounds.outHeight > 0) { "IMAGE_DECODE_FAILED" }
-            ImageWorkPolicy.requireFits(bounds.outWidth, bounds.outHeight, 0L, decodeBudget)
+            val maxTargetPx = (maxOf(availWidth, availHeight) * 2.5f).toInt().coerceAtLeast(1600)
+            var sample = 1
+            var w = bounds.outWidth
+            var h = bounds.outHeight
+            while ((w > maxTargetPx || h > maxTargetPx || w.toLong() * h.toLong() * 4L > decodeBudget) && sample < 64) {
+                sample *= 2
+                w = (bounds.outWidth + sample - 1) / sample
+                h = (bounds.outHeight + sample - 1) / sample
+            }
+            ImageWorkPolicy.requireFits(w, h, 0L, decodeBudget)
             val bitmap = BitmapFactory.decodeByteArray(
                 bytes, 0, bytes.size,
                 BitmapFactory.Options().apply {
+                    inSampleSize = sample
                     inPreferredConfig = Bitmap.Config.ARGB_8888
                     inScaled = false
                 }
             ) ?: throw IllegalArgumentException("IMAGE_DECODE_FAILED")
             try {
-                require(bitmap.width == bounds.outWidth && bitmap.height == bounds.outHeight) {
-                    "IMAGE_DECODE_DIMENSIONS_CHANGED"
-                }
+                require(bitmap.width > 0 && bitmap.height > 0) { "IMAGE_DECODE_FAILED" }
                 require(bitmap.allocationByteCount.toLong() <= decodeBudget) {
                     "IMAGE_MEMORY_BUDGET_EXCEEDED"
                 }
@@ -659,7 +667,8 @@ object OfficeToPdfRenderer {
                 } else {
                     val bitmap = decodeEmbeddedRaster(block.bytes)
                     try {
-                        LosslessFactory.createFromImage(document, bitmap)
+                        if (bitmap.hasAlpha()) LosslessFactory.createFromImage(document, bitmap)
+                        else JPEGFactory.createFromImage(document, bitmap, 0.90f)
                     } finally {
                         bitmap.recycle()
                     }

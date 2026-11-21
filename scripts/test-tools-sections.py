@@ -41,7 +41,7 @@ class ToolsSectionContracts(unittest.TestCase):
         self.assertIn('R.string.tools_section_recent', self.screen)
 
     def test_search_appears_exactly_once(self):
-        self.assertEqual(1, self.screen.count('QuietSearchBar('))
+        self.assertEqual(0, self.screen.count('QuietSearchBar('))
 
     def test_ungrouped_tools_fall_back_to_all_tools(self):
         self.assertIn('R.string.tools_section_all', self.screen)

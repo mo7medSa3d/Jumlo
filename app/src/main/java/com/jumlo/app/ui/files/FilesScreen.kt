@@ -56,7 +56,7 @@ import com.jumlo.app.model.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
-    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={}) {
+    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={},onImportToFolder:(String?)->Unit={ onImport() }) {
     val haptics=rememberAppHaptics()
     val context=LocalContext.current
     val outputs by vm.outputs.collectAsStateWithLifecycle()
@@ -83,6 +83,34 @@ import com.jumlo.app.model.*
     var purgeIds by remember {mutableStateOf<Set<String>?>(null)}
     var details by remember {mutableStateOf<OutputRecord?>(null)}
     var activeFolderId by rememberSaveable { mutableStateOf<String?>(null) }
+    var unlockedFolderIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                unlockedFolderIds = emptySet()
+                if (activeFolderId != null && activeFolderId in settings.lockedFolderIds) activeFolderId = null
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    fun openFolderSafely(folder: FileFolder) {
+        if (folder.id !in settings.lockedFolderIds || folder.id in unlockedFolderIds) {
+            activeFolderId = folder.id; selected = emptySet(); selecting = false
+            return
+        }
+        val act = context as? androidx.fragment.app.FragmentActivity
+        if (act == null) { vm.notifyMessage("VAULT_UNAVAILABLE"); return }
+        com.jumlo.app.data.files.BiometricVaultGuard.authenticate(
+            activity = act,
+            title = folder.name,
+            subtitle = context.getString(R.string.vault_unlock_subtitle),
+            onSuccess = { unlockedFolderIds = unlockedFolderIds + folder.id; activeFolderId = folder.id; selected = emptySet(); selecting = false },
+            onUnavailable = { vm.notifyMessage("VAULT_NO_BIOMETRIC") },
+            onError = { vm.notifyMessage("VAULT_AUTH_FAILED") }
+        )
+    }
     var pageActionsOpen by remember { mutableStateOf(false) }
     var folderMenuTarget by remember { mutableStateOf<FileFolder?>(null) }
     var createFolderOpen by rememberSaveable { mutableStateOf(false) }
@@ -90,6 +118,7 @@ import com.jumlo.app.model.*
     var deleteFolderTarget by remember { mutableStateOf<FileFolder?>(null) }
     var folderNameInput by rememberSaveable { mutableStateOf("") }
     var moveOutputIds by remember { mutableStateOf<Set<String>?>(null) }
+    var folderSearchOpen by rememberSaveable { mutableStateOf(false) }
     val dragState = rememberFileDragDropState()
     val activeFolder = remember(settings.fileFolders, activeFolderId) {
         settings.fileFolders.firstOrNull { it.id == activeFolderId }
@@ -139,7 +168,7 @@ import com.jumlo.app.model.*
     fun handleFileDrop(ids: Set<String>, targetId: String) {
         haptics.dragEnd()
         if (targetId == ROOT_DROP_TARGET_ID) {
-            vm.moveOutputsToFolder(ids, null)
+            vm.moveOutputsToFolder(ids, activeFolder?.parentId)
         } else {
             vm.moveOutputsToFolder(ids, targetId)
         }
@@ -153,8 +182,11 @@ import com.jumlo.app.model.*
         }
     }
     val density=LocalDensity.current
-    val visible=remember(outputs,search,sort,type,settings.favoriteOutputIds,settings.outputFolderIds,activeFolder) {
+    val visible=remember(outputs,search,sort,type,settings.favoriteOutputIds,settings.outputFolderIds,settings.lockedFolderIds,unlockedFolderIds,activeFolder) {
         outputs.filter { out ->
+            val fid = settings.outputFolderIds[out.id]
+            val hiddenInVault = fid != null && fid in settings.lockedFolderIds && fid !in unlockedFolderIds
+            if (hiddenInVault) return@filter false
             val inScope = when {
                 activeFolder != null -> settings.outputFolderIds[out.id] == activeFolder.id
                 search.isNotBlank() || type != "all" -> true
@@ -215,7 +247,10 @@ import com.jumlo.app.model.*
         else -> 2
     }
     val groupedRows = remember(grouped, columns) { grouped.mapValues { (_, files) -> files.chunked(columns) } }
-    val folderRows = remember(settings.fileFolders, columns) { settings.fileFolders.chunked(columns) }
+    val currentFolders = remember(settings.fileFolders, activeFolderId) {
+        settings.fileFolders.filter { it.parentId == activeFolderId }
+    }
+    val folderRows = remember(currentFolders, columns) { currentFolders.chunked(columns) }
     LazyColumn(
         modifier=Modifier.widthIn(max=980.dp).fillMaxSize().align(Alignment.TopCenter),
         contentPadding=PaddingValues(start=20.dp,end=20.dp,top=10.dp,
@@ -372,11 +407,28 @@ import com.jumlo.app.model.*
                             folder = activeFolder,
                             itemCount = folderCounts[activeFolder.id] ?: 0,
                             dragState = dragState,
-                            onBackToRoot = { haptics.actionClick(); activeFolderId = null; selected = emptySet(); selecting = false },
-                            onOpenFolderActions = null
+                            onBackToRoot = {
+                                haptics.actionClick()
+                                activeFolderId = activeFolder.parentId
+                                folderSearchOpen = false; search = ""
+                                selected = emptySet(); selecting = false
+                            },
+                            onOpenFolderActions = null,
+                            onCreateSubfolder = { haptics.actionClick(); folderNameInput = ""; createFolderOpen = true },
+                            onImport = { haptics.actionClick(); onImportToFolder(activeFolder.id) },
+                            onToggleSearch = { haptics.selectionToggle(); folderSearchOpen = !folderSearchOpen; if (!folderSearchOpen) search = "" },
+                            onToggleSelect = { haptics.selectionToggle(); selecting = !selecting; selected = emptySet() },
+                            selecting = selecting,
+                            onSelectAll = { haptics.selectionToggle(); selected = visible.map { it.id }.toSet() }
                         )
                     }
-                } else if (settings.fileFolders.isNotEmpty() && search.isBlank() && type == "all") {
+                    if (folderSearchOpen) {
+                        item("folder-search", contentType = "search") {
+                            QuietSearchBar(search, stringResource(R.string.ui_search_files), { search = it; selected = emptySet() }, { search = ""; selected = emptySet() })
+                        }
+                    }
+                }
+                if (currentFolders.isNotEmpty() && search.isBlank() && (activeFolder != null || type == "all")) {
                     items(folderRows, key = { "folder-row-" + it.joinToString("-") { f -> f.id } }, contentType = { "folderRow" }) { fRow ->
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                             fRow.forEach { folder ->
@@ -388,7 +440,7 @@ import com.jumlo.app.model.*
                                         .fileDropTarget(folder.id, dragState)
                                         .pressFeedback()
                                         .combinedClickable(
-                                            onClick = { haptics.actionClick(); activeFolderId = folder.id; selected = emptySet(); selecting = false },
+                                            onClick = { haptics.actionClick(); openFolderSafely(folder) },
                                             onLongClick = { haptics.longPress(); folderMenuTarget = folder }
                                         ),
                                     shape = QuietTheme.shapes.card,
@@ -423,7 +475,7 @@ import com.jumlo.app.model.*
                                             )
                                         }
                                         IconButton(onClick = { haptics.actionClick(); folderMenuTarget = folder }, modifier = Modifier.size(40.dp)) {
-                                            Icon(Icons.Rounded.MoreVert, stringResource(R.string.files_folder_actions_title), tint = colors.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                            Icon(if (folder.id in settings.lockedFolderIds) Icons.Rounded.Lock else Icons.Rounded.MoreVert, stringResource(R.string.files_folder_actions_title), tint = if (folder.id in settings.lockedFolderIds) colors.primary else colors.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                         }
                                     }
                                 }
@@ -433,14 +485,14 @@ import com.jumlo.app.model.*
                     }
                 }
                 if(outputLoad!=DataLoadStatus.READY) item("outputs-state", contentType = "load-state") { DocumentLoadState(outputLoad,vm::reloadSavedData) }
-                if(outputLoad==DataLoadStatus.READY && visible.isEmpty() && (activeFolder != null || settings.fileFolders.isEmpty() || search.isNotEmpty() || type != "all")) item("empty", contentType = "empty") {
+                if(outputLoad==DataLoadStatus.READY && visible.isEmpty() && (currentFolders.isEmpty() || search.isNotEmpty() || type != "all")) item("empty", contentType = "empty") {
                     val filtered=search.isNotEmpty() || type!="all"
                     when {
                         activeFolder != null && !filtered -> QuietStateCard(
                             stringResource(R.string.files_folder_empty_title),
                             stringResource(R.string.files_folder_empty_body),
-                            stringResource(R.string.files_folder_all_files),
-                            { activeFolderId = null },
+                            stringResource(R.string.import_device_files),
+                            { onImportToFolder(activeFolder.id) },
                             icon = Icons.Rounded.FolderOpen
                         )
                         else -> QuietStateCard(
@@ -728,7 +780,7 @@ import com.jumlo.app.model.*
             canSelect = outputs.isNotEmpty(),
             onDismiss = { pageActionsOpen = false },
             onCreateFolder = { folderNameInput = ""; createFolderOpen = true },
-            onImport = onImport,
+            onImport = { onImportToFolder(activeFolderId) },
             onStartSelect = { selecting = true; selected = emptySet() },
             onOpenSort = { sortPicker = true }
         )
@@ -749,7 +801,9 @@ import com.jumlo.app.model.*
             onCompressImages = { haptics.actionClick(); onOutputWorkflow(folderImages, "img_04") },
             onShareAll = { haptics.actionClick(); shareOutputList(folderOutputs) },
             onRename = { folderNameInput = folder.name; renameFolderTarget = folder },
-            onDelete = { deleteFolderTarget = folder }
+            onDelete = { deleteFolderTarget = folder },
+            isLocked = folder.id in settings.lockedFolderIds,
+            onToggleLock = { haptics.actionClick(); vm.toggleFolderLock(folder.id); folderMenuTarget = null }
         )
     }
     if (createFolderOpen) {
@@ -760,7 +814,7 @@ import com.jumlo.app.model.*
             onValueChange = { folderNameInput = it },
             onConfirm = {
                 haptics.actionClick()
-                vm.createFileFolder(folderNameInput)
+                vm.createFileFolder(folderNameInput, parentId = activeFolderId)
                 createFolderOpen = false
                 folderNameInput = ""
             },

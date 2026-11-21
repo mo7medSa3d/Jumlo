@@ -54,7 +54,7 @@ import kotlinx.serialization.json.Json
             "img_03" -> { val l=fraction(cropLeft);val t=fraction(cropTop);val r=fraction(cropRight);val b=fraction(cropBottom); require(l<r && t<b) { "INVALID_CROP" }; Json.encodeToString(ImageCropSettings(l,t,r,b,turns,flipX,flipY,converted)) }
             "img_04" -> Json.encodeToString(ImageCompressionSettings(converted))
             "pdf_02" -> Json.encodeToString(ImagesToPdfSettings(SafeNames.basename(outputName),number(paperWidth,72,14400),number(paperHeight,72,14400),orientation,number(margin,0,200),fill,paperMode,number(quality,1,100),flag1))
-            "pdf_07" -> Json.encodeToString(PdfImagesSettings(pages.trim().ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),if(format=="JPEG") "JPEG" else "PNG",if(format=="JPEG") number(quality,1,100) else 85,grayscale,outputName.trim()))
+            "pdf_07","pdf_long_image" -> Json.encodeToString(PdfImagesSettings(pages.trim().ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),if(format=="JPEG") "JPEG" else "PNG",if(format=="JPEG") number(quality,1,100) else 85,grayscale,outputName.trim()))
             "file_07","file_08" -> Json.encodeToString(ArchiveSettings(SafeNames.basename(outputName),number(zipLevel,0,9)))
             "pdf_03" -> Json.encodeToString(com.jumlo.app.data.processing.PdfMergeSettings(SafeNames.basename(outputName)))
             "pdf_05" -> Json.encodeToString(com.jumlo.app.data.processing.PdfSplitSettings(SafeNames.basename(outputName),if(flag1) "EVERY" else if(flag2) "BOUNDARIES" else "RANGES",if(flag2) pages else pages.ifBlank{"all"},if(flag1) number(num1.ifBlank{"1"},1,1000) else 1))
@@ -100,7 +100,9 @@ import kotlinx.serialization.json.Json
                 SafeNames.basename(outputName),downloadHandle ?: "",flag1,
                 allowPrinting,allowCopy,allowModify,allowAnnotations,allowForms))
             "office_to_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.OfficeToPdfSettings(SafeNames.basename(outputName)))
-            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf")))
+            "pdf_nup" -> Json.encodeToString(com.jumlo.app.data.processing.PdfNupSettings(SafeNames.basename(outputName),if(num1=="4") 4 else 2,grayscale))
+            "pdf_privacy_redact" -> Json.encodeToString(com.jumlo.app.data.processing.PdfRedactSettings(SafeNames.basename(outputName),pages.ifBlank{"1"},fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom),!flag1,cropOverrides))
+            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf"),text1.ifBlank{"LATIN"}))
             "img_watermark" -> {
                 if(flag1) require(sourceIds.distinct().size>=2) { "WATERMARK_LOGO_REQUIRED" }
                 else require(text1.isNotBlank()) { "WATERMARK_CONTENT_REQUIRED" }
@@ -117,13 +119,13 @@ import kotlinx.serialization.json.Json
                 Json.encodeToString(com.jumlo.app.data.processing.BatchRenameSettings(pattern,number(num1.ifBlank{"1"},0,1000000),renameDate))
             }
             "file_encrypted_zip" -> Json.encodeToString(com.jumlo.app.data.processing.EncryptedArchiveSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
-            "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.fromDisplayName(outputName.ifBlank{"download.bin"},"download.bin"),false,false,true))
+            "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.fromDisplayName(outputName.ifBlank{"download.bin"},"download.bin"),wifiOnly,unmeteredOnly,cleartextConsent))
             else -> throw IllegalArgumentException("CAPABILITY_UNAVAILABLE")
         }
     }
     companion object {
         fun normalizeDigits(text:String):String=text.trim().map { c -> when(c) { in '\u0660'..'\u0669' -> '0'+(c-'\u0660');in '\u06f0'..'\u06f9' -> '0'+(c-'\u06f0');'\u066b' -> '.';else->c } }.joinToString("")
-        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_to_docx"->"Document.docx";"pdf_to_pptx"->"Document.pptx";"pdf_ocr"->"Extracted.txt";"pdf_02"->"Images.pdf";"pdf_03"->"Merged.pdf";"pdf_04"->"Organized.pdf";"pdf_05"->"Split.pdf";"pdf_06"->"Extracted.pdf";"pdf_crop","pdf_compress","pdf_stamp","pdf_signature","pdf_protect","office_to_pdf"->"Document.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },quality=if(id=="img_04") "75" else "85").let { initial ->
+        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_to_docx"->"Document.docx";"pdf_to_pptx"->"Document.pptx";"pdf_ocr"->"Extracted.txt";"pdf_02"->"Images.pdf";"pdf_03"->"Merged.pdf";"pdf_04"->"Organized.pdf";"pdf_05"->"Split.pdf";"pdf_06"->"Extracted.pdf";"pdf_long_image"->"Long.png";"pdf_crop","pdf_compress","pdf_stamp","pdf_signature","pdf_protect","pdf_nup","pdf_privacy_redact","office_to_pdf"->"Document.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07" || id=="pdf_long_image") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },quality=if(id=="img_04") "75" else "85").let { initial ->
             when(id) {
                 "pdf_signature" -> initial.copy(cropLeft="0.6",cropTop="0.75",cropRight="0.95",cropBottom="0.95")
                 "pdf_compress" -> initial.copy(num1="180",quality="75")

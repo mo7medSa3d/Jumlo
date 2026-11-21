@@ -113,7 +113,7 @@ class ImportSessionIsolationTest {
         try {
             val active = withContext(Dispatchers.Main) {
                 AppViewModel(app, preferences, sources, outputs, jobs, DraftStore(db), secrets,
-                    DocumentTreeStore(app), budget, com.jumlo.app.data.ocr.MlKitOcrEngine(app), SavedStateHandle()).also { vm = it }
+                    DocumentTreeStore(app), budget, com.jumlo.app.data.ocr.MlKitOcrEngine(app), com.jumlo.app.data.billing.JumloBillingManager(app), SavedStateHandle()).also { vm = it }
             }
             withTimeout(15_000) { active.workspaceReady.first { it } }
             val finished = CompletableDeferred<Unit>()

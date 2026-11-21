@@ -50,7 +50,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
-import com.jumlo.app.core.PdfCompressionPolicy
 import com.jumlo.app.data.engine.PureDomainAlgorithms
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.data.jobs.stableError
@@ -70,7 +69,7 @@ import kotlinx.serialization.json.Json
 private data class RenamePreviewInput(val names:List<String>,val settings:BatchRenameSettings)
 private data class RenamePreviewState(val input:RenamePreviewInput,val result:Result<List<String>>)
 
-private val VISUAL_PAGE_SELECTION_TOOLS = setOf("pdf_04","pdf_05","pdf_06","pdf_07","pdf_crop","pdf_stamp","pdf_ocr","pdf_to_docx","pdf_to_pptx")
+private val VISUAL_PAGE_SELECTION_TOOLS = setOf("pdf_04","pdf_05","pdf_06","pdf_07","pdf_long_image","pdf_crop","pdf_stamp","pdf_ocr","pdf_to_docx","pdf_to_pptx")
 private val PDF_OVERLAY_TOOLS = setOf("pdf_signature","pdf_stamp")
 private val MULTI_SOURCE_MINIMUM_TOOLS = setOf("pdf_03","pdf_signature","img_join")
 private val ZIP_MIME_TYPES = setOf("application/zip","application/x-zip-compressed")
@@ -79,11 +78,11 @@ private val PRESET_SUPPORTED_TOOLS = setOf("pdf_compress","pdf_02","pdf_07","pdf
 private val CONVERSION_SCOPE_TOOLS = setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")
 private val DEDICATED_PREVIEW_TOOLS = setOf("img_01","img_03","img_02","img_04","img_join","img_watermark","pdf_crop","pdf_signature","pdf_stamp","pdf_02","pdf_ocr")
 private val SINGLE_PDF_EDITOR_TOOLS = setOf("pdf_04", "pdf_05", "pdf_06")
-private val GEOMETRY_EDITOR_TOOLS = setOf("img_03","pdf_crop")
+private val GEOMETRY_EDITOR_TOOLS = setOf("img_03","pdf_crop","pdf_privacy_redact")
 private val TRANSFORMED_IMAGE_TOOLS = setOf("img_02","img_join")
 private val ENCODED_IMAGE_TOOLS = setOf("img_01","img_04")
-private val VISUAL_IMAGE_SETTINGS_TOOLS = setOf("pdf_compress","pdf_07","pdf_02")
-private val PRIMARY_FIELDS_TOOLS = setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect")
+private val VISUAL_IMAGE_SETTINGS_TOOLS = setOf("pdf_compress","pdf_07","pdf_long_image","pdf_02")
+private val PRIMARY_FIELDS_TOOLS = setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect","pdf_nup","pdf_privacy_redact")
 private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
 
 /** Retains the original public call shape, including positional and trailing-lambda callers. */
@@ -139,7 +138,11 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
     val inputMismatch=remember(tool,queue,form.watermarkUseImage) { queue.any {source->
         val mime=source.mimeType
         when {
-            tool=="pdf_signature" || tool=="pdf_stamp" && form.watermarkUseImage ->
+            tool=="pdf_signature" ->
+                queue.count { it.mimeType=="application/pdf" }!=1 ||
+                    queue.any { it.mimeType!="application/pdf" && it.mimeType?.startsWith("image/")!=true } ||
+                    queue.count { it.mimeType?.startsWith("image/")==true } > 1
+            tool=="pdf_stamp" && form.watermarkUseImage ->
                 queue.size!=2 || queue.count { it.mimeType=="application/pdf" }!=1 ||
                     queue.count { it.mimeType?.startsWith("image/")==true }!=1
             mime==null || mime=="application/octet-stream" -> false
@@ -174,8 +177,8 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
         }.exceptionOrNull()?.let(::stableError)
     }
     val countValid=when(tool) {
-        "pdf_07","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
-        "pdf_compress","pdf_protect","pdf_ocr","pdf_to_docx","pdf_to_pptx" -> queue.size==1
+        "pdf_07","pdf_long_image","file_08","pdf_04","pdf_05","pdf_06","pdf_crop",
+        "pdf_compress","pdf_protect","pdf_nup","pdf_privacy_redact","pdf_ocr","pdf_to_docx","pdf_to_pptx","office_to_pdf" -> queue.size==1
         "pdf_signature" -> queue.size==2
         "pdf_stamp" -> queue.size==if(form.watermarkUseImage) 2 else 1
         "file_encrypted_zip" -> !form.flag1 || queue.size==1
@@ -209,26 +212,63 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
                 // Top step breadcrumb removed for a calm, uncluttered tool workspace.
+                val inputSpec = remember(tool, form.watermarkUseImage, form.flag1) { ToolInputPolicy.resolve(tool, form) }
+                val emptyTitleRes = when(inputSpec.kind) {
+                    ToolInputKind.PDF_SINGLE -> R.string.ui_choose_pdf_single
+                    ToolInputKind.PDF_MULTI -> R.string.ui_choose_pdf_multi
+                    ToolInputKind.IMAGES -> R.string.ui_choose_images
+                    ToolInputKind.PDF_OR_IMAGE -> R.string.ui_choose_pdf_or_image
+                    ToolInputKind.OFFICE -> R.string.ui_choose_office
+                    ToolInputKind.ZIP_SINGLE -> R.string.ui_choose_zip
+                    ToolInputKind.ANY_FILES -> R.string.ui_choose_inputs
+                }
+                val emptyBodyRes = when(inputSpec.kind) {
+                    ToolInputKind.PDF_SINGLE -> R.string.ui_choose_pdf_single_body
+                    ToolInputKind.PDF_MULTI -> R.string.ui_choose_pdf_multi_body
+                    ToolInputKind.IMAGES -> R.string.ui_choose_images_body
+                    ToolInputKind.PDF_OR_IMAGE -> R.string.ui_choose_pdf_or_image_body
+                    ToolInputKind.OFFICE -> R.string.ui_choose_office_body
+                    ToolInputKind.ZIP_SINGLE -> R.string.ui_choose_zip_body
+                    ToolInputKind.ANY_FILES -> R.string.ui_choose_inputs_body
+                }
+                val filesBtnRes = when(inputSpec.kind) {
+                    ToolInputKind.PDF_SINGLE -> R.string.import_pdf_single
+                    ToolInputKind.PDF_MULTI -> R.string.import_pdf_multi
+                    ToolInputKind.IMAGES -> R.string.import_images_from_files
+                    ToolInputKind.PDF_OR_IMAGE -> R.string.import_pdf_or_file
+                    ToolInputKind.OFFICE -> R.string.import_office_file
+                    ToolInputKind.ZIP_SINGLE -> R.string.import_zip_file
+                    ToolInputKind.ANY_FILES -> R.string.import_device_files
+                }
                 if(queue.isEmpty()) {
                     item(key="empty-inputs",contentType="state-card") {
                         QuietStateCard(
-                            stringResource(R.string.ui_choose_inputs),
-                            stringResource(R.string.ui_choose_inputs_body),
-                            stringResource(R.string.import_device_files),
-                            onImport
+                            stringResource(emptyTitleRes),
+                            stringResource(emptyBodyRes),
+                            stringResource(if (inputSpec.kind == ToolInputKind.IMAGES) R.string.import_photo_gallery else filesBtnRes),
+                            if (inputSpec.kind == ToolInputKind.IMAGES) onPhotos else onImport
                         )
                     }
-                    if(tool in PHOTO_GALLERY_TOOLS || tool.startsWith("img_")) {
+                    if(inputSpec.showPhotoGallery) {
                         item(key="inputs-photos",contentType="action-button") {
-                            QuietTonalButton(stringResource(R.string.import_photo_gallery), onPhotos, Modifier.fillMaxWidth())
+                            QuietTonalButton(
+                                stringResource(if (inputSpec.kind == ToolInputKind.IMAGES) filesBtnRes else R.string.import_photo_gallery),
+                                if (inputSpec.kind == ToolInputKind.IMAGES) onImport else onPhotos,
+                                Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 } else {
                     item(key="inputs",contentType="action-row") {
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            QuietTonalButton(stringResource(R.string.import_device_files),onImport,Modifier.weight(1f))
-                            if(tool in PHOTO_GALLERY_TOOLS || tool.startsWith("img_"))
+                            if(inputSpec.kind == ToolInputKind.IMAGES) {
                                 QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
+                                QuietTonalButton(stringResource(filesBtnRes),onImport,Modifier.weight(1f))
+                            } else {
+                                QuietTonalButton(stringResource(filesBtnRes),onImport,Modifier.weight(1f))
+                                if(inputSpec.showPhotoGallery)
+                                    QuietTonalButton(stringResource(R.string.import_photo_gallery),onPhotos,Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -239,7 +279,7 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                         onApply=vm::applyProcessingPreset,
                         onDelete=vm::deleteProcessingPreset)
                 }
-                if(tool in CONVERSION_SCOPE_TOOLS) item(key="conversion-scope",contentType="notice") {
+                if(false && tool in CONVERSION_SCOPE_TOOLS) item(key="conversion-scope",contentType="notice") {
                     Text(stringResource(when(tool) { "pdf_to_docx" -> R.string.rebuild_word_note; "pdf_to_pptx" -> R.string.rebuild_slides_note; "office_to_pdf" -> R.string.rebuild_office_note; else -> R.string.rebuild_ocr_note }),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -262,20 +302,14 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                     }
                 }
                 if(tool=="pdf_signature" && editorSource?.mimeType=="application/pdf") item(key="signature-placement-editor",contentType="signature-editor") {
-                    SignaturePlacementEditor(vm,editorSource.id,overlayImage?.id,form,vm::updateForm)
+                    SignaturePlacementEditor(vm,editorSource.id,overlayImage?.id,form,vm::updateForm,onImportImage=onPhotos)
                 }
                 if(tool=="pdf_stamp" && editorSource?.mimeType=="application/pdf") {
                     item(key="visual-watermark-editor",contentType="watermark-editor") {
                         VisualWatermarkEditor(vm,editorSource.id,form,vm::updateForm,overlayImage?.id,onPhotos)
                     }
                 }
-                if(tool=="pdf_signature" && queue.size<2) {
-                    item(key="image-overlay-hint",contentType="notice") {
-                        Text(stringResource(R.string.visual_two_sources),
-                            style=QuietTheme.typography.metadata,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+
                 if(tool=="img_watermark" && queue.isNotEmpty() && !inputMismatch) item(key="image-watermark-editor",contentType="watermark-editor") {
                     VisualWatermarkEditor(vm,queue.first().id,form,vm::updateForm,queue.getOrNull(1)?.id?.takeIf {form.flag1},onPhotos)
                 }
@@ -283,7 +317,8 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                     val ids=remember(tool,queue,preview.id) { if(tool=="img_join") queue.map {it.id} else listOf(preview.id) }
                     ImageResultPreview(vm,ids,form)
                 }
-                if(tool in ENCODED_IMAGE_TOOLS && preview!=null && !inputMismatch) item(key="encoded-image-preview",contentType="encoded-preview") {
+                // Background auto-encoding disabled for img_04 so the user controls compression directly without background CPU drain.
+                if(tool == "img_01" && preview!=null && !inputMismatch) item(key="encoded-image-preview",contentType="encoded-preview") {
                     EncodedImagePreviewPanel(vm,preview.id,form)
                 }
                 if(tool.startsWith("img_") || tool in VISUAL_IMAGE_SETTINGS_TOOLS) {
@@ -296,13 +331,13 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                 }
                 // Background PDF compression pre-calculation disabled to avoid CPU drain; user controls strength directly (1-100).
                 if(tool=="pdf_ocr" && queue.size==1 && !inputMismatch) item(key="ocr-result-panel",contentType="ocr-panel") {
-                    OcrWorkspacePanel(vm,queue.single().id,onExecute,ready)
+                    OcrWorkspacePanel(vm,queue.single().id,onExecute,ready,selectedScript=form.text1.ifBlank{"LATIN"},onSelectScript={s->vm.updateForm {it.copy(text1=s)}})
                 }
                 if(tool in PRIMARY_FIELDS_TOOLS) item(key="primary-tool-settings",contentType="settings") {
                     WorkspaceFields(form,vm::updateForm)
                 }
                 if(queue.isNotEmpty()) item(key="input-count",contentType="metadata") {Text(stringResource(R.string.ui_input_count,queue.size),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })}
-                if(queue.isNotEmpty() && !countValid) item(key="source-count-help",contentType="notice") {
+                if(queue.isNotEmpty() && !countValid && !(tool=="pdf_signature" && queue.size==1 && queue.first().mimeType=="application/pdf")) item(key="source-count-help",contentType="notice") {
                     Text(stringResource(R.string.watermark_correct_source_count),
                         style=QuietTheme.typography.metadata,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
@@ -361,12 +396,9 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                     }
                 }
             }
-        }
-        if(!viewer) {
-            HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.45f))
-            Surface(color=MaterialTheme.colorScheme.surfaceContainerLow) {
-                Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp)) {
-                    if(busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=8.dp))
+            if(!viewer) item(key="execute-action",contentType="execute-action") {
+                Column(Modifier.fillMaxWidth().padding(top=10.dp,bottom=16.dp).navigationBarsPadding()) {
+                    if(busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom=10.dp))
                     QuietPrimaryButton(text=when(tool) {
                         "pdf_to_docx"->stringResource(R.string.rebuild_word_action)
                         "pdf_to_pptx"->stringResource(R.string.rebuild_slides_action)
@@ -680,13 +712,13 @@ internal fun passwordStrength(value:String):Int = when {
 
 @Composable private fun Options(label:String,options:List<String>,selected:String,onSelect:(String)->Unit) {
     Text(label,style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
-    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) { items(options,key={it},contentType={"option-chip"}) { choice -> FilterChip(selected==choice,{onSelect(choice)},border=null,label={Text(choice)}) } }
+    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) { items(options,key={it},contentType={"option-chip"}) { choice -> FilterChip(selected==choice,{onSelect(choice)},shape=QuietTheme.shapes.pill,border=null,label={Text(choice,style=QuietTheme.typography.metadataStrong)}) } }
 }
 @Composable private fun LabeledOptions(label:String,options:List<Pair<String,String>>,selected:String,onSelect:(String)->Unit) {
     Text(label,style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         items(options,key={it.first},contentType={"option-chip"}) { (value, display) ->
-            FilterChip(selected==value,{onSelect(value)},border=null,label={Text(display)})
+            FilterChip(selected==value,{onSelect(value)},shape=QuietTheme.shapes.pill,border=null,label={Text(display,style=QuietTheme.typography.metadataStrong)})
         }
     }
 }
@@ -754,7 +786,7 @@ internal fun passwordStrength(value:String):Int = when {
                     ) {v->edit {it.copy(orientation=v)}}
                     Toggle(stringResource(R.string.field_fill_page),f.fill) {v->edit {it.copy(fill=v)}}
                 }
-                "pdf_07" -> {
+                "pdf_07","pdf_long_image" -> {
                     PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
                     InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(f.dpi,144),36,600,144) {v->edit {it.copy(dpi=v.toString())}}
                     Options(stringResource(R.string.field_output_format),listOf("PNG","JPEG"),f.format) {v->edit {it.copy(format=v)}}
@@ -775,14 +807,22 @@ internal fun passwordStrength(value:String):Int = when {
                 "pdf_06" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true) }
                 "pdf_04" -> { Text(stringResource(R.string.ui_pages_edit_visual),style=QuietTheme.typography.metadata); Options(stringResource(R.string.field_rotate_degrees),listOf("0","90","180","270"),f.num1) {v->edit {it.copy(num1=v,pageEdits=emptyList())}} }
                 "pdf_crop" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }
+                "pdf_nup" -> {
+                    Options(stringResource(R.string.field_nup_count), listOf("2", "4"), f.num1.ifBlank { "2" }) { v -> edit { it.copy(num1 = v) } }
+                    Toggle(stringResource(R.string.field_grayscale), f.grayscale) { v -> edit { it.copy(grayscale = v) } }
+                }
+                "pdf_privacy_redact" -> {
+                    PageSelectionSummary(f.pages, R.string.ui_pages_selection_title, true)
+                    Toggle(stringResource(R.string.field_redact_white), f.flag1) { v -> edit { it.copy(flag1 = v) } }
+                }
                 "pdf_compress" -> {
-                    val dpi = f.num1.toIntOrNull() ?: 150
-                    val quality = f.quality.toIntOrNull() ?: 75
-                    val strength = (PdfCompressionPolicy.sliderPosition(dpi, quality) * 100f).toInt().coerceIn(1, 100)
+                    val quality = f.quality.toIntOrNull() ?: 52
+                    val strength = (((95 - quality.coerceIn(8, 95)) * 99.0 / 87.0).toInt() + 1).coerceIn(1, 100)
                     val sliderLabel = stringResource(R.string.field_compress_slider, strength)
                     InteractiveIntSlider(sliderLabel, strength, 1, 100, 50) { v ->
-                        val step = PdfCompressionPolicy.sliderStep(v / 100f)
-                        edit { it.copy(num1 = step.first.toString(), quality = step.second.toString(), num2 = "") }
+                        val targetDpi = (300 - ((v - 1) * 264.0 / 99.0)).toInt().coerceIn(36, 300)
+                        val targetQuality = (95 - ((v - 1) * 87.0 / 99.0)).toInt().coerceIn(8, 95)
+                        edit { it.copy(num1 = targetDpi.toString(), quality = targetQuality.toString(), num2 = "") }
                     }
                     Text(stringResource(R.string.field_compress_note), style = QuietTheme.typography.metadata)
                 }
@@ -830,7 +870,7 @@ internal fun passwordStrength(value:String):Int = when {
                     Text(stringResource(R.string.studio_rename_patterns),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         items(RENAME_TOKEN_CHIPS,key={it},contentType={"token-chip"}) { token ->
-                            FilterChip(selected=false,border=null,onClick={edit {it.copy(text1=(it.text1+token).take(512))}},label={Text(token)})
+                            FilterChip(selected=false,shape=QuietTheme.shapes.pill,border=null,onClick={edit {it.copy(text1=(it.text1+token).take(512))}},label={Text(token)})
                         }
                     }
                     InteractiveCounter(stringResource(R.string.field_start_number),draftNumber(f.num1,1),0,1000000) {v->edit {it.copy(num1=v.toString())}}

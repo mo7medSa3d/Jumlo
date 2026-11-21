@@ -191,6 +191,7 @@ class UserPreferencesRepository @Inject constructor(
                 }
             }.getOrDefault(emptyMap()),
             fileFolders = decodedFolders,
+            lockedFolderIds = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty(),
             outputFolderIds = decodedFolderMap,
             isLoaded = true
         )
@@ -223,13 +224,14 @@ class UserPreferencesRepository @Inject constructor(
     private fun cleanFolderName(raw: String): String =
         raw.trim().replace(FOLDER_FORBIDDEN_CHARS, " ").replace(WHITESPACE_RUN, " ").take(60)
 
-    suspend fun createFileFolder(name: String): FileFolder {
+    suspend fun createFileFolder(name: String, parentId: String? = null): FileFolder {
         val clean = cleanFolderName(name)
         require(clean.isNotEmpty()) { "INVALID_FOLDER_NAME" }
         val created = FileFolder(
             id = java.util.UUID.randomUUID().toString(),
             name = clean,
-            createdAtEpochMs = System.currentTimeMillis()
+            createdAtEpochMs = System.currentTimeMillis(),
+            parentId = parentId?.takeIf { it.isNotBlank() }
         )
         context.dataStore.edit { prefs ->
             val old = runCatching {
@@ -259,11 +261,22 @@ class UserPreferencesRepository @Inject constructor(
             val oldFolders = runCatching {
                 Json.decodeFromString<List<FileFolder>>(prefs[Keys.FILE_FOLDERS] ?: "[]")
             }.getOrDefault(emptyList())
-            prefs[Keys.FILE_FOLDERS] = Json.encodeToString(oldFolders.filterNot { it.id == folderId })
+            val deletedParent = oldFolders.firstOrNull { it.id == folderId }?.parentId
+            val updatedFolders = oldFolders.filterNot { it.id == folderId }.map { f ->
+                if (f.parentId == folderId) f.copy(parentId = deletedParent) else f
+            }
+            prefs[Keys.FILE_FOLDERS] = Json.encodeToString(updatedFolders)
             val oldMap = runCatching {
                 Json.decodeFromString<Map<String, String>>(prefs[Keys.OUTPUT_FOLDER_IDS] ?: "{}")
             }.getOrDefault(emptyMap())
             prefs[Keys.OUTPUT_FOLDER_IDS] = Json.encodeToString(oldMap.filterValues { it != folderId })
+        }
+    }
+
+    suspend fun toggleFolderLock(folderId: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty()
+            prefs[Keys.LOCKED_FOLDER_IDS] = if (folderId in current) current - folderId else current + folderId
         }
     }
 

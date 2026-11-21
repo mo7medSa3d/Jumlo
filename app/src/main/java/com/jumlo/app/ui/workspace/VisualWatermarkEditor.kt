@@ -129,7 +129,7 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             WATERMARK_MODES.forEach {(value,label)->
-                FilterChip(border=null,selected=useImage==value,onClick={edit {current->
+                FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=useImage==value,onClick={edit {current->
                     val ids=if(!value && overlayId!=null) current.sourceIds-overlayId else current.sourceIds
                     if(imageTool) current.copy(flag1=value,sourceIds=ids) else current.copy(watermarkUseImage=value,sourceIds=ids)
                 }},label={Text(stringResource(label))})
@@ -141,13 +141,13 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 items(WATERMARK_PRESETS,key={it},contentType={"preset-chip"}) {labelId->
                     val label=stringResource(labelId)
-                    FilterChip(border=null,selected=draft.text1==label,onClick={edit {it.copy(text1=label)}},label={Text(label)})
+                    FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=draft.text1==label,onClick={edit {it.copy(text1=label)}},label={Text(label)})
                 }
             }
             Text(stringResource(R.string.studio_font),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 items(WATERMARK_FONTS,key={it.first},contentType={"font-chip"}) {(font,label)->
-                    FilterChip(border=null,selected=draft.watermarkFont==font,onClick={edit {it.copy(watermarkFont=font)}},label={Text(stringResource(label))})
+                    FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=draft.watermarkFont==font,onClick={edit {it.copy(watermarkFont=font)}},label={Text(stringResource(label))})
                 }
             }
             Text(stringResource(R.string.watermark_colors),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
@@ -168,25 +168,25 @@ internal fun VisualWatermarkEditor(vm:AppViewModel,sourceId:String,draft:Workspa
         else InteractiveIntSlider(stringResource(R.string.watermark_size),draftNumber(draft.num1,42),12,90,42) {v->edit {it.copy(num1=v.toString())}}
         InteractiveIntSlider(stringResource(R.string.watermark_rotation),rotation,-180,180,if(imageTool) 0 else -35) {v->edit {it.copy(text4=v.toString())}}
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(WATERMARK_ANGLES,key={it},contentType={"angle-chip"}) {angle->FilterChip(border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})}
+            items(WATERMARK_ANGLES,key={it},contentType={"angle-chip"}) {angle->FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=rotation==angle,onClick={edit {it.copy(text4=angle.toString())}},label={Text("$angle°")})}
         }
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            FilterChip(border=null,selected=!tiled,onClick={edit {it.copy(text2="SINGLE")}},label={Text(stringResource(R.string.watermark_single))})
-            FilterChip(border=null,selected=tiled,onClick={edit {it.copy(text2="TILE")}},label={Text(stringResource(R.string.watermark_tile))})
+            FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=!tiled,onClick={edit {it.copy(text2="SINGLE")}},label={Text(stringResource(R.string.watermark_single))})
+            FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=tiled,onClick={edit {it.copy(text2="TILE")}},label={Text(stringResource(R.string.watermark_tile))})
         }
         if(!tiled) {
             Text(stringResource(R.string.studio_watermark_placement),style=QuietTheme.typography.metadataStrong,modifier=Modifier.semantics { heading() })
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 items(WATERMARK_PLACEMENTS,key={it.first},contentType={"placement-chip"}) {(label,x,y)->
-                    FilterChip(border=null,selected=abs(centerX-x)<.01f && abs(centerY-y)<.01f,onClick={position(x,y)},label={Text(stringResource(label))})
+                    FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=abs(centerX-x)<.01f && abs(centerY-y)<.01f,onClick={position(x,y)},label={Text(stringResource(label))})
                 }
             }
             // Position is adjusted directly on the preview canvas or with the placement chips above.
         }
         if(!imageTool) {
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                FilterChip(border=null,selected=draft.pages.equals("all",true),onClick={edit {it.copy(pages="all")}},label={Text(stringResource(R.string.watermark_all_pages))})
-                FilterChip(border=null,selected=draft.pages==page.toString(),onClick={edit {it.copy(pages=page.toString())}},label={Text(stringResource(R.string.watermark_this_page))})
+                FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=draft.pages.equals("all",true),onClick={edit {it.copy(pages="all")}},label={Text(stringResource(R.string.watermark_all_pages))})
+                FilterChip(shape=QuietTheme.shapes.pill,border=null,selected=draft.pages==page.toString(),onClick={edit {it.copy(pages=page.toString())}},label={Text(stringResource(R.string.watermark_this_page))})
             }
             InteractiveToggle(stringResource(R.string.watermark_page_numbers),draft.flag1) {v->edit {it.copy(flag1=v)}}
         }

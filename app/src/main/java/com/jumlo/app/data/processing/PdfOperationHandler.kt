@@ -42,6 +42,9 @@ import kotlin.math.roundToInt
             "pdf_stamp" -> structural(request,context,"stamp")
             "pdf_signature" -> structural(request,context,"signature")
             "pdf_protect" -> structural(request,context,"protect")
+            "pdf_nup" -> nupPrint(request,context)
+            "pdf_privacy_redact" -> redactPdf(request,context)
+            "pdf_long_image" -> pdfToLongImage(request,context)
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
     }
@@ -621,5 +624,76 @@ import kotlin.math.roundToInt
                 }
             }
         }
+    }
+
+    private suspend fun nupPrint(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
+        require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
+        val key="document"
+        context.outputs.find(request.id,key)?.let { return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
+        val s=Json.decodeFromString<PdfNupSettings>(request.settingsJson)
+        val source=context.sources.get(request.sourceIds.single())
+        val base=com.jumlo.app.core.AutoOutputName.cleanBaseName(source.displayName,"Document")
+        val rawName=s.displayName.trim().takeUnless { it.isBlank() || it=="PrintLayout.pdf" || it=="Document.pdf" } ?: "$base - ${s.pagesPerSheet}in1.pdf"
+        val outName=SafeNames.basename(if (rawName.endsWith(".pdf", true)) rawName else "$rawName.pdf")
+        val ticket=context.outputs.reserve(request.id,key,outName,"application/pdf")
+        var origBytes=0L
+        try {
+            context.sources.withSeekable(source.id,request.id) { input ->
+                origBytes=input.length()
+                com.jumlo.app.data.pdf.PdfNupComposer.compose(input,ticket.stageFile,s.pagesPerSheet,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation)
+            }
+            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/pdf",originalSizeBytes=origBytes) }
+            return listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
+        } catch(t:Throwable) { ticket.stageFile.delete(); if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY"); throw t }
+    }
+
+    private suspend fun redactPdf(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
+        require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
+        val key="document"
+        context.outputs.find(request.id,key)?.let { return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
+        val s=Json.decodeFromString<PdfRedactSettings>(request.settingsJson)
+        val source=context.sources.get(request.sourceIds.single())
+        val base=com.jumlo.app.core.AutoOutputName.cleanBaseName(source.displayName,"Document")
+        val rawName=s.displayName.trim().takeUnless { it.isBlank() || it=="Redacted.pdf" || it=="Document.pdf" } ?: "$base - Redacted.pdf"
+        val outName=SafeNames.basename(if (rawName.endsWith(".pdf", true)) rawName else "$rawName.pdf")
+        val ticket=context.outputs.reserve(request.id,key,outName,"application/pdf")
+        var origBytes=0L
+        try {
+            context.sources.withSeekable(source.id,request.id) { input ->
+                origBytes=input.length()
+                val total = openUnencrypted(input).use { it.numberOfPages }
+                val regions = s.overrides.ifEmpty {
+                    pages(s.pages, total).map { p -> PdfCropOverride(p, s.left, s.top, s.right, s.bottom) }
+                }
+                com.jumlo.app.data.pdf.PdfRedactionEngine.burnRedactions(input,ticket.stageFile,regions,s.fillBlack,context.budget.maxBitmapBytes,context.checkCancellation)
+            }
+            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/pdf",originalSizeBytes=origBytes) }
+            return listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
+        } catch(t:Throwable) { ticket.stageFile.delete(); if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY"); throw t }
+    }
+
+    private suspend fun pdfToLongImage(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
+        require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
+        val key="image"
+        context.outputs.find(request.id,key)?.let { return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
+        val s=Json.decodeFromString<PdfImagesSettings>(request.settingsJson)
+        val source=context.sources.get(request.sourceIds.single())
+        val base=com.jumlo.app.core.AutoOutputName.cleanBaseName(source.displayName,"Document")
+        val asJpeg=s.format.equals("JPEG",true)
+        val ext=if(asJpeg) "jpg" else "png"
+        val mime=if(asJpeg) "image/jpeg" else "image/png"
+        val customBase = s.displayName.substringBeforeLast('.', s.displayName).trim()
+            .takeUnless { it.isEmpty() || it.equals("download", true) || it.equals("Long", true) || it.equals("Document", true) }
+        val outName=SafeNames.basename(if (customBase != null) "${com.jumlo.app.core.AutoOutputName.cleanBaseName(customBase, base)}.$ext" else "$base - Long.$ext")
+        val ticket=context.outputs.reserve(request.id,key,outName,mime)
+        var origBytes=0L
+        try {
+            context.sources.withSeekable(source.id,request.id) { input ->
+                origBytes=input.length()
+                com.jumlo.app.data.pdf.PdfLongImageComposer.compose(input,ticket.stageFile,s.pages,asJpeg,s.quality,s.dpi,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation)
+            }
+            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,mime,originalSizeBytes=origBytes) }
+            return listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
+        } catch(t:Throwable) { ticket.stageFile.delete(); if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY"); throw t }
     }
 }

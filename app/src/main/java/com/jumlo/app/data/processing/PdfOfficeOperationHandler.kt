@@ -67,14 +67,34 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
                             check()
                             val page = pages[index] - 1
                             var text = PdfPageText.extractStructured(doc, page, context.checkCancellation)
-                            if (text.isBlank) {
-                                ocrPages++
-                                val bitmap = raster().render(page, 2400, minOf(context.budget.maxBitmapBytes / 2, 32L * 1024 * 1024))
-                                try { text = OfficeTextPage.fromPlainText(runBlocking(workerContext) { ocr.recognize(bitmap) }) } finally { bitmap.recycle() }
+                            val hasEmbeddedImages = runCatching {
+                                val res = doc.getPage(page).resources
+                                res?.xObjectNames?.any { name -> res.isImageXObject(name) } == true
+                            }.getOrDefault(false)
+                            var pageJpeg: ByteArray? = null
+                            var imgW = 0.0
+                            var imgH = 0.0
+                            if (text.isBlank || hasEmbeddedImages) {
+                                val size = raster().pageSize(page)
+                                imgW = size.first.toDouble()
+                                imgH = size.second.toDouble()
+                                val bitmap = raster().render(page, 2000, minOf(context.budget.maxBitmapBytes / 2, 24L * 1024 * 1024))
+                                try {
+                                    if (text.isBlank) {
+                                        ocrPages++
+                                        val recognized = try { runBlocking(workerContext) { ocr.recognize(bitmap) } } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (oom: OutOfMemoryError) { throw oom } catch (_: Exception) { "" }
+                                        if (recognized.isNotBlank()) text = OfficeTextPage.fromPlainText(recognized)
+                                    }
+                                    if (text.isBlank || hasEmbeddedImages) {
+                                        pageJpeg = ByteArrayOutputStream().use { bytes ->
+                                            if (bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) bytes.toByteArray() else null
+                                        }
+                                    }
+                                } finally { bitmap.recycle() }
                             }
-                            if (text.isBlank) emptyPages++
+                            if (text.isBlank && pageJpeg == null) emptyPages++
                             progress(index)
-                            text
+                            text.copy(pageImageJpeg = pageJpeg, imageWidthPt = imgW, imageHeightPt = imgH)
                         }, ::check)
                         else OfficePackageWriter.writePptx(ticket.stageFile, pageCount, { index ->
                             check()

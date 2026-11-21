@@ -83,6 +83,18 @@ android {
         }
     }
 
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "ENABLE_MEDIA_DOWNLOADER", "false")
+        }
+        create("direct") {
+            dimension = "distribution"
+            buildConfigField("boolean", "ENABLE_MEDIA_DOWNLOADER", "true")
+        }
+    }
+
     buildTypes {
         debug {
             // CI checkouts have no gitignored debug.keystore; use AGP's default key then.
@@ -269,6 +281,14 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.4.0")
     implementation("androidx.camera:camera-view:1.4.0")
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.androidx.biometric)
+    implementation(libs.play.billing)
+    implementation(libs.play.integrity)
+    implementation(libs.mlkit.text.recognition.chinese)
+    implementation(libs.mlkit.text.recognition.devanagari)
+    implementation(libs.mlkit.text.recognition.japanese)
+    implementation(libs.mlkit.text.recognition.korean)
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
@@ -348,11 +368,11 @@ val maxFullMediaApkBytes = 60_000_000L
 tasks.register("verifyCompactApkSize") {
     group = "verification"
     description = "Build and enforce the 60,000,000-byte full-media compact APK limit"
-    dependsOn("assembleCompact")
+    dependsOn("assembleDirectCompact")
     doLast {
         // A small direct-link-only build is not a substitute for the full downloader.
         check(extendedMedia) { "Compact size verification requires the full media runtime; omit -PextendedMedia=false." }
-        val folder = layout.buildDirectory.dir("outputs/apk/compact").get().asFile
+        val folder = layout.buildDirectory.dir("outputs/apk/direct/compact").get().asFile
         val apks = folder.listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
         check(apks.size == 1) { "Expected exactly one compact APK in $folder; found ${apks.size}" }
         val apk = apks.single()
@@ -366,10 +386,10 @@ tasks.register("verifyCompactApkSize") {
 tasks.register("verifyReleaseApkSize") {
     group = "verification"
     description = "Enforce the 60,000,000-byte full-media release APK limit, ARM64 and extractor content"
-    dependsOn("assembleRelease")
+    dependsOn("assembleDirectRelease")
     doLast {
         check(extendedMedia) { "Release qualification requires the complete media runtime." }
-        val apks = layout.buildDirectory.dir("outputs/apk/release").get().asFile
+        val apks = layout.buildDirectory.dir("outputs/apk/direct/release").get().asFile
             .listFiles()?.filter { it.isFile && it.extension == "apk" }.orEmpty()
         check(apks.size == 1) { "Expected one current release APK; clean obsolete release artifacts first." }
         val apk = apks.single()
@@ -389,7 +409,7 @@ tasks.register("verifyReleaseApkSize") {
 tasks.register("verifyPublishableRelease") {
     group = "verification"
     description = "Require owner release signing, optimized APK/AAB and size/lint gates; does not publish"
-    dependsOn("verifyReleaseApkSize", "bundleRelease", "lintRelease")
+    dependsOn("verifyReleaseApkSize", "bundlePlayRelease", "lintPlayRelease")
     doLast {
         check(releaseSigningReady) { "Supply JUMLO_KEYSTORE_PATH, JUMLO_STORE_PASSWORD, JUMLO_KEY_ALIAS and JUMLO_KEY_PASSWORD, or a complete gitignored keystore.properties." }
         check(rootProject.file(releaseStorePath).isFile) { "Configured release keystore does not exist." }

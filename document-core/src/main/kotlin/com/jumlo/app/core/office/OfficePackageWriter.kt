@@ -43,37 +43,61 @@ object OfficePackageWriter {
     fun writeStructuredDocx(destination: File, pageCount: Int, page: (Int) -> OfficeTextPage, checkCancel: () -> Unit = {}) {
         require(pageCount in 1..MAX_PAGES) { "OFFICE_PAGE_LIMIT" }
         publishPackage(destination, checkCancel, { OfficePackageValidator.validateDocx(it, pageCount, checkCancel) }) { zip ->
-            zip.xml("[Content_Types].xml", "<Types xmlns=\"$CONTENT\">${defaults()}" +
+            zip.xml("[Content_Types].xml", "<Types xmlns=\"$CONTENT\">${defaults()}<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/>" +
                 override("/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml") +
                 override("/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml") + "</Types>")
             zip.xml("_rels/.rels", relationships(listOf(Triple("rId1", "officeDocument", "word/document.xml"))))
-            zip.xml("word/_rels/document.xml.rels", relationships(listOf(Triple("rId1", "styles", "styles.xml"))))
             zip.xml("word/styles.xml", """<w:styles xmlns:w="$W"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:bidi="ar-SA"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:pPr><w:spacing w:after="160"/></w:pPr></w:style>${headingStyles()}</w:styles>""")
-            zip.putNextEntry(ZipEntry("word/document.xml"))
-            zip.utf8("$HEADER<w:document xmlns:w=\"$W\"><w:body>")
-            var hasText = false
+            val docRels = mutableListOf(Triple("rId1", "styles", "styles.xml"))
+            val docXml = StringBuilder()
+            val wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+            val pic = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+            docXml.append("$HEADER<w:document xmlns:w=\"$W\" xmlns:r=\"$R\" xmlns:wp=\"$wp\" xmlns:a=\"$A\" xmlns:pic=\"$pic\"><w:body>")
+            var hasContent = false
+            var imgId = 1
             for (index in 0 until pageCount) {
                 checkCancel()
                 val current = page(index)
                 require(current.paragraphs.size <= MAX_PAGE_TEXT && current.paragraphs.sumOf { it.text.length.toLong() } <= MAX_PAGE_TEXT) { "OFFICE_TEXT_BUDGET_EXCEEDED" }
-                hasText = hasText || !current.isBlank
-                if (index > 0) zip.utf8("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>")
+                val imgBytes = current.pageImageJpeg
+                hasContent = hasContent || !current.isBlank || (imgBytes != null && imgBytes.isNotEmpty())
+                if (index > 0) docXml.append("<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>")
                 current.paragraphs.forEach { paragraph ->
                     checkCancel()
                     require(paragraph.headingLevel in 0..3) { "OFFICE_VERIFY_FAILED" }
                     val rtl = isRtl(paragraph.text)
                     val properties = (if (paragraph.headingLevel > 0) "<w:pStyle w:val=\"Heading${paragraph.headingLevel}\"/>" else "") +
                         (if (rtl) "<w:bidi/><w:jc w:val=\"right\"/>" else "")
-                    zip.utf8("<w:p>" + if (properties.isNotEmpty()) "<w:pPr>$properties</w:pPr>" else "")
+                    docXml.append("<w:p>" + if (properties.isNotEmpty()) "<w:pPr>$properties</w:pPr>" else "")
                     paragraph.text.split('\n').forEachIndexed { line, value ->
-                        if (line > 0) zip.utf8("<w:r><w:br/></w:r>")
-                        zip.utf8("<w:r>${if (rtl) "<w:rPr><w:rtl/></w:rPr>" else ""}<w:t xml:space=\"preserve\">${escape(value)}</w:t></w:r>")
+                        if (line > 0) docXml.append("<w:r><w:br/></w:r>")
+                        docXml.append("<w:r>${if (rtl) "<w:rPr><w:rtl/></w:rPr>" else ""}<w:t xml:space=\"preserve\">${escape(value)}</w:t></w:r>")
                     }
-                    zip.utf8("</w:p>")
+                    docXml.append("</w:p>")
+                }
+                if (imgBytes != null && imgBytes.size >= 4 && imgBytes[0] == 0xff.toByte() && imgBytes[1] == 0xd8.toByte()) {
+                    val relId = "rIdImg$imgId"
+                    val mediaName = "media/page$imgId.jpg"
+                    docRels += Triple(relId, "image", mediaName)
+                    zip.putNextEntry(ZipEntry("word/$mediaName"))
+                    zip.write(imgBytes)
+                    zip.closeEntry()
+                    val maxW = 6_650_000L // ~7.27 in (A4 width minus margins)
+                    val maxH = 8_600_000L
+                    val srcW = current.imageWidthPt.takeIf { it.isFinite() && it > 0.0 } ?: 595.0
+                    val srcH = current.imageHeightPt.takeIf { it.isFinite() && it > 0.0 } ?: 842.0
+                    val scale = minOf(maxW / srcW, maxH / srcH)
+                    val cx = (srcW * scale).toLong().coerceAtLeast(1L)
+                    val cy = (srcH * scale).toLong().coerceAtLeast(1L)
+                    docXml.append("<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"$cx\" cy=\"$cy\"/><wp:docPr id=\"$imgId\" name=\"Page ${index + 1}\"/><a:graphic><a:graphicData uri=\"$pic\"><pic:pic><pic:nvPicPr><pic:cNvPr id=\"$imgId\" name=\"page$imgId.jpg\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"$relId\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"$cx\" cy=\"$cy\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>")
+                    imgId++
                 }
             }
-            require(hasText) { "OCR_NO_TEXT" }
-            zip.utf8("<w:sectPr><w:pgSz w:w=\"11906\" w:h=\"16838\"/><w:pgMar w:top=\"720\" w:right=\"720\" w:bottom=\"720\" w:left=\"720\" w:header=\"360\" w:footer=\"360\" w:gutter=\"0\"/></w:sectPr></w:body></w:document>")
+            require(hasContent) { "OCR_NO_TEXT" }
+            docXml.append("<w:sectPr><w:pgSz w:w=\"11906\" w:h=\"16838\"/><w:pgMar w:top=\"720\" w:right=\"720\" w:bottom=\"720\" w:left=\"720\" w:header=\"360\" w:footer=\"360\" w:gutter=\"0\"/></w:sectPr></w:body></w:document>")
+            zip.xml("word/_rels/document.xml.rels", relationships(docRels))
+            zip.putNextEntry(ZipEntry("word/document.xml"))
+            zip.utf8(docXml.toString())
             zip.closeEntry()
         }
     }

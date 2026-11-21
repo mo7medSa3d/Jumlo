@@ -21,7 +21,7 @@ import java.security.SecureRandom
 internal fun PresetChipsRow(presets: List<String>, selected: String, onSelect: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(presets, key = { it }, contentType = { "preset-chip" }) { preset ->
-            FilterChip(selected = preset == selected, onClick = { onSelect(preset) }, border = null,
+            FilterChip(selected = preset == selected, onClick = { onSelect(preset) }, shape = QuietTheme.shapes.pill, border = null,
                 label = { Text(preset) })
         }
     }

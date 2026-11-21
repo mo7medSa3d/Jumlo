@@ -71,25 +71,71 @@ fun ScanScreen(
 ) {
     var format by rememberSaveable { mutableStateOf<String?>(null) }
     if (format == null) {
-        Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.align(Alignment.TopStart).padding(12.dp).size(48.dp)
+        var selectedMode by rememberSaveable { mutableStateOf("pdf") }
+        Surface(Modifier.fillMaxSize(), color = androidx.compose.ui.graphics.Color(0xFF0B0E14)) {
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.scan_back))
-            }
-            Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically)) {
-                Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
-                Text(stringResource(R.string.scan_smart_hint), style = QuietTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                QuietPrimaryButton(stringResource(R.string.scan_save_pdf), onClick = { format = "pdf" },
-                    enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.pdf"))
-                QuietTonalButton(stringResource(R.string.scan_save_jpg), onClick = { format = "jpg" },
-                    enabled = !externalBusy, modifier = Modifier.fillMaxWidth().testTag("scan.format.jpg"))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.scan_back), tint = androidx.compose.ui.graphics.Color.White)
+                    }
+                    Surface(shape = QuietTheme.shapes.pill, color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f)) {
+                        Text(stringResource(R.string.scan_hd_badge), style = QuietTheme.typography.metadataStrong, color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp))
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Surface(
+                        shape = CircleShape,
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
+                        modifier = Modifier.size(84.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.DocumentScanner, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+                        }
+                    }
+                    Text(stringResource(R.string.scan_choose_format), style = QuietTheme.typography.sectionTitle, color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.semantics { heading() })
+                    if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth(0.7f))
+                }
+                Spacer(Modifier.weight(1f))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.padding(bottom = 18.dp)) {
+                    items(listOf(
+                        Triple("pdf", R.string.scan_save_pdf, "scan.format.pdf"),
+                        Triple("jpg", R.string.scan_save_jpg, "scan.format.jpg"),
+                        Triple("id_card", R.string.scan_id_card_title, "scan.format.idcard")
+                    ), key = { it.first }) { (mode, labelRes, tag) ->
+                        val active = selectedMode == mode
+                        Surface(
+                            onClick = { selectedMode = mode; format = mode },
+                            enabled = !externalBusy,
+                            shape = QuietTheme.shapes.pill,
+                            color = if (active) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.10f),
+                            modifier = Modifier.testTag(tag)
+                        ) {
+                            Text(
+                                stringResource(labelRes),
+                                maxLines = 1,
+                                style = QuietTheme.typography.metadataStrong,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                            )
+                        }
+                    }
+                }
+                Surface(
+                    onClick = { if (!externalBusy) format = selectedMode },
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = androidx.compose.ui.graphics.Color.White,
+                    border = androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.padding(bottom = 8.dp).size(72.dp)
+                ) {}
+                Spacer(Modifier.height(10.dp))
             }
         }
+    } else if (format == "id_card") {
+        IdCardScanFlow(onPdfReady = onScannedPdf, onBack = { format = null }, externalBusy = externalBusy)
     } else {
         SmartDocumentScanLauncher(
             onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,

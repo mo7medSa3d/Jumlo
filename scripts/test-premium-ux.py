@@ -136,7 +136,7 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('HomeQuickAction(',code)
         self.assertIn('.size(54.dp)',code)
         self.assertIn('maxLines = 1',code)
-        self.assertNotIn('QuietSearchBar(',code)
+        self.assertIn('QuietSearchBar(',code)
 
     def test_old_color_system_is_gone_and_transparency_kept(self):
         settings = source('settings/SettingsScreen.kt')

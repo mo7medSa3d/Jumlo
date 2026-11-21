@@ -8,6 +8,7 @@ import com.jumlo.app.data.jobs.ExecutionContext
 import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.OperationHandler
 import com.jumlo.app.data.ocr.MlKitOcrEngine
+import com.jumlo.app.data.ocr.OcrScript
 import com.jumlo.app.data.pdf.PdfBoxBackend
 import com.jumlo.app.data.pdf.PdfPageRasterizer
 import com.jumlo.app.data.pdf.PdfPageText
@@ -26,6 +27,7 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
         require(request.sourceIds.size == 1) { "ONE_FILE_REQUIRED" }
         val source = context.sources.get(request.sourceIds.single())
         val settings = JSONObject(request.settingsJson)
+        val script = OcrScript.fromId(settings.optString("ocrScript", "LATIN"))
         val existingText = context.outputs.find(request.id, "text")
         val existingDoc = context.outputs.find(request.id, "document")
         if (existingText != null) {
@@ -63,7 +65,7 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
                                 if (text.isBlank()) {
                                     val renderer = rasterizer ?: PdfPageRasterizer(input, context.checkCancellation).also { rasterizer = it }
                                     val bitmap = renderer.render(number - 1, 2400, minOf(context.budget.maxBitmapBytes / 2, 32L * 1024 * 1024))
-                                    try { text = ocr.recognize(bitmap) } finally { bitmap.recycle() }
+                                    try { text = ocr.recognize(bitmap, script) } finally { bitmap.recycle() }
                                     if (text.isNotBlank() && !textOnly) {
                                         if (runCatching { OcrTextPolicy.requireRepresentable(text) }.isSuccess) {
                                             PdfBoxBackend.stampInvisibleText(document, number - 1, text, .04, .04, 9f, strict = true)
@@ -83,8 +85,8 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
                             }
                         } finally { rasterizer?.close() }
                     } else {
-                        BitmapTransforms.decode(input, context.budget.maxBitmapBytes).use { image ->
-                            val text = ocr.recognize(image.bitmap)
+                        BitmapTransforms.decode(input, context.budget.maxBitmapBytes / 2).use { image ->
+                            val text = ocr.recognize(image.bitmap, script)
                             detected = text.isNotBlank()
                             textOutput.write(text)
                         }

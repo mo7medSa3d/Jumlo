@@ -44,6 +44,11 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val LINKEDIN_VIDEO_REGEX = Regex("https://dms\\.licdn\\.com/playlist/vid/[^\\s\"'<>\\\\]+")
         val LINKEDIN_DOC_REGEX = Regex("https://media\\.licdn\\.com/dms/document/[^\\s\"'<>\\\\]+")
         val LINKEDIN_IMG_REGEX = Regex("https://media\\.licdn\\.com/dms/image/[^\\s\"'<>\\\\]+(?:feedshare|article-cover)[^\\s\"'<>\\\\]*")
+        val LINKEDIN_POST_URL_REGEX = Regex("""https://(?:www\.)?linkedin\.com/(?:posts|feed/update|pulse|video)/[^\s"'<>]+""")
+        val LINKEDIN_JSONLD_VIDEO_REGEX = Regex("\\\\?\"contentUrl\\\\?\"\\s*:\\s*\\\\?\"(https://[^\"\\\\]+\\.mp4[^\"\\\\]*)")
+        val UNIVERSAL_MEDIA_URL_REGEX = Regex("""https://[^\s"'<>\\]+\.(?:mp4|m4v|webm|m4a|mp3|pdf)(?:\?[^\s"'<>\\]*)?""", RegexOption.IGNORE_CASE)
+        val UNIVERSAL_META_IMAGE_REGEX = Regex("""(?:og:image|twitter:image)["'][^>]*content=["'](https://[^"']+)["']|content=["'](https://[^"']+)["'][^>]*property=["'](?:og:image|twitter:image)["']""", RegexOption.IGNORE_CASE)
+        val UNIVERSAL_MEDIA_EXTS = setOf("mp4", "m4v", "webm", "m4a", "mp3", "pdf")
     }
     private data class Remote(val url: String, val extension: String, val title: String, val size: Long?)
     private data class Inspection(val name: String, val extractor: String, val streams: List<Remote>, val thumbnailUrl: String? = null)
@@ -171,7 +176,14 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         return host == "lnkd.in" || host == "linkedin.com" || host.endsWith(".linkedin.com")
     }
 
-    /** Extract public LinkedIn video streams, PDF carousel documents, and post images from page HTML. */
+    private fun resolveLinkedInInterstitial(pageUrl: String, html: String, allowHttp: Boolean): String? {
+        if (!pageUrl.contains("lnkd.in", ignoreCase = true)) return null
+        val decoded = html.replace("&amp;", "&")
+        val target = LINKEDIN_POST_URL_REGEX.find(decoded)?.value?.trimEnd('"', '\'', ')', ']') ?: return null
+        return runCatching { MediaLinks.normalize(target, allowHttp) }.getOrNull()
+    }
+
+    /** Extract public LinkedIn video streams, PDF carousel documents, and single/multi-image posts from page HTML. */
     private fun extractLinkedInCandidates(pageUrl: String, html: String, allowHttp: Boolean): List<Remote> {
         val decoded = html.replace("&quot;", "\"").replace("&amp;", "&").replace("\\u002F", "/").replace("\\/", "/")
         val title = Html5MediaDiscovery.title(html)?.take(180)?.ifBlank { "LinkedIn media" } ?: "LinkedIn media"
@@ -180,15 +192,65 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             val u = m.value.trimEnd(',', '}', ']')
             if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "mp4", title, null))
         }
+        for (m in LINKEDIN_JSONLD_VIDEO_REGEX.findAll(decoded)) {
+            val u = m.groupValues[1].trimEnd(',', '}', ']')
+            if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "mp4", title, null))
+        }
         for (m in LINKEDIN_DOC_REGEX.findAll(decoded)) {
             val u = m.value.trimEnd(',', '}', ']')
             if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "pdf", title, null))
         }
         if (found.isEmpty()) {
+            // Deduplicate distinct photos by asset segment so we keep one high-res URL per photo in multi-photo posts.
+            val byAsset = linkedMapOf<String, String>()
             for (m in LINKEDIN_IMG_REGEX.findAll(decoded)) {
                 val u = m.value.trimEnd(',', '}', ']')
-                if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "jpg", title, null))
-                if (found.size >= 8) break
+                if (runCatching { MediaLinks.normalize(u, allowHttp) }.isFailure) continue
+                val assetKey = u.substringBefore("/feedshare").substringAfterLast('/')
+                val prev = byAsset[assetKey]
+                if (prev == null || u.contains("shrink_2048") || (u.contains("shrink_1280") && !prev.contains("shrink_2048"))) {
+                    byAsset[assetKey] = u
+                }
+                if (byAsset.size >= 20) break
+            }
+            val images = byAsset.values.toList()
+            if (images.size >= 2) {
+                found["bundle"] = Remote("bundle:" + images.joinToString("\n"), "zip", "$title (${images.size} photos)", null)
+            } else if (images.size == 1) {
+                found[images[0]] = Remote(images[0], "jpg", title, null)
+            }
+        }
+        return found.values.toList()
+    }
+
+    /** Universal fallback extractor for any public webpage: scans decoded HTML/JSON for direct
+     *  video/audio/PDF URLs and falls back to high-res OpenGraph/Twitter images when no stream exists. */
+    private fun extractUniversalPageMedia(pageUrl: String, html: String, allowHttp: Boolean): List<Remote> {
+        val decoded = html.replace("&quot;", "\"").replace("&amp;", "&").replace("\\u002F", "/").replace("\\/", "/")
+        val title = Html5MediaDiscovery.title(html)?.take(180)?.ifBlank { "Web media" } ?: "Web media"
+        val found = linkedMapOf<String, Remote>()
+        for (m in UNIVERSAL_MEDIA_URL_REGEX.findAll(decoded)) {
+            val u = m.value.trimEnd(',', '}', ']', ')')
+            if (runCatching { MediaLinks.normalize(u, allowHttp) }.isFailure) continue
+            val ext = u.substringBefore('?').substringAfterLast('.', "").lowercase(Locale.ROOT)
+            if (ext in UNIVERSAL_MEDIA_EXTS) {
+                found.putIfAbsent(u, Remote(u, ext, title, null))
+            }
+            if (found.size >= 6) break
+        }
+        if (found.isEmpty()) {
+            for (m in UNIVERSAL_META_IMAGE_REGEX.findAll(decoded)) {
+                val u = m.groupValues[1].ifBlank { m.groupValues[2] }.trim()
+                if (u.isNotBlank() && runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) {
+                    val lower = u.substringBefore('?').lowercase(Locale.ROOT)
+                    val ext = when {
+                        lower.endsWith(".png") -> "png"
+                        lower.endsWith(".webp") -> "webp"
+                        else -> "jpg"
+                    }
+                    found.putIfAbsent(u, Remote(u, ext, title, null))
+                    break
+                }
             }
         }
         return found.values.toList()
@@ -280,7 +342,19 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 catch (_: Exception) { /* One inaccessible candidate must not hide another verified resource. */ }
             }
             if (streams.isEmpty() && (isLinkedInHost(url) || isLinkedInHost(pageUrl))) {
-                streams += extractLinkedInCandidates(pageUrl, html, allowHttp)
+                val resolvedTarget = resolveLinkedInInterstitial(pageUrl, html, allowHttp)
+                if (resolvedTarget != null) {
+                    val targetPage = runCatching { readPage(resolvedTarget, allowHttp, check, preferredProfileIndex = nextProfile) }.getOrNull()
+                    if (targetPage != null) {
+                        streams += extractLinkedInCandidates(targetPage.url, targetPage.html, allowHttp)
+                    }
+                }
+                if (streams.isEmpty()) {
+                    streams += extractLinkedInCandidates(pageUrl, html, allowHttp)
+                }
+            }
+            if (streams.isEmpty()) {
+                streams += extractUniversalPageMedia(pageUrl, html, allowHttp)
             }
             if (streams.isNotEmpty()) return Inspection(
                 Html5MediaDiscovery.title(html) ?: streams.first().title, "Html5", streams,
@@ -300,7 +374,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             MediaFormat(id = if (found.extractor == "DirectMedia") "source" else "page_$index",
                 extension = source.extension, videoCodec = if (isAudio) "none" else "direct",
                 audioCodec = if (isAudio) "direct" else "none", bytes = source.size,
-                protocol = URI(source.url).scheme.lowercase(Locale.ROOT))
+                protocol = if (source.url.startsWith("bundle:")) "https" else URI(source.url).scheme.lowercase(Locale.ROOT))
         }
         return MediaAsset(
             id = Hashing.sha256(ByteArrayInputStream(normalized.toByteArray(Charsets.UTF_8))),
@@ -325,6 +399,60 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             else null
         val source = index?.let { found.streams.getOrNull(it) } ?: throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
         if (source.extension != choice.formats.single().extension) throw OperationFailure("MEDIA_REANALYSIS_REQUIRED")
+        if (source.url.startsWith("bundle:")) {
+            val urls = source.url.removePrefix("bundle:").lines().filter { it.isNotBlank() }
+            val target = File(directory, "media.zip")
+            val partialZip = File(directory, "native-bundle.part")
+            var writtenCount = 0
+            java.util.zip.ZipOutputStream(java.io.BufferedOutputStream(java.io.FileOutputStream(partialZip))).use { zos ->
+                urls.forEachIndexed { idx, imgUrl ->
+                    check()
+                    var currentImg = HttpPolicy.url(MediaLinks.normalize(imgUrl, allowHttp), allowHttp)
+                    for (hop in 0..5) {
+                        check()
+                        val imgReq = Request.Builder().url(currentImg.toString()).apply {
+                            headers(currentImg.toString(), 0, normalized).forEach { (k, v) -> header(k, v) }
+                        }.get().build()
+                        var redirected = false
+                        http.executeCancellable(imgReq, check).use { resp ->
+                            if (resp.code in REDIRECT_CODES) {
+                                val loc = resp.header("Location")
+                                if (loc != null && hop < 5) {
+                                    val next = HttpPolicy.url(MediaLinks.normalize(currentImg.resolve(loc).toString(), allowHttp), allowHttp)
+                                    if (currentImg.scheme == "https" && next.scheme != "https") throw OperationFailure("INSECURE_REDIRECT")
+                                    currentImg = next
+                                    redirected = true
+                                }
+                            } else if (resp.code in 200..299) {
+                                val bytes = resp.body?.bytes() ?: ByteArray(0)
+                                if (bytes.isNotEmpty()) {
+                                    val ctype = resp.header("Content-Type").orEmpty().lowercase(Locale.ROOT)
+                                    val ext = when {
+                                        ctype.contains("png") -> "png"
+                                        ctype.contains("webp") -> "webp"
+                                        else -> "jpg"
+                                    }
+                                    zos.putNextEntry(java.util.zip.ZipEntry("photo_${(idx + 1).toString().padStart(2, '0')}.$ext"))
+                                    zos.write(bytes)
+                                    zos.closeEntry()
+                                    writtenCount++
+                                }
+                            }
+                        }
+                        if (!redirected) break
+                    }
+                    progress(MediaProgress(id, (idx + 1).toLong(), urls.size.toLong(), null, null, null))
+                }
+            }
+            if (writtenCount == 0) {
+                partialZip.delete()
+                throw OperationFailure("MEDIA_SITE_UNSUPPORTED")
+            }
+            moveSafely(partialZip, target)
+            try { MediaOutputPolicy.inspect(target) } catch (error: Exception) { target.delete(); throw error }
+            check()
+            return
+        }
         val partial = File(directory, "native-media.part")
         val journal = File(directory, "native-media.properties")
         val old = java.util.Properties().apply { if (journal.isFile) journal.inputStream().use(::load) }

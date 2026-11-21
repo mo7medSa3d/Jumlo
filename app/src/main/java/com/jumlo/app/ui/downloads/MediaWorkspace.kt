@@ -557,30 +557,28 @@ private val IMAGE_DIRECT_MODES = listOf(
                         color=MaterialTheme.colorScheme.primary)
                 }
             }
-        }
-        Surface(tonalElevation=2.dp) {
-            Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
-            val selectedQualityTitle = remember(selectedChoice) {
-                selectedChoice?.let(MediaCatalog::qualityTitle)
-            }
-            val downloadButtonLabel = when {
-                state.submitting -> stringResource(R.string.media_queueing)
-                selectedQualityTitle != null -> stringResource(R.string.media_download_with_quality, selectedQualityTitle)
-                state.asset != null -> stringResource(R.string.media_download_selected)
-                else -> stringResource(R.string.redesign_download_now)
-            }
-            Button(
-                onClick=onSubmit,
-                enabled=!state.analyzing && !state.submitting && (state.direct!=null || state.selectedKey!=null),
-                modifier=Modifier.widthIn(max=840.dp).fillMaxWidth().padding(horizontal=20.dp,vertical=12.dp).pressFeedback().heightIn(min=56.dp),
-                shape=QuietTheme.shapes.button
-            ) {
-                Icon(Icons.Rounded.Download,null);Spacer(Modifier.width(8.dp))
-                Text(
-                    text=downloadButtonLabel,
-                    style=QuietTheme.typography.button
-                )
-            }
+            item("download-action", contentType = "execute-action") {
+                val selectedQualityTitle = remember(selectedChoice) {
+                    selectedChoice?.let(MediaCatalog::qualityTitle)
+                }
+                val downloadButtonLabel = when {
+                    state.submitting -> stringResource(R.string.media_queueing)
+                    selectedQualityTitle != null -> stringResource(R.string.media_download_with_quality, selectedQualityTitle)
+                    state.asset != null -> stringResource(R.string.media_download_selected)
+                    else -> stringResource(R.string.redesign_download_now)
+                }
+                Button(
+                    onClick=onSubmit,
+                    enabled=!state.analyzing && !state.submitting && (state.direct!=null || state.selectedKey!=null),
+                    modifier=Modifier.fillMaxWidth().padding(top=4.dp,bottom=20.dp).navigationBarsPadding().pressFeedback().heightIn(min=56.dp),
+                    shape=QuietTheme.shapes.button
+                ) {
+                    Icon(Icons.Rounded.Download,null);Spacer(Modifier.width(8.dp))
+                    Text(
+                        text=downloadButtonLabel,
+                        style=QuietTheme.typography.button
+                    )
+                }
             }
         }
     }
@@ -727,7 +725,7 @@ private fun formatDuration(totalSeconds: Int): String {
     val secs = totalSeconds % 60
     val raw = if (hrs > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hrs, mins, secs)
     else String.format(Locale.ROOT, "%02d:%02d", mins, secs)
-    return "\u2066$raw\u2069"
+    return "⁦$raw⁩"
 }
 
 private fun mediaBytes(bytes:Long):String {
@@ -737,7 +735,7 @@ private fun mediaBytes(bytes:Long):String {
         bytes>=1024L -> String.format(Locale.ROOT,"%.0f KiB",bytes/1024.0)
         else -> "$bytes B"
     }
-    return "\u2066$raw\u2069"
+    return "⁦$raw⁩"
 }
 
 @Composable private fun mediaError(code:String):String=stringResource(userMessageResource(code))

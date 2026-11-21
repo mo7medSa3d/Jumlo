@@ -40,7 +40,7 @@ import javax.inject.Singleton
             val sourceName = source.displayName
             val base = AutoOutputName.cleanBaseName(sourceName, "Document")
             val displayName = SafeNames.basename(
-                settings.displayName.trim().takeUnless { it.isEmpty() || it == "download.bin" }
+                settings.displayName.trim().takeUnless { it.isEmpty() || it == "download.bin" || it == "Document.pdf" }
                     ?.let { if (it.endsWith(".pdf", true)) it else "$it.pdf" } ?: "$base.pdf")
             val ticket = context.outputs.reserve(request.id, key, displayName, "application/pdf")
             var originalBytes = 0L
@@ -54,8 +54,7 @@ import javax.inject.Singleton
                     val kind = OfficeDocumentReader.detect(input, sourceName, context.budget.maxTemporaryBytes)
                     val imageBudget = minOf(
                         OfficeDocumentReader.MAX_IMAGE_BYTES,
-                        context.budget.maxTemporaryBytes,
-                        context.budget.maxBitmapBytes / 4L
+                        context.budget.maxTemporaryBytes
                     )
                     val document = OfficeDocumentReader.read(
                         input, kind, context.budget.maxTemporaryBytes, imageBudget

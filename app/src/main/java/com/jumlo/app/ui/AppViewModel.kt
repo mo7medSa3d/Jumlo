@@ -74,6 +74,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     private val treeStore:DocumentTreeStore,
     private val budget:WorkBudget,
     private val ocr:com.jumlo.app.data.ocr.MlKitOcrEngine,
+    private val billing:com.jumlo.app.data.billing.JumloBillingManager,
     private val savedState:SavedStateHandle
 ):AndroidViewModel(app) {
     private val _message=MutableStateFlow<String?>(null)
@@ -456,6 +457,98 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         }
     }
 
+    /** Imports device files directly into the app's Files library (OutputStore) so they appear alongside tool outputs. */
+    fun importToLibrary(intake:Intake,targetFolderId:String?=null,onFinished:()->Unit={}) {
+        if(intake.uris.isEmpty()) { onFinished(); return }
+        operationScope.launch {
+            val jobId = "import-" + UUID.randomUUID().toString()
+            beginBusy()
+            try {
+                initialized.await()
+                val publishedIds = mutableListOf<String>()
+                var anySaveFailed = false
+                for((index, uri) in intake.uris.withIndex()) {
+                    var sourceId:String? = null
+                    try {
+                        val source = sources.inspect(uri, intake.offeredFlags)
+                        sourceId = source.id
+                        val safeMime = source.mimeType.ifBlank { "application/octet-stream" }
+                        val ticket = outputStore.reserve(jobId, "import_$index", source.displayName, safeMime)
+                        withContext(Dispatchers.IO) {
+                            val coroutine = currentCoroutineContext()
+                            sources.openRead(source.id).use { input ->
+                                ticket.stageFile.outputStream().use { output ->
+                                    val buffer = ByteArray(64 * 1024)
+                                    while(true) {
+                                        coroutine.ensureActive()
+                                        val read = input.read(buffer)
+                                        if(read < 0) break
+                                        output.write(buffer, 0, read)
+                                    }
+                                }
+                            }
+                        }
+                        val record = outputStore.publish(ticket) { outputStore.inspect(it, safeMime) }
+                        publishedIds += record.id
+                        if(record.publicSaveError != null) anySaveFailed = true
+                    } catch(cancel:CancellationException) { throw cancel }
+                    catch(error:Exception) { _message.value = stableError(error) }
+                    finally {
+                        sourceId?.let { id -> withContext(NonCancellable + Dispatchers.IO) { runCatching { sources.discardNewImport(id) } } }
+                    }
+                }
+                if(targetFolderId != null && publishedIds.isNotEmpty()) {
+                    runCatching { preferences.moveOutputsToFolder(publishedIds, targetFolderId) }
+                }
+                if(anySaveFailed) notifyMessage("DESTINATION_SAVE_FAILED")
+                refreshStorage()
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)); AppDiagnostics.report("files-import", error) }
+            finally {
+                withContext(NonCancellable + Dispatchers.IO) { runCatching { outputStore.discardIncomplete(jobId) } }
+                endBusy()
+                onFinished()
+            }
+        }
+    }
+
+    /** Flattens interactive viewer markup (ink, highlights, Arabic text, checkmarks, signatures) into a new verified PDF. */
+    fun flattenPdfMarkup(sourceUri:String,displayName:String,items:List<com.jumlo.app.core.PdfMarkupItem>,onFinished:()->Unit={}) {
+        if(items.isEmpty()) { onFinished(); return }
+        operationScope.launch {
+            val jobId = "markup-" + UUID.randomUUID().toString()
+            val tempIn = File(app.cacheDir, "jumlo-markup-$jobId.pdf")
+            beginBusy()
+            try {
+                initialized.await()
+                withContext(Dispatchers.IO) {
+                    app.contentResolver.openInputStream(android.net.Uri.parse(sourceUri))?.use { input ->
+                        tempIn.outputStream().use { output -> input.copyTo(output) }
+                    } ?: throw IllegalArgumentException("ACCESS_LOST")
+                }
+                val base = com.jumlo.app.core.AutoOutputName.cleanBaseName(displayName, "Document")
+                val outName = com.jumlo.app.core.SafeNames.basename("$base - Annotated.pdf")
+                val ticket = outputStore.reserve(jobId, "markup", outName, "application/pdf")
+                val coroutine = currentCoroutineContext()
+                withContext(Dispatchers.IO) {
+                    com.jumlo.app.data.pdf.PdfMarkupFlattener.flatten(tempIn, ticket.stageFile, items) { coroutine.ensureActive() }
+                }
+                val record = outputStore.publish(ticket) { outputStore.inspect(it, "application/pdf", originalSizeBytes = tempIn.length()) }
+                refreshStorage()
+                if(record.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED")
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)); AppDiagnostics.report("pdf-markup", error) }
+            finally {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    tempIn.delete()
+                    runCatching { outputStore.discardIncomplete(jobId) }
+                }
+                endBusy()
+                onFinished()
+            }
+        }
+    }
+
     /** The scanner returns an owned cache file; publish it through the same verified save path as tools. */
     fun publishScannedPdf(file:File,onFinished:()->Unit={},onPublished:(OutputRecord)->Unit) {
         operationScope.launch {
@@ -639,10 +732,15 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     }
 
     fun toggleOutputFavorite(id:String) = savePreference { preferences.toggleFavoriteOutput(id) }
-    fun createFileFolder(name:String) = savePreference { preferences.createFileFolder(name) }
+    fun createFileFolder(name:String, parentId:String?=null) = savePreference { preferences.createFileFolder(name, parentId) }
     fun renameFileFolder(folderId:String,name:String) = savePreference { preferences.renameFileFolder(folderId,name) }
     fun deleteFileFolder(folderId:String) = savePreference { preferences.deleteFileFolder(folderId) }
     fun moveOutputsToFolder(outputIds:Collection<String>,folderId:String?) = savePreference { preferences.moveOutputsToFolder(outputIds,folderId) }
+    fun toggleFolderLock(folderId:String) = savePreference { preferences.toggleFolderLock(folderId) }
+    val proEntitlement = billing.entitlement
+    fun connectBilling() = billing.connect()
+    fun launchProPurchase(activity:android.app.Activity,sku:String) = billing.launchPurchase(activity,sku)
+    fun restoreProPurchases() = billing.restorePurchases()
 
     /** Reuse an immutable imported source in an operation that actually accepts its MIME type. */
     fun prepareSourceWorkflow(sourceId:String,onReady:()->Unit) { operationScope.launch {
@@ -1055,7 +1153,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     }
 
     /** Single-page OCR for the comparison panel. Submission still validates and publishes complete outputs. */
-    suspend fun recognizePage(sourceId:String,page:Int):String = withContext(Dispatchers.IO) {
+    suspend fun recognizePage(sourceId:String,page:Int,script:com.jumlo.app.data.ocr.OcrScript=com.jumlo.app.data.ocr.OcrScript.LATIN):String = withContext(Dispatchers.IO) {
         val active=currentCoroutineContext()
         val embedded=sources.withSeekable(sourceId,UUID.randomUUID().toString()) { file ->
             val isPdf=file.inputStream().use { stream ->
@@ -1069,7 +1167,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         }
         if(embedded.isNotBlank()) embedded else BitmapWorkGate.run {
             val frame=previewSized(sourceId,page,2400)
-            try { ocr.recognize(frame.bitmap).also { active.ensureActive() } }
+            try { ocr.recognize(frame.bitmap, script).also { active.ensureActive() } }
             finally { frame.bitmap.recycle() }
         }
     }

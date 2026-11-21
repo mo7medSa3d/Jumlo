@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class ImageCropSettings(val left:Double=0.0,val top:Double=0.0,val right:Double=1.0,val bottom:Double=1.0,val rotationQuarterTurns:Int=0,val flipX:Boolean=false,val flipY:Boolean=false,val output:ImageConversionSettings=ImageConversionSettings(quality=98,namePrefix="cropped_"))
 @Serializable data class ImageCompressionSettings(val output:ImageConversionSettings=ImageConversionSettings(quality=75,namePrefix="compressed_"))
 @Serializable data class ImagesToPdfSettings(val displayName:String="Images.pdf",val paperWidthPt:Int=595,val paperHeightPt:Int=842,val orientation:String="AUTO",val marginMm:Int=10,val fill:Boolean=false,val pageMode:String="AUTO",val quality:Int=85,val lossless:Boolean=false)
-@Serializable data class PdfImagesSettings(val pages:String="all",val dpi:Int=200,val format:String="PNG",val quality:Int=95,val grayscale:Boolean=false,val displayName:String="")
+@Serializable data class PdfImagesSettings(val pages:String="all",val dpi:Int=200,val format:String="PNG",val quality:Int=95,val grayscale:Boolean=false,val displayName:String="",val ocrScript:String="LATIN")
 @Serializable data class ArchiveSettings(val displayName:String="Archive.zip",val compressionLevel:Int=6)
 @Serializable data class DownloadSettings(
     val urlSecretHandle:String,
@@ -43,3 +43,6 @@ import kotlinx.serialization.Serializable
     val assetIdentity:String, val choiceKey:String, val fingerprint:String,
     val mode:String="VIDEO",val audioOutput:String="ORIGINAL",val audioBitrate:Int=192
 )
+
+@Serializable data class PdfNupSettings(val displayName:String="PrintLayout.pdf", val pagesPerSheet:Int=2, val grayscale:Boolean=false)
+@Serializable data class PdfRedactSettings(val displayName:String="Redacted.pdf", val pages:String="1", val left:Double=0.1, val top:Double=0.1, val right:Double=0.9, val bottom:Double=0.25, val fillBlack:Boolean=true, val overrides:List<PdfCropOverride> = emptyList())
