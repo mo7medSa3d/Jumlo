@@ -120,7 +120,7 @@ class JumloUiTest {
         compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.storage"))
         // Click the row's left edge: the floating centered dock can cover the middle of a
         // scrolled row on edge-to-edge devices, which is not what this test exercises.
-        compose.onNodeWithTag("settings.storage").performClick(position = Offset(12f, 12f))
+        compose.onNodeWithTag("settings.storage").performTouchInput { click(Offset(12f, 12f)) }
         // Assert the actual destination route, not emulator-dependent layout visibility.
         compose.waitUntil(15_000) {
             runCatching { compose.onNodeWithTag("route.storage").assertExists() }.isSuccess
