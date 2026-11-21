@@ -118,8 +118,15 @@ class JumloUiTest {
         compose.onNodeWithTag("settings.screen").assertIsDisplayed()
         compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.storage"))
         compose.onNodeWithTag("settings.storage").performClick()
+        // Navigation animations settle asynchronously; wait for the destination to be laid out.
+        compose.waitUntil(15_000) {
+            runCatching { compose.onNodeWithTag("storage.screen").assertIsDisplayed() }.isSuccess
+        }
         compose.onNodeWithTag("storage.screen").assertIsDisplayed()
         pressBack()
+        compose.waitUntil(15_000) {
+            runCatching { compose.onNodeWithTag("settings.screen").assertIsDisplayed() }.isSuccess
+        }
         compose.onNodeWithTag("settings.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.SETTINGS").assertIsSelected()
     }
