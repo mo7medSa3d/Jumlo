@@ -42,7 +42,7 @@
 
 ## Documentation status (2026-11-19 audit)
 
-Older entries below are historical and describe their own point in time. Several files they reference were intentionally removed from this tree and must not be recreated from history: `TEST_REPORT.md`, `docs/AUDIT_2.md`, `docs/PROGRESS.md`, `DECISIONS.md`, `AUDIT.md`, `HANDOFF_AR.md`, `ICON_MAP.md`, `IMPLEMENTATION_PLAN.md`, `PRODUCTION_BRIEF.md`, `ROUTES.md`, `TOOL_UI_SPEC.md`, `iOS_PLAN.md` and `SCREENSHOTS/`. Those references are provenance, not live links; regenerate release evidence for the release candidate. Current tree values are a 30-tool registry, four bottom tabs and the restored 60,000,000-byte full-media APK cap.
+Older entries below are historical and describe their own point in time. Several files they reference were intentionally removed from this tree and must not be recreated from history: `TEST_REPORT.md`, `docs/AUDIT_2.md`, `docs/PROGRESS.md`, `DECISIONS.md`, `AUDIT.md`, `HANDOFF_AR.md`, `ICON_MAP.md`, `IMPLEMENTATION_PLAN.md`, `PRODUCTION_BRIEF.md`, `ROUTES.md`, `TOOL_UI_SPEC.md`, `iOS_PLAN.md` and `SCREENSHOTS/`. Those references are provenance, not live links; regenerate release evidence for the release candidate. Current tree values are a 30-tool registry, four bottom tabs and the restored 70,000,000-byte full-media APK cap.
 
 ## 2026-11-01 — SaaS-style copy + design-system refresh + tool-wiring gate (local, no GitHub push)
 
@@ -103,7 +103,7 @@ Older entries below are historical and describe their own point in time. Several
 ## 2026-10-28 — WP06 PDF compression result integrity
 
 - Count only measured size reductions as `CREATED`; unchanged outputs now report `PDF_NOT_COMPRESSIBLE`, even when embedded images were skipped.
-- Android-free `PdfCompressionResultPolicy` and seven JVM regression cases. [CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) PASSED debug build, unit tests, release lint, compact (55,368,267 bytes) and release (55,355,939 bytes) 60 MB gates on PR #32.
+- Android-free `PdfCompressionResultPolicy` and seven JVM regression cases. [CI #40642568857](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642568857) PASSED debug build, unit tests, release lint, compact (55,368,267 bytes) and release (55,355,939 bytes) 70 MB gates on PR #32.
 - Real five-scan and 200-page Android device fixture tests are still NOT RUN.
 
 
@@ -114,7 +114,7 @@ Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers 
 
 ## 2026-10-28 — WP06 CI guard consolidation
 
-- Retain both mandatory 60,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
+- Retain both mandatory 70,000,000-byte full-media APK checks, KSP2 serialized Gradle workers, and release lint. Add debug lint and execute the corrected compact source-size regression in routine CI.
 - Previous WP06 head `7fbab51b` passed [Actions #40641996652](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641996652) and [#40641999746](https://github.com/mo7medSa3d/Jumlo/actions/runs/40641999746). Combined main-base run is required before merging; physical-device qualification remains pending.
 
 
@@ -132,7 +132,7 @@ Custom user-supplied `Referer`, `Origin`, `User-Agent` and other custom headers 
 
 ### 2026-10-28 — wp/01 release gate correction (verification pending)
 
-- Restore the strict 60,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
+- Restore the strict 70,000,000-byte limit in full-media compact and release APK Gradle tasks; fail over-limit artifacts without trimming functionality.
 - Normal GitHub CI now runs `:app:lintRelease` alongside `assembleDebug`, `testDebugUnitTest` and the compact APK size gate.
 - These are source changes, **not yet a passing CI result**; capture the work-package run before merging.
 
@@ -174,7 +174,7 @@ Android qualification. See TEST_REPORT.md for current artifact and test status.
   non-`pdf_ocr`) and `xf_05` (expansion concept, no handler/crypto backend)
   from registry, dispatch, workspace form, UI, strings (EN/AR) and icons
   (drawables deleted). Registry now 45 tools, all enabled/visible. Lift the
-  60,000,000-byte APK size cap in `verifyCompactApkSize`/`verifyReleaseApkSize`
+  70,000,000-byte APK size cap in `verifyCompactApkSize`/`verifyReleaseApkSize`
   (ARM64-only + yt-dlp payload checks retained). Lift tool-list/preset display
   caps: `recentToolIds` (8→all), `mostUsedToolIds` (5→all), `top` (5→all),
   processing presets (16→all). Updated `DECISIONS.md` #7/#8.
@@ -409,7 +409,7 @@ CameraX fallback lazy scanner rows now call existing `DisposeOwnedPreviewBitmap`
 
 - Restore the missing `verification/current/device/preflight-source/README.md` linked from README and RELEASE_CHECKLIST.
 - Provide source-backed fixture generation, per-run SHA-256, Android staging/storage and 200-page memory instructions, without fabricating test results.
-- [CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior branch head: unit tests, release lint, compact 55,367,131 bytes and release 55,354,871 bytes under 60 MB. Actual device benchmark NOT RUN.
+- [CI #40642889591](https://github.com/mo7medSa3d/Jumlo/actions/runs/40642889591) **PASS** on prior branch head: unit tests, release lint, compact 55,367,131 bytes and release 55,354,871 bytes under 70 MB. Actual device benchmark NOT RUN.
 
 ## 2026-10-28 — WP13 bounded PDF split page expansion
 

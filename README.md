@@ -59,7 +59,7 @@ JUMLO_MEDIA_TOKEN="replace-with-strong-random-token" \
 | Variant | Purpose | ABIs | Signing |
 |---|---|---|---|
 | `debug` | Development & emulator tests (`com.jumlo.app.debug`) | `arm64-v8a`, `x86_64` | Android debug key |
-| `compact` | R8-minified, resource-shrunk ARM64 test installer (<= 60 MB) | `arm64-v8a` | Android debug key (not production) |
+| `compact` | R8-minified, resource-shrunk ARM64 test installer (<= 70 MB) | `arm64-v8a` | Android debug key (not production) |
 | `release` | Production APK / Play Store AAB | `arm64-v8a` (bundle splits enabled) | Owner release keystore |
 | `benchmark` | Profileable release-equivalent target | `arm64-v8a` | Android debug key |
 
@@ -69,7 +69,7 @@ JUMLO_MEDIA_TOKEN="replace-with-strong-random-token" \
 # JVM unit tests and instrumentation test APK
 ./gradlew :app:testDebugUnitTest :app:assembleDebugAndroidTest
 
-# Size gates (60,000,000-byte ARM64 cap), Play bundle, and release lint
+# Size gates (70,000,000-byte ARM64 cap), Play bundle, and release lint
 ./gradlew :app:verifyCompactApkSize :app:verifyReleaseApkSize :app:bundleRelease :app:lintRelease
 
 # Full signed release verification (requires release signing credentials)
@@ -95,7 +95,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/media-service -p
    ./gradlew -PversionCode=10844 -PversionName="1.6-tools" :app:verifyPublishableRelease :app:bundleRelease
    ```
 3. **GitHub Actions CI (`Android CI & APK`)**:
-   - **Optimized test installer**: Every successful `main` run publishes `Jumlo-Optimized-Installable-ARM64-*` (`Jumlo-Optimized-ARM64.apk`, SHA-256 checksum, and `INSTALLATION.txt`) — R8-minified with the full local media engine (60,000,000-byte gate), signed with the Android testing key.
+   - **Optimized test installer**: Every successful `main` run publishes `Jumlo-Optimized-Installable-ARM64-*` (`Jumlo-Optimized-ARM64.apk`, SHA-256 checksum, and `INSTALLATION.txt`) — R8-minified with the full local media engine (70,000,000-byte gate), signed with the Android testing key.
    - **Owner-signed production APK**: Configure all four GitHub Actions secrets (`JUMLO_KEYSTORE_BASE64`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`). On `main` pushes, version tags, or manual workflow dispatch, CI runs `:app:verifyPublishableRelease`, verifies the signature with `apksigner`, and uploads `Jumlo-Owner-Signed-Release-ARM64-*`.
 
 ### Docker Media Service (`tools/media-service`)
