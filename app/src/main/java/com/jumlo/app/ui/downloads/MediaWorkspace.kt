@@ -660,7 +660,7 @@ private fun formatDuration(totalSeconds: Int): String {
     val secs = totalSeconds % 60
     val raw = if (hrs > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hrs, mins, secs)
     else String.format(Locale.ROOT, "%02d:%02d", mins, secs)
-    return "⁦$raw⁩"
+    return "\u2066$raw\u2069"
 }
 
 private fun mediaBytes(bytes:Long):String {
@@ -670,7 +670,7 @@ private fun mediaBytes(bytes:Long):String {
         bytes>=1024L -> String.format(Locale.ROOT,"%.0f KiB",bytes/1024.0)
         else -> "$bytes B"
     }
-    return "⁦$raw⁩"
+    return "\u2066$raw\u2069"
 }
 
 @Composable private fun mediaError(code:String):String=stringResource(userMessageResource(code))

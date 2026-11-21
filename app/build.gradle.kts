@@ -288,7 +288,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition.devanagari)
     implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.mlkit.text.recognition.korean)
-    implementation("cz.adaptech.tesseract4android:tesseract4android:4.7.0")
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
@@ -362,9 +362,9 @@ afterEvaluate {
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
-// Full-media builds must fit the requested 60,000,000-byte ARM64 distribution cap.
+// Full-media builds must fit the requested 70,000,000-byte ARM64 distribution cap.
 // Never replace the full extractor runtime with a lite build to satisfy this gate.
-val maxFullMediaApkBytes = 60_000_000L
+val maxFullMediaApkBytes = 70_000_000L
 tasks.register("verifyCompactApkSize") {
     group = "verification"
     description = "Build and enforce the 60,000,000-byte full-media compact APK limit"

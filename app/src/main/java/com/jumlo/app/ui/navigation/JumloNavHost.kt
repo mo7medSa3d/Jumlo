@@ -508,7 +508,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()},
                                 onShowGuide={showGuide=true},onOpenStorage={navigateTo("storage")})
                             "storage" -> com.jumlo.app.ui.settings.StorageScreen(viewModel,::pickDownloadDestination,::openSavedFolder)
-                            "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title,onBack=::goBack,onOpenFile={navigateTab(DockTab.FILES)},onPrint={u,_->viewModel.importForPrint(Intake(listOf(u),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},onSaveMarkup={items->viewModel.flattenPdfMarkup(it.uri,it.title,items)}) }
+                            "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title,onBack=::goBack,onOpenFile={navigateTab(DockTab.FILES)},onPrint={u,_->viewModel.importForPrint(Intake(listOf(u),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},onSaveMarkup={uri,title,items,done->viewModel.flattenPdfMarkup(uri,title,items,done)}) }
                             "scan" -> com.jumlo.app.ui.scan.ScanScreen(
                                 externalBusy=scanPublishing,
                                 onScannedJpegs={files -> scanPublishing=true; viewModel.publishScannedImages(files,onFinished={scanPublishing=false}) {

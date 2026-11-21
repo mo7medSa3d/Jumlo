@@ -472,7 +472,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                     try {
                         val source = sources.inspect(uri, intake.offeredFlags)
                         sourceId = source.id
-                        val safeMime = source.mimeType.ifBlank { "application/octet-stream" }
+                        val safeMime = source.mimeType?.takeIf(String::isNotBlank) ?: "application/octet-stream"
                         val safeDisplay = com.jumlo.app.core.SafeNames.fromDisplayName(source.displayName, "Imported")
                         val ticket = outputStore.reserve(jobId, "import_$index", safeDisplay, safeMime)
                         withContext(Dispatchers.IO) {

@@ -135,7 +135,7 @@ private fun PdfViewerContent(
     var passwordRevealed by remember(uri) { mutableStateOf(false) }
 
     var chromeVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(document) { if (document == null) chromeVisible = true }
+    LaunchedEffect(session) { if (session == null) chromeVisible = true }
     var pageObserved by remember { mutableStateOf(false) }
     var nightMode by rememberSaveable { mutableStateOf(false) }
     var menuOpen by rememberSaveable { mutableStateOf(false) }

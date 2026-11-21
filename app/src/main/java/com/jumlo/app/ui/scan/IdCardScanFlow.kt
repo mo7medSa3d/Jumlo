@@ -368,8 +368,9 @@ private fun CardSlot(label: String, bmp: Bitmap?, filter: ScanFilter, modifier: 
         modifier = modifier.height(168.dp)
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (filtered != null && !filtered.isRecycled) {
-                Image(filtered.asImageBitmap(), label, Modifier.fillMaxSize().padding(8.dp), contentScale = ContentScale.Fit)
+            val readyBitmap = filtered
+            if (readyBitmap != null && !readyBitmap.isRecycled) {
+                Image(readyBitmap.asImageBitmap(), label, Modifier.fillMaxSize().padding(8.dp), contentScale = ContentScale.Fit)
             } else {
                 QuietTonalButton(label, onPick)
             }

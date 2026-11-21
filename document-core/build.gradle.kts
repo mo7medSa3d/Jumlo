@@ -1,4 +1,4 @@
-plugins { alias(libs.plugins.kotlin.jvm); `java-library` }
+plugins { alias(libs.plugins.kotlin.jvm); alias(libs.plugins.kotlin.serialization); `java-library` }
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -9,4 +9,4 @@ kotlin {
     }
 }
 
-dependencies { api(project(":core-common")); testImplementation(libs.junit) }
+dependencies { api(project(":core-common")); implementation(libs.kotlinx.serialization.json); testImplementation(libs.junit) }

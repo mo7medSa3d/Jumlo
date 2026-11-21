@@ -103,7 +103,7 @@ import javax.inject.Singleton
         }
     }
     suspend fun snapshot(jobId: String): JobSnapshot? = dao.job(jobId)?.let { runCatching { json.decodeFromString<JobSnapshot>(it.snapshotJson) }.getOrNull() }
-    suspend fun outputRecord(outputId: String): OutputRecord? = dao.output(outputId)?.let { runCatching { json.decodeFromString<OutputRecord>(it.recordJson) }.getOrNull() }
+    suspend fun outputRecord(outputId: String): OutputRecord? = dao.outputById(outputId)?.let { runCatching { json.decodeFromString<OutputRecord>(it.recordJson) }.getOrNull() }
     suspend fun pause(jobId:String) {
         val row=dao.job(jobId) ?: return
         val old=json.decodeFromString<JobSnapshot>(row.snapshotJson)

@@ -214,12 +214,12 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
         (tool!="file_batch_rename" || proposedNames!=null) &&
         (tool!="pdf_signature" || form.signaturePlacements.isNotEmpty()) &&
         (if(download) urls.isNotBlank() else queue.size>=minimum)
+    val inputSpec = remember(tool, form.watermarkUseImage, form.flag1) { ToolInputPolicy.resolve(tool, form) }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
                 // Top step breadcrumb removed for a calm, uncluttered tool workspace.
-                val inputSpec = remember(tool, form.watermarkUseImage, form.flag1) { ToolInputPolicy.resolve(tool, form) }
                 val emptyTitleRes = when(inputSpec.kind) {
                     ToolInputKind.PDF_SINGLE -> R.string.ui_choose_pdf_single
                     ToolInputKind.PDF_MULTI -> R.string.ui_choose_pdf_multi

@@ -135,8 +135,7 @@ object PdfMarkupFlattener {
     ) {
         val text = item.text.trim()
         if (text.isEmpty()) return
-        if (rot == 0 && item.text.all { it in ' '..'~' || it == '
-' }) {
+        if (rot == 0 && item.text.all { it in ' '..'~' || it == '\n' }) {
             val fontSize = item.fontSizePt.coerceIn(8f, 48f)
             val lines = item.text.lines()
             val (tx, ty) = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, item.normX, item.normY)
