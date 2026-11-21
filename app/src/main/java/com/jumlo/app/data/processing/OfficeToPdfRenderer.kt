@@ -43,7 +43,7 @@ class RenderedOfficePdf(val document: PDDocument, val stats: OfficeRenderStats) 
  * page. Raster blocks taller than one page are sliced across pages.
  */
 object OfficeToPdfRenderer {
-    private const val SCALE = 3.0f // raster pixels per point (216 dpi crisp print quality)
+    private const val SCALE = 2.0f // raster pixels per point (144 dpi); bounded memory for large tables
     private const val MAX_RASTER_TABLE_COLUMNS = 512
     private const val MAX_RASTER_CELL_CHARS = 100_000
     private const val MAX_RASTER_ROW_CHARS = 250_000

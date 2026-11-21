@@ -356,7 +356,8 @@ object MediaOutputPolicy {
         // Ignore leftover intermediate yt-dlp stream files (e.g. media.f137.mp4) when a merged media.<ext> exists.
         val merged = all.filterNot { FRAGMENT_SUFFIX.containsMatchIn(it.name) }
         val candidates = merged.ifEmpty { all }
-        val file = if (candidates.size == 1) candidates.single() else candidates.maxBy { it.length() }
+        require(candidates.size == 1) { "MEDIA_OUTPUT_AMBIGUOUS" }
+        val file = candidates.single()
         require(file.isFile && !Files.isSymbolicLink(file.toPath()) && file.canonicalFile.parentFile == root.canonicalFile && file.length() > 0) { "INVALID_MEDIA_OUTPUT" }
         return file
     }

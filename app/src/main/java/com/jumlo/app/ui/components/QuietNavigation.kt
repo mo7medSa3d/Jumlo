@@ -93,7 +93,7 @@ fun JumloNavigationBar(
         shape = CircleShape,
         color = capsuleColor,
         border = BorderStroke(1.dp, capsuleBorder),
-        shadowElevation = if (isDark) 12.dp else 10.dp
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier

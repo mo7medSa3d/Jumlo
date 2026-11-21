@@ -197,19 +197,19 @@ fun mediaPolicyTests(test: (String, () -> Unit) -> Unit) {
         check("--extractor-args" !in args && "--no-check-formats" !in args)
         check(args.none { it in listOf("--exec","--no-check-certificates","--allow-unplayable-formats","--ignore-errors") })
         val ytArgs=MediaArguments.probe("https://www.youtube.com/watch?v=hello")
-        check(ytArgs[ytArgs.indexOf("--extractor-args")+1]=="youtube:player_client=default,web_embedded")
+        check(ytArgs[ytArgs.indexOf("--extractor-args")+1]=="youtube:player_client=android_vr,web")
         check("--no-check-formats" !in ytArgs)
     }
     test("selected video format uses exact ID first with bounded resolution fallback") {
         val c=MediaCatalog.choices(asset,MediaMode.VIDEO).first()
         val args=MediaArguments.download("https://example.test/video",c)
         check(args[args.indexOf("--format")+1]=="best*[format_id='v1080']+best*[format_id='a128']/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best")
-        check("--abort-on-unavailable-fragments" in args && "--continue" in args && "--no-overwrites" in args)
-        check("--no-continue" !in args && "--force-overwrites" !in args && "--no-check-formats" !in args)
+        check("--skip-unavailable-fragments" in args && "--continue" in args && "--force-overwrites" in args)
+        check("--no-continue" !in args && "--abort-on-unavailable-fragments" !in args && "--no-check-formats" !in args)
         check(args[args.indexOf("--output")+1]=="media.%(ext)s")
         check("--extractor-args" !in args)
         val ytArgs=MediaArguments.download("https://www.youtube.com/watch?v=abc",c)
-        check(ytArgs[ytArgs.indexOf("--extractor-args")+1]=="youtube:player_client=default,web_embedded")
+        check(ytArgs[ytArgs.indexOf("--extractor-args")+1]=="youtube:player_client=android_vr,web")
     }
     test("MP3 M4A and Opus audio choices invoke real extraction options") {
         val c=MediaCatalog.choices(asset,MediaMode.AUDIO).first()

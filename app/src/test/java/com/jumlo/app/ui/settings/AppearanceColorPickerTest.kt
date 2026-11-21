@@ -60,6 +60,6 @@ class AppearanceColorPickerTest {
             )
         }
         compose.onAllNodes(hasText("كوبالت")).assertCountEquals(1)
-        compose.onAllNodes(hasText("نيلي مميز")).assertCountEquals(1)
+        compose.onAllNodes(hasText("ياقوتي")).assertCountEquals(1)
     }
 }
