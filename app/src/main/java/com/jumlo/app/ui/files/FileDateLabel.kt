@@ -9,5 +9,5 @@ import java.util.Date
 @Composable fun fileDateLabel(epochMillis: Long): String {
     val locale = LocalConfiguration.current.locales[0] ?: java.util.Locale.getDefault()
     val formatter = remember(locale) { DateFormat.getDateInstance(DateFormat.MEDIUM, locale) }
-    return remember(epochMillis, formatter) { "⁦${formatter.format(Date(epochMillis))}⁩" }
+    return remember(epochMillis, formatter) { "\u2066${formatter.format(Date(epochMillis))}\u2069" }
 }
