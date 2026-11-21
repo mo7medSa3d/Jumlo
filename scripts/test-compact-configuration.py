@@ -28,7 +28,7 @@ class CompactConfigurationTests(unittest.TestCase):
         self.assertIn('dependsOn("assembleDirectCompact")', GRADLE)
         self.assertIn('tasks.register("verifyReleaseApkSize")', GRADLE)
         self.assertIn('dependsOn("assembleDirectRelease")', GRADLE)
-        self.assertIn('maxFullMediaApkBytes = 70_000_000L', GRADLE)
+        self.assertIn('maxFullMediaApkBytes = 60_000_000L', GRADLE)
         self.assertEqual(2, GRADLE.count('check(apk.length() <= maxFullMediaApkBytes)'))
         # Correctness gates retained in the release size task.
         self.assertIn('arm64-v8a', GRADLE)

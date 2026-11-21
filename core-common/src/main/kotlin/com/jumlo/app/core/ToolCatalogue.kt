@@ -41,13 +41,16 @@ object ToolCatalogue {
                 "pdf_compress",  // compress
                 "pdf_07",        // pdf to images
                 "pdf_signature", // sign
-                "pdf_protect"    // password protect / unlock
+                "pdf_protect",   // password protect / unlock
+                "pdf_long_image" // PDF to single long image
             ),
             merged = listOf(
-                "pdf_06",        // extract pages
-                "pdf_crop",      // crop pages
-                "pdf_stamp",     // watermark and page numbers
-                "pdf_01"         // view
+                "pdf_06",             // extract pages
+                "pdf_crop",           // crop pages
+                "pdf_stamp",          // watermark and page numbers
+                "pdf_privacy_redact", // redact sensitive text/areas
+                "pdf_nup",            // 2/4 pages per sheet
+                "pdf_01"              // view
             )
         ),
         WorkspaceEntry(
@@ -64,7 +67,9 @@ object ToolCatalogue {
                 "img_join",      // join and collage
                 "img_watermark"  // watermark
             ),
-            merged = emptyList()
+            merged = listOf(
+                "img_01"         // convert format
+            )
         ),
         WorkspaceEntry(
             ToolWorkspace.FILES,
@@ -106,7 +111,7 @@ object ToolCatalogue {
     fun workspaceOf(toolId: String): ToolWorkspace? =
         entries.firstOrNull { toolId in it.primary || toolId in it.merged }?.workspace
 
-    private val hidden: Set<String> = setOf("dl_02", "dl_03", "img_01")
+    private val hidden: Set<String> = setOf("dl_02", "dl_03")
     private val searchOnly: Set<String> = emptySet()
 
     /** True when the tool should be offered in the catalogue at all. */

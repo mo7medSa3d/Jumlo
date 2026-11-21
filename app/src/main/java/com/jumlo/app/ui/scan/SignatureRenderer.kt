@@ -31,7 +31,17 @@ internal fun renderSignature(strokes: List<SignatureStroke>, canvasWidth: Int, c
                 require(point.x.isFinite() && point.y.isFinite())
                 val x = point.x.coerceIn(0f, 1f) * geometry.width
                 val y = point.y.coerceIn(0f, 1f) * geometry.height
-                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                if (index == 0) {
+                    path.moveTo(x, y)
+                } else if (index == 1) {
+                    path.lineTo(x, y)
+                } else {
+                    val prev = stroke.points[index - 1]
+                    val px = prev.x.coerceIn(0f, 1f) * geometry.width
+                    val py = prev.y.coerceIn(0f, 1f) * geometry.height
+                    path.quadTo(px, py, (px + x) * 0.5f, (py + y) * 0.5f)
+                    if (index == stroke.points.lastIndex) path.lineTo(x, y)
+                }
             }
             canvas.drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = stroke.colorArgb

@@ -85,7 +85,7 @@ internal fun VisualDocumentEditor(
     edit: ((WorkspaceDraft) -> WorkspaceDraft) -> Unit
 ) {
     val tool = draft.toolId
-    val sourceIsPdf = tool == "pdf_crop"
+    val sourceIsPdf = tool == "pdf_crop" || tool == "pdf_privacy_redact"
     val haptics = rememberAppHaptics()
     var pageCount by remember(sourceId) { mutableIntStateOf(0) }
     var currentPage by rememberSaveable(sourceId, tool) {

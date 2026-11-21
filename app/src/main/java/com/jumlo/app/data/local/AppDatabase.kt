@@ -46,27 +46,6 @@ data class DownloadTaskEntity(
 )
 
 @Dao
-interface ManagedFileDao {
-    @Query("SELECT * FROM managed_files ORDER BY rowid DESC")
-    fun observeAllFiles(): Flow<List<ManagedFileEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(files: List<ManagedFileEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(file: ManagedFileEntity)
-
-    @Query("DELETE FROM managed_files WHERE id IN (:ids)")
-    suspend fun deleteByIds(ids: List<String>)
-
-    @Query("DELETE FROM managed_files WHERE isDraft = 1")
-    suspend fun clearDrafts()
-
-    @Query("DELETE FROM managed_files WHERE isDraft = 0")
-    suspend fun clearAllOutputs()
-}
-
-@Dao
 interface DownloadTaskDao {
     @Query("SELECT * FROM download_tasks")
     fun observeAllDownloads(): Flow<List<DownloadTaskEntity>>
@@ -95,6 +74,5 @@ interface DownloadTaskDao {
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun processingDao(): ProcessingDao
-    abstract fun managedFileDao(): ManagedFileDao
     abstract fun downloadTaskDao(): DownloadTaskDao
 }

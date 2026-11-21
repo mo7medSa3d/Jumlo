@@ -11,6 +11,6 @@
         <item name="windowSplashScreenBackground">@color/jumlo_launch_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Jumlo</item>
-        <item name="windowSplashScreenAnimationDuration">160</item>
+        <item name="windowSplashScreenAnimationDuration">280</item>
     </style>
 </resources>

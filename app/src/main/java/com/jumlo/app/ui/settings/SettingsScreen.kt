@@ -71,8 +71,8 @@ fun SettingsScreen(
             Surface(
                 onClick = { proSheetOpen = true },
                 shape = QuietTheme.shapes.card,
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                color = androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.14f),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.45f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -80,7 +80,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Rounded.VerifiedUser, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                    Icon(Icons.Rounded.AutoAwesome, null, tint = androidx.compose.ui.graphics.Color(0xFFD4A017), modifier = Modifier.size(28.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
@@ -116,6 +116,41 @@ fun SettingsScreen(
                     { panel = "language" },
                     Modifier.testTag("settings.language"),
                     iconStyle = settingsIconStyleFor("language", dark),
+                    grouped = true
+                )
+            }
+        }
+        item("alerts-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_alerts_feedback)) }
+        item("alerts-group", contentType = "group") {
+            val notificationsOn = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+            PreferenceGroup {
+                PreferenceRow(
+                    stringResource(R.string.pref_notifications),
+                    stringResource(if (notificationsOn) R.string.pref_on else R.string.pref_off),
+                    Icons.Rounded.Notifications,
+                    onRequestNotifications,
+                    Modifier.testTag("settings.notifications"),
+                    iconStyle = settingsIconStyleFor("notifications", dark),
+                    grouped = true
+                )
+                PreferenceGroupDivider()
+                PreferenceToggleRow(
+                    title = stringResource(R.string.settings_ui_sounds),
+                    checked = settings.soundsEnabled,
+                    onCheckedChange = viewModel::setSoundsEnabled,
+                    modifier = Modifier.testTag("settings.sounds"),
+                    icon = Icons.Rounded.Audiotrack,
+                    iconStyle = settingsIconStyleFor("sounds", dark),
+                    grouped = true
+                )
+                PreferenceGroupDivider()
+                PreferenceToggleRow(
+                    title = stringResource(R.string.pref_haptics),
+                    checked = settings.hapticFeedbackOnCommit,
+                    onCheckedChange = viewModel::setHapticFeedback,
+                    modifier = Modifier.testTag("settings.haptics"),
+                    icon = Icons.Rounded.Bolt,
+                    iconStyle = settingsIconStyleFor("haptics", dark),
                     grouped = true
                 )
             }
@@ -199,6 +234,7 @@ fun SettingsScreen(
                 Text(stringResource(R.string.pref_clear)) } },
             dismissButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
+    LaunchedEffect(proSheetOpen) { if (proSheetOpen) viewModel.connectBilling() }
     if (proSheetOpen) {
         com.jumlo.app.ui.pro.JumloProSheet(
             entitlement = proEntitlement,

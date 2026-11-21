@@ -130,12 +130,12 @@ fun JumloNavigationBar(
                 val interactionSource = remember { MutableInteractionSource() }
                 val tintState = animateColorAsState(
                     targetValue = if (active) pillars.activePillContent else colors.onSurfaceVariant,
-                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs),
+                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs, easing = JumloMotion.iosEase),
                     label = "nav-tint-${destination.name}"
                 )
                 val pillBgState = animateColorAsState(
                     targetValue = if (active) activePillBg else Color.Transparent,
-                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs),
+                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs, easing = JumloMotion.iosEase),
                     label = "nav-pill-${destination.name}"
                 )
                 Box(

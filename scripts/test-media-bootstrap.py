@@ -76,7 +76,8 @@ class CurrentNativeTransportContracts(unittest.TestCase):
         self.assertNotIn('showSessionSheet',ui)
         self.assertNotIn('media_session_btn',ui)
         self.assertFalse((MAIN/'ui/downloads/PlatformSessionSheet.kt').exists())
-        self.assertIn('media_restricted_hint',ui)
+        self.assertIn('text = "null"',ui)
+        self.assertNotIn('isError=true',ui)
 
     def test_actual_transfer_uses_compatible_profile_and_stops_on_denial(self):
         downloader=(MAIN/'data/processing/DownloadOperationHandler.kt').read_text(encoding="utf-8")

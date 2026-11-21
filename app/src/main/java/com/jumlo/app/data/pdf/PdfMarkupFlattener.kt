@@ -77,9 +77,25 @@ object PdfMarkupFlattener {
         cs.setLineJoinStyle(1)
         val first = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, points.first().x, points.first().y)
         cs.moveTo(first.first, first.second)
-        for (i in 1 until points.size) {
-            val pt = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, points[i].x, points[i].y)
+        if (points.size == 2) {
+            val pt = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, points[1].x, points[1].y)
             cs.lineTo(pt.first, pt.second)
+        } else {
+            var prev = first
+            for (i in 1 until points.size - 1) {
+                val ctrl = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, points[i].x, points[i].y)
+                val next = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, points[i + 1].x, points[i + 1].y)
+                val midX = (ctrl.first + next.first) * 0.5f
+                val midY = (ctrl.second + next.second) * 0.5f
+                val c1x = prev.first + (2f / 3f) * (ctrl.first - prev.first)
+                val c1y = prev.second + (2f / 3f) * (ctrl.second - prev.second)
+                val c2x = midX + (2f / 3f) * (ctrl.first - midX)
+                val c2y = midY + (2f / 3f) * (ctrl.second - midY)
+                cs.curveTo(c1x, c1y, c2x, c2y, midX, midY)
+                prev = midX to midY
+            }
+            val end = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, points.last().x, points.last().y)
+            cs.lineTo(end.first, end.second)
         }
         cs.stroke()
         cs.restoreGraphicsState()
@@ -119,7 +135,25 @@ object PdfMarkupFlattener {
     ) {
         val text = item.text.trim()
         if (text.isEmpty()) return
-        val scale = 3.0f
+        if (rot == 0 && item.text.all { it in ' '..'~' || it == '
+' }) {
+            val fontSize = item.fontSizePt.coerceIn(8f, 48f)
+            val lines = item.text.lines()
+            val (tx, ty) = PdfMarkupPolicy.toPdfPoint(bx, by, bw, bh, rot, item.normX, item.normY)
+            cs.saveGraphicsState()
+            cs.setNonStrokingColor((item.colorArgb shr 16) and 0xFF, (item.colorArgb shr 8) and 0xFF, item.colorArgb and 0xFF)
+            cs.beginText()
+            cs.setFont(com.tom_roush.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, fontSize)
+            cs.newLineAtOffset(tx, ty - fontSize)
+            lines.forEachIndexed { idx, line ->
+                if (idx > 0) cs.newLineAtOffset(0f, -(fontSize * 1.25f))
+                cs.showText(line)
+            }
+            cs.endText()
+            cs.restoreGraphicsState()
+            return
+        }
+        val scale = 4.167f // True 300 DPI for crisp Arabic/RTL StaticLayout rendering
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = item.colorArgb
             textSize = item.fontSizePt.coerceIn(8f, 48f) * scale

@@ -105,6 +105,13 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
     var previewId by rememberSaveable(tool, form.sourceIds) {mutableStateOf<String?>(null)}
     var renamePreviewOpen by rememberSaveable(tool, form.sourceIds) {mutableStateOf(false)}
 
+    // Auto-detect encryption status on pdf_protect so the user sees only Protect OR Unlock cleanly.
+    LaunchedEffect(tool, form.sourceIds) {
+        if (tool == "pdf_protect" && form.sourceIds.size == 1) {
+            val encrypted = vm.isPdfEncrypted(form.sourceIds.single())
+            vm.updateForm { it.copy(flag1 = encrypted) }
+        }
+    }
     // Populate smart defaults on tool entry so no manual typing is required on the main workspace.
     val defaultWatermark = stringResource(R.string.watermark_preset_confidential)
     LaunchedEffect(tool) {
@@ -202,17 +209,17 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
     val proposedNames=renamePreview?.getOrNull()
     val ready=CapabilityRegistry.enabled(tool) && !busy && !inputMismatch && settingsError==null && countValid &&
         (tool!="file_encrypted_zip" || form.secret1.isNotEmpty()) &&
-        (tool!="pdf_protect" || if(form.flag1) form.secret1.isNotEmpty() else form.secret2.isNotEmpty()) &&
+        (tool!="pdf_protect" || form.secret1.isNotEmpty() || (!form.flag1 && form.secret2.isNotEmpty())) &&
         (tool!="pdf_05" || !form.flag2 || form.flag1 || form.pages.isNotBlank()) &&
         (tool!="file_batch_rename" || proposedNames!=null) &&
         (tool!="pdf_signature" || form.signaturePlacements.isNotEmpty()) &&
         (if(download) urls.isNotBlank() else queue.size>=minimum)
-    val inputSpec = remember(tool, form.watermarkUseImage, form.flag1) { ToolInputPolicy.resolve(tool, form) }
     Column(Modifier.fillMaxSize().imePadding()) {
         LazyColumn(Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
                 // Top step breadcrumb removed for a calm, uncluttered tool workspace.
+                val inputSpec = remember(tool, form.watermarkUseImage, form.flag1) { ToolInputPolicy.resolve(tool, form) }
                 val emptyTitleRes = when(inputSpec.kind) {
                     ToolInputKind.PDF_SINGLE -> R.string.ui_choose_pdf_single
                     ToolInputKind.PDF_MULTI -> R.string.ui_choose_pdf_multi
@@ -331,7 +338,7 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                 }
                 // Background PDF compression pre-calculation disabled to avoid CPU drain; user controls strength directly (1-100).
                 if(tool=="pdf_ocr" && queue.size==1 && !inputMismatch) item(key="ocr-result-panel",contentType="ocr-panel") {
-                    OcrWorkspacePanel(vm,queue.single().id,onExecute,ready,selectedScript=form.text1.ifBlank{"LATIN"},onSelectScript={s->vm.updateForm {it.copy(text1=s)}})
+                    OcrWorkspacePanel(vm,queue.single().id,onExecute,ready,selectedScript="AUTO",onSelectScript={})
                 }
                 if(tool in PRIMARY_FIELDS_TOOLS) item(key="primary-tool-settings",contentType="settings") {
                     WorkspaceFields(form,vm::updateForm)
@@ -832,20 +839,19 @@ internal fun passwordStrength(value:String):Int = when {
                 }
                 "pdf_signature" -> Text(stringResource(R.string.field_signature_note),style=QuietTheme.typography.metadata)
                 "pdf_protect" -> {
-                    Toggle(stringResource(R.string.field_remove_protection),f.flag1) {v->edit {it.copy(flag1=v)}}
-                    Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true)
-                    if(!f.flag1) GeneratePasswordButton {v->edit {it.copy(secret1=v)}}
-                    if(!f.flag1) {
-                        Field(stringResource(R.string.field_owner_password),f.secret2,{v->edit {it.copy(secret2=v)}},secret=true)
+                    if (f.flag1) {
+                        QuietBadge(stringResource(R.string.pdf_protect_detected_locked), MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+                        Field(stringResource(R.string.field_current_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true)
+                    } else {
+                        Field(stringResource(R.string.field_user_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true)
+                        GeneratePasswordButton {v->edit {it.copy(secret1=v)}}
                         Text(stringResource(R.string.studio_permissions),style=QuietTheme.typography.sectionTitle,modifier=Modifier.semantics { heading() })
                         Toggle(stringResource(R.string.studio_allow_print),f.allowPrinting) {v->edit {it.copy(allowPrinting=v)}}
                         Toggle(stringResource(R.string.studio_allow_copy),f.allowCopy) {v->edit {it.copy(allowCopy=v)}}
                         Toggle(stringResource(R.string.studio_allow_modify),f.allowModify) {v->edit {it.copy(allowModify=v)}}
                         Toggle(stringResource(R.string.studio_allow_annotations),f.allowAnnotations) {v->edit {it.copy(allowAnnotations=v)}}
                         Toggle(stringResource(R.string.studio_allow_forms),f.allowForms) {v->edit {it.copy(allowForms=v)}}
-                        Text(stringResource(R.string.studio_permissions_note),style=QuietTheme.typography.metadata)
                     }
-                    Text(stringResource(R.string.field_protect_note),style=QuietTheme.typography.metadata)
                 }
                 "pdf_to_docx","pdf_to_pptx","pdf_ocr" -> PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
                 "img_watermark" -> {

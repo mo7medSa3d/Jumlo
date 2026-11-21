@@ -43,7 +43,7 @@ import com.jumlo.app.ui.tools.ToolTile
 @Composable
 fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> Unit,
     onJob: (String) -> Unit, onOutput: (OutputRecord) -> Unit, onDraft: () -> Unit,
-    onFiles: () -> Unit, onScan: () -> Unit, onDownloads: () -> Unit) {
+    onFiles: () -> Unit, onScan: () -> Unit, onDownloads: () -> Unit, onScanIdCard: () -> Unit = onScan) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
@@ -58,7 +58,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
         val q = homeSearch.trim()
         if (q.isEmpty()) emptyList()
         else CapabilityRegistry.tools.filter { t ->
-            CapabilityRegistry.visible(t.id) && CapabilityRegistry.enabled(t.id) &&
+            CapabilityRegistry.visible(t.id) && CapabilityRegistry.enabled(t.id) && com.jumlo.app.core.ToolCatalogue.isSearchable(t.id) &&
                 (t.titleEn.contains(q, true) || t.titleAr.contains(q, true) || t.subtitleEn.contains(q, true) || t.subtitleAr.contains(q, true))
         }.take(8)
     }
@@ -73,13 +73,13 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     val pinnedSet = remember(settings.quickActionIds) { settings.quickActionIds.toSet() }
     val sourceNamesById = remember(sources) { sources.associate { it.id to it.displayName } }
     fun open(id: String) { CapabilityRegistry.tools.firstOrNull { it.id == id }?.let(onTool) }
-    val actions = remember(onScan, onTool, onTools) {
+    val actions = remember(onScan, onScanIdCard, onTool, onTools) {
         listOf(
             Triple(R.string.modern_scan, R.drawable.ic_prism_scan, onScan),
             Triple(R.string.modern_convert, R.drawable.ic_prism_document, { showConvert = true }),
             Triple(R.string.modern_compress, R.drawable.ic_prism_compress, { open("pdf_compress") }),
             Triple(R.string.modern_download, R.drawable.ic_prism_download, { open("dl_media") }),
-            Triple(R.string.home_quick_id_card, R.drawable.ic_prism_scan, onScan),
+            Triple(R.string.home_quick_id_card, R.drawable.ic_prism_scan, onScanIdCard),
             Triple(R.string.home_quick_ocr, R.drawable.ic_prism_ocr, { open("pdf_ocr") }),
             Triple(R.string.modern_pdf_word, R.drawable.ic_prism_document, { open("pdf_to_docx") }),
             Triple(R.string.modern_all_tools, R.drawable.ic_prism_document, onTools)
@@ -343,7 +343,11 @@ private val ConvertSheetOptions = listOf(
                 .background(badgeBg.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(painterResource(icon), null, Modifier.size(24.dp), tint = badgeBg)
+            if (accentToolId != null) {
+                ToolIcon(accentToolId, badgeBg, Modifier.size(24.dp))
+            } else {
+                Icon(painterResource(icon), null, Modifier.size(24.dp), tint = badgeBg)
+            }
         }
         Text(
             label,

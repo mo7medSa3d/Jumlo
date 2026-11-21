@@ -116,11 +116,13 @@ class JumloBrandMotionChecks(unittest.TestCase):
         # User-directed removal 2026-11-02: the haptics and reduce-motion
         # rows are gone from the Settings page (the stored preferences and
         # the MainActivity wiring above stay, so behavior keeps its defaults).
-        for key in ('viewModel.setHapticIntensity','viewModel.setRespectReducedMotion','settings.hapticIntensity','settings.respectReducedMotion','settings.haptics','settings.reduceMotion'):
+        for key in ('viewModel.setHapticIntensity','viewModel.setRespectReducedMotion','settings.hapticIntensity','settings.respectReducedMotion','settings.reduceMotion'):
             self.assertNotIn(key,settings)
         self.assertIn('LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit',main)
         self.assertIn('LocalHapticIntensity provides settings.hapticIntensity',main)
         self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',main)
+        for key in ('settings.notifications','settings.sounds','settings.haptics'):
+            self.assertIn(key,settings)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
         for key in ('JumloNavigationBar(','role = Role.Tab','navigationBarsPadding()',

@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -38,7 +40,19 @@ internal class MediaServiceSettingsStore(
     suspend fun observe() {
         try {
             // Re-read transactionally: a queued, older flow emission cannot replace a newer save.
-            preferences.data.collect { refresh() }
+            preferences.data
+                .map { Triple(it[URL], it[LEGACY_TOKEN], it[ENCRYPTED_TOKEN]) }
+                .distinctUntilChanged()
+                .collect {
+                    try {
+                        refresh()
+                    } catch (cancel: CancellationException) {
+                        throw cancel
+                    } catch (error: Exception) {
+                        mutableState.value = MediaServiceSettings()
+                        report("media_settings_snapshot", error)
+                    }
+                }
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (error: Exception) {

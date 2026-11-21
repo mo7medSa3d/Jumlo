@@ -3,7 +3,7 @@
 ## Optimized APK artifact and owner-signed Release gate
 
 - [ ] Exact-head Actions run uploads `Jumlo-Optimized-Installable-ARM64-…` separately from `Jumlo-Debug-APK-…`; verify ZIP contains the optimized APK, its SHA-256 and `INSTALLATION.txt`. Follow the download URL in the run summary.
-- [ ] Confirm `apksigner verify --verbose --print-certs` succeeds on the optimized APK, size is at most 70,000,000 bytes, complete media runtime remains included, and an ARM64 Android 8+ device installs/launches it. This artifact is explicitly **test-signed**.
+- [ ] Confirm `apksigner verify --verbose --print-certs` succeeds on the optimized APK, size is at most 60,000,000 bytes, complete media runtime remains included, and an ARM64 Android 8+ device installs/launches it. This artifact is explicitly **test-signed**.
 - [ ] For a production installer, configure `JUMLO_KEYSTORE_BASE64`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD` securely in Actions and run trusted main/tag/manual CI. Require a successful `:app:verifyPublishableRelease` and `Jumlo-Owner-Signed-Release-ARM64` artifact.
 - [ ] Compare owner-signed APK certificate SHA-256 to the established release signing lineage before distribution; independently verify installation, upgrade and app-data preservation.
 - [ ] Do not publish unsigned release files or a debug-key-signed compact APK as a Play production release; test binaries are for personal installation only.
@@ -23,7 +23,7 @@ This is a release gate, not a claim of Play approval. The former `TEST_REPORT.md
 - [ ] Supply the owner's upload/release keystore. Do not reuse a debug key or commit passwords, keystores, service credentials or signing material.
 - [ ] Configure `JUMLO_KEYSTORE_PATH`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, `JUMLO_KEY_PASSWORD`, or an ignored complete `keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). Environment values take precedence.
 - [ ] Confirm the application ID, Play ownership, next unused `versionCode`, display `versionName`, update signing lineage and Play App Signing setup.
-- [ ] Run `./gradlew :app:verifyPublishableRelease` with real credentials. The task requires the complete runtime, release APK size below 70,000,000 bytes, ARM64-only native contents, AAB, release lint and a non-debug signing configuration. It does not upload anything.
+- [ ] Run `./gradlew :app:verifyPublishableRelease` with real credentials. The task requires the complete runtime, release APK size below 60,000,000 bytes, ARM64-only native contents, AAB, release lint and a non-debug signing configuration. It does not upload anything.
 - [ ] Independently verify certificate identity with `apksigner verify --verbose --print-certs`; a keystore filename/alias check cannot establish ownership.
 - [ ] Save the signed APK/AAB hashes and final exact compressed-size breakdown. Re-run the size gate after signing and any asset change.
 
@@ -131,7 +131,7 @@ No publishing, external messaging, service deployment or signing-key creation fo
 
 ## 2026-10-28 — CI release shrinker memory guard
 
-PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 70 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
+PR/main full-media CI is serialized and now grants the Gradle worker 4 GB max heap to avoid the observed R8 Java-heap exhaustion (PR #31 run 40644691679). This is resource configuration only: do not bypass minification, lintRelease, full-media payload/ABI checks, or the 60 MB compact/release limits. Keep the current-head CI result attached to the release candidate; earlier successful runs do not validate later changes.
 
 - [ ] WP13: Confirm no Settings option suggests global Wi-Fi-only or concurrency customization; verify per-job Wi-Fi flag still reaches a real download job and fixed 2-task scheduler remains enforced.
 

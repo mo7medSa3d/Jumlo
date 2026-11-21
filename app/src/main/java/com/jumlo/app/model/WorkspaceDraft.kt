@@ -102,7 +102,7 @@ import kotlinx.serialization.json.Json
             "office_to_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.OfficeToPdfSettings(SafeNames.basename(outputName)))
             "pdf_nup" -> Json.encodeToString(com.jumlo.app.data.processing.PdfNupSettings(SafeNames.basename(outputName),if(num1=="4") 4 else 2,grayscale))
             "pdf_privacy_redact" -> Json.encodeToString(com.jumlo.app.data.processing.PdfRedactSettings(SafeNames.basename(outputName),pages.ifBlank{"1"},fraction(cropLeft),fraction(cropTop),fraction(cropRight),fraction(cropBottom),!flag1,cropOverrides))
-            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf"),text1.ifBlank{"LATIN"}))
+            "pdf_ocr" -> Json.encodeToString(com.jumlo.app.data.processing.PdfImagesSettings(pages.ifBlank{"all"},number(dpi.ifBlank{"144"},36,600),"PNG",number(quality,1,100),grayscale,SafeNames.fromDisplayName(outputName.ifBlank{"searchable.pdf"},"searchable.pdf"),text1.ifBlank{"AUTO"}))
             "img_watermark" -> {
                 if(flag1) require(sourceIds.distinct().size>=2) { "WATERMARK_LOGO_REQUIRED" }
                 else require(text1.isNotBlank()) { "WATERMARK_CONTENT_REQUIRED" }

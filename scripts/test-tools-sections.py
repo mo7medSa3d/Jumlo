@@ -24,13 +24,13 @@ class ToolsSectionContracts(unittest.TestCase):
         cls.registry = read('data/jobs/CapabilityRegistry.kt')
 
     def test_required_sections_are_declared(self):
-        for key in ('scan', 'organize', 'convert', 'edit', 'optimize', 'protect', 'download', 'files'):
+        for key in ("scan", "edit", "optimize", "files"):
             self.assertIn(f'ToolSection("{key}"', self.screen, f'missing section {key}')
 
     def test_each_section_declares_bilingual_title_and_ids(self):
         block = self.screen.split('toolSections = listOf(', 1)[1]
         calls = re.split(r'\n\s*ToolSection\("', block)[1:]
-        self.assertEqual(8, len(calls))
+        self.assertEqual(4, len(calls))
         for call in calls:
             self.assertRegex(call, r'"[^"]+",\s*"[^"]+",\s*setOf\(', call)
 

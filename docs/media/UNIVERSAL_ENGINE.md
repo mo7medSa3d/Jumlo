@@ -59,7 +59,7 @@ group and postprocessors. Partial files remain private until validated publicati
 
 ## APK size, integrity and native packaging
 
-The arm64 compact APK has a **70,000,000-byte** verification gate. The release and
+The arm64 compact APK has a **60,000,000-byte** verification gate. The release and
 emulator ABI configuration is owned by the app build; x86_64 is for debug testing.
 Common media assets and ARM64 repairs live in `app/src/media/assets`; the five
 x86_64 repairs live in `app/src/mediaDebug/assets`, registered only for full-runtime

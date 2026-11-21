@@ -38,7 +38,29 @@ import kotlinx.coroutines.CancellationException
             catch(error:SecurityException) {
                 AppDiagnostics.reportFailure("worker_foreground_degraded","FOREGROUND_SERVICE_DEGRADED",elapsedMs(),error)
             }
-            if(jobs.execute(id,dispatcher)) Result.success() else Result.retry()
+            val ok = jobs.execute(id, dispatcher)
+            if (ok) {
+                runCatching {
+                    val snap = jobs.snapshot(id)
+                    if (snap?.progress?.stage == com.jumlo.app.model.JobStage.COMPLETED) {
+                        val created = snap.outcomes.filter { it.status == com.jumlo.app.model.ItemStatus.CREATED }
+                        val firstId = created.firstOrNull()?.outputId
+                        val firstOut = firstId?.let { jobs.outputRecord(it) }
+                        val title = firstOut?.displayName ?: applicationContext.getString(com.jumlo.app.R.string.completed_notification_title)
+                        val summary = if (created.size > 1) {
+                            applicationContext.getString(com.jumlo.app.R.string.completed_notification_multi, created.size)
+                        } else {
+                            applicationContext.getString(com.jumlo.app.R.string.completed_notification_single)
+                        }
+                        ProcessingNotification.postCompleted(
+                            applicationContext, id, title, summary,
+                            shareUri = if (created.size == 1) firstOut?.uri else null,
+                            shareMime = if (created.size == 1) firstOut?.mimeType else null
+                        )
+                    }
+                }
+                Result.success()
+            } else Result.retry()
         }
         catch(cancel:CancellationException) { throw cancel }
         catch(error:Exception) {

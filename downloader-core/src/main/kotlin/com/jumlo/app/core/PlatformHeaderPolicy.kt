@@ -82,6 +82,7 @@ object PlatformHeaderPolicy {
             if (!headerName.matches(name) || name.lowercase(Locale.ROOT) !in safeExtras ||
                 (compatibilityAttempt > 0 && name.equals("user-agent", true)) ||
                 text.isEmpty() || text.length > 2048 || text.any(Char::isISOControl)) continue
+            headers.keys.removeAll { it.equals(name, ignoreCase = true) }
             headers[name] = text
         }
         return headers

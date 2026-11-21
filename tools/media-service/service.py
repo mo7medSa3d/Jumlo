@@ -106,6 +106,7 @@ _MAX_QUERY_FIELDS = 32
 _ERROR_CODE_RE = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
 _VERSION_RE = re.compile(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:[.-][A-Za-z0-9.]{1,32})?")
 _HOST_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.?")
+_YTDLP_FRAGMENT_RE = re.compile(r"^media\.f[A-Za-z0-9_-]+\.")
 
 
 def _safe_ytdlp_version(version: str) -> str:
@@ -469,7 +470,7 @@ def extract(url: str) -> dict:
     if not _is_public_web_url(url):
         return {"error": "MEDIA_SITE_UNSUPPORTED"}
     try:
-        result = run_ytdlp(["-J", "--", url], timeout=120)
+        result = run_ytdlp(["-J", "--flat-playlist", "--", url], timeout=120)
     except subprocess.TimeoutExpired:
         return {"error": "MEDIA_NETWORK_ERROR"}
     except FileNotFoundError:
@@ -569,6 +570,10 @@ def resolve_stream(url: str, mode: str, fmt: str, bitrate: int,
             raise RuntimeError(classify(result.stderr or result.stdout))
         files = [path for path in Path(work).glob('media.*')
                  if path.suffix[1:].lower() in MEDIA_MIME and path.is_file() and not path.is_symlink()]
+        if len(files) > 1:
+            merged = [path for path in files if not _YTDLP_FRAGMENT_RE.match(path.name)]
+            if merged:
+                files = merged
         if len(files) != 1 or files[0].stat().st_size <= 0:
             raise RuntimeError('MEDIA_OUTPUT_MISSING')
         target = files[0]
@@ -870,10 +875,15 @@ class Handler(BaseHTTPRequestHandler):
         fmt = (query.get("format") or [""])[0]
         selector = (query.get("selector") or [""])[0]
         container = (query.get("container") or [""])[0]
-        try:
-            bitrate = int((query.get("bitrate") or ["0"])[0])
-        except ValueError:
+        raw_bitrate = (query.get("bitrate") or [""])[0]
+        if raw_bitrate == "":
             bitrate = 0
+        else:
+            try:
+                bitrate = int(raw_bitrate)
+            except ValueError:
+                self._error("INVALID_MEDIA_FORMAT", 422)
+                return
         if not url:
             self._error("MEDIA_SITE_UNSUPPORTED", 400)
             return

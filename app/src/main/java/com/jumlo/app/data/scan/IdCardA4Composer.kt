@@ -17,8 +17,8 @@ import kotlin.math.min
 object IdCardA4Composer {
     const val A4_WIDTH_PT = 595f
     const val A4_HEIGHT_PT = 842f
-    private const val CARD_MAX_W = 360f
-    private const val CARD_MAX_H = 240f
+    private const val CARD_MAX_W = 242.65f
+    private const val CARD_MAX_H = 153.01f
 
     private fun ensureLandscape(src: Bitmap): Bitmap {
         if (src.width >= src.height) return src

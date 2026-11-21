@@ -73,7 +73,11 @@ import javax.inject.Singleton
                             }
                             context.checkCancellation()
                             val resident=if(bmp!==src) src.allocationByteCount.toLong() else 0L
-                            if (isEncodePipeline) {
+                            if (request.toolId == "img_04" && originalSize > 0L) {
+                                val targetBytes = (originalSize * output.quality.coerceIn(5, 98) / 100.0).toLong().coerceAtLeast(4096L)
+                                BitmapTransforms.compressToTarget(bmp, ticket.stageFile, output.copy(format = effectiveFormat), targetBytes,
+                                    context.budget.maxBitmapBytes - resident, checkCancel = context.checkCancellation)
+                            } else if (isEncodePipeline) {
                                 ImageOutputEncoder.encode(bmp,ticket.stageFile,request.toolId,output,originalSize,
                                     context.budget.maxBitmapBytes-resident,checkCancel=context.checkCancellation)
                             } else {

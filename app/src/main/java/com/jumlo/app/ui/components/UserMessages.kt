@@ -25,6 +25,7 @@ import com.jumlo.app.R
     code=="PDF_COMPARE_DIFFERENT" -> R.string.pdf_compare_different
     code=="REDACT_PARTIAL" -> R.string.redact_partial
     code=="INVALID_REDACT_REGION" -> R.string.visual_redact_need_region
+    code=="PDF_WRONG_PASSWORD" -> R.string.msg_pdf_wrong_password
     code=="OCR_ARABIC_MODEL_MISSING" -> R.string.msg_ocr_arabic_model_missing
     code=="OCR_MODEL_UNAVAILABLE" -> R.string.rebuild_ocr_model
     code=="OCR_NO_TEXT" -> R.string.rebuild_ocr_empty

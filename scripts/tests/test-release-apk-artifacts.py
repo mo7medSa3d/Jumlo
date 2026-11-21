@@ -71,7 +71,7 @@ class InstallableArtifactContractTest(unittest.TestCase):
             ':app:verifyReleaseApkSize', ':app:testDebugUnitTest', ':app:lintRelease'
         ):
             self.assertIn(task, WORKFLOW)
-        self.assertIn('maxFullMediaApkBytes = 70_000_000L', GRADLE)
+        self.assertIn('maxFullMediaApkBytes = 60_000_000L', GRADLE)
         self.assertIn('python3 scripts/tests/test-release-apk-artifacts.py', WORKFLOW)
 
 

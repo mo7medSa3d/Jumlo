@@ -74,7 +74,7 @@ import javax.inject.Singleton
         work.enqueueUniqueWork("job:${request.id}",policy,builder.build())
     }
     /** Only call after the terminal state is durable. Paused/retryable jobs still need their URLs. */
-    private fun cleanupTerminalArtifacts(jobId:String,request:JobRequest) {
+    private suspend fun cleanupTerminalArtifacts(jobId:String,request:JobRequest) {
         if(runCatching { UUID.fromString(jobId).toString()==jobId }.getOrDefault(false)) {
             runCatching { File(app.filesDir,"transfers/$jobId").deleteRecursively() }
             runCatching { File(app.noBackupFilesDir,"media-transfers/$jobId").deleteRecursively() }
@@ -86,7 +86,24 @@ import javax.inject.Singleton
                 if(handle.isNotBlank()) secrets.remove(handle)
             }
         }
+        // Automatically reap temporary inbound tool-input copies so only published outputs & explicit library imports stay in app storage.
+        if (request.sourceIds.isNotEmpty()) {
+            runCatching {
+                val activeJobSources = dao.jobs().first()
+                    .filter { it.id != jobId && it.stage !in setOf(JobStage.COMPLETED.name, JobStage.CANCELLED.name) }
+                    .flatMap { runCatching { json.decodeFromString<JobRequest>(it.requestJson).sourceIds }.getOrDefault(emptyList()) }
+                    .toSet()
+                val draftBlobs = dao.allDrafts().map { it.requestJson }
+                request.sourceIds.distinct().forEach { sourceId ->
+                    if (sourceId !in activeJobSources && draftBlobs.none { it.contains(sourceId) }) {
+                        runCatching { sources.discardNewImport(sourceId) }
+                    }
+                }
+            }
+        }
     }
+    suspend fun snapshot(jobId: String): JobSnapshot? = dao.job(jobId)?.let { runCatching { json.decodeFromString<JobSnapshot>(it.snapshotJson) }.getOrNull() }
+    suspend fun outputRecord(outputId: String): OutputRecord? = dao.output(outputId)?.let { runCatching { json.decodeFromString<OutputRecord>(it.recordJson) }.getOrNull() }
     suspend fun pause(jobId:String) {
         val row=dao.job(jobId) ?: return
         val old=json.decodeFromString<JobSnapshot>(row.snapshotJson)

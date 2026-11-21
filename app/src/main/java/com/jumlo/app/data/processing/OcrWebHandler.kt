@@ -27,7 +27,7 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
         require(request.sourceIds.size == 1) { "ONE_FILE_REQUIRED" }
         val source = context.sources.get(request.sourceIds.single())
         val settings = JSONObject(request.settingsJson)
-        val script = OcrScript.fromId(settings.optString("ocrScript", "LATIN"))
+        val script = OcrScript.fromId(settings.optString("ocrScript", "AUTO"))
         val existingText = context.outputs.find(request.id, "text")
         val existingDoc = context.outputs.find(request.id, "document")
         if (existingText != null) {

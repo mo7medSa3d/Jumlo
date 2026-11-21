@@ -37,6 +37,7 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 enum class OcrScript(val id: String) {
+    AUTO("AUTO"),
     ARABIC("ARABIC"),
     LATIN("LATIN"),
     CHINESE("CHINESE"),
@@ -45,7 +46,7 @@ enum class OcrScript(val id: String) {
     DEVANAGARI("DEVANAGARI");
 
     companion object {
-        fun fromId(raw: String?): OcrScript = entries.firstOrNull { it.id.equals(raw?.trim(), ignoreCase = true) } ?: LATIN
+        fun fromId(raw: String?): OcrScript = entries.firstOrNull { it.id.equals(raw?.trim(), ignoreCase = true) } ?: AUTO
     }
 }
 
@@ -57,26 +58,31 @@ class MlKitOcrEngine @Inject constructor(
 ) {
     constructor(context: Context) : this(context, ArabicTesseractOcrEngine(context))
     private fun createRecognizer(script: OcrScript): TextRecognizer = when (script) {
-        OcrScript.ARABIC, OcrScript.LATIN -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        OcrScript.AUTO, OcrScript.ARABIC, OcrScript.LATIN -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         OcrScript.CHINESE -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
         OcrScript.DEVANAGARI -> TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
         OcrScript.JAPANESE -> TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
         OcrScript.KOREAN -> TextRecognition.getClient(KoreanTextRecognizerOptions.Builder().build())
     }
 
-    suspend fun recognize(bitmap: Bitmap, script: OcrScript = OcrScript.LATIN): String {
+    suspend fun recognize(bitmap: Bitmap, script: OcrScript = OcrScript.AUTO): String {
         currentCoroutineContext().ensureActive()
-        if (script == OcrScript.ARABIC) {
+        if (script == OcrScript.AUTO || script == OcrScript.ARABIC) {
             val prepared = prepareForAccuracy(bitmap)
             try {
-                val firstPass = arabicEngine.recognize(prepared)
-                if (firstPass.isNotBlank()) return firstPass
-                val enhanced = enhanceContrast(prepared)
-                try {
-                    return arabicEngine.recognize(enhanced)
-                } finally {
-                    enhanced.recycle()
+                val tessResult = try {
+                    val first = arabicEngine.recognize(prepared, includeEnglish = true)
+                    if (first.isNotBlank()) first else {
+                        val enhanced = enhanceContrast(prepared)
+                        try { arabicEngine.recognize(enhanced, includeEnglish = true) } finally { enhanced.recycle() }
+                    }
+                } catch (cancel: CancellationException) {
+                    throw cancel
+                } catch (_: Exception) {
+                    ""
                 }
+                if (tessResult.isNotBlank()) return tessResult
+                if (script == OcrScript.ARABIC) throw OperationFailure("OCR_ARABIC_MODEL_MISSING")
             } finally {
                 if (prepared !== bitmap) prepared.recycle()
             }

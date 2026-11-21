@@ -130,8 +130,12 @@ private fun PdfViewerContent(
     var session by remember { mutableStateOf<PdfReaderSession?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     var retry by remember { mutableIntStateOf(0) }
+    var unlockPassword by remember(uri) { mutableStateOf<String?>(null) }
+    var passwordInput by remember(uri) { mutableStateOf("") }
+    var passwordRevealed by remember(uri) { mutableStateOf(false) }
 
-    var chromeVisible by remember { mutableStateOf(false) }
+    var chromeVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(document) { if (document == null) chromeVisible = true }
     var pageObserved by remember { mutableStateOf(false) }
     var nightMode by rememberSaveable { mutableStateOf(false) }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
@@ -179,12 +183,12 @@ private fun PdfViewerContent(
         if (chromeVisible) wake() else hideJob?.cancel()
     }
 
-    LaunchedEffect(uri, retry) {
+    LaunchedEffect(uri, retry, unlockPassword) {
         var opened: PdfReaderSession? = null
         try {
             failure = null
             session = null
-            opened = PdfReaderSession.open(context, uri)
+            opened = PdfReaderSession.open(context, uri, unlockPassword)
             session = opened
             awaitCancellation()
         } catch (cancel: CancellationException) { throw cancel }
@@ -242,6 +246,33 @@ private fun PdfViewerContent(
                     if (currentFailure == null) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.reader_loading))
+                    } else if (currentFailure == "PDF_ENCRYPTED" || currentFailure == "PDF_WRONG_PASSWORD") {
+                        Icon(Icons.Rounded.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
+                        Text(
+                            stringResource(if (currentFailure == "PDF_WRONG_PASSWORD") R.string.msg_pdf_wrong_password else R.string.reader_password_prompt),
+                            color = if (currentFailure == "PDF_WRONG_PASSWORD") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            style = QuietTheme.typography.sectionTitle,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        )
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = { passwordInput = it.take(256) },
+                            label = { Text(stringResource(R.string.field_current_password)) },
+                            singleLine = true,
+                            visualTransformation = if (passwordRevealed) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordRevealed = !passwordRevealed }) {
+                                    Icon(Icons.Rounded.Visibility, null)
+                                }
+                            },
+                            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth()
+                        )
+                        Button(
+                            onClick = { if (passwordInput.isNotEmpty()) { unlockPassword = passwordInput; retry++ } },
+                            enabled = passwordInput.isNotEmpty(),
+                            shape = QuietTheme.shapes.pill,
+                            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().heightIn(min = 48.dp)
+                        ) { Text(stringResource(R.string.reader_unlock_action)) }
                     } else {
                         Text(stringResource(userMessageResource(currentFailure)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                         Button(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
@@ -561,6 +592,7 @@ private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, def
         catch (_: OutOfMemoryError) { failure = "LOW_MEMORY" }
     }
     fun reset() { scale = 1f; pan = Offset.Zero }
+    LaunchedEffect(markupEnabled) { if (markupEnabled) reset() }
     val transform = rememberTransformableState { zoom, offset, _ ->
         scale = (scale * zoom).coerceIn(1f, 5f)
         val maxX = viewport.width * (scale - 1) / 2

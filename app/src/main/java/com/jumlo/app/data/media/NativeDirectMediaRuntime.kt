@@ -41,14 +41,16 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
         val RANGE_FALLBACK_CODES = setOf(400, 403, 405, 501)
         val HTML_MIMES = setOf("text/html", "application/xhtml+xml")
-        val LINKEDIN_VIDEO_REGEX = Regex("https://dms\\.licdn\\.com/playlist/vid/[^\\s\"'<>\\\\]+")
+        val LINKEDIN_VIDEO_REGEX = Regex("https://(?:dms|media)\\.licdn\\.com/(?:playlist/|dms/)?(?:prv/)?vid/[^\\s\"'<>\\\\]+")
         val LINKEDIN_DOC_REGEX = Regex("https://media\\.licdn\\.com/dms/document/[^\\s\"'<>\\\\]+")
-        val LINKEDIN_IMG_REGEX = Regex("https://media\\.licdn\\.com/dms/image/[^\\s\"'<>\\\\]+(?:feedshare|article-cover)[^\\s\"'<>\\\\]*")
+        val LINKEDIN_IMG_REGEX = Regex("https://media\\.licdn\\.com/dms/image/[^\\s\"'<>\\\\]+(?:feedshare|article-cover|document-images)[^\\s\"'<>\\\\]*")
         val LINKEDIN_POST_URL_REGEX = Regex("""https://(?:www\.)?linkedin\.com/(?:posts|feed/update|pulse|video)/[^\s"'<>]+""")
-        val LINKEDIN_JSONLD_VIDEO_REGEX = Regex("\\\\?\"contentUrl\\\\?\"\\s*:\\s*\\\\?\"(https://[^\"\\\\]+\\.mp4[^\"\\\\]*)")
+        val LINKEDIN_JSONLD_VIDEO_REGEX = Regex("\\\\?\"(?:contentUrl|src)\\\\?\"\\s*:\\s*\\\\?\"(https://[^\"\\\\]+(?:licdn\\.com|\\.mp4)[^\"\\\\]*)")
+        val LINKEDIN_OG_VIDEO_REGEX = Regex("<meta[^>]+property=[\"']og:video(?::secure_url)?[\"'][^>]+content=[\"'](https://[^\"']+)[\"']", RegexOption.IGNORE_CASE)
         val UNIVERSAL_MEDIA_URL_REGEX = Regex("""https://[^\s"'<>\\]+\.(?:mp4|m4v|webm|m4a|mp3|pdf)(?:\?[^\s"'<>\\]*)?""", RegexOption.IGNORE_CASE)
         val UNIVERSAL_META_IMAGE_REGEX = Regex("""(?:og:image|twitter:image)["'][^>]*content=["'](https://[^"']+)["']|content=["'](https://[^"']+)["'][^>]*property=["'](?:og:image|twitter:image)["']""", RegexOption.IGNORE_CASE)
         val UNIVERSAL_MEDIA_EXTS = setOf("mp4", "m4v", "webm", "m4a", "mp3", "pdf")
+        val PLATFORM_JSON_VIDEO_REGEX = Regex(""""(?:playable_url_quality_hd|browser_native_hd_url|playable_url|browser_native_sd_url|video_url|fallback_url|contentUrl|hd_src|sd_src)"\s*:\s*"(https://[^"\s<>]+)"""")
     }
     private data class Remote(val url: String, val extension: String, val title: String, val size: Long?)
     private data class Inspection(val name: String, val extractor: String, val streams: List<Remote>, val thumbnailUrl: String? = null)
@@ -185,7 +187,12 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
 
     /** Extract public LinkedIn video streams, PDF carousel documents, and single/multi-image posts from page HTML. */
     private fun extractLinkedInCandidates(pageUrl: String, html: String, allowHttp: Boolean): List<Remote> {
-        val decoded = html.replace("&quot;", "\"").replace("&amp;", "&").replace("\\u002F", "/").replace("\\/", "/")
+        val decoded = html
+            .replace("&quot;", "\"")
+            .replace("&amp;", "&")
+            .replace("\\u002F", "/")
+            .replace("\\u0026", "&")
+            .replace("\\/", "/")
         val title = Html5MediaDiscovery.title(html)?.take(180)?.ifBlank { "LinkedIn media" } ?: "LinkedIn media"
         val found = linkedMapOf<String, Remote>()
         for (m in LINKEDIN_VIDEO_REGEX.findAll(decoded)) {
@@ -193,6 +200,10 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "mp4", title, null))
         }
         for (m in LINKEDIN_JSONLD_VIDEO_REGEX.findAll(decoded)) {
+            val u = m.groupValues[1].trimEnd(',', '}', ']')
+            if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "mp4", title, null))
+        }
+        for (m in LINKEDIN_OG_VIDEO_REGEX.findAll(decoded)) {
             val u = m.groupValues[1].trimEnd(',', '}', ']')
             if (runCatching { MediaLinks.normalize(u, allowHttp) }.isSuccess) found.putIfAbsent(u, Remote(u, "mp4", title, null))
         }
@@ -229,6 +240,14 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val decoded = html.replace("&quot;", "\"").replace("&amp;", "&").replace("\\u002F", "/").replace("\\/", "/")
         val title = Html5MediaDiscovery.title(html)?.take(180)?.ifBlank { "Web media" } ?: "Web media"
         val found = linkedMapOf<String, Remote>()
+        for (m in PLATFORM_JSON_VIDEO_REGEX.findAll(decoded)) {
+            val u = m.groupValues[1].trim()
+            if (runCatching { MediaLinks.normalize(u, allowHttp) }.isFailure) continue
+            val ext = u.substringBefore('?').substringAfterLast('.', "mp4").lowercase(Locale.ROOT)
+                .takeIf { it in UNIVERSAL_MEDIA_EXTS } ?: "mp4"
+            found.putIfAbsent(u, Remote(u, ext, title, null))
+            if (found.size >= 6) break
+        }
         for (m in UNIVERSAL_MEDIA_URL_REGEX.findAll(decoded)) {
             val u = m.value.trimEnd(',', '}', ']', ')')
             if (runCatching { MediaLinks.normalize(u, allowHttp) }.isFailure) continue

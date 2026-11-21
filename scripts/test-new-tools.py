@@ -58,7 +58,7 @@ class NewToolsTest(unittest.TestCase):
         catalogue = read("core-common/src/main/kotlin/com/jumlo/app/core/ToolCatalogue.kt")
         self.assertIn('"office_to_pdf"', catalogue.split("primary = listOf(")[1].split(")")[0])
         sections = read("app/src/main/java/com/jumlo/app/ui/tools/ToolsScreen.kt")
-        self.assertIn('"office_to_pdf"', sections.split('"convert"')[1].split("ToolSection(")[0])
+        self.assertIn('"office_to_pdf"', sections.split('"scan"')[1].split("ToolSection(")[0])
 
     def test_icon_mappings(self):
         icons = read("app/src/main/java/com/jumlo/app/ui/components/ToolIcons.kt")

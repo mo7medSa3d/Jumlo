@@ -51,4 +51,45 @@ object ProcessingNotification {
             ForegroundInfo(notificationId,notification)
         }
     }
+
+    fun postCompleted(context: Context, jobId: String, title: String, summary: String, shareUri: String? = null, shareMime: String? = null) {
+        if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        val channel = "file_completed"
+        nm.createNotificationChannel(
+            NotificationChannel(channel, context.getString(R.string.completed_channel), NotificationManager.IMPORTANCE_DEFAULT)
+        )
+        val open = PendingIntent.getActivity(
+            context, jobId.hashCode(),
+            Intent(context, MainActivity::class.java)
+                .setAction("${context.packageName}.OPEN_JOB")
+                .setData(Uri.parse("jumlo-job:$jobId"))
+                .putExtra("job_id", jobId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val builder = NotificationCompat.Builder(context, channel)
+            .setContentTitle(title)
+            .setContentText(summary)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setCategory(Notification.CATEGORY_STATUS)
+        if (!shareUri.isNullOrBlank() && shareUri.startsWith("content://")) {
+            val parsedUri = Uri.parse(shareUri)
+            val sendIntent = Intent(Intent.ACTION_SEND)
+                .setType(shareMime ?: "*/*")
+                .putExtra(Intent.EXTRA_STREAM, parsedUri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val shareIntent = Intent.createChooser(sendIntent, context.getString(R.string.action_share))
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val sharePending = PendingIntent.getActivity(
+                context, jobId.hashCode() + 1, shareIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(0, context.getString(R.string.action_share), sharePending)
+        }
+        val nid = (jobId.hashCode().and(Int.MAX_VALUE) xor 0x5A5A).coerceAtLeast(2)
+        runCatching { nm.notify(nid, builder.build()) }
+    }
 }

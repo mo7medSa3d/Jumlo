@@ -13,12 +13,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -36,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -312,6 +309,23 @@ fun FolderBreadcrumbBar(
                 Text(stringResource(if (selecting) R.string.action_cancel else R.string.ui_select_files), style = QuietTheme.typography.metadataStrong)
             }
         }
+        if (onOpenFolderActions != null && !selecting) {
+            Surface(
+                onClick = onOpenFolderActions,
+                shape = CircleShape,
+                color = colors.surfaceContainer,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.files_folder_actions_title),
+                        tint = colors.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -329,7 +343,8 @@ fun FolderActionsSheet(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     isLocked: Boolean = false,
-    onToggleLock: (() -> Unit)? = null
+    onToggleLock: (() -> Unit)? = null,
+    onImportToFolder: (() -> Unit)? = null
 ) {
     val pdfs = remember(folderOutputs) { folderOutputs.filter { it.mimeType == "application/pdf" } }
     val images = remember(folderOutputs) { folderOutputs.filter { it.mimeType.startsWith("image/") } }
@@ -361,6 +376,13 @@ fun FolderActionsSheet(
             )
             Spacer(Modifier.size(6.dp))
 
+            if (onImportToFolder != null) {
+                SheetActionRow(
+                    icon = Icons.Rounded.Add,
+                    title = stringResource(R.string.files_import_action),
+                    onClick = { onDismiss(); onImportToFolder() }
+                )
+            }
             if (folderOutputs.isNotEmpty()) {
                 SheetActionRow(
                     icon = Icons.Rounded.FolderZip,
@@ -398,7 +420,14 @@ fun FolderActionsSheet(
                     onClick = { onDismiss(); onShareAll() }
                 )
             }
-            SheetActionRow(
+            if (onToggleLock != null) {
+                    SheetActionRow(
+                        icon = Icons.Rounded.Lock,
+                        title = stringResource(if (isLocked) R.string.vault_unlock_folder else R.string.vault_lock_folder),
+                        onClick = { onDismiss(); onToggleLock() }
+                    )
+                }
+                SheetActionRow(
                 icon = Icons.Rounded.Edit,
                 title = stringResource(R.string.files_folder_action_rename),
                 onClick = { onDismiss(); onRename() }

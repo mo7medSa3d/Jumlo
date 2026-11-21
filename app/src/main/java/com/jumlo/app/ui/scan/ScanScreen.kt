@@ -67,9 +67,9 @@ private val SIGNATURE_INKS = listOf(
 @Composable
 fun ScanScreen(
     onScannedPdf: (File) -> Unit, onScannedJpegs: (List<File>) -> Unit = {},
-    onBack: () -> Unit, externalBusy: Boolean = false
+    onBack: () -> Unit, externalBusy: Boolean = false, initialMode: String? = null
 ) {
-    var format by rememberSaveable { mutableStateOf<String?>(null) }
+    var format by rememberSaveable(initialMode) { mutableStateOf<String?>(initialMode) }
     if (format == null) {
         var selectedMode by rememberSaveable { mutableStateOf("pdf") }
         Surface(Modifier.fillMaxSize(), color = androidx.compose.ui.graphics.Color(0xFF0B0E14)) {
@@ -135,7 +135,7 @@ fun ScanScreen(
             }
         }
     } else if (format == "id_card") {
-        IdCardScanFlow(onPdfReady = onScannedPdf, onBack = { format = null }, externalBusy = externalBusy)
+        IdCardScanFlow(onPdfReady = onScannedPdf, onBack = { if (initialMode == "id_card") onBack() else format = null }, externalBusy = externalBusy)
     } else {
         SmartDocumentScanLauncher(
             onScannedPdf = onScannedPdf, onScannedJpegs = onScannedJpegs,

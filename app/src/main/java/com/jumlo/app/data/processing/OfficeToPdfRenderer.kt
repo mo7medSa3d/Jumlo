@@ -602,7 +602,7 @@ object OfficeToPdfRenderer {
                     }
                     val heightPt = chunkHeightPx / SCALE
                     needSpace(heightPt)
-                    val image = LosslessFactory.createFromImage(document, bitmap)
+                    val image = JPEGFactory.createFromImage(document, bitmap, 0.92f)
                     stream!!.drawImage(image, margin, cursorY - heightPt, availWidth, heightPt)
                     cursorY -= heightPt
                     hasContent = true
@@ -667,8 +667,18 @@ object OfficeToPdfRenderer {
                 } else {
                     val bitmap = decodeEmbeddedRaster(block.bytes)
                     try {
-                        if (bitmap.hasAlpha()) LosslessFactory.createFromImage(document, bitmap)
-                        else JPEGFactory.createFromImage(document, bitmap, 0.90f)
+                        if (bitmap.hasAlpha()) {
+                            val flat = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+                            try {
+                                val c = Canvas(flat)
+                                c.drawColor(Color.WHITE)
+                                c.drawBitmap(bitmap, 0f, 0f, null)
+                                flat.setHasAlpha(false)
+                                JPEGFactory.createFromImage(document, flat, 0.90f)
+                            } finally {
+                                flat.recycle()
+                            }
+                        } else JPEGFactory.createFromImage(document, bitmap, 0.90f)
                     } finally {
                         bitmap.recycle()
                     }

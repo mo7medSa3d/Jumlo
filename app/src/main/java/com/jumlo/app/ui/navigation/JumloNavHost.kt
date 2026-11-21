@@ -83,7 +83,7 @@ private fun subtitle(tool:UtilityTool,language:AppLanguage)=if(language.isRtl) t
 @Serializable @SerialName("settings") object SettingsRoute
 @Serializable @SerialName("settings/details") object SettingsDetailRoute
 @Serializable @SerialName("settings/storage") object StorageRoute
-@Serializable @SerialName("tools/scan") data class ScanRoute(val transitionOrigin: String = "tools")
+@Serializable @SerialName("tools/scan") data class ScanRoute(val transitionOrigin: String = "tools", val initialMode: String? = null)
 @Serializable @SerialName("tools/run") data class ToolRoute(val toolId: String, val transitionOrigin: String = "tools")
 @Serializable @SerialName("files/viewer") data class ViewerRoute(val uri: String, val title: String, val returnTab: String? = null)
 @Serializable @SerialName("downloads/job") data class JobRoute(val jobId: String, val returnTab: String? = null)
@@ -410,7 +410,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
         }
     }
 
-    @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools") {
+    @Composable fun Shell(shellRoute: String, jobId: String? = null, viewer: ViewerRoute? = null, entryId:String?=null, transitionScope:AnimatedVisibilityScope?=null, entryToolId:String?=null, transitionOrigin:String="tools", scanInitialMode:String?=null) {
         var scanPublishing by remember(entryId) { mutableStateOf(false) }
         var scannedOutput by remember(entryId) { mutableStateOf<OutputRecord?>(null) }
         val root = shellRoute in ROOT_ROUTES
@@ -472,7 +472,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                  {navigateTo("workspace")},
                                  {navigateTab(DockTab.FILES)},
                                  {navigateTo("scan")},
-                                 {navigateTab(DockTab.DOWNLOADS)})
+                                 {navigateTab(DockTab.DOWNLOADS)},
+                                 onScanIdCard = { viewModel.recordToolOpen("scan_doc"); navController.navigate(ScanRoute("home", initialMode = "id_card")) })
                             "tools" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool)
                             "downloads" -> com.jumlo.app.ui.downloads.DownloadsScreen(viewModel,::openTool,{selectedJob=it;navigateTo("activity")})
                             "files" -> com.jumlo.app.ui.files.FilesScreen(viewModel,
@@ -491,17 +492,23 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 {chosen,toolId->viewModel.prepareOutputWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 {chosen,toolId->viewModel.prepareSourceBatchWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 onPrint=viewModel::printOutput,onPrintSource={viewModel.printSource(it)},
-                                onChangeSaveFolder=::pickDownloadDestination,onStorage={navigateTo("storage")},onImportToFolder={importLibraryFiles(it)})
+                                onChangeSaveFolder=::pickDownloadDestination,onStorage={navigateTo("storage")},onImportToFolder={importLibraryFiles(it)}, onScan = { navigateTo("scan") })
                             "print" -> com.jumlo.app.printing.PrintScreen(
                                 source=printSource,onBack=::goBack,onPickDocument=::importPrintDocument,
                                 modifier=Modifier.padding(bottom=QuietTheme.spacing.listBottomBuffer))
                             "settings", "settings_detail" -> com.jumlo.app.ui.settings.SettingsScreen(viewModel,
-                                onRequestNotifications={if(Build.VERSION.SDK_INT>=33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)},
+                                onRequestNotifications={
+                                    val enabledNow = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+                                    if(Build.VERSION.SDK_INT>=33 && !enabledNow) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    else runCatching {
+                                        context.startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName))
+                                    }
+                                },
                                 onExportLogs={viewModel.prepareErrorLogExport();errorLogExportPicker.safeLaunch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"jumlo-errors.txt")})},
                                 onChooseDownloadFolder={pickDownloadDestination()},onOpenSavedFolder={openSavedFolder()},
                                 onShowGuide={showGuide=true},onOpenStorage={navigateTo("storage")})
                             "storage" -> com.jumlo.app.ui.settings.StorageScreen(viewModel,::pickDownloadDestination,::openSavedFolder)
-                            "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title,onBack=::goBack,onOpenFile={navigateTab(DockTab.FILES)},onPrint={u,_->viewModel.importForPrint(Intake(listOf(u),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))}) }
+                            "viewer" -> viewer?.let { com.jumlo.app.ui.viewer.PdfViewerScreen(it.uri,it.title,onBack=::goBack,onOpenFile={navigateTab(DockTab.FILES)},onPrint={u,_->viewModel.importForPrint(Intake(listOf(u),Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},onSaveMarkup={items->viewModel.flattenPdfMarkup(it.uri,it.title,items)}) }
                             "scan" -> com.jumlo.app.ui.scan.ScanScreen(
                                 externalBusy=scanPublishing,
                                 onScannedJpegs={files -> scanPublishing=true; viewModel.publishScannedImages(files,onFinished={scanPublishing=false}) {
@@ -514,7 +521,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                     if(navController.currentBackStackEntry?.id==entryId && navController.currentDestination?.hasRoute<ScanRoute>()==true) {
                                         scannedOutput = output
                                     }
-                                } }, onBack=::goBack
+                                } }, onBack=::goBack, initialMode=scanInitialMode
                             )
                             "workspace" -> {
                                 val imported by viewModel.imported.collectAsStateWithLifecycle()
@@ -621,35 +628,47 @@ fun JumloNavHost(viewModel:AppViewModel) {
             startDestination = HomeRoute,
             modifier = Modifier.fillMaxSize(),
             enterTransition = {
-                fadeIn(tween(if(reduceMotion) 0 else JumloMotion.standardMs)) +
-                    (if(reduceMotion) EnterTransition.None
-                    else if(targetState.destination.hasRoute<PrintRoute>()) scaleIn(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),initialScale=.94f)
+                val isTabSwitch =
+                    (initialState.destination.hasRoute<HomeRoute>() || initialState.destination.hasRoute<ToolsRoute>() || initialState.destination.hasRoute<FilesRoute>() || initialState.destination.hasRoute<SettingsRoute>()) &&
+                    (targetState.destination.hasRoute<HomeRoute>() || targetState.destination.hasRoute<ToolsRoute>() || targetState.destination.hasRoute<FilesRoute>() || targetState.destination.hasRoute<SettingsRoute>())
+                fadeIn(tween(if(reduceMotion) 0 else if(isTabSwitch) JumloMotion.stateChangeMs else JumloMotion.standardMs, easing = JumloMotion.iosEase)) +
+                    (if(reduceMotion || isTabSwitch) EnterTransition.None
+                    else if(targetState.destination.hasRoute<PrintRoute>()) scaleIn(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),initialScale=.96f)
                     else slideInHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) -1 else 1) * it / 3
+                        (if(rtl) -1 else 1) * it / 6
                     })
             },
             exitTransition = {
-                fadeOut(tween(if(reduceMotion) 0 else JumloMotion.exitMs)) +
-                    (if(reduceMotion) ExitTransition.None
-                    else if(initialState.destination.hasRoute<PrintRoute>()) scaleOut(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),targetScale=.96f)
+                val isTabSwitch =
+                    (initialState.destination.hasRoute<HomeRoute>() || initialState.destination.hasRoute<ToolsRoute>() || initialState.destination.hasRoute<FilesRoute>() || initialState.destination.hasRoute<SettingsRoute>()) &&
+                    (targetState.destination.hasRoute<HomeRoute>() || targetState.destination.hasRoute<ToolsRoute>() || targetState.destination.hasRoute<FilesRoute>() || targetState.destination.hasRoute<SettingsRoute>())
+                fadeOut(tween(if(reduceMotion) 0 else if(isTabSwitch) JumloMotion.fastMs else JumloMotion.exitMs, easing = JumloMotion.iosEase)) +
+                    (if(reduceMotion || isTabSwitch) ExitTransition.None
+                    else if(initialState.destination.hasRoute<PrintRoute>()) scaleOut(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),targetScale=.97f)
                     else slideOutHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) 1 else -1) * it / 4
+                        (if(rtl) 1 else -1) * it / 8
                     })
             },
             popEnterTransition = {
-                fadeIn(tween(if(reduceMotion) 0 else JumloMotion.standardMs)) +
-                    (if(reduceMotion) EnterTransition.None
-                    else if(targetState.destination.hasRoute<PrintRoute>()) scaleIn(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),initialScale=.94f)
+                val isTabSwitch =
+                    (initialState.destination.hasRoute<HomeRoute>() || initialState.destination.hasRoute<ToolsRoute>() || initialState.destination.hasRoute<FilesRoute>() || initialState.destination.hasRoute<SettingsRoute>()) &&
+                    (targetState.destination.hasRoute<HomeRoute>() || targetState.destination.hasRoute<ToolsRoute>() || targetState.destination.hasRoute<FilesRoute>() || targetState.destination.hasRoute<SettingsRoute>())
+                fadeIn(tween(if(reduceMotion) 0 else if(isTabSwitch) JumloMotion.stateChangeMs else JumloMotion.standardMs, easing = JumloMotion.iosEase)) +
+                    (if(reduceMotion || isTabSwitch) EnterTransition.None
+                    else if(targetState.destination.hasRoute<PrintRoute>()) scaleIn(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),initialScale=.96f)
                     else slideInHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) 1 else -1) * it / 4
+                        (if(rtl) 1 else -1) * it / 8
                     })
             },
             popExitTransition = {
-                fadeOut(tween(if(reduceMotion) 0 else JumloMotion.exitMs)) +
-                    (if(reduceMotion) ExitTransition.None
-                    else if(initialState.destination.hasRoute<PrintRoute>()) scaleOut(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),targetScale=.96f)
+                val isTabSwitch =
+                    (initialState.destination.hasRoute<HomeRoute>() || initialState.destination.hasRoute<ToolsRoute>() || initialState.destination.hasRoute<FilesRoute>() || initialState.destination.hasRoute<SettingsRoute>()) &&
+                    (targetState.destination.hasRoute<HomeRoute>() || targetState.destination.hasRoute<ToolsRoute>() || targetState.destination.hasRoute<FilesRoute>() || targetState.destination.hasRoute<SettingsRoute>())
+                fadeOut(tween(if(reduceMotion) 0 else if(isTabSwitch) JumloMotion.fastMs else JumloMotion.exitMs, easing = JumloMotion.iosEase)) +
+                    (if(reduceMotion || isTabSwitch) ExitTransition.None
+                    else if(initialState.destination.hasRoute<PrintRoute>()) scaleOut(spring(dampingRatio=JumloMotion.printScaleDamping,stiffness=JumloMotion.navStiffness),targetScale=.97f)
                     else slideOutHorizontally(spring(dampingRatio=JumloMotion.navDamping,stiffness=JumloMotion.navStiffness)) {
-                        (if(rtl) -1 else 1) * it / 3
+                        (if(rtl) -1 else 1) * it / 6
                     })
             }
         ) {
@@ -672,8 +691,11 @@ fun JumloNavHost(viewModel:AppViewModel) {
             }
             composable<ViewerRoute> { entry -> Shell("viewer",viewer=entry.toRoute<ViewerRoute>(),transitionScope=this) }
             composable<JobRoute> { entry -> Shell("activity",jobId=entry.toRoute<JobRoute>().jobId,transitionScope=this) }
-            composable<ScanRoute> { entry -> Shell("scan",entryId=entry.id,transitionScope=this,
-                transitionOrigin=entry.toRoute<ScanRoute>().transitionOrigin) }
+            composable<ScanRoute> { entry ->
+                val args = entry.toRoute<ScanRoute>()
+                Shell("scan",entryId=entry.id,transitionScope=this,
+                    transitionOrigin=args.transitionOrigin, scanInitialMode=args.initialMode)
+            }
             composable<WorkspaceRoute>(deepLinks = listOf(navDeepLink<WorkspaceRoute>(basePath = "jumlo://workspace"))) { Shell("workspace",transitionScope=this) }
             composable<ActivityRoute> { Shell("activity",transitionScope=this) }
         }

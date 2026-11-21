@@ -64,8 +64,6 @@ data class QuietPrecisionShapes(
     val dockPill: RoundedCornerShape = RoundedCornerShape(percent = 50),
     val modalSheetTop: RoundedCornerShape = RoundedCornerShape(topStart = JumloRadii.sheet, topEnd = JumloRadii.sheet),
     val pill: RoundedCornerShape = RoundedCornerShape(percent = 50),
-    val sheet: RoundedCornerShape = RoundedCornerShape(JumloRadii.sheet),
-    val chip: RoundedCornerShape = RoundedCornerShape(JumloRadii.badge),
     val splashIcon: RoundedCornerShape = RoundedCornerShape(JumloRadii.splashIcon)
 )
 

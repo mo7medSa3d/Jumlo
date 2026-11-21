@@ -394,7 +394,7 @@ class RequestValidationTest(unittest.TestCase):
         with patch.object(service, "run_ytdlp", side_effect=fake_run):
             result = service.extract("https://example.org/watch")
         self.assertIn("formats", result)
-        self.assertEqual(["-J", "--", "https://example.org/watch"], seen[0])
+        self.assertEqual(["-J", "--flat-playlist", "--", "https://example.org/watch"], seen[0])
 
     def test_extract_and_resolve_stream_block_ssrf_and_invalid_urls(self):
         blocked = (
@@ -538,7 +538,7 @@ class RequestValidationTest(unittest.TestCase):
             return FakeProc()
 
         with patch.object(service.subprocess, "Popen", side_effect=fake_popen):
-            service.run_ytdlp(["-J", "--", "https://example.org/watch"])
+            service.run_ytdlp(["-J", "--flat-playlist", "--", "https://example.org/watch"])
         cmd = captured["cmd"]
         sep = cmd.index("--")
         self.assertIn("--ignore-config", cmd[:sep])
@@ -1273,10 +1273,10 @@ class ExtractionEdgeCasesTest(unittest.TestCase):
             return _FakeProc()
 
         with patch.object(service.subprocess, "Popen", side_effect=fake_popen):
-            service.run_ytdlp(["-J", "--", "https://www.youtube.com/watch?v=abc"])
-            service.run_ytdlp(["-J", "--", "https://youtu.be/abc"])
-            service.run_ytdlp(["-J", "--", "https://www.tiktok.com/@user/video/12345"])
-            service.run_ytdlp(["-J", "--", "https://www.instagram.com/reel/C123/"])
+            service.run_ytdlp(["-J", "--flat-playlist", "--", "https://www.youtube.com/watch?v=abc"])
+            service.run_ytdlp(["-J", "--flat-playlist", "--", "https://youtu.be/abc"])
+            service.run_ytdlp(["-J", "--flat-playlist", "--", "https://www.tiktok.com/@user/video/12345"])
+            service.run_ytdlp(["-J", "--flat-playlist", "--", "https://www.instagram.com/reel/C123/"])
 
         for yt_cmd in captured_cmds[:2]:
             self.assertIn("--extractor-args", yt_cmd)
@@ -1298,6 +1298,55 @@ class ExtractionEdgeCasesTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, os.path.dirname(path), ignore_errors=True)
         self.assertIn("-S", captured[0])
         self.assertEqual("res,vcodec:h264,acodec:m4a", captured[0][captured[0].index("-S") + 1])
+
+    def test_resolve_stream_ignores_ytdlp_fragments_when_merged_file_exists(self):
+        def fake_run(args, timeout=120):
+            out_dir = Path(args[args.index("-o") + 1]).parent
+            (out_dir / "media.f137.mp4").write_bytes(b"video-frag")
+            (out_dir / "media.f140-drc.m4a").write_bytes(b"audio-frag")
+            (out_dir / "media.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42" * 8)
+            return _completed(args, 0, "", "")
+
+        with patch.object(service, "run_ytdlp", side_effect=fake_run):
+            path, name, mime = service.resolve_stream("https://example.org/clip", "video", "137+140", 0)
+        self.addCleanup(shutil.rmtree, os.path.dirname(path), ignore_errors=True)
+        self.assertEqual("media.mp4", name)
+        self.assertEqual("video/mp4", mime)
+
+    def test_resolve_stream_rejects_multiple_fragments_without_merged_output(self):
+        def fake_run(args, timeout=120):
+            out_dir = Path(args[args.index("-o") + 1]).parent
+            (out_dir / "media.f137.mp4").write_bytes(b"video-frag")
+            (out_dir / "media.f140.m4a").write_bytes(b"audio-frag")
+            return _completed(args, 0, "", "")
+
+        with patch.object(service, "run_ytdlp", side_effect=fake_run):
+            with self.assertRaisesRegex(RuntimeError, "MEDIA_OUTPUT_MISSING"):
+                service.resolve_stream("https://example.org/clip", "video", "137+140", 0)
+
+    def test_stream_rejects_non_numeric_bitrate_with_422(self):
+        for bad_bitrate in ("abc", "128k", "12.5"):
+            with self.subTest(bitrate=bad_bitrate):
+                handler = service.Handler.__new__(service.Handler)
+                captured = {}
+                handler.headers = {}
+                handler.wfile = io.BytesIO()
+                handler.send_response = lambda code: captured.update(status=code)
+                handler.send_header = lambda name, value: None
+                handler.end_headers = lambda: None
+                with patch.object(service, "resolve_stream") as mocked_resolve:
+                    service.Handler._stream(
+                        handler,
+                        {
+                            "url": ["https://example.org/track"],
+                            "mode": ["audio"],
+                            "format": ["mp3"],
+                            "bitrate": [bad_bitrate],
+                        },
+                    )
+                mocked_resolve.assert_not_called()
+                self.assertEqual(422, captured["status"])
+                self.assertEqual({"error": "INVALID_MEDIA_FORMAT"}, json.loads(handler.wfile.getvalue()))
 
 
 class SecurityHardeningRegressionTest(unittest.TestCase):
@@ -1470,7 +1519,7 @@ class SecurityHardeningRegressionTest(unittest.TestCase):
         with patch.object(service.subprocess, "Popen", return_value=_InterruptProc()), \
                 patch.object(service.os, "killpg", side_effect=lambda pid, sig: killed.append((pid, sig))):
             with self.assertRaises(KeyboardInterrupt):
-                service.run_ytdlp(["-J", "--", "https://example.org/watch"])
+                service.run_ytdlp(["-J", "--flat-playlist", "--", "https://example.org/watch"])
         self.assertEqual([(43210, service.signal.SIGKILL)], killed)
         self.assertEqual([True], reaped)
 

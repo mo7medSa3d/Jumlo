@@ -46,7 +46,9 @@ class MainActivity : AppCompatActivity() {
                 (!appViewModel.settings.value.isLoaded || !appViewModel.workspaceReady.value)
         }
         splash.setOnExitAnimationListener { provider ->
-            provider.view.animate().alpha(0f).setDuration(160L)
+            provider.view.animate().alpha(0f).setDuration(240L)
+                .scaleX(1.04f).scaleY(1.04f)
+                .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
                 .withEndAction { provider.remove() }.start()
         }
         if (savedInstanceState == null) receiveIntent(intent)
@@ -71,6 +73,18 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
                 onDispose {}
+            }
+            LaunchedEffect(settings.isLoaded, settings.themeMode) {
+                if (settings.isLoaded) {
+                    val nightMode = when (settings.themeMode) {
+                        ThemeMode.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                        ThemeMode.DARK, ThemeMode.AMOLED -> AppCompatDelegate.MODE_NIGHT_YES
+                        ThemeMode.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                    }
+                    if (AppCompatDelegate.getDefaultNightMode() != nightMode) {
+                        AppCompatDelegate.setDefaultNightMode(nightMode)
+                    }
+                }
             }
             LaunchedEffect(settings.isLoaded, settings.language) {
                 if (settings.isLoaded) {

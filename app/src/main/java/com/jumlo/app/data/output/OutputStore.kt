@@ -177,7 +177,7 @@ import javax.inject.Singleton
         refreshTrashUnlocked();purged
     } }
     /** Compatibility for callers deleting one explicitly selected item; bulk deletion is refused. */
-    suspend fun purgeTrash(outputId:String?=null,cutoffEpochMs:Long=Long.MAX_VALUE):Int {
+    suspend fun purgeTrash(outputId:String?=null):Int {
         require(outputId!=null) { "EXPLICIT_TRASH_IDS_REQUIRED" }
         return purgeTrashIds(setOf(outputId))
     }

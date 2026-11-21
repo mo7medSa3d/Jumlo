@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.jumlo.app.BuildConfig
 import com.jumlo.app.core.OutputFavorites
@@ -50,7 +51,6 @@ class UserPreferencesRepository @Inject constructor(
         val QUICK_ACTION_IDS = stringPreferencesKey("quick_action_ids")
         val OUTPUT_NAMES = stringPreferencesKey("output_names_v1")
         val FAVORITE_OUTPUT_IDS = stringPreferencesKey("favorite_output_ids")
-        val LOCKED_FOLDER_IDS = stringPreferencesKey("locked_folder_ids")
         val RECENT_TOOLS = stringPreferencesKey("recent_tools")
         val TOOL_COUNTS = stringPreferencesKey("tool_counts")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -66,9 +66,9 @@ class UserPreferencesRepository @Inject constructor(
         val COLOR_SYSTEM = stringPreferencesKey("color_system")
         val FONT_SCALE = stringPreferencesKey("font_scale")
         val NOTIFICATIONS_GRANTED = booleanPreferencesKey("notifications_granted")
-        val MEDIA_RIGHTS_ACCEPTED = booleanPreferencesKey("media_rights_accepted")
         val FILE_FOLDERS = stringPreferencesKey("file_folders_v1")
         val OUTPUT_FOLDER_IDS = stringPreferencesKey("output_folder_ids_v1")
+        val LOCKED_FOLDER_IDS = stringSetPreferencesKey("locked_folder_ids_v1")
     }
 
     private companion object {
@@ -80,18 +80,6 @@ class UserPreferencesRepository @Inject constructor(
         val VALID_FONT_SCALES = setOf("SMALL", "NORMAL", "LARGE")
         val VALID_COLOR_SYSTEMS = setOf("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
         val DEFAULT_QUICK_ACTION_IDS = listOf("pdf_02", "pdf_03", "img_02", "dl_media")
-    }
-
-    /**
-     * The user must confirm they have the rights to the content before a media
-     * download is queued. The answer is remembered so it is asked once, and it can
-     * be withdrawn again in Settings.
-     */
-    val mediaRightsAcceptedFlow: Flow<Boolean> =
-        context.dataStore.data.map { it[Keys.MEDIA_RIGHTS_ACCEPTED] ?: false }
-
-    suspend fun setMediaRightsAccepted(accepted: Boolean) {
-        context.dataStore.edit { it[Keys.MEDIA_RIGHTS_ACCEPTED] = accepted }
     }
 
     /**
@@ -192,7 +180,7 @@ class UserPreferencesRepository @Inject constructor(
                 }
             }.getOrDefault(emptyMap()),
             fileFolders = decodedFolders,
-            lockedFolderIds = prefs[Keys.LOCKED_FOLDER_IDS]?.split('|')?.filter(String::isNotBlank)?.toSet().orEmpty(),
+            lockedFolderIds = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty(),
             outputFolderIds = decodedFolderMap,
             isLoaded = true
         )
@@ -271,13 +259,14 @@ class UserPreferencesRepository @Inject constructor(
                 Json.decodeFromString<Map<String, String>>(prefs[Keys.OUTPUT_FOLDER_IDS] ?: "{}")
             }.getOrDefault(emptyMap())
             prefs[Keys.OUTPUT_FOLDER_IDS] = Json.encodeToString(oldMap.filterValues { it != folderId })
+            prefs[Keys.LOCKED_FOLDER_IDS]?.let { prefs[Keys.LOCKED_FOLDER_IDS] = it - folderId }
         }
     }
 
     suspend fun toggleFolderLock(folderId: String) {
         context.dataStore.edit { prefs ->
-            val current = prefs[Keys.LOCKED_FOLDER_IDS]?.split('|')?.filter(String::isNotBlank)?.toSet().orEmpty()
-            prefs[Keys.LOCKED_FOLDER_IDS] = (if (folderId in current) current - folderId else current + folderId).joinToString("|")
+            val current = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty()
+            prefs[Keys.LOCKED_FOLDER_IDS] = if (folderId in current) current - folderId else current + folderId
         }
     }
 
@@ -368,7 +357,6 @@ class UserPreferencesRepository @Inject constructor(
         require(value in VALID_FONT_SCALES)
         context.dataStore.edit { it[Keys.FONT_SCALE] = value }
     }
-    val mediaServiceUrlFlow: Flow<String> = mediaServiceSettings.state.map { it.url }
 
     /** Release backends require HTTPS; debug additionally permits explicit loopback HTTP. */
     suspend fun setMediaServiceUrl(url: String) = mediaServiceSettings.setEndpoint(url)

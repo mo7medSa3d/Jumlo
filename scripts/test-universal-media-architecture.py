@@ -17,8 +17,8 @@ class UniversalMediaArchitecture(unittest.TestCase):
     def test_downloader_copy_matches_optional_engine_without_false_claims(self):
         import xml.etree.ElementTree as ET
         ui=(MAIN/'ui/downloads/MediaWorkspace.kt').read_text(encoding="utf-8")
-        self.assertIn('BuildConfig.EXTENDED_MEDIA', ui)
-        self.assertIn('BuildConfig.EXTENDED_MEDIA', ui)
+        self.assertIn('AudioOutput.ORIGINAL', ui)
+        self.assertNotIn('AUDIO_BITRATES', ui)
         for folder in ('values', 'values-ar'):
             values={v.attrib['name']: v.text or '' for v in ET.parse(ROOT/'app/src/main/res'/folder/'media_strings.xml').getroot()}
             self.assertTrue(values['media_supported_platforms_extended'])

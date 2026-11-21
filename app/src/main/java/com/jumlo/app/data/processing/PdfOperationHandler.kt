@@ -278,7 +278,13 @@ import kotlin.math.roundToInt
                     var skippedImages=0
                     context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
                         originalSize=src.length()
-                        skippedImages=compressPdfGuaranteedSmaller(src,ticket.stageFile,s.optInt("maxDpi",150),s.optInt("jpegQuality",80),s.optLong("targetBytes",0L),context)
+                        val reqDpi = s.optInt("maxDpi", 150)
+                        val reqQuality = s.optInt("jpegQuality", 80)
+                        val explicitTarget = s.optLong("targetBytes", 0L)
+                        val strengthPct = (((95 - reqQuality.coerceIn(8, 95)) * 99.0 / 87.0).toInt() + 1).coerceIn(1, 100)
+                        val autoTarget = if (explicitTarget > 0L) explicitTarget
+                            else (src.length() * (100 - strengthPct).coerceIn(10, 95) / 100.0).toLong().coerceAtLeast(16_384L)
+                        skippedImages=compressPdfGuaranteedSmaller(src,ticket.stageFile,reqDpi,reqQuality,autoTarget,context)
                     }
                     // Only measured output bytes decide whether compression saved space.
                     // An already-optimal document stays UNCHANGED even when some images
@@ -374,9 +380,10 @@ import kotlin.math.roundToInt
                                     if(doc.numberOfPages<=0) throw OperationFailure("EMPTY_PDF")
                                     if(remove) PdfBoxBackend.removeProtection(doc,out)
                                     else {
-                                        require(owner.isNotEmpty()){"OWNER_PASSWORD_REQUIRED"}
-                                        val userArr=user.toCharArray(); val ownerArr=owner.toCharArray()
-                                        try { PdfBoxBackend.protect(doc,userArr,ownerArr,out, PdfProtectionPermissions(
+                                        val effectiveOwner = if (owner.isNotEmpty()) owner else if (user.isNotEmpty()) java.util.UUID.randomUUID().toString() else ""
+                                        require(effectiveOwner.isNotEmpty()){"OWNER_PASSWORD_REQUIRED"}
+                                        val userArr=user.toCharArray(); val ownerArr=effectiveOwner.toCharArray()
+                                        try { PdfBoxBackend.protect(doc,userArr,ownerArr.copyOf(),out, PdfProtectionPermissions(
                                             allowPrinting = s.optBoolean("allowPrinting", true),
                                             allowCopy = s.optBoolean("allowCopy", true),
                                             allowModify = s.optBoolean("allowModify", false),

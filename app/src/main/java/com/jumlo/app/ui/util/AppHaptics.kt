@@ -76,12 +76,12 @@ class AppHaptics(
         effect(event)
         if(cue!=null) sound?.play(cue,soundEnabled)
     }
-    fun navigationTab()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
+    fun navigationTab()=trigger(Event.TICK,null)
     fun toolExecute()=trigger(Event.START,UiSoundPlayer.Cue.START)
-    fun toolSelect()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
+    fun toolSelect()=trigger(Event.TICK,null)
     fun selectionToggle()=trigger(Event.TICK,UiSoundPlayer.Cue.TOGGLE)
     fun secondaryAction()=trigger(Event.DELETE,UiSoundPlayer.Cue.DELETE)
-    fun actionClick()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
+    fun actionClick()=trigger(Event.TICK,null)
     fun longPress()=trigger(Event.HOLD,null)
     fun sliderTick()=trigger(Event.TICK,null)
     /** A drag was picked up. Distinct from the click tick so lifts feel different from taps. */

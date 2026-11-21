@@ -7,6 +7,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,7 +29,9 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
 
     private val _entitlement = MutableStateFlow(ProEntitlement())
     val entitlement: StateFlow<ProEntitlement> = _entitlement.asStateFlow()
-    private var productDetailsMap: Map<String, ProductDetails> = emptyMap()
+    private val productDetailsMap = ConcurrentHashMap<String, ProductDetails>()
+    @Volatile private var hasLifetime = false
+    @Volatile private var hasAnnual = false
 
     private val client: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -54,8 +58,8 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
         client.queryProductDetailsAsync(inAppParams) { res, list ->
             if (res.responseCode == BillingClient.BillingResponseCode.OK) {
                 val item = list.firstOrNull() ?: return@queryProductDetailsAsync
-                productDetailsMap = productDetailsMap + (SKU_LIFETIME to item)
-                _entitlement.value = _entitlement.value.copy(lifetimePrice = item.oneTimePurchaseOfferDetails?.formattedPrice)
+                productDetailsMap[SKU_LIFETIME] = item
+                _entitlement.update { it.copy(lifetimePrice = item.oneTimePurchaseOfferDetails?.formattedPrice) }
             }
         }
         val subsParams = QueryProductDetailsParams.newBuilder().setProductList(
@@ -64,16 +68,18 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
         client.queryProductDetailsAsync(subsParams) { res, list ->
             if (res.responseCode == BillingClient.BillingResponseCode.OK) {
                 val item = list.firstOrNull() ?: return@queryProductDetailsAsync
-                productDetailsMap = productDetailsMap + (SKU_ANNUAL to item)
+                productDetailsMap[SKU_ANNUAL] = item
                 val price = item.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
-                _entitlement.value = _entitlement.value.copy(annualPrice = price)
+                _entitlement.update { it.copy(annualPrice = price) }
             }
         }
     }
 
     fun launchPurchase(activity: Activity, sku: String): Boolean {
+        if (!client.isReady) { connect(); return false }
         val details = productDetailsMap[sku] ?: return false
         val offerToken = if (sku == SKU_ANNUAL) details.subscriptionOfferDetails?.firstOrNull()?.offerToken else null
+        if (sku == SKU_ANNUAL && offerToken == null) return false
         val productParam = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(details)
             .apply { if (offerToken != null) setOfferToken(offerToken) }
@@ -83,33 +89,51 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
     }
 
     fun restorePurchases() {
+        if (!client.isReady) { connect(); return }
         client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()) { res, list ->
-            if (res.responseCode == BillingClient.BillingResponseCode.OK) processPurchases(list)
+            if (res.responseCode == BillingClient.BillingResponseCode.OK) processPurchases(list, BillingClient.ProductType.INAPP)
         }
         client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()) { res, list ->
-            if (res.responseCode == BillingClient.BillingResponseCode.OK) processPurchases(list)
+            if (res.responseCode == BillingClient.BillingResponseCode.OK) processPurchases(list, BillingClient.ProductType.SUBS)
         }
     }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
         if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            processPurchases(purchases)
+            processPurchases(purchases, null)
         }
     }
 
-    private fun processPurchases(purchases: List<Purchase>) {
-        var isPro = _entitlement.value.isPro
-        var isLifetime = _entitlement.value.isLifetime
+    private fun processPurchases(purchases: List<Purchase>, productTypeScope: String?) {
+        var foundLifetime = if (productTypeScope == BillingClient.ProductType.INAPP) false else hasLifetime
+        var foundAnnual = if (productTypeScope == BillingClient.ProductType.SUBS) false else hasAnnual
         for (p in purchases) {
             if (p.purchaseState == Purchase.PurchaseState.PURCHASED) {
-                if (SKU_LIFETIME in p.products) { isPro = true; isLifetime = true }
-                if (SKU_ANNUAL in p.products) { isPro = true }
+                val grantsLifetime = SKU_LIFETIME in p.products
+                val grantsAnnual = SKU_ANNUAL in p.products
                 if (!p.isAcknowledged) {
                     val ack = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.purchaseToken).build()
-                    client.acknowledgePurchase(ack) {}
+                    client.acknowledgePurchase(ack) { ackRes ->
+                        if (ackRes.responseCode == BillingClient.BillingResponseCode.OK) {
+                            if (grantsLifetime) hasLifetime = true
+                            if (grantsAnnual) hasAnnual = true
+                            publishEntitlement()
+                        }
+                    }
+                } else {
+                    if (grantsLifetime) foundLifetime = true
+                    if (grantsAnnual) foundAnnual = true
                 }
             }
         }
-        _entitlement.value = _entitlement.value.copy(isPro = isPro, isLifetime = isLifetime)
+        hasLifetime = foundLifetime
+        hasAnnual = foundAnnual
+        publishEntitlement()
+    }
+
+    private fun publishEntitlement() {
+        val lifetime = hasLifetime
+        val pro = lifetime || hasAnnual
+        _entitlement.update { it.copy(isPro = pro, isLifetime = lifetime) }
     }
 }

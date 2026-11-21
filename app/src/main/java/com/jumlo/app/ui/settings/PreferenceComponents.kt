@@ -145,21 +145,20 @@ import com.jumlo.app.ui.components.QuietIconTile
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle? = null
+    iconStyle: com.jumlo.app.ui.theme.SettingsIconStyle? = null,
+    grouped: Boolean = false
 ) {
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
-    val shape = QuietTheme.shapes.inputField
-    Surface(
-        modifier = modifier.fillMaxWidth().heightIn(min = 60.dp)
-            .clip(shape)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
-        shape = shape,
-        color = pillars.cardSurface,
-        shadowElevation = 0.dp
-    ) {
+    val haptics = rememberAppHaptics()
+    val shape = QuietTheme.shapes.card
+    val onToggle: (Boolean) -> Unit = { next ->
+        haptics.selectionToggle()
+        onCheckedChange(next)
+    }
+    val rowContent: @Composable () -> Unit = {
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 14.dp),
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 12.dp, horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (icon != null && iconStyle != null) {
@@ -174,12 +173,27 @@ import com.jumlo.app.ui.components.QuietIconTile
             Text(
                 title,
                 Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = colors.onSurface
             )
             Spacer(Modifier.width(12.dp))
             Switch(checked = checked, onCheckedChange = null)
         }
+    }
+    if (grouped) {
+        Box(
+            modifier = modifier.fillMaxWidth()
+                .toggleable(value = checked, role = Role.Switch, onValueChange = onToggle)
+        ) { rowContent() }
+    } else {
+        Surface(
+            modifier = modifier.fillMaxWidth()
+                .clip(shape)
+                .toggleable(value = checked, role = Role.Switch, onValueChange = onToggle),
+            shape = shape,
+            color = pillars.cardSurface,
+            shadowElevation = 0.dp
+        ) { rowContent() }
     }
 }
 

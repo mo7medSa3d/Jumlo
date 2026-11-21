@@ -34,7 +34,15 @@ class UiSoundPlayer(context: Context) {
         val manager=audio ?: return
         if(!enabled || manager.ringerMode!=AudioManager.RINGER_MODE_NORMAL || manager.getStreamVolume(AudioManager.STREAM_SYSTEM)==0) return
         val sample=soundIds[cue] ?: return
-        if(synchronized(loaded) {sample in loaded}) runCatching { pool.play(sample,.22f,.22f,1,0,1f) }
+        val gain=when(cue) {
+            Cue.TAP -> 0.06f
+            Cue.TOGGLE -> 0.09f
+            Cue.START -> 0.10f
+            Cue.SUCCESS -> 0.13f
+            Cue.ERROR -> 0.11f
+            Cue.DELETE -> 0.09f
+        }
+        if(synchronized(loaded) {sample in loaded}) runCatching { pool.play(sample,gain,gain,1,0,1f) }
     }
     fun release() {
         released=true

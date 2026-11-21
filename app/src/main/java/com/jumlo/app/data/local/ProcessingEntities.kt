@@ -14,7 +14,6 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
 
 @Dao interface ProcessingDao {
     @Query("SELECT * FROM sources WHERE id=:id") suspend fun source(id:String):SourceEntity?
-    @Query("SELECT * FROM sources WHERE uri=:uri ORDER BY rowid DESC LIMIT 1") suspend fun sourceByUri(uri:String):SourceEntity?
     @Query("SELECT * FROM sources ORDER BY rowid DESC") fun sources():Flow<List<SourceEntity>>
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun putSource(source:SourceEntity)
     @Query("DELETE FROM sources WHERE id=:id") suspend fun deleteSource(id:String):Int
@@ -46,4 +45,5 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     @Query("SELECT * FROM outputs ORDER BY rowid DESC") fun outputs():Flow<List<OutputEntity>>
     @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun saveDraft(draft:DraftEntity)
     @Query("SELECT * FROM drafts WHERE id=:id") suspend fun draft(id:String):DraftEntity?
+    @Query("SELECT * FROM drafts") suspend fun allDrafts():List<DraftEntity>
 }

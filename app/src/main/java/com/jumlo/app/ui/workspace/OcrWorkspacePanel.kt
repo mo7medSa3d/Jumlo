@@ -42,7 +42,7 @@ internal fun OcrWorkspacePanel(
     sourceId: String,
     onExport: () -> Unit,
     exportEnabled: Boolean,
-    selectedScript: String = "LATIN",
+    selectedScript: String = "AUTO",
     onSelectScript: (String) -> Unit = {}
 ) {
     var page by rememberSaveable(sourceId) { mutableIntStateOf(1) }
@@ -71,27 +71,6 @@ internal fun OcrWorkspacePanel(
         )
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(scriptItems, key = { it.first.id }) { (itemScript, labelRes) ->
-                val selected = script == itemScript
-                FilterChip(
-                    selected = selected,
-                    onClick = {
-                        onSelectScript(itemScript.id)
-                        if (attempts > 0) attempts++
-                    },
-                    shape = QuietTheme.shapes.pill,
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = pillars.cardSurface,
-                        labelColor = colors.onSurfaceVariant,
-                        selectedContainerColor = colors.primaryContainer,
-                        selectedLabelColor = colors.onPrimaryContainer
-                    ),
-                    border = if (selected) BorderStroke(1.dp, colors.primary.copy(alpha = 0.25f)) else null,
-                    label = { Text(stringResource(labelRes), style = QuietTheme.typography.metadataStrong) }
-                )
-            }
-        }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             @Composable fun Page(modifier: Modifier) {
                 Surface(modifier, shape = QuietTheme.shapes.card, color = colors.surfaceContainerLow) {

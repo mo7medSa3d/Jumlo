@@ -56,13 +56,12 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     var search by rememberSaveable { mutableStateOf("") }
-    var showAllTools by rememberSaveable { mutableStateOf(false) }
     val eligible = remember { CapabilityRegistry.tools.filter {
         CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id) && ToolCatalogue.isListed(it.id)
     } }
     ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
         settings.quickActionIds, settings.recentToolIds, search, { search = it },
-        showAllTools, { showAllTools = !showAllTools }, onTool,
+        onTool = onTool,
         onPin = { tool -> vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) })
 }
 
@@ -74,19 +73,14 @@ private data class ToolSection(val key: String, val titleEn: String, val titleAr
  * trailing "All tools" group, so a newly registered tool is never silently hidden.
  */
 private val toolSections = listOf(
-    ToolSection("scan", "Scan & Capture", "المسح والالتقاط", setOf("scan_doc")),
-    ToolSection("organize", "Organize PDF", "تنظيم PDF",
-        setOf("pdf_01", "pdf_03", "pdf_04", "pdf_05", "pdf_06", "pdf_crop", "pdf_nup")),
-    ToolSection("convert", "Convert", "التحويل",
-        setOf("pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_long_image", "pdf_ocr")),
-    ToolSection("edit", "Edit & Sign", "التحرير والتوقيع",
-        setOf("pdf_signature", "pdf_stamp")),
-    ToolSection("optimize", "Optimize", "التحسين",
-        setOf("pdf_compress", "img_02", "img_03", "img_04", "img_join", "img_watermark")),
-    ToolSection("protect", "Protect", "الحماية", setOf("pdf_protect", "pdf_privacy_redact")),
-    ToolSection("download", "Download", "التنزيل", setOf("dl_media")),
-    ToolSection("files", "Files", "الملفات",
-        setOf("file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
+    ToolSection("scan", "Scan & Convert", "المسح والتحويل",
+        setOf("scan_doc", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_long_image")),
+    ToolSection("edit", "PDF Edit & Security", "تحرير وحماية PDF",
+        setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_06", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
+    ToolSection("optimize", "Images", "الصور",
+        setOf("img_01", "img_04", "img_02", "img_03", "img_watermark", "img_join")),
+    ToolSection("files", "Files & Download", "الملفات والتنزيل",
+        setOf("dl_media", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
@@ -127,19 +121,16 @@ internal fun ToolsCatalogue(
     recentToolIds: List<String>,
     search: String,
     onSearch: (String) -> Unit,
-    showAllTools: Boolean = false,
-    onToggleShowAll: () -> Unit = {},
     onTool: (UtilityTool) -> Unit,
     onPin: (UtilityTool) -> Unit = {}
 ) {
     val byId = remember(tools) { tools.associateBy { it.id } }
-    val specialistCount = remember(tools) { tools.count { ToolCatalogue.isListed(it.id) && !ToolCatalogue.isPrimary(it.id) } }
-    val filtered = remember(tools, rankedToolIds, search, showAllTools) {
+    val filtered = remember(tools, rankedToolIds, search) {
         val ranks = rankedToolIds.withIndex().associate { it.value to it.index }
         val query = search.trim()
         tools.withIndex().filter { (_, tool) ->
             if (query.isEmpty()) {
-                ToolCatalogue.isListed(tool.id) && (showAllTools || ToolCatalogue.isPrimary(tool.id))
+                ToolCatalogue.isListed(tool.id)
             } else {
                 ToolCatalogue.isSearchable(tool.id) &&
                     listOf(
@@ -290,16 +281,7 @@ internal fun ToolsCatalogue(
                         ToolTile(tool, language, { onTool(tool) }, if (reduceMotion) Modifier else Modifier.animateItem(), haptics, onPin = { actionSheetTool = tool }, isPinned = tool.id in pinnedSet)
                     }
                 }
-                if (specialistCount > 0) {
-                    item("toggle-all-tools", span = { GridItemSpan(maxLineSpan) }, contentType = "toggle-all") {
-                        OutlinedButton(
-                            onClick = onToggleShowAll,
-                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 48.dp)
-                        ) {
-                            Text(if (showAllTools) stringResource(R.string.tools_show_essential) else stringResource(R.string.tools_show_more, specialistCount))
-                        }
-                    }
-                }
+
             }
         }
     }
@@ -439,6 +421,7 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "pdf_long_image" -> "Long Image" to "صورة طويلة"
         "pdf_to_docx" -> "To Word" to "إلى Word"
         "pdf_to_pptx" -> "PDF to PowerPoint" to "PDF إلى PowerPoint"
+    "office_to_pdf" -> "Office to PDF" to "أوفيس إلى PDF"
         "pdf_ocr" -> "Extract Text" to "استخراج النص"
         "pdf_compress" -> "Compress" to "ضغط"
         "pdf_protect" -> "Lock" to "قفل"
@@ -452,6 +435,8 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "img_02" -> "Resize" to "تغيير الحجم"
         "img_03" -> "Crop & rotate" to "قص وتدوير"
         "img_04" -> "Compress images" to "ضغط الصور"
+    "img_watermark" -> "Watermark" to "علامة مائية"
+    "img_join" -> "Join images" to "دمج الصور"
         "dl_media" -> "Download" to "تنزيل"
         "dl_02" -> "Direct link" to "رابط مباشر"
         "dl_03" -> "Batch links" to "عدة روابط"

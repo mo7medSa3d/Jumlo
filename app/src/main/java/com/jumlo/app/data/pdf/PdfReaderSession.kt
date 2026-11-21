@@ -86,7 +86,7 @@ class PdfReaderSession private constructor(
             catch (deleteFailure: Throwable) { if (deleteFailure !== failure) failure.addSuppressed(deleteFailure) }
         }
 
-        suspend fun open(context: Context, location: String): PdfReaderSession {
+        suspend fun open(context: Context, location: String, password: String? = null): PdfReaderSession {
             var pending: PdfReaderSession? = null
             try {
                 val opened = withContext(Dispatchers.IO) {
@@ -96,8 +96,28 @@ class PdfReaderSession private constructor(
                     var copied: File? = null
                     var renderer: PdfRenderer? = null
                     try {
-                        // SAF providers may return a pipe. A renderer requires a seekable descriptor.
-                        try {
+                        // When a password is provided, decrypt into a private temp copy so Android PdfRenderer can render it.
+                        if (password != null) {
+                            val rawIn = File.createTempFile("pdf-enc-", ".pdf", context.cacheDir)
+                            copied = File.createTempFile("pdf-dec-", ".pdf", context.cacheDir)
+                            try {
+                                (context.contentResolver.openInputStream(uri) ?: error("ACCESS_LOST")).use { input ->
+                                    FileOutputStream(rawIn).use { output -> input.copyTo(output) }
+                                }
+                                try {
+                                    PdfBoxBackend.open(rawIn, password.toCharArray()).use { doc ->
+                                        doc.isAllSecurityToBeRemoved = true
+                                        doc.save(copied)
+                                    }
+                                } catch (_: com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException) {
+                                    throw OperationFailure("PDF_WRONG_PASSWORD")
+                                }
+                                val descriptor = ParcelFileDescriptor.open(copied, ParcelFileDescriptor.MODE_READ_ONLY)
+                                renderer = PdfRendererFactory.open(descriptor, context.cacheDir) { coroutine.ensureActive() }
+                            } finally {
+                                rawIn.delete()
+                            }
+                        } else try {
                             val descriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: error("ACCESS_LOST")
                             renderer = PdfRendererFactory.open(descriptor, context.cacheDir) { coroutine.ensureActive() }
                         } catch (failure: Exception) {

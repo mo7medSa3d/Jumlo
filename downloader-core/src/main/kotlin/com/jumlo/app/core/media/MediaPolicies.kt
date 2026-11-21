@@ -166,7 +166,7 @@ object MediaCatalog {
     fun displayBytes(choice: MediaChoice, durationSeconds: Double?): Long? {
         choice.estimatedBytes?.let { return it }
         val dur = durationSeconds?.takeIf { it.isFinite() && it > 0.0 } ?: return null
-        val rates = choice.formats.map { it.bitrateKbps ?: it.audioBitrateKbps }
+        val rates = choice.formats.map { if (!it.hasVideo) it.audioBitrateKbps ?: it.bitrateKbps?.takeIf { r -> r > 0.0 } else it.bitrateKbps?.takeIf { r -> r > 0.0 } ?: it.audioBitrateKbps }
         if (rates.any { it == null || !it.isFinite() || it <= 0.0 }) return null
         val totalKbps = rates.filterNotNull().sum()
         val estimated = (totalKbps * 1000.0 / 8.0) * dur

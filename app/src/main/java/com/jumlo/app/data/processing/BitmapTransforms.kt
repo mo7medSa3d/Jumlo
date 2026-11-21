@@ -187,6 +187,69 @@ object BitmapTransforms {
      * Progressively steps down quality and, if needed, scales dimensions down so compression
      * never produces an equal-size or larger output file.
      */
+    fun compressToTarget(
+        bitmap: Bitmap,
+        destination: File,
+        settings: ImageConversionSettings,
+        targetBytes: Long,
+        maxBitmapBytes: Long,
+        checkCancel: () -> Unit = {}
+    ): Long {
+        checkCancel()
+        val effectiveFmt = if (settings.format.uppercase() == "PNG") "WEBP" else settings.format
+        val base = settings.copy(format = effectiveFmt)
+        var low = 12
+        var high = base.quality.coerceIn(12, 95)
+        var bestFile: File? = null
+        var bestSize = Long.MAX_VALUE
+        val tmp = File(destination.parentFile, ".cmp-${java.util.UUID.randomUUID()}.tmp")
+        try {
+            // Binary search quality first (max 5 passes) to hit targetBytes cleanly.
+            var attempts = 0
+            while (low <= high && attempts < 5) {
+                checkCancel()
+                attempts++
+                val mid = (low + high) / 2
+                encode(bitmap, tmp, base.copy(quality = mid), maxBitmapBytes, checkCancel)
+                val sz = tmp.length()
+                if (sz < bestSize) {
+                    bestSize = sz
+                    tmp.copyTo(destination, overwrite = true)
+                    bestFile = destination
+                }
+                if (sz <= targetBytes) {
+                    low = mid + 1
+                } else {
+                    high = mid - 1
+                }
+            }
+            if (bestSize > targetBytes && bitmap.width > 640 && bitmap.height > 640) {
+                checkCancel()
+                val ratio = kotlin.math.sqrt(targetBytes.toDouble() / bestSize.toDouble()).toFloat().coerceIn(0.45f, 0.90f)
+                val nw = (bitmap.width * ratio).toInt().coerceAtLeast(480)
+                val nh = (bitmap.height * ratio).toInt().coerceAtLeast(480)
+                val scaled = Bitmap.createScaledBitmap(bitmap, nw, nh, true)
+                try {
+                    encode(scaled, tmp, base.copy(quality = base.quality.coerceIn(25, 80)), maxBitmapBytes, checkCancel)
+                    val sz = tmp.length()
+                    if (sz < bestSize) {
+                        bestSize = sz
+                        tmp.copyTo(destination, overwrite = true)
+                        bestFile = destination
+                    }
+                } finally {
+                    if (scaled !== bitmap) scaled.recycle()
+                }
+            }
+            if (bestFile == null || !destination.exists() || destination.length() <= 0L) {
+                encode(bitmap, destination, base, maxBitmapBytes, checkCancel)
+            }
+            return destination.length()
+        } finally {
+            tmp.delete()
+        }
+    }
+
     fun encodeGuaranteedSmaller(
         bitmap: Bitmap,
         file: File,

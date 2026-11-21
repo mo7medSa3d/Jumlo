@@ -461,7 +461,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun importToLibrary(intake:Intake,targetFolderId:String?=null,onFinished:()->Unit={}) {
         if(intake.uris.isEmpty()) { onFinished(); return }
         operationScope.launch {
-            val jobId = "import-" + UUID.randomUUID().toString()
+            val jobId = UUID.randomUUID().toString()
             beginBusy()
             try {
                 initialized.await()
@@ -472,8 +472,9 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                     try {
                         val source = sources.inspect(uri, intake.offeredFlags)
                         sourceId = source.id
-                        val safeMime = source.mimeType?.takeIf(String::isNotBlank) ?: "application/octet-stream"
-                        val ticket = outputStore.reserve(jobId, "import_$index", source.displayName, safeMime)
+                        val safeMime = source.mimeType.ifBlank { "application/octet-stream" }
+                        val safeDisplay = com.jumlo.app.core.SafeNames.fromDisplayName(source.displayName, "Imported")
+                        val ticket = outputStore.reserve(jobId, "import_$index", safeDisplay, safeMime)
                         withContext(Dispatchers.IO) {
                             val coroutine = currentCoroutineContext()
                             sources.openRead(source.id).use { input ->
@@ -516,7 +517,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun flattenPdfMarkup(sourceUri:String,displayName:String,items:List<com.jumlo.app.core.PdfMarkupItem>,onFinished:()->Unit={}) {
         if(items.isEmpty()) { onFinished(); return }
         operationScope.launch {
-            val jobId = "markup-" + UUID.randomUUID().toString()
+            val jobId = UUID.randomUUID().toString()
             val tempIn = File(app.cacheDir, "jumlo-markup-$jobId.pdf")
             beginBusy()
             try {
@@ -1127,6 +1128,22 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
             bytes(File(app.filesDir,"processing/trash"))
         )
     })?.cancel() }
+    suspend fun isPdfEncrypted(sourceId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            sources.withSeekable(sourceId, UUID.randomUUID().toString()) { file ->
+                try {
+                    com.jumlo.app.data.pdf.PdfBoxBackend.open(file, null).use { it.isEncrypted }
+                } catch (_: com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException) {
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     suspend fun preview(sourceId:String,page:Int):PreviewFrame = previewSized(sourceId, page, 1600)
 
     /** Reads only a verified app-owned output, never a caller supplied path or provider URI. */

@@ -56,7 +56,7 @@ import com.jumlo.app.model.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
-    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={},onImportToFolder:(String?)->Unit={ onImport() }) {
+    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={},onImportToFolder:(String?)->Unit={ onImport() },onScan:(()->Unit)?=null) {
     val haptics=rememberAppHaptics()
     val context=LocalContext.current
     val outputs by vm.outputs.collectAsStateWithLifecycle()
@@ -113,6 +113,24 @@ import com.jumlo.app.model.*
     }
     var pageActionsOpen by remember { mutableStateOf(false) }
     var folderMenuTarget by remember { mutableStateOf<FileFolder?>(null) }
+    fun openFolderMenuSafely(folder: FileFolder) {
+        if (folder.id !in settings.lockedFolderIds || folder.id in unlockedFolderIds) {
+            folderMenuTarget = folder
+            return
+        }
+        val act = context as? androidx.fragment.app.FragmentActivity
+        if (act == null) { vm.notifyMessage("VAULT_UNAVAILABLE"); return }
+        com.jumlo.app.data.files.BiometricVaultGuard.authenticate(
+            activity = act,
+            title = folder.name,
+            subtitle = context.getString(R.string.vault_unlock_subtitle),
+            onSuccess = { unlockedFolderIds = unlockedFolderIds + folder.id; folderMenuTarget = folder },
+            onUnavailable = { vm.notifyMessage("VAULT_NO_BIOMETRIC") },
+            onError = { vm.notifyMessage("VAULT_AUTH_FAILED") }
+        )
+    }
+    var quickAddOpen by remember { mutableStateOf(false) }
+    var fileToolsTarget by remember { mutableStateOf<OutputRecord?>(null) }
     var createFolderOpen by rememberSaveable { mutableStateOf(false) }
     var renameFolderTarget by remember { mutableStateOf<FileFolder?>(null) }
     var deleteFolderTarget by remember { mutableStateOf<FileFolder?>(null) }
@@ -413,7 +431,7 @@ import com.jumlo.app.model.*
                                 folderSearchOpen = false; search = ""
                                 selected = emptySet(); selecting = false
                             },
-                            onOpenFolderActions = null,
+                            onOpenFolderActions = { folderMenuTarget = activeFolder },
                             onCreateSubfolder = { haptics.actionClick(); folderNameInput = ""; createFolderOpen = true },
                             onImport = { haptics.actionClick(); onImportToFolder(activeFolder.id) },
                             onToggleSearch = { haptics.selectionToggle(); folderSearchOpen = !folderSearchOpen; if (!folderSearchOpen) search = "" },
@@ -441,7 +459,7 @@ import com.jumlo.app.model.*
                                         .pressFeedback()
                                         .combinedClickable(
                                             onClick = { haptics.actionClick(); openFolderSafely(folder) },
-                                            onLongClick = { haptics.longPress(); folderMenuTarget = folder }
+                                            onLongClick = { haptics.longPress(); openFolderMenuSafely(folder) }
                                         ),
                                     shape = QuietTheme.shapes.card,
                                     color = if (isHovered) colors.primaryContainer else pillars.cardSurface,
@@ -474,7 +492,7 @@ import com.jumlo.app.model.*
                                                 maxLines = 1
                                             )
                                         }
-                                        IconButton(onClick = { haptics.actionClick(); folderMenuTarget = folder }, modifier = Modifier.size(40.dp)) {
+                                        IconButton(onClick = { haptics.actionClick(); openFolderMenuSafely(folder) }, modifier = Modifier.size(40.dp)) {
                                             Icon(if (folder.id in settings.lockedFolderIds) Icons.Rounded.Lock else Icons.Rounded.MoreVert, stringResource(R.string.files_folder_actions_title), tint = if (folder.id in settings.lockedFolderIds) colors.primary else colors.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                         }
                                     }
@@ -535,7 +553,7 @@ import com.jumlo.app.model.*
                         SwipeFileActions(output.displayName,enabled=!selecting && !dragState.isDragging,onShare={onShare(output)},
                             onRename={rename(output)},onTrash={vm.trashOutputs(listOf(output))},onPrint=printAction(output)) {
                             OutputRow(output,{if(selecting) selected=selected.symmetric(output.id) else onOpen(output)},
-                                {onShare(output)},{onExport(output)},{onReuse(output)},{deleteIds=setOf(output.id)},
+                                {onShare(output)},{onExport(output)},{fileToolsTarget=output},{deleteIds=setOf(output.id)},
                                 if(selecting) output.id in selected else null,{selected=selected.symmetric(output.id)},
                                 onDetails={details=output},isFavorite=output.id in settings.favoriteOutputIds,
                                 onFavorite={vm.toggleOutputFavorite(output.id)},onPrint=printAction(output),onRename={rename(output)},
@@ -628,7 +646,7 @@ import com.jumlo.app.model.*
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_share))},onClick={actionsExpanded=false;onShare(output)})
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_details))},onClick={actionsExpanded=false;details=output})
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_save_as))},onClick={actionsExpanded=false;onExport(output)})
-                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={actionsExpanded=false;onReuse(output)})
+                                                        DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={actionsExpanded=false;fileToolsTarget=output})
                                                         DropdownMenuItem(text={Text(stringResource(R.string.action_move_to_trash))},onClick={actionsExpanded=false;deleteIds=setOf(output.id)})
                                                     }
                                                 }
@@ -735,6 +753,20 @@ import com.jumlo.app.model.*
             }
         }
     }
+    if (!selecting && section == "outputs") {
+        FloatingActionButton(
+            onClick = { haptics.actionClick(); quickAddOpen = true },
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = QuietTheme.spacing.listBottomBuffer - 12.dp)
+                .testTag("files.fab.add")
+        ) {
+            Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.files_quick_add_title))
+        }
+    }
     FloatingDragGhost(dragState = dragState, modifier = Modifier.align(AbsoluteAlignment.TopLeft))
     }
     if(sortPicker) AlertDialog(onDismissRequest={sortPicker=false},title={Text(stringResource(R.string.modern_sort_group),modifier=Modifier.semantics { heading() })},text={Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -775,6 +807,130 @@ import com.jumlo.app.model.*
     }
     details?.let { output -> OutputDetailsDialog(output = output, onDismiss = { details = null }) }
     purgeIds?.let {ids->AlertDialog(onDismissRequest={purgeIds=null},title={Text(stringResource(R.string.ui_purge_title),modifier=Modifier.semantics { heading() })},text={Text(stringResource(R.string.ui_purge_body,ids.size))},confirmButton={TextButton(onClick={purgeIds=null;vm.purgeTrashIds(ids)}) {Text(stringResource(R.string.ui_delete_forever))}},dismissButton={TextButton(onClick={purgeIds=null}) {Text(stringResource(R.string.action_cancel))}})}
+    if (quickAddOpen) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { quickAddOpen = false }) {
+            Surface(
+                shape = QuietTheme.shapes.heroCard,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, QuietTheme.pillars.cardBorder),
+                shadowElevation = 16.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = activeFolder?.name ?: stringResource(R.string.files_quick_add_title),
+                        style = QuietTheme.typography.sectionTitle,
+                        modifier = Modifier.semantics { heading() }
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    if (onScan != null) {
+                        SheetActionRow(
+                            icon = Icons.Rounded.DocumentScanner,
+                            title = stringResource(R.string.modern_scan),
+                            onClick = { quickAddOpen = false; haptics.actionClick(); onScan() }
+                        )
+                    }
+                    SheetActionRow(
+                        icon = Icons.Rounded.Add,
+                        title = stringResource(R.string.files_import_action),
+                        onClick = { quickAddOpen = false; haptics.actionClick(); onImportToFolder(activeFolderId) }
+                    )
+                    SheetActionRow(
+                        icon = Icons.Rounded.Folder,
+                        title = stringResource(R.string.files_folder_create_title),
+                        onClick = { quickAddOpen = false; haptics.actionClick(); folderNameInput = ""; createFolderOpen = true }
+                    )
+                }
+            }
+        }
+    }
+    fileToolsTarget?.let { target ->
+        val adaptiveToolIds = remember(target.mimeType) {
+            when {
+                target.mimeType == "application/pdf" -> listOf(
+                    "pdf_signature", "pdf_compress", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx",
+                    "pdf_long_image", "pdf_protect", "pdf_stamp", "pdf_privacy_redact", "pdf_05", "pdf_04"
+                )
+                target.mimeType.startsWith("image/") -> listOf(
+                    "pdf_02", "img_04", "img_03", "img_02", "img_01", "img_watermark", "pdf_ocr"
+                )
+                target.mimeType.contains("word") || target.mimeType.contains("spreadsheet") ||
+                    target.mimeType.contains("presentation") || target.mimeType.contains("officedocument") -> listOf(
+                    "office_to_pdf", "file_07"
+                )
+                target.mimeType.contains("zip") || target.mimeType.contains("archive") -> listOf(
+                    "file_08", "file_encrypted_zip"
+                )
+                else -> listOf("file_07", "file_encrypted_zip", "file_batch_rename")
+            }
+        }
+        val adaptiveTools = remember(adaptiveToolIds) {
+            adaptiveToolIds.mapNotNull { id -> com.jumlo.app.data.jobs.CapabilityRegistry.tools.firstOrNull { it.id == id } }
+        }
+        androidx.compose.ui.window.Dialog(onDismissRequest = { fileToolsTarget = null }) {
+            Surface(
+                shape = QuietTheme.shapes.heroCard,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, QuietTheme.pillars.cardBorder),
+                shadowElevation = 16.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = target.displayName,
+                        style = QuietTheme.typography.sectionTitle.copy(textDirection = TextDirection.Content),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { heading() }
+                    )
+                    Text(
+                        text = stringResource(R.string.files_adaptive_tools_subtitle),
+                        style = QuietTheme.typography.metadata,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        adaptiveTools.forEach { tool ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(QuietTheme.shapes.inputField)
+                                    .clickable {
+                                        haptics.actionClick()
+                                        fileToolsTarget = null
+                                        onOutputWorkflow(listOf(target), tool.id)
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                ToolIcon(
+                                    toolId = tool.id,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = if (settings.language.isRtl) tool.titleAr else tool.titleEn,
+                                    style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     if (pageActionsOpen) {
         PageQuickActionsSheet(
             canSelect = outputs.isNotEmpty(),
@@ -803,7 +959,8 @@ import com.jumlo.app.model.*
             onRename = { folderNameInput = folder.name; renameFolderTarget = folder },
             onDelete = { deleteFolderTarget = folder },
             isLocked = folder.id in settings.lockedFolderIds,
-            onToggleLock = { haptics.actionClick(); vm.toggleFolderLock(folder.id); folderMenuTarget = null }
+            onToggleLock = { haptics.actionClick(); vm.toggleFolderLock(folder.id); folderMenuTarget = null },
+            onImportToFolder = { haptics.actionClick(); onImportToFolder(folder.id) }
         )
     }
     if (createFolderOpen) {

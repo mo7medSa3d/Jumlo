@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import com.jumlo.app.ui.theme.JumloMotion
 import com.jumlo.app.ui.theme.LocalReducedMotion
 
 /** The NavHost owns both scopes so a card icon and its workspace header share real bounds. */
@@ -25,7 +26,7 @@ fun Modifier.toolSharedElement(toolId: String): Modifier {
             state = rememberSharedContentState("$origin/tool-icon/$toolId"),
             animatedVisibilityScope = visibility,
             boundsTransform = { _, _ ->
-                spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                spring(dampingRatio = JumloMotion.navDamping, stiffness = JumloMotion.navStiffness)
             }
         )
     }

@@ -55,16 +55,30 @@ object PdfNupComposer {
                                 checkCancel()
                                 val srcPage = src.getPage(idx)
                                 val box = srcPage.cropBox ?: srcPage.mediaBox
+                                val rot = ((srcPage.rotation % 360) + 360) % 360
+                                val effW = (if (rot == 90 || rot == 270) box.height else box.width).coerceAtLeast(1f)
+                                val effH = (if (rot == 90 || rot == 270) box.width else box.height).coerceAtLeast(1f)
                                 val form = layer.importPageAsForm(src, idx)
                                 val c = slot % cols
                                 val r = slot / cols
                                 val ox = margin + c * (cellW + gap)
                                 val oy = sheetH - margin - (r + 1) * cellH - r * gap
-                                val scale = min(cellW / box.width.coerceAtLeast(1f), cellH / box.height.coerceAtLeast(1f))
-                                val dx = ox + (cellW - box.width * scale) / 2f
-                                val dy = oy + (cellH - box.height * scale) / 2f
+                                val scale = min(cellW / effW, cellH / effH)
+                                val dx = ox + (cellW - effW * scale) / 2f
+                                val dy = oy + (cellH - effH * scale) / 2f
                                 cs.saveGraphicsState()
-                                cs.transform(Matrix(scale, 0f, 0f, scale, dx, dy))
+                                cs.addRect(ox, oy, cellW, cellH)
+                                cs.clip()
+                                val m = Matrix()
+                                m.concatenate(Matrix.getTranslateInstance(dx, dy))
+                                m.concatenate(Matrix.getScaleInstance(scale, scale))
+                                when (rot) {
+                                    90 -> { m.concatenate(Matrix.getTranslateInstance(0f, box.width)); m.concatenate(Matrix.getRotateInstance(-Math.PI / 2.0, 0f, 0f)) }
+                                    180 -> { m.concatenate(Matrix.getTranslateInstance(box.width, box.height)); m.concatenate(Matrix.getRotateInstance(Math.PI, 0f, 0f)) }
+                                    270 -> { m.concatenate(Matrix.getTranslateInstance(box.height, 0f)); m.concatenate(Matrix.getRotateInstance(Math.PI / 2.0, 0f, 0f)) }
+                                }
+                                m.concatenate(Matrix.getTranslateInstance(-box.lowerLeftX, -box.lowerLeftY))
+                                cs.transform(m)
                                 cs.drawForm(form)
                                 cs.restoreGraphicsState()
                                 idx++

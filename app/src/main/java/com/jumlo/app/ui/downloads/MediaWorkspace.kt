@@ -65,7 +65,6 @@ private val UrlKeyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri
 private val RESTRICTED_ERROR_CODES = setOf("MEDIA_SESSION_REQUIRED", "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED", "MEDIA_SOURCE_REJECTED", "HTTP_401", "HTTP_403")
 private val UNSUPPORTED_ERROR_CODES = setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
 private val UNPROBED_EXTRACTORS = setOf("DirectMedia", "Html5")
-private val AUDIO_BITRATES = listOf(320, 256, 192, 128, 96, 64)
 private val PDF_DIRECT_MODES = listOf(
     "ORIGINAL" to R.string.media_pdf_original,
     "PDF_RECOMMENDED" to R.string.media_pdf_recommended,
@@ -108,11 +107,7 @@ private val IMAGE_DIRECT_MODES = listOf(
     val readClipboard = remember(clipboard) {
         { try { clipboard.getText()?.text?.take(32768) } catch (_:RuntimeException) { null } }
     }
-    val clipboardSuggestion=remember {
-        readClipboard()?.let { text ->
-            runCatching { MediaLinks.normalize(text,allowHttp=true) }.getOrNull()
-        }
-    }
+    val clipboardSuggestion: String? = null
     val onAnalyze = remember(viewModel) { { viewModel.analyze() } }
     val onAnalyzeWithHaptics = remember(haptics, viewModel) { { haptics.actionClick(); viewModel.analyze() } }
     val onUrlChange = remember(editUrl) { { value: String -> clipboardEmpty = false; editUrl(value) } }
@@ -136,14 +131,12 @@ private val IMAGE_DIRECT_MODES = listOf(
     LaunchedEffect(sessionEpoch) {
         viewModel.beginSession(initialUrl,sessionEpoch,defaultVideoQuality,defaultAudioQuality)
     }
-    // Also re-inspect on a fresh entry with the exact same shared URL.
-    LaunchedEffect(sessionEpoch, state.url, state.allowHttp) {
-        if(runCatching { MediaLinks.normalize(state.url,state.allowHttp) }.isSuccess) {
-            delay(200)
+    // Only auto-analyze when a URL was explicitly shared into the app via Intent.
+    LaunchedEffect(sessionEpoch) {
+        if(initialUrl.isNotBlank() && runCatching { MediaLinks.normalize(initialUrl, state.allowHttp) }.isSuccess) {
             viewModel.analyze(automatic=true)
         }
     }
-    LaunchedEffect(state.error) { if(state.error!=null) haptics.error() }
     DisposableEffect(Unit) { onDispose { viewModel.cancelAnalysis() } }
     val choiceRows = remember(state.choices) { state.choices.chunked(2) }
     val selectedChoice = remember(state.choices, state.selectedKey) {
@@ -258,21 +251,23 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
             }
-            state.error?.let { code -> item("error", contentType = "error") {
-                val restricted = code in RESTRICTED_ERROR_CODES
-                val unsupported = code in UNSUPPORTED_ERROR_CODES
-                QuietStateCard(
-                    title=mediaError(code),
-                    subtitle=stringResource(when {
-                        restricted -> R.string.media_restricted_hint
-                        unsupported -> R.string.media_direct_url_hint
-                        else -> R.string.redesign_download_retry_hint
-                    }),
-                    actionLabel=if(restricted || unsupported) null else stringResource(R.string.media_analyze),
-                    onAction=if(restricted || unsupported) null else onAnalyze,
-                    isError=true,
-                    modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-                )
+            state.error?.let { item("error", contentType = "error") {
+                Surface(
+                    shape = QuietTheme.shapes.card,
+                    color = QuietTheme.pillars.cardSurface,
+                    modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "null",
+                            style = QuietTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }}
 
 
@@ -436,66 +431,10 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
 
-                if (state.mode == MediaMode.AUDIO) {
-                    item("audio-format-controls", contentType = "audio-format-controls") {
-                        Surface(
-                            shape=QuietTheme.shapes.card,
-                            color=MaterialTheme.colorScheme.surfaceContainerLow
-                        ) {
-                            Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                                Text(stringResource(R.string.media_audio_format),style=QuietTheme.typography.metadataStrong)
-                                val originalAudioLabel = stringResource(R.string.media_original_audio)
-                                val hasNativeOnlyChoice = remember(state.choices) {
-                                    state.choices.any { MediaEngineRouting.isNativeChoice(it) }
-                                }
-                                LaunchedEffect(hasNativeOnlyChoice, state.audio) {
-                                    if ((!BuildConfig.EXTENDED_MEDIA || hasNativeOnlyChoice) && state.audio != AudioOutput.ORIGINAL) {
-                                        viewModel.audio(AudioOutput.ORIGINAL)
-                                    }
-                                }
-                                val audioFormats = remember(hasNativeOnlyChoice, originalAudioLabel) {
-                                    if (BuildConfig.EXTENDED_MEDIA && !hasNativeOnlyChoice) {
-                                        listOf(
-                                            AudioOutput.ORIGINAL to originalAudioLabel,
-                                            AudioOutput.MP3 to "MP3",
-                                            AudioOutput.M4A to "M4A",
-                                            AudioOutput.OPUS to "OPUS"
-                                        )
-                                    } else {
-                                        listOf(AudioOutput.ORIGINAL to originalAudioLabel)
-                                    }
-                                }
-                                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                    items(audioFormats, key={it.first.name}, contentType={"audio-format-chip"}) { (fmt, label) ->
-                                        val onFormatClick = remember(fmt, haptics, viewModel) {
-                                            { haptics.selectionToggle(); viewModel.audio(fmt) }
-                                        }
-                                        FilterChip(
-                                            border=null,
-                                            selected=state.audio==fmt,
-                                            onClick=onFormatClick,
-                                            label={Text(label,style=QuietTheme.typography.metadataStrong)}
-                                        )
-                                    }
-                                }
-                                if (state.audio != AudioOutput.ORIGINAL) {
-                                    Text(stringResource(R.string.media_encoding_bitrate),style=QuietTheme.typography.metadataStrong)
-                                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                        items(AUDIO_BITRATES, key={it}, contentType={"bitrate-chip"}) { kbps ->
-                                            val onBitrateClick = remember(kbps, haptics, viewModel) {
-                                                { haptics.selectionToggle(); viewModel.bitrate(kbps) }
-                                            }
-                                            FilterChip(
-                                                border=null,
-                                                selected=state.bitrate==kbps,
-                                                onClick=onBitrateClick,
-                                                label={Text(stringResource(R.string.modern_audio_bitrate, kbps),style=QuietTheme.typography.metadataStrong)}
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                // Always keep AudioOutput.ORIGINAL so only authentic source streams are offered.
+                if (state.mode == MediaMode.AUDIO && state.audio != AudioOutput.ORIGINAL) {
+                    item("audio-original-sync", contentType = "audio-original-sync") {
+                        LaunchedEffect(Unit) { viewModel.audio(AudioOutput.ORIGINAL) }
                     }
                 }
 
@@ -518,12 +457,8 @@ private val IMAGE_DIRECT_MODES = listOf(
                                     ?.let { (if(choice.sizeIsApproximate || choice.estimatedBytes == null) "~" else "") + mediaBytes(it) }
                                     ?: unknownSizeLabel
                             }
-                            val containerLabel = remember(state.mode, state.audio, choice.container) {
-                                if (state.mode == MediaMode.AUDIO && state.audio != AudioOutput.ORIGINAL) {
-                                    state.audio.name
-                                } else {
-                                    choice.container.uppercase(Locale.ROOT)
-                                }
+                            val containerLabel = remember(choice.container) {
+                                choice.container.uppercase(Locale.ROOT)
                             }
                             val subBadge = if (choice.mode == MediaMode.VIDEO) {
                                 val audioLabel = if (isUnprobedExtractor)
@@ -725,7 +660,7 @@ private fun formatDuration(totalSeconds: Int): String {
     val secs = totalSeconds % 60
     val raw = if (hrs > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hrs, mins, secs)
     else String.format(Locale.ROOT, "%02d:%02d", mins, secs)
-    return "\u2066$raw\u2069"
+    return "⁦$raw⁩"
 }
 
 private fun mediaBytes(bytes:Long):String {
@@ -735,7 +670,7 @@ private fun mediaBytes(bytes:Long):String {
         bytes>=1024L -> String.format(Locale.ROOT,"%.0f KiB",bytes/1024.0)
         else -> "$bytes B"
     }
-    return "\u2066$raw\u2069"
+    return "⁦$raw⁩"
 }
 
 @Composable private fun mediaError(code:String):String=stringResource(userMessageResource(code))

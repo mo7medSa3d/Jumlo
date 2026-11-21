@@ -36,8 +36,9 @@ object PdfRedactionEngine {
                 require(r.left < r.right && r.top < r.bottom) { "INVALID_CROP" }
             }
             PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { dst ->
-                // Strip document metadata (author, creator, producer, keywords) for privacy.
+                // Strip both documentInformation and XMP /Metadata streams for complete privacy.
                 dst.documentInformation = PDDocumentInformation()
+                dst.documentCatalog.metadata = null
                 var rasterizer: PdfPageRasterizer? = null
                 try {
                     for (pageIndex in 0 until totalPages) {
