@@ -50,6 +50,7 @@ class UserPreferencesRepository @Inject constructor(
         val QUICK_ACTION_IDS = stringPreferencesKey("quick_action_ids")
         val OUTPUT_NAMES = stringPreferencesKey("output_names_v1")
         val FAVORITE_OUTPUT_IDS = stringPreferencesKey("favorite_output_ids")
+        val LOCKED_FOLDER_IDS = stringPreferencesKey("locked_folder_ids")
         val RECENT_TOOLS = stringPreferencesKey("recent_tools")
         val TOOL_COUNTS = stringPreferencesKey("tool_counts")
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -191,7 +192,7 @@ class UserPreferencesRepository @Inject constructor(
                 }
             }.getOrDefault(emptyMap()),
             fileFolders = decodedFolders,
-            lockedFolderIds = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty(),
+            lockedFolderIds = prefs[Keys.LOCKED_FOLDER_IDS]?.split('|')?.filter(String::isNotBlank)?.toSet().orEmpty(),
             outputFolderIds = decodedFolderMap,
             isLoaded = true
         )
@@ -274,9 +275,9 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun toggleFolderLock(folderId: String) {
-        dataStore.edit { prefs ->
-            val current = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty()
-            prefs[Keys.LOCKED_FOLDER_IDS] = if (folderId in current) current - folderId else current + folderId
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.LOCKED_FOLDER_IDS]?.split('|')?.filter(String::isNotBlank)?.toSet().orEmpty()
+            prefs[Keys.LOCKED_FOLDER_IDS] = (if (folderId in current) current - folderId else current + folderId).joinToString("|")
         }
     }
 

@@ -202,8 +202,8 @@ fun SettingsScreen(
     if (proSheetOpen) {
         com.jumlo.app.ui.pro.JumloProSheet(
             entitlement = proEntitlement,
-            onPurchase = { productId -> hostActivity?.let { viewModel.purchasePro(it, productId) } },
-            onRestore = { viewModel.restorePurchases() },
+            onPurchase = { productId -> hostActivity?.let { viewModel.launchProPurchase(it, productId) } },
+            onRestore = { viewModel.restoreProPurchases() },
             onDismiss = { proSheetOpen = false }
         )
     }

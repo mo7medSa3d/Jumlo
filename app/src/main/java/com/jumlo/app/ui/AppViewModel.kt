@@ -472,7 +472,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                     try {
                         val source = sources.inspect(uri, intake.offeredFlags)
                         sourceId = source.id
-                        val safeMime = source.mimeType.ifBlank { "application/octet-stream" }
+                        val safeMime = source.mimeType?.takeIf(String::isNotBlank) ?: "application/octet-stream"
                         val ticket = outputStore.reserve(jobId, "import_$index", source.displayName, safeMime)
                         withContext(Dispatchers.IO) {
                             val coroutine = currentCoroutineContext()
