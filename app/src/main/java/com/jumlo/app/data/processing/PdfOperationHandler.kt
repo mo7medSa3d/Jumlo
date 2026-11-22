@@ -51,16 +51,21 @@ import kotlin.math.roundToInt
 
     /** A placed image must be upright: re-encode with the EXIF orientation applied. */
     private fun uprightImage(file: File, context: ExecutionContext): File {
-        val info=BitmapTransforms.inspect(file)
-        // PDFBox may keep decoded pixels, RGB and alpha buffers together while embedding PNGs.
-        require(info.decodePeakBytes<=context.budget.maxBitmapBytes/2) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
+        val info = BitmapTransforms.inspect(file)
+        val effectiveBudget = ImageWorkPolicy.effectiveBudget(context.budget.maxBitmapBytes)
+        val embedBudget = (effectiveBudget / 2L).coerceAtLeast(4L * 1024 * 1024)
         val orientation = info.orientation
-        if (orientation == 1) return file
+        if (orientation == 1 && info.decodePeakBytes <= embedBudget) return file
         val temp = File.createTempFile("upright-", ".png", file.parentFile)
         try {
-            BitmapTransforms.decode(file, context.budget.maxBitmapBytes).use { decoded ->
+            val decoded = if (info.decodePeakBytes <= embedBudget && maxOf(info.normalizedWidth, info.normalizedHeight) <= ImageWorkPolicy.MAX_EDGE_PX) {
+                BitmapTransforms.decode(file, effectiveBudget)
+            } else {
+                BitmapTransforms.decodeSampled(file, embedBudget, ImageWorkPolicy.MAX_EDGE_PX)
+            }
+            decoded.use { d ->
                 // PNG preserves drawn-signature alpha while applying EXIF mirroring/rotation.
-                BitmapTransforms.encode(decoded.bitmap, temp, ImageConversionSettings(format = "PNG"), context.budget.maxBitmapBytes, context.checkCancellation)
+                BitmapTransforms.encode(d.bitmap, temp, ImageConversionSettings(format = "PNG"), effectiveBudget, context.checkCancellation)
             }
             return temp
         } catch (t: Throwable) { temp.delete(); throw t }
@@ -128,6 +133,7 @@ import kotlin.math.roundToInt
             }
             "split" -> {
                 require(request.sourceIds.size==1){"ONE_PDF_REQUIRED"}
+                if (s.optString("mode","RANGES") == "EXTRACT_SINGLE") return structural(request, context, "extract")
                 val outcomes=mutableListOf<ItemOutcome>()
                 context.sources.withSeekable(request.sourceIds.single(),request.id){ src ->
                     val count=openUnencrypted(src).use{ it.numberOfPages }
@@ -317,7 +323,7 @@ import kotlin.math.roundToInt
                             openUnencrypted(files[0]).use {doc ->
                                 val selected=pages(s.optString("pages","all"),doc.numberOfPages).map {it-1}
                                 context.checkCancellation()
-                                BitmapTransforms.decodeSampled(files[1],minOf(context.budget.maxBitmapBytes/4,16L*1024*1024),1600).use {decoded ->
+                                BitmapTransforms.decodeSampled(files[1],(ImageWorkPolicy.effectiveBudget(context.budget.maxBitmapBytes)/4).coerceAtLeast(4L*1024*1024),1600).use {decoded ->
                                     val logo=com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(doc,decoded.bitmap)
                                     PdfBoxBackend.stampWatermarkLogo(doc,selected,logo,style,context.checkCancellation)
                                 }
@@ -455,54 +461,86 @@ import kotlin.math.roundToInt
                 require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                 context.sources.withSeekable(id,request.id) { file ->
                     totalInputBytes+=file.length()
-                    BitmapTransforms.decode(file,context.budget.maxBitmapBytes).use { decoded ->
-                        val bitmap=decoded.bitmap
-                        val geometry=PdfPageGeometry.resolve(bitmap.width, bitmap.height,
-                            settings.pageMode, settings.paperWidthPt, settings.paperHeightPt, settings.orientation)
-                        val w=geometry.widthPt
-                        val h=geometry.heightPt
-                        val placement=ImagePdfLayout.resolve(bitmap.width,bitmap.height,geometry,settings.marginMm,settings.pageMode=="AUTO",settings.fill)
-                        val pageMargin=placement.marginPt
-                        val pdPage=PDPage(PDRectangle(w,h))
-                        outDoc.addPage(pdPage)
-                        if (settings.fill) {
-                            // Lossless keeps every source pixel; the 2048px ceiling is a lossy-only default.
-                            val renderScale=if(settings.lossless)
-                                maxOf(bitmap.width.toFloat()/placement.widthPt,bitmap.height.toFloat()/placement.heightPt).coerceAtLeast(1f)
-                            else minOf(2048f/maxOf(w,h), 2.5f).coerceAtLeast(1f)
-                            val canvasW=(w*renderScale).roundToInt().coerceAtLeast(64)
-                            val canvasH=(h*renderScale).roundToInt().coerceAtLeast(64)
-                            ImageWorkPolicy.requireFits(canvasW,canvasH,bitmap.allocationByteCount.toLong(),context.budget.maxBitmapBytes)
-                            val pageBmp=Bitmap.createBitmap(canvasW,canvasH,Bitmap.Config.ARGB_8888)
-                            try {
-                                val canvas=Canvas(pageBmp)
-                                canvas.drawColor(Color.WHITE)
-                                pageBmp.setHasAlpha(false)
-                                val mPx=pageMargin*renderScale
-                                val left=placement.leftPt*renderScale; val top=placement.topPt*renderScale
-                                val dw=placement.widthPt*renderScale; val dh=placement.heightPt*renderScale
-                                canvas.save()
-                                canvas.clipRect(mPx,mPx,canvasW-mPx,canvasH-mPx)
-                                canvas.drawBitmap(bitmap,null,RectF(left,top,left+dw,top+dh),Paint(Paint.FILTER_BITMAP_FLAG))
-                                canvas.restore()
-                                val pdImage=if(settings.lossless)
-                                    com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(outDoc,pageBmp)
-                                else JPEGFactory.createFromImage(outDoc,pageBmp,settings.quality/100f)
-                                PDPageContentStream(outDoc,pdPage).use { cs ->
-                                    cs.drawImage(pdImage,0f,0f,w.toFloat(),h.toFloat())
-                                }
-                            } finally { pageBmp.recycle() }
-                        } else {
-                            val dw=placement.widthPt; val dh=placement.heightPt
-                            val x=placement.leftPt; val y=h-placement.topPt-dh
-                            val pdImage=if(settings.lossless)
-                                com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(outDoc,bitmap)
-                            else JPEGFactory.createFromImage(outDoc,bitmap,settings.quality/100f)
-                            PDPageContentStream(outDoc,pdPage).use { cs ->
-                                cs.drawImage(pdImage,x,y,dw,dh)
+                    val effectiveBudget = ImageWorkPolicy.effectiveBudget(context.budget.maxBitmapBytes)
+                    val info = BitmapTransforms.inspect(file)
+                    var attemptBudget = (effectiveBudget / 2L).coerceAtLeast(4L * 1024 * 1024)
+                    var attemptMaxEdge = ImageWorkPolicy.MAX_EDGE_PX
+                    var lastOom: OutOfMemoryError? = null
+                    var pageAdded = false
+                    for (attempt in 0 until 4) {
+                        context.checkCancellation()
+                        var pdPage: PDPage? = null
+                        var pageInDoc = false
+                        try {
+                            val decoded = if (attempt == 0 && info.decodePeakBytes <= attemptBudget && maxOf(info.normalizedWidth, info.normalizedHeight) <= attemptMaxEdge) {
+                                BitmapTransforms.decode(file, attemptBudget)
+                            } else {
+                                BitmapTransforms.decodeSampled(file, attemptBudget, attemptMaxEdge)
                             }
+                            decoded.use { d ->
+                                val bitmap = d.bitmap
+                                val geometry = PdfPageGeometry.resolve(bitmap.width, bitmap.height,
+                                    settings.pageMode, settings.paperWidthPt, settings.paperHeightPt, settings.orientation)
+                                val w = geometry.widthPt
+                                val h = geometry.heightPt
+                                val placement = ImagePdfLayout.resolve(bitmap.width, bitmap.height, geometry, settings.marginMm, settings.pageMode == "AUTO", settings.fill)
+                                val pageMargin = placement.marginPt
+                                val page = PDPage(PDRectangle(w, h))
+                                pdPage = page
+                                if (settings.fill) {
+                                    // Lossless keeps every source pixel; the 2048px ceiling is a lossy-only default.
+                                    val renderScale = if (settings.lossless)
+                                        maxOf(bitmap.width.toFloat() / placement.widthPt, bitmap.height.toFloat() / placement.heightPt).coerceAtLeast(1f)
+                                    else minOf(2048f / maxOf(w, h), 2.5f).coerceAtLeast(1f)
+                                    val reqCanvasW = (w * renderScale).roundToInt().coerceAtLeast(64)
+                                    val reqCanvasH = (h * renderScale).roundToInt().coerceAtLeast(64)
+                                    val available = (effectiveBudget - bitmap.allocationByteCount.toLong()).coerceAtLeast(4L * 1024 * 1024)
+                                    val (canvasW, canvasH) = ImageWorkPolicy.boundedDimensions(reqCanvasW, reqCanvasH, available, maxEdge = attemptMaxEdge)
+                                    val effScaleX = canvasW.toFloat() / w
+                                    val effScaleY = canvasH.toFloat() / h
+                                    val pageBmp = Bitmap.createBitmap(canvasW, canvasH, Bitmap.Config.ARGB_8888)
+                                    try {
+                                        val canvas = Canvas(pageBmp)
+                                        canvas.drawColor(Color.WHITE)
+                                        pageBmp.setHasAlpha(false)
+                                        val mPxX = pageMargin * effScaleX; val mPxY = pageMargin * effScaleY
+                                        val left = placement.leftPt * effScaleX; val top = placement.topPt * effScaleY
+                                        val dw = placement.widthPt * effScaleX; val dh = placement.heightPt * effScaleY
+                                        canvas.save()
+                                        canvas.clipRect(mPxX, mPxY, canvasW - mPxX, canvasH - mPxY)
+                                        canvas.drawBitmap(bitmap, null, RectF(left, top, left + dw, top + dh), Paint(Paint.FILTER_BITMAP_FLAG))
+                                        canvas.restore()
+                                        val pdImage = if (settings.lossless)
+                                            com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(outDoc, pageBmp)
+                                        else JPEGFactory.createFromImage(outDoc, pageBmp, settings.quality / 100f)
+                                        outDoc.addPage(page); pageInDoc = true
+                                        PDPageContentStream(outDoc, page).use { cs ->
+                                            cs.drawImage(pdImage, 0f, 0f, w.toFloat(), h.toFloat())
+                                        }
+                                    } finally { if (!pageBmp.isRecycled) pageBmp.recycle() }
+                                } else {
+                                    val dw = placement.widthPt; val dh = placement.heightPt
+                                    val x = placement.leftPt; val y = h - placement.topPt - dh
+                                    val pdImage = if (settings.lossless)
+                                        com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(outDoc, bitmap)
+                                    else JPEGFactory.createFromImage(outDoc, bitmap, settings.quality / 100f)
+                                    outDoc.addPage(page); pageInDoc = true
+                                    PDPageContentStream(outDoc, page).use { cs ->
+                                        cs.drawImage(pdImage, x, y, dw, dh)
+                                    }
+                                }
+                            }
+                            pageAdded = true
+                            break
+                        } catch (oom: OutOfMemoryError) {
+                            if (pageInDoc) pdPage?.let { outDoc.removePage(it) }
+                            lastOom = oom
+                            attemptBudget = (attemptBudget * 3L / 5L).coerceAtLeast(4L * 1024 * 1024)
+                            attemptMaxEdge = (attemptMaxEdge * 3 / 4).coerceAtLeast(512)
+                            System.gc()
                         }
                     }
+                    if (!pageAdded) throw lastOom ?: OutOfMemoryError("Image to PDF page exceeded available memory")
                 }
                 context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),request.sourceIds.size.toLong()))
             }
@@ -523,7 +561,7 @@ import kotlin.math.roundToInt
         val sourceRef = runCatching { context.sources.get(request.sourceIds.single()) }.getOrNull()
         val originalPdfFolder = AutoOutputName.cleanBaseName(sourceRef?.displayName ?: settings.displayName.ifBlank { "PDF" }, "PDF")
         val customBase = settings.displayName.substringBeforeLast('.', settings.displayName).trim()
-            .takeUnless { it.isEmpty() || it.equals("download", ignoreCase = true) || it.equals("Images", ignoreCase = true) || it.equals("Document", ignoreCase = true) }
+            .takeUnless { it.isEmpty() || it.equals("download", ignoreCase = true) || it.equals("Images", ignoreCase = true) || it.equals("Long", ignoreCase = true) || it.equals("Document", ignoreCase = true) }
         val effectiveBaseName = customBase?.let { AutoOutputName.cleanBaseName(it, originalPdfFolder) } ?: originalPdfFolder
         val ext = BitmapTransforms.extension(settings.format)
         return context.sources.withSeekable(request.sourceIds.single(),request.id) { source ->
@@ -534,38 +572,59 @@ import kotlin.math.roundToInt
                     val pages=PageSelection.parse(if(settings.pages.isBlank() || settings.pages.trim().equals("all",true)) "1-${renderer.pageCount}" else settings.pages,renderer.pageCount)
                     val outputMime=BitmapTransforms.mime(settings.format)
 
+                    val effectiveBudget = ImageWorkPolicy.effectiveBudget(context.budget.maxBitmapBytes)
+                    val formatMaxEdge = ImageWorkPolicy.maxEdgeForFormat(settings.format)
                     // One bitmap at a time: no full-document rasterization in resident memory.
                     fun renderPage(number:Int, target:File) {
                         context.checkCancellation()
                         renderer.openPage(number-1).use { page ->
-                            val width=(page.width.toDouble()*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
-                            val height=(page.height.toDouble()*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
-                            val rowBytes=if(settings.grayscale) width.toLong()*4L else 0L
-                            ImageWorkPolicy.requireFits(width,height,rowBytes,context.budget.maxBitmapBytes)
-                            val bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
-                            try {
-                                bitmap.eraseColor(Color.WHITE)
-                                page.render(bitmap,null,null,PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                                // The rendered page already has an opaque white
-                                // background. JPEG encoding can use this bitmap
-                                // directly instead of allocating a second matte.
-                                bitmap.setHasAlpha(false)
-                                if(settings.grayscale) {
-                                    val rowPixels=IntArray(width)
-                                    for(y in 0 until height) {
-                                        if (y and 63 == 0) context.checkCancellation()
-                                        bitmap.getPixels(rowPixels,0,width,0,y,width,1)
-                                        for(x in 0 until width) {
-                                            val c=rowPixels[x]
-                                            val luma=(((c shr 16 and 0xff)*77)+((c shr 8 and 0xff)*150)+((c and 0xff)*29)) shr 8
-                                            rowPixels[x]=(c and -0x1000000) or (luma shl 16) or (luma shl 8) or luma
-                                        }
-                                        bitmap.setPixels(rowPixels,0,width,0,y,width,1)
-                                    }
-                                }
+                            val reqW=(page.width.toDouble()*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
+                            val reqH=(page.height.toDouble()*settings.dpi/72.0).roundToInt().coerceAtLeast(1)
+                            var attemptScale = 1.0
+                            var lastOom: OutOfMemoryError? = null
+                            for (attempt in 0 until 4) {
                                 context.checkCancellation()
-                                BitmapTransforms.encode(bitmap,target,ImageConversionSettings(format=settings.format,quality=settings.quality),context.budget.maxBitmapBytes,context.checkCancellation)
-                            } finally { bitmap.recycle() }
+                                val scaledW = (reqW * attemptScale).roundToInt().coerceAtLeast(1)
+                                val scaledH = (reqH * attemptScale).roundToInt().coerceAtLeast(1)
+                                val rowReserve = if (settings.grayscale) scaledW.toLong() * 4L else 0L
+                                val available = (effectiveBudget - rowReserve).coerceAtLeast(4L * 1024 * 1024)
+                                val (width, height) = ImageWorkPolicy.boundedDimensions(scaledW, scaledH, available, maxEdge = formatMaxEdge)
+                                var bitmap: Bitmap? = null
+                                try {
+                                    val created = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                                    bitmap = created
+                                    created.eraseColor(Color.WHITE)
+                                    page.render(created, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                                    // The rendered page already has an opaque white
+                                    // background. JPEG encoding can use this bitmap
+                                    // directly instead of allocating a second matte.
+                                    created.setHasAlpha(false)
+                                    if (settings.grayscale) {
+                                        val rowPixels = IntArray(width)
+                                        for (y in 0 until height) {
+                                            if (y and 63 == 0) context.checkCancellation()
+                                            created.getPixels(rowPixels, 0, width, 0, y, width, 1)
+                                            for (x in 0 until width) {
+                                                val c = rowPixels[x]
+                                                val luma = (((c shr 16 and 0xff) * 77) + ((c shr 8 and 0xff) * 150) + ((c and 0xff) * 29)) shr 8
+                                                rowPixels[x] = (c and -0x1000000) or (luma shl 16) or (luma shl 8) or luma
+                                            }
+                                            created.setPixels(rowPixels, 0, width, 0, y, width, 1)
+                                        }
+                                    }
+                                    context.checkCancellation()
+                                    BitmapTransforms.encode(created, target, ImageConversionSettings(format = settings.format, quality = settings.quality), effectiveBudget, context.checkCancellation)
+                                    return
+                                } catch (oom: OutOfMemoryError) {
+                                    lastOom = oom
+                                    target.delete()
+                                    attemptScale *= 0.75
+                                    System.gc()
+                                } finally {
+                                    bitmap?.let { if (!it.isRecycled) it.recycle() }
+                                }
+                            }
+                            throw lastOom ?: OutOfMemoryError("PDF page render exceeded available memory")
                         }
                     }
 
@@ -681,9 +740,9 @@ import kotlin.math.roundToInt
 
     private suspend fun pdfToLongImage(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
-        val key="image"
-        context.outputs.find(request.id,key)?.let { return listOf(ItemOutcome(key,ItemStatus.CREATED,it.id)) }
         val s=Json.decodeFromString<PdfImagesSettings>(request.settingsJson)
+        if (s.separateImages) return pagesToImages(request, context)
+        context.outputs.find(request.id,"image")?.let { return listOf(ItemOutcome("image",ItemStatus.CREATED,it.id)) }
         val source=context.sources.get(request.sourceIds.single())
         val base=com.jumlo.app.core.AutoOutputName.cleanBaseName(source.displayName,"Document")
         val asJpeg=s.format.equals("JPEG",true)
@@ -691,16 +750,51 @@ import kotlin.math.roundToInt
         val mime=if(asJpeg) "image/jpeg" else "image/png"
         val customBase = s.displayName.substringBeforeLast('.', s.displayName).trim()
             .takeUnless { it.isEmpty() || it.equals("download", true) || it.equals("Long", true) || it.equals("Document", true) }
-        val outName=SafeNames.basename(if (customBase != null) "${com.jumlo.app.core.AutoOutputName.cleanBaseName(customBase, base)}.$ext" else "$base - Long.$ext")
-        val ticket=context.outputs.reserve(request.id,key,outName,mime)
+        val effectiveBase = if (customBase != null) com.jumlo.app.core.AutoOutputName.cleanBaseName(customBase, base) else "$base - Long"
+        val tickets = linkedMapOf<Int, OutputTicket>()
+        val publishedParts = mutableSetOf<Int>()
         var origBytes=0L
         try {
-            context.sources.withSeekable(source.id,request.id) { input ->
+            val parts = context.sources.withSeekable(source.id,request.id) { input ->
                 origBytes=input.length()
-                com.jumlo.app.data.pdf.PdfLongImageComposer.compose(input,ticket.stageFile,s.pages,asJpeg,s.quality,s.dpi,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation)
+                com.jumlo.app.data.pdf.PdfLongImageComposer.composeParts(
+                    inputPdf = input,
+                    outputFileForPart = { partIndex, totalParts ->
+                        val key = if (totalParts == 1) "image" else "part:$partIndex"
+                        val outName = SafeNames.basename(
+                            if (totalParts == 1) "$effectiveBase.$ext"
+                            else "$effectiveBase - Part $partIndex of $totalParts.$ext"
+                        )
+                        val ticket = runBlocking { context.outputs.reserve(request.id, key, outName, mime) }
+                        tickets[partIndex] = ticket
+                        ticket.stageFile
+                    },
+                    pagesSpec = s.pages,
+                    asJpeg = asJpeg,
+                    quality = s.quality,
+                    dpi = s.dpi,
+                    grayscale = s.grayscale,
+                    maxBitmapBytes = context.budget.maxBitmapBytes,
+                    checkCancel = context.checkCancellation,
+                    keepOriginalImageQuality = s.keepOriginalImageQuality
+                )
             }
-            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,mime,originalSizeBytes=origBytes) }
-            return listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
-        } catch(t:Throwable) { ticket.stageFile.delete(); if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY"); throw t }
+            val outcomes = mutableListOf<ItemOutcome>()
+            for (part in parts) {
+                context.checkCancellation()
+                val ticket = requireNotNull(tickets[part.partIndex])
+                val rec = context.outputs.publish(ticket) {
+                    context.outputs.inspect(it, mime, originalSizeBytes = if (parts.size == 1) origBytes else null)
+                }
+                publishedParts += part.partIndex
+                outcomes += ItemOutcome(ticket.itemKey, ItemStatus.CREATED, rec.id)
+                context.report(JobProgress(JobStage.RUNNING, part.partIndex.toLong(), part.totalParts.toLong()))
+            }
+            return outcomes
+        } catch(t:Throwable) {
+            tickets.forEach { (idx, ticket) -> if (idx !in publishedParts) ticket.stageFile.delete() }
+            if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY")
+            throw t
+        }
     }
 }

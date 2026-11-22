@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s10_saved_title">تم الحفظ</string>
+    <string name="s10_saved_location_default">التنزيلات/Jumlo</string>
+    <string name="s10_saved_in_place">تم حفظ التعديلات في المستند</string>
+    <string name="s10_saved_as_copy">تم الحفظ كنسخة جديدة في التنزيلات/Jumlo</string>
+    <string name="s10_markup_save_failed">تعذّر حفظ تعديلات PDF. تحقق من المساحة المتاحة وحاول مجددًا.</string>
+    <string name="s10_new_operation">عملية جديدة</string>
+    <string name="s10_files_saved_count">تم حفظ %1$d ملفات</string>
+    <string name="s10_finalizing_output">جارٍ إنهاء الحفظ…</string>
+    <string name="s10_zip_optional_password">كلمة المرور (اختياري، تشفير AES-256)</string>
+    <string name="s10_keep_original_image_quality">الحفاظ على جودة الصور الأصلية المدمجة</string>
+</resources>

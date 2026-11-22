@@ -37,14 +37,29 @@ private val FileHeader.isSymbolicLink: Boolean
  * password.
  */
 object EncryptedZip {
+    private fun zip4jLevel(level: Int): CompressionLevel = when (level) {
+        0 -> CompressionLevel.NO_COMPRESSION
+        1 -> CompressionLevel.FASTEST
+        2 -> CompressionLevel.FASTER
+        3 -> CompressionLevel.FAST
+        4 -> CompressionLevel.MEDIUM_FAST
+        5 -> CompressionLevel.NORMAL
+        6 -> CompressionLevel.HIGHER
+        7 -> CompressionLevel.MAXIMUM
+        8 -> CompressionLevel.PRE_ULTRA
+        else -> CompressionLevel.ULTRA
+    }
+
     fun create(
         outZip: File,
         sources: List<EncryptedZipEntrySource>,
         password: CharArray,
         limits: ArchiveLimits = ArchiveLimits(2L * 1024 * 1024 * 1024, 10000, 32),
+        compressionLevel: Int = 6,
         checkCancel: () -> Unit = {}
     ) {
         require(password.isNotEmpty()) { "ZIP_PASSWORD_REQUIRED" }
+        require(compressionLevel in 0..9) { "INVALID_ARCHIVE_REQUEST" }
         require(sources.isNotEmpty() && sources.size <= limits.maxEntries) { "ARCHIVE_ENTRY_LIMIT" }
         require(!outZip.exists()) { "OUTPUT_ALREADY_EXISTS" }
         val parent = requireNotNull(outZip.absoluteFile.parentFile) { "OUTPUT_CREATE_FAILED" }
@@ -55,8 +70,8 @@ object EncryptedZip {
             val expectedEntries = linkedMapOf<String,Long>()
             var copiedBytes = 0L
             val params = ZipParameters().apply {
-                compressionMethod = CompressionMethod.DEFLATE
-                compressionLevel = CompressionLevel.NORMAL
+                compressionMethod = if (compressionLevel == 0) CompressionMethod.STORE else CompressionMethod.DEFLATE
+                this.compressionLevel = zip4jLevel(compressionLevel)
                 isEncryptFiles = true
                 encryptionMethod = EncryptionMethod.AES
                 aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256

@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.icons.automirrored.rounded.Sort
 import com.jumlo.app.ui.icons.automirrored.rounded.ViewList
 import com.jumlo.app.ui.icons.rounded.*
@@ -58,16 +59,14 @@ import com.jumlo.app.model.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable fun FilesScreen(vm:AppViewModel,onImport:()->Unit,onFolder:()->Unit,onSavedFolder:()->Unit,onOpen:(OutputRecord)->Unit,onShare:(OutputRecord)->Unit,onExport:(OutputRecord)->Unit,onReuse:(OutputRecord)->Unit,onSource:(String)->Unit,onBrowse:(DocumentEntry)->Unit,onProviderOpen:(DocumentEntry)->Unit,onProviderImport:(DocumentEntry)->Unit,onCopy:(DocumentEntry)->Unit,onRename:(DocumentEntry)->Unit,onDelete:(DocumentEntry)->Unit,onNewFolder:()->Unit,
-    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={},onImportToFolder:(String?)->Unit={ onImport() },onScan:(()->Unit)?=null) {
+    onOutputWorkflow:(List<OutputRecord>,String)->Unit,onSourceWorkflow:(List<SourceRef>,String)->Unit,onPrint:((OutputRecord)->Unit)?=null,onPrintSource:((String)->Unit)?=null,onChangeSaveFolder:()->Unit=onFolder,onStorage:()->Unit={},onImportToFolder:(String?)->Unit={ onImport() },onScan:(()->Unit)?=null,initialFilter:String?=null) {
     val haptics=rememberAppHaptics()
     val context=LocalContext.current
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val trashed by vm.trashed.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val tree by vm.tree.collectAsStateWithLifecycle()
     val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
     val trashLoad by vm.trashLoad.collectAsStateWithLifecycle()
-    val treeLoad by vm.treeLoad.collectAsStateWithLifecycle()
     var renameOutput by remember { mutableStateOf<OutputRecord?>(null) }
     var renameText by rememberSaveable { mutableStateOf("") }
     fun rename(record:OutputRecord) { renameOutput=record;renameText=record.displayName }
@@ -102,7 +101,7 @@ import com.jumlo.app.model.*
             activeFolderId = folder.id; selected = emptySet(); selecting = false
             return
         }
-        val act = context as? androidx.fragment.app.FragmentActivity
+        val act = findFragmentActivity(context)
         if (act == null) { vm.notifyMessage("VAULT_UNAVAILABLE"); return }
         com.jumlo.app.data.files.BiometricVaultGuard.authenticate(
             activity = act,
@@ -120,7 +119,7 @@ import com.jumlo.app.model.*
             folderMenuTarget = folder
             return
         }
-        val act = context as? androidx.fragment.app.FragmentActivity
+        val act = findFragmentActivity(context)
         if (act == null) { vm.notifyMessage("VAULT_UNAVAILABLE"); return }
         com.jumlo.app.data.files.BiometricVaultGuard.authenticate(
             activity = act,
@@ -147,6 +146,38 @@ import com.jumlo.app.model.*
         if (activeFolderId != null && settings.fileFolders.none { it.id == activeFolderId }) {
             activeFolderId = null
         }
+    }
+    LaunchedEffect(section) {
+        if (section != "outputs" && section != "trash") section = "outputs"
+    }
+    LaunchedEffect(initialFilter) {
+        val raw = initialFilter?.trim()?.takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
+        activeFolderId = null
+        folderSearchOpen = false
+        selected = emptySet()
+        selecting = false
+        when (raw.lowercase()) {
+            "trash" -> { section = "trash"; type = "all" }
+            "pdf" -> { section = "outputs"; type = "PDF" }
+            "images", "image" -> { section = "outputs"; type = "Images" }
+            "video", "videos" -> { section = "outputs"; type = "Video" }
+            "audio" -> { section = "outputs"; type = "Audio" }
+            "documents", "docs" -> { section = "outputs"; type = "Documents" }
+            "favorites", "favourites" -> { section = "outputs"; type = "favorites" }
+            else -> { section = "outputs"; type = "all" }
+        }
+    }
+    androidx.activity.compose.BackHandler(enabled = section == "trash") {
+        section = "outputs"
+        selected = emptySet()
+        selecting = false
+    }
+    androidx.activity.compose.BackHandler(enabled = activeFolderId != null) {
+        activeFolderId = activeFolder?.parentId
+        folderSearchOpen = false
+        search = ""
+        selected = emptySet()
+        selecting = false
     }
     val folderCounts = remember(outputs, settings.outputFolderIds) {
         val counts = HashMap<String, Int>()
@@ -219,9 +250,6 @@ import com.jumlo.app.model.*
     }
     val visibleTrashed=remember(trashed,search) {
         trashed.filter {it.displayName.contains(search,true)}
-    }
-    val visibleProviderEntries=remember(tree,search) {
-        tree?.entries?.filter {it.name.contains(search,true)}.orEmpty()
     }
     val hasPrivateOutputs = remember(outputs) { outputs.any { it.publicUri == null } }
     val selectedOutputs = remember(visible, selected) { visible.filter { it.id in selected } }
@@ -336,11 +364,6 @@ import com.jumlo.app.model.*
                             containerColor = pillars.cardSurface
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.ui_granted_folder)) },
-                                leadingIcon = { Icon(Icons.Rounded.FolderOpen, null, tint = colors.primary) },
-                                onClick = { overflowMenuOpen = false; haptics.selectionToggle(); section = "folder"; selecting = false; selected = emptySet() }
-                            )
-                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.files_trash_title)) },
                                 leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = colors.onSurfaceVariant) },
                                 onClick = { overflowMenuOpen = false; haptics.selectionToggle(); section = "trash"; selecting = false; selected = emptySet() }
@@ -369,7 +392,7 @@ import com.jumlo.app.model.*
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.ui_outputs), tint = colors.primary)
                         }
                         Text(
-                            text = stringResource(if (section == "trash") R.string.files_trash_title else R.string.ui_granted_folder),
+                            text = stringResource(R.string.files_trash_title),
                             style = QuietTheme.typography.sectionTitle,
                             color = colors.onSurface,
                             modifier = Modifier.weight(1f).semantics { heading() }
@@ -679,24 +702,6 @@ import com.jumlo.app.model.*
                     }}
                 }
             }
-            "folder" -> {
-                item("folder-browse", contentType = "action") {FilledTonalButton(onClick=onFolder) {Text(stringResource(R.string.tool_browse_storage))}}
-                val listing=tree
-                if(treeLoad!=DataLoadStatus.READY) item("folder-state", contentType = "load-state") {DocumentLoadState(treeLoad,vm::reloadTree)}
-                else if(listing==null) item("folder-empty", contentType = "empty") {QuietStateCard(stringResource(R.string.ui_granted_folder),stringResource(R.string.ui_folder_empty),stringResource(R.string.tool_browse_storage),onFolder,icon=Icons.Rounded.Folder)}
-                else {
-                    item("folder-heading", contentType = "heading") { Column(verticalArrangement=Arrangement.spacedBy(4.dp)) { Text(listing.name,style=QuietTheme.typography.sectionTitle.copy(textDirection=TextDirection.Content),modifier=Modifier.semantics { heading() });Text(stringResource(R.string.ui_provider_notice),style=QuietTheme.typography.metadata) } }
-                    if(listing.writable) item("folder-new", contentType = "action") {TextButton(onClick=onNewFolder) {Text(stringResource(R.string.files_new_folder))}}
-                    if(listing.entries.isEmpty()) item("folder-no-files", contentType = "empty") {
-                        QuietStateCard(stringResource(R.string.files_state_folder_empty_title),stringResource(R.string.files_state_folder_empty_body),
-                            stringResource(R.string.files_state_refresh_folder),vm::reloadTree,icon=Icons.Rounded.FolderOpen)
-                    } else if(visibleProviderEntries.isEmpty()) item("folder-filtered-empty", contentType = "empty") {
-                        QuietStateCard(stringResource(R.string.upgrade_no_results),stringResource(R.string.upgrade_no_results_hint),
-                            stringResource(R.string.files_state_clear_search),{search=""},icon=Icons.Rounded.Search)
-                    }
-                    items(visibleProviderEntries,key={it.uri},contentType={"provider-entry"}) {entry->ProviderFileRow(entry,listing.writable,{onBrowse(entry)},{onProviderOpen(entry)},{onProviderImport(entry)},{onCopy(entry)},{onRename(entry)},{onDelete(entry)})}
-                }
-            }
         }
     }
     if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) {
@@ -854,16 +859,16 @@ import com.jumlo.app.model.*
                     "pdf_long_image", "pdf_protect", "pdf_stamp", "pdf_privacy_redact", "pdf_05", "pdf_04"
                 )
                 target.mimeType.startsWith("image/") -> listOf(
-                    "pdf_02", "img_04", "img_03", "img_02", "img_01", "img_watermark", "pdf_ocr"
+                    "pdf_02", "img_04", "img_02", "img_watermark", "pdf_ocr"
                 )
                 target.mimeType.contains("word") || target.mimeType.contains("spreadsheet") ||
                     target.mimeType.contains("presentation") || target.mimeType.contains("officedocument") -> listOf(
                     "office_to_pdf", "file_07"
                 )
                 target.mimeType.contains("zip") || target.mimeType.contains("archive") -> listOf(
-                    "file_08", "file_encrypted_zip"
+                    "file_08", "file_07"
                 )
-                else -> listOf("file_07", "file_encrypted_zip", "file_batch_rename")
+                else -> listOf("file_07", "file_batch_rename")
             }
         }
         val adaptiveTools = remember(adaptiveToolIds) {
@@ -921,7 +926,7 @@ import com.jumlo.app.model.*
                                     modifier = Modifier.weight(1f)
                                 )
                                 Icon(
-                                    imageVector = Icons.Rounded.ChevronRight,
+                                    imageVector = Icons.AutoMirrored.Rounded.ChevronRight,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                     modifier = Modifier.size(18.dp)
@@ -1070,6 +1075,10 @@ private val FileGroupOptions = listOf(
 )
 
 private fun Set<String>.symmetric(id:String):Set<String> = if(id in this) this-id else this+id
+
+private fun findFragmentActivity(context: android.content.Context): androidx.fragment.app.FragmentActivity? =
+    generateSequence<android.content.Context>(context) { c -> (c as? android.content.ContextWrapper)?.baseContext?.takeUnless { it === c } }
+        .filterIsInstance<androidx.fragment.app.FragmentActivity>().firstOrNull()
 
 @Composable internal fun ProviderFileRow(
     entry: DocumentEntry,

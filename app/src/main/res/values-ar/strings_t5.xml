@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="completed_notification_tool_title">%1$s — تم الإنجاز</string>
+    <string name="failed_notification_title">تعذّرت المهمة</string>
+    <string name="failed_notification_tool_title">%1$s — تعذّر الإكمال</string>
+    <string name="failed_notification_body">تعذّر إكمال المهمة. اضغط لعرض التفاصيل.</string>
+</resources>

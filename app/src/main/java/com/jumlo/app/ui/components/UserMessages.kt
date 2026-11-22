@@ -12,7 +12,7 @@ import com.jumlo.app.R
     code=="DESTINATION_SAVE_FAILED" -> R.string.msg_destination_save_failed
     code=="CLIPBOARD_EMPTY" -> R.string.studio_clipboard_empty
     code=="CLIPBOARD_UNAVAILABLE" -> R.string.rebuild_clipboard_unavailable
-    code=="PDF_INVALID" -> R.string.msg_pdf_corrupt
+    code=="PDF_INVALID" || code=="SCAN_PDF_INVALID" -> R.string.msg_pdf_corrupt
     code in setOf("OFFICE_PAGE_LIMIT","OFFICE_TEXT_BUDGET_EXCEEDED") -> R.string.rebuild_office_limit
     code=="OFFICE_PAGE_ASPECT_UNSUPPORTED" -> R.string.rebuild_office_aspect
     code in setOf("OFFICE_VERIFY_FAILED","OFFICE_IMAGE_INVALID") -> R.string.rebuild_office_verify
@@ -41,6 +41,9 @@ import com.jumlo.app.R
     code in setOf("INVALID_FORM_INPUT","FORM_FIELD_MISSING","FORM_FIELD_TYPE_MISMATCH") -> R.string.upgrade_form_values
     code in setOf("FORM_APPEARANCE_UNAVAILABLE","FORM_WIDGET_PAGE_MISSING","FORM_VALUE_CHANGED","FORM_FLATTEN_UNSUPPORTED") -> R.string.upgrade_form_flatten
     code in setOf("INVALID_PAGE_INSTANCE","PDF_PAGE_IMPORT_FAILED") -> R.string.upgrade_page_edit_failed
+    code=="MARKUP_SAVED_IN_PLACE" -> R.string.s10_saved_in_place
+    code=="MARKUP_SAVED_AS_COPY" -> R.string.s10_saved_as_copy
+    code=="MARKUP_SAVE_FAILED" -> R.string.s10_markup_save_failed
     code=="DRAFT_SAVED" -> R.string.msg_draft_saved
     code in setOf("DRAFT_SAVE_FAILED","DRAFT_RESTORE_FAILED") -> R.string.msg_draft_failed
     code in setOf("SETTINGS_READ_FAILED","SETTINGS_SAVE_FAILED") -> R.string.msg_settings_failed
@@ -61,6 +64,9 @@ import com.jumlo.app.R
     code=="UNSUPPORTED_SOCIAL_PLATFORM" -> R.string.msg_unsupported_social_platform
     code=="MEDIA_SERVICE_NOT_CONFIGURED" -> R.string.media_error_service
     code=="MEDIA_SITE_UNSUPPORTED" -> R.string.media_error_site
+    code=="LINKEDIN_AUTH_REQUIRED" -> R.string.msg_linkedin_auth_required
+    code=="LINKEDIN_NO_VIDEO" -> R.string.msg_linkedin_no_video
+    code=="LINKEDIN_UNSUPPORTED_STREAM" -> R.string.msg_linkedin_unsupported_stream
     code=="MEDIA_CONVERSION_UNAVAILABLE" -> R.string.media_error_conversion
     code=="MEDIA_SESSION_REQUIRED" -> R.string.media_error_session
     code=="MEDIA_PRIVATE_CONTENT" -> R.string.media_error_private
@@ -115,7 +121,7 @@ import com.jumlo.app.R
     code=="PDF_IMAGE_COMPRESSION_PARTIAL" -> R.string.msg_pdf_compression_partial
     code=="PDF_IMAGE_COMPRESSION_FAILED" -> R.string.msg_pdf_compression_failed
     code=="PDF_ENCRYPTED" -> R.string.msg_pdf_encrypted
-code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
+    code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="OWNER_PASSWORD_REQUIRED" -> R.string.msg_owner_password_required
     code=="ZIP_PASSWORD_REQUIRED" -> R.string.msg_zip_password_required
     code=="ARCHIVE_NOT_A_ZIP" -> R.string.msg_archive_not_a_zip
@@ -147,7 +153,7 @@ code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code.contains("MIME") || code.contains("UNSUPPORTED_FORMAT") || code.contains("UNSUPPORTED_FILE") || code=="UNSAFE_ARCHIVE_PATH" || code=="ARCHIVE_HAS_NO_FILES" -> R.string.msg_file_type
     code=="HTTPS_REQUIRED" || code.contains("CLEARTEXT") || code.contains("HTTP_CONSENT") -> R.string.msg_https
     code.contains("NETWORK") || code.contains("TIMEOUT") || code.startsWith("HTTP_") || code.contains("DOWNLOAD_RESTART") -> R.string.msg_network
-    code=="PAGE_SELECTION_LIMIT" -> R.string.msg_page_selection_limit
+    code=="PAGE_SELECTION_LIMIT" || code=="PRINT_PAGE_COUNT" -> R.string.msg_page_selection_limit
     code=="INVALID_REDIRECT" -> R.string.msg_insecure_redirect
     code in setOf("INVALID_URL","INVALID_DOWNLOAD_LIST","INVALID_DRIVE_FILE_ID","INVALID_NETWORK_URL") -> R.string.msg_url
     code=="INVALID_CONTENT_RANGE" -> R.string.msg_network
@@ -164,7 +170,7 @@ code=="PDF_PASSWORD_INCORRECT" -> R.string.msg_pdf_password_incorrect
     code=="INVALID_ANNOTATION" -> R.string.ui_annotation_text_required
     code=="STAMP_CONTENT_REQUIRED" -> R.string.ui_stamp_content_required
     code=="INVALID_RENAME_PATTERN" -> R.string.ui_rename_pattern_invalid
-    code.startsWith("INVALID_") || code=="CHOOSE_ONE_RESIZE_MODE" || code=="PAGE_OUT_OF_RANGE" || code=="TARGET_SIZE_UNREACHABLE" -> R.string.msg_check_settings
-    code.contains("CAPABILITY") || code.contains("UNQUALIFIED") || code.contains("QUALIFICATION") || code.contains("UNSUPPORTED_DRAFT") -> R.string.msg_unavailable
+    code.startsWith("INVALID_") || code=="CHOOSE_ONE_RESIZE_MODE" || code=="PAGE_OUT_OF_RANGE" || code=="TARGET_SIZE_UNREACHABLE" || code=="TOO_MANY_SIGNATURES" -> R.string.msg_check_settings
+    code.contains("CAPABILITY") || code.contains("UNQUALIFIED") || code.contains("QUALIFICATION") || code.contains("UNSUPPORTED_DRAFT") || code=="PRESET_TOOL_MISMATCH" -> R.string.msg_unavailable
     else -> R.string.msg_failed
 }

@@ -8,8 +8,12 @@ import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Download
 import com.jumlo.app.ui.icons.rounded.CheckCircle
 import com.jumlo.app.ui.icons.rounded.Bolt
+import com.jumlo.app.ui.icons.rounded.FolderOpen
 import com.jumlo.app.ui.icons.rounded.History
 import com.jumlo.app.ui.icons.rounded.Link
+import com.jumlo.app.ui.icons.rounded.Refresh
+import com.jumlo.app.ui.icons.rounded.Share
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -18,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
@@ -253,6 +258,9 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     val recentJobs=remember(relevantJobs) { relevantJobs.filterNot(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val availableOutputs=remember(outputs,selectedJob) { outputs.filter { selectedJob==null || it.jobId==selectedJob } }
     val sourceNamesById=remember(sources) { sources.associate { it.id to it.displayName } }
+    val focusJob=remember(relevantJobs,selectedJob) { selectedJob?.let { id -> relevantJobs.firstOrNull { it.request.id==id } } }
+    val completedOutputsReady = focusJob?.progress?.stage == JobStage.COMPLETED && availableOutputs.isNotEmpty()
+    val completedOutputsPending = focusJob?.progress?.stage == JobStage.COMPLETED && availableOutputs.isEmpty()
     Box(Modifier.fillMaxSize()) {
     LazyColumn(Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=QuietTheme.spacing.listBottomBuffer),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item("activity-summary") {
@@ -262,6 +270,25 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
                 if(selectedJob!=null && onShowAll!=null) {
                     TextButton(onClick=onShowAll) {
                         Text(stringResource(R.string.ui_all),style=QuietTheme.typography.metadataStrong)
+                    }
+                }
+            }
+        }
+        if(completedOutputsReady) {
+            item("completion-hero") {
+                CompletedResultCard(
+                    outputs = availableOutputs,
+                    onOpen = { onOpen(availableOutputs.first()) },
+                    onShare = { onShare(availableOutputs.first()) },
+                    onNewRun = onNewRun
+                )
+            }
+        } else if(completedOutputsPending) {
+            item("completion-finalizing") {
+                NeonPanel(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.5.dp)
+                        Text(stringResource(R.string.s10_finalizing_output), style = QuietTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -333,4 +360,140 @@ private val REENTER_URL_ERROR_CODES = setOf("SECRET_EXPIRED", "DOWNLOAD_RESTART_
         }
     }
     // Single error presentation is handled directly inside TransferRow to avoid duplicate error banners.
+}
+
+@Composable
+internal fun CompletedResultCard(
+    outputs: List<OutputRecord>,
+    onOpen: () -> Unit,
+    onShare: () -> Unit,
+    onNewRun: () -> Unit,
+    modifier: Modifier = Modifier,
+    newRunLabel: String? = null
+) {
+    val primary = outputs.first()
+    val sizeSummary = if (outputs.size > 1) formatBytes(outputs.sumOf { it.sizeBytes }) else formatOutputSizeSummary(primary)
+    // formatOutputSizeSummary already appends the subfolder when present.
+    val metadataLine = if (primary.metadata.subfolder.isNullOrBlank()) {
+        "$sizeSummary · ${stringResource(R.string.s10_saved_location_default)}"
+    } else sizeSummary
+    CompletedResultCard(
+        title = if (outputs.size > 1) stringResource(R.string.s10_files_saved_count, outputs.size)
+        else stringResource(R.string.s10_saved_title),
+        displayName = primary.displayName,
+        metadataLine = metadataLine,
+        onOpen = onOpen,
+        onShare = onShare,
+        onNewRun = onNewRun,
+        newRunLabel = newRunLabel ?: stringResource(R.string.s10_new_operation),
+        modifier = modifier
+    )
+}
+
+@Composable
+internal fun CompletedResultCard(
+    title: String,
+    displayName: String,
+    metadataLine: String,
+    onOpen: () -> Unit,
+    onShare: () -> Unit,
+    onNewRun: () -> Unit,
+    newRunLabel: String,
+    modifier: Modifier = Modifier
+) {
+    val pillars = QuietTheme.pillars
+    val colors = MaterialTheme.colorScheme
+    val haptics = rememberAppHaptics()
+    Surface(
+        shape = QuietTheme.shapes.heroCard,
+        color = pillars.cardSurface,
+        shadowElevation = 0.dp,
+        modifier = modifier.fillMaxWidth().testTag("completion.result.card")
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = QuietTheme.shapes.iconTile,
+                    color = pillars.successContainer,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = pillars.successPrimary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = QuietTheme.typography.sectionTitle,
+                        color = pillars.successPrimary,
+                        modifier = Modifier.semantics { heading() }
+                    )
+                    Text(
+                        text = displayName,
+                        style = QuietTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            textDirection = TextDirection.Content
+                        ),
+                        color = colors.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = metadataLine,
+                        style = QuietTheme.typography.metadata.copy(textDirection = TextDirection.Content),
+                        color = colors.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { haptics.actionClick(); onOpen() },
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).pressFeedback(),
+                    shape = QuietTheme.shapes.button
+                ) {
+                    Icon(Icons.Rounded.FolderOpen, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.action_open), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                FilledTonalButton(
+                    onClick = { haptics.actionClick(); onShare() },
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).pressFeedback(),
+                    shape = QuietTheme.shapes.button
+                ) {
+                    Icon(Icons.Rounded.Share, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.action_share), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            OutlinedButton(
+                onClick = { haptics.actionClick(); onNewRun() },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).pressFeedback(),
+                shape = QuietTheme.shapes.button
+            ) {
+                Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(newRunLabel)
+            }
+        }
+    }
 }

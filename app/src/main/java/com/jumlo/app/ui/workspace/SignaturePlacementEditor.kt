@@ -21,6 +21,8 @@ import com.jumlo.app.ui.components.QuietStateCard
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.NavigateBefore
 import com.jumlo.app.ui.icons.automirrored.rounded.NavigateNext
+import com.jumlo.app.ui.icons.automirrored.rounded.Redo
+import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.scan.SignaturePad
 import com.jumlo.app.ui.theme.QuietTheme
@@ -79,10 +81,10 @@ internal fun SignaturePlacementEditor(vm:AppViewModel,sourceId:String,signatureI
             Text(stringResource(R.string.studio_signature_place),style=QuietTheme.typography.sectionTitle,modifier=Modifier.weight(1f))
             IconButton(enabled=past.isNotEmpty(),onClick={
                 future=(future+listOf(placements)).takeLast(30);replace(past.last());past=past.dropLast(1)
-            },modifier=Modifier.testTag("signature.placement.undo")) {Icon(Icons.Rounded.Undo,stringResource(R.string.visual_edit_undo))}
+            },modifier=Modifier.testTag("signature.placement.undo")) {Icon(Icons.AutoMirrored.Rounded.Undo,stringResource(R.string.visual_edit_undo))}
             IconButton(enabled=future.isNotEmpty(),onClick={
                 past=(past+listOf(placements)).takeLast(30);replace(future.last());future=future.dropLast(1)
-            }) {Icon(Icons.Rounded.Redo,stringResource(R.string.visual_edit_redo))}
+            }) {Icon(Icons.AutoMirrored.Rounded.Redo,stringResource(R.string.visual_edit_redo))}
         }
         Text(stringResource(R.string.studio_signature_gesture),style=QuietTheme.typography.metadata)
         val current=frame?.getOrNull()

@@ -65,7 +65,7 @@ Generic cleartext HTTP file downloads remain a deliberate compatibility path con
 | Target API | `compileSdk=36`, `targetSdk=36`, `minSdk=26` | Recheck Play requirements at upload. Current requirement for ordinary new apps/updates is API 36. |
 | Native runtime and 16 KB pages | Pinned full ARM64 native payload; repacker and `inspect-media-artifact.py` validate nested ELF alignment/closure | Final artifact inspection plus actual ARM64 16 KB device execution. Static ELF checks do not establish runtime compatibility. |
 | Data safety and privacy policy | Local-first processing, minimal permissions, encrypted credentials, no default analytics/crash upload | Publish an owner-completed privacy URL and complete the Console form against the actual shipped SDKs, providers and optional service configuration. |
-| Retired legacy tools | Webpage→PDF, authenticated Drive (`file_drive`), and vault entries are removed from the current 30-tool registry | Any future re-introduction requires full security, privacy, and backend qualification. |
+| Retired legacy tools | Webpage→PDF, authenticated Drive (`file_drive`), and vault entries are removed from the current 21-primary-tool catalogue (33 registered tool IDs) | Any future re-introduction requires full security, privacy, and backend qualification. |
 
 Primary policy references, checked on the review date:
 
@@ -78,7 +78,7 @@ Primary policy references, checked on the review date:
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
 
-Revision note: Updated to match the current 30-tool codebase where `file_drive` (`GoogleDriveClient.kt`), `webpage_pdf`, and `xf_05` are retired and absent. Runtime results and unresolved release gates have no current evidence file in this tree; regenerate them for the release candidate.
+Revision note: Updated to match the current 21-primary-tool catalogue (33 registered tool IDs) where `file_drive` (`GoogleDriveClient.kt`), `webpage_pdf`, and `xf_05` are retired and absent. Runtime results and unresolved release gates have no current evidence file in this tree; regenerate them for the release candidate.
 
 ## 2026-10-28 — Reader bookmarks
 

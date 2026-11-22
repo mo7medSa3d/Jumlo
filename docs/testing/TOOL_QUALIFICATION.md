@@ -1,6 +1,6 @@
 # Tool qualification handoff
 
-This is an execution template, **not a release pass**. [tool-matrix.template.csv](tool-matrix.template.csv) covers the **30 currently registered tool IDs × normal, large, encrypted and corrupt input** (120 cases), validated against the [registry](../../app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt) and [capability policy](../../core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt) by `scripts/test-tool-matrix-contract.py`. Retired IDs (including `file_drive`, `webpage_pdf`, and `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv). No case is a device PASS.
+This is an execution template, **not a release pass**. [tool-matrix.template.csv](tool-matrix.template.csv) covers the **33 currently registered tool IDs** (21 primary tools, 5 folded PDF actions, 7 internal legacy aliases) **× normal, large, encrypted and corrupt input** (132 cases), validated against the [registry](../../app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt) and [capability policy](../../core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt) by `scripts/test-tool-matrix-contract.py`. Retired IDs (including `file_drive`, `webpage_pdf`, and `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv). No case is a device PASS.
 
 The eight historical N/A scenarios for two unregistered IDs (`webpage_pdf`, `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv) rather than being silently counted as current registered capabilities. This does not remove any user-facing registered tool.
 
@@ -29,7 +29,7 @@ Use `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, or `N/A`. `PASS` requires all row asse
 
 ## Retired Google Drive processing
 
-`file_drive` (`GoogleDriveClient.kt`) has been **retired** from the 30-tool catalogue and moved to [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv).
+`file_drive` (`GoogleDriveClient.kt`) has been **retired** from the active catalogue and moved to [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv).
 
 ## Navigation-only entries
 
@@ -39,9 +39,6 @@ Their four input rows are `N/A` because they are not dispatcher processing jobs.
 | --- | --- |
 | `pdf_01` | Reader route. Open normal/large/encrypted/corrupt PDFs; verify scrolling, zoom, thumbnails, dark mode and safe failure. |
 | `scan_doc` | ML Kit launcher. On supported hardware verify camera/gallery, multiple pages, cancellation/model availability, saved PDF and source preservation. |
-| `dl_settings` | Settings route. Persist changes and verify later downloads use them. |
-| `file_02` | Files route. Verify granted/read-only/revoked provider access and actual file actions. |
-| `file_trash` | Files/trash route. Verify recoverable removal and restoration with matching hashes. |
 
 ## Existing related tests: scope matters
 

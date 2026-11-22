@@ -4,8 +4,6 @@
     <string name="tagline">ملفاتك. أدواتك.</string>
     <string name="tagline_subtitle">حرّر ملفات PDF والصور محلياً، مع عمليات نقل عبر الشبكة عند اختيارك.</string>
     <string name="offline_pledge_short">تحرير المستندات محلياً. تستخدم الميزات المتصلة الشبكة عند اختيارها.</string>
-    <string name="offline_badge">تحرير محلي واتصال اختياري</string>
-    <string name="local_only_badge">تعديل على الجهاز</string>
 
     <!-- Navigation Dock -->
     <string name="nav_home">الرئيسية</string>
@@ -14,47 +12,19 @@
     <string name="nav_files">الملفات</string>
 
     <!-- Welcome Launch -->
-    <string name="welcome_title">مرحباً بك في جملو</string>
     <string name="welcome_badge">تحرير محلي • تنزيلات وDrive عند الحاجة</string>
     <string name="welcome_card_title">عدّل محلياً وشارك باختيارك</string>
     <string name="welcome_card_body">تُعدَّل ملفات PDF والصور على جهازك. تستخدم التنزيلات ومعاينات الوسائط وخدمات الاستخراج الاختيارية وعمليات Google Drive الشبكة عند اختيارها.</string>
-    <string name="welcome_sandbox_active">التخزين الخاص بالتطبيق جاهز</string>
-    <string name="welcome_pillars_header">أقسام الأدوات الرئيسية</string>
-    <string name="welcome_ready">جاهز</string>
-    <string name="welcome_get_started">ابدأ الآن</string>
-    <string name="welcome_privacy_licenses">هندسة الخصوصية والتراخيص</string>
 
     <!-- Home -->
-    <string name="home_search_placeholder">البحث في الأدوات والملفات المحلية…</string>
-    <string name="home_hero_title">أدوات ملفات قوية</string>
-    <string name="home_hero_subtitle">PDF والصور والأرشيفات والتنزيلات، تتم معالجتها على جهازك.</string>
     <string name="transfer_activity_title">نشاط النقل</string>
-    <string name="pillar_pdf_title">ملفات PDF</string>
-    <string name="pillar_pdf_sub">دمج وتقسيم وترتيب</string>
-    <string name="pillar_images_title">أدوات الصور</string>
-    <string name="pillar_images_sub">تحويل وتحجيم وقص</string>
-    <string name="pillar_downloads_title">مدير التنزيلات</string>
-    <string name="pillar_downloads_sub">روابط مباشرة وقائمة انتظار</string>
-    <string name="pillar_files_title">متصفح الملفات</string>
-    <string name="pillar_files_sub">تخزين داخلي ومجلدات ممنوحة</string>
-    <string name="quick_actions_title">الإجراءات السريعة والمفضلة</string>
     <string name="action_customize">تخصيص</string>
-    <string name="recent_results_title">أحدث المخرجات المكتملة</string>
-    <string name="local_cache_badge">ذاكرة محلية</string>
-    <string name="filter_all">الكل</string>
-    <string name="filter_pdfs">PDF فقط</string>
-    <string name="filter_images">الصور</string>
-    <string name="filter_drafts">المسودات</string>
-    <string name="filter_archives">الأرشيف</string>
-    <string name="action_view">عرض</string>
     <string name="action_open">فتح</string>
     <string name="action_print">طباعة</string>
     <string name="action_share">مشاركة</string>
-    <string name="action_apply">تطبيق</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_pause">إيقاف مؤقت</string>
     <string name="action_resume">استئناف</string>
-    <string name="action_change">تغيير</string>
     <string name="action_reset">إعادة ضبط</string>
     <string name="action_copy">نسخ</string>
     <string name="action_paste">لصق</string>
@@ -76,135 +46,44 @@
     <string name="action_restore">استعادة</string>
     <string name="action_undo">تراجع</string>
     <string name="output_pages_count">عدد الصفحات: %1$d</string>
-    <string name="output_entries_count">%1$d عناصر أرشيف</string>
     <string name="output_sha256_label">بصمة SHA-256: &#x200E;%1$s</string>
     <string name="job_outcomes_summary">تم نشر %1$d · فشل %2$d</string>
-    <string name="before_after_original">الأصلي</string>
-    <string name="before_after_target">الناتج المستهدف</string>
-
-    <!-- Scoped Search -->
-    <string name="search_title">البحث في الأدوات والملفات</string>
-    <string name="search_matching_utilities">الأدوات المطابقة</string>
-    <string name="search_suggested_tools">أدوات مقترحة</string>
-    <string name="search_recent_matching_files">الملفات المطابقة الحديثة</string>
-    <string name="search_local_index_notice">يبحث في الأدوات المثبتة وملفاتك على هذا الجهاز فقط، دون إرسال أي بيانات للإنترنت.</string>
 
     <!-- Choose Source Import -->
-    <string name="import_title">استيراد الملفات</string>
     <string name="import_subtitle">اختر ملفات PDF والصور. تبقى التعديلات على المستندات على جهازك.</string>
-    <string name="import_received_share">تم الاستلام عبر مشاركة أندرويد</string>
-    <string name="import_use_shared">استخدام الملفات المشاركة</string>
     <string name="import_photo_gallery">معرض الصور والوسائط</string>
     <string name="import_device_files">ملفات الجهاز والتخزين</string>
-    <string name="import_my_files">ملفاتي (التخزين الداخلي للتطبيق)</string>
-    <string name="import_privacy_pledge">تُعالج المستندات على جهازك باستخدام ملفات التطبيق الخاصة والملفات التي تختارها. قد تستخدم التنزيلات والصور المصغّرة البعيدة واستخراج الروابط الاختياري وتثبيت النماذج الشبكة.</string>
-
-    <!-- Permission Education -->
-    <string name="perm_sheet_badge">نافذة استعادة النظام</string>
-    <string name="perm_allow_title">السماح بإشعارات تقدم المهام في الخلفية</string>
-    <string name="perm_allow_subtitle">تابع حالة التنزيلات والتحويلات أثناء استخدام تطبيقات أخرى أو عند قفل الشاشة.</string>
-    <string name="perm_grant_btn">منح إذن الإشعارات</string>
-    <string name="perm_continue_without">المتابعة بدون إشعارات</string>
 
     <!-- Tools Catalog -->
-    <string name="tools_catalog_title">دليل الأدوات</string>
-    <string name="tools_count_badge">16 أداة</string>
     <string name="tools_no_matching">لا توجد أدوات مطابقة</string>
     <string name="tools_no_matching_sub">جميع الأدوات تعمل محلياً على جهازك. جرب البحث بكلمات مثل \'دمج\' أو \'تحويل\'.</string>
     <string name="tools_reset_filters">إعادة ضبط الفلاتر</string>
 
-    <!-- PDF Tools -->
-    <string name="tool_images_to_pdf">صور إلى PDF</string>
-    <string name="tool_images_to_pdf_sub">تجميع فوري للصور في مستند PDF</string>
-    <string name="tool_merge_pdf">دمج ملفات PDF</string>
-    <string name="tool_merge_pdf_sub">دمج عدة ملفات PDF بدون فقد جودة</string>
-    <string name="tool_split_pdf">تقسيم مستند PDF</string>
-    <string name="tool_split_pdf_sub">تقسيم حسب عدد الصفحات أو النطاقات</string>
-    <string name="tool_organize_pages">ترتيب صفحات PDF</string>
-    <string name="tool_organize_pages_sub">إعادة ترتيب أو تدوير أو حذف الصفحات</string>
-    <string name="tool_extract_pages">استخراج صفحات PDF</string>
-    <string name="tool_extract_pages_sub">تصدير نطاقات صفحات محددة</string>
-    <string name="tool_pdf_to_images">تحويل PDF إلى صور</string>
-    <string name="tool_pdf_to_images_sub">تصدير الصفحات بصيغة JPG أو PNG</string>
-    <string name="tool_view_pdf">عارض PDF</string>
-    <string name="tool_view_pdf_sub">فحص وقراءة المستندات المحلية</string>
-    <string name="tool_pdf_expansion">ضغط PDF والعلامة المائية والترقيم</string>
-
-    <!-- Image Tools -->
-    <string name="tool_convert_images">تحويل الصور</string>
-    <string name="tool_convert_images_sub">تحويل دفعات JPG وPNG وWebP</string>
-    <string name="tool_resize_images">تغيير أبعاد الصور</string>
-    <string name="tool_resize_images_sub">تحجيم بالبكسل أو النسبة المئوية</string>
-    <string name="tool_crop_rotate_flip">قص وتدوير وقلب الصور</string>
-    <string name="tool_crop_rotate_flip_sub">نسب أبعاد قياسية وتعديل الاتجاه</string>
-    <string name="tool_compress_images">ضغط الصور</string>
-    <string name="tool_compress_images_sub">تقليل حجم الملف مع الحفاظ على الجودة</string>
-    <string name="tool_image_expansion">دمج الصور والعلامة المائية</string>
-
-    <!-- Download Tools -->
-    <string name="tool_new_download">تنزيل جديد</string>
-    <string name="tool_new_download_sub">لصق الرابط المباشر للتنزيل</string>
-    <string name="tool_batch_url">إدخال دفعة روابط</string>
-    <string name="tool_download_settings">إعدادات التنزيل</string>
-    <string name="tool_download_settings_sub">تفضيلات الشبكة ومجلد الحفظ</string>
-
     <!-- File Tools -->
-    <string name="tool_browse_storage">تصفح التخزين</string>
-    <string name="tool_browse_storage_sub">تصفح تخزين التطبيق والمجلدات المرتبطة</string>
-    <string name="tool_create_zip">إنشاء أرشيف ZIP</string>
-    <string name="tool_create_zip_sub">ضغط الملفات في أرشيف محلي</string>
     <string name="tool_extract_zip">فك ضغط ZIP</string>
-    <string name="tool_extract_zip_sub">استخراج ملفات أرشيف ZIP بأمان</string>
 
     <!-- Settings -->
     <string name="settings_title">الإعدادات العامة</string>
-    <string name="settings_appearance_language">المظهر واللغة</string>
-    <string name="settings_haptic_feedback">الاستجابة اللمسية (الاهتزاز)</string>
-    <string name="settings_reduce_motion">تقليل الحركة والمؤثرات</string>
-    <string name="settings_tool_defaults">الإعدادات الافتراضية للأدوات</string>
-    <string name="settings_download_prefs">تفضيلات التنزيل</string>
-    <string name="settings_storage_history_cache">التخزين والسجل وذاكرة التخزين المؤقت</string>
-    <string name="settings_privacy_permissions">الخصوصية والأذونات</string>
-    <string name="settings_offline_help">الدليل والمساعدة بدون اتصال</string>
-    <string name="settings_diagnostic_report">تقرير التشخيص الآمن</string>
-    <string name="settings_about">حول جملو</string>
     <string name="settings_storage_summary">النسخ: %1$s · المخرجات: %2$s · المهملات: %3$s · التنزيلات: %4$s · المؤقتة: %5$s</string>
     <string name="settings_allow_notifications">السماح بإشعارات التقدم في الخلفية</string>
     <string name="settings_privacy_summary">تجري معالجة المستندات على جهازك. قد تستخدم التنزيلات والصور المصغّرة البعيدة وخدمات الاستخراج الاختيارية وعمليات Google Drive وتثبيت نماذج المسح والتعرّف الضوئي الشبكة. النسخ الاحتياطي للتطبيق معطّل.</string>
     <string name="processing_channel">معالجة الملفات</string>
     <string name="processing_title">جاري معالجة الملفات على هذا الجهاز</string>
-    <string name="processing_body">افتح التطبيق لرؤية التقدم والنتائج.</string>
     <string name="processing_cancel">إلغاء</string>
-    <string name="settings_export_error_log">تصدير سجل الأخطاء</string>
     <string name="scan_title">مسح المستند</string>
     <string name="scan_smart_retry">إعادة المسح الذكي</string>
     <string name="scan_use_basic_camera">استخدام الكاميرا الأساسية</string>
-    <string name="scan_hint">حاذِ المستند داخل الإطار. يتم اكتشاف الحواف تلقائياً ويمكنك تعديلها.</string>
-    <string name="scan_allow_camera">السماح بالكاميرا</string>
     <string name="scan_capture">التقط وصحّح المنظور</string>
     <string name="scan_back">رجوع</string>
-    <string name="scan_error_bind">الكاميرا غير متاحة. أغلق تطبيقات الكاميرا الأخرى أو تحقق من إذن الكاميرا ثم أعد المحاولة.</string>
-    <string name="scan_error_process">تعذّرت معالجة المسح. أعد التقاط الصورة أو استورد صورة بدلًا من ذلك.</string>
-    <string name="scan_error_capture">تعذّر التقاط الصفحة. ثبّت الجهاز وحاول مجددًا.</string>
     <string name="signature_title">ارسم التوقيع</string>
     <string name="signature_clear">مسح</string>
     <string name="signature_save">حفظ الرسم كصورة توقيع</string>
     <string name="signature_hint">بعد الحفظ، أضف صورة التوقيع كملف ثانٍ محدد (ملف PDF أولًا).</string>
-    <string name="scan_adjust_hint">اسحب الزوايا الأربع إلى حواف المستند.</string>
-    <string name="scan_apply">تطبيق التصحيح</string>
-    <string name="scan_retake">إعادة الالتقاط</string>
-    <string name="settings_refresh_storage">تحديث التخزين</string>
-    <string name="settings_clean_temp">تنظيف الملفات المؤقتة</string>
 
     <!-- Workspace & Tool Fields -->
     <string name="home_resume_workspace">استئناف مساحة العمل النشطة (%1$d)</string>
     <string name="downloads_empty_title">لا توجد تنزيلات مباشرة بعد</string>
-    <string name="downloads_empty_sub">أضف رابط HTTPS مباشر للتنزيل مع متابعة التقدم والإلغاء والتحقق من SHA-256.</string>
-    <string name="files_snapshots_title">نسخ الملفات المستوردة</string>
-    <string name="files_snapshots_sub">نسخ محلية محفوظة داخل التطبيق للملفات التي اخترتها</string>
     <string name="files_import_action">استيراد</string>
-    <string name="files_empty_snapshots">لم يتم استيراد أي ملفات بعد.</string>
-    <string name="files_add_to_workspace">إضافة إلى مساحة العمل</string>
     <string name="files_browse_inside">التصفح داخل التطبيق</string>
     <string name="files_new_folder">مجلد جديد</string>
     <string name="files_folder_label">مجلد</string>
@@ -217,18 +96,12 @@
     <string name="dialog_delete_title">الحذف نهائياً؟</string>
     <string name="dialog_delete_body">سيتم حذف الملف من المجلد الممنوح ولا يمكن التراجع عن ذلك.</string>
     <string name="workspace_title">مساحة عمل الأداة</string>
-    <string name="workspace_clear_selection">مسح التحديد</string>
     <string name="workspace_direct_urls_batch">روابط الملفات المباشرة (رابط في كل سطر)</string>
     <string name="workspace_direct_url_single">رابط الملف المباشر</string>
     <string name="workspace_batch_valid_links">الروابط الجاهزة للتنزيل: %1$d من %2$d</string>
     <string name="workspace_batch_duplicates">الروابط المكررة التي سيتم تخطيها: %1$d</string>
     <string name="workspace_batch_invalid_links">الروابط التي لا تشير إلى ملفات HTTP/HTTPS مباشرة: %1$d</string>
     <string name="workspace_direct_url_hint">روابط ملفات HTTP/HTTPS المباشرة وروابط Google Drive.</string>
-    <string name="field_expected_sha256">بصمة SHA-256 المتوقعة (اختياري)</string>
-    <string name="field_unmetered_only">شبكة غير محدودة البيانات فقط</string>
-    <string name="field_wifi_only">واي فاي فقط</string>
-    <string name="field_allow_http">السماح باتصال HTTP غير المشفر لهذه المهمة</string>
-    <string name="field_http_warning">اتصال HTTP غير مشفر. يظل التحويل من HTTPS إلى HTTP وإرسال بيانات الاعتماد عبر HTTP محظوراً.</string>
     <string name="field_paper_width">عرض الصفحة (نقطة)</string>
     <string name="field_paper_height">ارتفاع الصفحة (نقطة)</string>
     <string name="field_margin_mm">الهامش (مم)</string>
@@ -241,65 +114,23 @@
     <string name="field_output_prefix">بادئة اسم الملف الناتج</string>
     <string name="field_merge_note">اختر ملفَي PDF أو أكثر بالترتيب المطلوب للدمج.</string>
     <string name="field_pages_per_part">عدد الصفحات لكل جزء (عند ترك النطاقات فارغة)</string>
-    <string name="field_extract_instead">استخراج في ملف PDF واحد بدلاً من عدة أجزاء</string>
     <string name="field_organize_order">ترتيب الصفحات (تبدأ من 1، مفصولة بفواصل؛ احذف الرقم لإزالة الصفحة)</string>
     <string name="field_rotate_pages">الصفحات المراد تدويرها (فارغ = لا شيء، أو مثل 1,3)</string>
     <string name="field_clockwise_rotation">التدوير باتجاه عقارب الساعة</string>
-    <string name="field_max_image_dpi">أقصى دقة للصور المضمنة DPI (72..300)</string>
     <string name="field_quality">جودة الصورة (1–100)</string>
     <string name="field_pdf_quality">جودة صور PDF (1–100)</string>
     <string name="field_pdf_lossless">الجودة الأصلية / بدون فقدان</string>
     <string name="field_pdf_lossless_note">تُضمَّن البكسلات الأصلية دون إعادة ترميز JPEG. الملفات الناتجة أكبر حجماً، وقد تتجاوز الصور الكبيرة جداً ميزانية الذاكرة في الجهاز.</string>
-    <string name="field_target_size_mb">الحجم المستهدف (ميغابايت)</string>
-    <string name="field_target_size_note">عند تحديد حجم مستهدف، يخفض Jumlo الدقة والجودة حتى يصل الملف إليه، ويعرض الحجم الذي تحقق فعليًا.</string>
-    <string name="field_remove_title">إزالة العنوان والموضوع والكلمات المفتاحية أيضًا</string>
-    <string name="field_clean_note">يزيل اسم المؤلف وبرنامج الإنتاج وتاريخي الإنشاء والتعديل ومسار XMP المضمّن. يُحفظ الملف المنظَّف مع تقرير يسرد كل مفتاح تمت إزالته.</string>
     <string name="field_compress_slider">قوة الضغط: %1$d%%</string>
-    <string name="field_compress_estimate">الحجم التقديري للناتج: %1$s</string>
-    <string name="field_compress_saving">التوفير التقديري: %1$d%%</string>
-    <string name="field_compress_estimate_note">تقدير مبني على الصور المضمنة. يعرض الملف المحفوظ الحجم الحقيقي.</string>
-    <string name="field_compress_preset_high">ضغط عالٍ</string>
-    <string name="field_compress_preset_balanced">ضغط متوسط</string>
-    <string name="field_compress_preset_low">ضغط منخفض</string>
     <string name="field_compress_note">تبقى النصوص والرسومات المتجهة دون تغيير؛ يتم تقليص الصور المضمنة التي تتجاوز الدقة المحددة.</string>
-    <string name="field_left">يسار (0..1)</string>
-    <string name="field_top">أعلى (0..1)</string>
-    <string name="field_right">يمين (0..1)</string>
-    <string name="field_bottom">أسفل (0..1)</string>
     <string name="field_crop_hint">إحداثيات الصفحة النسبية (من 0.0 إلى 1.0).</string>
-    <string name="field_text">النص</string>
     <string name="field_page_number">رقم الصفحة (يبدأ من 1)</string>
-    <string name="field_x_norm">الموضع الأفقي (0..1)</string>
-    <string name="field_y_norm">الموضع الرأسي (0..1)</string>
-    <string name="field_annotation_kind">التعليق</string>
-    <string name="field_annotation_region_hint">اسحب المنطقة على معاينة الصفحة، واسحب زواياها لتغيير الحجم.</string>
-    <string name="annotation_highlight">تظليل</string>
-    <string name="annotation_underline">تسطير</string>
-    <string name="annotation_strikethrough">شطب</string>
-    <string name="annotation_note">ملاحظة لاصقة</string>
-    <string name="annotation_square">مستطيل</string>
-    <string name="annotation_circle">دائرة</string>
-    <string name="annotation_textbox">مربع نص</string>
-    <string name="annotation_ink">رسم حر</string>
-    <string name="annotation_text">نص عادي</string>
-    <string name="field_as_note_annotation">إضافة كملاحظة PDF قابلة للطي</string>
     <string name="field_watermark_text">نص العلامة المائية (اختياري)</string>
     <string name="field_opacity_percent">العتامة (1–100%)</string>
     <string name="field_add_page_numbers">إضافة أرقام الصفحات أسفل المنتصف</string>
     <string name="field_start_number">رقم البداية للترقيم</string>
     <string name="field_signature_note">اختر ملف PDF أولاً وصورة التوقيع ثانياً، أو ارسم توقيعاً جديداً.</string>
-    <string name="field_remove_protection">إزالة الحماية بكلمة مرور حالية</string>
     <string name="field_user_password">كلمة مرور الفتح</string>
-    <string name="field_owner_password">كلمة مرور المالك/الأذونات (اختياري)</string>
-    <string name="field_protect_note">للمستندات التي تملكها فقط. تبقى كلمات المرور في ذاكرة الجلسة فقط ولا تُحفظ على القرص.</string>
-    <string name="field_title">العنوان</string>
-    <string name="field_author">المؤلف</string>
-    <string name="field_subject">الموضوع</string>
-    <string name="field_keywords">الكلمات المفتاحية</string>
-    <string name="field_insert_at_page">إدراج ملف PDF الثاني قبل الصفحة (تبدأ من 1، عند اختيار ملفين)</string>
-    <string name="field_forms_json">قيم الحقول (مفتاح=قيمة في كل سطر)</string>
-    <string name="field_flatten_form">دمج حقول النموذج في محتوى الصفحة الثابت</string>
-    <string name="field_ocr_note">يتعرف على النص محليًا على جهازك لتصدير ملف .txt ونسخة PDF قابلة للبحث.</string>
     <string name="field_output_format">صيغة الإخراج</string>
     <string name="field_target_width">العرض المطلوب (بكسل)</string>
     <string name="field_target_height">الارتفاع المطلوب (بكسل)</string>
@@ -309,20 +140,9 @@
     <string name="field_rotate_degrees">درجة التدوير باتجاه عقارب الساعة</string>
     <string name="field_flip_horizontal">قلب أفقي</string>
     <string name="field_flip_vertical">قلب رأسي</string>
-    <string name="field_exif_remove_location">إزالة بيانات الموقع الجغرافي GPS</string>
-    <string name="field_exif_remove_all">إزالة جميع بيانات EXIF الوصفية</string>
-    <string name="field_exif_note">يُصدر تقريراً ببيانات EXIF ويحفظ صوراً منظفة حسب اختيارك.</string>
     <string name="field_use_second_logo">استخدام الصورة الثانية المحددة كشعار علامة مائية</string>
     <string name="field_layout">تخطيط الدمج</string>
     <string name="field_gap_px">المسافة الفاصلة بين الصور (بكسل)</string>
-    <string name="field_overlap_px">قص التداخل العلوي (بكسل، لدمج لقطات الشاشة)</string>
-    <string name="field_brightness">السطوع (-100..100)</string>
-    <string name="field_contrast">التباين (0–300%)</string>
-    <string name="field_saturation">التشبع اللوني (0–300%)</string>
-    <string name="field_padding_px">هامش اللوحة المحيط (بكسل)</string>
-    <string name="field_target_bytes">الحجم الأقصى المستهدف (بايت)</string>
-    <string name="field_compare_img_note">اختر صورتين لحساب الفروق اللونية وإنشاء خريطة الاختلاف.</string>
-    <string name="field_zip_create_note">يجمع الملفات المحددة في أرشيف ZIP واحد مع التحقق من بصمة SHA-256.</string>
     <string name="field_zip_level">مستوى الضغط (0..9)</string>
     <string name="field_output_filename">اسم الملف الناتج</string>
     <string name="field_zip_extract_note">اختر ملف .zip واحدًا لاستخراج ملفاته بأمان.</string>
@@ -330,43 +150,19 @@
     <string name="field_encrypted_zip_note">ينشئ أو يستخرج أرشيفات ZIP مشفرة بمعيار AES-256 عند إدخال كلمة مرور.</string>
     <string name="field_rename_pattern">النمط ({n} = الرقم التسلسلي، {name} = الاسم الأصلي)</string>
     <string name="field_rename_note">ينشر نسخاً معاداً تسميتها من الملفات المحددة باستخدام النمط ورقم البداية.</string>
-    <string name="field_duplicates_note">يحسب بصمة SHA-256 للملفات المحددة ويكتشف المجموعات المتطابقة تماماً.</string>
-    <string name="field_trash_note">يعرض عناصر سلة المهملات ويزيل الملفات المؤقتة المنتهية الصلاحية.</string>
     <string name="field_split_every_n">عدد الصفحات لكل جزء</string>
     <string name="field_fill_page">ملء الصفحة (قص الزوائد)</string>
     <string name="field_grayscale">تحويل إلى تدرج الرمادي</string>
     <string name="workspace_queue_download">إضافة التنزيل إلى القائمة</string>
     <string name="workspace_process_files">معالجة الملفات المحددة</string>
     <string name="workspace_queue_summary">المحدد: %1$d ملفات (%2$s)</string>
-    <string name="workspace_queue_hint">استورد وحدد ملف مصدر واحداً على الأقل بالأعلى لتفعيل المعالجة.</string>
     <string name="activity_title">نشاط المهام والنتائج</string>
     <string name="activity_reenter_url">أعد إدخال الرابط لإعادة المحاولة</string>
     <string name="activity_reenter_url_hint">تُحفظ الروابط الموقعة في الذاكرة المؤقتة فقط وتُمسح عند إغلاق التطبيق.</string>
     <string name="activity_retry_urls">إعادة المحاولة بهذه الروابط</string>
     <string name="activity_published_notice">تم التحقق من المخرجات على القرص وإدراجها في الرئيسية والملفات.</string>
     <string name="activity_start_new_run">بدء عملية جديدة</string>
-    <string name="account_hub_title">حساب المستخدم والمحرك</string>
-    <string name="account_hub_tier">نسخة جملو الاحترافية المحلية</string>
-    <string name="account_privacy_status">المستندات على الجهاز • التنزيلات تستخدم الشبكة</string>
-    <string name="account_storage_stats">مساحة التخزين والذاكرة</string>
-    <string name="account_clear_cache_btn">تفريغ الذاكرة المؤقتة الآن</string>
-    <string name="account_clear_cache_success">تم مسح الملفات المؤقتة</string>
-    <string name="account_preferences_header">المظهر واللغة وتجربة الاستخدام</string>
-    <string name="home_greeting">أهلاً بك في جملو</string>
-    <string name="home_greeting_sub">محركك المحلي الذكي لإدارة الوسائط والمستندات بخصوصية كاملة</string>
-    <string name="home_stat_outputs">ملفات منجزة</string>
-    <string name="home_stat_jobs">عمليات ناجحة</string>
-    <string name="home_stat_storage">مساحة مستخدمة</string>
-    <string name="home_featured_header">أدوات رئيسية سريعة</string>
-    <string name="home_browse_catalog_banner_title">استكشف جميع الأدوات</string>
-    <string name="home_browse_catalog_banner_sub">أدوات PDF المتقدمة، استوديو الصور، التشفير والأرشيف</string>
-    <string name="home_browse_catalog_btn">فتح دليل الأدوات</string>
-    <string name="home_no_recent_outputs">لا توجد نتائج معالجة حديثة بعد. اختر إحدى الأدوات للبدء فوراً!</string>
-    <string name="home_active_tasks_title">مهام قيد المعالجة الآن</string>
-    <string name="media_rights_confirmation">أؤكد أن لدي الحق في تنزيل هذا المحتوى وأنني سألتزم بشروط المنصة.</string>
-    <string name="media_rights_required">أكّد حقوق التنزيل وشروط المنصة أولًا.</string>
     <!-- مهام دفعية محلية من النتائج المحفوظة -->
-    <string name="home_favorite_results">الملفات المثبتة</string>
     <string name="files_workflow_incompatible">لا يمكن دمج هذه الملفات بهذه الأداة. اختر ملفات PDF فقط للدمج، أو صورًا فقط للتحويل إلى PDF.</string>
     <string name="files_workflow_missing">أحد النتائج مفقود أو تغيّر. حدّث صفحة الملفات وحاول مجددًا، لم تُعدّل الملفات الأصلية.</string>
     <string name="files_workflow_size">قد لا تكفي مساحة الجهاز لمعالجة هذه الملفات. وفّر مساحة ثم أعد المحاولة؛ ملفاتك الأصلية لم تتغير.</string>
@@ -379,7 +175,6 @@
     <string name="files_bundle_selected">إنشاء ZIP (%1$d)</string>
     <string name="files_merge_selected">دمج PDF (%1$d)</string>
     <string name="files_images_to_pdf_selected">صور إلى PDF (%1$d)</string>
-    <string name="files_batch_tool_hint">اختر الملفات وحوّلها إلى PDF أو ZIP بدون إعادة الاستيراد.</string>
     <string name="output_saved_location">محفوظ في %1$s</string>
     <string name="output_saved_privately">محفوظ داخل جملو فقط. استخدم مشاركة أو تصدير لحفظ نسخة خارج التطبيق.</string>
     <string name="settings_ui_sounds">أصوات الواجهة</string>
@@ -424,11 +219,6 @@
     <string name="tools_pin_action">تثبيت في الأعلى</string>
     <string name="tools_unpin_action">إلغاء التثبيت</string>
     <string name="tools_open_action">فتح الأداة</string>
-    <string name="ocr_script_latin">لاتيني (EN/EU)</string>
-    <string name="ocr_script_chinese">صيني</string>
-    <string name="ocr_script_japanese">ياباني</string>
-    <string name="ocr_script_korean">كوري</string>
-    <string name="ocr_script_devanagari">هندي</string>
     <string name="markup_toggle">تعبئة وتوقيع وتظليل</string>
     <string name="markup_tool_pen">قلم</string>
     <string name="markup_tool_highlight">تظليل</string>
@@ -453,18 +243,14 @@
     <string name="field_redact_white">استخدام مربع أبيض بدل الأسود</string>
     <string name="vault_unlock_subtitle">تحقّق من هويتك لفتح هذا المجلد الخاص</string>
     <string name="pro_title">جملو Pro</string>
-    <string name="pro_privacy_badge">100% محلي على جهازك · بدون حساب · بدون علامة مائية</string>
-    <string name="pro_lifetime_label">مدى الحياة (مرة واحدة)</string>
-    <string name="pro_annual_label">اشتراك سنوي</string>
-    <string name="pro_continue">تفعيل جملو Pro</string>
     <string name="pro_restore">استعادة المشتريات</string>
     <string name="action_save">حفظ</string>
     <string name="vault_lock_folder">قفل المجلد بالبصمة</string>
     <string name="vault_unlock_folder">إلغاء قفل المجلد</string>
     <string name="pro_active_badge">جملو Pro مفعّل</string>
-    <string name="pro_upgrade_subtitle">تفعيل مدى الحياة لمرة واحدة · 100% محلي</string>
+    <string name="pro_upgrade_subtitle" formatted="false">تفعيل مدى الحياة لمرة واحدة · 100% محلي</string>
     <string name="msg_vault_unavailable">فعّل قفل الشاشة أو البصمة من إعدادات الجهاز لاستخدام الخزنة.</string>
-    <string name="msg_vault_auth_failed">تعذّر التحقق من الهوية. حاول مرة أخرى.</string>
+    <string name="msg_vault_auth_failed">تعذّر التحقق من الهوية. أعد التحقق وحاول مجددًا.</string>
     <string name="msg_redact_required">حدّد منطقة واحدة على الأقل للطمس.</string>
     <string name="home_quick_id_card">بطاقة هوية</string>
     <string name="home_quick_ocr">استخراج النص</string>
@@ -486,12 +272,9 @@
     <string name="ui_choose_office_body">استورد مستند Word أو Excel أو PowerPoint من جهازك.</string>
     <string name="ui_choose_zip">اختر ملف ZIP</string>
     <string name="ui_choose_zip_body">استورد أرشيف ZIP من جهازك لفك ضغطه بأمان.</string>
-    <string name="ocr_script_arabic">العربية</string>
-    <string name="msg_ocr_arabic_model_missing">حزمة استخراج النص العربي غير مثبّتة بعد.</string>
+    <string name="msg_ocr_arabic_model_missing">حزمة استخراج النص العربي غير مثبّتة بعد. بدّل إلى الإنجليزية أو ثبّت الحزمة العربية للمتابعة.</string>
     <string name="scan_hd_badge">دقة عالية</string>
     <string name="import_signature_image">أو استيراد صورة توقيع</string>
-    <string name="scan_ready_title">تم حفظ المسح</string>
-    <string name="scan_next_view_sign">عرض وتوقيع</string>
     <string name="scan_next_ocr">استخراج النص</string>
     <string name="scan_next_compress">ضغط</string>
     <string name="scan_next_redact">طمس بيانات</string>
@@ -499,12 +282,12 @@
     <string name="field_current_password">كلمة مرور الملف</string>
     <string name="reader_password_prompt">أدخل كلمة المرور لفتح الملف</string>
     <string name="reader_unlock_action">فتح الملف</string>
-    <string name="msg_pdf_wrong_password">كلمة المرور غير صحيحة. حاول مجددًا.</string>
+    <string name="msg_pdf_wrong_password">كلمة المرور غير صحيحة. تحقق منها وحاول مجددًا.</string>
     <string name="scan_id_hint_front">ضع الوجه الأمامي للبطاقة داخل الإطار</string>
     <string name="scan_id_hint_back">اقلب البطاقة وضع الوجه الخلفي داخل الإطار</string>
     <string name="scan_flash">الفلاش</string>
     <string name="scan_gallery_short">المعرض</string>
-    <string name="pro_subtitle">أدوات احترافية 100% محليًا · بلا إعلانات · بلا علامة مائية · خزنة بصمة</string>
+    <string name="pro_subtitle" formatted="false">أدوات احترافية 100% محليًا · بلا إعلانات · بلا علامة مائية · خزنة بصمة</string>
     <string name="pro_lifetime">مدى الحياة</string>
     <string name="pro_annual">سنوي</string>
     <string name="pro_one_time">دفعة واحدة</string>

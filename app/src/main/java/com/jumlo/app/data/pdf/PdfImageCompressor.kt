@@ -9,6 +9,7 @@ import com.tom_roush.pdfbox.cos.COSStream
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.common.PDStream
+import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceGray
 import com.tom_roush.pdfbox.pdmodel.graphics.color.PDDeviceRGB
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -238,6 +239,29 @@ object PdfImageCompressor {
         return out
     }
 
+    /** Parse JPEG SOF marker to detect actual channel count (1 = Grayscale, 3 = YCbCr/RGB). */
+    private fun jpegComponentCount(bytes: ByteArray): Int? {
+        if (bytes.size < 4 || (bytes[0].toInt() and 0xFF) != 0xFF || (bytes[1].toInt() and 0xFF) != 0xD8) return null
+        var i = 2
+        while (i + 3 < bytes.size) {
+            if ((bytes[i].toInt() and 0xFF) != 0xFF) { i++; continue }
+            while (i < bytes.size && (bytes[i].toInt() and 0xFF) == 0xFF) i++
+            if (i >= bytes.size) break
+            val marker = bytes[i++].toInt() and 0xFF
+            if (marker == 0xD9 || marker == 0xDA) break
+            if (marker == 0x01 || marker in 0xD0..0xD7) continue
+            if (i + 1 >= bytes.size) break
+            val segLen = ((bytes[i].toInt() and 0xFF) shl 8) or (bytes[i + 1].toInt() and 0xFF)
+            if (segLen < 2 || i + segLen > bytes.size) break
+            val isSof = marker in 0xC0..0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC
+            if (isSof && segLen >= 8) {
+                return bytes[i + 7].toInt() and 0xFF
+            }
+            i += segLen
+        }
+        return null
+    }
+
     /**
      * Re-encode one image, walking the ladder until the result is smaller.
      *
@@ -320,6 +344,12 @@ object PdfImageCompressor {
             } ?: return null to "DECODE_FAILED"
             checkCancel()
             if (recoded.bytes.isEmpty() || recoded.bytes.size >= originalLength) continue
+            // Preserve DeviceGray whenever the source is DeviceGray and the recoded JPEG is not 3-channel RGB.
+            val outputColorSpace = if (colorSpace == COSName.DEVICEGRAY && jpegComponentCount(recoded.bytes) != 3) {
+                PDDeviceGray.INSTANCE
+            } else {
+                PDDeviceRGB.INSTANCE
+            }
             val candidate = PDImageXObject(
                 doc,
                 ByteArrayInputStream(recoded.bytes),
@@ -327,7 +357,7 @@ object PdfImageCompressor {
                 recoded.width,
                 recoded.height,
                 8,
-                PDDeviceRGB.INSTANCE
+                outputColorSpace
             )
             val newLength = (candidate.cosObject as? COSStream)?.length ?: Long.MAX_VALUE
             if (newLength > 0L && newLength < originalLength) {

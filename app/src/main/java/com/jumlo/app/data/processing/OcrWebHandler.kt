@@ -14,15 +14,18 @@ import com.jumlo.app.data.pdf.PdfPageRasterizer
 import com.jumlo.app.data.pdf.PdfPageText
 import com.jumlo.app.model.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** OCR writes lossless UTF-8 text. A PDF text layer is added only when it can preserve every glyph. */
+/** OCR always writes clean, lossless UTF-8 text. A PDF text layer is added only when its font can represent every glyph. */
 @Singleton
 class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : OperationHandler {
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
+        val workerContext = currentCoroutineContext()
         require(request.toolId == "pdf_ocr") { "CAPABILITY_UNAVAILABLE" }
         require(request.sourceIds.size == 1) { "ONE_FILE_REQUIRED" }
         val source = context.sources.get(request.sourceIds.single())
@@ -61,11 +64,20 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
                             pages.forEachIndexed { index, number ->
                                 context.checkCancellation()
                                 require(requireNotNull(textTicket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
-                                var text = PdfPageText.extract(document, number - 1, context.checkCancellation)
+                                var text = OcrTextPolicy.normalizeUtf8(PdfPageText.extract(document, number - 1, context.checkCancellation))
                                 if (text.isBlank()) {
                                     val renderer = rasterizer ?: PdfPageRasterizer(input, context.checkCancellation).also { rasterizer = it }
                                     val bitmap = renderer.render(number - 1, 2400, minOf(context.budget.maxBitmapBytes / 2, 32L * 1024 * 1024))
-                                    try { text = ocr.recognize(bitmap, script) } finally { bitmap.recycle() }
+                                    try {
+                                        val recognized = ocr.recognize(bitmap, script) { frac ->
+                                            if (frac >= 0f && pages.size == 1) {
+                                                runBlocking(workerContext) {
+                                                    context.report(JobProgress(JobStage.RUNNING, (frac * 90f).toLong().coerceIn(0L, 90L), 100L))
+                                                }
+                                            }
+                                        }
+                                        text = OcrTextPolicy.normalizeUtf8(recognized)
+                                    } finally { bitmap.recycle() }
                                     if (text.isNotBlank() && !textOnly) {
                                         if (runCatching { OcrTextPolicy.requireRepresentable(text) }.isSuccess) {
                                             PdfBoxBackend.stampInvisibleText(document, number - 1, text, .04, .04, 9f, strict = true)
@@ -86,7 +98,14 @@ class OcrWebHandler @Inject constructor(private val ocr: MlKitOcrEngine) : Opera
                         } finally { rasterizer?.close() }
                     } else {
                         BitmapTransforms.decode(input, context.budget.maxBitmapBytes / 2).use { image ->
-                            val text = ocr.recognize(image.bitmap, script)
+                            val recognized = ocr.recognize(image.bitmap, script) { frac ->
+                                if (frac >= 0f) {
+                                    runBlocking(workerContext) {
+                                        context.report(JobProgress(JobStage.RUNNING, (frac * 90f).toLong().coerceIn(0L, 90L), 100L))
+                                    }
+                                }
+                            }
+                            val text = OcrTextPolicy.normalizeUtf8(recognized)
                             detected = text.isNotBlank()
                             textOutput.write(text)
                         }

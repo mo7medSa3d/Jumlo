@@ -21,6 +21,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -32,6 +35,8 @@ import javax.inject.Singleton
 @Singleton class FileExtrasHandler @Inject constructor(
     private val secrets: EphemeralSecretStore
 ) : OperationHandler {
+    private val lenientJson = Json { ignoreUnknownKeys = true }
+
     override suspend fun execute(request: JobRequest, context: ExecutionContext): List<ItemOutcome> = withContext(Dispatchers.IO) {
         when (request.toolId) {
             "file_batch_rename" -> rename(request, context)
@@ -43,7 +48,7 @@ import javax.inject.Singleton
     private suspend fun rename(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
         require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
         ResourceBudgetPolicy.requireOutputCount(request.sourceIds.size + 1, context.budget.maxOutputFiles)
-        val settings = Json.decodeFromString<BatchRenameSettings>(request.settingsJson)
+        val settings = lenientJson.decodeFromString<BatchRenameSettings>(request.settingsJson)
         val names = request.sourceIds.map { context.sources.get(it).displayName }
         val preview = PureDomainAlgorithms.batchRenamePreview(names, settings.pattern, settings.startAt,
             settings.date.ifBlank { java.time.Instant.ofEpochMilli(request.submittedAtEpochMs).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString() })
@@ -83,7 +88,10 @@ import javax.inject.Singleton
     }
 
     private suspend fun encryptedZip(request: JobRequest, context: ExecutionContext): List<ItemOutcome> {
-        val settings = Json.decodeFromString<EncryptedArchiveSettings>(request.settingsJson)
+        val settings = lenientJson.decodeFromString<EncryptedArchiveSettings>(request.settingsJson)
+        val compressionLevel = runCatching {
+            lenientJson.parseToJsonElement(request.settingsJson).jsonObject["compressionLevel"]?.jsonPrimitive?.intOrNull
+        }.getOrNull()?.coerceIn(0, 9) ?: 6
         val raw = secrets.copy(settings.secretHandle) ?: throw OperationFailure("SECRET_EXPIRED")
         require(raw.isNotEmpty()) { "ZIP_PASSWORD_REQUIRED" }
         val password = raw.copyOf()
@@ -129,7 +137,7 @@ import javax.inject.Singleton
                             EncryptedZipEntrySource(ref.displayName, tempFile)
                         }
                         if (ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
-                        EncryptedZip.create(ticket.stageFile, entrySources, password, limits) {
+                        EncryptedZip.create(ticket.stageFile, entrySources, password, limits, compressionLevel) {
                             context.checkCancellation()
                             require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                         }

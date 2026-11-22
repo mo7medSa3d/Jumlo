@@ -4,8 +4,6 @@
     <string name="tagline">Your files. Your tools.</string>
     <string name="tagline_subtitle">Edit PDFs and images locally, with optional online transfers.</string>
     <string name="offline_pledge_short">Local document editing. Selected online features use the network.</string>
-    <string name="offline_badge">Local editing &amp; optional network</string>
-    <string name="local_only_badge">On-device edits</string>
 
     <!-- Navigation Dock -->
     <string name="nav_home">Home</string>
@@ -13,48 +11,20 @@
     <string name="nav_downloads">Downloads</string>
     <string name="nav_files">Files</string>
 
-    <!-- Welcome Launch (app_01) -->
-    <string name="welcome_title">Welcome to Jumlo</string>
+    <!-- Welcome Launch -->
     <string name="welcome_badge">Local editing • Optional downloads and Drive</string>
     <string name="welcome_card_title">Edit locally. Share when you choose.</string>
     <string name="welcome_card_body">PDF and image edits stay on your device. Downloads, remote previews, optional extraction services and Google Drive transfers use the network when selected.</string>
-    <string name="welcome_sandbox_active">Private app storage ready</string>
-    <string name="welcome_pillars_header">Engine Pillars</string>
-    <string name="welcome_ready">Ready</string>
-    <string name="welcome_get_started">Get Started</string>
-    <string name="welcome_privacy_licenses">Privacy architecture &amp; licenses</string>
 
-    <!-- Home (home_01) -->
-    <string name="home_search_placeholder">Search tools or local files…</string>
-    <string name="home_hero_title">Powerful file tools</string>
-    <string name="home_hero_subtitle">PDF, images, archives and downloads, processed on your device.</string>
+    <!-- Home -->
     <string name="transfer_activity_title">Transfer activity</string>
-    <string name="pillar_pdf_title">PDF Tools</string>
-    <string name="pillar_pdf_sub">Merge, split, organize</string>
-    <string name="pillar_images_title">Image Tools</string>
-    <string name="pillar_images_sub">Convert, resize, crop</string>
-    <string name="pillar_downloads_title">Downloads</string>
-    <string name="pillar_downloads_sub">Direct transfers, queue</string>
-    <string name="pillar_files_title">File Manager</string>
-    <string name="pillar_files_sub">Internal &amp; granted</string>
-    <string name="quick_actions_title">Quick actions</string>
     <string name="action_customize">Customize</string>
-    <string name="recent_results_title">Recent results</string>
-    <string name="local_cache_badge">Local cache</string>
-    <string name="filter_all">All</string>
-    <string name="filter_pdfs">PDFs</string>
-    <string name="filter_images">Images</string>
-    <string name="filter_drafts">Drafts</string>
-    <string name="filter_archives">Archives</string>
-    <string name="action_view">View</string>
     <string name="action_open">Open</string>
     <string name="action_print">Print</string>
     <string name="action_share">Share</string>
-    <string name="action_apply">Apply</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_pause">Pause</string>
     <string name="action_resume">Resume</string>
-    <string name="action_change">Change</string>
     <string name="action_reset">Reset</string>
     <string name="action_copy">Copy</string>
     <string name="action_paste">Paste</string>
@@ -76,135 +46,44 @@
     <string name="action_restore">Restore</string>
     <string name="action_undo">Undo</string>
     <string name="output_pages_count">Pages: %1$d</string>
-    <string name="output_entries_count">%1$d archive entries</string>
     <string name="output_sha256_label">SHA-256: %1$s</string>
     <string name="job_outcomes_summary">%1$d published · %2$d failed</string>
-    <string name="before_after_original">Original</string>
-    <string name="before_after_target">Target output</string>
 
-    <!-- Scoped Search (home_02) -->
-    <string name="search_title">Search Tools &amp; Files</string>
-    <string name="search_matching_utilities">Matching Utilities</string>
-    <string name="search_suggested_tools">Suggested Tools</string>
-    <string name="search_recent_matching_files">Recent matching files</string>
-    <string name="search_local_index_notice">Searches local tools and your files on this device. Nothing is sent online.</string>
-
-    <!-- Choose Source Import (import_01) -->
-    <string name="import_title">Import Intake</string>
+    <!-- Choose Source Import -->
     <string name="import_subtitle">Choose PDF and image files. Document edits stay on this device.</string>
-    <string name="import_received_share">Received via Android Share</string>
-    <string name="import_use_shared">Use Shared Files</string>
     <string name="import_photo_gallery">Photo Gallery &amp; Media</string>
     <string name="import_device_files">Device Files &amp; Storage</string>
-    <string name="import_my_files">My Files (Internal App Storage)</string>
-    <string name="import_privacy_pledge">Documents are processed on your device using app-private files and the files you select. Downloads, remote thumbnails, optional link extraction and model installation can use the network.</string>
 
-    <!-- Permission Education (sys_01) -->
-    <string name="perm_sheet_badge">System Recovery Sheet</string>
-    <string name="perm_allow_title">Allow Background Progress Notifications</string>
-    <string name="perm_allow_subtitle">Stay updated on downloads and transformations while using other apps or when the screen is locked.</string>
-    <string name="perm_grant_btn">Grant Notification Permission</string>
-    <string name="perm_continue_without">Continue Without Notifications</string>
-
-    <!-- Tools Catalog (tools_01) -->
-    <string name="tools_catalog_title">Tools Catalog</string>
-    <string name="tools_count_badge">16 tools</string>
+    <!-- Tools Catalog -->
     <string name="tools_no_matching">No matching tools</string>
     <string name="tools_no_matching_sub">Everything runs locally on your device. Try searching by action like \'merge\', \'zip\', or \'convert\'.</string>
     <string name="tools_reset_filters">Reset Filters</string>
 
-    <!-- PDF Tools -->
-    <string name="tool_images_to_pdf">Images to PDF</string>
-    <string name="tool_images_to_pdf_sub">Compile photos into clean document</string>
-    <string name="tool_merge_pdf">Merge PDF</string>
-    <string name="tool_merge_pdf_sub">Combine multiple PDF files &amp; ranges</string>
-    <string name="tool_split_pdf">Split PDF</string>
-    <string name="tool_split_pdf_sub">Split by page count or custom ranges</string>
-    <string name="tool_organize_pages">Organize Pages</string>
-    <string name="tool_organize_pages_sub">Reorder, rotate, or delete pages</string>
-    <string name="tool_extract_pages">Extract Pages</string>
-    <string name="tool_extract_pages_sub">Export selected page ranges</string>
-    <string name="tool_pdf_to_images">PDF to Images</string>
-    <string name="tool_pdf_to_images_sub">Export pages as JPG or PNG</string>
-    <string name="tool_view_pdf">View PDF</string>
-    <string name="tool_view_pdf_sub">Inspect and read local documents</string>
-    <string name="tool_pdf_expansion">PDF Compression, Watermark &amp; Numbering</string>
-
-    <!-- Image Tools -->
-    <string name="tool_convert_images">Convert Images</string>
-    <string name="tool_convert_images_sub">Batch convert JPG, PNG, WebP</string>
-    <string name="tool_resize_images">Resize Images</string>
-    <string name="tool_resize_images_sub">Scale by pixels or percentage</string>
-    <string name="tool_crop_rotate_flip">Crop, Rotate &amp; Flip</string>
-    <string name="tool_crop_rotate_flip_sub">Standard aspect ratios &amp; orientation</string>
-    <string name="tool_compress_images">Compress Images</string>
-    <string name="tool_compress_images_sub">Reduce file size with visual quality</string>
-    <string name="tool_image_expansion">Image Collage &amp; Watermark</string>
-
-    <!-- Download Tools -->
-    <string name="tool_new_download">New Direct Download</string>
-    <string name="tool_new_download_sub">Download files from direct URLs</string>
-    <string name="tool_batch_url">Batch URL Intake</string>
-    <string name="tool_download_settings">Download Settings</string>
-    <string name="tool_download_settings_sub">Network preferences &amp; storage destination</string>
-
     <!-- File Tools -->
-    <string name="tool_browse_storage">Browse Storage</string>
-    <string name="tool_browse_storage_sub">Browse app storage and linked folders</string>
-    <string name="tool_create_zip">Create ZIP Archive</string>
-    <string name="tool_create_zip_sub">Package files into compressed archive</string>
     <string name="tool_extract_zip">Extract ZIP Archive</string>
-    <string name="tool_extract_zip_sub">Decompress local ZIP archives</string>
 
-    <!-- Settings (set_01, set_02, set_04) -->
+    <!-- Settings -->
     <string name="settings_title">General Settings</string>
-    <string name="settings_appearance_language">Appearance &amp; Language</string>
-    <string name="settings_haptic_feedback">Haptic Feedback</string>
-    <string name="settings_reduce_motion">Reduce Motion</string>
-    <string name="settings_tool_defaults">Tool &amp; Output Defaults</string>
-    <string name="settings_download_prefs">Download Preferences</string>
-    <string name="settings_storage_history_cache">Storage, History &amp; Cache</string>
-    <string name="settings_privacy_permissions">Privacy &amp; Permissions</string>
-    <string name="settings_offline_help">Offline Documentation &amp; Help</string>
-    <string name="settings_diagnostic_report">Sanitized Diagnostic Report</string>
-    <string name="settings_about">About Jumlo</string>
     <string name="settings_storage_summary">Snapshots: %1$s · Outputs: %2$s · Trash: %3$s · Transfers: %4$s · Temp: %5$s</string>
     <string name="settings_allow_notifications">Allow background progress notifications</string>
     <string name="settings_privacy_summary">Document editing stays on your device. Downloads, remote thumbnails, optional extraction services, Google Drive transfers and scanner/OCR model installation can use the network. App backup is disabled.</string>
     <string name="processing_channel">File processing</string>
     <string name="processing_title">Processing files on this device</string>
-    <string name="processing_body">Open the app to see actual progress and results.</string>
     <string name="processing_cancel">Cancel</string>
-    <string name="settings_export_error_log">Export error log</string>
     <string name="scan_title">Scan document</string>
     <string name="scan_smart_retry">Retry smart scan</string>
     <string name="scan_use_basic_camera">Use basic camera</string>
-    <string name="scan_hint">Align the document inside the frame. Edges are detected automatically and can be adjusted.</string>
-    <string name="scan_allow_camera">Allow camera</string>
     <string name="scan_capture">Capture &amp; correct perspective</string>
     <string name="scan_back">Back</string>
-    <string name="scan_error_bind">Camera unavailable. Close other camera apps or check camera permission and retry.</string>
-    <string name="scan_error_process">Could not process the scan. Retake the photo or import an image instead.</string>
-    <string name="scan_error_capture">Could not capture the page. Hold steady and try again.</string>
     <string name="signature_title">Draw signature</string>
     <string name="signature_clear">Clear</string>
     <string name="signature_save">Save drawing as signature image</string>
     <string name="signature_hint">After saving, add the signature image as the second selected file (PDF first).</string>
-    <string name="scan_adjust_hint">Drag the four corners onto the document edges.</string>
-    <string name="scan_apply">Apply correction</string>
-    <string name="scan_retake">Retake</string>
-    <string name="settings_refresh_storage">Refresh storage</string>
-    <string name="settings_clean_temp">Clean temporary files</string>
 
     <!-- Workspace & Tool Fields -->
     <string name="home_resume_workspace">Resume active workspace (%1$d)</string>
     <string name="downloads_empty_title">No direct downloads yet</string>
-    <string name="downloads_empty_sub">Queue a direct HTTPS file URL to download with progress, cancellation, and SHA-256 verification.</string>
-    <string name="files_snapshots_title">Imported Source Snapshots</string>
-    <string name="files_snapshots_sub">Immutable app-owned copies of files you selected</string>
     <string name="files_import_action">Import</string>
-    <string name="files_empty_snapshots">No snapshots imported yet.</string>
-    <string name="files_add_to_workspace">Add to workspace</string>
     <string name="files_browse_inside">Browse inside Jumlo</string>
     <string name="files_new_folder">New folder</string>
     <string name="files_folder_label">Folder</string>
@@ -217,18 +96,12 @@
     <string name="dialog_delete_title">Delete permanently?</string>
     <string name="dialog_delete_body">This deletes the file in the granted folder. It cannot be undone.</string>
     <string name="workspace_title">Tool Workspace</string>
-    <string name="workspace_clear_selection">Clear selection</string>
     <string name="workspace_direct_urls_batch">Direct file URLs (one per line)</string>
     <string name="workspace_direct_url_single">Direct file URL</string>
     <string name="workspace_batch_valid_links">Links ready to download: %1$d of %2$d</string>
     <string name="workspace_batch_duplicates">Duplicate links to skip: %1$d</string>
     <string name="workspace_batch_invalid_links">Links that are not direct HTTP/HTTPS file URLs: %1$d</string>
     <string name="workspace_direct_url_hint">Direct HTTP/HTTPS file links and Google Drive shared links.</string>
-    <string name="field_expected_sha256">Expected SHA-256 (optional)</string>
-    <string name="field_unmetered_only">Unmetered network only</string>
-    <string name="field_wifi_only">Wi-Fi only</string>
-    <string name="field_allow_http">Allow unencrypted HTTP for this job</string>
-    <string name="field_http_warning">HTTP traffic is not encrypted. Redirects from HTTPS to HTTP and credential headers over HTTP remain blocked.</string>
     <string name="field_paper_width">Paper width (pt)</string>
     <string name="field_paper_height">Paper height (pt)</string>
     <string name="field_margin_mm">Margin (mm)</string>
@@ -241,65 +114,23 @@
     <string name="field_output_prefix">Output filename prefix</string>
     <string name="field_merge_note">Select 2+ PDFs in the order to merge.</string>
     <string name="field_pages_per_part">Pages per split part (used when ranges is blank)</string>
-    <string name="field_extract_instead">Extract into one PDF instead of multiple parts</string>
     <string name="field_organize_order">Page order (1-based, comma-separated; omit to delete)</string>
     <string name="field_rotate_pages">Pages to rotate (blank = none, or e.g. 1,3)</string>
     <string name="field_clockwise_rotation">Clockwise rotation</string>
-    <string name="field_max_image_dpi">Max embedded image DPI (72..300)</string>
     <string name="field_quality">Image quality (1–100)</string>
     <string name="field_pdf_quality">PDF image quality (1–100)</string>
     <string name="field_pdf_lossless">Original / lossless quality</string>
     <string name="field_pdf_lossless_note">Embeds the original pixels without JPEG re-encoding. Files are larger, and very large photos may exceed the device memory budget.</string>
-    <string name="field_target_size_mb">Target size (MB)</string>
-    <string name="field_target_size_note">With a target set, Jumlo lowers resolution and quality until the file reaches it, and reports the size it actually achieved.</string>
-    <string name="field_remove_title">Also remove the title, subject and keywords</string>
-    <string name="field_clean_note">Removes the author, the producing application, the creation and modification dates and the embedded XMP trail. The cleaned file and a report listing every removed key are saved together.</string>
     <string name="field_compress_slider">Compression strength: %1$d%%</string>
-    <string name="field_compress_estimate">Estimated output: %1$s</string>
-    <string name="field_compress_saving">Estimated saving: %1$d%%</string>
-    <string name="field_compress_estimate_note">An estimate from the embedded images. The saved file reports the real size.</string>
-    <string name="field_compress_preset_high">High compression</string>
-    <string name="field_compress_preset_balanced">Medium compression</string>
-    <string name="field_compress_preset_low">Low compression</string>
     <string name="field_compress_note">Text and vector streams stay untouched; embedded images above the target DPI are downsampled.</string>
-    <string name="field_left">Left (0..1)</string>
-    <string name="field_top">Top (0..1)</string>
-    <string name="field_right">Right (0..1)</string>
-    <string name="field_bottom">Bottom (0..1)</string>
     <string name="field_crop_hint">Normalized page coordinates (0.0 to 1.0).</string>
-    <string name="field_text">Text</string>
     <string name="field_page_number">Page (1-based)</string>
-    <string name="field_x_norm">Horizontal position (0..1)</string>
-    <string name="field_y_norm">Vertical position (0..1)</string>
-    <string name="field_annotation_kind">Annotation</string>
-    <string name="field_annotation_region_hint">Drag the area on the page preview, and drag its corners to resize it.</string>
-    <string name="annotation_highlight">Highlight</string>
-    <string name="annotation_underline">Underline</string>
-    <string name="annotation_strikethrough">Strikethrough</string>
-    <string name="annotation_note">Sticky note</string>
-    <string name="annotation_square">Rectangle</string>
-    <string name="annotation_circle">Ellipse</string>
-    <string name="annotation_textbox">Text box</string>
-    <string name="annotation_ink">Freehand</string>
-    <string name="annotation_text">Plain text</string>
-    <string name="field_as_note_annotation">Add as collapsible PDF note annotation</string>
     <string name="field_watermark_text">Watermark text (optional)</string>
     <string name="field_opacity_percent">Opacity (1–100%)</string>
     <string name="field_add_page_numbers">Add bottom-center page numbers</string>
     <string name="field_start_number">Starting number</string>
     <string name="field_signature_note">Select the target PDF first and a signature image second, or draw a signature on the Signature pad.</string>
-    <string name="field_remove_protection">Remove existing password protection</string>
     <string name="field_user_password">Open password</string>
-    <string name="field_owner_password">Owner/permissions password (optional)</string>
-    <string name="field_protect_note">Only for documents you own or are authorized to modify. Passwords stay in session memory only and are never written to disk.</string>
-    <string name="field_title">Title</string>
-    <string name="field_author">Author</string>
-    <string name="field_subject">Subject</string>
-    <string name="field_keywords">Keywords</string>
-    <string name="field_insert_at_page">Insert second PDF before page (1-based, when 2 PDFs selected)</string>
-    <string name="field_forms_json">Field values (key=value per line)</string>
-    <string name="field_flatten_form">Flatten form fields into static page content</string>
-    <string name="field_ocr_note">Recognizes text on this device to export a .txt file and a searchable PDF.</string>
     <string name="field_output_format">Output format</string>
     <string name="field_target_width">Target width px</string>
     <string name="field_target_height">Target height px</string>
@@ -309,20 +140,9 @@
     <string name="field_rotate_degrees">Clockwise rotation degrees</string>
     <string name="field_flip_horizontal">Flip horizontally</string>
     <string name="field_flip_vertical">Flip vertically</string>
-    <string name="field_exif_remove_location">Remove GPS location tags</string>
-    <string name="field_exif_remove_all">Remove all EXIF metadata</string>
-    <string name="field_exif_note">Exports an EXIF report and writes cleaned image outputs according to your selection.</string>
     <string name="field_use_second_logo">Use 2nd selected image as logo watermark</string>
     <string name="field_layout">Collage layout</string>
     <string name="field_gap_px">Gap between images (px)</string>
-    <string name="field_overlap_px">Overlap trim (px, for screenshot stitching)</string>
-    <string name="field_brightness">Brightness (-100..100)</string>
-    <string name="field_contrast">Contrast (0–300%)</string>
-    <string name="field_saturation">Saturation (0–300%)</string>
-    <string name="field_padding_px">Canvas padding (px)</string>
-    <string name="field_target_bytes">Target max file size (bytes)</string>
-    <string name="field_compare_img_note">Select two images to compute pixel difference metrics and a visual diff map.</string>
-    <string name="field_zip_create_note">Packages all selected source snapshots into one ZIP archive with SHA-256 verification.</string>
     <string name="field_zip_level">Compression level (0..9)</string>
     <string name="field_output_filename">Output filename</string>
     <string name="field_zip_extract_note">Select one .zip archive to extract its files safely.</string>
@@ -330,43 +150,18 @@
     <string name="field_encrypted_zip_note">Creates or extracts AES-256 encrypted ZIP archives when a password is supplied.</string>
     <string name="field_rename_pattern">Pattern ({n} = index, {name} = base name)</string>
     <string name="field_rename_note">Publishes renamed copies of the selected files using the pattern and starting number.</string>
-    <string name="field_duplicates_note">Computes SHA-256 across selected files and reports exact duplicate groups.</string>
-    <string name="field_trash_note">Lists items in Trash and removes expired temporary files.</string>
     <string name="field_split_every_n">Pages per split part</string>
     <string name="field_fill_page">Fill page (crop overflow)</string>
     <string name="field_grayscale">Convert to grayscale</string>
     <string name="workspace_queue_download">Queue Download</string>
     <string name="workspace_process_files">Process Selected Files</string>
     <string name="workspace_queue_summary">Selected: %1$d files (%2$s)</string>
-    <string name="workspace_queue_hint">Import and select at least one source file above to enable processing.</string>
     <string name="activity_title">Job Activity &amp; Results</string>
     <string name="activity_reenter_url">Re-enter URL to retry</string>
     <string name="activity_reenter_url_hint">Signed URLs are kept only in memory and cleared when the app process stops.</string>
     <string name="activity_retry_urls">Retry with these URLs</string>
     <string name="activity_published_notice">Outputs are verified on disk and listed in Home and Files.</string>
     <string name="activity_start_new_run">Start another run</string>
-    <string name="account_hub_title">User &amp; Engine Hub</string>
-    <string name="account_hub_tier">Jumlo On-Device Pro Core</string>
-    <string name="account_privacy_status">Documents on device • Downloads use the network</string>
-    <string name="account_storage_stats">Engine Storage &amp; Space</string>
-    <string name="account_clear_cache_btn">Clear Temporary Cache</string>
-    <string name="account_clear_cache_success">Temporary files cleared</string>
-    <string name="account_preferences_header">Display &amp; Experience</string>
-    <string name="home_greeting">Welcome back to Jumlo</string>
-    <string name="home_greeting_sub">Private on-device powerhouse for media &amp; documents</string>
-    <string name="home_stat_outputs">Outputs generated</string>
-    <string name="home_stat_jobs">Completed jobs</string>
-    <string name="home_stat_storage">Storage active</string>
-    <string name="home_featured_header">Featured Super Utilities</string>
-    <string name="home_browse_catalog_banner_title">Explore All Tools</string>
-    <string name="home_browse_catalog_banner_sub">Advanced PDF, image manipulation, file encryption &amp; archives</string>
-    <string name="home_browse_catalog_btn">View Complete Catalog</string>
-    <string name="home_no_recent_outputs">No processed results yet. Launch any tool above to get started!</string>
-    <string name="home_active_tasks_title">Active Tasks in Progress</string>
-    <string name="media_rights_confirmation">I confirm I have rights to download this content and will follow the platform terms.</string>
-    <string name="media_rights_required">Confirm your rights and the platform terms first.</string>
-    <!-- Customer-grade batch result workflows; output selection never edits originals. -->
-    <string name="home_favorite_results">Pinned files</string>
     <string name="files_workflow_incompatible">These files can’t be combined with this tool. Select only PDFs for merge or only images for image-to-PDF.</string>
     <string name="files_workflow_missing">A selected result is missing or has changed. Refresh Files and try again; originals were not modified.</string>
     <string name="files_workflow_size">The selected files may exceed available device storage. Free up space and try again; originals are unchanged.</string>
@@ -379,7 +174,6 @@
     <string name="files_bundle_selected">Make ZIP (%1$d)</string>
     <string name="files_merge_selected">Merge PDFs (%1$d)</string>
     <string name="files_images_to_pdf_selected">Images to PDF (%1$d)</string>
-    <string name="files_batch_tool_hint">Choose files and create a PDF or ZIP without re-importing.</string>
     <string name="output_saved_location">Saved in %1$s</string>
     <string name="output_saved_privately">Saved inside Jumlo only. Use Share or Export to save a copy outside the app.</string>
     <string name="settings_ui_sounds">Interface sounds</string>
@@ -424,11 +218,6 @@
     <string name="tools_pin_action">Pin to top</string>
     <string name="tools_unpin_action">Unpin tool</string>
     <string name="tools_open_action">Open tool</string>
-    <string name="ocr_script_latin">Latin (EN/EU)</string>
-    <string name="ocr_script_chinese">Chinese</string>
-    <string name="ocr_script_japanese">Japanese</string>
-    <string name="ocr_script_korean">Korean</string>
-    <string name="ocr_script_devanagari">Devanagari</string>
     <string name="markup_toggle">Fill &amp; Annotate</string>
     <string name="markup_tool_pen">Pen</string>
     <string name="markup_tool_highlight">Highlight</string>
@@ -453,18 +242,14 @@
     <string name="field_redact_white">Use white box instead of black</string>
     <string name="vault_unlock_subtitle">Verify your identity to open this private folder</string>
     <string name="pro_title">Jumlo Pro</string>
-    <string name="pro_privacy_badge">100% offline on your device · No account · No watermarks</string>
-    <string name="pro_lifetime_label">Lifetime (One-Time)</string>
-    <string name="pro_annual_label">Annual Plan</string>
-    <string name="pro_continue">Unlock Jumlo Pro</string>
     <string name="pro_restore">Restore Purchases</string>
     <string name="action_save">Save</string>
     <string name="vault_lock_folder">Lock with Biometrics</string>
     <string name="vault_unlock_folder">Remove Folder Lock</string>
     <string name="pro_active_badge">Jumlo Pro Active</string>
-    <string name="pro_upgrade_subtitle">Lifetime one-time unlock · 100% offline</string>
+    <string name="pro_upgrade_subtitle" formatted="false">Lifetime one-time unlock · 100% offline</string>
     <string name="msg_vault_unavailable">Set up screen lock or biometrics in device settings to use Vault.</string>
-    <string name="msg_vault_auth_failed">Authentication failed. Please try again.</string>
+    <string name="msg_vault_auth_failed">Authentication failed. Verify your identity and try again.</string>
     <string name="msg_redact_required">Select at least one region to redact.</string>
     <string name="home_quick_id_card">ID Cards</string>
     <string name="home_quick_ocr">Extract Text</string>
@@ -486,12 +271,9 @@
     <string name="ui_choose_office_body">Import a Word, Excel, or PowerPoint file from your device.</string>
     <string name="ui_choose_zip">Choose a ZIP File</string>
     <string name="ui_choose_zip_body">Import a ZIP archive from your device to extract safely.</string>
-    <string name="ocr_script_arabic">Arabic</string>
-    <string name="msg_ocr_arabic_model_missing">Arabic OCR language pack is not installed yet.</string>
+    <string name="msg_ocr_arabic_model_missing">Arabic OCR language pack isn\'t installed yet. Switch to English or install the Arabic pack to continue.</string>
     <string name="scan_hd_badge">HD</string>
     <string name="import_signature_image">Or import signature photo</string>
-    <string name="scan_ready_title">Scan Saved</string>
-    <string name="scan_next_view_sign">View &amp; Sign</string>
     <string name="scan_next_ocr">Extract Text</string>
     <string name="scan_next_compress">Compress</string>
     <string name="scan_next_redact">Redact</string>
@@ -499,12 +281,12 @@
     <string name="field_current_password">PDF password</string>
     <string name="reader_password_prompt">Enter password to unlock PDF</string>
     <string name="reader_unlock_action">Unlock PDF</string>
-    <string name="msg_pdf_wrong_password">Incorrect password. Please try again.</string>
+    <string name="msg_pdf_wrong_password">Incorrect password. Check your password and try again.</string>
     <string name="scan_id_hint_front">Align front of ID card inside the frame</string>
     <string name="scan_id_hint_back">Now flip and align back of ID card</string>
     <string name="scan_flash">Flash</string>
     <string name="scan_gallery_short">Gallery</string>
-    <string name="pro_subtitle">100% offline Pro tools · No ads · No watermarks · Biometric Vault</string>
+    <string name="pro_subtitle" formatted="false">100% offline Pro tools · No ads · No watermarks · Biometric Vault</string>
     <string name="pro_lifetime">Lifetime</string>
     <string name="pro_annual">Annual</string>
     <string name="pro_one_time">One-time</string>

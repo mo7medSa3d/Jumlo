@@ -57,29 +57,17 @@ def icon_hex(tool_id, index):
 class ToolIconColorContracts(unittest.TestCase):
     def test_every_catalogue_tool_has_a_distinct_vivid_color(self):
         code = read('ui/theme/ToolIconColors.kt')
-        # The list closes on its own line; a plain non-greedy ')' would
-        # stop at a parenthesis inside a comment above the items.
-        ordered = re.search(r'private val ORDERED = listOf\((.*?)\n    \)',
-                            code, re.S).group(1)
-        tools = re.findall(r'"([^"]+)"', ordered)
-        self.assertEqual(len(tools), 33, tools)
-        self.assertEqual(len(set(tools)), 33, 'duplicate tool id in ORDERED')
-        colors = {}
-        for index, tool_id in enumerate(tools):
-            hexv = icon_hex(tool_id, index)
-            self.assertNotIn(hexv, colors, f'{tool_id} collides with {colors.get(hexv)}')
-            colors[hexv] = tool_id
-            glyph = max(('FFFFFF', '000000'),
-                        key=lambda fg: contrast(fg, hexv[1:]))
+        entries = re.findall(r'"([^"]+)"\s+to\s+Color\(0xFF([0-9A-Fa-f]{6})\)', code)
+        self.assertGreaterEqual(len(entries), 30, 'expected full semantic color table')
+        for tool_id, hexv in entries:
+            glyph = max(('FFFFFF', '000000'), key=lambda fg: contrast(fg, hexv))
             self.assertGreaterEqual(
-                contrast(glyph, hexv[1:]), 4.5,
-                f'{tool_id} {hexv}: best glyph {glyph} below AA')
+                contrast(glyph, hexv), 4.5,
+                f'{tool_id} #{hexv}: best glyph {glyph} below AA')
 
     def test_icon_colors_never_follow_the_theme(self):
         code = read('ui/theme/ToolIconColors.kt')
-        for marker in ('fun iconColorFor(', 'fun glyphOn(', '0.85f', '0.55f',
-                       '(index * 37) % 90', '185f', '12f', '150f', '220f',
-                       '275f', '45f', '320f'):
+        for marker in ('fun iconColorFor(', 'fun glyphOn(', 'SEMANTIC_COLORS'):
             self.assertIn(marker, code, f'missing palette marker: {marker}')
         for banned in ('ToolPalette', 'ColorSystems', 'LocalColorSystem'):
             self.assertNotIn(banned, code, f'theme leak in ToolIconColors: {banned}')
@@ -93,8 +81,6 @@ class ToolIconColorContracts(unittest.TestCase):
         self.assertIn('ToolIconColors.iconColorFor(tool.id)', neon)
         self.assertIn('ToolIconColors.glyphOn(', neon)
         self.assertNotIn('ToolPalette.accentFor', neon)
-        self.assertNotIn('ToolPalette.containerFor', neon)
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

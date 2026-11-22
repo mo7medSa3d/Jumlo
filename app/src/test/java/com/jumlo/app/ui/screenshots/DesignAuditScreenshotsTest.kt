@@ -56,27 +56,23 @@ class DesignAuditScreenshotsTest {
         compose.waitUntil(15_000) { viewModel().settings.value.let { it.language == language && it.themeMode == theme } }
         compose.waitForIdle()
 
-        // 1. Home
         compose.onRoot().captureRoboImage(File(outDir, "01_home.png").absolutePath)
 
         // Downloads is no longer a root dock tab or static Home button; it is only surfaced from
         // Home's Active Tasks header when jobs are active, so it is skipped on a clean launch.
 
-        // 2. Tools tab
         if (compose.onAllNodesWithTag("nav.TOOLS").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithTag("nav.TOOLS").performClick()
             compose.waitForIdle()
             compose.onRoot().captureRoboImage(File(outDir, "03_tools.png").absolutePath)
         }
 
-        // 3. Files tab
         if (compose.onAllNodesWithTag("nav.FILES").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithTag("nav.FILES").performClick()
             compose.waitForIdle()
             compose.onRoot().captureRoboImage(File(outDir, "04_files.png").absolutePath)
         }
 
-        // 4. Settings tab
         if (compose.onAllNodesWithTag("nav.SETTINGS").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithTag("nav.SETTINGS").performClick()
             compose.waitForIdle()

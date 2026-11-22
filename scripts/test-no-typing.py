@@ -7,7 +7,6 @@ Behavioral: a Python mirror validates the page-count summary and the password
 generator's class guarantees.
 """
 import random
-import re
 import string
 import unittest
 from pathlib import Path
@@ -27,7 +26,6 @@ def xml_strings(locale):
     return text
 
 
-# --- Behavioral mirrors ---
 def count_selected_pages(spec):
     s = spec.strip()
     if not s or s.lower() == 'all':

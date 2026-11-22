@@ -16,7 +16,7 @@ Choose a PDF or image, review the actual page, adjust the available controls and
 
 Turn images into PDFs, convert image formats, adjust colors, crop and rotate pictures, or prepare a collage. Scan multiple pages through the Android document scanner, with a camera fallback and gallery import where available.
 
-Convert PDF text into a Word document with basic paragraphs, headings and page breaks. Convert PDF pages into PowerPoint slides containing a page image and extracted text. Complex layouts, tables and presentation objects are not reconstructed. Existing Arabic text can be preserved; the included scanned-text recognizer supports Latin scripts.
+Convert PDF text into a Word document with basic paragraphs, headings and page breaks. Convert PDF pages into PowerPoint slides containing a page image and extracted text. Complex layouts, tables and presentation objects are not reconstructed. Existing Arabic text is preserved; scanned-text OCR uses ML Kit (Latin/CJK/Devanagari) and Tesseract4Android for Arabic.
 
 For links you are authorized to download, inspect the available media information before choosing a real video or audio option. Track progress, cancel, pause and resume supported transfers, and select an output folder. Availability depends on the source website, access rights, connection and Android background-work limits. Jumlo does not bypass private-content access, DRM or a provider's restrictions.
 
@@ -42,7 +42,7 @@ Most document work is local. Some scanner/OCR components require an initial Play
 
 حوّل الصور إلى PDF، أو غيّر صيغتها، أو اضبط ألوانها، أو قصّها ودوّرها، أو اجمعها في صورة واحدة. امسح عدة صفحات باستخدام ماسح المستندات في Android، مع بديل للكاميرا واستيراد الصور من المعرض عند توافرهما.
 
-حوّل نصوص PDF إلى مستند Word يتضمن فقرات وعناوين وفواصل صفحات أساسية. ويمكن تحويل كل صفحة إلى شريحة PowerPoint تحتوي على صورة الصفحة وطبقة للنص المستخرج. لا يعيد التطبيق بناء الجداول والتخطيطات المعقدة أو عناصر العروض التقديمية. يمكن الحفاظ على النص العربي الموجود داخل الملف؛ أما التعرّف على النص من الصور فيستخدم نموذجًا للخطوط اللاتينية.
+حوّل نصوص PDF إلى مستند Word يتضمن فقرات وعناوين وفواصل صفحات أساسية. ويمكن تحويل كل صفحة إلى شريحة PowerPoint تحتوي على صورة الصفحة وطبقة للنص المستخرج. لا يعيد التطبيق بناء الجداول والتخطيطات المعقدة أو عناصر العروض التقديمية. يمكن الحفاظ على النص العربي الموجود داخل الملف؛ ويدعم التعرّف على النص من الصور الخطوط اللاتينية والآسيوية عبر ML Kit والعربية عبر Tesseract.
 
 للروابط التي تملك حق تنزيل محتواها، اعرض بيانات الوسائط أولًا ثم اختر من خيارات الفيديو أو الصوت المتاحة فعليًا. تابع التقدم وألغِ المهمة أو أوقف النقل المدعوم مؤقتًا واستأنفه، واختر مجلد الحفظ. يعتمد التوافر على المصدر وحقوق الوصول والاتصال وقيود العمل في الخلفية في Android. لا يتجاوز Jumlo حماية المحتوى أو قيود الوصول إلى المحتوى الخاص.
 

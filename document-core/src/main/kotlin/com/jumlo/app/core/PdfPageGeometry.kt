@@ -140,13 +140,9 @@ object PdfCompressionPolicy {
      * --measure`, on the host, without a device.
      */
     enum class Preset(val dpi: Int, val quality: Int, val measuredSavingPercent: IntRange) {
-        /** The lightest compression: the best picture. */
         BEST_QUALITY(240, 90, 0..40),
-        /** The middle ground. */
         BALANCED(180, 75, 11..81),
-        /** A small file that is still readable. */
         SMALL_FILE(135, 58, 9..92),
-        /** The smallest file: the strongest compression. */
         STRONG(108, 45, 28..96);
 
         companion object {
@@ -188,7 +184,6 @@ object PdfCompressionPolicy {
 
     fun sliderSteps(): List<Pair<Int, Int>> = SLIDER_STEPS
 
-    /** The (dpi, quality) pair for a slider position in [0, 1]. */
     fun sliderStep(position: Float): Pair<Int, Int> {
         val steps = sliderSteps()
         if (steps.isEmpty()) return 150 to 70
@@ -197,7 +192,6 @@ object PdfCompressionPolicy {
         return steps[index]
     }
 
-    /** The slider position that matches a (dpi, quality) pair. */
     fun sliderPosition(dpi: Int, quality: Int): Float {
         val steps = sliderSteps()
         if (steps.isEmpty()) return 0.5f
@@ -208,15 +202,6 @@ object PdfCompressionPolicy {
         return index.toFloat() / (steps.size - 1)
     }
 
-    /**
-     * A rough size estimate for the slider.
-     *
-     * Only the embedded images are re-encoded, so the image share of the file is
-     * scaled by the resolution and the quality factor, and everything else is left
-     * alone. 300 DPI is the reference for "as captured". It is an *estimate*: the real
-     * size is only known after the run, and the tool always reports the real one.
-     */
-    /** The share of the file the estimate expects to save, as a percentage. */
     fun estimatedSavingPercent(originalBytes: Long, estimatedBytes: Long): Int {
         if (originalBytes <= 0L || estimatedBytes >= originalBytes) return 0
         val clamped = estimatedBytes.coerceAtLeast(0L)
@@ -224,6 +209,10 @@ object PdfCompressionPolicy {
             .toInt().coerceIn(0, 99)
     }
 
+    /**
+     * Only embedded images are re-encoded, so only the image share scales with resolution
+     * and quality (300 DPI reference). Real size is known only after compression.
+     */
     fun estimateBytes(originalBytes: Long, imageBytes: Long, dpi: Int, quality: Int): Long {
         if (originalBytes <= 0L) return 0L
         val images = imageBytes.coerceIn(0L, originalBytes)
@@ -259,7 +248,6 @@ object PdfCompressionPolicy {
         return rungs.distinct()
     }
 
-    /** The lowest resolution the ladder may reach for the chosen quality. */
     fun ladderFloor(quality: Int): Int = when {
         quality <= 55 -> 60
         quality <= 70 -> 72
@@ -267,7 +255,6 @@ object PdfCompressionPolicy {
         else -> 150
     }
 
-    /** The resolutions the ladder walks down through. */
     private val LADDER_STEPS = listOf(300, 220, 170, 135, 108, 96, 72, 60)
 
     /** Pick a safe decode subsampling factor before creating an Android ARGB Bitmap.

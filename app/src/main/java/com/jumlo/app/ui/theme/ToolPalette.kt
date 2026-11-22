@@ -14,12 +14,12 @@ object ToolPalette {
     fun accentFor(toolId: String, dark: Boolean = false, system: ColorSystem = ColorSystems.DEFAULT): Color {
         val accents = system.tools(dark)
         val index = when {
-            toolId == "scan_doc" -> 3
-            toolId.startsWith("pdf_") -> 0
+            toolId == "scan_doc" || toolId == "scan" || toolId == "id_card" || toolId == "scan_id_card" -> 3
+            toolId.startsWith("pdf_") || toolId == "office_to_pdf" || toolId == "convert" -> 0
             toolId.startsWith("img_") -> 1
             toolId.startsWith("dl_") -> 2
-            toolId.startsWith("file_") -> 3
-            toolId.startsWith("xf_") -> 4
+            toolId.startsWith("file_") || toolId.startsWith("zip_") -> 3
+            toolId.startsWith("xf_") || toolId == "all_tools" -> 4
             else -> (toolId.hashCode() and Int.MAX_VALUE) % accents.size
         }
         return accents[index]

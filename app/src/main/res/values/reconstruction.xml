@@ -11,11 +11,6 @@
     <string name="quick_start_privacy">Your files are processed on your device; no account is required.</string>
     <string name="quick_start_skip">Not now</string>
     <string name="quick_start_replay">Quick-start guide</string>
-    <string name="quick_start_replay_detail">See the Import, Scan and Tools walkthrough again.</string>
-    <string name="quick_start_done">Start creating</string>
-    <string name="quick_start_section">First steps</string>
-    <string name="quick_start_print">Print from your files</string>
-    <string name="quick_start_print_desc">Use Android print services to select an installed printer.</string>
     <string name="print_invalid_numeric">Correct the highlighted numeric settings before printing or saving a preset.</string>
     <string name="print_reset_invalid">Reset invalid values</string>
     <string name="preset_panel_title">Saved tool presets</string>

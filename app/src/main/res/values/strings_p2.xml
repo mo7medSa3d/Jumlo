@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="p2_pdf_split_mode_label">Mode</string>
+    <string name="p2_pdf_split_mode_split">Split into separate PDFs</string>
+    <string name="p2_pdf_split_mode_extract">Extract selected pages as one PDF</string>
+    <string name="p2_pdf_images_mode_label">Output Mode</string>
+    <string name="p2_pdf_images_mode_long">One long image (auto-split parts)</string>
+    <string name="p2_pdf_images_mode_separate">Separate image per page</string>
+</resources>

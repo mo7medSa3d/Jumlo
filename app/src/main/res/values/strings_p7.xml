@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="msg_linkedin_auth_required">LinkedIn blocked public access to this post behind a sign-in wall. Share a public post link or configure a media extraction service in Settings.</string>
+    <string name="msg_linkedin_no_video">This public LinkedIn post loaded, but it contains no downloadable video or media (it may be a text-only or link post).</string>
+    <string name="msg_linkedin_unsupported_stream">This LinkedIn video is only available as an adaptive HLS or protected stream without a direct MP4 download. Configure a media extraction service in Settings to try downloading it.</string>
+</resources>

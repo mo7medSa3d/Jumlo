@@ -7,7 +7,6 @@ Behavioral: a faithful Python mirror validates the algorithms (move, rotate
 mod-360, delete, extract, splitEvery, merge renumber, undo/redo) since no kotlinc
 is available in this sandbox.
 """
-import re
 import unittest
 from pathlib import Path
 from source_paths import source_path
@@ -19,7 +18,6 @@ def read(relative):
     return source_path(relative).read_text(encoding='utf-8')
 
 
-# --- Behavioral mirror of the Kotlin (validates the algorithm design) ---
 class PdfPageEdit:
     def __init__(self, order, selected=None, rotations=None):
         self.order = list(order)

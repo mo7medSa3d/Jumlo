@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+test_*.py
+.git
+.pytest_cache

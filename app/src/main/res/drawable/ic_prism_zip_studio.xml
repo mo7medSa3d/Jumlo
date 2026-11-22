@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Filled rounded archive box with zipper teeth cutout for unified ZIP tools. -->
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M4,4h6l2,2h8c1.1,0 2,0.9 2,2v10c0,1.1 -0.9,2 -2,2H4c-1.1,0 -2,-0.9 -2,-2V6c0,-1.1 0.9,-2 2,-2zM12,8h2v2h-2V8zM14,10h2v2h-2v-2zM12,12h2v2h-2v-2zM14,14h2v2h-2v-2zM12,16h2v2h-2v-2z" />
+</vector>

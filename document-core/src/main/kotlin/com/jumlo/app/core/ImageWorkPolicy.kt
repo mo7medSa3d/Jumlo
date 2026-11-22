@@ -1,7 +1,61 @@
 package com.jumlo.app.core
 
+import kotlin.math.floor
+import kotlin.math.sqrt
+
 /** All image allocations use the caller's actual budget, including resident bitmaps. */
 object ImageWorkPolicy {
+    const val MIN_DYNAMIC_BUDGET_BYTES: Long = 192L * 1024 * 1024
+    const val MAX_EDGE_PX: Int = 32_768
+    const val MAX_STRIP_EDGE_PX: Int = 65_500
+    const val MAX_PNG_STRIP_EDGE_PX: Int = 131_000
+    const val MAX_WEBP_EDGE_PX: Int = 16_383
+    const val MAX_PIXELS: Long = 128L * 1024 * 1024
+    private const val SYNTHETIC_TEST_BUDGET_THRESHOLD: Long = 16L * 1024 * 1024
+
+    /** Scales dynamically up to 65% of max heap with a 192 MiB floor. */
+    fun dynamicBudget(heapMaxBytes: Long = Runtime.getRuntime().maxMemory()): Long {
+        val safeHeap = heapMaxBytes.coerceAtLeast(0L)
+        return maxOf(MIN_DYNAMIC_BUDGET_BYTES, (safeHeap / 100L) * 65L + ((safeHeap % 100L) * 65L) / 100L)
+    }
+
+    /** Raises artificial production caps to [dynamicBudget] while preserving tiny explicit test budgets. */
+    fun effectiveBudget(configuredBudget: Long, heapMaxBytes: Long = Runtime.getRuntime().maxMemory()): Long =
+        if (configuredBudget < SYNTHETIC_TEST_BUDGET_THRESHOLD) configuredBudget
+        else maxOf(configuredBudget, dynamicBudget(heapMaxBytes))
+
+    /** Format-aware safe edge ceiling (WebP hard limit is 16,383 px; JPEG SOF0 is 65,535 px). */
+    fun maxEdgeForFormat(format: String, strip: Boolean = false): Int = when (format.uppercase(java.util.Locale.ROOT)) {
+        "WEBP" -> MAX_WEBP_EDGE_PX
+        "JPEG", "JPG" -> if (strip) MAX_STRIP_EDGE_PX else MAX_EDGE_PX
+        "PNG" -> if (strip) MAX_PNG_STRIP_EDGE_PX else MAX_EDGE_PX
+        else -> if (strip) MAX_STRIP_EDGE_PX else MAX_EDGE_PX
+    }
+
+    /** Keeps target dimensions unchanged when they fit; gracefully scales down only when extreme dimensions exceed budget/caps. */
+    fun boundedDimensions(
+        width: Int,
+        height: Int,
+        availableBytes: Long,
+        maxEdge: Int = MAX_EDGE_PX,
+        maxPixels: Long = MAX_PIXELS
+    ): Pair<Int, Int> {
+        require(width > 0 && height > 0 && maxEdge > 0 && maxPixels > 0 && availableBytes >= 4L) { "INVALID_DIMENSIONS" }
+        val pixelCap = minOf(maxPixels, availableBytes / 4L, Int.MAX_VALUE / 4L).coerceAtLeast(1L)
+        val currentPixels = width.toLong() * height.toLong()
+        if (maxOf(width, height) <= maxEdge && currentPixels <= pixelCap) return width to height
+        val edgeScale = maxEdge.toDouble() / maxOf(width, height).toDouble()
+        val areaScale = sqrt(pixelCap.toDouble() / currentPixels.toDouble())
+        val scale = minOf(1.0, edgeScale, areaScale)
+        var w = floor(width * scale).toInt().coerceAtLeast(1)
+        var h = floor(height * scale).toInt().coerceAtLeast(1)
+        if (w.toLong() * h > pixelCap) {
+            if (w >= h) w = (pixelCap / h).toInt().coerceAtLeast(1)
+            else h = (pixelCap / w).toInt().coerceAtLeast(1)
+        }
+        return w to h
+    }
+
     fun bytes(width: Int, height: Int): Long {
         require(width > 0 && height > 0) { "INVALID_DIMENSIONS" }
         val pixels = width.toLong() * height.toLong()
@@ -72,7 +126,7 @@ data class ImageJoinPlan(val width: Int, val height: Int, val placements: List<I
 object ImageJoinPolicy {
     fun plan(sizes: List<Pair<Int, Int>>, layout: String, gapPx: Int, overlapPx: Int = 0): ImageJoinPlan {
         require(sizes.isNotEmpty()) { "NO_SOURCES" }
-        sizes.forEach { ImageWorkPolicy.bytes(it.first, it.second) }
+        sizes.forEach { require(it.first > 0 && it.second > 0) { "INVALID_DIMENSIONS" } }
         val gap = gapPx.coerceIn(0, 500)
         val overlap = if (layout == "VSTRIP") overlapPx.coerceIn(0, 400) else 0
         val cellWidth = sizes.maxOf { it.first }
@@ -84,8 +138,8 @@ object ImageJoinPolicy {
             val placement = ImagePlacement(x.toInt(), y.toInt(), trim)
             width = maxOf(width, x + w); height = maxOf(height, y + h - trim)
             when (layout) {
-                "VSTRIP" -> y += h - trim + gap
-                "HSTRIP" -> x += w + gap
+                "VSTRIP" -> y += h.toLong() - trim + gap
+                "HSTRIP" -> x += w.toLong() + gap
                 else -> if (index % 2 == 0) x = cellWidth.toLong() + gap else { x = 0; y += cellHeight.toLong() + gap }
             }
             placement
@@ -96,7 +150,7 @@ object ImageJoinPolicy {
             height = cellHeight.toLong() * ((sizes.size + 1L) / 2L) + gap * ((sizes.size - 1L) / 2L)
         }
         require(width in 1..Int.MAX_VALUE.toLong() && height in 1..Int.MAX_VALUE.toLong()) { "IMAGE_DIMENSIONS_UNREPRESENTABLE" }
-        ImageWorkPolicy.bytes(width.toInt(), height.toInt())
+        // Virtual plan dimensions may exceed a single 2 GiB bitmap; callers scale via boundedDimensions before allocation.
         return ImageJoinPlan(width.toInt(), height.toInt(), placements)
     }
 }

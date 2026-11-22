@@ -51,7 +51,7 @@ fun DropFilesTarget(
                 val androidEvent = event.toAndroidDragEvent()
                 val clip = androidEvent.clipData ?: return false
                 val uris = (0 until clip.itemCount.coerceAtMost(1000))
-                    .mapNotNull { clip.getItemAt(it).uri?.takeIf { uri -> uri.scheme == "content" }?.toString() }
+                    .mapNotNull { clip.getItemAt(it).uri?.takeIf { uri -> uri.scheme.equals("content", ignoreCase = true) }?.toString() }
                     .distinct()
                 if (uris.isEmpty()) return false
                 var release: () -> Unit = {}

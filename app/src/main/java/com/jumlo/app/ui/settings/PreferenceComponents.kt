@@ -26,7 +26,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.jumlo.app.BuildConfig
 import com.jumlo.app.R
 import com.jumlo.app.ui.StorageUsage
 import com.jumlo.app.model.OutputRecord
@@ -206,13 +205,15 @@ import com.jumlo.app.ui.components.QuietIconTile
 @Composable fun PrivacyDialog(onDismiss: () -> Unit) = InfoDialog(
     stringResource(R.string.account_privacy), stringResource(R.string.account_privacy_body), onDismiss)
 
-@Composable fun AboutDialog(onDismiss: () -> Unit) = InfoDialog(
-    stringResource(R.string.account_help_about), stringResource(R.string.account_about_body, BuildConfig.VERSION_NAME), onDismiss)
 
 @Composable fun StorageOverviewDialog(usage: StorageUsage, onDismiss: () -> Unit, onClean: (() -> Unit)? = null, outputFiles: List<OutputRecord> = emptyList()) {
     val context = LocalContext.current
-    val items = listOf(R.string.storage_imports to usage.sources, R.string.storage_results to usage.outputs,
-        R.string.storage_transfers to usage.partials, R.string.storage_temporary to usage.temporary, R.string.storage_trash to usage.trash)
+    val items = listOf(
+        R.string.storage_results to usage.outputs,
+        R.string.storage_transfers to usage.partials,
+        R.string.storage_temporary to usage.temporary,
+        R.string.storage_trash to usage.trash
+    )
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.account_storage), modifier = Modifier.semantics { heading() }) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items.forEach { (label, bytes) ->

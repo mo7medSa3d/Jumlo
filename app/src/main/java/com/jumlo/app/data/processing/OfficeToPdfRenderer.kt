@@ -43,7 +43,7 @@ class RenderedOfficePdf(val document: PDDocument, val stats: OfficeRenderStats) 
  * page. Raster blocks taller than one page are sliced across pages.
  */
 object OfficeToPdfRenderer {
-    private const val SCALE = 2.0f // raster pixels per point (144 dpi); bounded memory for large tables
+    private const val SCALE = 3.5f // raster pixels per point (252 dpi); crisp Arabic/RTL shaping with bounded slice memory
     private const val MAX_RASTER_TABLE_COLUMNS = 512
     private const val MAX_RASTER_CELL_CHARS = 100_000
     private const val MAX_RASTER_ROW_CHARS = 250_000
@@ -304,6 +304,9 @@ object OfficeToPdfRenderer {
             xPt: Float = margin,
             drawWidthPt: Float = availWidth
         ) {
+            val bitmapHeightLimit = (maxBitmapBytes / 2L / (widthPx.toLong() * 4L))
+                .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            require(bitmapHeightLimit > 0) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
             var lineIdx = 0
             val lineCount = layout.lineCount
             while (lineIdx < lineCount) {
@@ -315,9 +318,10 @@ object OfficeToPdfRenderer {
                     newPage()
                     roomPt = cursorY - margin
                 }
-                val roomPx = (roomPt * SCALE).toInt().coerceAtLeast(1)
+                val pageRoomPx = (roomPt * SCALE).toInt().coerceAtLeast(1)
+                val sliceLimitPx = minOf(pageRoomPx, bitmapHeightLimit).coerceAtLeast(1)
                 var endLine = lineIdx
-                while (endLine + 1 < lineCount && layout.getLineBottom(endLine + 1) - startY <= roomPx) {
+                while (endLine + 1 < lineCount && layout.getLineBottom(endLine + 1) - startY <= sliceLimitPx) {
                     endLine++
                 }
                 val endY = layout.getLineBottom(endLine).coerceAtMost(totalHeightPx)
@@ -340,7 +344,10 @@ object OfficeToPdfRenderer {
                     bitmap.recycle()
                 }
                 lineIdx = endLine + 1
-                if (lineIdx < lineCount) newPage()
+                if (lineIdx < lineCount) {
+                    val nextLineHeightPx = (layout.getLineBottom(lineIdx) - layout.getLineTop(lineIdx)).coerceAtLeast(1)
+                    if ((cursorY - margin) * SCALE < nextLineHeightPx) newPage()
+                }
             }
         }
 
@@ -499,7 +506,7 @@ object OfficeToPdfRenderer {
         }
 
         private data class RasterCellLayout(val span: Int, val layout: StaticLayout)
-        private data class RasterRowLayout(val cells: List<RasterCellLayout>, val height: Int)
+        private data class RasterRowLayout(val cells: List<RasterCellLayout>, val height: Int, val isHeader: Boolean = false)
 
         private fun drawRasterTable(block: OfficeBlock.TableBlock) {
             val rows = block.rows
@@ -509,6 +516,7 @@ object OfficeToPdfRenderer {
             val bitmapHeightLimit = (maxBitmapBytes / 2L / (widthPx.toLong() * 4L))
                 .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
             require(bitmapHeightLimit > 0) { "IMAGE_MEMORY_BUDGET_EXCEEDED" }
+            val chunkHeightLimit = minOf(pageHeightLimit, bitmapHeightLimit)
             val colCount = rows.maxOf { row -> row.sumOf { it.colSpan.toLong() } }
             require(colCount in 1L..MAX_RASTER_TABLE_COLUMNS.toLong()) { "OFFICE_SIZE_LIMIT" }
             val colWidthPx = widthPx / colCount.toInt()
@@ -520,8 +528,13 @@ object OfficeToPdfRenderer {
             val boldPaint = TextPaint(paint).apply {
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             }
+            val headerFillPaint = Paint().apply {
+                color = Color.rgb(237, 237, 237)
+                style = Paint.Style.FILL
+            }
+            val padPx = (4f * SCALE).toInt().coerceAtLeast(8)
 
-            fun layoutRow(row: List<OfficeCell>): RasterRowLayout {
+            fun layoutRow(row: List<OfficeCell>, isHeader: Boolean): RasterRowLayout {
                 var col = 0
                 var rowChars = 0L
                 val cells = ArrayList<RasterCellLayout>(row.size)
@@ -533,41 +546,47 @@ object OfficeToPdfRenderer {
                         rowChars <= MAX_RASTER_ROW_CHARS) { "OFFICE_SIZE_LIMIT" }
                     require(cell.colSpan in 1..MAX_RASTER_TABLE_COLUMNS &&
                         col + cell.colSpan <= MAX_RASTER_TABLE_COLUMNS) { "OFFICE_SIZE_LIMIT" }
-                    val cellPad = minOf(8, colWidthPx * cell.colSpan / 4)
+                    val cellPad = minOf(padPx, colWidthPx * cell.colSpan / 4)
                     val cellWidth = (colWidthPx * cell.colSpan - 2 * cellPad).coerceAtLeast(1)
                     val rtl = isRtlText(cell.text)
                     val layout = StaticLayout.Builder.obtain(
                         cell.text, 0, cell.text.length,
-                        if (cell.bold) boldPaint else paint, cellWidth
+                        if (cell.bold || isHeader) boldPaint else paint, cellWidth
                     ).setTextDirection(if (rtl) android.text.TextDirectionHeuristics.RTL else android.text.TextDirectionHeuristics.FIRSTSTRONG_LTR)
                         .setLineSpacing(0f, 1.35f).build()
                     cells += RasterCellLayout(cell.colSpan, layout)
                     rowHeight = maxOf(rowHeight, layout.height + 2 * cellPad)
                     col += cell.colSpan
                 }
-                return RasterRowLayout(cells, rowHeight)
+                return RasterRowLayout(cells, rowHeight, isHeader)
             }
 
-            // Keep only the layouts needed for the current page-sized bitmap.
-            // The previous implementation created StaticLayout for every cell in
-            // the workbook/slide deck before rendering the first page.
+            // Keep only the layouts needed for the current page/memory-bounded bitmap slice.
             var start = 0
             while (start < rows.size) {
+                val roomPx = ((cursorY - margin) * SCALE).toInt().coerceAtLeast(1)
+                val sliceLimit = minOf(chunkHeightLimit, if (hasContent) roomPx else pageHeightLimit)
                 val chunk = ArrayList<RasterRowLayout>()
                 var chunkHeight = 0L
                 while (start + chunk.size < rows.size) {
                     checkCancel()
-                    val rowLayout = layoutRow(rows[start + chunk.size])
+                    val rowIndex = start + chunk.size
+                    val rowLayout = layoutRow(rows[rowIndex], isHeader = block.headerRow && rowIndex == 0)
                     val nextHeight = rowLayout.height.toLong()
-                    if (chunk.isNotEmpty() && chunkHeight + nextHeight > pageHeightLimit) break
+                    if (chunk.isNotEmpty() && chunkHeight + nextHeight > sliceLimit) break
+                    if (chunk.isEmpty() && hasContent && nextHeight > roomPx && nextHeight <= pageHeightLimit) {
+                        newPage()
+                        break
+                    }
                     require(nextHeight <= bitmapHeightLimit.toLong() - chunkHeight) {
                         "IMAGE_MEMORY_BUDGET_EXCEEDED"
                     }
                     chunk += rowLayout
                     chunkHeight += nextHeight
-                    if (chunkHeight >= pageHeightLimit) break
+                    if (chunkHeight >= sliceLimit) break
                 }
-                require(chunk.isNotEmpty() && chunkHeight in 1..Int.MAX_VALUE.toLong()) {
+                if (chunk.isEmpty()) continue
+                require(chunkHeight in 1..Int.MAX_VALUE.toLong()) {
                     "IMAGE_MEMORY_BUDGET_EXCEEDED"
                 }
                 val chunkHeightPx = chunkHeight.toInt()
@@ -578,14 +597,17 @@ object OfficeToPdfRenderer {
                     val linePaint = Paint().apply {
                         color = Color.LTGRAY
                         style = Paint.Style.STROKE
-                        strokeWidth = 1f
+                        strokeWidth = (0.5f * SCALE).coerceAtLeast(1f)
                     }
                     var y = 0
                     for (rowLayout in chunk) {
+                        if (rowLayout.isHeader) {
+                            canvas.drawRect(0f, y.toFloat(), widthPx.toFloat(), (y + rowLayout.height).toFloat(), headerFillPaint)
+                        }
                         var x = 0
                         for (cell in rowLayout.cells) {
                             val cellWidth = colWidthPx * cell.span
-                            val cellPad = minOf(8, cellWidth / 4)
+                            val cellPad = minOf(padPx, cellWidth / 4)
                             canvas.save()
                             canvas.clipRect(x.toFloat(), y.toFloat(), (x + cellWidth).toFloat(), (y + rowLayout.height).toFloat())
                             canvas.translate((x + cellPad).toFloat(), (y + cellPad).toFloat())
@@ -610,7 +632,7 @@ object OfficeToPdfRenderer {
                     bitmap.recycle()
                 }
                 start += chunk.size
-                if (start < rows.size) newPage()
+                if (start < rows.size && cursorY - margin < 20f) newPage()
             }
             cursorY -= 4f
             rasterized++

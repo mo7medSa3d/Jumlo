@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s8_markup_tool_eraser">ممحاة</string>
+    <string name="s8_markup_size">الحجم</string>
+    <string name="s8_markup_saving">جارٍ الحفظ…</string>
+    <string name="s8_markup_saved">تم الحفظ في الملف</string>
+    <string name="s8_markup_saved_copy">تم الحفظ كنسخة جديدة</string>
+    <string name="s8_markup_save_in_place">حفظ في نفس الملف</string>
+    <string name="s8_markup_save_copy">حفظ كنسخة جديدة</string>
+    <string name="s8_markup_save_failed">تعذر حفظ التغييرات</string>
+    <string name="s8_markup_resize_signature">تغيير حجم التوقيع</string>
+    <string name="s8_markup_delete_item">حذف</string>
+    <string name="s8_markup_brightness">السطوع</string>
+</resources>

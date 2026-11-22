@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ocr_downloading_arabic_model">جارٍ تنزيل حزمة التعرّف على العربية…</string>
+    <string name="ocr_downloading_arabic_model_pct">جارٍ تنزيل حزمة التعرّف على العربية… %1$d%%</string>
+    <string name="ocr_arabic_model_missing_actionable">يتطلب التعرّف على النص العربي تنزيل حزمة اللغة لمرة واحدة. اتصل بالإنترنت واضغط على إعادة المحاولة لتنزيلها للاستخدام دون اتصال.</string>
+</resources>

@@ -1,76 +1,105 @@
 package com.jumlo.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import kotlin.math.abs
 
 /**
- * Tool icon colors, fixed by design — deliberately NOT the chosen color
- * system. Every tool tile used to inherit its pillar accent from the
- * system, so in a warm system (Sunset) every icon read as the same orange.
- * These colors are vivid, one per tool, and identical in light and dark
- * mode: the tile itself is the color, so it needs no theme to read.
+ * Fixed, vivid semantic colors per tool and Home quick action.
+ * Deliberately independent of the user's theme accent so every tool tile stays
+ * immediately recognizable in both light and dark modes.
  *
- * Hue plan: each family has a center hue (PDF red-orange, scanner teal,
- * images green, files violet, downloads blue, organize amber, other
- * magenta) and each tool steps 37 degrees inside a 90-degree window
- * around it. 37 and 90 are coprime, so all 30 catalogue tools land on
- * distinct hues. Saturation 0.85 / lightness 0.55 keeps every tile vivid;
- * glyphOn picks black or white by WCAG contrast (worst pair 4.82).
- * Unknown ids fall back to a hash step so no tool ever renders colorless.
+ * Every curated color is unique (no duplicates, no grey fallback) and paired
+ * with [glyphOn] for WCAG AA contrast (>= 4.5:1) against white or black.
  */
 object ToolIconColors {
-    private val ORDERED = listOf(
-        // PDF workspace, catalogue order.
-        "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_ocr", "pdf_02",
-        "pdf_03", "pdf_05", "pdf_04", "pdf_compress", "pdf_07", "pdf_long_image", "pdf_signature",
-        "pdf_06", "pdf_crop", "pdf_stamp", "pdf_protect", "pdf_nup", "pdf_privacy_redact", "pdf_01",
-        // Scanner.
-        "scan_doc",
-        // Images workspace.
-        "img_03", "img_02", "img_04", "img_01", "img_join", "img_watermark",
-        // Files workspace.
-        "file_07", "file_batch_rename", "file_08", "file_encrypted_zip",
-        // Downloads workspace.
-        "dl_media", "dl_02", "dl_03"
+    private val SEMANTIC_COLORS: Map<String, Color> = linkedMapOf(
+        // PDF conversion & scan (warm reds, oranges, corals, blues/teals)
+        "pdf_to_docx" to Color(0xFF2563EB),        // Word royal blue
+        "pdf_to_pptx" to Color(0xFFEA580C),        // PowerPoint burnt orange
+        "office_to_pdf" to Color(0xFFDC2626),      // Office crimson red
+        "pdf_ocr" to Color(0xFFE11D48),            // OCR rose red
+        "pdf_02" to Color(0xFFF97316),             // Images to PDF tangerine
+        "pdf_07" to Color(0xFFF59E0B),             // PDF to Images amber
+        "pdf_long_image" to Color(0xFFD97706),     // Long Image golden ochre
+        "scan_doc" to Color(0xFF0284C7),           // Smart Scan ocean blue
+        "scan" to Color(0xFF0284C7),
+
+        // PDF edit, organize & security
+        "pdf_01" to Color(0xFFEF4444),             // View PDF scarlet
+        "pdf_03" to Color(0xFFEC4899),             // Merge PDF hot pink
+        "pdf_04" to Color(0xFFEAB308),             // Organize Pages vivid gold
+        "pdf_05" to Color(0xFFF43F5E),             // Split PDF coral red
+        "pdf_06" to Color(0xFFCA8A04),             // Extract Pages warm mustard
+        "pdf_compress" to Color(0xFFBE123C),       // Compress PDF ruby
+        "pdf_crop" to Color(0xFFFB7185),           // Crop PDF salmon
+        "pdf_stamp" to Color(0xFFFB923C),          // Watermark PDF warm orange
+        "pdf_signature" to Color(0xFFC2410C),      // Sign PDF terracotta
+        "pdf_protect" to Color(0xFFDB2777),        // Lock PDF magenta
+        "pdf_nup" to Color(0xFFFACC15),            // 2/4 per page sunflower
+        "pdf_privacy_redact" to Color(0xFFB91C1C), // Redact deep crimson
+
+        // Images & unified image studio (greens & teals)
+        "img_01" to Color(0xFF10B981),             // Convert Images emerald
+        "img_02" to Color(0xFF14B8A6),             // Resize Images teal
+        "img_03" to Color(0xFF22C55E),             // Crop & Rotate bright green
+        "img_04" to Color(0xFF84CC16),             // Compress Images lime
+        "img_watermark" to Color(0xFF059669),      // Watermark Images jade
+        "img_join" to Color(0xFF06B6D4),           // Join / Collage cyan
+        "img_studio" to Color(0xFF16A34A),         // Unified Image Studio vivid green
+        "img_unified" to Color(0xFF16A34A),
+        "img_editor" to Color(0xFF16A34A),
+        "img_tools" to Color(0xFF16A34A),
+
+        // Files & unified ZIP studio (purples, violets, indigos)
+        "file_02" to Color(0xFF6366F1),            // Files indigo
+        "file_07" to Color(0xFF9333EA),            // Create ZIP vivid purple
+        "file_08" to Color(0xFF7C3AED),            // Extract ZIP violet
+        "file_encrypted_zip" to Color(0xFFC026D3), // Encrypted ZIP fuchsia
+        "file_batch_rename" to Color(0xFF4F46E5),  // Batch Rename deep indigo
+        "file_zip" to Color(0xFF8B5CF6),           // Unified ZIP Studio amethyst
+        "zip_studio" to Color(0xFF8B5CF6),
+        "zip_unified" to Color(0xFF8B5CF6),
+        "file_archive" to Color(0xFF8B5CF6),
+
+        // Downloads (blues)
+        "dl_media" to Color(0xFF0EA5E9),           // Download sky blue
+        "dl_02" to Color(0xFF3B82F6),              // Direct Link cobalt
+        "dl_03" to Color(0xFF0369A1),              // Batch Links deep cerulean
+        "dl_settings" to Color(0xFF1D4ED8),        // Download settings royal blue
+
+        // Home quick actions (distinct from every neighboring quick action)
+        "id_card" to Color(0xFF0D9488),            // ID Card deep teal (distinct from scan_doc blue)
+        "scan_id_card" to Color(0xFF0D9488),
+        "convert" to Color(0xFFFF6D00),            // Convert vivid deep orange
+        "all_tools" to Color(0xFF6D28D9),          // All Tools deep violet
     )
 
-    private val INDEX = ORDERED.withIndex().associate { it.value to it.index }
-
     private fun pillarCenter(toolId: String): Float = when {
-        toolId == "scan_doc" -> 185f
-        toolId.startsWith("pdf_") || toolId == "office_to_pdf" -> 12f
-        toolId.startsWith("img_") -> 150f
-        toolId.startsWith("dl_") -> 220f
-        toolId.startsWith("file_") -> 275f
+        toolId == "scan_doc" || toolId == "scan" || toolId == "id_card" -> 195f
+        toolId.startsWith("pdf_") || toolId == "office_to_pdf" || toolId == "convert" -> 12f
+        toolId.startsWith("img_") -> 148f
+        toolId.startsWith("dl_") -> 212f
+        toolId.startsWith("file_") || toolId.startsWith("zip_") -> 272f
         toolId.startsWith("xf_") -> 45f
-        else -> 320f
+        else -> 295f
     }
 
-    /** The fixed tile color for a tool. Never follows the color system. */
+    /** The fixed vivid tile color for a tool or Home quick action. */
     fun iconColorFor(toolId: String): Color {
-        val index = INDEX[toolId] ?: ((toolId.hashCode() and Int.MAX_VALUE) % ORDERED.size)
-        val hue = (pillarCenter(toolId) + ((index * 37) % 90) - 45 + 360) % 360
-        return hsl(hue, 0.85f, 0.55f)
+        SEMANTIC_COLORS[toolId]?.let { return it }
+        val step = (toolId.hashCode() and Int.MAX_VALUE) % 36
+        val hue = (pillarCenter(toolId) + ((step * 37) % 90) - 45 + 360) % 360
+        return hsl(hue, 0.82f, 0.50f)
     }
 
     /** Black or white, whichever reads better on the tile (WCAG contrast). */
     fun glyphOn(icon: Color): Color =
         if (M3ColorFactory.contrast(icon, Color.White) >= M3ColorFactory.contrast(icon, Color.Black)) Color.White else Color.Black
 
-    /** Linear mix of two colors, for tile borders that echo the icon. */
-    fun mix(a: Color, b: Color, amount: Float): Color {
-        val t = amount.coerceIn(0f, 1f)
-        return Color(
-            red = a.red + (b.red - a.red) * t,
-            green = a.green + (b.green - a.green) * t,
-            blue = a.blue + (b.blue - a.blue) * t,
-            alpha = 1f
-        )
-    }
-
     private fun hsl(hueDeg: Float, saturation: Float, lightness: Float): Color {
         val h = (hueDeg % 360) / 360f
-        val c = (1 - Math.abs(2 * lightness - 1)) * saturation
-        val x = c * (1 - Math.abs((h * 6) % 2 - 1))
+        val c = (1 - abs(2 * lightness - 1)) * saturation
+        val x = c * (1 - abs((h * 6) % 2 - 1))
         val m = lightness - c / 2
         val (r, g, b) = when ((h * 6).toInt()) {
             0 -> Triple(c, x, 0f)

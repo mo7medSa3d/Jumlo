@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="msg_linkedin_auth_required">حظر LinkedIn الوصول العام إلى هذا المنشور خلف صفحة تسجيل الدخول. استخدم رابط منشور عام أو اضبط خدمة استخراج الوسائط من الإعدادات.</string>
+    <string name="msg_linkedin_no_video">تم تحميل منشور LinkedIn العام، لكنه لا يحتوي على فيديو أو وسائط قابلة للتنزيل (قد يكون منشورًا نصيًا أو رابطًا فقط).</string>
+    <string name="msg_linkedin_unsupported_stream">يتوفر فيديو LinkedIn هذا كبث HLS تكيّفي أو محمي فقط دون رابط MP4 مباشر. اضبط خدمة استخراج الوسائط من الإعدادات لمحاولة تنزيله.</string>
+</resources>

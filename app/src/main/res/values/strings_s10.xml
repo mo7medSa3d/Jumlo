@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s10_saved_title">Saved</string>
+    <string name="s10_saved_location_default">Downloads/Jumlo</string>
+    <string name="s10_saved_in_place">Changes saved to document</string>
+    <string name="s10_saved_as_copy">Saved as a new copy in Downloads/Jumlo</string>
+    <string name="s10_markup_save_failed">Couldn\'t save PDF changes. Check free storage and try again.</string>
+    <string name="s10_new_operation">New operation</string>
+    <string name="s10_files_saved_count">%1$d files saved</string>
+    <string name="s10_finalizing_output">Finalizing output…</string>
+    <string name="s10_zip_optional_password">Password (optional, AES-256)</string>
+    <string name="s10_keep_original_image_quality">Keep original embedded image quality</string>
+</resources>

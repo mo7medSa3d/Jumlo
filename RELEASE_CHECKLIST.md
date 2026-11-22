@@ -63,7 +63,7 @@ This is a release gate, not a claim of Play approval. The former `TEST_REPORT.md
 
 ## Manual smoke checklist
 
-- [ ] Confirm the tool matrix covers every registered ID × four scenarios (30×4 = 120 cases: 100 processing NOT_RUN, 20 navigation N/A) until real evidence exists. The authenticated Drive transfer cases are retired; never count archived IDs or N/A cases as PASS.
+- [ ] Confirm the tool matrix covers every registered ID × four scenarios (33×4 = 132 cases: 124 processing NOT_RUN, 8 navigation N/A; 21 primary tools, 5 folded PDF actions, 7 internal legacy aliases) until real evidence exists. The authenticated Drive transfer cases are retired; never count archived IDs or N/A cases as PASS.
 
 - [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
 

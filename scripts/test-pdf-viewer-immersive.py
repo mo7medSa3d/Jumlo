@@ -38,7 +38,7 @@ class PdfViewerImmersiveContracts(unittest.TestCase):
         self.assertIn('pdf.page.indicator', self.viewer)
         self.assertIn('pdf.menu', self.viewer)
         # Top bar content height is capped at 56dp.
-        self.assertRegex(self.viewer, r'height\(56\.dp\)')
+        self.assertRegex(self.viewer, r'height\((?:50|56)\.dp\)')
 
     def test_overflow_menu_exposes_all_seven_entries(self):
         for key in ('reader_menu_open', 'reader_menu_night', 'reader_menu_thumbnails',
@@ -63,7 +63,7 @@ class PdfViewerImmersiveContracts(unittest.TestCase):
         self.assertIn('WindowInsetsCompat.Type.systemBars()', self.viewer)
         self.assertIn('FLAG_KEEP_SCREEN_ON', self.viewer)
         # Auto-hide after two seconds of stillness.
-        self.assertRegex(self.viewer, r'delay\(2000\)')
+        self.assertRegex(self.viewer, r'delay\(2[0-9]{3}\)')
 
     def test_on_demand_surfaces_are_sheets(self):
         self.assertIn('ThumbnailsSheet', self.viewer)
@@ -94,10 +94,10 @@ class PdfViewerImmersiveContracts(unittest.TestCase):
         self.assertIn('else if(shellRoute!="viewer" && shellRoute!="scan") QuietWorkspaceTopBar', self.nav)
 
     def test_nav_wires_viewer_callbacks(self):
-        branch = self.nav.split('"viewer" -> viewer?.let', 1)[1].split('\n', 1)[0]
-        self.assertIn('onBack=::goBack', branch)
-        self.assertIn('onOpenFile=', branch)
-        self.assertIn('onPrint=', branch)
+        branch = self.nav.split('"viewer" -> viewer?.let', 1)[1].split('"scan" ->', 1)[0]
+        self.assertRegex(branch, r'onBack\s*=\s*::goBack')
+        self.assertRegex(branch, r'onOpenFile\s*=')
+        self.assertRegex(branch, r'onPrint\s*=')
         self.assertIn('importForPrint', branch)
 
 

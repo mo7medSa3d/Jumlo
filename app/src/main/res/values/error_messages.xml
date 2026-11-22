@@ -19,7 +19,7 @@
     <string name="msg_access_lost">File access was lost. Select the file or folder again.</string>
     <string name="msg_provider_unavailable">This storage provider does not allow that action. Choose another destination.</string>
     <string name="msg_no_viewer">Could not open this file. Check file access and that a compatible app is installed.</string>
-    <string name="msg_preview_unavailable">A preview is unavailable for this file.</string>
+    <string name="msg_preview_unavailable">Preview unavailable for this file. Open it in another app to view.</string>
     <string name="msg_size_limit">The operation could not complete with the resources available on this device. Check free storage or try lower image resolution. Your original was preserved.</string>
     <string name="msg_file_type">This file type is not supported by the selected tool. Choose a compatible file or switch tools.</string>
     <string name="msg_https">Use an HTTPS link. Unencrypted HTTP requires explicit permission in download settings.</string>
@@ -29,7 +29,6 @@
     <string name="msg_check_settings">Check the entered values and page ranges, then try again.</string>
     <string name="msg_page_selection_limit">Too many repeated page selections. Choose fewer ranges or remove duplicates, then try again.</string>
     <string name="msg_unavailable">This tool is unavailable in this build. Choose another tool.</string>
-    <string name="msg_login">Sign in to continue.</string>
     <string name="msg_failed">Could not complete this action. Check your inputs and retry.</string>
     <string name="msg_one_file">Choose exactly one file for this tool.</string>
     <string name="msg_unsupported_social_platform">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
@@ -75,12 +74,11 @@
     <string name="msg_animated_image_unsupported">Animated images are not supported by this tool. Choose a static JPG, PNG, or WebP image.</string>
     <string name="msg_image_corrupt">This image could not be read or verified. Choose another image file.</string>
     <string name="msg_pdf_corrupt">This PDF file is empty or damaged and could not be processed. Choose another PDF.</string>
-    <string name="msg_social_policy_detail">This video page cannot be downloaded with the available engine. Try a direct media link or another supported source.</string>
     <string name="jumlo_paper_mode">PDF page size</string>
     <string name="jumlo_custom_paper">Custom dimensions</string>
     <string name="msg_pdf_not_compressible">This PDF cannot be made smaller without lowering content quality. Your original file is unchanged.</string>
     <string name="msg_pdf_compression_partial">Some pages could not be re-compressed. The rest of the document was compressed and saved.</string>
-    <string name="msg_pdf_compression_failed">The images in this PDF could not be re-compressed. Your original file is unchanged.</string>
+    <string name="msg_pdf_compression_failed">Couldn\'t re-compress images in this PDF. Your original file is unchanged — try a different quality level or another file.</string>
     <string name="jumlo_page_editor_title">Edit pages</string>
     <string name="jumlo_page_editor_hint">Tap to select, hold and drag to reorder</string>
     <string name="jumlo_page_count">Pages: %1$d</string>

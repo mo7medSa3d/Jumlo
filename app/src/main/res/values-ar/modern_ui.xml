@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="modern_reset_save_folder">استخدام Download/Jumlo</string>
-    <string name="modern_download_defaults">إعدادات التنزيل الافتراضية</string>
-    <string name="modern_video_quality">جودة الفيديو</string>
-    <string name="modern_audio_quality">جودة الصوت</string>
-    <string name="modern_best_available">أفضل جودة متاحة</string>
-    <string name="modern_audio_bitrate">%1$d كيلوبت/ث</string>
-    <string name="modern_quality_defaults_note">تُستخدم عند توفرها. يمكنك تغيير الجودة لكل تنزيل.</string>
     <string name="modern_storage_usage">مساحة التخزين</string>
     <string name="modern_clear_cache">مسح ذاكرة التخزين المؤقت</string>
     <string name="modern_about">عن جملو</string>
@@ -14,7 +8,6 @@
     <string name="modern_chosen_folder">المجلد المحدد</string>
     <string name="modern_change_folder">تغيير المجلد</string>
     <string name="modern_home_title">كل مهام ملفاتك\nفي مكان واحد.</string>
-    <string name="modern_home_subtitle">امسح وحرّر وحوّل ونزّل — باحتراف، على جهازك.</string>
     <string name="modern_scan">مسح</string>
     <string name="modern_convert">تحويل</string>
     <string name="modern_compress">ضغط</string>
@@ -28,8 +21,6 @@
     <string name="modern_office_to_pdf">Office إلى PDF</string>
     <string name="modern_pdf_images">PDF إلى صور</string>
     <string name="modern_convert_images">تحويل الصور</string>
-    <string name="modern_fewer_tools">أدوات أقل</string>
-    <string name="modern_more_tools">أدوات أخرى</string>
     <string name="modern_sort_group">ترتيب وتجميع</string>
     <string name="modern_group_by">تجميع حسب</string>
     <string name="modern_group_none">بدون تجميع</string>

@@ -11,7 +11,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -41,7 +42,10 @@ import com.jumlo.app.ui.components.QuietPrimaryButton
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Close
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
 import java.io.ByteArrayOutputStream
+import kotlin.math.ceil
+import kotlin.math.floor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +63,7 @@ internal fun SignaturePadSheet(
     val strokes = remember { mutableStateListOf<Pair<Int, List<Offset>>>() }
     var currentStroke by remember { mutableStateOf<List<Offset>>(emptyList()) }
     var padSize by remember { mutableStateOf(IntSize.Zero) }
+    val latestColor by rememberUpdatedState(activeColor)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -88,6 +93,7 @@ internal fun SignaturePadSheet(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(saved, key = { it.id }) { sig ->
                         val preview = remember(sig.file.absolutePath) { runCatching { BitmapFactory.decodeFile(sig.file.absolutePath) }.getOrNull() }
+                        DisposeOwnedPreviewBitmap(preview)
                         Surface(
                             onClick = { onPickSaved(sig) },
                             shape = QuietTheme.shapes.card,
@@ -96,11 +102,11 @@ internal fun SignaturePadSheet(
                             modifier = Modifier.width(124.dp).height(58.dp)
                         ) {
                             Box(Modifier.fillMaxSize()) {
-                                if (preview != null) {
+                                if (preview != null && !preview.isRecycled) {
                                     Image(preview.asImageBitmap(), null, Modifier.fillMaxSize().padding(6.dp), contentScale = ContentScale.Fit)
                                 }
                                 IconButton(onClick = { onDeleteSaved(sig) }, modifier = Modifier.align(Alignment.TopEnd).size(24.dp)) {
-                                    Icon(Icons.Rounded.Close, null, Modifier.size(14.dp), tint = colors.onSurfaceVariant)
+                                    Icon(Icons.Rounded.Close, stringResource(R.string.action_delete), Modifier.size(14.dp), tint = colors.onSurfaceVariant)
                                 }
                             }
                         }
@@ -115,19 +121,40 @@ internal fun SignaturePadSheet(
             ) {
                 Canvas(
                     Modifier.fillMaxSize().onSizeChanged { padSize = it }
-                        .pointerInput(activeColor) {
-                            detectDragGestures(
-                                onDragStart = { offset -> currentStroke = listOf(offset) },
-                                onDrag = { change, _ -> change.consume(); currentStroke = currentStroke + change.position },
-                                onDragEnd = {
-                                    if (currentStroke.size >= 2) strokes += activeColor.toArgb() to currentStroke
-                                    currentStroke = emptyList()
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                down.consume()
+                                val pts = mutableListOf(down.position)
+                                currentStroke = pts.toList()
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    if (!change.pressed) {
+                                        change.consume()
+                                        break
+                                    }
+                                    change.consume()
+                                    val pos = change.position
+                                    if ((pos - pts.last()).getDistanceSquared() >= 1.5f) {
+                                        pts.add(pos)
+                                        currentStroke = pts.toList()
+                                    }
                                 }
-                            )
+                                if (pts.isNotEmpty()) {
+                                    strokes += latestColor.toArgb() to pts.toList()
+                                }
+                                currentStroke = emptyList()
+                            }
                         }
                 ) {
                     fun drawPts(pts: List<Offset>, argb: Int) {
-                        if (pts.size < 2) return
+                        if (pts.isEmpty()) return
+                        val strokeColor = Color(argb)
+                        if (pts.size == 1) {
+                            drawCircle(strokeColor, radius = 3.2f, center = pts.first())
+                            return
+                        }
                         val path = Path().apply {
                             moveTo(pts.first().x, pts.first().y)
                             for (i in 1 until pts.size) {
@@ -135,8 +162,9 @@ internal fun SignaturePadSheet(
                                 val cur = pts[i]
                                 quadraticBezierTo(prev.x, prev.y, (prev.x + cur.x) / 2f, (prev.y + cur.y) / 2f)
                             }
+                            lineTo(pts.last().x, pts.last().y)
                         }
-                        drawPath(path, Color(argb), style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        drawPath(path, strokeColor, style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     strokes.forEach { (c, pts) -> drawPts(pts, c) }
                     drawPts(currentStroke, activeColor.toArgb())
@@ -146,36 +174,81 @@ internal fun SignaturePadSheet(
                 text = stringResource(R.string.markup_use_signature),
                 enabled = strokes.isNotEmpty() && padSize.width > 0 && padSize.height > 0,
                 onClick = {
-                    val bmp = Bitmap.createBitmap(padSize.width.coerceAtLeast(320), padSize.height.coerceAtLeast(160), Bitmap.Config.ARGB_8888)
-                    val canvas = AndroidCanvas(bmp)
-                    val paint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
-                        style = AndroidPaint.Style.STROKE
-                        strokeWidth = 7f
-                        strokeCap = AndroidPaint.Cap.ROUND
-                        strokeJoin = AndroidPaint.Join.ROUND
-                    }
-                    strokes.forEach { (argb, pts) ->
-                        paint.color = argb
-                        val p = AndroidPath().apply {
-                            moveTo(pts.first().x, pts.first().y)
-                            for (i in 1 until pts.size) {
-                                val prev = pts[i - 1]
-                                val cur = pts[i]
-                                quadTo(prev.x, prev.y, (prev.x + cur.x) / 2f, (prev.y + cur.y) / 2f)
-                            }
-                        }
-                        canvas.drawPath(p, paint)
-                    }
-                    val bytes = ByteArrayOutputStream().use { out ->
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
-                        out.toByteArray()
-                    }
-                    bmp.recycle()
-                    onSaveNew(bytes)
+                    val bytes = renderTrimmedHighResSignature(strokes)
+                    if (bytes.isNotEmpty()) onSaveNew(bytes)
                 },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(6.dp))
         }
+    }
+}
+
+/** Renders trimmed, 3x supersampled smooth quadratic Bezier signature PNG bytes with transparent background. */
+private fun renderTrimmedHighResSignature(strokes: List<Pair<Int, List<Offset>>>): ByteArray {
+    var minX = Float.POSITIVE_INFINITY
+    var minY = Float.POSITIVE_INFINITY
+    var maxX = Float.NEGATIVE_INFINITY
+    var maxY = Float.NEGATIVE_INFINITY
+    for ((_, pts) in strokes) {
+        for (p in pts) {
+            if (p.x < minX) minX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.x > maxX) maxX = p.x
+            if (p.y > maxY) maxY = p.y
+        }
+    }
+    if (!minX.isFinite() || !minY.isFinite()) return ByteArray(0)
+
+    val margin = 12f
+    val left = floor(minX - margin)
+    val top = floor(minY - margin)
+    val srcW = (ceil(maxX + margin) - left).coerceAtLeast(32f)
+    val srcH = (ceil(maxY + margin) - top).coerceAtLeast(24f)
+
+    // Supersample 3x for crisp 300 DPI PDF flattening, capped to keep memory bounded.
+    val scale = minOf(3f, 1600f / srcW, 800f / srcH).coerceAtLeast(1f)
+    val outW = ceil(srcW * scale).toInt().coerceIn(64, 1600)
+    val outH = ceil(srcH * scale).toInt().coerceIn(32, 800)
+
+    val bmp = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+    return try {
+        val canvas = AndroidCanvas(bmp)
+        canvas.scale(scale, scale)
+        canvas.translate(-left, -top)
+        val strokePaint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG or AndroidPaint.DITHER_FLAG).apply {
+            style = AndroidPaint.Style.STROKE
+            strokeWidth = 5.5f
+            strokeCap = AndroidPaint.Cap.ROUND
+            strokeJoin = AndroidPaint.Join.ROUND
+        }
+        val dotPaint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG or AndroidPaint.DITHER_FLAG).apply {
+            style = AndroidPaint.Style.FILL
+        }
+        for ((argb, pts) in strokes) {
+            if (pts.isEmpty()) continue
+            if (pts.size == 1) {
+                dotPaint.color = argb
+                canvas.drawCircle(pts[0].x, pts[0].y, strokePaint.strokeWidth * 0.5f, dotPaint)
+                continue
+            }
+            strokePaint.color = argb
+            val path = AndroidPath().apply {
+                moveTo(pts.first().x, pts.first().y)
+                for (i in 1 until pts.size) {
+                    val prev = pts[i - 1]
+                    val cur = pts[i]
+                    quadTo(prev.x, prev.y, (prev.x + cur.x) * 0.5f, (prev.y + cur.y) * 0.5f)
+                }
+                lineTo(pts.last().x, pts.last().y)
+            }
+            canvas.drawPath(path, strokePaint)
+        }
+        ByteArrayOutputStream().use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            out.toByteArray()
+        }
+    } finally {
+        bmp.recycle()
     }
 }

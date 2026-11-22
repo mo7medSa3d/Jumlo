@@ -74,13 +74,13 @@ private data class ToolSection(val key: String, val titleEn: String, val titleAr
  */
 private val toolSections = listOf(
     ToolSection("scan", "Scan & Convert", "المسح والتحويل",
-        setOf("scan_doc", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_long_image")),
+        setOf("scan_doc", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_long_image")),
     ToolSection("edit", "PDF Edit & Security", "تحرير وحماية PDF",
-        setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_06", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
+        setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
     ToolSection("optimize", "Images", "الصور",
-        setOf("img_01", "img_04", "img_02", "img_03", "img_watermark", "img_join")),
+        setOf("img_04", "img_02", "img_watermark", "img_join")),
     ToolSection("files", "Files & Download", "الملفات والتنزيل",
-        setOf("dl_media", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
+        setOf("dl_media", "file_07", "file_08", "file_batch_rename"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
@@ -125,8 +125,11 @@ internal fun ToolsCatalogue(
     onPin: (UtilityTool) -> Unit = {}
 ) {
     val byId = remember(tools) { tools.associateBy { it.id } }
-    val filtered = remember(tools, rankedToolIds, search) {
-        val ranks = rankedToolIds.withIndex().associate { it.value to it.index }
+    val canonicalRanked = remember(rankedToolIds) { rankedToolIds.map(ToolCatalogue::canonicalId).distinct() }
+    val canonicalPinned = remember(pinnedToolIds) { pinnedToolIds.map(ToolCatalogue::canonicalId).distinct() }
+    val canonicalRecent = remember(recentToolIds) { recentToolIds.map(ToolCatalogue::canonicalId).distinct() }
+    val filtered = remember(tools, canonicalRanked, search) {
+        val ranks = canonicalRanked.withIndex().associate { it.value to it.index }
         val query = search.trim()
         tools.withIndex().filter { (_, tool) ->
             if (query.isEmpty()) {
@@ -136,23 +139,24 @@ internal fun ToolsCatalogue(
                     listOf(
                         tool.id, tool.titleEn, tool.titleAr, tool.subtitleEn, tool.subtitleAr,
                         shortToolLabel(tool, AppLanguage.ENGLISH),
-                        shortToolLabel(tool, AppLanguage.ARABIC)
+                        shortToolLabel(tool, AppLanguage.ARABIC),
+                        ToolCatalogue.searchAliases(tool.id)
                     ).any { it.contains(query, ignoreCase = true) }
             }
         }.sortedWith(compareBy<IndexedValue<UtilityTool>> { ranks[it.value.id] ?: Int.MAX_VALUE }
             .thenBy { it.index }).map { it.value }
     }
-    val pinned = remember(tools, pinnedToolIds) {
-        pinnedToolIds.mapNotNull { byId[it] }.filter { CapabilityRegistry.enabled(it.id) && ToolCatalogue.isListed(it.id) }
+    val pinned = remember(tools, canonicalPinned) {
+        canonicalPinned.mapNotNull { byId[it] }.filter { CapabilityRegistry.enabled(it.id) && ToolCatalogue.isListed(it.id) }
     }
-    val recent = remember(tools, recentToolIds, pinned) {
+    val recent = remember(tools, canonicalRecent, pinned) {
         val pinnedIds = pinned.map { it.id }.toSet()
-        recentToolIds.mapNotNull { byId[it] }.filter { it.id !in pinnedIds && ToolCatalogue.isListed(it.id) }.take(3)
+        canonicalRecent.mapNotNull { byId[it] }.filter { it.id !in pinnedIds && ToolCatalogue.isListed(it.id) }.take(4)
     }
     val featuredIds = remember(pinned, recent) { (pinned.map { it.id } + recent.map { it.id }).toSet() }
     var selectedSectionKey by rememberSaveable { mutableStateOf<String?>(null) }
     var actionSheetTool by remember { mutableStateOf<UtilityTool?>(null) }
-    val pinnedSet = remember(pinnedToolIds) { pinnedToolIds.toSet() }
+    val pinnedSet = remember(canonicalPinned) { canonicalPinned.toSet() }
     val haptics = rememberAppHaptics()
     val colors = MaterialTheme.colorScheme
     val availableSections = remember(filtered) {
@@ -415,16 +419,16 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "pdf_02" -> "Images to PDF" to "صور إلى PDF"
         "pdf_03" -> "Merge" to "دمج"
         "pdf_04" -> "Organize pages" to "ترتيب الصفحات"
-        "pdf_05" -> "Split" to "تقسيم"
+        "pdf_05" -> "Split / Extract" to "تقسيم / استخراج"
         "pdf_06" -> "Extract pages" to "استخراج صفحات"
         "pdf_07" -> "To Images" to "إلى صور"
-        "pdf_long_image" -> "Long Image" to "صورة طويلة"
+        "pdf_long_image" -> "PDF to Images" to "PDF إلى صور"
         "pdf_to_docx" -> "To Word" to "إلى Word"
         "pdf_to_pptx" -> "PDF to PowerPoint" to "PDF إلى PowerPoint"
-    "office_to_pdf" -> "Office to PDF" to "أوفيس إلى PDF"
+        "office_to_pdf" -> "Office to PDF" to "أوفيس إلى PDF"
         "pdf_ocr" -> "Extract Text" to "استخراج النص"
         "pdf_compress" -> "Compress" to "ضغط"
-        "pdf_protect" -> "Lock" to "قفل"
+        "pdf_protect" -> "Lock / Unlock" to "قفل / فك قفل"
         "pdf_nup" -> "2/4 per page" to "طباعة 2/4 في 1"
         "pdf_privacy_redact" -> "Redact" to "طمس البيانات"
         "pdf_stamp" -> "Watermark" to "علامة مائية"
@@ -434,9 +438,9 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "img_01" -> "Convert images" to "تحويل الصور"
         "img_02" -> "Resize" to "تغيير الحجم"
         "img_03" -> "Crop & rotate" to "قص وتدوير"
-        "img_04" -> "Compress images" to "ضغط الصور"
-    "img_watermark" -> "Watermark" to "علامة مائية"
-    "img_join" -> "Join images" to "دمج الصور"
+        "img_04" -> "Edit & Optimize Image" to "تعديل وضغط الصور"
+        "img_watermark" -> "Watermark" to "علامة مائية"
+        "img_join" -> "Join images" to "دمج الصور"
         "dl_media" -> "Download" to "تنزيل"
         "dl_02" -> "Direct link" to "رابط مباشر"
         "dl_03" -> "Batch links" to "عدة روابط"

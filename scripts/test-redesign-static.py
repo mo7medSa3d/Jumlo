@@ -11,7 +11,7 @@ class RedesignWiringTests(unittest.TestCase):
         vm=code('ui/AppViewModel.kt')
         start=vm.index('fun chooseTool(id:String)')
         self.assertIn('WorkspaceDraft.forTool(id,emptyList())',vm[start:start+550])
-        self.assertIn('closeToolSession()',vm)
+        self.assertIn('fun closeToolSession(',vm)
         self.assertIn('_sessionEpoch.value++',vm)
     def test_fresh_media_session_resets_url_but_same_epoch_keeps_metadata(self):
         self.assertIn('LaunchedEffect(sessionEpoch)',code('ui/downloads/MediaWorkspace.kt'))

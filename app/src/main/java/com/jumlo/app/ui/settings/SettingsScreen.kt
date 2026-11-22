@@ -24,7 +24,6 @@ import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
 import com.jumlo.app.ui.AppViewModel
-import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
 import com.jumlo.app.ui.theme.ColorSystems
 import com.jumlo.app.ui.theme.QuietTheme
@@ -57,150 +56,141 @@ fun SettingsScreen(
     // Row icons use fixed per-row colors, never the user accent.
     val dark = isDarkTheme(settings.themeMode)
     val totalStorageBytes = remember(storage) {
-        storage.sources + storage.outputs + storage.partials + storage.temporary + storage.trash
+        storage.outputs + storage.partials + storage.temporary + storage.trash
     }
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
     Box(Modifier.fillMaxSize()) {
-    LazyColumn(
-        modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        item("pro-banner", contentType = "pro") {
-            Surface(
-                onClick = { proSheetOpen = true },
-                shape = QuietTheme.shapes.card,
-                color = androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.14f),
-                border = androidx.compose.foundation.BorderStroke(1.2.dp, androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.45f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+        LazyColumn(
+            modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            item("pro-banner", contentType = "pro") {
+                Surface(
+                    onClick = { proSheetOpen = true },
+                    shape = QuietTheme.shapes.card,
+                    color = androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.14f),
+                    border = androidx.compose.foundation.BorderStroke(1.2.dp, androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.45f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Rounded.AutoAwesome, null, tint = androidx.compose.ui.graphics.Color(0xFFD4A017), modifier = Modifier.size(28.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
-                            style = QuietTheme.typography.sectionTitle,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            stringResource(R.string.pro_upgrade_subtitle),
-                            style = QuietTheme.typography.metadata,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Rounded.AutoAwesome, null, tint = androidx.compose.ui.graphics.Color(0xFFD4A017), modifier = Modifier.size(28.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
+                                style = QuietTheme.typography.sectionTitle,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                stringResource(R.string.pro_upgrade_subtitle),
+                                style = QuietTheme.typography.metadata,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
-        }
-        item("appearance-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
-        item("appearance-group", contentType = "group") {
-            PreferenceGroup {
+            item("appearance-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_appearance)) }
+            item("appearance-group", contentType = "group") {
+                PreferenceGroup {
+                    PreferenceRow(
+                        stringResource(R.string.pref_theme),
+                        themeLabel(if (settings.themeMode == ThemeMode.AMOLED) ThemeMode.DARK else settings.themeMode),
+                        Icons.Rounded.DarkMode,
+                        { panel = "theme" },
+                        Modifier.testTag("settings.theme"),
+                        iconStyle = settingsIconStyleFor("theme", dark),
+                        grouped = true
+                    )
+                    PreferenceGroupDivider()
+                    PreferenceRow(
+                        stringResource(R.string.pref_language),
+                        languageLabel(settings.language),
+                        Icons.Rounded.Language,
+                        { panel = "language" },
+                        Modifier.testTag("settings.language"),
+                        iconStyle = settingsIconStyleFor("language", dark),
+                        grouped = true
+                    )
+                }
+            }
+            item("alerts-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_alerts_feedback)) }
+            item("alerts-group", contentType = "group") {
+                val notificationsOn = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+                PreferenceGroup {
+                    PreferenceRow(
+                        stringResource(R.string.pref_notifications),
+                        stringResource(if (notificationsOn) R.string.pref_on else R.string.pref_off),
+                        Icons.Rounded.Notifications,
+                        onRequestNotifications,
+                        Modifier.testTag("settings.notifications"),
+                        iconStyle = settingsIconStyleFor("notifications", dark),
+                        grouped = true
+                    )
+                    PreferenceGroupDivider()
+                    PreferenceToggleRow(
+                        title = stringResource(R.string.settings_ui_sounds),
+                        checked = settings.soundsEnabled,
+                        onCheckedChange = viewModel::setSoundsEnabled,
+                        modifier = Modifier.testTag("settings.sounds"),
+                        icon = Icons.Rounded.Audiotrack,
+                        iconStyle = settingsIconStyleFor("sounds", dark),
+                        grouped = true
+                    )
+                    PreferenceGroupDivider()
+                    PreferenceToggleRow(
+                        title = stringResource(R.string.pref_haptics),
+                        checked = settings.hapticFeedbackOnCommit,
+                        onCheckedChange = viewModel::setHapticFeedback,
+                        modifier = Modifier.testTag("settings.haptics"),
+                        icon = Icons.Rounded.Bolt,
+                        iconStyle = settingsIconStyleFor("haptics", dark),
+                        grouped = true
+                    )
+                }
+            }
+            item("storage-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.account_storage)) }
+            item("storage-group", contentType = "group") {
+                PreferenceGroup {
+                    PreferenceRow(
+                        stringResource(R.string.modern_storage_usage),
+                        formatBytes(totalStorageBytes),
+                        Icons.Rounded.Storage,
+                        { viewModel.refreshStorage(); onOpenStorage?.invoke() ?: run { panel = "storage" } },
+                        Modifier.testTag("settings.storage"),
+                        iconStyle = settingsIconStyleFor("storage", dark),
+                        grouped = true
+                    )
+                    PreferenceGroupDivider()
+                    PreferenceRow(
+                        stringResource(R.string.modern_clear_cache),
+                        formatBytes(storage.temporary),
+                        Icons.Rounded.CleaningServices,
+                        { panel = "cache" },
+                        Modifier.testTag("settings.cache"),
+                        enabled = !busy,
+                        iconStyle = settingsIconStyleFor("cache", dark),
+                        grouped = true
+                    )
+                }
+            }
+            item("about-spacer", contentType = "spacer") { Spacer(Modifier.height(10.dp)) }
+            item("about", contentType = "row") {
                 PreferenceRow(
-                    stringResource(R.string.pref_theme),
-                    themeLabel(if (settings.themeMode == ThemeMode.AMOLED) ThemeMode.DARK else settings.themeMode),
-                    Icons.Rounded.DarkMode,
-                    { panel = "theme" },
-                    Modifier.testTag("settings.theme"),
-                    iconStyle = settingsIconStyleFor("theme", dark),
-                    grouped = true
-                )
-                PreferenceGroupDivider()
-                PreferenceRow(
-                    stringResource(R.string.pref_language),
-                    languageLabel(settings.language),
-                    Icons.Rounded.Language,
-                    { panel = "language" },
-                    Modifier.testTag("settings.language"),
-                    iconStyle = settingsIconStyleFor("language", dark),
-                    grouped = true
+                    stringResource(R.string.modern_about),
+                    stringResource(R.string.settings_about_summary),
+                    Icons.Rounded.Info,
+                    { panel = "about" },
+                    Modifier.testTag("settings.about"),
+                    iconStyle = settingsIconStyleFor("about", dark)
                 )
             }
         }
-        item("alerts-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_alerts_feedback)) }
-        item("alerts-group", contentType = "group") {
-            val notificationsOn = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
-            PreferenceGroup {
-                PreferenceRow(
-                    stringResource(R.string.pref_notifications),
-                    stringResource(if (notificationsOn) R.string.pref_on else R.string.pref_off),
-                    Icons.Rounded.Notifications,
-                    onRequestNotifications,
-                    Modifier.testTag("settings.notifications"),
-                    iconStyle = settingsIconStyleFor("notifications", dark),
-                    grouped = true
-                )
-                PreferenceGroupDivider()
-                PreferenceToggleRow(
-                    title = stringResource(R.string.settings_ui_sounds),
-                    checked = settings.soundsEnabled,
-                    onCheckedChange = viewModel::setSoundsEnabled,
-                    modifier = Modifier.testTag("settings.sounds"),
-                    icon = Icons.Rounded.Audiotrack,
-                    iconStyle = settingsIconStyleFor("sounds", dark),
-                    grouped = true
-                )
-                PreferenceGroupDivider()
-                PreferenceToggleRow(
-                    title = stringResource(R.string.pref_haptics),
-                    checked = settings.hapticFeedbackOnCommit,
-                    onCheckedChange = viewModel::setHapticFeedback,
-                    modifier = Modifier.testTag("settings.haptics"),
-                    icon = Icons.Rounded.Bolt,
-                    iconStyle = settingsIconStyleFor("haptics", dark),
-                    grouped = true
-                )
-            }
-        }
-        item("save-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_save_location)) }
-        item("save-folder", contentType = "save-folder") {
-            SaveFolderCard(settings.downloadDestinationFolder, onChooseDownloadFolder, onOpenSavedFolder)
-            if (settings.downloadDestinationFolder.startsWith("content://")) TextButton(
-                onClick = viewModel::resetDownloadDestinationFolder,
-                modifier = Modifier.testTag("settings.resetDownloadLocation")) {
-                Text(stringResource(R.string.modern_reset_save_folder))
-            }
-        }
-        item("storage-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.account_storage)) }
-        item("storage-group", contentType = "group") {
-            PreferenceGroup {
-                PreferenceRow(
-                    stringResource(R.string.modern_storage_usage),
-                    formatBytes(totalStorageBytes),
-                    Icons.Rounded.Storage,
-                    { viewModel.refreshStorage(); onOpenStorage?.invoke() ?: run { panel = "storage" } },
-                    Modifier.testTag("settings.storage"),
-                    iconStyle = settingsIconStyleFor("storage", dark),
-                    grouped = true
-                )
-                PreferenceGroupDivider()
-                PreferenceRow(
-                    stringResource(R.string.modern_clear_cache),
-                    formatBytes(storage.temporary),
-                    Icons.Rounded.CleaningServices,
-                    { panel = "cache" },
-                    Modifier.testTag("settings.cache"),
-                    enabled = !busy,
-                    iconStyle = settingsIconStyleFor("cache", dark),
-                    grouped = true
-                )
-            }
-        }
-        item("about-spacer", contentType = "spacer") { Spacer(Modifier.height(10.dp)) }
-        item("about", contentType = "row") {
-            PreferenceRow(
-                stringResource(R.string.modern_about),
-                stringResource(R.string.settings_about_summary),
-                Icons.Rounded.Info,
-                { panel = "about" },
-                Modifier.testTag("settings.about"),
-                iconStyle = settingsIconStyleFor("about", dark)
-            )
-        }
-    }
     }
     when (panel) {
         "theme" -> {
@@ -223,7 +213,6 @@ fun SettingsScreen(
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.modern_about_body, com.jumlo.app.BuildConfig.VERSION_NAME))
                 TextButton(onClick = { panel = null; onShowGuide() }) { Text(stringResource(R.string.quick_start_replay)) }
-                TextButton(onClick = { panel = null; onExportLogs() }) { Text(stringResource(R.string.pref_export_diagnostics)) }
                 TextButton(onClick = { panel = "privacy" }) { Text(stringResource(R.string.account_privacy)) }
             } }, confirmButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.account_done)) } })
         "privacy" -> PrivacyDialog { panel = null }

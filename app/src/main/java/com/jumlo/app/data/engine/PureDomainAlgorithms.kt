@@ -10,15 +10,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/**
- * Pure, deterministic domain utilities for Jumlo:
- * 1. Page Range Syntax Parser (pdf_06 & pdf_05): e.g., "1-3, 7, 10-12"
- * 2. Batch URL Intake Parser & Deduplicator (dl_03)
- * 3. Zip-Slip Path Traversal Security Validator (file_08)
- * 4. Collision Filename Resolver (file_07, file_08, dl_02)
- * 5. Image Constraint & Bounding-Box Resize Calculator (img_02)
- * 6. Byte & Tabular Metric Formatter (tnum)
- */
 object PureDomainAlgorithms {
 
     /**

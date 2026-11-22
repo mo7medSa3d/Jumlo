@@ -9,8 +9,9 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.jumlo.app.BuildConfig
 import com.jumlo.app.core.OutputFavorites
-import com.jumlo.app.core.ToolUsagePolicy
 import com.jumlo.app.core.StoragePaths
+import com.jumlo.app.core.ToolCatalogue
+import com.jumlo.app.core.ToolUsagePolicy
 import com.jumlo.app.diagnostics.AppDiagnostics
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.AppSettingsState
@@ -130,12 +131,21 @@ class UserPreferencesRepository @Inject constructor(
     val settingsFlow: Flow<AppSettingsState> = combine(context.dataStore.data, mediaServiceSettings.state) { prefs, media ->
         val themeStr = prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name
         val langStr = prefs[Keys.LANGUAGE] ?: AppLanguage.SYSTEM.name
-        val counts = prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull { value ->
-            val id = value.substringBefore('=')
-            val count = value.substringAfter('=', "").toIntOrNull()
-            if (id.matches(TOOL_ID_PATTERN) && count != null && count > 0) id to count else null
-        }.toMap()
-        val rankedTools = ToolUsagePolicy.ranked(counts, com.jumlo.app.data.jobs.CapabilityRegistry.tools.map { it.id })
+        // Merge legacy consolidated tool counts into their canonical IDs so ranking stays accurate.
+        val counts = buildMap<String, Int> {
+            prefs[Keys.TOOL_COUNTS].orEmpty().split('|').forEach { value ->
+                val rawId = value.substringBefore('=')
+                val count = value.substringAfter('=', "").toIntOrNull()
+                if (rawId.matches(TOOL_ID_PATTERN) && count != null && count > 0) {
+                    val id = ToolCatalogue.canonicalId(rawId)
+                    put(id, ((get(id) ?: 0) + count).coerceAtMost(1_000_000))
+                }
+            }
+        }
+        val rankedTools = ToolUsagePolicy.ranked(
+            counts,
+            com.jumlo.app.data.jobs.CapabilityRegistry.tools.map { ToolCatalogue.canonicalId(it.id) }.distinct()
+        )
         val decodedFolders = runCatching {
             Json.decodeFromString<List<FileFolder>>(prefs[Keys.FILE_FOLDERS] ?: "[]")
                 .filter { it.id.isNotBlank() && it.name.trim().length in 1..60 }
@@ -165,8 +175,16 @@ class UserPreferencesRepository @Inject constructor(
             colorSystem = migrateColorSystem(prefs[Keys.COLOR_SYSTEM]),
             fontScale = (prefs[Keys.FONT_SCALE] ?: "NORMAL").takeIf { it in VALID_FONT_SCALES } ?: "NORMAL",
             notificationsGranted = prefs[Keys.NOTIFICATIONS_GRANTED] ?: false,
-            quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')?.filter { it.isNotBlank() } ?: DEFAULT_QUICK_ACTION_IDS,
-            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')?.filter { it.matches(TOOL_ID_PATTERN) }.orEmpty(),
+            quickActionIds = prefs[Keys.QUICK_ACTION_IDS]?.split('|')
+                ?.filter { it.isNotBlank() }
+                ?.map(ToolCatalogue::canonicalId)
+                ?.distinct()
+                ?: DEFAULT_QUICK_ACTION_IDS,
+            recentToolIds = prefs[Keys.RECENT_TOOLS]?.split('|')
+                ?.filter { it.matches(TOOL_ID_PATTERN) }
+                ?.map(ToolCatalogue::canonicalId)
+                ?.distinct()
+                .orEmpty(),
             mostUsedToolIds = rankedTools,
             rankedToolIds = rankedTools,
             favoriteOutputIds = OutputFavorites.sanitize(
@@ -188,14 +206,23 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun recordToolOpen(id:String) {
         if(!id.matches(TOOL_ID_PATTERN)) return
+        val canonicalId = ToolCatalogue.canonicalId(id)
         context.dataStore.edit {prefs ->
-            val oldRecent=prefs[Keys.RECENT_TOOLS].orEmpty().split('|').filter(String::isNotBlank)
-            prefs[Keys.RECENT_TOOLS]=ToolUsagePolicy.recent(oldRecent,id).joinToString("|")
-            val oldCounts=prefs[Keys.TOOL_COUNTS].orEmpty().split('|').mapNotNull {entry ->
-                val key=entry.substringBefore('='); val count=entry.substringAfter('=',"").toIntOrNull()
-                if(key.matches(TOOL_ID_PATTERN) && count!=null) key to count else null
-            }.toMap()
-            prefs[Keys.TOOL_COUNTS]=ToolUsagePolicy.count(oldCounts,id).entries.joinToString("|") { "${it.key}=${it.value}" }
+            val oldRecent=prefs[Keys.RECENT_TOOLS].orEmpty().split('|')
+                .filter { it.matches(TOOL_ID_PATTERN) }
+                .map(ToolCatalogue::canonicalId)
+                .distinct()
+            prefs[Keys.RECENT_TOOLS]=ToolUsagePolicy.recent(oldRecent,canonicalId).joinToString("|")
+            val oldCounts=buildMap<String,Int> {
+                prefs[Keys.TOOL_COUNTS].orEmpty().split('|').forEach { entry ->
+                    val key=entry.substringBefore('='); val count=entry.substringAfter('=',"").toIntOrNull()
+                    if(key.matches(TOOL_ID_PATTERN) && count!=null && count>0) {
+                        val target=ToolCatalogue.canonicalId(key)
+                        put(target, ((get(target) ?: 0) + count).coerceAtMost(1_000_000))
+                    }
+                }
+            }
+            prefs[Keys.TOOL_COUNTS]=ToolUsagePolicy.count(oldCounts,canonicalId).entries.joinToString("|") { "${it.key}=${it.value}" }
         }
     }
 
@@ -293,7 +320,7 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setQuickActionIds(ids: List<String>) {
-        val safe=ids.filter { TOOL_ID_PATTERN.matches(it) }.distinct().take(4)
+        val safe=ids.filter { TOOL_ID_PATTERN.matches(it) }.map(ToolCatalogue::canonicalId).distinct()
         context.dataStore.edit { it[Keys.QUICK_ACTION_IDS] = safe.joinToString("|") }
     }
 

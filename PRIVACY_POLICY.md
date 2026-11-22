@@ -10,7 +10,7 @@ Jumlo is operated by **[operator legal name]**. For privacy questions or request
 
 Jumlo lets you choose documents, images and download links. It stores working copies, processing settings, task history, file metadata, generated results, reusable signature images and recoverable trash in application storage. It also stores your appearance/language choices, selected save folder and usage counts used to order tools. These counts are used locally.
 
-PDF/image processing and the default media extractor run on your device. Jumlo does not automatically upload your document collection to an operator server. Scanner and OCR features use Android/Google Play services; initial component or model installation may need a network connection. The included OCR recognizer supports Latin-script recognition; choosing Arabic as the app language does not enable scanned-Arabic OCR.
+PDF/image processing and the default media extractor run on your device. Jumlo does not automatically upload your document collection to an operator server. Scanner and OCR features use Android/Google Play services; initial component or model installation may need a network connection. OCR uses ML Kit (Latin/CJK/Devanagari) and Tesseract4Android for Arabic; initial OCR language models may be downloaded on demand.
 
 Files you export to a folder, share with another app or send to a cloud provider are handled by the destination you select. Its own privacy practices apply. Public exports may remain after uninstalling Jumlo. App-private files and app-specific external files are removed when Android clears the app's data or uninstalls it. Backup/device-transfer is disabled for the app's managed data; export any files you want to keep.
 

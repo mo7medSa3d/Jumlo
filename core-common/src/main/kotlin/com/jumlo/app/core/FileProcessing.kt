@@ -36,6 +36,8 @@ data class ArchiveLimits(val maxBytes: Long, val maxEntries: Int, val maxDepth: 
 
 /** Pure byte engine shared by Android handlers and executable host tests. */
 object ArchiveCore {
+    private const val STORE_MEM_THRESHOLD = 256 * 1024
+
     /** Verify every payload and its CRC against the central directory without extracting to disk.
      * Opening a ZIP or counting its central entries alone does not verify its file bytes. */
     fun verify(input: File, limits: ArchiveLimits, checkCancel: () -> Unit = {}): ArchiveSummary {
@@ -92,7 +94,7 @@ object ArchiveCore {
         return ArchiveSummary(count, total)
     }
 
-    fun create(out: File, inputs: List<ArchiveInput>, level: Int, limits: ArchiveLimits, checkCancel: () -> Unit = {}) {
+    fun create(out: File, inputs: List<ArchiveInput>, level: Int, limits: ArchiveLimits, checkCancel: () -> Unit = {}): ArchiveSummary {
         require(!out.exists() && inputs.isNotEmpty() && inputs.size<=limits.maxEntries && level in 0..9) { "INVALID_ARCHIVE_REQUEST" }
         val parentDir = out.absoluteFile.parentFile
         val names=HashSet<String>()
@@ -105,25 +107,101 @@ object ArchiveCore {
         try {
             FileOutputStream(out).use { file ->
                 ZipOutputStream(BufferedOutputStream(file)).use { zip ->
-                    zip.setLevel(level)
+                    if (level == 0) {
+                        zip.setMethod(ZipOutputStream.STORED)
+                        zip.setLevel(Deflater.NO_COMPRESSION)
+                    } else {
+                        zip.setMethod(ZipOutputStream.DEFLATED)
+                        zip.setLevel(level)
+                    }
                     val buf=ByteArray(64*1024)
                     inputs.forEach { input ->
-                        checkCancel(); zip.putNextEntry(ZipEntry(input.name))
-                        input.open().use { source ->
-                            while(true) {
-                                checkCancel(); val n=source.read(buf); if(n<0) break
-                                require(n.toLong() <= limits.maxBytes-total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
-                                if(n>0) { zip.write(buf,0,n); total+=n }
+                        checkCancel()
+                        if (level == 0) {
+                            // ZipEntry.STORED requires exact size, compressedSize, and CRC-32 upfront.
+                            val crc = CRC32()
+                            var entryBytes = 0L
+                            var memBuf: ByteArrayOutputStream? = ByteArrayOutputStream()
+                            var spillFile: File? = null
+                            var spillOut: BufferedOutputStream? = null
+                            try {
+                                input.open().use { source ->
+                                    while (true) {
+                                        checkCancel()
+                                        val n = source.read(buf)
+                                        if (n < 0) break
+                                        require(n.toLong() <= limits.maxBytes - total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
+                                        if (n > 0) {
+                                            crc.update(buf, 0, n)
+                                            entryBytes += n
+                                            total += n
+                                            val currentMem = memBuf
+                                            if (currentMem != null) {
+                                                if (currentMem.size() + n <= STORE_MEM_THRESHOLD) {
+                                                    currentMem.write(buf, 0, n)
+                                                } else {
+                                                    val tmp = File.createTempFile(".store-", ".tmp", parentDir)
+                                                    spillFile = tmp
+                                                    val outStream = BufferedOutputStream(FileOutputStream(tmp))
+                                                    spillOut = outStream
+                                                    currentMem.writeTo(outStream)
+                                                    outStream.write(buf, 0, n)
+                                                    memBuf = null
+                                                }
+                                            } else {
+                                                spillOut!!.write(buf, 0, n)
+                                            }
+                                        }
+                                    }
+                                }
+                                spillOut?.close()
+                                spillOut = null
+                                val entry = ZipEntry(input.name).apply {
+                                    method = ZipEntry.STORED
+                                    size = entryBytes
+                                    compressedSize = entryBytes
+                                    this.crc = crc.value
+                                }
+                                zip.putNextEntry(entry)
+                                val inMem = memBuf
+                                if (inMem != null) {
+                                    inMem.writeTo(zip)
+                                } else if (spillFile != null) {
+                                    BufferedInputStream(FileInputStream(spillFile)).use { spilled ->
+                                        while (true) {
+                                            checkCancel()
+                                            val n = spilled.read(buf)
+                                            if (n < 0) break
+                                            if (n > 0) zip.write(buf, 0, n)
+                                        }
+                                    }
+                                }
+                                zip.closeEntry()
+                            } finally {
+                                runCatching { spillOut?.close() }
+                                spillFile?.delete()
                             }
+                        } else {
+                            val entry = ZipEntry(input.name).apply { method = ZipEntry.DEFLATED }
+                            zip.putNextEntry(entry)
+                            input.open().use { source ->
+                                while(true) {
+                                    checkCancel(); val n=source.read(buf); if(n<0) break
+                                    require(n.toLong() <= limits.maxBytes-total) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
+                                    if(n>0) { zip.write(buf,0,n); total+=n }
+                                }
+                            }
+                            zip.closeEntry()
                         }
-                        zip.closeEntry()
                     }
                     zip.finish(); zip.flush(); file.fd.sync()
                 }
             }
             // Never declare a generated archive complete before re-reading every payload.
             // This catches CRC mismatches, truncated member streams and false central entries.
-            require(verify(out, limits, checkCancel).entryCount == inputs.size) { "ARCHIVE_VERIFICATION_FAILED" }
+            val summary = verify(out, limits, checkCancel)
+            require(summary.entryCount == inputs.size) { "ARCHIVE_VERIFICATION_FAILED" }
+            return summary
         } catch(t: Throwable) { out.delete(); throw t }
     }
 

@@ -1,17 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="upgrade_print">Print</string>
-    <string name="upgrade_print_selected">Print selected document</string>
     <string name="upgrade_loading_documents">Loading your documents…</string>
-    <string name="upgrade_loading_activity">Loading activity…</string>
     <string name="upgrade_loading_failed">Could not load saved data. Refresh the screen and retry.</string>
-    <string name="upgrade_rename_copy">Rename</string>
-    <string name="upgrade_swipe_hint">Swipe for file actions</string>
-    <string name="upgrade_scan_corner">Corner %1$d</string>
-    <string name="upgrade_scan_horizontal">Horizontal position</string>
-    <string name="upgrade_scan_vertical">Vertical position</string>
-    <string name="upgrade_scan_precision">Adjust corners precisely</string>
-    <string name="upgrade_preview_loading">Loading preview</string>
     <string name="upgrade_no_results">No matching documents</string>
     <string name="upgrade_no_results_hint">Try a different search or filter.</string>
     <string name="upgrade_new_name">New name</string>

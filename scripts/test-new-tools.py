@@ -62,7 +62,7 @@ class NewToolsTest(unittest.TestCase):
 
     def test_icon_mappings(self):
         icons = read("app/src/main/java/com/jumlo/app/ui/components/ToolIcons.kt")
-        self.assertIn('"office_to_pdf" to R.drawable.ic_tool_pdf_to_docx', icons)
+        self.assertIn('"office_to_pdf" to R.drawable.ic_prism_office_to_pdf', icons)
 
     def test_office_handler_and_reader(self):
         handler = read("app/src/main/java/com/jumlo/app/data/processing/OfficeToPdfOperationHandler.kt")

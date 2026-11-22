@@ -76,10 +76,14 @@ object PdfCompressionRunner {
             val originalBytes = source.length()
             val pageCount = open(source, directory, minFreeBytes).use { it.numberOfPages }
             require(pageCount > 0 && originalBytes > 0L) { "EMPTY_PDF" }
-            // When the user chooses an explicit compression strength (no byte budget), run a single exact pass
-            // at the user's chosen (dpi, quality) so 1%..100% produces an immediate, predictable size difference.
-            val profiles = if (targetBytes > 0L) PdfCompressionPolicy.targetProfiles(quality)
-                else listOf(dpi to quality)
+            // Always honor the user's exact slider (dpi, quality) first. When a byte budget is set,
+            // step down from the user's chosen ceiling only if the first pass does not meet targetBytes.
+            val profiles = if (targetBytes > 0L) {
+                (listOf(dpi to quality) + PdfCompressionPolicy.targetProfiles(quality)
+                    .map { (d, q) -> minOf(d, dpi) to minOf(q, quality) }).distinct()
+            } else {
+                listOf(dpi to quality)
+            }
             val candidate = File(directory, "candidate.pdf")
             val best = File(directory, "best.pdf")
             var bestBytes = originalBytes

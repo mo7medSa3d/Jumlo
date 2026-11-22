@@ -1,6 +1,8 @@
 package com.jumlo.app
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
@@ -9,13 +11,22 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.jumlo.app.diagnostics.AppDiagnostics
+import com.jumlo.app.worker.ActiveTaskTracker
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import dagger.hilt.android.HiltAndroidApp
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 @HiltAndroidApp
 class JumloApplication : Application(), Configuration.Provider, ImageLoaderFactory {
+
+    companion object {
+        @Volatile
+        var isAppInForeground: Boolean = false
+            private set
+    }
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -23,8 +34,29 @@ class JumloApplication : Application(), Configuration.Provider, ImageLoaderFacto
     @Inject
     lateinit var okHttpClient: OkHttpClient
 
+    private val startedCount = AtomicInteger(0)
+
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityStarted(activity: Activity) {
+                val foreground = startedCount.incrementAndGet() > 0
+                isAppInForeground = foreground
+                ActiveTaskTracker.setAppForeground(foreground)
+            }
+
+            override fun onActivityStopped(activity: Activity) {
+                val foreground = startedCount.updateAndGet { (it - 1).coerceAtLeast(0) } > 0
+                isAppInForeground = foreground
+                ActiveTaskTracker.setAppForeground(foreground)
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityResumed(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        })
         AppDiagnostics.install(this)
         runCatching { PDFBoxResourceLoader.init(applicationContext) }
             .onFailure { AppDiagnostics.report("startup", it) }
@@ -42,7 +74,14 @@ class JumloApplication : Application(), Configuration.Provider, ImageLoaderFacto
 
     // Single Coil 2.7.0 ImageLoader reusing Hilt's OkHttpClient pool with bounded memory/disk caches.
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
-        .okHttpClient { if (::okHttpClient.isInitialized) okHttpClient.newBuilder().followRedirects(true).followSslRedirects(true).build() else OkHttpClient() }
+        .okHttpClient {
+            val base = if (::okHttpClient.isInitialized) okHttpClient.newBuilder() else OkHttpClient.Builder()
+            base.followRedirects(true)
+                .followSslRedirects(true)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .callTimeout(30, TimeUnit.SECONDS)
+                .build()
+        }
         .memoryCache {
             MemoryCache.Builder(this)
                 .maxSizePercent(0.20)

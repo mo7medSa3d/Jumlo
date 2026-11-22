@@ -69,4 +69,14 @@ class CoreNamingPolicyTest {
             zipFile.delete()
         }
     }
+
+    @Test fun pageSelectionParseBoundsOverlappingRangesAndBudgetAvoidsLongOverflow() {
+        val overlapping = (1..30).joinToString(",") { "$it-10000" }
+        val failure = assertThrows(IllegalArgumentException::class.java) {
+            PageSelection.parse(overlapping, 10_000)
+        }
+        assertEquals("PAGE_SELECTION_LIMIT", failure.message)
+        val hugeBudget = ResourceBudgetPolicy.dynamicBitmapBudgetBytes(Long.MAX_VALUE)
+        assertEquals(true, hugeBudget > ResourceBudgetPolicy.minBitmapBudgetBytes)
+    }
 }

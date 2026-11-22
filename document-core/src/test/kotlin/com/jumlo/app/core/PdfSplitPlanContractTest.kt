@@ -31,5 +31,10 @@ class PdfSplitPlanContractTest {
         val parts = PdfPageEdit.start(4).rotate(1, 90).rotate(3, 270).splitEvery(2)
         assertEquals(listOf(mapOf(1 to 90), mapOf(3 to 270)), parts.map { it.rotations })
         assertEquals(listOf("pdf-id", "img-id"), PdfOverlaySourcePolicy.ordered(listOf("img-id" to "IMAGE/PNG", "pdf-id" to "APPLICATION/PDF")))
+        assertEquals(true, ImageWorkPolicy.dynamicBudget(Long.MAX_VALUE) > ImageWorkPolicy.MIN_DYNAMIC_BUDGET_BYTES)
+        val overflow = assertThrows(IllegalArgumentException::class.java) {
+            ImageJoinPolicy.plan(listOf(Int.MAX_VALUE to 10, 10 to 10), layout = "HSTRIP", gapPx = 10)
+        }
+        assertEquals("IMAGE_DIMENSIONS_UNREPRESENTABLE", overflow.message)
     }
 }

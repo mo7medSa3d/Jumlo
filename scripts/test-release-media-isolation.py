@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Source-only checks for the new default production media runtime and opt-out stub."""
 from pathlib import Path
-import re
 import unittest
 root=Path(__file__).resolve().parent.parent
 build=(root/'app/build.gradle.kts').read_text(encoding="utf-8")

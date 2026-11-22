@@ -17,7 +17,6 @@ def read(relative):
     return source_path(relative).read_text(encoding='utf-8')
 
 
-# --- Behavioral mirror of ColorSystems.systemFor ---
 SYSTEMS = ("COBALT", "EMERALD", "SAPPHIRE", "AMETHYST")
 DEFAULT = "COBALT"
 

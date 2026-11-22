@@ -18,6 +18,7 @@
 
 # Keep Hilt workers instantiated via HiltWorkerFactory reflection
 -keep @androidx.hilt.work.HiltWorker class com.jumlo.app.** { *; }
+-keep class com.jumlo.app.worker.ActiveTaskTracker { *; }
 
 # PDFBox-Android (Apache-2.0)
 -keep class com.tom_roush.** { *; }

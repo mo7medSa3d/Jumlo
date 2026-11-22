@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
+import com.jumlo.app.core.ToolCatalogue
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.*
 import com.jumlo.app.ui.AppViewModel
@@ -38,6 +39,14 @@ import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.tools.ToolTile
+import com.jumlo.app.ui.tools.shortToolLabel
+
+private data class HomeQuickActionSpec(
+    val labelRes: Int,
+    val tag: String,
+    val accentId: String,
+    val onClick: () -> Unit
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,37 +67,54 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
         val q = homeSearch.trim()
         if (q.isEmpty()) emptyList()
         else CapabilityRegistry.tools.filter { t ->
-            CapabilityRegistry.visible(t.id) && CapabilityRegistry.enabled(t.id) && com.jumlo.app.core.ToolCatalogue.isSearchable(t.id) &&
-                (t.titleEn.contains(q, true) || t.titleAr.contains(q, true) || t.subtitleEn.contains(q, true) || t.subtitleAr.contains(q, true))
+            CapabilityRegistry.visible(t.id) && CapabilityRegistry.enabled(t.id) && ToolCatalogue.isSearchable(t.id) &&
+                listOf(
+                    t.titleEn, t.titleAr, t.subtitleEn, t.subtitleAr,
+                    shortToolLabel(t, AppLanguage.ENGLISH), shortToolLabel(t, AppLanguage.ARABIC),
+                    ToolCatalogue.searchAliases(t.id)
+                ).any { it.contains(q, true) }
         }.take(8)
     }
+    val pinned = remember(settings.quickActionIds) {
+        settings.quickActionIds.map(ToolCatalogue::canonicalId).distinct().mapNotNull { id ->
+            CapabilityRegistry.tools.firstOrNull {
+                it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) && ToolCatalogue.isListed(id)
+            }
+        }
+    }
     val frequent = remember(settings.rankedToolIds) {
-        settings.rankedToolIds.mapNotNull { id ->
-            CapabilityRegistry.tools.firstOrNull { it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) }
-        }.take(3)
+        settings.rankedToolIds.map(ToolCatalogue::canonicalId).distinct().mapNotNull { id ->
+            CapabilityRegistry.tools.firstOrNull {
+                it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) && ToolCatalogue.isListed(id)
+            }
+        }.take(4)
     }
     val active = remember(jobs) { jobs.filter { it.isActive() }.take(2) }
     val recentOutputs = remember(outputs) { outputs.take(6) }
     val visibleRecent = remember(recentOutputs, settings.outputFolderIds, settings.lockedFolderIds) { recentOutputs.filter { out -> val fid = settings.outputFolderIds[out.id]; fid == null || fid !in settings.lockedFolderIds } }
-    val pinnedSet = remember(settings.quickActionIds) { settings.quickActionIds.toSet() }
+    val pinnedSet = remember(settings.quickActionIds) { settings.quickActionIds.map(ToolCatalogue::canonicalId).toSet() }
     val sourceNamesById = remember(sources) { sources.associate { it.id to it.displayName } }
-    fun open(id: String) { CapabilityRegistry.tools.firstOrNull { it.id == id }?.let(onTool) }
+    fun open(id: String) {
+        val targetId = ToolCatalogue.canonicalId(id)
+        CapabilityRegistry.tools.firstOrNull { it.id == targetId }?.let(onTool)
+    }
     val actions = remember(onScan, onScanIdCard, onTool, onTools) {
         listOf(
-            Triple(R.string.modern_scan, R.drawable.ic_prism_scan, onScan),
-            Triple(R.string.modern_convert, R.drawable.ic_prism_document, { showConvert = true }),
-            Triple(R.string.modern_compress, R.drawable.ic_prism_compress, { open("pdf_compress") }),
-            Triple(R.string.modern_download, R.drawable.ic_prism_download, { open("dl_media") }),
-            Triple(R.string.home_quick_id_card, R.drawable.ic_prism_scan, onScanIdCard),
-            Triple(R.string.home_quick_ocr, R.drawable.ic_prism_ocr, { open("pdf_ocr") }),
-            Triple(R.string.modern_pdf_word, R.drawable.ic_prism_document, { open("pdf_to_docx") }),
-            Triple(R.string.modern_all_tools, R.drawable.ic_prism_document, onTools)
+            HomeQuickActionSpec(R.string.modern_scan, "scan", "scan_doc", onScan),
+            HomeQuickActionSpec(R.string.modern_convert, "convert", "pdf_02", { showConvert = true }),
+            HomeQuickActionSpec(R.string.modern_compress, "compress", "pdf_compress", { open("pdf_compress") }),
+            HomeQuickActionSpec(R.string.modern_download, "download", "dl_media", { open("dl_media") }),
+            HomeQuickActionSpec(R.string.home_quick_id_card, "id_card", "scan_doc", onScanIdCard),
+            HomeQuickActionSpec(R.string.home_quick_ocr, "ocr", "pdf_ocr", { open("pdf_ocr") }),
+            HomeQuickActionSpec(R.string.modern_pdf_word, "pdf_word", "pdf_to_docx", { open("pdf_to_docx") }),
+            HomeQuickActionSpec(R.string.modern_all_tools, "all_tools", "pdf_01", onTools)
         )
     }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("home.screen")) {
         val actionColumns = 4
-        val frequentColumns = if (maxWidth >= 640.dp) 4 else 3
+        val frequentColumns = 4
         val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
+        val pinnedRows = remember(pinned, actionColumns) { pinned.chunked(actionColumns) }
         val frequentRows = remember(frequent, frequentColumns) { frequent.chunked(frequentColumns) }
         LazyColumn(Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
@@ -114,7 +140,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                            Text(if (settings.language.isRtl) matched.titleAr else matched.titleEn, style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = colors.onSurface, modifier = Modifier.weight(1f))
+                                            Text(shortToolLabel(matched, settings.language), style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = colors.onSurface, modifier = Modifier.weight(1f))
                                             Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(16.dp), tint = colors.onSurfaceVariant)
                                         }
                                     }
@@ -124,21 +150,32 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                     }
                     actionRows.forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { (label, icon, action) ->
-                                val (tag, accentId) = when (label) {
-                                    R.string.modern_scan -> "scan" to "scan_doc"
-                                    R.string.modern_convert -> "convert" to "pdf_02"
-                                    R.string.modern_compress -> "compress" to "pdf_compress"
-                                    R.string.modern_download -> "download" to "dl_media"
-                                    R.string.home_quick_id_card -> "id_card" to "scan_doc"
-                                    R.string.home_quick_ocr -> "ocr" to "pdf_ocr"
-                                    R.string.modern_pdf_word -> "pdf_word" to "pdf_to_docx"
-                                    else -> "all_tools" to "pdf_01"
-                                }
-                                HomeQuickAction(stringResource(label), icon, action,
-                                    Modifier.weight(1f).testTag("home.action.$tag"),
-                                    accentToolId = accentId)
+                            row.forEach { spec ->
+                                HomeQuickAction(
+                                    label = stringResource(spec.labelRes),
+                                    accentToolId = spec.accentId,
+                                    onClick = spec.onClick,
+                                    modifier = Modifier.weight(1f).testTag("home.action.${spec.tag}")
+                                )
                             }
+                        }
+                    }
+                }
+            }
+            if (pinned.isNotEmpty()) item("pinned-tools", contentType = "pinned-tools") {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NeonSectionHeader(stringResource(R.string.tools_section_pinned),
+                        action = stringResource(R.string.modern_all_tools), onAction = onTools)
+                    pinnedRows.forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            row.forEach { tool ->
+                                ToolTile(
+                                    tool, settings.language, { onTool(tool) }, Modifier.weight(1f),
+                                    onPin = { vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) },
+                                    isPinned = true
+                                )
+                            }
+                            repeat(actionColumns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -248,8 +285,9 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
             )
             val convertOptions = remember {
                 ConvertSheetOptions.mapNotNull { (id, label) ->
-                    if (!CapabilityRegistry.visible(id) || !CapabilityRegistry.enabled(id)) null
-                    else Triple(id, label, CapabilityRegistry.tools.firstOrNull { it.id == id })
+                    val canonical = ToolCatalogue.canonicalId(id)
+                    if (!CapabilityRegistry.visible(canonical) || !CapabilityRegistry.enabled(canonical) || !ToolCatalogue.isListed(canonical)) null
+                    else Triple(canonical, label, CapabilityRegistry.tools.firstOrNull { it.id == canonical })
                 }
             }
             convertOptions.forEach { (id, label, tool) ->
@@ -309,24 +347,19 @@ private val ConvertSheetOptions = listOf(
     "pdf_to_docx" to R.string.modern_pdf_word,
     "pdf_to_pptx" to R.string.modern_pdf_powerpoint,
     "office_to_pdf" to R.string.modern_office_to_pdf,
-    "pdf_07" to R.string.modern_pdf_images,
-    "img_01" to R.string.modern_convert_images
+    "pdf_long_image" to R.string.modern_pdf_images,
+    "img_04" to R.string.modern_convert_images
 )
 
 @Composable private fun HomeQuickAction(
     label: String,
-    icon: Int,
+    accentToolId: String,
     onClick: () -> Unit,
-    modifier: Modifier,
-    accentToolId: String? = null
+    modifier: Modifier
 ) {
     val colors = MaterialTheme.colorScheme
-    val badgeBg = remember(accentToolId, colors.primaryContainer) {
-        accentToolId?.let { ToolIconColors.iconColorFor(it) } ?: colors.primaryContainer
-    }
-    val badgeTint = remember(accentToolId, badgeBg, colors.onPrimaryContainer) {
-        accentToolId?.let { ToolIconColors.glyphOn(badgeBg) } ?: colors.onPrimaryContainer
-    }
+    val accent = remember(accentToolId) { ToolIconColors.iconColorFor(accentToolId) }
+    val iconForeground = remember(accent) { ToolIconColors.glyphOn(accent) }
     Column(
         modifier = modifier
             .clip(QuietTheme.shapes.inputField)
@@ -336,17 +369,13 @@ private val ConvertSheetOptions = listOf(
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier
-                .size(54.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(badgeBg.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center
+        Surface(
+            shape = QuietTheme.shapes.iconTile,
+            color = accent,
+            modifier = Modifier.size(54.dp)
         ) {
-            if (accentToolId != null) {
-                ToolIcon(accentToolId, badgeBg, Modifier.size(24.dp))
-            } else {
-                Icon(painterResource(icon), null, Modifier.size(24.dp), tint = badgeBg)
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ToolIcon(accentToolId, iconForeground, Modifier.size(26.dp))
             }
         }
         Text(

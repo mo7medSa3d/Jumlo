@@ -39,7 +39,6 @@ def walk_images(resources, prefix="", depth=0, seen=None):
     return out
 
 def placements(contents):
-    # Return mapping from XObject name to CTM tuple (a,b,c,d,e,f).
     data = contents.get_data() if contents is not None else b""
     current = (1.0,0.0,0.0,1.0,0.0,0.0)
     result = {}

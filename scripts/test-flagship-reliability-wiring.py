@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Source wiring contracts only; NOT a substitute for an Android compilation or UI test."""
 from pathlib import Path
-import re
 import unittest
 R=Path(__file__).resolve().parents[1]
 SRC=R/'app/src/main/java/com/jumlo/app'

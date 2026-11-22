@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="completed_notification_tool_title">%1$s — Ready</string>
+    <string name="failed_notification_title">Task failed</string>
+    <string name="failed_notification_tool_title">%1$s — Failed</string>
+    <string name="failed_notification_body">Could not finish. Tap to view details.</string>
+</resources>

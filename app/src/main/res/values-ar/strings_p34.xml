@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="processing_working_percent">جارٍ العمل… %1$d%%</string>
+</resources>

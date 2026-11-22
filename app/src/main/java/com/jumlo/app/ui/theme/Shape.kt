@@ -35,20 +35,6 @@ data class QuietPrecisionElevation(
     val overlay: Dp = 16.dp
 )
 
-/**
- * Jumlo Studio shape language: crisp architectural radii with disciplined hierarchy.
- *
- * - Hairline bars & accents: 4dp
- * - Compact badges & chips: 10dp
- * - Thumbnails and tags: 12dp
- * - Active indicators & pills: 14dp
- * - Tool & action icon tiles: 15dp
- * - Inputs, search, and buttons: 16dp
- * - Nested inner surfaces & panels: 18dp
- * - Cards and tiles: 20dp
- * - Hero / spotlight cards & floating navigation dock: 24dp
- * - Sheets and overlays: 28dp top radius
- */
 @Immutable
 data class QuietPrecisionShapes(
     val bar: RoundedCornerShape = RoundedCornerShape(JumloRadii.hairline),

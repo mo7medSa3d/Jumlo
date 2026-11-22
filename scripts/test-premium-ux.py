@@ -130,14 +130,15 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('Modifier.widthIn(max = 1000.dp).fillMaxSize()', source('tools/ToolsScreen.kt'))
 
     def test_home_quick_actions_have_four_distinct_filled_icons(self):
-        code = source('home/HomeScreen.kt')
-        for label, icon in [('scan','scan'),('convert','document'),('compress','compress'),('download','download')]:
-            self.assertIn(f'Triple(R.string.modern_{label}, R.drawable.ic_prism_{icon}',code)
-        self.assertIn('HomeQuickAction(',code)
-        self.assertIn('.size(54.dp)',code)
-        self.assertIn('maxLines = 1',code)
-        self.assertIn('QuietSearchBar(',code)
-
+        home = source('home/HomeScreen.kt')
+        for marker in (
+            'HomeQuickActionSpec(R.string.modern_scan, "scan", "scan_doc"',
+            'HomeQuickActionSpec(R.string.modern_convert, "convert", "pdf_02"',
+            'HomeQuickActionSpec(R.string.modern_compress, "compress", "pdf_compress"',
+            'HomeQuickActionSpec(R.string.modern_download, "download", "dl_media"',
+            'ToolIcon(accentToolId',
+        ):
+            self.assertIn(marker, home)
     def test_old_color_system_is_gone_and_transparency_kept(self):
         settings = source('settings/SettingsScreen.kt')
         theme = source('theme/Theme.kt')

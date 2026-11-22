@@ -1,37 +1,14 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="media_intro">Download the media you own, in the quality you choose. Everything stays on your device.</string>
     <string name="media_link">Link</string>
     <string name="media_analyze">Analyze link</string>
-    <string name="media_update_extractor">Update extractor</string>
-    <string name="media_cancel">Cancel</string>
     <string name="media_analyzing">Checking source and available media files…</string>
     <string name="media_video">Video file</string>
     <string name="media_audio_only">Audio only</string>
-    <string name="media_duration">Duration: %1$d seconds</string>
-    <string name="media_actual_qualities">Formats available from this source.</string>
-    <string name="media_resolution_unknown">Resolution not reported</string>
-    <string name="media_bitrate_unknown">Bitrate not reported</string>
     <string name="media_size_unknown">Size not reported</string>
-    <string name="media_approximate">Approximately %1$s</string>
-    <string name="media_mux">Video and audio will be merged into %1$s</string>
-    <string name="media_silent">This source has no audio track.</string>
-    <string name="media_no_choices">No usable stream for this mode. Try the other mode or direct download.</string>
     <string name="media_audio_format">Audio output format</string>
-    <string name="media_original_audio">Original codec</string>
-    <string name="media_encoding_bitrate">Audio quality (Bitrate)</string>
-    <string name="media_no_upscale">A higher encoding bitrate does not restore detail absent from the source. Source codec avoids unnecessary re-encoding when supported.</string>
-    <string name="media_filename">Output filename (extension is added automatically)</string>
-    <string name="media_wifi">Wi-Fi only</string>
-    <string name="media_unmetered">Unmetered network only</string>
-    <string name="media_http">Allow unencrypted HTTP requests for this analysis/job</string>
-    <string name="media_limits">Media workspace limit: 8 GiB, subject to free storage. Retry restarts unpublished media transfers; finalized outputs are not duplicated.</string>
-    <string name="media_direct_instead">Download as a direct file</string>
     <string name="media_queueing">Starting download…</string>
     <string name="media_download_selected">Download selected quality</string>
-    <string name="media_rights_title">Before you download</string>
-    <string name="media_rights_body">Only download content you own or have permission to download, and follow the terms of the site you are downloading from. Jumlo does not bypass DRM, paywalls or access controls; a site that requires an account will say so and the download will stop.</string>
-    <string name="media_rights_confirm">I have the rights</string>
     <string name="media_error_service">This build has no configured extraction service. Try an original direct file link.</string>
     <string name="media_error_site">No downloadable file was found on this page. If the site offers a direct file link, paste that instead — DRM, private, and login-only content can\'t be downloaded.</string>
     <string name="media_error_private">This resource requires sign-in or private access. Use an authorized direct download provided by the source.</string>
@@ -52,17 +29,6 @@
     <string name="media_error_native_repair_unavailable">The bundled media repair for this processor is missing. Update Jumlo, then retry.</string>
     <string name="media_error_live">Live streams cannot be downloaded because they have no end yet. Try again after the stream ends, or use a finished video.</string>
     <string name="media_error_generic">This media could not be read or downloaded. The site or content may not be supported — try a direct file link from the source.</string>
-    <string name="media_found">Found (%1$d)</string>
-    <string name="media_candidates_note">Analyze a detected stream to inspect actual formats.</string>
-    <string name="media_no_candidates">No media resource detected yet.</string>
-    <string name="media_new_copy">Create an additional copy on the next download</string>
-    <string name="media_tos_notice">Choose your preferred video resolution, audio format, or PDF compression before downloading.</string>
-    <string name="media_tos_ack">I confirm download settings</string>
-    <string name="media_platform_matrix_title">Platform qualification status</string>
-    <string name="media_status_unverified">UNVERIFIED</string>
-    <string name="media_status_host_verified">HOST_VERIFIED</string>
-    <string name="media_advanced_options">Advanced options</string>
-    <string name="media_auto_best_quality">Best available format selected automatically. To download audio only or choose a format, open Advanced options.</string>
     <string name="media_select_type">Download type</string>
     <string name="media_select_quality">Quality and format</string>
     <string name="media_pdf_original" formatted="false">Original PDF</string>
@@ -73,19 +39,12 @@
     <string name="media_img_compressed">Smaller image</string>
     <string name="media_img_to_pdf">Image as PDF</string>
     <string name="media_switch_to_extractor">Inspect original audio/video file</string>
-    <string name="media_supported_platforms">TikTok, YouTube, Instagram, Facebook, LinkedIn, X, and direct files.</string>
     <string name="media_supported_platforms_extended">TikTok, YouTube, Instagram, Facebook, LinkedIn, X, and direct links in high quality.</string>
     <string name="media_with_audio">With Audio</string>
     <string name="media_without_audio">No audio</string>
     <string name="media_video_only">Video</string>
     <string name="media_choose_quality_hint">Choose a quality above to download in the background.</string>
     <string name="media_error_conversion">This source cannot be converted to the requested audio format. Try its original audio format.</string>
-    <string name="media_direct_url_hint">Try a direct downloadable media URL or an authorized page containing HTML5 video/audio files.</string>
     <string name="media_audio_not_probed">Audio tracks checked after download</string>
-    <string name="media_restricted_hint">This link requires a login or its provider has restricted access. Jumlo will not request cookies or bypass protected content. Try an openly downloadable link.</string>
-    <string name="downloads_live_count">%1$d active</string>
-    <string name="downloads_completed_count">%1$d completed</string>
-    <string name="home_manage_downloads">View all downloads</string>
-    <string name="media_selected_quality_summary">Ready to download: %1$s</string>
     <string name="media_download_with_quality">Download (%s)</string>
 </resources>

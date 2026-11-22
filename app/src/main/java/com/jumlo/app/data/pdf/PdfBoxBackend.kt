@@ -35,7 +35,7 @@ class PdfInput(val file: File, val password: CharArray? = null) {
  * The bitmap budget the compressor works to when the caller does not give one.
  * It mirrors the job budget: half the heap, capped.
  */
-val DEFAULT_MAX_BITMAP_BYTES: Long = minOf(Runtime.getRuntime().maxMemory() / 2, 192L * 1024 * 1024)
+val DEFAULT_MAX_BITMAP_BYTES: Long = com.jumlo.app.core.ResourceBudgetPolicy.dynamicBitmapBudgetBytes()
 
 data class OrganizeOp(val sourceIndex: Int, val rotationDegrees: Int = 0)
 data class PageGroup(val first: Int, val count: Int)

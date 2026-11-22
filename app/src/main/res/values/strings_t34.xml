@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="t34_scan_again">Scan again</string>
+    <string name="t34_annotate_again">Annotate again</string>
+    <string name="t34_markup_done">Done</string>
+</resources>

@@ -1,7 +1,5 @@
 <resources>
-    <string name="print_title">Print</string>
     <string name="print_subtitle">Prepare your document, then choose a printer</string>
-    <string name="print_back">Back</string>
     <string name="print_documents">Documents</string>
     <string name="print_setup">Print setup</string>
     <string name="print_history">Print history</string>

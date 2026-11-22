@@ -196,8 +196,10 @@ fun QuietStateCard(
                     Text(text = title, modifier = Modifier.semantics { heading() },
                         style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = if (isError) colors.onErrorContainer else colors.onSurface)
-                    Text(text = subtitle, style = QuietTheme.typography.metadata,
-                        color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+                    if (subtitle.isNotBlank()) {
+                        Text(text = subtitle, style = QuietTheme.typography.metadata,
+                            color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+                    }
                 }
             } else {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -211,8 +213,10 @@ fun QuietStateCard(
                         Text(text = title, modifier = Modifier.semantics { heading() },
                             style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = if (isError) colors.onErrorContainer else colors.onSurface)
-                        Text(text = subtitle, style = QuietTheme.typography.metadata,
-                            color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+                        if (subtitle.isNotBlank()) {
+                            Text(text = subtitle, style = QuietTheme.typography.metadata,
+                                color = if (isError) colors.onErrorContainer else colors.onSurfaceVariant)
+                        }
                     }
                 }
             }

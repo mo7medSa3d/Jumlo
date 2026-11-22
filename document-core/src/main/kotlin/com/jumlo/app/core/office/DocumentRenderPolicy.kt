@@ -5,9 +5,12 @@ import kotlin.math.sqrt
 
 /** Bounded raster dimensions for viewing, OCR and Office export; independent of Android bitmap APIs. */
 object DocumentRenderPolicy {
+    /** 6.0x PDF points (432 DPI) ceiling for crisp print-grade rendering. */
+    const val MAX_RENDER_SCALE: Double = 6.0
+
     fun dimensions(width: Int, height: Int, maxEdge: Int, maxBitmapBytes: Long): Pair<Int, Int> {
         require(width > 0 && height > 0 && maxEdge > 0 && maxBitmapBytes >= 4) { "INVALID_PDF_PAGE_GEOMETRY" }
-        val target = minOf(maxEdge.toDouble() / maxOf(width, height), 4.0)
+        val target = minOf(maxEdge.toDouble() / maxOf(width, height), MAX_RENDER_SCALE)
         val maxPixels = minOf(maxBitmapBytes / 4, Int.MAX_VALUE / 4L)
         val factor = minOf(target, sqrt(maxPixels.toDouble() / width.toDouble() / height.toDouble()))
         var w = floor(width * factor).toInt().coerceAtLeast(1)

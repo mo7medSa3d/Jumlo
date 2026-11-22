@@ -401,4 +401,17 @@ class OfficeDocumentReaderTest {
             file.delete()
         }
     }
+
+    @Test fun officeXmlRejectsUtf16BeDoctypeWithOverlappingPrefix() {
+        val utf16Be = "<?xml version="1.0" encoding="UTF-16BE"?><<!DOCTYPE x><w:document/>".toByteArray(Charsets.UTF_16BE)
+        val file = packageFile(mapOf("word/document.xml" to utf16Be))
+        try {
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                OfficeDocumentReader.read(file, OfficeKind.DOCX, 10_000_000)
+            }
+            assertEquals("OFFICE_INVALID", failure.message)
+        } finally {
+            file.delete()
+        }
+    }
 }

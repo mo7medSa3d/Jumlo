@@ -367,7 +367,7 @@ ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 val maxFullMediaApkBytes = 70_000_000L
 tasks.register("verifyCompactApkSize") {
     group = "verification"
-    description = "Build and enforce the 60,000,000-byte full-media compact APK limit"
+    description = "Build and enforce the 70,000,000-byte full-media compact APK limit"
     dependsOn("assembleDirectCompact")
     doLast {
         // A small direct-link-only build is not a substitute for the full downloader.
@@ -385,7 +385,7 @@ tasks.register("verifyCompactApkSize") {
 
 tasks.register("verifyReleaseApkSize") {
     group = "verification"
-    description = "Enforce the 60,000,000-byte full-media release APK limit, ARM64 and extractor content"
+    description = "Enforce the 70,000,000-byte full-media release APK limit, ARM64 and extractor content"
     dependsOn("assembleDirectRelease")
     doLast {
         check(extendedMedia) { "Release qualification requires the complete media runtime." }

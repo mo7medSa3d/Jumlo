@@ -25,6 +25,7 @@ import json
 import math
 import os
 import re
+import secrets
 import shutil
 import signal
 import socket
@@ -107,6 +108,7 @@ _ERROR_CODE_RE = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
 _VERSION_RE = re.compile(r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:[.-][A-Za-z0-9.]{1,32})?")
 _HOST_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.?")
 _YTDLP_FRAGMENT_RE = re.compile(r"^media\.f[A-Za-z0-9_-]+\.")
+_REQUEST_ID_RE = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 
 def _safe_ytdlp_version(version: str) -> str:
@@ -207,7 +209,7 @@ def parse_config(argv: list[str] | None = None, environ: dict[str, str] | None =
     args.port = _parse_int_range(str(args.port), "JUMLO_MEDIA_PORT", 1, 65535)
     args.rate_limit = _parse_int_range(str(args.rate_limit), "JUMLO_MEDIA_RATE_LIMIT", 1)
     args.max_concurrent = _parse_int_range(str(args.max_concurrent), "JUMLO_MEDIA_MAX_CONCURRENT", 1)
-    args.log_level = str(args.log_level or "INFO").strip().upper()
+    args.log_level = str(args.log_level).strip().upper()
     if args.log_level not in _VALID_LOG_LEVELS:
         raise ValueError(f"JUMLO_MEDIA_LOG_LEVEL must be one of {', '.join(_VALID_LOG_LEVELS)}")
     args.cors_origin = _validate_cors_origin(args.cors_origin)
@@ -600,6 +602,7 @@ class MediaHTTPServer(ThreadingHTTPServer):
         log_level: str = "INFO",
         health_cache_ttl: float = 30.0,
         cors_origin: str = "",
+        on_error=None,
     ):
         self.expected_authorization = f"Bearer {token}" if token else None
         self.rate_limiter = _RateLimiter(rate_limit)
@@ -607,6 +610,7 @@ class MediaHTTPServer(ThreadingHTTPServer):
         self.shutting_down = False
         self.log_level = log_level
         self.cors_origin = _validate_cors_origin(cors_origin)
+        self.on_error = on_error
         self._started_at = time.monotonic()
         self._metrics_lock = threading.Lock()
         self._requests_total = 0
@@ -683,7 +687,17 @@ class MediaHTTPServer(ThreadingHTTPServer):
         kind = error_type.__name__ if error_type is not None else "UnknownError"
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,63}", kind):
             kind = "UnknownError"
-        sys.stderr.write(json.dumps({"event": "http_request_failed", "type": kind}) + "\n")
+        payload = {"event": "http_request_failed", "type": kind}
+        sys.stderr.write(json.dumps(payload) + "\n")
+        self.notify_error(payload)
+
+    def notify_error(self, payload: dict) -> None:
+        hook = getattr(self, "on_error", None)
+        if callable(hook):
+            try:
+                hook(dict(payload))
+            except Exception:
+                pass
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -694,9 +708,28 @@ class Handler(BaseHTTPRequestHandler):
         self.request.settimeout(30)
         super().setup()
 
+    def handle_one_request(self) -> None:
+        # Reset per-request ID so HTTP/1.1 keep-alive connections never reuse a prior ID.
+        self._request_id = None
+        super().handle_one_request()
+
+    def _get_request_id(self) -> str:
+        rid = getattr(self, "_request_id", None)
+        if rid:
+            return rid
+        headers = getattr(self, "headers", None)
+        incoming = headers.get("X-Request-Id") if headers is not None and hasattr(headers, "get") else ""
+        if isinstance(incoming, str) and _REQUEST_ID_RE.fullmatch(incoming.strip()):
+            rid = incoming.strip()
+        else:
+            rid = secrets.token_hex(8)
+        self._request_id = rid
+        return rid
+
     def end_headers(self) -> None:
         for name, value in _SECURITY_HEADERS:
             self.send_header(name, value)
+        self.send_header("X-Request-Id", self._get_request_id())
         cors_origin = getattr(getattr(self, "server", None), "cors_origin", "")
         if cors_origin:
             self.send_header("Access-Control-Allow-Origin", cors_origin)
@@ -760,12 +793,24 @@ class Handler(BaseHTTPRequestHandler):
         server = getattr(self, "server", None)
         if server is not None and hasattr(server, "record_response"):
             server.record_response(status)
+        entry_level = "ERROR" if status is not None and status >= 500 else (
+            "WARNING" if status is not None and status >= 400 else "INFO"
+        )
+        entry = {
+            "event": "http_request",
+            "level": entry_level,
+            "request_id": self._get_request_id(),
+            "route": route,
+            "status": status,
+        }
+        if status is not None and status >= 500 and server is not None and hasattr(server, "notify_error"):
+            server.notify_error(entry)
         level = getattr(server, "log_level", "INFO")
         if level == "ERROR" and (status is None or status < 500):
             return
         if level == "WARNING" and (status is None or status < 400):
             return
-        sys.stderr.write(json.dumps({"event": "http_request", "route": route, "status": status}) + "\n")
+        sys.stderr.write(json.dumps(entry) + "\n")
 
     def log_message(self, fmt, *args):
         # Never format arbitrary request/error text: exceptions can contain URLs,
@@ -796,14 +841,14 @@ class Handler(BaseHTTPRequestHandler):
             if server is not None and hasattr(server, "health_payload_bytes"):
                 self._json_bytes(200, server.health_payload_bytes())
             else:
-                self._json(200, {"ok": True, "ytdlp": ytdlp_version(), "ffmpeg": bool(shutil.which("ffmpeg"))})
+                self._json(200, {"ok": True, "ytdlp": _safe_ytdlp_version(ytdlp_version()), "ffmpeg": bool(shutil.which("ffmpeg"))})
             return True
         if path == "/ready":
             shutting_down = bool(getattr(server, "shutting_down", False))
             if server is not None and hasattr(server, "probe_dependencies"):
                 version, ffmpeg = server.probe_dependencies()
             else:
-                version, ffmpeg = ytdlp_version(), bool(shutil.which("ffmpeg"))
+                version, ffmpeg = _safe_ytdlp_version(ytdlp_version()), bool(shutil.which("ffmpeg"))
             ytdlp_ready = version not in ("unavailable", "unknown", "")
             ready = (not shutting_down) and ytdlp_ready
             self._json(
@@ -1036,6 +1081,10 @@ class Handler(BaseHTTPRequestHandler):
             self._error("MEDIA_SITE_UNSUPPORTED", 404)
             return
         if self.headers.get("Transfer-Encoding"):
+            self.close_connection = True
+            self._error("MEDIA_SITE_UNSUPPORTED", 400)
+            return
+        if hasattr(self.headers, "get_all") and len(self.headers.get_all("Content-Length") or ()) > 1:
             self.close_connection = True
             self._error("MEDIA_SITE_UNSUPPORTED", 400)
             return

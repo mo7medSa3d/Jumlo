@@ -1,5 +1,6 @@
 package com.jumlo.app.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -10,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -22,19 +24,34 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.NeonPanel
 import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
+import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.util.rememberAppHaptics
 
-@Composable fun StorageScreen(vm: AppViewModel, onChooseFolder: () -> Unit, onOpenFolder: () -> Unit) {
+private val TYPE_CATEGORIES = listOf("PDF", "Images", "Video", "Audio", "Documents")
+
+@Composable
+fun StorageScreen(
+    vm: AppViewModel,
+    onChooseFolder: () -> Unit,
+    onOpenFolder: () -> Unit,
+    onOpenCategory: (String) -> Unit = {}
+) {
     val usage by vm.storage.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val haptics = rememberAppHaptics()
     LaunchedEffect(Unit) { vm.refreshStorage() }
     val categories = remember(usage) {
-        listOf(R.string.storage_imports to usage.sources, R.string.storage_results to usage.outputs,
-            R.string.storage_transfers to usage.partials, R.string.storage_temporary to usage.temporary,
-            R.string.storage_trash to usage.trash)
+        listOf(
+            Triple("all", R.string.storage_results, usage.outputs),
+            Triple("downloads", R.string.storage_transfers, usage.partials),
+            Triple("cache", R.string.storage_temporary, usage.temporary),
+            Triple("trash", R.string.storage_trash, usage.trash)
+        )
     }
-    val total = remember(categories) { categories.sumOf { it.second } }
+    val total = remember(categories) { categories.sumOf { it.third } }
     val (outputsByType, outputsTotal) = remember(outputs) {
         outputs.groupBy { StoragePaths.category(it.mimeType) }
             .mapValues { (_, files) -> files.sumOf { it.sizeBytes } } to outputs.sumOf { it.sizeBytes }
@@ -79,33 +96,58 @@ import com.jumlo.app.ui.theme.QuietTheme
                 }
             }
             item("save-folder") {
-                SaveFolderCard(settings.downloadDestinationFolder, onChooseFolder, onOpenFolder)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    SaveFolderCard(settings.downloadDestinationFolder, onChooseFolder, onOpenFolder)
+                    if (settings.downloadDestinationFolder.startsWith("content://")) {
+                        TextButton(
+                            onClick = vm::resetDownloadDestinationFolder,
+                            modifier = Modifier.testTag("storage.resetDownloadLocation")
+                        ) {
+                            Text(stringResource(R.string.modern_reset_save_folder))
+                        }
+                    }
+                }
             }
             item("categories") {
                 NeonPanel {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        categories.forEach { (title, bytes) ->
-                            StorageCategory(stringResource(title), bytes, total)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        categories.forEach { (key, title, bytes) ->
+                            StorageCategory(
+                                label = stringResource(title),
+                                bytes = bytes,
+                                total = total,
+                                modifier = Modifier.testTag("storage.category.$key"),
+                                onClick = { haptics.actionClick(); onOpenCategory(key) }
+                            )
                         }
                     }
                 }
             }
             if (outputs.isNotEmpty()) item("by-type") {
                 NeonPanel {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
                             stringResource(R.string.redesign_storage_by_type),
                             style = QuietTheme.typography.sectionTitle,
                             modifier = Modifier.semantics { heading() }
                         )
-                        outputsByType.forEach { (category, bytes) ->
-                            StorageCategory(stringResource(when (category) {
-                                "Video" -> R.string.redesign_filter_video
-                                "Audio" -> R.string.redesign_filter_audio
-                                "Images" -> R.string.redesign_filter_images
-                                "PDF" -> R.string.redesign_pdf_type
-                                else -> R.string.redesign_filter_documents
-                            }), bytes, outputsTotal)
+                        TYPE_CATEGORIES.forEach { category ->
+                            val bytes = outputsByType[category] ?: 0L
+                            if (bytes > 0L) {
+                                StorageCategory(
+                                    label = stringResource(when (category) {
+                                        "Video" -> R.string.redesign_filter_video
+                                        "Audio" -> R.string.redesign_filter_audio
+                                        "Images" -> R.string.redesign_filter_images
+                                        "PDF" -> R.string.redesign_pdf_type
+                                        else -> R.string.redesign_filter_documents
+                                    }),
+                                    bytes = bytes,
+                                    total = outputsTotal,
+                                    modifier = Modifier.testTag("storage.type.$category"),
+                                    onClick = { haptics.actionClick(); onOpenCategory(category) }
+                                )
+                            }
                         }
                     }
                 }
@@ -123,15 +165,35 @@ import com.jumlo.app.ui.theme.QuietTheme
     }
 }
 
-@Composable private fun StorageCategory(label: String, bytes: Long, total: Long) {
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+@Composable
+private fun StorageCategory(
+    label: String,
+    bytes: Long,
+    total: Long,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(QuietTheme.shapes.inputField)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp, horizontal = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 label,
                 modifier = Modifier.weight(1f),
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
             )
             Text(formatBytes(bytes), style = QuietTheme.typography.metadataStrong.copy(textDirection = TextDirection.Ltr))
+            Icon(
+                Icons.AutoMirrored.Rounded.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
         LinearProgressIndicator(
             progress = { if (total > 0L) (bytes.toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f },

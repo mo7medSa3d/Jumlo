@@ -118,9 +118,9 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         .catch { error -> if(error is CancellationException || error !is Exception) throw error; AppDiagnostics.report("workspace",error); _sourceLoad.value=DataLoadStatus.ERROR; emit(emptyList()) }
     }.stateIn(operationScope,SharingStarted.WhileSubscribed(5000),emptyList())
     val outputs=reloadRecords.flatMapLatest {
-        combine(outputStore.records,settings) { records,prefs ->
+        combine(outputStore.records,settings.map { it.outputNames }.distinctUntilChanged()) { records,outputNames ->
             records.map { record ->
-                val label=prefs.outputNames[record.id]
+                val label=outputNames[record.id]
                 if(label==null) record else {
                     val payload=File(File(File(app.filesDir,"processing/results"),record.id),com.jumlo.app.core.SafeNames.basename(record.displayName))
                     record.copy(displayName=label,uri=androidx.core.content.FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",payload,label).toString())
@@ -236,6 +236,13 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     private var openedSession=false
     private val _sessionEpoch=MutableStateFlow(0L)
     val sessionEpoch=_sessionEpoch.asStateFlow()
+    private val _lastToolId=MutableStateFlow(savedState.get<String>("last_tool_id"))
+    val lastToolId=_lastToolId.asStateFlow()
+    private fun rememberLastTool(id:String) {
+        _lastToolId.value=id
+        savedState["last_tool_id"]=id
+    }
+    @Volatile private var suppressRecoverySave=false
     private val submitting=AtomicBoolean(false)
     private val storageRefresh=AtomicReference<Job?>(null)
     private var lastFingerprint:String?=null
@@ -267,7 +274,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
             catch(_:Exception) { _message.value="DRAFT_RESTORE_FAILED" }
             finally { initialized.complete(Unit); _workspaceReady.value=true }
             _form.debounce(300).collect { snapshot ->
-                try { draftMutex.withLock { if(snapshot==_form.value) drafts.saveRecovery(snapshot) } }
+                try { draftMutex.withLock { if(!suppressRecoverySave && snapshot==_form.value) drafts.saveRecovery(snapshot) } }
                 catch(cancel:CancellationException) { throw cancel }
                 catch(_:Exception) { _message.value="DRAFT_SAVE_FAILED" }
             }
@@ -314,6 +321,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun saveWorkspaceDraft(onSaved:()->Unit) { operationScope.launch {
         initialized.await(); beginBusy()
         try {
+            suppressRecoverySave=false
             val snapshot=form.value; val links=urls.value
             draftMutex.withLock { drafts.saveWorkspaceAndRecovery(snapshot);savedWorkspace.value=snapshot;savedUrls.value=links }
             _message.value="DRAFT_SAVED"
@@ -325,6 +333,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun discardWorkspaceChanges(onDiscarded:()->Unit) { operationScope.launch {
         initialized.await(); beginBusy()
         try {
+            suppressRecoverySave=false
             draftMutex.withLock {
                 val checkpoint=savedWorkspace.value
                 drafts.saveRecovery(checkpoint)
@@ -346,7 +355,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
             }
         }
     }
-    fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { _form.update(change); lastFingerprint=null; lastJobId=null }
+    fun updateForm(change:(WorkspaceDraft)->WorkspaceDraft) { suppressRecoverySave=false; _form.update(change); lastFingerprint=null; lastJobId=null }
 
     private fun smartDefaultsForTool(draft: WorkspaceDraft): WorkspaceDraft = when (draft.toolId) {
         "pdf_stamp" -> draft.copy(flag1 = true)
@@ -363,6 +372,8 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     fun chooseTool(id:String):Boolean {
         if(!CapabilityRegistry.enabled(id)) { _message.value=CapabilityRegistry.reason(id); return false }
         openedSession=true
+        suppressRecoverySave=false
+        rememberLastTool(id)
         _sessionEpoch.value++
         recordToolOpen(id)
         _urls.value=""
@@ -374,6 +385,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     }
     /** Navigation-only catalogue entries count as use without replacing a working draft. */
     fun recordToolOpen(id:String) {
+        if(id == "scan_doc") rememberLastTool(id)
         if(CapabilityRegistry.enabled(id)) savePreference { preferences.recordToolOpen(id) }
     }
     /** Explicit handoff only, e.g. a result's "Use in another tool" action. */
@@ -382,14 +394,16 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         updateForm { it.copy(sourceIds=sourceIds.distinct().take(1000)) }
         return true
     }
-    fun closeToolSession() {
+    fun closeToolSession(preserveDraft:Boolean=false) {
         openedSession=true
+        suppressRecoverySave=true
         _sessionEpoch.value++
+        lastFingerprint=null;lastJobId=null
+        if (preserveDraft) return
         _urls.value=""
-        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool("pdf_02",emptyList()))
+        _form.value=smartDefaultsForTool(WorkspaceDraft.forTool(_lastToolId.value ?: "pdf_02",emptyList()))
         savedWorkspace.value=_form.value
         savedUrls.value=""
-        lastFingerprint=null;lastJobId=null
     }
     fun addSource(id:String,displayName:String?=null) { updateForm { draft ->
         val names=(draft.sourceIds+id).distinct().take(1000)
@@ -514,16 +528,25 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     }
 
     /** Flattens interactive viewer markup (ink, highlights, Arabic text, checkmarks, signatures) into a new verified PDF. */
-    fun flattenPdfMarkup(sourceUri:String,displayName:String,items:List<com.jumlo.app.core.PdfMarkupItem>,onFinished:()->Unit={}) {
-        if(items.isEmpty()) { onFinished(); return }
+    fun flattenPdfMarkup(
+        sourceUri:String,
+        displayName:String,
+        items:List<com.jumlo.app.core.PdfMarkupItem>,
+        onFinished:()->Unit={},
+        onResult:((com.jumlo.app.ui.viewer.MarkupSaveResult?)->Unit)?=null
+    ) {
+        if(items.isEmpty()) { onResult?.invoke(null); onFinished(); return }
         operationScope.launch {
             val jobId = UUID.randomUUID().toString()
             val tempIn = File(app.cacheDir, "jumlo-markup-$jobId.pdf")
+            var savedResult: com.jumlo.app.ui.viewer.MarkupSaveResult? = null
             beginBusy()
             try {
                 initialized.await()
+                val parsedUri = Uri.parse(sourceUri)
+                require(parsedUri.scheme.equals("content", ignoreCase = true)) { "CONTENT_URI_REQUIRED" }
                 withContext(Dispatchers.IO) {
-                    app.contentResolver.openInputStream(android.net.Uri.parse(sourceUri))?.use { input ->
+                    app.contentResolver.openInputStream(parsedUri)?.use { input ->
                         tempIn.outputStream().use { output -> input.copyTo(output) }
                     } ?: throw IllegalArgumentException("ACCESS_LOST")
                 }
@@ -537,6 +560,14 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 val record = outputStore.publish(ticket) { outputStore.inspect(it, "application/pdf", originalSizeBytes = tempIn.length()) }
                 refreshStorage()
                 if(record.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED")
+                else notifyMessage("MARKUP_SAVED_AS_COPY")
+                savedResult = com.jumlo.app.ui.viewer.MarkupSaveResult(
+                    uri = record.uri,
+                    displayName = record.displayName,
+                    sizeBytes = record.sizeBytes,
+                    locationLabel = record.metadata.subfolder,
+                    savedInPlace = false
+                )
             } catch(cancel:CancellationException) { throw cancel }
             catch(error:Exception) { notifyMessage(stableError(error)); AppDiagnostics.report("pdf-markup", error) }
             finally {
@@ -545,6 +576,94 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                     runCatching { outputStore.discardIncomplete(jobId) }
                 }
                 endBusy()
+                onResult?.invoke(savedResult)
+                onFinished()
+            }
+        }
+    }
+
+    /** Flattens interactive viewer markup in place via a temp file + atomic stream copy when writable,
+     *  falling back cleanly to a verified new copy when the source URI is read-only or app-immutable. */
+    fun flattenPdfMarkupInPlace(
+        sourceUri:String,
+        displayName:String,
+        items:List<com.jumlo.app.core.PdfMarkupItem>,
+        onFinished:()->Unit={},
+        onResult:((com.jumlo.app.ui.viewer.MarkupSaveResult?)->Unit)?=null
+    ) {
+        if(items.isEmpty()) { onResult?.invoke(null); onFinished(); return }
+        operationScope.launch {
+            val jobId = UUID.randomUUID().toString()
+            val tempIn = File(app.cacheDir, "jumlo-markup-in-$jobId.pdf")
+            val tempOut = File(app.cacheDir, "jumlo-markup-out-$jobId.pdf")
+            var savedResult: com.jumlo.app.ui.viewer.MarkupSaveResult? = null
+            beginBusy()
+            try {
+                initialized.await()
+                val parsedUri = Uri.parse(sourceUri)
+                require(parsedUri.scheme.equals("content", ignoreCase = true)) { "CONTENT_URI_REQUIRED" }
+                withContext(Dispatchers.IO) {
+                    app.contentResolver.openInputStream(parsedUri)?.use { input ->
+                        tempIn.outputStream().use { output -> input.copyTo(output) }
+                    } ?: throw IllegalArgumentException("ACCESS_LOST")
+                }
+                val coroutine = currentCoroutineContext()
+                withContext(Dispatchers.IO) {
+                    com.jumlo.app.data.pdf.PdfMarkupFlattener.flatten(tempIn, tempOut, items) { coroutine.ensureActive() }
+                }
+                require(tempOut.isFile && tempOut.length() > 0L) { "MARKUP_SAVE_FAILED" }
+                val isAppImmutableProvider = parsedUri.authority == "${app.packageName}.fileprovider"
+                val wroteInPlace = if (!isAppImmutableProvider && parsedUri.scheme == "content") {
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            app.contentResolver.openOutputStream(parsedUri, "wt")?.use { out ->
+                                tempOut.inputStream().use { input -> input.copyTo(out) }
+                                out.flush()
+                                true
+                            } ?: false
+                        }.getOrDefault(false)
+                    }
+                } else false
+                if (wroteInPlace) {
+                    notifyMessage("MARKUP_SAVED_IN_PLACE")
+                    savedResult = com.jumlo.app.ui.viewer.MarkupSaveResult(
+                        uri = sourceUri,
+                        displayName = displayName,
+                        sizeBytes = tempOut.length(),
+                        locationLabel = null,
+                        savedInPlace = true
+                    )
+                } else {
+                    val base = com.jumlo.app.core.AutoOutputName.cleanBaseName(displayName, "Document")
+                    val outName = com.jumlo.app.core.SafeNames.basename("$base - Annotated.pdf")
+                    val ticket = outputStore.reserve(jobId, "markup", outName, "application/pdf")
+                    withContext(Dispatchers.IO) {
+                        tempOut.inputStream().use { input ->
+                            ticket.stageFile.outputStream().use { out -> input.copyTo(out) }
+                        }
+                    }
+                    val record = outputStore.publish(ticket) { outputStore.inspect(it, "application/pdf", originalSizeBytes = tempIn.length()) }
+                    refreshStorage()
+                    if (record.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED")
+                    else notifyMessage("MARKUP_SAVED_AS_COPY")
+                    savedResult = com.jumlo.app.ui.viewer.MarkupSaveResult(
+                        uri = record.uri,
+                        displayName = record.displayName,
+                        sizeBytes = record.sizeBytes,
+                        locationLabel = record.metadata.subfolder,
+                        savedInPlace = false
+                    )
+                }
+            } catch(cancel:CancellationException) { throw cancel }
+            catch(error:Exception) { notifyMessage(stableError(error)); AppDiagnostics.report("pdf-markup-inplace", error) }
+            finally {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    tempIn.delete()
+                    tempOut.delete()
+                    runCatching { outputStore.discardIncomplete(jobId) }
+                }
+                endBusy()
+                onResult?.invoke(savedResult)
                 onFinished()
             }
         }
@@ -618,7 +737,8 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                             } }
                         }
                         val record = outputStore.publish(ticket) { outputStore.inspect(it, "image/jpeg") }
-                        if (record.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED") else published += record
+                        if (record.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED")
+                        published += record
                     } finally {
                         withContext(NonCancellable + Dispatchers.IO) { runCatching { outputStore.discardIncomplete(jobId) } }
                     }
@@ -909,6 +1029,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                 initialized.await()
                 submissionReset.awaitLatest()
                 val state=form.value
+                rememberLastTool(state.toolId)
                 require(CapabilityRegistry.canProcess(state.toolId)) { "CAPABILITY_UNAVAILABLE" }
                 val download=state.toolId.startsWith("dl_")
                 require(download || state.sourceIds.isNotEmpty()) { "NO_SOURCES" }
@@ -1046,7 +1167,9 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         if(target==null) return
         operationScope.launch(Dispatchers.IO) {
             try {
-                app.contentResolver.openOutputStream(Uri.parse(target),"wt")?.use { it.write((errorLog.read()+AppDiagnostics.read()).toByteArray(Charsets.UTF_8)) }
+                val targetUri = Uri.parse(target)
+                require(targetUri.scheme.equals("content", ignoreCase = true)) { "CONTENT_URI_REQUIRED" }
+                app.contentResolver.openOutputStream(targetUri,"wt")?.use { it.write((errorLog.read()+AppDiagnostics.read()).toByteArray(Charsets.UTF_8)) }
                     ?: throw OperationFailure("EXPORT_WRITE_FAILED")
                 _message.value="ERROR_LOG_EXPORTED"
             } catch(cancel:CancellationException) { throw cancel }

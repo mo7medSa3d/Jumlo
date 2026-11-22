@@ -1,6 +1,7 @@
 package com.jumlo.app.core
 
 import kotlinx.serialization.Serializable
+import kotlin.math.hypot
 
 @Serializable
 data class NormPoint(val x: Float, val y: Float)
@@ -9,7 +10,7 @@ data class NormPoint(val x: Float, val y: Float)
 data class PdfRect(val x: Float, val y: Float, val width: Float, val height: Float)
 
 enum class PdfMarkupTool {
-    NONE, PEN, HIGHLIGHTER, TEXT, DATE, CHECK, SIGNATURE
+    NONE, PEN, HIGHLIGHTER, ERASER, TEXT, DATE, CHECK, SIGNATURE
 }
 
 @Serializable
@@ -142,5 +143,44 @@ object PdfMarkupPolicy {
         val right = maxOf(p1.first, p2.first)
         val top = maxOf(p1.second, p2.second)
         return PdfRect(left, bottom, (right - left).coerceAtLeast(1f), (top - bottom).coerceAtLeast(1f))
+    }
+
+    /** Returns true if a normalized eraser circle at (normX, normY) intersects the markup item. */
+    fun hitTestEraser(item: PdfMarkupItem, normX: Float, normY: Float, radiusNorm: Float): Boolean {
+        val r = radiusNorm.coerceIn(0.005f, 0.15f)
+        return when (item) {
+            is PdfMarkupItem.InkStroke -> hitTestPolyline(item.points, normX, normY, r + item.widthNorm * 0.5f)
+            is PdfMarkupItem.HighlightStroke -> hitTestPolyline(item.points, normX, normY, r + item.widthNorm * 0.5f)
+            is PdfMarkupItem.CheckMark -> {
+                val s = item.sizeNorm
+                normX in (item.normX - r)..(item.normX + s + r) && normY in (item.normY - r)..(item.normY + s + r)
+            }
+            is PdfMarkupItem.TextBox -> {
+                val estW = (item.text.length.coerceIn(2, 24) * 0.012f * (item.fontSizePt / 14f)).coerceIn(0.05f, 0.55f)
+                val estH = (0.028f * (item.fontSizePt / 14f)).coerceIn(0.02f, 0.12f)
+                normX in (item.normX - r)..(item.normX + estW + r) && normY in (item.normY - r)..(item.normY + estH + r)
+            }
+            is PdfMarkupItem.SavedSignatureStamp -> {
+                normX in (item.normX - r)..(item.normX + item.normW + r) && normY in (item.normY - r)..(item.normY + item.normH + r)
+            }
+        }
+    }
+
+    private fun hitTestPolyline(points: List<NormPoint>, x: Float, y: Float, threshold: Float): Boolean {
+        if (points.isEmpty()) return false
+        if (points.size == 1) return hypot(x - points[0].x, y - points[0].y) <= threshold
+        for (i in 0 until points.size - 1) {
+            if (distanceToSegment(x, y, points[i].x, points[i].y, points[i + 1].x, points[i + 1].y) <= threshold) return true
+        }
+        return false
+    }
+
+    private fun distanceToSegment(px: Float, py: Float, ax: Float, ay: Float, bx: Float, by: Float): Float {
+        val dx = bx - ax
+        val dy = by - ay
+        val lenSq = dx * dx + dy * dy
+        if (lenSq <= 1e-8f) return hypot(px - ax, py - ay)
+        val t = (((px - ax) * dx + (py - ay) * dy) / lenSq).coerceIn(0f, 1f)
+        return hypot(px - (ax + t * dx), py - (ay + t * dy))
     }
 }

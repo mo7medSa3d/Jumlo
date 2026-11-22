@@ -12,6 +12,7 @@
     <!-- Requested only by CameraX fallback; Play-services scanning needs no app camera grant. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Android 11+ package visibility: without this the print-service lookup always
          returns an empty list and the app would claim no printer could ever exist. -->
@@ -21,10 +22,9 @@
         </intent>
     </queries>
 
-        <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-
     <application
         android:name=".JumloApplication"
+        android:largeHeap="true"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"

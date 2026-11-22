@@ -3,12 +3,17 @@ package com.jumlo.app.data.processing
 import android.content.Context
 import android.webkit.MimeTypeMap
 import com.jumlo.app.core.*
+import com.jumlo.app.data.files.EncryptedZip
+import com.jumlo.app.data.files.EncryptedZipEntrySource
 import com.jumlo.app.data.jobs.*
 import com.jumlo.app.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -17,6 +22,8 @@ import javax.inject.Inject
 
 /** All input bytes come from the immutable intake store; no display-name fallback. */
 class ArchiveOperationHandler @Inject constructor(@ApplicationContext private val app:Context):OperationHandler {
+    private val lenientJson = Json { ignoreUnknownKeys = true }
+
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> = withContext(Dispatchers.IO) {
         require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
         when(request.toolId) {
@@ -32,12 +39,62 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
     }
     private suspend fun create(job:JobRequest,ctx:ExecutionContext):List<ItemOutcome> {
         ctx.outputs.find(job.id,"archive")?.let { return listOf(ItemOutcome("archive",ItemStatus.CREATED,it.id)) }
-        val settings=Json.decodeFromString<ArchiveSettings>(job.settingsJson)
+        val settings=lenientJson.decodeFromString<ArchiveSettings>(job.settingsJson)
+        val rawPassword = runCatching {
+            lenientJson.parseToJsonElement(job.settingsJson).jsonObject["password"]?.jsonPrimitive?.contentOrNull
+        }.getOrNull()?.takeIf { it.isNotBlank() }
         val display = if(settings.displayName.endsWith(".zip",true)) settings.displayName else "${settings.displayName}.zip"
         val ticket=ctx.outputs.reserve(job.id,"archive",SafeNames.basename(display),"application/zip")
         // An interrupted process may leave this job's private .part file. It is
         // not a completed archive and must not prevent a safe restart.
         if(ticket.stageFile.exists()) require(ticket.stageFile.delete()) { "OUTPUT_STAGE_CLEANUP_FAILED" }
+        val archiveLimits = limits(ctx,app.filesDir)
+        if (rawPassword != null) {
+            val password = rawPassword.toCharArray()
+            val tempSourcesDir = File(ticket.stageFile.parentFile, "zip-inputs-${UUID.randomUUID()}").apply { mkdirs() }
+            var stagedBytes = 0L
+            try {
+                val entrySources = job.sourceIds.mapIndexed { idx, id ->
+                    ctx.checkCancellation()
+                    val ref = ctx.sources.get(id)
+                    val tempFile = File(tempSourcesDir, "src-$idx.bin")
+                    ctx.sources.openRead(id).use { input ->
+                        FileOutputStream(tempFile).use { out ->
+                            val buffer = ByteArray(64 * 1024)
+                            while (true) {
+                                ctx.checkCancellation()
+                                val count = input.read(buffer)
+                                if (count < 0) break
+                                require(count.toLong() <= archiveLimits.maxBytes - stagedBytes) { "ARCHIVE_BYTE_BUDGET_EXCEEDED" }
+                                if (count > 0) {
+                                    require(tempSourcesDir.usableSpace >= ctx.budget.minFreeBytes + count) { "DISK_BUDGET_EXCEEDED" }
+                                    out.write(buffer, 0, count)
+                                    stagedBytes += count
+                                }
+                            }
+                            out.fd.sync()
+                        }
+                    }
+                    ctx.report(JobProgress(JobStage.RUNNING, (idx + 1).toLong(), job.sourceIds.size.toLong()))
+                    EncryptedZipEntrySource(ref.displayName, tempFile)
+                }
+                EncryptedZip.create(ticket.stageFile, entrySources, password, archiveLimits, settings.compressionLevel) {
+                    ctx.checkCancellation()
+                    if (app.filesDir.usableSpace < ctx.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
+                }
+                ctx.report(JobProgress(JobStage.FINALIZING, job.sourceIds.size.toLong(), job.sourceIds.size.toLong()))
+                val record = ctx.outputs.publish(ticket) {
+                    OutputMetadata(entryCount = job.sourceIds.size, originalSizeBytes = stagedBytes.takeIf { it > 0L })
+                }
+                return listOf(ItemOutcome("archive", ItemStatus.CREATED, record.id))
+            } catch (t: Throwable) {
+                ticket.stageFile.delete()
+                throw t
+            } finally {
+                password.fill('\u0000')
+                tempSourcesDir.deleteRecursively()
+            }
+        }
         val used=mutableSetOf<String>()
         var totalSourceBytes=0L
         val inputs=job.sourceIds.mapIndexed { index,id ->
@@ -50,16 +107,17 @@ class ArchiveOperationHandler @Inject constructor(@ApplicationContext private va
         }
         val record=try {
             var completed=0L
-            ArchiveCore.create(ticket.stageFile,inputs.map { input -> ArchiveInput(input.name) {
+            val summary = ArchiveCore.create(ticket.stageFile,inputs.map { input -> ArchiveInput(input.name) {
                 ctx.checkCancellation()
                 runBlocking { ctx.report(JobProgress(JobStage.RUNNING,completed++,inputs.size.toLong())) }
                 input.open()
-            } },settings.compressionLevel,limits(ctx,app.filesDir)) {
+            } },settings.compressionLevel,archiveLimits) {
                 ctx.checkCancellation()
                 if(app.filesDir.usableSpace<ctx.budget.minFreeBytes) throw OperationFailure("DISK_BUDGET_EXCEEDED")
             }
+            val originalBytes = summary.expandedBytes.takeIf { it > 0L } ?: totalSourceBytes.takeIf { it > 0L }
             ctx.report(JobProgress(JobStage.FINALIZING,inputs.size.toLong(),inputs.size.toLong()))
-            ctx.outputs.publish(ticket) { ctx.outputs.inspect(it,ticket.mimeType,originalSizeBytes=totalSourceBytes.takeIf { b -> b > 0L }) }
+            ctx.outputs.publish(ticket) { ctx.outputs.inspect(it,ticket.mimeType,originalSizeBytes=originalBytes) }
         } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
         return listOf(ItemOutcome("archive",ItemStatus.CREATED,record.id))
     }

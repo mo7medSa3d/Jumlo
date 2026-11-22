@@ -329,9 +329,9 @@ class ToolScreenshotMatrixTest {
             return
         }
         val key = when (tool) {
-            "img_01", "img_04" -> "encoded-image-preview"
+            "img_01" -> "encoded-image-preview"
             "img_02", "img_join" -> "transformed-image-preview"
-            "img_03", "pdf_crop" -> "visual-geometry-editor"
+            "img_03", "img_04", "pdf_crop" -> "visual-geometry-editor"
             "img_watermark" -> "image-watermark-editor"
             "pdf_02" -> "paper-preview"
             "pdf_04", "pdf_05", "pdf_06" -> "pdf-visual-editor-${ids[visualIndex]}"
@@ -342,7 +342,7 @@ class ToolScreenshotMatrixTest {
         compose.onNodeWithTag("workspace.scroll").performScrollToKey(key)
         waitForReadyTags("preview.bitmap")
         compose.onAllNodesWithTag("preview.bitmap", useUnmergedTree = true).onFirst().performScrollTo().assertIsDisplayed()
-        if (tool in setOf("img_01", "img_04")) {
+        if (tool == "img_01") {
             compose.onNodeWithTag("encoded.preview.error").assertDoesNotExist()
             compose.onNodeWithTag("image.comparison", useUnmergedTree = true).assertIsDisplayed()
         }

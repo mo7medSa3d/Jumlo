@@ -101,7 +101,7 @@ class StreamTransfer(private val transport:HttpTransport) {
             }
             if(request.offset>0) {
                 headers["Range"]="bytes=${request.offset}-"
-                val validator=request.strongEtag?.takeIf { !it.startsWith("W/") } ?: request.lastModified
+                val validator=ResumePolicy.strong(request.strongEtag) ?: request.lastModified
                 require(!validator.isNullOrBlank()) { "MISSING_RESUME_VALIDATOR" }
                 headers["If-Range"]=validator
             }
@@ -165,7 +165,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                         knownTotalBytes=null,finalUrlSha256=null),checkCancel,progress,onMetadata)
                 }
                 if(request.offset>0 && (request.finalUrlSha256==null || request.finalUrlSha256!=finalDigest)) throw RestartRequired("FINAL_URL_CHANGED")
-                val etag=header("etag")?.takeUnless { it.startsWith("W/") }
+                val etag=ResumePolicy.strong(header("etag"))
                 val modified=header("last-modified")
                 val contentEncoding=header("content-encoding")?.trim()?.lowercase(Locale.ROOT)
                 val isGzipped = contentEncoding == "gzip" || contentEncoding == "x-gzip"
@@ -198,6 +198,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                             checkCancel()
                             val read=streamToRead.read(buf); if(read<0) break
                             if(read.toLong()>request.maxBytes-written) throw IllegalArgumentException("DISK_BUDGET_EXCEEDED")
+                            if(total!=null && read.toLong()>total-written) throw IOException("OVERFLOW_HTTP_BODY")
                             written+=read
                             if((request.partialFile.parentFile?.usableSpace ?: Long.MAX_VALUE)<request.minFreeBytes) throw IOException("INSUFFICIENT_STORAGE")
                             out.write(buf,0,read); progress(written,total)

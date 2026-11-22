@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="p2_pdf_split_mode_label">الوضع</string>
+    <string name="p2_pdf_split_mode_split">تقسيم إلى ملفات PDF منفصلة</string>
+    <string name="p2_pdf_split_mode_extract">استخراج الصفحات المحددة في ملف PDF واحد</string>
+    <string name="p2_pdf_images_mode_label">وضع الإخراج</string>
+    <string name="p2_pdf_images_mode_long">صورة طويلة واحدة (تقسيم تلقائي)</string>
+    <string name="p2_pdf_images_mode_separate">صورة منفصلة لكل صفحة</string>
+</resources>

@@ -12,6 +12,7 @@ import com.jumlo.app.data.jobs.ExecutionContext
 import com.jumlo.app.data.jobs.OperationFailure
 import com.jumlo.app.data.jobs.OperationHandler
 import com.jumlo.app.data.ocr.MlKitOcrEngine
+import com.jumlo.app.data.ocr.OcrScript
 import com.jumlo.app.data.pdf.PdfPageRasterizer
 import com.jumlo.app.data.pdf.PdfPageText
 import com.jumlo.app.model.*
@@ -35,6 +36,7 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
         val key = "document"
         context.outputs.find(request.id, key)?.let { return@withContext listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
         val settings = JSONObject(request.settingsJson)
+        val ocrScript = OcrScript.fromId(settings.optString("ocrScript", "AUTO"))
         val source = context.sources.get(request.sourceIds.single())
         val word = request.toolId == "pdf_to_docx"
         val extension = if (word) "docx" else "pptx"
@@ -62,30 +64,37 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
                         require(requireNotNull(ticket.stageFile.parentFile) { "OUTPUT_CREATE_FAILED" }.usableSpace >= context.budget.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
                     }
                     fun progress(index: Int) { runBlocking(workerContext) { context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), pageCount.toLong())) } }
+                    fun recognizeOcr(bitmap: Bitmap): String {
+                        ocrPages++
+                        return try {
+                            runBlocking(workerContext) { ocr.recognize(bitmap, ocrScript) }
+                        } catch (c: kotlinx.coroutines.CancellationException) {
+                            throw c
+                        } catch (oom: OutOfMemoryError) {
+                            throw oom
+                        } catch (_: Exception) {
+                            ""
+                        }
+                    }
                     try {
                         if (word) OfficePackageWriter.writeStructuredDocx(ticket.stageFile, pageCount, { index ->
                             check()
                             val page = pages[index] - 1
                             var text = PdfPageText.extractStructured(doc, page, context.checkCancellation)
-                            val hasEmbeddedImages = runCatching {
-                                val res = doc.getPage(page).resources
-                                res?.xObjectNames?.any { name -> res.isImageXObject(name) } == true
-                            }.getOrDefault(false)
+                            val needsOcr = text.isBlank || PdfPageText.isLikelyGarbled(text.paragraphs.joinToString("\n") { it.text })
                             var pageJpeg: ByteArray? = null
                             var imgW = 0.0
                             var imgH = 0.0
-                            if (text.isBlank || hasEmbeddedImages) {
+                            // Only rasterize for OCR fallback; only embed full-page image when both extraction and OCR are empty.
+                            if (needsOcr) {
                                 val size = raster().pageSize(page)
                                 imgW = size.first.toDouble()
                                 imgH = size.second.toDouble()
                                 val bitmap = raster().render(page, 2000, minOf(context.budget.maxBitmapBytes / 2, 24L * 1024 * 1024))
                                 try {
+                                    val recognized = recognizeOcr(bitmap)
+                                    text = if (recognized.isNotBlank()) OfficeTextPage.fromPlainText(recognized) else OfficeTextPage(emptyList())
                                     if (text.isBlank) {
-                                        ocrPages++
-                                        val recognized = try { runBlocking(workerContext) { ocr.recognize(bitmap) } } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (oom: OutOfMemoryError) { throw oom } catch (_: Exception) { "" }
-                                        if (recognized.isNotBlank()) text = OfficeTextPage.fromPlainText(recognized)
-                                    }
-                                    if (text.isBlank || hasEmbeddedImages) {
                                         pageJpeg = ByteArrayOutputStream().use { bytes ->
                                             if (bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)) bytes.toByteArray() else null
                                         }
@@ -99,10 +108,14 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
                         else OfficePackageWriter.writePptx(ticket.stageFile, pageCount, { index ->
                             check()
                             val page = pages[index] - 1
-                            val text = PdfPageText.extract(doc, page, context.checkCancellation)
+                            var text = PdfPageText.extract(doc, page, context.checkCancellation)
                             val size = raster().pageSize(page)
                             val bitmap = raster().render(page, 2400, minOf(context.budget.maxBitmapBytes / 2, 32L * 1024 * 1024))
                             val jpeg = try {
+                                if (text.isBlank() || PdfPageText.isLikelyGarbled(text)) {
+                                    val recognized = recognizeOcr(bitmap)
+                                    text = recognized.trim()
+                                }
                                 ByteArrayOutputStream().use { bytes ->
                                     require(bitmap.compress(Bitmap.CompressFormat.JPEG, 95, bytes)) { "OFFICE_IMAGE_INVALID" }
                                     bytes.toByteArray()

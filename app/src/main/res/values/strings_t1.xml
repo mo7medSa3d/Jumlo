@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ocr_downloading_arabic_model">Downloading Arabic OCR language pack…</string>
+    <string name="ocr_downloading_arabic_model_pct">Downloading Arabic OCR language pack… %1$d%%</string>
+    <string name="ocr_arabic_model_missing_actionable">Arabic OCR requires a one-time language pack download. Connect to the internet and tap Retry to download it for offline use.</string>
+</resources>

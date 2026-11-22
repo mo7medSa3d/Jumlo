@@ -1,7 +1,5 @@
 <resources>
-    <string name="print_title">الطباعة</string>
     <string name="print_subtitle">جهّز مستندك ثم اختر الطابعة</string>
-    <string name="print_back">رجوع</string>
     <string name="print_documents">المستندات</string>
     <string name="print_setup">إعداد الطباعة</string>
     <string name="print_history">سجل الطباعة</string>

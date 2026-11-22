@@ -1,10 +1,7 @@
 package com.jumlo.app.ui.workspace
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +24,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.data.jobs.stableError
+import com.jumlo.app.data.ocr.ArabicTesseractOcrEngine
 import com.jumlo.app.data.ocr.OcrScript
 import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
@@ -35,7 +33,7 @@ import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
 
-/** Clean iOS 27-style per-page OCR preview with multi-script selector; export uses the validated job pipeline. */
+/** Clean iOS-style per-page OCR preview with automatic Arabic/English detection and copy/export actions. */
 @Composable
 internal fun OcrWorkspacePanel(
     vm: AppViewModel,
@@ -48,6 +46,7 @@ internal fun OcrWorkspacePanel(
     var page by rememberSaveable(sourceId) { mutableIntStateOf(1) }
     var attempts by rememberSaveable(sourceId) { mutableIntStateOf(0) }
     val script = remember(selectedScript) { OcrScript.fromId(selectedScript) }
+    val downloadProgress by ArabicTesseractOcrEngine.downloadProgress.collectAsState()
     val clipboard = LocalClipboardManager.current
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
@@ -59,16 +58,6 @@ internal fun OcrWorkspacePanel(
     val recognized by produceState<Result<String>?>(null, sourceId, page, attempts, script) {
         value = null
         if (attempts > 0) value = try { Result.success(vm.recognizePage(sourceId, page, script)) } catch (cancel: CancellationException) { throw cancel } catch (error: Exception) { Result.failure(error) }
-    }
-    val scriptItems = remember {
-        listOf(
-            OcrScript.ARABIC to R.string.ocr_script_arabic,
-            OcrScript.LATIN to R.string.ocr_script_latin,
-            OcrScript.CHINESE to R.string.ocr_script_chinese,
-            OcrScript.JAPANESE to R.string.ocr_script_japanese,
-            OcrScript.KOREAN to R.string.ocr_script_korean,
-            OcrScript.DEVANAGARI to R.string.ocr_script_devanagari
-        )
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -90,21 +79,14 @@ internal fun OcrWorkspacePanel(
                 val extractedText = recognized?.getOrNull().orEmpty()
                 Surface(modifier, shape = QuietTheme.shapes.card, color = pillars.cardSurface) {
                     Column(Modifier.heightIn(min = 180.dp, max = 320.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(stringResource(R.string.studio_ocr_text), style = QuietTheme.typography.sectionTitle, color = colors.onSurface, modifier = Modifier.semantics { heading() })
-                            if (extractedText.isNotBlank()) {
-                                FilledTonalButton(
-                                    onClick = {
-                                        try { clipboard.setText(AnnotatedString(extractedText)) }
-                                        catch (_: RuntimeException) { vm.notifyMessage("CLIPBOARD_UNAVAILABLE") }
-                                    },
-                                    shape = QuietTheme.shapes.pill,
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                                    modifier = Modifier.heightIn(min = 36.dp)
-                                ) {
-                                    Text(stringResource(R.string.studio_ocr_copy), style = QuietTheme.typography.metadataStrong)
-                                }
-                            }
+                            Text(
+                                stringResource(R.string.ocr_auto_detect_status),
+                                style = QuietTheme.typography.metadata,
+                                color = colors.onSurfaceVariant,
+                                modifier = Modifier.testTag("ocr.auto-status")
+                            )
                         }
                         Box(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState())) {
                             when {
@@ -113,10 +95,33 @@ internal fun OcrWorkspacePanel(
                                     onClick = { attempts++ },
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                recognized == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                                recognized == null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    val progress = downloadProgress
+                                    if (progress != null && progress >= 0f) {
+                                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                                        Text(
+                                            stringResource(R.string.ocr_downloading_arabic_model_pct, (progress * 100).toInt()),
+                                            style = QuietTheme.typography.metadata,
+                                            color = colors.onSurfaceVariant
+                                        )
+                                    } else {
+                                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                                        Text(
+                                            stringResource(if (progress != null) R.string.ocr_downloading_arabic_model else R.string.studio_ocr_wait),
+                                            style = QuietTheme.typography.metadata,
+                                            color = colors.onSurfaceVariant
+                                        )
+                                    }
+                                }
                                 recognized?.isFailure == true -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    val errorCode = stableError(recognized!!.exceptionOrNull()!!)
+                                    val errorMessage = if (errorCode == "OCR_ARABIC_MODEL_MISSING") {
+                                        stringResource(R.string.ocr_arabic_model_missing_actionable)
+                                    } else {
+                                        stringResource(userMessageResource(errorCode))
+                                    }
                                     Text(
-                                        stringResource(userMessageResource(stableError(recognized!!.exceptionOrNull()!!))),
+                                        errorMessage,
                                         style = QuietTheme.typography.bodyMedium,
                                         color = colors.error
                                     )
@@ -137,6 +142,37 @@ internal fun OcrWorkspacePanel(
                                         style = QuietTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
                                         color = colors.onSurface
                                     )
+                                }
+                            }
+                        }
+                        if (extractedText.isNotBlank() || exportEnabled) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (extractedText.isNotBlank()) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            try { clipboard.setText(AnnotatedString(extractedText)) }
+                                            catch (_: RuntimeException) { vm.notifyMessage("CLIPBOARD_UNAVAILABLE") }
+                                        },
+                                        shape = QuietTheme.shapes.pill,
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                        modifier = Modifier.heightIn(min = 36.dp).testTag("ocr.copy")
+                                    ) {
+                                        Text(stringResource(R.string.studio_ocr_copy), style = QuietTheme.typography.metadataStrong)
+                                    }
+                                }
+                                if (exportEnabled) {
+                                    Button(
+                                        onClick = onExport,
+                                        shape = QuietTheme.shapes.pill,
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                                        modifier = Modifier.heightIn(min = 36.dp).testTag("ocr.export")
+                                    ) {
+                                        Text(stringResource(R.string.studio_ocr_export), style = QuietTheme.typography.metadataStrong)
+                                    }
                                 }
                             }
                         }

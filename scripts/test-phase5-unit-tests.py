@@ -5,7 +5,6 @@ kotlinc/Gradle cannot run in this sandbox, so this asserts the JUnit test files
 exist and cover the required areas (page-op logic + color-scheme contrast). In a
 proper environment these run via `./gradlew :app:testDebugUnitTest`.
 """
-import re
 import unittest
 from pathlib import Path
 

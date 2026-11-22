@@ -31,28 +31,6 @@ object PdfDisplayCoordinates {
             (right-left)*frame.widthPt,(bottom-top)*frame.heightPt)
     }
 
-    /**
-     * The four corners of a normalized rectangle in page space, ordered the way a
-     * PDF markup annotation expects them: upper-left, upper-right, lower-left,
-     * lower-right. The corners go through the same rotation and user-unit mapping as
-     * the rectangle, so a quad always matches its bounding box.
-     */
-    fun normalizedCorners(frame:PdfDisplayFrame,left:Double,top:Double,right:Double,bottom:Double):FloatArray {
-        Box(left,top,right,bottom).normalized()
-        val x0=left*frame.widthPt; val x1=right*frame.widthPt
-        val yTop=(1.0-top)*frame.heightPt; val yBottom=(1.0-bottom)*frame.heightPt
-        val corners=listOf(x0 to yTop,x1 to yTop,x0 to yBottom,x1 to yBottom)
-            .map { (x,y) -> frame.displayToPage.map(x,y) }
-        val result = floatArrayOf(
-            corners[0].first.toFloat(),corners[0].second.toFloat(),
-            corners[1].first.toFloat(),corners[1].second.toFloat(),
-            corners[2].first.toFloat(),corners[2].second.toFloat(),
-            corners[3].first.toFloat(),corners[3].second.toFloat()
-        )
-        require(result.all(Float::isFinite)) { "INVALID_PDF_PAGE_GEOMETRY" }
-        return result
-    }
-
     fun frame(left:Double,bottom:Double,width:Double,height:Double,rotationDegrees:Int,userUnit:Double=1.0):PdfDisplayFrame {
         require(left.isFinite() && bottom.isFinite() && width.isFinite() && height.isFinite() && userUnit.isFinite() && width>0 && height>0 && userUnit>0) { "INVALID_PDF_PAGE_GEOMETRY" }
         require(rotationDegrees%90==0) { "INVALID_ROTATION" }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="processing_working">جارٍ العمل…</string>
+    <string name="completed_notification_single_generic">ملفك جاهز للفتح أو المشاركة</string>
+</resources>

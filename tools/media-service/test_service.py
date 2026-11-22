@@ -989,6 +989,7 @@ class ProductionHardeningTest(unittest.TestCase):
             ({"JUMLO_MEDIA_MAX_CONCURRENT": "-2"}, "JUMLO_MEDIA_MAX_CONCURRENT"),
             ({"JUMLO_MEDIA_MAX_CONCURRENT": ""}, "JUMLO_MEDIA_MAX_CONCURRENT"),
             ({"JUMLO_MEDIA_LOG_LEVEL": "VERBOSE"}, "JUMLO_MEDIA_LOG_LEVEL"),
+            ({"JUMLO_MEDIA_LOG_LEVEL": ""}, "JUMLO_MEDIA_LOG_LEVEL"),
             ({"JUMLO_MEDIA_CORS_ORIGIN": "ftp://example.com"}, "JUMLO_MEDIA_CORS_ORIGIN"),
         )
         for bad_env, expected_field in cases:
@@ -1156,6 +1157,100 @@ class ProductionHardeningTest(unittest.TestCase):
                 },
                 after["metrics"],
             )
+
+    def test_cors_wildcard_never_emits_allow_credentials(self):
+        _, port = self._start_server(cors_origin="*")
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+            self.assertEqual(200, resp.status)
+            self.assertEqual("*", resp.headers.get("Access-Control-Allow-Origin"))
+            self.assertEqual("Origin", resp.headers.get("Vary"))
+            self.assertIsNone(resp.headers.get("Access-Control-Allow-Credentials"))
+
+        preflight = urllib.request.Request(f"http://127.0.0.1:{port}/extract", method="OPTIONS")
+        with urllib.request.urlopen(preflight, timeout=10) as resp:
+            self.assertEqual(204, resp.status)
+            self.assertEqual("*", resp.headers.get("Access-Control-Allow-Origin"))
+            self.assertEqual("Origin", resp.headers.get("Vary"))
+            self.assertIsNone(resp.headers.get("Access-Control-Allow-Credentials"))
+
+    def test_request_id_header_propagation_sanitization_and_log_levels(self):
+        _, port = self._start_server(log_level="INFO")
+        captured = io.StringIO()
+        with redirect_stderr(captured):
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as resp:
+                generated_id = resp.headers.get("X-Request-Id")
+                self.assertRegex(generated_id or "", r"^[0-9a-f]{16}$")
+
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/health",
+                headers={"X-Request-Id": "req-abc.123_ok"},
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                self.assertEqual("req-abc.123_ok", resp.headers.get("X-Request-Id"))
+
+            bad_req = urllib.request.Request(
+                f"http://127.0.0.1:{port}/missing",
+                headers={"X-Request-Id": "bad id https://secret.example"},
+            )
+            with self.assertRaises(urllib.error.HTTPError) as not_found:
+                urllib.request.urlopen(bad_req, timeout=10)
+            try:
+                sanitized_id = not_found.exception.headers.get("X-Request-Id")
+                self.assertRegex(sanitized_id or "", r"^[0-9a-f]{16}$")
+            finally:
+                not_found.exception.close()
+
+        lines = [json.loads(line) for line in captured.getvalue().strip().splitlines()]
+        self.assertEqual(3, len(lines))
+        self.assertEqual("INFO", lines[0]["level"])
+        self.assertEqual(generated_id, lines[0]["request_id"])
+        self.assertEqual("INFO", lines[1]["level"])
+        self.assertEqual("req-abc.123_ok", lines[1]["request_id"])
+        self.assertEqual("WARNING", lines[2]["level"])
+        self.assertEqual(sanitized_id, lines[2]["request_id"])
+        self.assertNotIn("secret.example", captured.getvalue())
+
+        _, warn_port = self._start_server(log_level="WARNING")
+        warn_logs = io.StringIO()
+        with redirect_stderr(warn_logs):
+            with urllib.request.urlopen(f"http://127.0.0.1:{warn_port}/health", timeout=10) as resp:
+                self.assertEqual(200, resp.status)
+            with self.assertRaises(urllib.error.HTTPError) as err:
+                urllib.request.urlopen(f"http://127.0.0.1:{warn_port}/missing", timeout=10)
+            err.exception.close()
+        warn_entries = [json.loads(line) for line in warn_logs.getvalue().strip().splitlines()]
+        self.assertEqual(1, len(warn_entries))
+        self.assertEqual("WARNING", warn_entries[0]["level"])
+        self.assertEqual(404, warn_entries[0]["status"])
+
+    def test_error_tracking_hook_receives_5xx_and_unhandled_errors_safely(self):
+        seen = []
+
+        def hook(payload):
+            seen.append(payload)
+
+        server, port = self._start_server(health_cache_ttl=0, log_level="ERROR", on_error=hook)
+        server.shutting_down = True
+        with redirect_stderr(io.StringIO()):
+            with self.assertRaises(urllib.error.HTTPError) as draining:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=10)
+            draining.exception.close()
+            try:
+                raise RuntimeError("https://secret.example/?tok=123")
+            except RuntimeError:
+                server.handle_error(None, ("192.0.2.1", 1234))
+
+        self.assertEqual(2, len(seen))
+        self.assertEqual("http_request", seen[0]["event"])
+        self.assertEqual("ERROR", seen[0]["level"])
+        self.assertEqual(503, seen[0]["status"])
+        self.assertEqual({"event": "http_request_failed", "type": "RuntimeError"}, seen[1])
+        self.assertNotIn("secret.example", json.dumps(seen))
+
+        # A failing hook must never crash handle_error.
+        server.on_error = lambda _payload: (_ for _ in ()).throw(RuntimeError("hook boom"))
+        with redirect_stderr(io.StringIO()):
+            server.handle_error(None, ("192.0.2.1", 1234))
 
 
 
@@ -1532,6 +1627,38 @@ class SecurityHardeningRegressionTest(unittest.TestCase):
             "MEDIA_SESSION_REQUIRED",
             service.classify("ERROR: [Instagram] Login required to view this post"),
         )
+
+    def test_post_extract_rejects_duplicate_content_length_headers(self):
+        from email.message import Message
+
+        headers = Message()
+        headers.add_header("Content-Length", "2")
+        headers.add_header("Content-Length", "2")
+        handler = service.Handler.__new__(service.Handler)
+        handler.path = "/extract"
+        handler.headers = headers
+        handler.rfile = io.BytesIO(b"{}")
+        handler.wfile = io.BytesIO()
+        captured = {}
+        handler.send_response = lambda code: captured.update(status=code)
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        handler.do_POST()
+        self.assertEqual(400, captured["status"])
+        self.assertTrue(handler.close_connection)
+
+    def test_probe_fallback_sanitizes_untrusted_ytdlp_version_without_server(self):
+        handler = service.Handler.__new__(service.Handler)
+        handler.command = "GET"
+        handler.wfile = io.BytesIO()
+        captured = {}
+        handler.send_response = lambda code: captured.update(status=code)
+        handler.send_header = lambda name, value: None
+        handler.end_headers = lambda: None
+        with patch.object(service, "ytdlp_version", return_value="https://evil.example/?token=secret"):
+            self.assertTrue(handler._handle_probe("/health"))
+        self.assertEqual(200, captured["status"])
+        self.assertEqual("unknown", json.loads(handler.wfile.getvalue())["ytdlp"])
 
 
 if __name__ == "__main__":

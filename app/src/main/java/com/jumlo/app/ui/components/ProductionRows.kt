@@ -125,7 +125,9 @@ fun formatOutputSizeSummary(output: OutputRecord): String {
         DropdownMenuItem(text={Text(stringResource(R.string.action_use_as_input))},onClick={close();onReuse()})
         DropdownMenuItem(text={Text(stringResource(R.string.action_move_to_trash))},onClick={close();onTrash()})
     }
-    if(output.publicUri==null) Text(
+    // Only surface a red warning when an actual public save error occurred, never during the
+    // transient window while OutputStore.recordPublicCopy() is still writing to Downloads/Jumlo.
+    if(output.publicUri==null && output.publicSaveError!=null) Text(
         stringResource(R.string.ui_private_output_save_as),
         modifier=Modifier.padding(horizontal=12.dp),
         style=QuietTheme.typography.metadata,
@@ -210,7 +212,8 @@ fun JobSnapshot.isActive()=progress.stage in ActiveJobStages
                     Text(stringResource(R.string.action_retry_failed))
                 }
             }
-            if((job.isActive() && job.progress.stage!=JobStage.FINALIZING) ||
+            val atFullProgress = job.progress.totalUnits?.let { it > 0L && job.progress.completedUnits >= it } == true
+            if((job.isActive() && job.progress.stage!=JobStage.FINALIZING && !atFullProgress) ||
                 job.progress.stage in StoppableFailedStages) {
                 TextButton(onClick={haptics.secondaryAction();onCancel()},modifier=Modifier.sizeIn(minHeight=48.dp)) {
                     Icon(Icons.Rounded.Close,null,Modifier.size(18.dp))
@@ -220,30 +223,35 @@ fun JobSnapshot.isActive()=progress.stage in ActiveJobStages
                 }
             }
         }
-        if(job.progress.stage==JobStage.COMPLETED && job.request.toolId.startsWith("dl_")) {
+        if(job.progress.stage==JobStage.COMPLETED) {
             var ready by remember(job.request.id) { mutableStateOf(false) }
             LaunchedEffect(job.request.id) { ready=true }
             val confirmScaleState=animateFloatAsState(if(ready) 1f else .80f,
                 animationSpec=if(LocalReducedMotion.current) snap() else spring(dampingRatio=.62f,stiffness=360f),
-                label="download-success-pulse")
+                label="job-success-pulse")
+            val successColor = QuietTheme.pillars.successPrimary
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Rounded.CheckCircle,contentDescription=null,
-                    tint=MaterialTheme.colorScheme.tertiary,
+                    tint=successColor,
                     modifier=Modifier.size(20.dp).graphicsLayer { val s=confirmScaleState.value;scaleX=s;scaleY=s })
-                Text(stringResource(R.string.brand_completed),style=QuietTheme.typography.navigation,
-                    color=MaterialTheme.colorScheme.tertiary)
+                Text(
+                    stringResource(if (job.request.toolId.startsWith("dl_")) R.string.brand_completed else R.string.s10_saved_title),
+                    style=QuietTheme.typography.navigation,
+                    color=successColor
+                )
             }
         }
-        if(job.outcomes.isNotEmpty()) {
-            val (published, notPublished, firstErrorCode) = remember(job.outcomes) {
+        if(job.outcomes.isNotEmpty() && !job.isActive()) {
+            val showErrors = job.progress.stage in StoppableFailedStages
+            val (published, notPublished, firstErrorCode) = remember(job.outcomes, showErrors) {
                 Triple(
                     job.outcomes.count { it.outputId != null },
                     job.outcomes.count { it.status != ItemStatus.CREATED && it.status != ItemStatus.SKIPPED },
-                    job.outcomes.firstOrNull { it.status != ItemStatus.CREATED && it.errorCode != null }?.errorCode
+                    if (showErrors) job.outcomes.firstOrNull { it.status != ItemStatus.CREATED && it.errorCode != null }?.errorCode else null
                 )
             }
             Text(stringResource(R.string.job_outcomes_summary,published,notPublished),style=QuietTheme.typography.metadata)
-            // Single, clear error card explaining why an item produced no file.
+            // Single, clear error card shown only for terminal failed/partial/waiting jobs.
             firstErrorCode?.let { code ->
                 Surface(
                     color=MaterialTheme.colorScheme.errorContainer.copy(alpha=0.55f),

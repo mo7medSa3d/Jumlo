@@ -80,7 +80,8 @@ internal class BenchmarkUi(private val device:UiDevice) {
         device.waitForIdle()
         await(By.pkg(TARGET_PACKAGE).text(exact(listOf("Crop pages","قص الصفحات"))),
             "Actual Crop pages tool tile did not appear").click()
-        await(text("preset_panel_title"),"Crop workspace did not open")
+        await(By.pkg(TARGET_PACKAGE).text(exact(listOf("Crop PDF Pages","قص صفحات \u2066PDF\u2069"))),
+            "Crop workspace did not open")
         await(description("scan_back"),"Workspace Back action is unavailable").click()
         await(description("neon_tools_search"),"Back did not return to Tools").text=""
         device.waitForIdle()

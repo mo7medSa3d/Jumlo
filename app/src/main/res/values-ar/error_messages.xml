@@ -19,7 +19,7 @@
     <string name="msg_access_lost">فُقد الوصول إلى الملف. اختر الملف أو المجلد مجددًا.</string>
     <string name="msg_provider_unavailable">موفر التخزين لا يسمح بهذا الإجراء. اختر وجهة أخرى.</string>
     <string name="msg_no_viewer">تعذر فتح الملف. تحقق من صلاحية الوصول ومن وجود تطبيق متوافق.</string>
-    <string name="msg_preview_unavailable">المعاينة غير متاحة لهذا الملف.</string>
+    <string name="msg_preview_unavailable">المعاينة غير متاحة لهذا الملف. افتحه في تطبيق آخر لعرضه.</string>
     <string name="msg_size_limit">لم تكتمل العملية بالموارد المتاحة حاليًا على الجهاز. تحقّق من مساحة التخزين أو جرّب دقة صور أقل؛ الملف الأصلي محفوظ.</string>
     <string name="msg_file_type">نوع الملف غير مدعوم في الأداة المحددة. اختر ملفًا متوافقًا أو بدّل الأداة.</string>
     <string name="msg_https">استخدم رابط HTTPS. يتطلب HTTP غير المشفر إذنًا صريحًا في إعدادات التنزيل.</string>
@@ -29,7 +29,6 @@
     <string name="msg_check_settings">تحقق من القيم المدخلة ونطاقات الصفحات، ثم حاول مجددًا.</string>
     <string name="msg_page_selection_limit">تم تحديد عدد كبير جدًا من الصفحات المكررة. قلّل نطاقات الصفحات أو أزل التكرار ثم حاول مجددًا.</string>
     <string name="msg_unavailable">هذه الأداة غير متاحة في هذا الإصدار. اختر أداة أخرى.</string>
-    <string name="msg_login">سجّل الدخول للمتابعة.</string>
     <string name="msg_failed">تعذر إكمال هذا الإجراء. تحقق من المدخلات وأعد المحاولة.</string>
     <string name="msg_one_file">اختر ملفًا واحدًا فقط لهذه الأداة.</string>
     <string name="msg_unsupported_social_platform">لا يمكن تنزيل الفيديو من هذه الصفحة باستخدام المحرك المتاح. جرّب رابط وسائط مباشرًا أو مصدرًا آخر مدعومًا.</string>
@@ -75,12 +74,11 @@
     <string name="msg_animated_image_unsupported">الصور المتحركة غير مدعومة في هذه الأداة. اختر صورة ثابتة بصيغة JPG أو PNG أو WebP.</string>
     <string name="msg_image_corrupt">تعذرت قراءة هذه الصورة أو التحقق منها. اختر ملف صورة آخر.</string>
     <string name="msg_pdf_corrupt">ملف PDF هذا فارغ أو تالف وتعذرت معالجته. اختر ملف PDF آخر.</string>
-    <string name="msg_social_policy_detail">لا يمكن تنزيل الفيديو من هذه الصفحة باستخدام المحرك المتاح. جرّب رابط وسائط مباشرًا أو مصدرًا آخر مدعومًا.</string>
     <string name="jumlo_paper_mode">حجم صفحة PDF</string>
     <string name="jumlo_custom_paper">مقاسات مخصصة</string>
     <string name="msg_pdf_not_compressible">لا يمكن تقليل حجم ملف PDF دون فقد جودة المحتوى. تم الحفاظ على الملف الأصلي.</string>
     <string name="msg_pdf_compression_partial">تعذّر ضغط بعض الصفحات. تم ضغط بقية المستند وحفظه.</string>
-    <string name="msg_pdf_compression_failed">تعذّر إعادة ضغط الصور في ملف PDF. تم الحفاظ على الملف الأصلي.</string>
+    <string name="msg_pdf_compression_failed">تعذّر إعادة ضغط الصور في ملف PDF. ملفك الأصلي كما هو — جرّب مستوى جودة آخر أو ملفاً آخر.</string>
     <string name="jumlo_page_editor_title">تحرير الصفحات</string>
     <string name="jumlo_page_editor_hint">اضغط للتحديد، واضغط مطولًا واسحب لتغيير الترتيب</string>
     <string name="jumlo_page_count">عدد الصفحات: %1$d</string>

@@ -30,6 +30,7 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
     private val _entitlement = MutableStateFlow(ProEntitlement())
     val entitlement: StateFlow<ProEntitlement> = _entitlement.asStateFlow()
     private val productDetailsMap = ConcurrentHashMap<String, ProductDetails>()
+    private val entitlementLock = Any()
     @Volatile private var hasLifetime = false
     @Volatile private var hasAnnual = false
 
@@ -105,8 +106,8 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
     }
 
     private fun processPurchases(purchases: List<Purchase>, productTypeScope: String?) {
-        var foundLifetime = if (productTypeScope == BillingClient.ProductType.INAPP) false else hasLifetime
-        var foundAnnual = if (productTypeScope == BillingClient.ProductType.SUBS) false else hasAnnual
+        var foundLifetime = false
+        var foundAnnual = false
         for (p in purchases) {
             if (p.purchaseState == Purchase.PurchaseState.PURCHASED) {
                 val grantsLifetime = SKU_LIFETIME in p.products
@@ -115,8 +116,10 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
                     val ack = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.purchaseToken).build()
                     client.acknowledgePurchase(ack) { ackRes ->
                         if (ackRes.responseCode == BillingClient.BillingResponseCode.OK) {
-                            if (grantsLifetime) hasLifetime = true
-                            if (grantsAnnual) hasAnnual = true
+                            synchronized(entitlementLock) {
+                                if (grantsLifetime) hasLifetime = true
+                                if (grantsAnnual) hasAnnual = true
+                            }
                             publishEntitlement()
                         }
                     }
@@ -126,8 +129,16 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
                 }
             }
         }
-        hasLifetime = foundLifetime
-        hasAnnual = foundAnnual
+        synchronized(entitlementLock) {
+            when (productTypeScope) {
+                BillingClient.ProductType.INAPP -> hasLifetime = foundLifetime
+                BillingClient.ProductType.SUBS -> hasAnnual = foundAnnual
+                else -> {
+                    if (foundLifetime) hasLifetime = true
+                    if (foundAnnual) hasAnnual = true
+                }
+            }
+        }
         publishEntitlement()
     }
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,9 +41,8 @@ fun JumloProSheet(
     onRestore: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedId by remember { mutableStateOf(JumloBillingManager.SKU_LIFETIME) }
+    var selectedId by rememberSaveable { mutableStateOf(JumloBillingManager.SKU_LIFETIME) }
     val colors = MaterialTheme.colorScheme
-    val pillars = QuietTheme.pillars
     val goldGradient = remember { Brush.horizontalGradient(listOf(GoldLight, GoldPrimary, GoldDeep)) }
 
     Dialog(
@@ -66,7 +66,6 @@ fun JumloProSheet(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Box(Modifier.fillMaxWidth()) {
-                    // Gold Crown emblem centered
                     Box(
                         Modifier
                             .align(Alignment.Center)

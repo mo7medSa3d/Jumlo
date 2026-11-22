@@ -1,4 +1,11 @@
-# Changelog — current production-hardening candidate
+# Changelog
+
+## 2026-11-22 — Release Verification & Documentation Hygiene
+
+### Changed & Cleaned
+- **Verification artifacts:** Removed 4 unreferenced scratch/stale files under `verification/current/platform-matrix/` (`android-qualification-plan.csv`, `host-probe.json`, `inputs.template.json`, `probe-inputs.json`) while retaining all 11 referenced `docs/**` specs/templates and `verification/current/device/preflight-source/README.md`.
+- **Documentation:** Polished `README.md` configuration table to cross-reference both `.env.example` and `tools/media-service/.env.example`, and documented the Docker media service non-root runtime and `HEALTHCHECK`.
+- **Build & CI verification:** Audited `.env.example`, `app/build.gradle.kts` (`versionCode=10844`, `versionName=1.6-tools`, R8 minification & resource shrinking), `gradle/libs.versions.toml` (all versions pinned), and `.github/workflows/*.yml` (lint, unit tests, media-service tests, APK/AAB build gates).
 
 ## 2026-11-21 — Production Release Hardening
 
@@ -42,7 +49,7 @@
 
 ## Documentation status (2026-11-19 audit)
 
-Older entries below are historical and describe their own point in time. Several files they reference were intentionally removed from this tree and must not be recreated from history: `TEST_REPORT.md`, `docs/AUDIT_2.md`, `docs/PROGRESS.md`, `DECISIONS.md`, `AUDIT.md`, `HANDOFF_AR.md`, `ICON_MAP.md`, `IMPLEMENTATION_PLAN.md`, `PRODUCTION_BRIEF.md`, `ROUTES.md`, `TOOL_UI_SPEC.md`, `iOS_PLAN.md` and `SCREENSHOTS/`. Those references are provenance, not live links; regenerate release evidence for the release candidate. Current tree values are a 30-tool registry, four bottom tabs and the restored 70,000,000-byte full-media APK cap.
+Older entries below are historical and describe their own point in time. Several files they reference were intentionally removed from this tree and must not be recreated from history: `TEST_REPORT.md`, `docs/AUDIT_2.md`, `docs/PROGRESS.md`, `DECISIONS.md`, `AUDIT.md`, `HANDOFF_AR.md`, `ICON_MAP.md`, `IMPLEMENTATION_PLAN.md`, `PRODUCTION_BRIEF.md`, `ROUTES.md`, `TOOL_UI_SPEC.md`, `iOS_PLAN.md` and `SCREENSHOTS/`. Those references are provenance, not live links; regenerate release evidence for the release candidate. Current tree values are a 21-primary-tool catalogue (33 registered tool IDs), four bottom tabs and the restored 70,000,000-byte full-media APK cap.
 
 ## 2026-11-01 — SaaS-style copy + design-system refresh + tool-wiring gate (local, no GitHub push)
 

@@ -38,7 +38,9 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.PreviewFrame
 import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.Redo
 import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
+import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
@@ -230,14 +232,14 @@ internal fun VisualDocumentEditor(
                     restoreSnapshot(restored.snapshot)
                     haptics.selectionToggle()
                 }
-            }) { Icon(Icons.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
+            }) { Icon(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
             IconButton(modifier = Modifier.size(48.dp), enabled = redoHistory.isNotEmpty(), onClick = {
                 timeline.redo(snapshot())?.let { restored ->
                     timeline = restored.timeline
                     restoreSnapshot(restored.snapshot)
                     haptics.selectionToggle()
                 }
-            }) { Icon(Icons.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
+            }) { Icon(Icons.AutoMirrored.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
         }
 
         val frame = preview

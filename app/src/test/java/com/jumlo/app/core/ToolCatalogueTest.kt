@@ -2,6 +2,7 @@ package com.jumlo.app.core
 
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -21,11 +22,16 @@ class ToolCatalogueTest {
 
     @Test fun theVisibleSurfaceIsSmallEnoughToScan() {
         val primary = ToolCatalogue.primaryTools()
+        assertEquals("the catalogue must expose exactly 21 primary tiles", 21, primary.size)
         assertTrue(
             "the catalogue shows ${primary.size} tiles; it must stay a scannable list",
             primary.size in 12..24
         )
-        assertTrue(primary.containsAll(listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr")))
+        assertTrue(
+            primary.containsAll(
+                listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr", "pdf_05", "pdf_long_image", "img_04", "file_07", "dl_media")
+            )
+        )
     }
 
     @Test fun everyWorkspaceHasAWayIn() {
@@ -71,10 +77,36 @@ class ToolCatalogueTest {
             assertTrue("$id must not be listed", !ToolCatalogue.isListed(id))
             assertTrue("$id must not be searchable", !ToolCatalogue.isSearchable(id))
         }
-        for (id in listOf("pdf_03", "pdf_ocr", "scan_doc", "dl_media", "img_04", "file_07", "office_to_pdf")) {
+        for (id in listOf("pdf_03", "pdf_05", "pdf_long_image", "pdf_ocr", "scan_doc", "dl_media", "img_04", "file_07", "office_to_pdf")) {
             assertTrue("$id must remain reachable from the Tools grid", ToolCatalogue.isListed(id))
             assertTrue("$id must remain searchable", ToolCatalogue.isSearchable(id))
         }
+    }
+
+    @Test fun consolidatedLegacyAliasesMigrateToCanonicalToolsAndStayHidden() {
+        val expectedAliases = mapOf(
+            "img_01" to "img_04",
+            "img_03" to "img_04",
+            "file_encrypted_zip" to "file_07",
+            "dl_02" to "dl_media",
+            "dl_03" to "dl_media",
+            "pdf_06" to "pdf_05",
+            "pdf_07" to "pdf_long_image"
+        )
+        assertEquals(expectedAliases.keys, ToolCatalogue.hiddenTools())
+        expectedAliases.forEach { (legacy, canonical) ->
+            assertEquals("$legacy must resolve to $canonical", canonical, ToolCatalogue.canonicalId(legacy))
+            assertFalse("$legacy must not be listed", ToolCatalogue.isListed(legacy))
+            assertFalse("$legacy must not be searchable", ToolCatalogue.isSearchable(legacy))
+            assertFalse("$legacy must not be primary", ToolCatalogue.isPrimary(legacy))
+            assertTrue("$canonical must be primary", ToolCatalogue.isPrimary(canonical))
+            assertTrue("$canonical must be listed", ToolCatalogue.isListed(canonical))
+            assertTrue("$canonical must be searchable", ToolCatalogue.isSearchable(canonical))
+        }
+        assertTrue(ToolCatalogue.searchAliases("pdf_05").contains("extract pages", ignoreCase = true))
+        assertTrue(ToolCatalogue.searchAliases("pdf_05").contains("استخراج صفحات"))
+        assertTrue(ToolCatalogue.searchAliases("pdf_long_image").contains("pdf to images", ignoreCase = true))
+        assertTrue(ToolCatalogue.searchAliases("pdf_long_image").contains("تحويل صور"))
     }
 
     @Test fun downloadsHaveOneUserVisibleTool() {

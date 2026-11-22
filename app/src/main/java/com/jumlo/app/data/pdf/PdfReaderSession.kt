@@ -102,15 +102,27 @@ class PdfReaderSession private constructor(
                             copied = File.createTempFile("pdf-dec-", ".pdf", context.cacheDir)
                             try {
                                 (context.contentResolver.openInputStream(uri) ?: error("ACCESS_LOST")).use { input ->
-                                    FileOutputStream(rawIn).use { output -> input.copyTo(output) }
+                                    FileOutputStream(rawIn).use { output ->
+                                        val buffer = ByteArray(64 * 1024)
+                                        while (true) {
+                                            coroutine.ensureActive()
+                                            val n = input.read(buffer)
+                                            if (n < 0) break
+                                            require(context.cacheDir.usableSpace >= ResourceBudgetPolicy.minFreeBytes) { "DISK_BUDGET_EXCEEDED" }
+                                            if (n > 0) output.write(buffer, 0, n)
+                                        }
+                                    }
                                 }
+                                val pwChars = password.toCharArray()
                                 try {
-                                    PdfBoxBackend.open(rawIn, password.toCharArray()).use { doc ->
+                                    PdfBoxBackend.open(rawIn, pwChars).use { doc ->
                                         doc.isAllSecurityToBeRemoved = true
                                         doc.save(copied)
                                     }
                                 } catch (_: com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException) {
                                     throw OperationFailure("PDF_WRONG_PASSWORD")
+                                } finally {
+                                    pwChars.fill('\u0000')
                                 }
                                 val descriptor = ParcelFileDescriptor.open(copied, ParcelFileDescriptor.MODE_READ_ONLY)
                                 renderer = PdfRendererFactory.open(descriptor, context.cacheDir) { coroutine.ensureActive() }

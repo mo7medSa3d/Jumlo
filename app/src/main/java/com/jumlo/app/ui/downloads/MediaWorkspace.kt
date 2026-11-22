@@ -12,7 +12,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -44,26 +43,20 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.jumlo.app.BuildConfig
 import com.jumlo.app.R
 import com.jumlo.app.core.DirectFileKind
 import com.jumlo.app.core.media.*
 import com.jumlo.app.ui.components.QuietBadge
 import com.jumlo.app.ui.components.QuietShimmerSkeleton
-import com.jumlo.app.ui.components.QuietStateCard
 import com.jumlo.app.ui.components.QuietTonalButton
-import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
-import kotlinx.coroutines.delay
 import java.util.Locale
 import kotlin.math.roundToInt
 
 private val UrlKeyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go)
-private val RESTRICTED_ERROR_CODES = setOf("MEDIA_SESSION_REQUIRED", "MEDIA_PRIVATE_CONTENT", "MEDIA_AGE_RESTRICTED", "MEDIA_SOURCE_REJECTED", "HTTP_401", "HTTP_403")
-private val UNSUPPORTED_ERROR_CODES = setOf("MEDIA_SITE_UNSUPPORTED", "MEDIA_CONVERSION_UNAVAILABLE")
 private val UNPROBED_EXTRACTORS = setOf("DirectMedia", "Html5")
 private val PDF_DIRECT_MODES = listOf(
     "ORIGINAL" to R.string.media_pdf_original,
@@ -673,4 +666,3 @@ private fun mediaBytes(bytes:Long):String {
     return "\u2066$raw\u2069"
 }
 
-@Composable private fun mediaError(code:String):String=stringResource(userMessageResource(code))

@@ -15,20 +15,29 @@ import javax.inject.Inject
 
 /** Non-exported: cancellation is persisted before WorkManager is stopped, preventing recovery restarts. */
 @AndroidEntryPoint
-class CancelJobReceiver:BroadcastReceiver() {
-    @Inject lateinit var jobs:JobStore
-    override fun onReceive(context:Context,intent:Intent) {
-        if(intent.action!="${context.packageName}.CANCEL_JOB") return
-        val jobId=intent.getStringExtra("job_id")?.takeIf {
-            runCatching { java.util.UUID.fromString(it).toString()==it }.getOrDefault(false)
+class CancelJobReceiver : BroadcastReceiver() {
+    @Inject lateinit var jobs: JobStore
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != "${context.packageName}.CANCEL_JOB") return
+        val jobId = intent.getStringExtra("job_id")?.takeIf {
+            runCatching { java.util.UUID.fromString(it).toString() == it }.getOrDefault(false)
         } ?: return
-        val pending=goAsync()
+        val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
-            try { withTimeout(8_000L) { jobs.cancel(jobId) } }
-            catch(timeout:TimeoutCancellationException) { AppDiagnostics.report("worker_cancel",timeout); android.util.Log.w("JobCancellation","Cancellation timed out") }
-            catch(cancel:kotlinx.coroutines.CancellationException) { throw cancel }
-            catch(error:Exception) { AppDiagnostics.report("worker_cancel",error); android.util.Log.w("JobCancellation","Cancellation could not be persisted") }
-            finally { pending.finish() }
+            try {
+                withTimeout(8_000L) { jobs.cancel(jobId) }
+            } catch (timeout: TimeoutCancellationException) {
+                AppDiagnostics.report("worker_cancel", timeout)
+                android.util.Log.w("JobCancellation", "Cancellation timed out")
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                AppDiagnostics.report("worker_cancel", error)
+                android.util.Log.w("JobCancellation", "Cancellation could not be persisted")
+            } finally {
+                ProcessingNotification.cancelProgress(context, jobId)
+                pending.finish()
+            }
         }
     }
 }

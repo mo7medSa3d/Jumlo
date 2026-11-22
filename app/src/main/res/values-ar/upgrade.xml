@@ -1,17 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="upgrade_print">طباعة</string>
-    <string name="upgrade_print_selected">طباعة المستند المحدد</string>
     <string name="upgrade_loading_documents">جارٍ تحميل مستنداتك…</string>
-    <string name="upgrade_loading_activity">جارٍ تحميل النشاط…</string>
     <string name="upgrade_loading_failed">تعذّر تحميل البيانات المحفوظة. حدّث الشاشة وأعد المحاولة.</string>
-    <string name="upgrade_rename_copy">إعادة تسمية</string>
-    <string name="upgrade_swipe_hint">اسحب لعرض إجراءات الملف</string>
-    <string name="upgrade_scan_corner">الزاوية %1$d</string>
-    <string name="upgrade_scan_horizontal">الموضع الأفقي</string>
-    <string name="upgrade_scan_vertical">الموضع العمودي</string>
-    <string name="upgrade_scan_precision">ضبط الزوايا بدقة</string>
-    <string name="upgrade_preview_loading">جارٍ تحميل المعاينة</string>
     <string name="upgrade_no_results">لا توجد مستندات مطابقة</string>
     <string name="upgrade_no_results_hint">جرّب بحثًا أو مرشحًا آخر.</string>
     <string name="upgrade_new_name">الاسم الجديد</string>

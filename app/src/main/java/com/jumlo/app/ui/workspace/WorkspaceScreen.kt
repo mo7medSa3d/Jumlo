@@ -73,14 +73,12 @@ private val VISUAL_PAGE_SELECTION_TOOLS = setOf("pdf_04","pdf_05","pdf_06","pdf_
 private val PDF_OVERLAY_TOOLS = setOf("pdf_signature","pdf_stamp")
 private val MULTI_SOURCE_MINIMUM_TOOLS = setOf("pdf_03","pdf_signature","img_join")
 private val ZIP_MIME_TYPES = setOf("application/zip","application/x-zip-compressed")
-private val PHOTO_GALLERY_TOOLS = setOf("pdf_02","pdf_signature","pdf_stamp","pdf_ocr")
 private val PRESET_SUPPORTED_TOOLS = setOf("pdf_compress","pdf_02","pdf_07","pdf_stamp","img_01","img_02","img_04","img_watermark")
 private val CONVERSION_SCOPE_TOOLS = setOf("pdf_to_docx","pdf_to_pptx","pdf_ocr","office_to_pdf")
 private val DEDICATED_PREVIEW_TOOLS = setOf("img_01","img_03","img_02","img_04","img_join","img_watermark","pdf_crop","pdf_signature","pdf_stamp","pdf_02","pdf_ocr")
 private val SINGLE_PDF_EDITOR_TOOLS = setOf("pdf_04", "pdf_05", "pdf_06")
-private val GEOMETRY_EDITOR_TOOLS = setOf("img_03","pdf_crop","pdf_privacy_redact")
+private val GEOMETRY_EDITOR_TOOLS = setOf("img_03","img_04","pdf_crop","pdf_privacy_redact")
 private val TRANSFORMED_IMAGE_TOOLS = setOf("img_02","img_join")
-private val ENCODED_IMAGE_TOOLS = setOf("img_01","img_04")
 private val VISUAL_IMAGE_SETTINGS_TOOLS = setOf("pdf_compress","pdf_07","pdf_long_image","pdf_02")
 private val PRIMARY_FIELDS_TOOLS = setOf("file_07","file_encrypted_zip","file_batch_rename","pdf_protect","pdf_nup","pdf_privacy_redact")
 private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
@@ -219,7 +217,6 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
         LazyColumn(Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
-                // Top step breadcrumb removed for a calm, uncluttered tool workspace.
                 val emptyTitleRes = when(inputSpec.kind) {
                     ToolInputKind.PDF_SINGLE -> R.string.ui_choose_pdf_single
                     ToolInputKind.PDF_MULTI -> R.string.ui_choose_pdf_multi
@@ -338,7 +335,7 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                 }
                 // Background PDF compression pre-calculation disabled to avoid CPU drain; user controls strength directly (1-100).
                 if(tool=="pdf_ocr" && queue.size==1 && !inputMismatch) item(key="ocr-result-panel",contentType="ocr-panel") {
-                    OcrWorkspacePanel(vm,queue.single().id,onExecute,ready,selectedScript="AUTO",onSelectScript={})
+                    OcrWorkspacePanel(vm,queue.single().id,onExecute,ready,selectedScript=form.text1.ifBlank { "AUTO" },onSelectScript={ s -> vm.updateForm { it.copy(text1 = s) } })
                 }
                 if(tool in PRIMARY_FIELDS_TOOLS) item(key="primary-tool-settings",contentType="settings") {
                     WorkspaceFields(form,vm::updateForm)
@@ -413,9 +410,9 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                         "pdf_02"->stringResource(R.string.ui_create_pdf)
                         "pdf_03"->stringResource(R.string.ui_merge_files,queue.size)
                         "pdf_04"->stringResource(R.string.workspace_action_save_order)
-                        "pdf_05"->stringResource(R.string.workspace_action_split_pdf)
+                        "pdf_05"->stringResource(if(form.text4=="EXTRACT_SINGLE") R.string.workspace_action_extract_pages else R.string.workspace_action_split_pdf)
                         "pdf_06"->stringResource(R.string.workspace_action_extract_pages)
-                        "pdf_07"->stringResource(R.string.workspace_action_export_images)
+                        "pdf_07","pdf_long_image"->stringResource(R.string.workspace_action_export_images)
                         "pdf_compress"->stringResource(R.string.workspace_action_compress_pdf)
                         "pdf_signature"->stringResource(R.string.workspace_action_sign_pdf)
                         "pdf_protect"->stringResource(R.string.workspace_action_protect_pdf)
@@ -450,12 +447,6 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
     )
 }
 
-/**
- * 2026 PDF & Image Previewer:
- * - Smooth horizontal page swiping via HorizontalPager (automatically reverses in RTL).
- * - Pinch-to-zoom & pan gestures + double-tap quick zoom (1x <-> 2.5x).
- * - Modern floating page indicator pill & prev/next controls.
- */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable private fun InputPreview(
     vm:AppViewModel,sourceId:String,reduceMotion:Boolean=false,
@@ -763,7 +754,7 @@ internal fun passwordStrength(value:String):Int = when {
                     ) {v->edit {it.copy(fit=v)}}
                     Toggle(stringResource(R.string.field_allow_upscaling),f.allowUpscaling) {v->edit {it.copy(allowUpscaling=v)}}
                 }
-                "img_03" -> {
+                "img_03","img_04" -> {
                     Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata)
                     Options(stringResource(R.string.field_clockwise_rotation),listOf("0","90","180","270"),(f.turns*90).toString()) {v->edit {it.copy(turns=v.toInt()/90)}}
                     Toggle(stringResource(R.string.field_flip_horizontal),f.flipX) {v->edit {it.copy(flipX=v)}};Toggle(stringResource(R.string.field_flip_vertical),f.flipY) {v->edit {it.copy(flipY=v)}}
@@ -794,10 +785,21 @@ internal fun passwordStrength(value:String):Int = when {
                     Toggle(stringResource(R.string.field_fill_page),f.fill) {v->edit {it.copy(fill=v)}}
                 }
                 "pdf_07","pdf_long_image" -> {
+                    LabeledOptions(
+                        label=stringResource(R.string.p2_pdf_images_mode_label),
+                        options=listOf(
+                            "LONG" to stringResource(R.string.p2_pdf_images_mode_long),
+                            "SEPARATE" to stringResource(R.string.p2_pdf_images_mode_separate)
+                        ),
+                        selected=if(f.flag2) "SEPARATE" else "LONG"
+                    ) {v->edit {it.copy(flag2=v=="SEPARATE")}}
                     PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
-                    InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(f.dpi,144),36,600,144) {v->edit {it.copy(dpi=v.toString())}}
+                    val defaultDpi = if(f.toolId=="pdf_long_image") 300 else 144
+                    val defaultQ = if(f.toolId=="pdf_long_image") 100 else 85
+                    InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(f.dpi,defaultDpi),36,600,defaultDpi) {v->edit {it.copy(dpi=v.toString())}}
                     Options(stringResource(R.string.field_output_format),listOf("PNG","JPEG"),f.format) {v->edit {it.copy(format=v)}}
-                    if(f.format=="JPEG") InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(f.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
+                    if(f.format=="JPEG") InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(f.quality,defaultQ),1,100,defaultQ) {v->edit {it.copy(quality=v.toString())}}
+                    if(f.toolId=="pdf_long_image" && !f.flag2) Toggle(stringResource(R.string.s10_keep_original_image_quality),f.flag1) {v->edit {it.copy(flag1=v)}}
                     Toggle(stringResource(R.string.field_grayscale),f.grayscale) {v->edit {it.copy(grayscale=v)}}
                     Text(stringResource(R.string.field_raster_note),style=QuietTheme.typography.metadata)
                 }
@@ -806,11 +808,32 @@ internal fun passwordStrength(value:String):Int = when {
                         "0" to R.string.interactive_zip_store,"1" to R.string.interactive_zip_fast,
                         "6" to R.string.interactive_zip_balanced,"9" to R.string.interactive_zip_maximum),f.zipLevel) {v->edit {it.copy(zipLevel=v)}}
                     InteractiveIntSlider(stringResource(R.string.field_zip_level),draftNumber(f.zipLevel,6),0,9,6) {v->edit {it.copy(zipLevel=v.toString())}}
+                    Field(stringResource(R.string.s10_zip_optional_password),f.secret1,{v->edit {it.copy(secret1=v)}},secret=true)
                     Text(stringResource(R.string.interactive_zip_note),style=QuietTheme.typography.metadata)
                 }
                 "file_08" -> Text(stringResource(R.string.field_zip_extract_note),style=QuietTheme.typography.metadata)
                 "pdf_03" -> { Text(stringResource(R.string.field_merge_note),style=QuietTheme.typography.metadata) }
-                "pdf_05" -> { Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v)}}; if(f.flag1) InteractiveIntSlider(stringResource(R.string.field_pages_per_part),draftNumber(f.num1,1),1,1000,1) {v->edit {it.copy(num1=v.toString())}} else PageSelectionSummary(f.pages,if(f.flag2) R.string.jumlo_split_markers else R.string.ui_pages_selection_title,!f.flag2) }
+                "pdf_05" -> {
+                    val extractSingle = f.text4 == "EXTRACT_SINGLE"
+                    LabeledOptions(
+                        label=stringResource(R.string.p2_pdf_split_mode_label),
+                        options=listOf(
+                            "SPLIT" to stringResource(R.string.p2_pdf_split_mode_split),
+                            "EXTRACT_SINGLE" to stringResource(R.string.p2_pdf_split_mode_extract)
+                        ),
+                        selected=if(extractSingle) "EXTRACT_SINGLE" else "SPLIT"
+                    ) {v->
+                        if(v=="EXTRACT_SINGLE") edit {it.copy(text4="EXTRACT_SINGLE",flag1=false,flag2=false)}
+                        else edit {it.copy(text4="")}
+                    }
+                    if(extractSingle) {
+                        PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
+                    } else {
+                        Toggle(stringResource(R.string.field_split_every_n),f.flag1) {v->edit {it.copy(flag1=v,text4="")}}
+                        if(f.flag1) InteractiveIntSlider(stringResource(R.string.field_pages_per_part),draftNumber(f.num1,1),1,1000,1) {v->edit {it.copy(num1=v.toString())}}
+                        else PageSelectionSummary(f.pages,if(f.flag2) R.string.jumlo_split_markers else R.string.ui_pages_selection_title,!f.flag2)
+                    }
+                }
                 "pdf_06" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true) }
                 "pdf_04" -> { Text(stringResource(R.string.ui_pages_edit_visual),style=QuietTheme.typography.metadata); Options(stringResource(R.string.field_rotate_degrees),listOf("0","90","180","270"),f.num1) {v->edit {it.copy(num1=v,pageEdits=emptyList())}} }
                 "pdf_crop" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }

@@ -1,12 +1,8 @@
 package com.jumlo.app.ui
 
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.test.platform.app.InstrumentationRegistry
-import com.jumlo.app.R
 import com.jumlo.app.data.jobs.CapabilityRegistry
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.ThemeMode
@@ -24,16 +20,12 @@ class ToolCatalogueInteractionTest {
     @Test fun specialistToolIsDirectlyAvailableAsAnIconTile() {
         val tool = CapabilityRegistry.tools.single { it.id == "pdf_crop" }
         var selected = ""
-        var showAll by mutableStateOf(false)
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
         compose.setContent {
             JumloTheme(ThemeMode.LIGHT, AppLanguage.ENGLISH) {
                 ToolsCatalogue(listOf(tool), AppLanguage.ENGLISH, emptyList(), emptyList(), emptyList(), "", {},
-                    showAllTools = showAll, onToggleShowAll = { showAll = !showAll }, onTool = { selected = it.id })
+                    onTool = { selected = it.id })
             }
         }
-        compose.onNodeWithTag("tool.pdf_crop").assertDoesNotExist()
-        compose.onNodeWithText(context.getString(R.string.tools_show_more, 1)).performClick()
         compose.onNodeWithTag("tool.icon.pdf_crop", useUnmergedTree = true).assertExists()
         compose.onNodeWithText(shortToolLabel(tool, AppLanguage.ENGLISH)).assertExists()
         compose.onNodeWithTag("tool.pdf_crop").assertHasClickAction().performClick()
@@ -41,26 +33,26 @@ class ToolCatalogueInteractionTest {
     }
 
     @Test fun persistedUsagePlacesMostUsedToolFirstWithinASection() {
-        val tools = listOf("img_03", "img_02").map { id -> CapabilityRegistry.tools.single { it.id == id } }
+        val tools = listOf("img_04", "img_02").map { id -> CapabilityRegistry.tools.single { it.id == id } }
         compose.setContent {
             JumloTheme(ThemeMode.DARK, AppLanguage.ARABIC) {
-                ToolsCatalogue(tools, AppLanguage.ARABIC, listOf("img_02", "img_03"), emptyList(), emptyList(), "", {}, onTool = {})
+                ToolsCatalogue(tools, AppLanguage.ARABIC, listOf("img_02", "img_04"), emptyList(), emptyList(), "", {}, onTool = {})
             }
         }
         val first = compose.onNodeWithTag("tool.img_02").fetchSemanticsNode().boundsInRoot
-        val last = compose.onNodeWithTag("tool.img_03").fetchSemanticsNode().boundsInRoot
+        val last = compose.onNodeWithTag("tool.img_04").fetchSemanticsNode().boundsInRoot
         // A multi-column Arabic (RTL) grid puts the first-ranked tool on the
         // right of the same row. Rank is row-major, not strictly top-to-bottom.
-        assertTrue("Ranked img_02 must precede img_03 in RTL grid",
+        assertTrue("Ranked img_02 must precede img_04 in RTL grid",
             first.top < last.top - 1f ||
                 (kotlin.math.abs(first.top - last.top) <= 1f && first.left > last.left))
         tools.forEach { compose.onNodeWithTag("tool.${it.id}").assertExists() }
     }
 
-    @Test fun defaultGridHidesMergedToolsButSearchCanOpenOne() {
-        val ids = listOf("img_04", "file_encrypted_zip", "pdf_crop")
+    @Test fun legacyHiddenToolsStayHiddenWhileSearchAliasOpensCanonicalTool() {
+        val ids = listOf("img_04", "file_07", "file_encrypted_zip", "pdf_05", "pdf_06", "pdf_long_image", "pdf_07")
         val tools = ids.map { id -> CapabilityRegistry.tools.single { it.id == id } }
-        val query = androidx.compose.runtime.mutableStateOf("")
+        val query = mutableStateOf("")
         var selected = ""
         compose.setContent {
             JumloTheme(ThemeMode.LIGHT, AppLanguage.ENGLISH) {
@@ -69,13 +61,23 @@ class ToolCatalogueInteractionTest {
             }
         }
         compose.onNodeWithTag("tool.img_04").assertExists()
+        compose.onNodeWithTag("tool.file_07").assertExists()
+        compose.onNodeWithTag("tool.pdf_05").assertExists()
+        compose.onNodeWithTag("tool.pdf_long_image").assertExists()
         compose.onNodeWithTag("tool.file_encrypted_zip").assertDoesNotExist()
-        compose.onNodeWithTag("tool.pdf_crop").assertDoesNotExist()
+        compose.onNodeWithTag("tool.pdf_06").assertDoesNotExist()
+        compose.onNodeWithTag("tool.pdf_07").assertDoesNotExist()
+
         compose.runOnIdle { query.value = "Encrypted" }
-        compose.onNodeWithTag("tool.file_encrypted_zip").assertHasClickAction().performClick()
-        compose.onNodeWithTag("tool.pdf_crop").assertDoesNotExist()
+        compose.onNodeWithTag("tool.file_07").assertHasClickAction().performClick()
+        compose.onNodeWithTag("tool.file_encrypted_zip").assertDoesNotExist()
         compose.onNodeWithTag("tool.img_04").assertDoesNotExist()
-        compose.runOnIdle { assertEquals("file_encrypted_zip", selected) }
+        compose.runOnIdle { assertEquals("file_07", selected) }
+
+        compose.runOnIdle { query.value = "extract pages" }
+        compose.onNodeWithTag("tool.pdf_05").assertHasClickAction().performClick()
+        compose.onNodeWithTag("tool.pdf_06").assertDoesNotExist()
+        compose.runOnIdle { assertEquals("pdf_05", selected) }
     }
 
     @Test fun anEmptySearchResultProvidesResetAction() {

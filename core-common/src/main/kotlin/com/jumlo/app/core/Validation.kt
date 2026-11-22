@@ -52,11 +52,14 @@ object PageSelection {
 
     fun parse(value: String, count: Int): List<Int> {
         val maxUniquePages = 100_000
+        val maxScannedPages = 200_000L
         val result = linkedSetOf<Int>()
         val seenRanges = HashSet<IntRange>()
+        var scanned = 0L
         for (range in parseRanges(value, count, enforceExpandedLimit = false)) {
             if (!seenRanges.add(range)) continue
             for (page in range) {
+                require(++scanned <= maxScannedPages) { "PAGE_SELECTION_LIMIT" }
                 if (result.add(page)) {
                     require(result.size <= maxUniquePages) { "PAGE_SELECTION_LIMIT" }
                 }

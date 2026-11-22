@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="modern_reset_save_folder">Use Download/Jumlo</string>
-    <string name="modern_download_defaults">Download defaults</string>
-    <string name="modern_video_quality">Video quality</string>
-    <string name="modern_audio_quality">Audio quality</string>
-    <string name="modern_best_available">Best available</string>
-    <string name="modern_audio_bitrate">%1$d kbps</string>
-    <string name="modern_quality_defaults_note">Used when that quality is available. You can change it for each download.</string>
     <string name="modern_storage_usage">Storage usage</string>
     <string name="modern_clear_cache">Clear cache</string>
     <string name="modern_about">About Jumlo</string>
@@ -14,7 +8,6 @@
     <string name="modern_chosen_folder">Selected folder</string>
     <string name="modern_change_folder">Change folder</string>
     <string name="modern_home_title">Every file task,\nin one place.</string>
-    <string name="modern_home_subtitle">Scan, edit, convert, and download — beautifully, on your device.</string>
     <string name="modern_scan">Scan</string>
     <string name="modern_convert">Convert</string>
     <string name="modern_compress">Compress</string>
@@ -28,8 +21,6 @@
     <string name="modern_office_to_pdf">Office to PDF</string>
     <string name="modern_pdf_images">PDF to images</string>
     <string name="modern_convert_images">Convert images</string>
-    <string name="modern_fewer_tools">Fewer tools</string>
-    <string name="modern_more_tools">More tools</string>
     <string name="modern_sort_group">Sort &amp; group</string>
     <string name="modern_group_by">Group by</string>
     <string name="modern_group_none">No grouping</string>

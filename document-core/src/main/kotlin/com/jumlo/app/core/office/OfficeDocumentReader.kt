@@ -57,21 +57,32 @@ object OfficeDocumentReader {
         "<!DOCTYPE".toByteArray(Charsets.UTF_16LE),
         "<!DOCTYPE".toByteArray(Charsets.UTF_16BE)
     )
+    private val DOCTYPE_LPS = Array(DOCTYPE_PATTERNS.size) { idx ->
+        val p = DOCTYPE_PATTERNS[idx]
+        IntArray(p.size).also { lps ->
+            var len = 0
+            for (i in 1 until p.size) {
+                while (len > 0 && p[i] != p[len]) len = lps[len - 1]
+                if (p[i] == p[len]) len++
+                lps[i] = len
+            }
+        }
+    }
 
     private class DoctypeRejectingInputStream(input: InputStream) : FilterInputStream(input) {
         private val matched = IntArray(DOCTYPE_PATTERNS.size)
 
         private fun scan(value: Int) {
             if (value < 0) return
+            val next = value.toByte()
             for (index in DOCTYPE_PATTERNS.indices) {
                 val pattern = DOCTYPE_PATTERNS[index]
-                val next = value.toByte()
-                matched[index] = when {
-                    next == pattern[matched[index]] -> matched[index] + 1
-                    next == pattern[0] -> 1
-                    else -> 0
-                }
-                if (matched[index] == pattern.size) throw IOException("OFFICE_DTD_NOT_ALLOWED")
+                val lps = DOCTYPE_LPS[index]
+                var state = matched[index]
+                while (state > 0 && next != pattern[state]) state = lps[state - 1]
+                if (next == pattern[state]) state++
+                matched[index] = state
+                if (state == pattern.size) throw IOException("OFFICE_DTD_NOT_ALLOWED")
             }
         }
 
@@ -439,8 +450,7 @@ object OfficeDocumentReader {
                 var currentRow: ArrayList<OfficeCell>? = null
                 var headerRow = false
                 var rowHasHeader = false
-                // Paragraph state (also used for table-cell paragraphs).
-                var runs = ArrayList<OfficeRun>()
+                        var runs = ArrayList<OfficeRun>()
                 var runText = StringBuilder()
                 var runBold = false
                 var runItalic = false
@@ -943,8 +953,7 @@ object OfficeDocumentReader {
             val slideRelTargets = slideRels.mapValues { (_, t) -> resolve(target, t) }
             val stream = open(zip, map, target) ?: return@forEachIndexed
             stream.use { parseXml(it, object : DefaultHandler() {
-                // Shape text state.
-                var runs = ArrayList<OfficeRun>()
+                    var runs = ArrayList<OfficeRun>()
                 var runText = StringBuilder()
                 var runBold = false
                 var runItalic = false

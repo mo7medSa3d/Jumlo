@@ -18,9 +18,7 @@ enum class ToolWorkspace(val id: String) {
 /** One workspace: the tool that opens it, and the capabilities merged into it. */
 data class WorkspaceEntry(
     val workspace: ToolWorkspace,
-    /** The tools that get a tile. */
     val primary: List<String>,
-    /** The tools that are reachable, but folded into the workspace. */
     val merged: List<String>
 )
 
@@ -36,17 +34,15 @@ object ToolCatalogue {
                 "pdf_ocr",       // text extraction
                 "pdf_02",        // images to PDF
                 "pdf_03",        // merge
-                "pdf_05",        // split
+                "pdf_05",        // split / extract pages
                 "pdf_04",        // organise pages
-                "pdf_compress",  // compress
-                "pdf_07",        // pdf to images
-                "pdf_signature", // sign
+                "pdf_compress",
+                "pdf_signature",
                 "pdf_protect",   // password protect / unlock
-                "pdf_long_image" // PDF to single long image
+                "pdf_long_image" // PDF to images / single long image
             ),
             merged = listOf(
-                "pdf_06",             // extract pages
-                "pdf_crop",           // crop pages
+                "pdf_crop",
                 "pdf_stamp",          // watermark and page numbers
                 "pdf_privacy_redact", // redact sensitive text/areas
                 "pdf_nup",            // 2/4 pages per sheet
@@ -60,27 +56,26 @@ object ToolCatalogue {
         ),
         WorkspaceEntry(
             ToolWorkspace.IMAGES,
+            // img_04 is the unified "Edit & Optimize Image" studio; img_01 (convert) and
+            // img_03 (crop/rotate) stay registered for internal routing and modes.
             primary = listOf(
-                "img_03",        // crop, rotate, flip
+                "img_04",        // edit, convert, crop & compress
                 "img_02",        // resize
-                "img_04",        // compress & convert
-                "img_join",      // join and collage
-                "img_watermark"  // watermark
+                "img_join",
+                "img_watermark"
             ),
-            merged = listOf(
-                "img_01"         // convert format
-            )
+            merged = emptyList()
         ),
         WorkspaceEntry(
             ToolWorkspace.FILES,
+            // file_07 is the unified "Create ZIP" entry (with optional password);
+            // file_encrypted_zip stays registered for internal encrypted ZIP routing.
             primary = listOf(
-                "file_07",           // create an archive
+                "file_07",           // create an archive (standard or encrypted)
                 "file_08",           // extract an archive
-                "file_batch_rename"  // batch rename
+                "file_batch_rename"
             ),
-            merged = listOf(
-                "file_encrypted_zip" // encrypted archive
-            )
+            merged = emptyList()
         ),
         WorkspaceEntry(
             ToolWorkspace.DOWNLOADS,
@@ -95,33 +90,50 @@ object ToolCatalogue {
     private val primaryIds = entries.flatMap { it.primary }.toSet()
     private val mergedIds = entries.flatMap { it.merged }.toSet()
 
+    /** Maps consolidated legacy tool IDs to their unified user-facing target ID. */
+    private val legacyAliases: Map<String, String> = mapOf(
+        "img_01" to "img_04",
+        "img_03" to "img_04",
+        "file_encrypted_zip" to "file_07",
+        "dl_02" to "dl_media",
+        "dl_03" to "dl_media",
+        "pdf_06" to "pdf_05",
+        "pdf_07" to "pdf_long_image"
+    )
+
+    private val hidden: Set<String> = legacyAliases.keys
+
     fun all(): List<WorkspaceEntry> = entries
 
     fun entry(workspace: ToolWorkspace): WorkspaceEntry? = byWorkspace[workspace]
 
-    /** The tools that get a tile in the catalogue. */
     fun primaryTools(): List<String> = primaryIds.toList()
 
-    /** The tools that are folded into a workspace but stay reachable. */
     fun mergedTools(): List<String> = mergedIds.toList()
 
-    /** True when the tool appears as a tile rather than as a folded action. */
     fun isPrimary(toolId: String): Boolean = toolId in primaryIds
 
     fun workspaceOf(toolId: String): ToolWorkspace? =
         entries.firstOrNull { toolId in it.primary || toolId in it.merged }?.workspace
 
-    private val hidden: Set<String> = setOf("dl_02", "dl_03")
-    private val searchOnly: Set<String> = emptySet()
+    /** Resolves consolidated legacy IDs to their unified user-facing tool ID. */
+    fun canonicalId(toolId: String): String = legacyAliases[toolId] ?: toolId
 
-    /** True when the tool should be offered in the catalogue at all. */
+    /** Extra EN/AR search terms so merged capabilities and dual-mode tools remain discoverable. */
+    fun searchAliases(toolId: String): String = when (toolId) {
+        "img_04" -> "convert crop rotate flip optimize compress تحويل قص تدوير قلب تعديل ضغط"
+        "file_07" -> "encrypt encrypted password aes archive zip مشفر كلمة مرور أرشيف ضغط"
+        "dl_media" -> "direct link batch url links video audio download رابط مباشر دفعة روابط فيديو صوت تنزيل"
+        "pdf_protect" -> "unlock decrypt remove password lock protect فك قفل إزالة كلمة المرور حماية"
+        "pdf_05" -> "extract pages split استخراج صفحات تقسيم"
+        "pdf_long_image" -> "pdf to images png jpg convert long image تحويل صور صورة طويلة"
+        else -> ""
+    }
+
     fun isListed(toolId: String): Boolean =
         toolId !in hidden && (toolId in primaryIds || toolId in mergedIds)
 
-    /** The capabilities that are deliberately kept out of the catalogue. */
     fun hiddenTools(): Set<String> = hidden
 
-    /** Search finds every listed tool in the streamlined catalogue. */
-    fun isSearchable(toolId: String): Boolean =
-        isListed(toolId) || toolId in searchOnly
+    fun isSearchable(toolId: String): Boolean = isListed(toolId)
 }

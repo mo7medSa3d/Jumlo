@@ -6,7 +6,6 @@ WCAG AA contrast guard, exposes no hard-coded brand hues, and stays live as the
 contrast utility used by ToolPalette — while JumloTheme itself now builds its
 scheme from the four color systems, not from a seed. Does not render.
 """
-import re
 import unittest
 from pathlib import Path
 from source_paths import source_path

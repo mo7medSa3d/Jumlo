@@ -86,6 +86,12 @@ object ToolInputPolicy {
             allowMultiple = false,
             showPhotoGallery = false
         )
+        "file_07" -> ToolInputSpec(
+            kind = ToolInputKind.ANY_FILES,
+            mimeTypes = listOf("*/*"),
+            allowMultiple = true,
+            showPhotoGallery = false
+        )
         "file_08" -> ToolInputSpec(
             kind = ToolInputKind.ZIP_SINGLE,
             mimeTypes = ZIP_MIMES,

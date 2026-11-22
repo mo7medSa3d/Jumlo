@@ -27,6 +27,8 @@ object OfficePackageWriter {
     const val PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     const val MAX_PAGES = 10_000
     const val MAX_PAGE_TEXT = 1_000_000
+    private const val WIDESCREEN_WIDTH_EMU = 12_192_000L
+    private const val WIDESCREEN_HEIGHT_EMU = 6_858_000L
     private const val W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
     private const val A = "http://schemas.openxmlformats.org/drawingml/2006/main"
     private const val P = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -35,6 +37,7 @@ object OfficePackageWriter {
     private const val CONTENT = "http://schemas.openxmlformats.org/package/2006/content-types"
     private const val HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
     private val BLANK_LINE_SPLIT = Regex("\n[\\t ]*\n+")
+    private val LTR_RUN_REGEX = Regex("[A-Za-z0-9]+(?:[._:/@+%\\- ][A-Za-z0-9]+)*")
 
     fun writeDocx(destination: File, pageCount: Int, pageText: (Int) -> String, checkCancel: () -> Unit = {}) {
         writeStructuredDocx(destination, pageCount, { OfficeTextPage.fromPlainText(pageText(it)) }, checkCancel)
@@ -47,7 +50,7 @@ object OfficePackageWriter {
                 override("/word/document.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml") +
                 override("/word/styles.xml", "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml") + "</Types>")
             zip.xml("_rels/.rels", relationships(listOf(Triple("rId1", "officeDocument", "word/document.xml"))))
-            zip.xml("word/styles.xml", """<w:styles xmlns:w="$W"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:bidi="ar-SA"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:pPr><w:spacing w:after="160"/></w:pPr></w:style>${headingStyles()}</w:styles>""")
+            zip.xml("word/styles.xml", """<w:styles xmlns:w="$W"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:bidi="ar-SA"/></w:rPr></w:rPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:pPr><w:spacing w:after="160"/></w:pPr></w:style>${headingStyles()}</w:styles>""")
             val docRels = mutableListOf(Triple("rId1", "styles", "styles.xml"))
             val docXml = StringBuilder()
             val wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
@@ -65,13 +68,24 @@ object OfficePackageWriter {
                 current.paragraphs.forEach { paragraph ->
                     checkCancel()
                     require(paragraph.headingLevel in 0..3) { "OFFICE_VERIFY_FAILED" }
-                    val rtl = isRtl(paragraph.text)
+                    val rtl = containsRtl(paragraph.text)
                     val properties = (if (paragraph.headingLevel > 0) "<w:pStyle w:val=\"Heading${paragraph.headingLevel}\"/>" else "") +
                         (if (rtl) "<w:bidi/><w:jc w:val=\"right\"/>" else "")
                     docXml.append("<w:p>" + if (properties.isNotEmpty()) "<w:pPr>$properties</w:pPr>" else "")
                     paragraph.text.split('\n').forEachIndexed { line, value ->
                         if (line > 0) docXml.append("<w:r><w:br/></w:r>")
-                        docXml.append("<w:r>${if (rtl) "<w:rPr><w:rtl/></w:rPr>" else ""}<w:t xml:space=\"preserve\">${escape(value)}</w:t></w:r>")
+                        if (rtl) {
+                            splitBidiRuns(value).forEach { (segment, isLtrRun) ->
+                                val runProps = if (isLtrRun) {
+                                    "<w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\" w:cs=\"Arial\"/><w:rtl w:val=\"0\"/><w:lang w:val=\"en-US\"/></w:rPr>"
+                                } else {
+                                    "<w:rPr><w:rFonts w:ascii=\"Calibri\" w:hAnsi=\"Calibri\" w:cs=\"Arial\"/><w:rtl/><w:lang w:bidi=\"ar-SA\"/></w:rPr>"
+                                }
+                                docXml.append("<w:r>$runProps<w:t xml:space=\"preserve\">${escape(segment, stripIllegal = true)}</w:t></w:r>")
+                            }
+                        } else {
+                            docXml.append("<w:r><w:t xml:space=\"preserve\">${escape(value, stripIllegal = true)}</w:t></w:r>")
+                        }
                     }
                     docXml.append("</w:p>")
                 }
@@ -134,10 +148,16 @@ object OfficePackageWriter {
                 require(current.jpeg.size >= 4 && current.jpeg[0] == 0xff.toByte() && current.jpeg[1] == 0xd8.toByte() &&
                     current.jpeg[current.jpeg.lastIndex - 1] == 0xff.toByte() && current.jpeg.last() == 0xd9.toByte()) { "OFFICE_IMAGE_INVALID" }
                 if (index == 0) {
-                    val scale = 9_144_000.0 / maxOf(current.widthPt, current.heightPt)
-                    canvasWidth = (current.widthPt * scale).toLong()
-                    canvasHeight = (current.heightPt * scale).toLong()
-                    require(minOf(canvasWidth, canvasHeight) >= 914_400) { "OFFICE_PAGE_ASPECT_UNSUPPORTED" }
+                    val aspect = current.widthPt / current.heightPt
+                    if (current.widthPt > current.heightPt && aspect >= 1.5 && aspect <= 2.5) {
+                        canvasWidth = WIDESCREEN_WIDTH_EMU
+                        canvasHeight = WIDESCREEN_HEIGHT_EMU
+                    } else {
+                        val scale = 9_144_000.0 / maxOf(current.widthPt, current.heightPt)
+                        canvasWidth = (current.widthPt * scale).toLong()
+                        canvasHeight = (current.heightPt * scale).toLong()
+                        require(minOf(canvasWidth, canvasHeight) >= 914_400) { "OFFICE_PAGE_ASPECT_UNSUPPORTED" }
+                    }
                 }
                 val fit = minOf(canvasWidth / current.widthPt, canvasHeight / current.heightPt)
                 val width = (current.widthPt * fit).toLong().coerceAtLeast(1)
@@ -145,12 +165,18 @@ object OfficePackageWriter {
                 val x = (canvasWidth - width) / 2
                 val y = (canvasHeight - height) / 2
                 val textXml = paragraphs(current.text).joinToString("") { para ->
-                    val paraRtl = isRtl(para)
-                    val rtl = if (paraRtl) " rtl=\"1\"" else ""
-                    val lang = if (paraRtl) "ar" else "en-US"
-                    "<a:p><a:pPr$rtl/>" + para.split('\n').mapIndexed { line, value ->
-                        (if (line > 0) "<a:br/>" else "") +
-                            "<a:r><a:rPr lang=\"$lang\" sz=\"1200\"><a:solidFill><a:srgbClr val=\"000000\"><a:alpha val=\"0\"/></a:srgbClr></a:solidFill></a:rPr><a:t>${escape(value)}</a:t></a:r>"
+                    val paraRtl = containsRtl(para)
+                    val pPr = if (paraRtl) "<a:pPr rtl=\"1\" algn=\"r\"/>" else "<a:pPr/>"
+                    "<a:p>$pPr" + para.split('\n').mapIndexed { line, value ->
+                        val br = if (line > 0) "<a:br/>" else ""
+                        if (paraRtl) {
+                            br + splitBidiRuns(value).joinToString("") { (segment, isLtrRun) ->
+                                val lang = if (isLtrRun) "en-US" else "ar-SA"
+                                "<a:r><a:rPr lang=\"$lang\" sz=\"1200\"><a:solidFill><a:srgbClr val=\"000000\"><a:alpha val=\"0\"/></a:srgbClr></a:solidFill></a:rPr><a:t>${escape(segment, stripIllegal = true)}</a:t></a:r>"
+                            }
+                        } else {
+                            br + "<a:r><a:rPr lang=\"en-US\" sz=\"1200\"><a:solidFill><a:srgbClr val=\"000000\"><a:alpha val=\"0\"/></a:srgbClr></a:solidFill></a:rPr><a:t>${escape(value, stripIllegal = true)}</a:t></a:r>"
+                        }
                     }.joinToString("") + "</a:p>"
                 }
                 // Transparent text stays editable/selectable without drawing a second text copy over the page image.
@@ -186,14 +212,30 @@ object OfficePackageWriter {
     }
     private fun paragraphs(text: String): List<String> = text.replace("\r\n", "\n").replace('\r', '\n').trim('\n')
         .split(BLANK_LINE_SPLIT).ifEmpty { listOf("") }
-    private fun isRtl(text: String): Boolean {
-        for (character in text) when (Character.getDirectionality(character)) {
-            Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> return true
-            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> return false
-        }
-        return false
+    private fun containsRtl(text: String): Boolean = text.any { character ->
+        val dir = Character.getDirectionality(character)
+        dir == Character.DIRECTIONALITY_RIGHT_TO_LEFT || dir == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
     }
-    private fun escape(text: String): String = buildString(text.length) {
+
+    /** Splits an RTL line into (segment, isLtrRun) pairs so Latin/digit runs render LTR in OOXML without Unicode isolates. */
+    internal fun splitBidiRuns(line: String): List<Pair<String, Boolean>> {
+        if (line.isEmpty()) return listOf("" to false)
+        val runs = ArrayList<Pair<String, Boolean>>()
+        var cursor = 0
+        for (match in LTR_RUN_REGEX.findAll(line)) {
+            if (match.range.first > cursor) {
+                runs += line.substring(cursor, match.range.first) to false
+            }
+            runs += match.value to true
+            cursor = match.range.last + 1
+        }
+        if (cursor < line.length) {
+            runs += line.substring(cursor) to false
+        }
+        return if (runs.isEmpty()) listOf(line to false) else runs
+    }
+
+    private fun escape(text: String, stripIllegal: Boolean = false): String = buildString(text.length) {
         var index = 0
         while (index < text.length) {
             val cp = text.codePointAt(index)
@@ -201,9 +243,10 @@ object OfficePackageWriter {
             when (cp) {
                 38 -> append("&amp;"); 60 -> append("&lt;"); 62 -> append("&gt;"); 34 -> append("&quot;")
                 9, 10, 13 -> append(cp.toChar())
+                in 0x2066..0x2069 -> if (!stripIllegal) append(cp.toChar())
                 in 32..0xd7ff, in 0xe000..0xfffd -> append(cp.toChar())
                 in 0x10000..0x10ffff -> append(String(Character.toChars(cp)))
-                else -> append('\ufffd')
+                else -> if (!stripIllegal) append('\ufffd')
             }
         }
     }

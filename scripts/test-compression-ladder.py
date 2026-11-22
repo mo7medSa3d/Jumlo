@@ -7,7 +7,6 @@ seam, Flate raster downsampling, metadata stripping, bounded memory and the
 guaranteed-smaller policy -- to the code that implements them, so a regression
 that drops a ladder step fails here before it reaches a device.
 """
-import re
 import unittest
 from pathlib import Path
 from source_paths import source_path

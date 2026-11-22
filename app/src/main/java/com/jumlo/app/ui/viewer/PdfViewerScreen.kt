@@ -1,9 +1,9 @@
 package com.jumlo.app.ui.viewer
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Context
 import android.content.ContextWrapper
-import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.view.WindowManager
@@ -14,9 +14,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -27,18 +31,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -52,8 +57,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,16 +67,18 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.jumlo.app.R
-import com.jumlo.app.data.jobs.stableError
-import com.jumlo.app.data.pdf.PdfPageText
-import com.jumlo.app.data.pdf.PdfReaderSession
 import com.jumlo.app.core.PdfMarkupItem
 import com.jumlo.app.core.PdfMarkupTool
 import com.jumlo.app.core.UndoRedoStack
+import com.jumlo.app.data.jobs.stableError
+import com.jumlo.app.data.pdf.PdfMarkupFlattener
+import com.jumlo.app.data.pdf.PdfPageText
+import com.jumlo.app.data.pdf.PdfReaderSession
 import com.jumlo.app.data.pdf.ReaderPositionStore
-import com.jumlo.app.data.pdf.SavedSignature
 import com.jumlo.app.data.pdf.SavedSignatureStore
+import com.jumlo.app.ui.components.formatBytes
 import com.jumlo.app.ui.components.userMessageResource
+import com.jumlo.app.ui.downloads.CompletedResultCard
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.rounded.*
@@ -84,19 +91,41 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Immersive, content-first reading surface.
+ * Full-bleed iOS 27 immersive PDF reader & annotation studio.
  *
- * A single slim top bar carries the only persistent chrome; tapping the page or scrolling
- * reveals it and it auto-hides after two seconds of stillness so the document fills the screen.
- * Thumbnails, search, file info and the jump-to-page control live behind the overflow menu as
- * on-demand surfaces, keeping the reading canvas uncluttered.
+ * Pages fill the viewport edge-to-edge; translucent floating top & bottom pill bars fade away
+ * automatically while reading and stay accessible in markup mode with 2-finger pinch-zoom & pan.
  */
+data class MarkupSaveResult(
+    val uri: String,
+    val displayName: String,
+    val sizeBytes: Long,
+    val locationLabel: String?,
+    val savedInPlace: Boolean
+)
+
+private val markupSaveResultSaver = listSaver<MarkupSaveResult?, Any?>(
+    save = { r ->
+        if (r == null) emptyList()
+        else listOf(r.uri, r.displayName, r.sizeBytes, r.locationLabel ?: "", r.savedInPlace)
+    },
+    restore = { saved ->
+        if (saved.size < 5) null else MarkupSaveResult(
+            uri = saved[0] as String,
+            displayName = saved[1] as String,
+            sizeBytes = (saved[2] as Number).toLong(),
+            locationLabel = (saved[3] as String).takeIf { it.isNotBlank() },
+            savedInPlace = saved[4] as Boolean
+        )
+    }
+)
+
 @Composable
 fun PdfViewerScreen(
     uri: String,
@@ -105,9 +134,18 @@ fun PdfViewerScreen(
     onOpenFile: () -> Unit,
     onPrint: (String, String) -> Unit,
     modifier: Modifier = Modifier,
-    onSaveMarkup: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null
+    onSaveMarkup: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null,
+    onSaveInPlace: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null,
+    onSaveMarkupResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
+    onSaveInPlaceResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
+    onOpenSavedOutput: ((String, String) -> Unit)? = null
 ) {
-    key(uri) { PdfViewerContent(uri, title, onBack, onOpenFile, onPrint, modifier, onSaveMarkup) }
+    key(uri) {
+        PdfViewerContent(
+            uri, title, onBack, onOpenFile, onPrint, modifier,
+            onSaveMarkup, onSaveInPlace, onSaveMarkupResult, onSaveInPlaceResult, onOpenSavedOutput
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,7 +157,11 @@ private fun PdfViewerContent(
     onOpenFile: () -> Unit,
     onPrint: (String, String) -> Unit,
     modifier: Modifier,
-    onSaveMarkup: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null
+    onSaveMarkup: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null,
+    onSaveInPlace: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null,
+    onSaveMarkupResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
+    onSaveInPlaceResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
+    onOpenSavedOutput: ((String, String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val defaultEdge = with(LocalDensity.current) { 960.dp.roundToPx() }.coerceIn(1280, 1800)
@@ -150,21 +192,133 @@ private fun PdfViewerContent(
     var searchJob by remember { mutableStateOf<Job?>(null) }
     var info by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var infoError by remember { mutableStateOf(false) }
+
     var markupMode by rememberSaveable { mutableStateOf(false) }
-    var activeTool by remember { mutableStateOf(PdfMarkupTool.PEN) }
-    var activeColor by remember { mutableStateOf(Color(0xFF2E67FF)) }
+    var activeToolName by rememberSaveable { mutableStateOf(PdfMarkupTool.PEN.name) }
+    val activeTool = PdfMarkupTool.entries.firstOrNull { it.name == activeToolName } ?: PdfMarkupTool.PEN
+    var activeColorArgb by rememberSaveable { mutableIntStateOf(0xFF2E67FF.toInt()) }
+    val activeColor = Color(activeColorArgb)
+    var penWidthNorm by rememberSaveable { mutableFloatStateOf(0.0045f) }
+    var highlighterWidthNorm by rememberSaveable { mutableFloatStateOf(0.024f) }
+    var eraserRadiusNorm by rememberSaveable { mutableFloatStateOf(0.032f) }
+    var textSizePt by rememberSaveable { mutableFloatStateOf(14f) }
+    var checkSizeNorm by rememberSaveable { mutableFloatStateOf(0.042f) }
+    var signatureScaleNorm by rememberSaveable { mutableFloatStateOf(0.28f) }
+    var selectedItemId by remember(uri) { mutableStateOf<String?>(null) }
+
     var markupItems by remember(uri) { mutableStateOf<List<PdfMarkupItem>>(emptyList()) }
     val history = remember(uri) { UndoRedoStack<PdfMarkupItem>() }
     var markupSaving by remember { mutableStateOf(false) }
+    var completedMarkup by rememberSaveable(uri, stateSaver = markupSaveResultSaver) { mutableStateOf<MarkupSaveResult?>(null) }
+    var saveFeedback by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
+    var feedbackJob by remember { mutableStateOf<Job?>(null) }
     var signatureSheetOpen by remember { mutableStateOf(false) }
     var pendingSignaturePath by remember { mutableStateOf<String?>(null) }
     var pendingTextPos by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
     var textInput by remember { mutableStateOf("") }
     val sigStore = remember(context) { SavedSignatureStore(context) }
     var savedSignatures by remember(uri) { mutableStateOf(sigStore.list()) }
+
+    val canAnnotate = onSaveMarkup != null || onSaveInPlace != null || onSaveMarkupResult != null || onSaveInPlaceResult != null
+
+    fun showFeedback(message: String, isError: Boolean = false) {
+        feedbackJob?.cancel()
+        saveFeedback = message to isError
+        feedbackJob = scope.launch {
+            delay(2600)
+            saveFeedback = null
+        }
+    }
+
     fun commitMarkup(next: List<PdfMarkupItem>) {
         history.push(markupItems)
         markupItems = next
+    }
+
+    fun executeSave(preferInPlace: Boolean) {
+        if (markupItems.isEmpty() || markupSaving) return
+        val snapshot = markupItems.toList()
+        markupSaving = true
+
+        fun finishSaved(label: String, reloadDocument: Boolean, result: MarkupSaveResult? = null) {
+            markupSaving = false
+            markupItems = emptyList()
+            selectedItemId = null
+            history.clear()
+            markupMode = false
+            if (reloadDocument) retry++
+            if (result != null) completedMarkup = result else showFeedback(label, isError = false)
+        }
+
+        fun handleStructuredResult(result: MarkupSaveResult?) {
+            if (result != null) {
+                finishSaved(
+                    context.getString(if (result.savedInPlace) R.string.s8_markup_saved else R.string.s8_markup_saved_copy),
+                    reloadDocument = result.savedInPlace,
+                    result = result
+                )
+            } else {
+                markupSaving = false
+                showFeedback(context.getString(R.string.s8_markup_save_failed), isError = true)
+            }
+        }
+
+        if (preferInPlace && onSaveInPlaceResult != null) {
+            onSaveInPlaceResult(uri, title, snapshot, ::handleStructuredResult)
+            return
+        }
+        if (!preferInPlace && onSaveMarkupResult != null) {
+            onSaveMarkupResult(uri, title, snapshot, ::handleStructuredResult)
+            return
+        }
+
+        if (preferInPlace && onSaveInPlace != null) {
+            onSaveInPlace(uri, title, snapshot) {
+                finishSaved(context.getString(R.string.s8_markup_saved), reloadDocument = true)
+            }
+            return
+        }
+
+        if (preferInPlace) {
+            scope.launch {
+                val overwritten = try {
+                    withContext(Dispatchers.IO) {
+                        val coroutine = currentCoroutineContext()
+                        PdfMarkupFlattener.flattenInPlace(context, Uri.parse(uri), snapshot) { coroutine.ensureActive() }
+                    }
+                } catch (cancel: CancellationException) {
+                    markupSaving = false
+                    throw cancel
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (overwritten) {
+                    val size = withContext(Dispatchers.IO) {
+                        runCatching { context.contentResolver.openAssetFileDescriptor(Uri.parse(uri), "r")?.use { it.length } }.getOrNull()?.takeIf { it > 0L } ?: 0L
+                    }
+                    finishSaved(
+                        context.getString(R.string.s8_markup_saved),
+                        reloadDocument = true,
+                        result = MarkupSaveResult(uri, title, size, null, savedInPlace = true)
+                    )
+                } else if (onSaveMarkup != null) {
+                    onSaveMarkup(uri, title, snapshot) {
+                        finishSaved(context.getString(R.string.s8_markup_saved_copy), reloadDocument = false)
+                    }
+                } else {
+                    markupSaving = false
+                    showFeedback(context.getString(R.string.s8_markup_save_failed), isError = true)
+                }
+            }
+        } else if (onSaveMarkup != null) {
+            onSaveMarkup(uri, title, snapshot) {
+                finishSaved(context.getString(R.string.s8_markup_saved_copy), reloadDocument = false)
+            }
+        } else {
+            markupSaving = false
+            showFeedback(context.getString(R.string.s8_markup_save_failed), isError = true)
+        }
     }
 
     val activity = remember(context) { context.findActivity() }
@@ -174,7 +328,7 @@ private fun PdfViewerContent(
         chromeVisible = true
         hideJob?.cancel()
         hideJob = scope.launch {
-            delay(2000)
+            delay(2200)
             if (!thumbsOpen && !jumpOpen && !menuOpen && !searchOpen && !infoOpen && !markupMode) chromeVisible = false
         }
     }
@@ -238,19 +392,27 @@ private fun PdfViewerContent(
             withContext(Dispatchers.IO) { ReaderPositionStore.save(context, uri, page) }
         }
     }
-    Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("pdf.viewer")) {
+
+    val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
+
+    Box(modifier.fillMaxSize().background(colors.surfaceContainerLowest).testTag("pdf.viewer")) {
         if (document == null) {
             Box(Modifier.fillMaxSize().clickable { wake() }, contentAlignment = Alignment.Center) {
-                Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+                Column(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+                ) {
                     val currentFailure = failure
                     if (currentFailure == null) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.reader_loading))
                     } else if (currentFailure == "PDF_ENCRYPTED" || currentFailure == "PDF_WRONG_PASSWORD") {
-                        Icon(Icons.Rounded.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Rounded.Lock, null, tint = colors.primary, modifier = Modifier.size(36.dp))
                         Text(
                             stringResource(if (currentFailure == "PDF_WRONG_PASSWORD") R.string.msg_pdf_wrong_password else R.string.reader_password_prompt),
-                            color = if (currentFailure == "PDF_WRONG_PASSWORD") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            color = if (currentFailure == "PDF_WRONG_PASSWORD") colors.error else colors.onSurface,
                             style = QuietTheme.typography.sectionTitle,
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                         )
@@ -262,7 +424,7 @@ private fun PdfViewerContent(
                             visualTransformation = if (passwordRevealed) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                             trailingIcon = {
                                 IconButton(onClick = { passwordRevealed = !passwordRevealed }) {
-                                    Icon(Icons.Rounded.Visibility, null)
+                                    Icon(Icons.Rounded.Visibility, stringResource(if (passwordRevealed) R.string.studio_password_hide else R.string.studio_password_show))
                                 }
                             },
                             modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth()
@@ -274,16 +436,26 @@ private fun PdfViewerContent(
                             modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().heightIn(min = 48.dp)
                         ) { Text(stringResource(R.string.reader_unlock_action)) }
                     } else {
-                        Text(stringResource(userMessageResource(currentFailure)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                        Button(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
+                        Text(
+                            stringResource(userMessageResource(currentFailure)),
+                            color = colors.error,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        )
+                        Button(onClick = { retry++ }, modifier = Modifier.heightIn(min = 48.dp)) {
+                            Text(stringResource(R.string.reader_retry))
+                        }
                     }
                 }
             }
         } else {
             val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            LazyColumn(Modifier.fillMaxSize().testTag("pdf.pages").background(MaterialTheme.colorScheme.surfaceContainer), state = list,
-                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp + navBottom),
-                verticalArrangement = Arrangement.spacedBy(28.dp)) {
+            // Full-bleed edge-to-edge PDF canvas (zero horizontal waste, tight 6dp page gap).
+            LazyColumn(
+                Modifier.fillMaxSize().testTag("pdf.pages").background(colors.surfaceContainer),
+                state = list,
+                contentPadding = PaddingValues(top = 0.dp, bottom = navBottom + if (markupMode) 124.dp else 72.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 items(document.pageCount, key = { it }, contentType = { "pdf-page" }) { page ->
                     val pageMarkup = remember(markupItems, page) { markupItems.filter { it.pageIndex == page } }
                     ReaderPage(
@@ -300,20 +472,49 @@ private fun PdfViewerContent(
                                     items = pageMarkup,
                                     activeTool = if (markupMode) activeTool else PdfMarkupTool.NONE,
                                     activeColor = activeColor,
+                                    penWidthNorm = penWidthNorm,
+                                    highlighterWidthNorm = highlighterWidthNorm,
+                                    eraserRadiusNorm = eraserRadiusNorm,
+                                    textSizePt = textSizePt,
+                                    checkSizeNorm = checkSizeNorm,
+                                    signatureScaleNorm = signatureScaleNorm,
                                     pendingSignaturePath = pendingSignaturePath,
+                                    selectedItemId = selectedItemId,
+                                    onSelectItem = { selectedItemId = it },
                                     onAddItem = { item -> commitMarkup(markupItems + item) },
                                     onRequestTextAt = { p, x, y -> pendingTextPos = Triple(p, x, y); textInput = "" },
                                     onMoveItem = { id, dx, dy ->
                                         markupItems = markupItems.map { item ->
                                             if (item.id != id) item else when (item) {
-                                                is PdfMarkupItem.TextBox -> item.copy(normX = (item.normX + dx).coerceIn(0f, 0.92f), normY = (item.normY + dy).coerceIn(0f, 0.94f))
-                                                is PdfMarkupItem.CheckMark -> item.copy(normX = (item.normX + dx).coerceIn(0f, 0.94f), normY = (item.normY + dy).coerceIn(0f, 0.94f))
-                                                is PdfMarkupItem.SavedSignatureStamp -> item.copy(normX = (item.normX + dx).coerceIn(0f, 0.85f), normY = (item.normY + dy).coerceIn(0f, 0.90f))
+                                                is PdfMarkupItem.TextBox -> item.copy(
+                                                    normX = (item.normX + dx).coerceIn(0f, 0.92f),
+                                                    normY = (item.normY + dy).coerceIn(0f, 0.94f)
+                                                )
+                                                is PdfMarkupItem.CheckMark -> item.copy(
+                                                    normX = (item.normX + dx).coerceIn(0f, 0.94f),
+                                                    normY = (item.normY + dy).coerceIn(0f, 0.94f)
+                                                )
+                                                is PdfMarkupItem.SavedSignatureStamp -> item.copy(
+                                                    normX = (item.normX + dx).coerceIn(0f, (1f - item.normW).coerceAtLeast(0f)),
+                                                    normY = (item.normY + dy).coerceIn(0f, (1f - item.normH).coerceAtLeast(0f))
+                                                )
                                                 else -> item
                                             }
                                         }
                                     },
-                                    onDeleteItem = { id -> commitMarkup(markupItems.filterNot { it.id == id }) }
+                                    onResizeSignature = { id, dNormW, dNormH ->
+                                        markupItems = markupItems.map { item ->
+                                            if (item.id != id || item !is PdfMarkupItem.SavedSignatureStamp) item else {
+                                                val nextW = (item.normW + dNormW).coerceIn(0.08f, (1f - item.normX).coerceAtMost(0.85f))
+                                                val nextH = (item.normH + dNormH).coerceIn(0.04f, (1f - item.normY).coerceAtMost(0.55f))
+                                                item.copy(normW = nextW, normH = nextH)
+                                            }
+                                        }
+                                    },
+                                    onDeleteItem = { id ->
+                                        if (selectedItemId == id) selectedItemId = null
+                                        commitMarkup(markupItems.filterNot { it.id == id })
+                                    }
                                 )
                             }
                         }
@@ -321,75 +522,205 @@ private fun PdfViewerContent(
                 }
             }
         }
-        // Chrome overlays the document instead of consuming layout space, so pages never get cut off.
+
         AnimatedVisibility(
             visible = chromeVisible,
             modifier = Modifier.align(Alignment.TopCenter),
             enter = if (reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { -it },
             exit = if (reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { -it }
         ) {
-            Surface(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onBack(); menuOpen = false }, modifier = Modifier.size(48.dp).testTag("pdf.back")) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.reader_back))
-                    }
-                    Text(title, Modifier.weight(1f).padding(horizontal = 8.dp).semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.Content))
-                    document?.let { doc ->
-                        TextButton(onClick = { jumpOpen = true; wake() }, modifier = Modifier.heightIn(min = 48.dp).testTag("pdf.page.indicator")) {
-                            Text(stringResource(R.string.reader_page_indicator, if (doc.pageCount > 0) (currentPage + 1).coerceIn(1, doc.pageCount) else 0, doc.pageCount))
+            Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                Surface(
+                    shape = QuietTheme.shapes.pill,
+                    color = colors.surfaceContainerHigh.copy(alpha = 0.88f),
+                    border = BorderStroke(1.dp, pillars.cardBorder),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { onBack(); menuOpen = false }, modifier = Modifier.size(42.dp).testTag("pdf.back")) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.reader_back), modifier = Modifier.size(21.dp))
                         }
-                        if (onSaveMarkup != null) {
-                            IconButton(
-                                onClick = { markupMode = !markupMode; if (markupMode) chromeVisible = true },
-                                modifier = Modifier.size(48.dp).testTag("pdf.markup.toggle")
+                        Text(
+                            title,
+                            Modifier.weight(1f).padding(horizontal = 6.dp).semantics { heading() },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.Content)
+                        )
+                        document?.let { doc ->
+                            TextButton(
+                                onClick = { jumpOpen = true; wake() },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.heightIn(min = 38.dp).testTag("pdf.page.indicator")
                             ) {
-                                Icon(Icons.Rounded.Edit, stringResource(R.string.markup_toggle), tint = if (markupMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                                Text(
+                                    stringResource(
+                                        R.string.reader_page_indicator,
+                                        if (doc.pageCount > 0) (currentPage + 1).coerceIn(1, doc.pageCount) else 0,
+                                        doc.pageCount
+                                    ),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
                             }
-                        }
-                        IconButton(onClick = { menuOpen = !menuOpen; wake() }, modifier = Modifier.size(48.dp).testTag("pdf.menu")) {
-                            Icon(Icons.Rounded.MoreVert, stringResource(R.string.reader_menu))
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_open)) }, leadingIcon = { Icon(Icons.Rounded.FolderOpen, null) }, onClick = { menuOpen = false; onOpenFile(); wake() })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_night)) }, leadingIcon = { Icon(Icons.Rounded.DarkMode, null) }, onClick = { menuOpen = false; nightMode = !nightMode; wake() })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_thumbnails)) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { menuOpen = false; thumbsOpen = true; wake() })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_search)) }, leadingIcon = { Icon(Icons.Rounded.Search, null) }, onClick = { menuOpen = false; searchOpen = true; wake() })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_share)) }, leadingIcon = { Icon(Icons.Rounded.Share, null) }, onClick = { menuOpen = false; shareDocument(context, uri, title) })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_print)) }, leadingIcon = { Icon(Icons.Rounded.Print, null) }, onClick = { menuOpen = false; onPrint(uri, title) })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_info)) }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { menuOpen = false; infoOpen = true; wake() })
+                            if (canAnnotate) {
+                                IconButton(
+                                    onClick = {
+                                        markupMode = !markupMode
+                                        if (markupMode) chromeVisible = true
+                                    },
+                                    modifier = Modifier.size(42.dp).testTag("pdf.markup.toggle")
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Edit,
+                                        stringResource(R.string.markup_toggle),
+                                        tint = if (markupMode) colors.primary else colors.onSurface,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { menuOpen = !menuOpen; wake() }, modifier = Modifier.size(42.dp).testTag("pdf.menu")) {
+                                Icon(Icons.Rounded.MoreVert, stringResource(R.string.reader_menu), modifier = Modifier.size(20.dp))
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_open)) }, leadingIcon = { Icon(Icons.Rounded.FolderOpen, null) }, onClick = { menuOpen = false; onOpenFile(); wake() })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_night)) }, leadingIcon = { Icon(Icons.Rounded.DarkMode, null) }, onClick = { menuOpen = false; nightMode = !nightMode; wake() })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_thumbnails)) }, leadingIcon = { Icon(Icons.Rounded.Image, null) }, onClick = { menuOpen = false; thumbsOpen = true; wake() })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_search)) }, leadingIcon = { Icon(Icons.Rounded.Search, null) }, onClick = { menuOpen = false; searchOpen = true; wake() })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_share)) }, leadingIcon = { Icon(Icons.Rounded.Share, null) }, onClick = { menuOpen = false; shareDocument(context, uri, title) })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_print)) }, leadingIcon = { Icon(Icons.Rounded.Print, null) }, onClick = { menuOpen = false; onPrint(uri, title) })
+                                    DropdownMenuItem(text = { Text(stringResource(R.string.reader_menu_info)) }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { menuOpen = false; infoOpen = true; wake() })
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        if (markupMode && document != null && onSaveMarkup != null) {
+
+        AnimatedVisibility(
+            visible = saveFeedback != null,
+            modifier = Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.statusBars).padding(top = 66.dp),
+            enter = if (reducedMotion) EnterTransition.None else fadeIn(),
+            exit = if (reducedMotion) ExitTransition.None else fadeOut()
+        ) {
+            saveFeedback?.let { (message, isError) ->
+                Surface(
+                    shape = QuietTheme.shapes.pill,
+                    color = if (isError) colors.errorContainer else colors.primaryContainer,
+                    border = BorderStroke(1.dp, pillars.cardBorder),
+                    shadowElevation = 6.dp,
+                    modifier = Modifier.testTag("pdf.markup.feedback")
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            if (isError) Icons.Rounded.Warning else Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = if (isError) colors.onErrorContainer else colors.onPrimaryContainer,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            message,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isError) colors.onErrorContainer else colors.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = chromeVisible && !markupMode && document != null,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = if (reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { it },
+            exit = if (reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { it }
+        ) {
+            Surface(
+                shape = QuietTheme.shapes.pill,
+                color = colors.surfaceContainerHigh.copy(alpha = 0.88f),
+                border = BorderStroke(1.dp, pillars.cardBorder),
+                shadowElevation = 8.dp,
+                modifier = Modifier.navigationBarsPadding().padding(bottom = 12.dp)
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    IconButton(onClick = { thumbsOpen = true; wake() }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Rounded.Image, stringResource(R.string.reader_menu_thumbnails), modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { searchOpen = true; wake() }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Rounded.Search, stringResource(R.string.reader_menu_search), modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { nightMode = !nightMode; wake() }, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            Icons.Rounded.DarkMode,
+                            stringResource(R.string.reader_menu_night),
+                            tint = if (nightMode) colors.primary else colors.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(onClick = { shareDocument(context, uri, title) }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Rounded.Share, stringResource(R.string.reader_menu_share), modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { onPrint(uri, title) }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Rounded.Print, stringResource(R.string.reader_menu_print), modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        }
+
+        if (markupMode && document != null && canAnnotate) {
             PdfMarkupFloatingBar(
                 activeTool = activeTool,
                 activeColor = activeColor,
+                penWidthNorm = penWidthNorm,
+                highlighterWidthNorm = highlighterWidthNorm,
+                eraserRadiusNorm = eraserRadiusNorm,
+                textSizePt = textSizePt,
+                checkSizeNorm = checkSizeNorm,
+                signatureScaleNorm = signatureScaleNorm,
                 canUndo = history.canUndo,
                 canRedo = history.canRedo,
                 hasEdits = markupItems.isNotEmpty(),
                 saving = markupSaving,
                 onSelectTool = { t ->
-                    activeTool = t
-                    if (t == PdfMarkupTool.HIGHLIGHTER && activeColor == Color(0xFF2E67FF)) activeColor = Color(0xFFFFD60A)
+                    activeToolName = t.name
+                    if (t == PdfMarkupTool.HIGHLIGHTER && activeColorArgb == 0xFF2E67FF.toInt()) activeColorArgb = 0xFFFFD60A.toInt()
                     if (t == PdfMarkupTool.SIGNATURE) signatureSheetOpen = true
                 },
-                onSelectColor = { activeColor = it },
-                onUndo = { history.undo(markupItems)?.let { markupItems = it } },
-                onRedo = { history.redo(markupItems)?.let { markupItems = it } },
-                onSave = {
-                    if (markupItems.isNotEmpty() && !markupSaving) {
-                        markupSaving = true
-                        onSaveMarkup(uri, title, markupItems) {
-                            markupSaving = false
-                            markupItems = emptyList()
-                            history.clear()
-                            markupMode = false
+                onSelectColor = { activeColorArgb = it.toArgb() },
+                onPenWidthChange = { penWidthNorm = it },
+                onHighlighterWidthChange = { highlighterWidthNorm = it },
+                onEraserRadiusChange = { eraserRadiusNorm = it },
+                onTextSizeChange = { textSizePt = it },
+                onCheckSizeChange = { checkSizeNorm = it },
+                onSignatureScaleChange = { scale ->
+                    signatureScaleNorm = scale
+                    val selId = selectedItemId
+                    if (selId != null) {
+                        markupItems = markupItems.map { item ->
+                            if (item.id != selId || item !is PdfMarkupItem.SavedSignatureStamp) item else {
+                                val aspect = if (item.normW > 0.001f) item.normH / item.normW else 0.36f
+                                val nextW = scale.coerceIn(0.08f, (1f - item.normX).coerceAtMost(0.85f))
+                                val nextH = (nextW * aspect).coerceIn(0.04f, (1f - item.normY).coerceAtMost(0.55f))
+                                item.copy(normW = nextW, normH = nextH)
+                            }
                         }
                     }
                 },
-                onClose = { markupMode = false },
+                onUndo = { history.undo(markupItems)?.let { markupItems = it } },
+                onRedo = { history.redo(markupItems)?.let { markupItems = it } },
+                onSaveInPlace = { executeSave(preferInPlace = true) },
+                onSaveAsCopy = { executeSave(preferInPlace = false) },
+                onClose = { markupMode = false; selectedItemId = null },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
@@ -400,7 +731,12 @@ private fun PdfViewerContent(
             ThumbnailsSheet(document, currentPage, { page -> scope.launch { list.animateScrollToItem(page) } }, { thumbsOpen = false })
         }
         if (jumpOpen) {
-            JumpDialog(document.pageCount, currentPage + 1, { page -> if (document.pageCount > 0) scope.launch { list.animateScrollToItem((page - 1).coerceIn(0, document.pageCount - 1)) }; jumpOpen = false }, { jumpOpen = false })
+            JumpDialog(
+                document.pageCount,
+                currentPage + 1,
+                { page -> if (document.pageCount > 0) scope.launch { list.animateScrollToItem((page - 1).coerceIn(0, document.pageCount - 1)) }; jumpOpen = false },
+                { jumpOpen = false }
+            )
         }
         if (searchOpen) {
             SearchSheet(
@@ -446,6 +782,44 @@ private fun PdfViewerContent(
                 onDismiss = { signatureSheetOpen = false }
             )
         }
+        completedMarkup?.let { saved ->
+            val location = saved.locationLabel?.takeIf { it.isNotBlank() }?.let {
+                stringResource(R.string.ui_saved_subfolder, it)
+            } ?: stringResource(if (saved.savedInPlace) R.string.s10_saved_in_place else R.string.s10_saved_location_default)
+            val meta = if (saved.sizeBytes > 0L) "${formatBytes(saved.sizeBytes)} · $location" else location
+            ModalBottomSheet(
+                onDismissRequest = { completedMarkup = null },
+                containerColor = colors.surfaceContainerLow
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CompletedResultCard(
+                        title = stringResource(R.string.s10_saved_title),
+                        displayName = saved.displayName,
+                        metadataLine = meta,
+                        onOpen = {
+                            completedMarkup = null
+                            if (!saved.savedInPlace) onOpenSavedOutput?.invoke(saved.uri, saved.displayName)
+                        },
+                        onShare = { shareDocument(context, saved.uri, saved.displayName) },
+                        onNewRun = {
+                            completedMarkup = null
+                            markupMode = true
+                            chromeVisible = true
+                        },
+                        newRunLabel = stringResource(R.string.t34_annotate_again)
+                    )
+                    TextButton(
+                        onClick = { completedMarkup = null },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    ) {
+                        Text(stringResource(R.string.t34_markup_done))
+                    }
+                }
+            }
+        }
         pendingTextPos?.let { (pIdx, nx, ny) ->
             AlertDialog(
                 onDismissRequest = { pendingTextPos = null },
@@ -455,7 +829,17 @@ private fun PdfViewerContent(
                     TextButton(onClick = {
                         val trimmed = textInput.trim()
                         if (trimmed.isNotEmpty()) {
-                            commitMarkup(markupItems + PdfMarkupItem.TextBox(java.util.UUID.randomUUID().toString(), pIdx, nx, ny, trimmed, activeColor.toArgb()))
+                            commitMarkup(
+                                markupItems + PdfMarkupItem.TextBox(
+                                    java.util.UUID.randomUUID().toString(),
+                                    pIdx,
+                                    nx,
+                                    ny,
+                                    trimmed,
+                                    activeColor.toArgb(),
+                                    textSizePt
+                                )
+                            )
                         }
                         pendingTextPos = null
                     }) { Text(stringResource(R.string.action_save)) }
@@ -496,12 +880,17 @@ private fun JumpDialog(count: Int, current: Int, onJump: (Int) -> Unit, onDismis
             val jumpState = stringResource(R.string.reader_page_indicator, page, safeCount)
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (safeCount > 1) Slider(value = page.toFloat(), valueRange = 1f..safeCount.toFloat(), onValueChange = { page = it.toInt(); draft = page.toString() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = jumpLabel; stateDescription = jumpState })
-                OutlinedTextField(draft, { value ->
-                    val digits = value.filter { it.isDigit() }
-                    draft = digits
-                    digits.toIntOrNull()?.let { page = it.coerceIn(1, safeCount) }
-                },
-                    label = { Text(stringResource(R.string.reader_jump_title)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    draft,
+                    { value ->
+                        val digits = value.filter { it.isDigit() }
+                        draft = digits
+                        digits.toIntOrNull()?.let { page = it.coerceIn(1, safeCount) }
+                    },
+                    label = { Text(stringResource(R.string.reader_jump_title)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Text(stringResource(R.string.reader_page_indicator, page, safeCount), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
@@ -566,7 +955,7 @@ private fun InfoSheet(info: Map<String, String>, error: Boolean, title: String, 
 @Composable
 private fun InfoRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Text(label + ": ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(110.dp))
+        Text("$label: ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(110.dp))
         Text(value, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -576,7 +965,15 @@ private val NightModeColorFilter = ColorFilter.colorMatrix(ColorMatrix(floatArra
 )))
 
 @Composable
-private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, defaultEdge: Int, onTap: () -> Unit, markupEnabled: Boolean = false, markupOverlay: @Composable () -> Unit = {}) {
+private fun ReaderPage(
+    document: PdfReaderSession,
+    page: Int,
+    dark: Boolean,
+    defaultEdge: Int,
+    onTap: () -> Unit,
+    markupEnabled: Boolean = false,
+    markupOverlay: @Composable () -> Unit = {}
+) {
     var frame by remember(document, page) { mutableStateOf<PdfReaderSession.Frame?>(null) }
     var failure by remember(document, page) { mutableStateOf<String?>(null) }
     var pageRetry by remember(document, page) { mutableIntStateOf(0) }
@@ -592,51 +989,111 @@ private fun ReaderPage(document: PdfReaderSession, page: Int, dark: Boolean, def
         catch (_: OutOfMemoryError) { failure = "LOW_MEMORY" }
     }
     fun reset() { scale = 1f; pan = Offset.Zero }
-    LaunchedEffect(markupEnabled) { if (markupEnabled) reset() }
-    val transform = rememberTransformableState { zoom, offset, _ ->
-        scale = (scale * zoom).coerceIn(1f, 5f)
-        val maxX = viewport.width * (scale - 1) / 2
-        val maxY = viewport.height * (scale - 1) / 2
-        pan = if (scale <= 1.01f) Offset.Zero else Offset((pan.x + offset.x).coerceIn(-maxX, maxX), (pan.y + offset.y).coerceIn(-maxY, maxY))
+    fun applyTransform(zoomChange: Float, panChange: Offset) {
+        val nextScale = (scale * zoomChange).coerceIn(1f, 5f)
+        scale = nextScale
+        val maxX = viewport.width * (nextScale - 1f) * 0.5f
+        val maxY = viewport.height * (nextScale - 1f) * 0.5f
+        pan = if (nextScale <= 1.01f) {
+            Offset.Zero
+        } else {
+            Offset((pan.x + panChange.x).coerceIn(-maxX, maxX), (pan.y + panChange.y).coerceIn(-maxY, maxY))
+        }
     }
+
+    val transform = rememberTransformableState { zoom, offset, _ -> applyTransform(zoom, offset) }
     val pageLabel = stringResource(R.string.reader_page, page + 1)
     val fitLabel = stringResource(R.string.ui_preview_reset_zoom)
-    val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.firstPageRatio).takeIf { it.isFinite() && it > 0f } ?: 0.707f
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.fillMaxWidth()) {
-            Box(Modifier.fillMaxWidth().aspectRatio(pageRatio)
-                .clip(QuietTheme.shapes.thumbnail).background(if (dark) Color.Black else Color.White).clipToBounds()
-                .onSizeChanged { viewport = it }.testTag("pdf.page.$page")
-                .pointerInput(page, markupEnabled) { detectTapGestures(onTap = { latestOnTap() }, onDoubleTap = { if (!markupEnabled) { if (scale > 1.01f) reset() else scale = 2.5f } }) }
+    val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.firstPageRatio)
+        .takeIf { it.isFinite() && it > 0f } ?: 0.707f
+
+    Box(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(pageRatio)
+                .background(if (dark) Color.Black else Color.White)
+                .clipToBounds()
+                .onSizeChanged { viewport = it }
+                .testTag("pdf.page.$page")
+                .pointerInput(page, markupEnabled) {
+                    if (!markupEnabled) {
+                        detectTapGestures(
+                            onTap = { latestOnTap() },
+                            onDoubleTap = { if (scale > 1.01f) reset() else scale = 2.5f }
+                        )
+                    }
+                }
+                // In markup mode, intercept 2-finger pinch-zoom & pan on Initial pass while letting 1-finger gestures draw.
+                .pointerInput(page, markupEnabled) {
+                    if (!markupEnabled) return@pointerInput
+                    awaitEachGesture {
+                        var zooming = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val pressedCount = event.changes.count { it.pressed }
+                            if (pressedCount == 0) break
+                            if (pressedCount >= 2) {
+                                zooming = true
+                                val zoomChange = event.calculateZoom()
+                                val panChange = event.calculatePan()
+                                if (zoomChange != 1f || panChange != Offset.Zero) {
+                                    applyTransform(zoomChange, panChange)
+                                }
+                                event.changes.forEach { it.consume() }
+                            } else if (zooming) {
+                                // Keep consuming remaining lift events after a pinch so lifting 1 finger doesn't leave a stray dot.
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    }
+                }
                 .semantics {
                     contentDescription = pageLabel
                     stateDescription = "${(scale * 100).toInt()}%"
                     customActions = listOf(CustomAccessibilityAction(fitLabel) { reset(); true })
                 }
-                .transformable(transform, enabled = !markupEnabled, canPan = { scale > 1f && !markupEnabled }), contentAlignment = Alignment.Center) {
+                .transformable(transform, enabled = !markupEnabled, canPan = { scale > 1f && !markupEnabled }),
+            contentAlignment = Alignment.Center
+        ) {
+            // Shared transform container so PDF bitmap and normalized [0..1] markup overlay zoom/pan in lockstep.
+            Box(
+                Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = pan.x
+                    translationY = pan.y
+                },
+                contentAlignment = Alignment.Center
+            ) {
                 frame?.takeUnless { it.bitmap.isRecycled }?.let { rendered ->
                     val imageBitmap = remember(rendered.bitmap) { rendered.bitmap.asImageBitmap() }
-                    Image(imageBitmap, null, Modifier.fillMaxSize().testTag("pdf.page.image.$page").graphicsLayer {
-                        scaleX = scale; scaleY = scale; translationX = pan.x; translationY = pan.y
-                    }, contentScale = ContentScale.Fit, colorFilter = if (dark) NightModeColorFilter else null)
+                    Image(
+                        imageBitmap,
+                        null,
+                        Modifier.fillMaxSize().testTag("pdf.page.image.$page"),
+                        contentScale = ContentScale.Fit,
+                        colorFilter = if (dark) NightModeColorFilter else null
+                    )
                 }
                 markupOverlay()
-                if (frame == null && failure == null) CircularProgressIndicator(Modifier.size(32.dp))
-                failure?.let {
-                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(userMessageResource(it)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                        TextButton(onClick = { pageRetry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
-                    }
-                }
             }
-            if (scale > 1.01f) {
-                FilledTonalButton(onClick = ::reset, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).heightIn(min = 40.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
-                    Text("${(scale * 100).toInt()}% · $fitLabel", style = MaterialTheme.typography.labelSmall)
+            if (frame == null && failure == null) CircularProgressIndicator(Modifier.size(32.dp))
+            failure?.let {
+                Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(userMessageResource(it)), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    TextButton(onClick = { pageRetry++ }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.reader_retry)) }
                 }
             }
         }
-        Text(pageLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+        if (scale > 1.01f) {
+            FilledTonalButton(
+                onClick = ::reset,
+                shape = QuietTheme.shapes.pill,
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).heightIn(min = 34.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Text("${(scale * 100).toInt()}% · $fitLabel", style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
 }
 
@@ -650,9 +1107,13 @@ private fun ReaderThumbnail(document: PdfReaderSession, page: Int, selected: Boo
         catch (_: OutOfMemoryError) { /* The full page can be retried after memory is reclaimed. */ }
     }
     val label = stringResource(R.string.reader_page, page + 1)
-    Surface(onClick = onClick, color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = QuietTheme.shapes.thumbnail, modifier = Modifier.width(76.dp).fillMaxHeight().testTag("pdf.thumbnail.$page")
-            .semantics { this.selected = selected; contentDescription = label }) {
+    Surface(
+        onClick = onClick,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = QuietTheme.shapes.thumbnail,
+        modifier = Modifier.width(76.dp).fillMaxHeight().testTag("pdf.thumbnail.$page")
+            .semantics { this.selected = selected; contentDescription = label }
+    ) {
         Column(Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 frame?.takeUnless { it.bitmap.isRecycled }?.let { rendered ->

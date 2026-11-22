@@ -25,10 +25,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -38,6 +37,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -81,10 +82,10 @@ internal fun IdCardScanFlow(
 
     var frontBmp by remember { mutableStateOf<Bitmap?>(null) }
     var backBmp by remember { mutableStateOf<Bitmap?>(null) }
-    var filter by remember { mutableStateOf(ScanFilter.CLEAN_DOCUMENT) }
+    var filter by rememberSaveable { mutableStateOf(ScanFilter.CLEAN_DOCUMENT) }
     var flashOn by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    var capturingFront by remember { mutableStateOf(true) }
+    var capturingFront by rememberSaveable { mutableStateOf(true) }
     var camera by remember { mutableStateOf<Camera?>(null) }
     val imageCapture = remember {
         ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build()
@@ -141,12 +142,11 @@ internal fun IdCardScanFlow(
         }
     }
 
-    DisposableEffect(Unit) { onDispose { frontBmp?.recycle(); backBmp?.recycle() } }
+    DisposableEffect(Unit) { onDispose { camera?.cameraControl?.enableTorch(false); frontBmp?.recycle(); backBmp?.recycle() } }
 
     val bothReady = frontBmp != null && backBmp != null
 
     if (!bothReady && hasCamera) {
-        // LIVE CAMERAX ID CARD VIEWFINDER WITH CORNER-BRACKET GUIDE FRAME
         Box(Modifier.fillMaxSize().background(Color.Black).testTag("scan.idcard.screen")) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
@@ -165,7 +165,6 @@ internal fun IdCardScanFlow(
                     }
                 }
             )
-            // Corner-bracket ID card frame overlay
             Canvas(Modifier.fillMaxSize()) {
                 val frameW = size.width * 0.86f
                 val frameH = frameW / 1.586f
@@ -174,12 +173,10 @@ internal fun IdCardScanFlow(
                 val bracket = 28.dp.toPx()
                 val stroke = 3.5.dp.toPx()
                 val accent = Color(0xFF00D2B4)
-                // Dim outside frame
                 drawRect(Color.Black.copy(alpha = 0.52f), Offset.Zero, Size(size.width, top))
                 drawRect(Color.Black.copy(alpha = 0.52f), Offset(0f, top + frameH), Size(size.width, size.height - top - frameH))
                 drawRect(Color.Black.copy(alpha = 0.52f), Offset(0f, top), Size(left, frameH))
                 drawRect(Color.Black.copy(alpha = 0.52f), Offset(left + frameW, top), Size(size.width - left - frameW, frameH))
-                // 4 corner brackets
                 fun corner(x: Float, y: Float, dx: Float, dy: Float) {
                     drawLine(accent, Offset(x, y), Offset(x + dx, y), stroke, StrokeCap.Round)
                     drawLine(accent, Offset(x, y), Offset(x, y + dy), stroke, StrokeCap.Round)
@@ -189,7 +186,6 @@ internal fun IdCardScanFlow(
                 corner(left, top + frameH, bracket, -bracket)
                 corner(left + frameW, top + frameH, -bracket, -bracket)
             }
-            // Top bar: Back, Step Pill (Front/Back), Flash
             Row(
                 Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -216,7 +212,6 @@ internal fun IdCardScanFlow(
                     Icon(Icons.Rounded.AutoAwesome, stringResource(R.string.scan_flash), tint = if (flashOn) Color(0xFFFFD54F) else Color.White)
                 }
             }
-            // Bottom studio controls: Captured Front thumb, Shutter, Gallery import
             Column(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(bottom = 24.dp, start = 24.dp, end = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -232,7 +227,6 @@ internal fun IdCardScanFlow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Front thumbnail badge if captured
                     Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                         frontBmp?.takeUnless { it.isRecycled }?.let { thumb ->
                             Surface(
@@ -245,7 +239,7 @@ internal fun IdCardScanFlow(
                             }
                         }
                     }
-                    // Circular Shutter Button
+                    val captureLabel = stringResource(R.string.scan_capture)
                     Surface(
                         onClick = {
                             if (busy) return@Surface
@@ -271,9 +265,8 @@ internal fun IdCardScanFlow(
                         shape = CircleShape,
                         color = Color.White,
                         border = BorderStroke(4.dp, Color(0xFF00D2B4)),
-                        modifier = Modifier.size(72.dp)
+                        modifier = Modifier.size(72.dp).semantics { contentDescription = captureLabel }
                     ) {}
-                    // Gallery picker fallback
                     Surface(
                         onClick = { galleryPicker.launch("image/*") },
                         shape = CircleShape,
@@ -290,7 +283,6 @@ internal fun IdCardScanFlow(
         return
     }
 
-    // REVIEW & FILTER A4 2-IN-1 PREVIEW (or fallback when camera permission denied)
     val filterChoices = remember {
         listOf(
             ScanFilter.ORIGINAL to R.string.scan_filter_original,
@@ -360,6 +352,9 @@ private fun CardSlot(label: String, bmp: Bitmap?, filter: ScanFilter, modifier: 
         value = if (bmp == null) null else withContext(Dispatchers.Default) {
             runCatching { DocumentFilterEngine.apply(bmp, filter) }.getOrNull() ?: bmp
         }
+    }
+    DisposableEffect(filtered, bmp) {
+        onDispose { if (filtered != null && filtered !== bmp && !filtered!!.isRecycled) filtered?.recycle() }
     }
     Surface(
         onClick = onPick,

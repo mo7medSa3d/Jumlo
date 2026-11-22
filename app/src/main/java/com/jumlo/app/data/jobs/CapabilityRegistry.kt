@@ -5,7 +5,6 @@ import com.jumlo.app.model.*
 /** Catalog and common standard availability policy. Availability does not certify device qualification. */
 object CapabilityRegistry {
     val allTools: List<UtilityTool> = listOf(
-        // PDF Tools
         UtilityTool("pdf_to_docx", "tools/pdf/word", PillarCategory.PDF, "PDF to Word", "\u200F\u2066PDF\u2069 إلى \u2066Word\u2069", "Turn PDFs into editable Word docs", "حوّل PDF إلى مستند Word قابل للتحرير", "description"),
         UtilityTool("pdf_to_pptx", "tools/pdf/powerpoint", PillarCategory.PDF, "PDF to PowerPoint", "\u200F\u2066PDF\u2069 إلى \u2066PowerPoint\u2069", "Turn every page into a slide", "حوّل كل صفحة إلى شريحة", "slideshow"),
         UtilityTool("pdf_02", "images_to_pdf", PillarCategory.PDF, "Images to PDF", "صور إلى \u2066PDF\u2069", "Turn photos into a clean PDF", "حوّل صورك إلى PDF نظيف", "picture_as_pdf"),
@@ -27,7 +26,6 @@ object CapabilityRegistry {
         UtilityTool("pdf_ocr", "tools/pdf/ocr", PillarCategory.PDF, "Extract Text", "استخراج النص", "Extract text from images and PDFs", "استخرج النص من الصور و\u2066PDF\u2069 بدقة عالية", "text_fields"),
         UtilityTool("scan_doc", "tools/scan", PillarCategory.PDF, "Smart Scan", "المسح الذكي", "Scan a stack of pages into one PDF", "امسح عدة صفحات في PDF واحد", "document_scanner"),
 
-        // Image Tools
         UtilityTool("img_01", "convert_images", PillarCategory.IMAGES, "Convert Images", "تحويل الصور", "Convert images in batches, fast", "حوّل الصور دفعات وبسرعة", "photo_library"),
         UtilityTool("img_02", "resize_images", PillarCategory.IMAGES, "Resize Images", "تغيير أبعاد الصور", "Resize images to exactly the size you need", "غيّر حجم الصور إلى المقاس المطلوب تمامًا", "aspect_ratio"),
         UtilityTool("img_03", "crop_rotate_flip", PillarCategory.IMAGES, "Crop, Rotate & Flip", "قص وتدوير وقلب الصور", "Crop, rotate, and flip with confidence", "اقصص ودوّر واقلِب بثقة", "crop"),
@@ -35,12 +33,10 @@ object CapabilityRegistry {
         UtilityTool("img_watermark", "img_watermark", PillarCategory.IMAGES, "Watermark Images", "علامة مائية للصور", "Protect your images with your mark", "احمِ صورك بعلامتك", "approval"),
         UtilityTool("img_join", "img_join", PillarCategory.IMAGES, "Join / Collage", "دمج الصور", "Build beautiful collages in minutes", "أنشئ كولاجات جميلة في دقائق", "grid_view"),
 
-        // Download Tools
         UtilityTool("dl_media", "media_download", PillarCategory.DOWNLOADS, "Download", "تنزيل", "", "", "download"),
         UtilityTool("dl_02", "add_single_url", PillarCategory.DOWNLOADS, "New Direct Download", "تنزيل مباشر و\u2066Google Drive\u2069", "Grab any direct file or Drive link, fast", "احصل على أي ملف مباشر أو رابط Drive بسرعة", "add_link"),
         UtilityTool("dl_03", "batch_url_intake", PillarCategory.DOWNLOADS, "Batch URL Intake", "إدخال دفعة روابط", "Paste a whole list of links — we'll handle them all", "الصق قائمة روابط كاملة — وسنتولى الباقي", "download"),
 
-        // File Tools
         UtilityTool("file_07", "create_zip", PillarCategory.FILES, "Create ZIP Archive", "إنشاء أرشيف \u2066ZIP\u2069", "Bundle files into one tidy ZIP", "اجمع الملفات في ZIP واحد مرتب", "folder_zip"),
         UtilityTool("file_08", "extract_zip", PillarCategory.FILES, "Extract ZIP Archive", "فك ضغط \u2066ZIP\u2069", "Unzip anything, safely", "فك ضغط أي ملف بأمان", "unarchive"),
         UtilityTool("file_encrypted_zip", "encrypted_zip", PillarCategory.FILES, "Encrypted ZIP", "\u200F\u2066ZIP\u2069 مشفر", "ZIPs locked with AES encryption", "ملفات ZIP مقفلة بتشفير AES", "lock"),

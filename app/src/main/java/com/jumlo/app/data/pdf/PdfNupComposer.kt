@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import com.jumlo.app.core.ImageWorkPolicy
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.multipdf.LayerUtility
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -15,9 +16,14 @@ import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.util.Matrix
 import java.io.File
 import kotlin.math.min
+import kotlin.math.roundToInt
 
-/** Combines 2 or 4 PDF pages onto each ISO A4 sheet (vector-preserving in color; grayscale ink-saver supported). */
+/** Combines 2 or 4 PDF pages onto each ISO A4 sheet (vector-preserving in color; crisp 300 DPI grayscale ink-saver supported). */
 object PdfNupComposer {
+    private const val MARGIN_PT = 14f
+    private const val GAP_PT = 10f
+    private const val GRAYSCALE_MAX_EDGE = 3200
+
     fun compose(
         inputPdf: File,
         outputPdf: File,
@@ -31,8 +37,8 @@ object PdfNupComposer {
         val sheetH = if (pagesPerSheet == 2) 595f else 842f
         val cols = 2
         val rows = if (pagesPerSheet == 2) 1 else 2
-        val margin = 18f
-        val gap = 12f
+        val margin = MARGIN_PT
+        val gap = GAP_PT
         val cellW = (sheetW - margin * 2 - gap * (cols - 1)) / cols
         val cellH = (sheetH - margin * 2 - gap * (rows - 1)) / rows
         var outPages = 0
@@ -86,6 +92,8 @@ object PdfNupComposer {
                         }
                     }
                 } else {
+                    val effectiveBudget = ImageWorkPolicy.effectiveBudget(maxBitmapBytes)
+                    val renderBudget = (effectiveBudget / 2).coerceAtLeast(4L)
                     PdfPageRasterizer(inputPdf, checkCancel).use { raster ->
                         var idx = 0
                         while (idx < total) {
@@ -97,21 +105,15 @@ object PdfNupComposer {
                                 for (slot in 0 until pagesPerSheet) {
                                     if (idx >= total) break
                                     checkCancel()
-                                    val raw = raster.render(idx, 1800, minOf(maxBitmapBytes / 2, 24L * 1024 * 1024))
-                                    val gray = try { toGrayscale(raw) } finally { raw.recycle() }
-                                    try {
-                                        val img = JPEGFactory.createFromImage(dst, gray, 0.92f)
-                                        val c = slot % cols
-                                        val r = slot / cols
-                                        val ox = margin + c * (cellW + gap)
-                                        val oy = sheetH - margin - (r + 1) * cellH - r * gap
-                                        val scale = min(cellW / img.width, cellH / img.height)
-                                        val w = img.width * scale
-                                        val h = img.height * scale
-                                        cs.drawImage(img, ox + (cellW - w) / 2f, oy + (cellH - h) / 2f, w, h)
-                                    } finally {
-                                        gray.recycle()
-                                    }
+                                    val img = renderGrayscalePageWithRetry(dst, raster, idx, GRAYSCALE_MAX_EDGE, renderBudget)
+                                    val c = slot % cols
+                                    val r = slot / cols
+                                    val ox = margin + c * (cellW + gap)
+                                    val oy = sheetH - margin - (r + 1) * cellH - r * gap
+                                    val scale = min(cellW / img.width, cellH / img.height)
+                                    val w = img.width * scale
+                                    val h = img.height * scale
+                                    cs.drawImage(img, ox + (cellW - w) / 2f, oy + (cellH - h) / 2f, w, h)
                                     idx++
                                 }
                             }
@@ -125,17 +127,50 @@ object PdfNupComposer {
         return outPages
     }
 
+    private fun renderGrayscalePageWithRetry(
+        dst: PDDocument,
+        raster: PdfPageRasterizer,
+        pageIndex: Int,
+        maxEdge: Int,
+        budget: Long
+    ): com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject {
+        var edge = maxEdge
+        var currentBudget = budget
+        var lastOom: OutOfMemoryError? = null
+        for (attempt in 0 until 4) {
+            var raw: Bitmap? = null
+            var gray: Bitmap? = null
+            try {
+                raw = raster.render(pageIndex, edge, currentBudget)
+                gray = toGrayscale(raw)
+                if (!raw.isRecycled) raw.recycle()
+                raw = null
+                return JPEGFactory.createFromImage(dst, gray, 0.92f)
+            } catch (oom: OutOfMemoryError) {
+                lastOom = oom
+                edge = (edge * 0.75).roundToInt().coerceAtLeast(256)
+                currentBudget = (currentBudget / 2L).coerceAtLeast(4L * 1024 * 1024)
+                System.gc()
+            } finally {
+                raw?.let { if (!it.isRecycled) it.recycle() }
+                gray?.let { if (!it.isRecycled) it.recycle() }
+            }
+        }
+        throw lastOom ?: OutOfMemoryError("Grayscale N-up render exceeded available memory")
+    }
+
     private fun toGrayscale(src: Bitmap): Bitmap {
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
         try {
-        val canvas = Canvas(out)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
-        }
-        canvas.drawBitmap(src, 0f, 0f, paint)
-        return out
+            val canvas = Canvas(out)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                colorFilter = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+            }
+            canvas.drawBitmap(src, 0f, 0f, paint)
+            out.setHasAlpha(false)
+            return out
         } catch (t: Throwable) {
-            out.recycle()
+            if (!out.isRecycled) out.recycle()
             throw t
         }
     }

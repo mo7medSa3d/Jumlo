@@ -12,7 +12,9 @@ import com.jumlo.app.data.processing.PdfSplitSettings
 import com.jumlo.app.data.processing.ImageWatermarkSettings
 import com.jumlo.app.data.processing.PdfStampSettings
 import com.jumlo.app.data.processing.PdfProtectSettings
+import com.jumlo.app.data.processing.ArchiveSettings
 import com.jumlo.app.data.processing.DownloadSettings
+import com.jumlo.app.data.processing.ImageCompressionSettings
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.*
@@ -192,5 +194,68 @@ class WorkspaceSettingsTest {
         assertEquals(com.jumlo.app.core.DirectFileKind.VIDEO, DownloadLinkPolicy.classifyDirectFile("clip.mp4", "video/mp4"))
         assertEquals(com.jumlo.app.core.DirectFileKind.AUDIO, DownloadLinkPolicy.classifyDirectFile("song.mp3", "audio/mpeg"))
         assertFalse(DownloadLinkPolicy.isDirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ"))
+    }
+
+    @Test fun pdfLongImagePropagatesSeparateImagesAndNativeQualityDefaults() {
+        val defaultSettings = Json.decodeFromString<PdfImagesSettings>(
+            WorkspaceDraft.forTool("pdf_long_image", listOf("pdf")).executionSettings()
+        )
+        assertEquals(300, defaultSettings.dpi)
+        assertEquals("PNG", defaultSettings.format)
+        assertEquals(100, defaultSettings.quality)
+        assertTrue(defaultSettings.keepOriginalImageQuality)
+        assertFalse(defaultSettings.separateImages)
+
+        val separateSettings = Json.decodeFromString<PdfImagesSettings>(
+            WorkspaceDraft.forTool("pdf_long_image", listOf("pdf"))
+                .copy(flag1 = false, flag2 = true, format = "JPEG", quality = "88")
+                .executionSettings()
+        )
+        assertFalse(separateSettings.keepOriginalImageQuality)
+        assertTrue(separateSettings.separateImages)
+        assertEquals("JPEG", separateSettings.format)
+        assertEquals(88, separateSettings.quality)
+    }
+
+    @Test fun unifiedArchiveToolCarriesOptionalPasswordAndCompressionLevel() {
+        val plain = Json.decodeFromString<ArchiveSettings>(
+            WorkspaceDraft.forTool("file_07", listOf("src")).copy(zipLevel = "9", secret1 = "   ").executionSettings()
+        )
+        assertEquals(9, plain.compressionLevel)
+        assertNull(plain.password)
+
+        val encrypted = Json.decodeFromString<ArchiveSettings>(
+            WorkspaceDraft.forTool("file_07", listOf("src")).copy(zipLevel = "5", secret1 = "vault-pass").executionSettings()
+        )
+        assertEquals(5, encrypted.compressionLevel)
+        assertEquals("vault-pass", encrypted.password)
+    }
+
+    @Test fun unifiedImageStudioPreservesCropTransformAndRejectsInvertedBounds() {
+        val settings = Json.decodeFromString<ImageCompressionSettings>(
+            WorkspaceDraft.forTool("img_04", listOf("img"))
+                .copy(cropLeft = "0.1", cropTop = "0.2", cropRight = "0.8", cropBottom = "0.9", turns = 1, flipX = true, flipY = false)
+                .executionSettings()
+        )
+        assertEquals(0.1, settings.left, 1e-6)
+        assertEquals(0.2, settings.top, 1e-6)
+        assertEquals(0.8, settings.right, 1e-6)
+        assertEquals(0.9, settings.bottom, 1e-6)
+        assertEquals(1, settings.rotationQuarterTurns)
+        assertTrue(settings.flipX)
+        assertFalse(settings.flipY)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun unifiedImageStudioRejectsInvertedCropBounds() {
+        WorkspaceDraft.forTool("img_04", listOf("img")).copy(cropLeft = "0.8", cropRight = "0.2").executionSettings()
+    }
+
+    @Test fun splitPdfSupportsExtractSingleMode() {
+        val settings = Json.decodeFromString<PdfSplitSettings>(
+            WorkspaceDraft.forTool("pdf_05", listOf("pdf")).copy(pages = "2-4", text4 = "EXTRACT_SINGLE").executionSettings()
+        )
+        assertEquals("EXTRACT_SINGLE", settings.mode)
+        assertEquals("2-4", settings.pages)
     }
 }

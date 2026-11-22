@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="s8_markup_tool_eraser">Eraser</string>
+    <string name="s8_markup_size">Size</string>
+    <string name="s8_markup_saving">Saving…</string>
+    <string name="s8_markup_saved">Saved to file</string>
+    <string name="s8_markup_saved_copy">Saved as copy</string>
+    <string name="s8_markup_save_in_place">Save to file</string>
+    <string name="s8_markup_save_copy">Save as copy</string>
+    <string name="s8_markup_save_failed">Could not save changes</string>
+    <string name="s8_markup_resize_signature">Resize signature</string>
+    <string name="s8_markup_delete_item">Delete</string>
+    <string name="s8_markup_brightness">Brightness</string>
+</resources>

@@ -41,9 +41,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.ui.components.QuietPrimaryButton
-import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
+import com.jumlo.app.ui.icons.automirrored.rounded.Redo
+import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
@@ -124,12 +125,13 @@ fun ScanScreen(
                         }
                     }
                 }
+                val startScanLabel = stringResource(R.string.scan_title)
                 Surface(
                     onClick = { if (!externalBusy) format = selectedMode },
                     shape = androidx.compose.foundation.shape.CircleShape,
                     color = androidx.compose.ui.graphics.Color.White,
                     border = androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.padding(bottom = 8.dp).size(72.dp)
+                    modifier = Modifier.padding(bottom = 8.dp).size(72.dp).semantics { contentDescription = startScanLabel }
                 ) {}
                 Spacer(Modifier.height(10.dp))
             }
@@ -240,9 +242,9 @@ fun SignaturePad(onSaved: (File) -> Unit) {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             IconButton(onClick = { strokes.lastOrNull()?.let { last -> undone = undone + last; strokes = strokes.dropLast(1) } }, enabled = strokes.isNotEmpty() && !busy,
-                modifier = Modifier.size(48.dp).testTag("signature.undo")) { Icon(Icons.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
+                modifier = Modifier.size(48.dp).testTag("signature.undo")) { Icon(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.visual_edit_undo)) }
             IconButton(onClick = { undone.lastOrNull()?.let { last -> strokes = strokes + last; undone = undone.dropLast(1) } }, enabled = undone.isNotEmpty() && !busy,
-                modifier = Modifier.size(48.dp).testTag("signature.redo")) { Icon(Icons.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
+                modifier = Modifier.size(48.dp).testTag("signature.redo")) { Icon(Icons.AutoMirrored.Rounded.Redo, stringResource(R.string.visual_edit_redo)) }
             TextButton(onClick = { strokes = emptyList(); undone = emptyList(); activePoints.clear() }, enabled = !busy && hasInk, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.signature_clear))
             }
