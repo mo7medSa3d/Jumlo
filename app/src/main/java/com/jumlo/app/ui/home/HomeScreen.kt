@@ -2,6 +2,7 @@ package com.jumlo.app.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -110,7 +111,7 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
             HomeQuickActionSpec(R.string.modern_all_tools, "all_tools", "pdf_01", onTools)
         )
     }
-    BoxWithConstraints(Modifier.fillMaxSize().testTag("home.screen")) {
+    Box(Modifier.fillMaxSize().testTag("home.screen")) {
         val actionColumns = 4
         val frequentColumns = 4
         val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
