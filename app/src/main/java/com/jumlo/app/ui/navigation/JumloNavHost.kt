@@ -97,7 +97,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val formToolId by remember(viewModel) {
         viewModel.form.map { it.toolId }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = viewModel.form.value.toolId)
+    }.collectAsStateWithLifecycle(initialValue = "pdf_02")
     val printSource by viewModel.printSource.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val undoTrashIds by viewModel.undoTrashIds.collectAsStateWithLifecycle()

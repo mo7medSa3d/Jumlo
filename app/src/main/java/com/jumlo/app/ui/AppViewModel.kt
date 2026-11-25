@@ -1122,7 +1122,7 @@ data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:I
                 val config=Json.decodeFromString<DownloadSettings>(job.request.settingsJson)
                 val lines=replacementUrls.take(100000).lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
                 require(lines.isNotEmpty() && lines.size<=100 && (job.request.toolId=="dl_03" || lines.size==1)) { "INVALID_DOWNLOAD_LIST" }
-                lines.forEach { line -> HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line), config.allowHttp) }
+                lines.forEach { line -> HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line), config.cleartextConsent) }
                 lines.joinToString("\n").toCharArray().let { chars -> try { secrets.replaceDownload(config.urlSecretHandle,chars) } finally { chars.fill('\u0000') } }
             }
             jobStore.retryFailed(job.request.id)

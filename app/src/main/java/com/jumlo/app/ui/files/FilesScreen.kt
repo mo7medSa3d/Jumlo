@@ -879,7 +879,7 @@ import com.jumlo.app.model.*
                                         vm.restoreOutput(entry.id)
                                     }
                                 },
-                                icon = fileIcon(entry.displayName),
+                                icon = fileIconFor(entry.displayName.substringAfterLast('.', "")),
                                 selection = if (selecting) entry.id in selected else null,
                                 onSelect = { haptics.selectionToggle(); selected = selected.symmetric(entry.id) },
                                 showOverflow = !selecting,

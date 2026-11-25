@@ -172,7 +172,6 @@ fun Modifier.fileDragDropContainer(
                 }
                 trackedChange.consume()
                 when {
-                    event.type == PointerEventType.Cancel -> dragState.cancelDrag()
                     trackedChange.changedToUpIgnoreConsumed() || !trackedChange.pressed -> {
                         val (ids, target) = dragState.finishDrag()
                         if (ids.isNotEmpty() && target != null) {
