@@ -34,12 +34,14 @@ object ToolCatalogue {
                 "pdf_ocr",       // text extraction
                 "pdf_02",        // images to PDF
                 "pdf_03",        // merge
-                "pdf_05",        // split / extract pages
+                "pdf_05",        // split PDF
+                "pdf_06",        // extract pages
                 "pdf_04",        // organise pages
                 "pdf_compress",
                 "pdf_signature",
                 "pdf_protect",   // password protect / unlock
-                "pdf_long_image" // PDF to images / single long image
+                "pdf_07",        // PDF to images (one image per page)
+                "pdf_long_image" // PDF to long image
             ),
             merged = listOf(
                 "pdf_crop",
@@ -56,11 +58,11 @@ object ToolCatalogue {
         ),
         WorkspaceEntry(
             ToolWorkspace.IMAGES,
-            // img_04 is the unified "Edit & Optimize Image" studio; img_01 (convert) and
-            // img_03 (crop/rotate) stay registered for internal routing and modes.
             primary = listOf(
-                "img_04",        // edit, convert, crop & compress
+                "img_01",        // convert images
                 "img_02",        // resize
+                "img_03",        // crop, rotate & flip
+                "img_04",        // compress / optimize
                 "img_join",
                 "img_watermark"
             ),
@@ -68,20 +70,17 @@ object ToolCatalogue {
         ),
         WorkspaceEntry(
             ToolWorkspace.FILES,
-            // file_07 is the unified "Create ZIP" entry (with optional password);
-            // file_encrypted_zip stays registered for internal encrypted ZIP routing.
             primary = listOf(
-                "file_07",           // create an archive (standard or encrypted)
+                "file_07",           // create an archive
                 "file_08",           // extract an archive
+                "file_encrypted_zip",// encrypted ZIP (AES)
                 "file_batch_rename"
             ),
             merged = emptyList()
         ),
         WorkspaceEntry(
             ToolWorkspace.DOWNLOADS,
-            // One download tool covers direct links, batches and media. dl_02/dl_03 stay
-            // registered for internal direct/batch job routing but are not user-facing.
-            primary = listOf("dl_media"),
+            primary = listOf("dl_media", "dl_02", "dl_03"),
             merged = emptyList()
         )
     )
@@ -91,17 +90,9 @@ object ToolCatalogue {
     private val mergedIds = entries.flatMap { it.merged }.toSet()
 
     /** Maps consolidated legacy tool IDs to their unified user-facing target ID. */
-    private val legacyAliases: Map<String, String> = mapOf(
-        "img_01" to "img_04",
-        "img_03" to "img_04",
-        "file_encrypted_zip" to "file_07",
-        "dl_02" to "dl_media",
-        "dl_03" to "dl_media",
-        "pdf_06" to "pdf_05",
-        "pdf_07" to "pdf_long_image"
-    )
+    private val legacyAliases: Map<String, String> = emptyMap()
 
-    private val hidden: Set<String> = legacyAliases.keys
+    private val hidden: Set<String> = emptySet()
 
     fun all(): List<WorkspaceEntry> = entries
 

@@ -250,6 +250,7 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     val jobs by vm.jobs.collectAsStateWithLifecycle()
     val jobLoad by vm.jobLoad.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
+    val trashed by vm.trashed.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val sources by vm.imported.collectAsStateWithLifecycle()
     var details by remember { mutableStateOf<OutputRecord?>(null) }
@@ -257,10 +258,21 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     val activeJobs=remember(relevantJobs) { relevantJobs.filter(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val recentJobs=remember(relevantJobs) { relevantJobs.filterNot(JobSnapshot::isActive).sortedByDescending(JobSnapshot::updatedAtEpochMs) }
     val availableOutputs=remember(outputs,selectedJob) { outputs.filter { selectedJob==null || it.jobId==selectedJob } }
+    val jobHasTrashedOutputs=remember(trashed,selectedJob) { selectedJob!=null && trashed.any { it.jobId==selectedJob } }
     val sourceNamesById=remember(sources) { sources.associate { it.id to it.displayName } }
     val focusJob=remember(relevantJobs,selectedJob) { selectedJob?.let { id -> relevantJobs.firstOrNull { it.request.id==id } } }
+    var finalizingTimedOut by remember(focusJob?.request?.id) { mutableStateOf(false) }
+    val waitingForOutputs = focusJob?.progress?.stage == JobStage.COMPLETED && availableOutputs.isEmpty() && !jobHasTrashedOutputs && focusJob.outcomes.isNotEmpty()
+    LaunchedEffect(focusJob?.request?.id, waitingForOutputs) {
+        if (!waitingForOutputs) {
+            finalizingTimedOut = false
+        } else {
+            kotlinx.coroutines.delay(2500L)
+            finalizingTimedOut = true
+        }
+    }
     val completedOutputsReady = focusJob?.progress?.stage == JobStage.COMPLETED && availableOutputs.isNotEmpty()
-    val completedOutputsPending = focusJob?.progress?.stage == JobStage.COMPLETED && availableOutputs.isEmpty()
+    val completedOutputsPending = waitingForOutputs && !finalizingTimedOut
     Box(Modifier.fillMaxSize()) {
     LazyColumn(Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=QuietTheme.spacing.listBottomBuffer),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item("activity-summary") {

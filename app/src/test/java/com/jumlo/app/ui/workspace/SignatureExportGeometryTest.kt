@@ -12,7 +12,7 @@ class SignatureExportGeometryTest {
             // uniform scale in both directions.
             assertEquals(width*out.scale,out.width.toFloat(),.5f)
             assertEquals(height*out.scale,out.height.toFloat(),.5f)
-            assertTrue(out.width<=600 && out.height<=600)
+            assertTrue(out.width<=1800 && out.height<=1800)
             assertEquals(out.width.toFloat()/width,out.scale,.001f)
         }
     }

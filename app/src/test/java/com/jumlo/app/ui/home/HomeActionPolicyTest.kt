@@ -24,17 +24,14 @@ class HomeActionPolicyTest {
         assertEquals(listOf("pdf_02", "pdf_03", "img_02", "dl_media", "pdf_05", "pdf_long_image"), afterSixth)
     }
 
-    @Test fun togglePinCanonicalizesAndDeduplicatesLegacyIds() {
-        // Pinning canonical img_04 when legacy img_01 is saved unpins the consolidated tool.
-        assertEquals(emptyList<String>(), HomeActionPolicy.togglePin(listOf("img_01"), "img_04"))
-        // Duplicate legacy + canonical entries collapse to a single canonical entry.
+    @Test fun togglePinDeduplicatesDistinctIds() {
+        assertEquals(listOf("img_01", "img_04"), HomeActionPolicy.togglePin(listOf("img_01"), "img_04"))
         assertEquals(
-            listOf("img_04", "pdf_05"),
+            listOf("img_01", "img_04", "pdf_06"),
             HomeActionPolicy.togglePin(listOf("img_01", "img_04"), "pdf_06")
         )
-        // Migrates pdf_06 -> pdf_05, pdf_07 -> pdf_long_image, file_encrypted_zip -> file_07, dl_02 -> dl_media.
         assertEquals(
-            listOf("pdf_05", "pdf_long_image", "file_07", "dl_media", "scan_doc"),
+            listOf("pdf_06", "pdf_07", "file_encrypted_zip", "dl_02", "scan_doc"),
             HomeActionPolicy.togglePin(
                 listOf("pdf_06", "pdf_07", "file_encrypted_zip", "dl_02"),
                 "scan_doc"
@@ -42,12 +39,12 @@ class HomeActionPolicyTest {
         )
     }
 
-    @Test fun resolveCanonicalizesLegacySavedPinsAndPreservesOrder() {
-        val eligible = listOf("pdf_05", "pdf_long_image", "file_07", "img_04", "dl_media")
+    @Test fun resolveFiltersToEligibleAndPreservesOrder() {
+        val eligible = listOf("pdf_05", "pdf_07", "pdf_long_image", "file_07", "img_04", "dl_media")
         val resolved = HomeActionPolicy.resolve(
-            saved = listOf("img_01", "img_04", "pdf_06", "pdf_07", "file_encrypted_zip", "dl_03"),
+            saved = listOf("img_01", "img_04", "pdf_07", "pdf_long_image", "file_07", "dl_media"),
             eligible = eligible
         )
-        assertEquals(listOf("img_04", "pdf_05", "pdf_long_image", "file_07", "dl_media"), resolved)
+        assertEquals(listOf("img_04", "pdf_07", "pdf_long_image", "file_07", "dl_media"), resolved)
     }
 }

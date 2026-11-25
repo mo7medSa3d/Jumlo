@@ -364,22 +364,7 @@ import com.jumlo.app.model.*
         settings.fileFolders.filter { it.parentId == activeFolderId }
     }
     val folderRows = remember(currentFolders, columns) { currentFolders.chunked(columns) }
-    LaunchedEffect(dragState.isDragging, dragState.hoveredTargetId, currentFolders) {
-        val targetId = dragState.hoveredTargetId
-        if (!dragState.isDragging || targetId == null) return@LaunchedEffect
-        val targetFolder = currentFolders.firstOrNull { it.id == targetId } ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(650L)
-        if (dragState.isDragging && dragState.hoveredTargetId == targetId) {
-            haptics.snap()
-            openFolderSafely(targetFolder)
-        }
-    }
     Column(modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter)) {
-    ActiveDragDropBanner(
-        dragState = dragState,
-        activeFolderId = activeFolder?.id,
-        activeFolderName = activeFolder?.name
-    )
     LazyColumn(
         state=listState,
         modifier=Modifier.weight(1f).fillMaxWidth(),

@@ -90,13 +90,13 @@ private data class ToolSection(val key: String, val titleEn: String, val titleAr
  */
 private val toolSections = listOf(
     ToolSection("scan", "Scan & Convert", "المسح والتحويل",
-        setOf("scan_doc", "scan_id_card", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_long_image")),
+        setOf("scan_doc", "scan_id_card", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_07", "pdf_long_image")),
     ToolSection("edit", "PDF Edit & Security", "تحرير وحماية PDF",
-        setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
+        setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_06", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
     ToolSection("optimize", "Images", "الصور",
-        setOf("img_04", "img_02", "img_watermark", "img_join")),
+        setOf("img_01", "img_02", "img_03", "img_04", "img_watermark", "img_join")),
     ToolSection("files", "Files & Download", "الملفات والتنزيل",
-        setOf("dl_media", "file_07", "file_08", "file_batch_rename"))
+        setOf("dl_media", "dl_02", "dl_03", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
@@ -441,40 +441,40 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
 /** Concise task labels; full catalogue titles still support search and workspace headings. */
 internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
     val labels = when (tool.id) {
-        "pdf_01" -> "View PDF" to "عرض PDF"
-        "pdf_02" -> "Images to PDF" to "صور إلى PDF"
+        "pdf_01" -> "Reader" to "عارض PDF"
+        "pdf_02" -> "Images → PDF" to "صور → PDF"
         "pdf_03" -> "Merge" to "دمج"
-        "pdf_04" -> "Organize pages" to "ترتيب الصفحات"
-        "pdf_05" -> "Split / Extract" to "تقسيم / استخراج"
-        "pdf_06" -> "Extract pages" to "استخراج صفحات"
-        "pdf_07" -> "To Images" to "إلى صور"
-        "pdf_long_image" -> "PDF to Images" to "PDF إلى صور"
-        "pdf_to_docx" -> "To Word" to "إلى Word"
-        "pdf_to_pptx" -> "PDF to PowerPoint" to "PDF إلى PowerPoint"
-        "office_to_pdf" -> "Office to PDF" to "أوفيس إلى PDF"
-        "pdf_ocr" -> "Extract Text" to "استخراج النص"
+        "pdf_04" -> "Organize" to "ترتيب"
+        "pdf_05" -> "Split" to "تقسيم"
+        "pdf_06" -> "Extract" to "استخراج"
+        "pdf_07" -> "PDF Images" to "صور PDF"
+        "pdf_long_image" -> "Long Image" to "صورة مطولة"
+        "pdf_to_docx" -> "Word" to "Word"
+        "pdf_to_pptx" -> "PowerPoint" to "PowerPoint"
+        "office_to_pdf" -> "Office → PDF" to "أوفيس → PDF"
+        "pdf_ocr" -> "OCR Text" to "استخراج نص"
         "pdf_compress" -> "Compress" to "ضغط"
-        "pdf_protect" -> "Lock / Unlock" to "قفل / فك قفل"
-        "pdf_nup" -> "2/4 per page" to "طباعة 2/4 في 1"
-        "pdf_privacy_redact" -> "Redact" to "طمس البيانات"
+        "pdf_protect" -> "Protect" to "حماية"
+        "pdf_nup" -> "2/4-in-1" to "2/4 في 1"
+        "pdf_privacy_redact" -> "Redact" to "طمس"
         "pdf_stamp" -> "Watermark" to "علامة مائية"
         "pdf_signature" -> "Sign" to "توقيع"
-        "pdf_crop" -> "Crop pages" to "قص الصفحات"
+        "pdf_crop" -> "Crop" to "قص"
         "scan_doc" -> "Smart Scan" to "مسح ذكي"
-        "scan_id_card" -> "ID Card" to "مسح البطاقة"
-        "img_01" -> "Convert images" to "تحويل الصور"
+        "scan_id_card" -> "ID Card" to "البطاقة"
+        "img_01" -> "Convert" to "تحويل"
         "img_02" -> "Resize" to "تغيير الحجم"
-        "img_03" -> "Crop & rotate" to "قص وتدوير"
-        "img_04" -> "Edit & Optimize Image" to "تعديل وضغط الصور"
+        "img_03" -> "Crop & Rotate" to "قص وتدوير"
+        "img_04" -> "Compress" to "ضغط الصور"
         "img_watermark" -> "Watermark" to "علامة مائية"
-        "img_join" -> "Join images" to "دمج الصور"
+        "img_join" -> "Collage" to "كولاج"
         "dl_media" -> "Download" to "تنزيل"
-        "dl_02" -> "Direct link" to "رابط مباشر"
-        "dl_03" -> "Batch links" to "عدة روابط"
-        "file_07" -> "Create ZIP" to "إنشاء ZIP"
-        "file_08" -> "Extract ZIP" to "فك ZIP"
-        "file_encrypted_zip" -> "Encrypted ZIP" to "ZIP مشفر"
-        "file_batch_rename" -> "Batch rename" to "تسمية جماعية"
+        "dl_02" -> "Direct Link" to "رابط مباشر"
+        "dl_03" -> "Batch Links" to "دفعة روابط"
+        "file_07" -> "Zip" to "إنشاء ZIP"
+        "file_08" -> "Unzip" to "فك ZIP"
+        "file_encrypted_zip" -> "Locked ZIP" to "ZIP مشفر"
+        "file_batch_rename" -> "Rename" to "إعادة تسمية"
         else -> tool.titleEn to tool.titleAr
     }
     return if (language.isRtl) labels.second else labels.first

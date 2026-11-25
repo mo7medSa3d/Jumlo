@@ -799,7 +799,7 @@ internal fun passwordStrength(value:String):Int = when {
                     Toggle(stringResource(R.string.field_fill_page),f.fill) {v->edit {it.copy(fill=v)}}
                 }
                 "pdf_07","pdf_long_image" -> {
-                    LabeledOptions(
+                    if(f.toolId=="pdf_long_image") LabeledOptions(
                         label=stringResource(R.string.p2_pdf_images_mode_label),
                         options=listOf(
                             "LONG" to stringResource(R.string.p2_pdf_images_mode_long),

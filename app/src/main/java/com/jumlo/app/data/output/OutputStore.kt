@@ -158,7 +158,14 @@ import javax.inject.Singleton
                         val root=context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)?.canonicalFile
                         val target=File(parsed.path.orEmpty()).canonicalFile
                         if(root!=null && target.path.startsWith(root.path+File.separator)) {
-                            VerifiedFileCopy.copy(published.file,target,published.sha256,check)
+                            target.parentFile?.mkdirs()
+                            val stage=File(target.parentFile,".${target.name}.tmp-${java.util.UUID.randomUUID()}")
+                            try {
+                                VerifiedFileCopy.copy(published.file,stage,published.sha256,check)
+                                java.nio.file.Files.move(stage.toPath(),target.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                            } finally {
+                                stage.delete()
+                            }
                             true
                         } else false
                     }

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="800dp"
+    android:height="320dp"
+    android:viewportWidth="800"
+    android:viewportHeight="320">
+
+    <!-- Deep layered background -->
+    <path android:pathData="M0,0 L800,0 L800,320 L0,320 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="800"
+                android:endY="320"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF070C1A" />
+                <item android:offset="0.55" android:color="#FF0E1B3D" />
+                <item android:offset="1" android:color="#FF141E46" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Ambient cyan/indigo glow on the right -->
+    <path android:pathData="M620,160 m-260,0 a260,260 0 1,0 520,0 a260,260 0 1,0 -520,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="620"
+                android:centerY="160"
+                android:gradientRadius="260"
+                android:type="radial">
+                <item android:offset="0" android:color="#5538BDF8" />
+                <item android:offset="0.45" android:color="#2E6366F1" />
+                <item android:offset="1" android:color="#00070C1A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Secondary emerald/teal accent glow -->
+    <path android:pathData="M710,270 m-170,0 a170,170 0 1,0 340,0 a170,170 0 1,0 -340,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="710"
+                android:centerY="270"
+                android:gradientRadius="170"
+                android:type="radial">
+                <item android:offset="0" android:color="#4010B981" />
+                <item android:offset="1" android:color="#00070C1A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle precision orbital arcs -->
+    <path
+        android:pathData="M430,330 A280,280 0 0,1 780,40"
+        android:strokeWidth="1.2"
+        android:strokeColor="#2293C5FD" />
+    <path
+        android:pathData="M480,340 A230,230 0 0,1 810,95"
+        android:strokeWidth="1"
+        android:strokeColor="#1A38BDF8" />
+
+    <!-- Back tilted glass layer (Image/Archive card) -->
+    <group
+        android:pivotX="615"
+        android:pivotY="160"
+        android:rotation="-10">
+        <path
+            android:pathData="M525,52 L675,52 Q695,52 695,72 L695,248 Q695,268 675,268 L525,268 Q505,268 505,248 L505,72 Q505,52 525,52 Z"
+            android:strokeWidth="1.5"
+            android:strokeColor="#3893C5FD">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="505"
+                    android:startY="52"
+                    android:endX="695"
+                    android:endY="268"
+                    android:type="linear">
+                    <item android:offset="0" android:color="#2E6366F1" />
+                    <item android:offset="1" android:color="#141E293B" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+
+    <!-- Middle tilted glass layer -->
+    <group
+        android:pivotX="635"
+        android:pivotY="160"
+        android:rotation="6">
+        <path
+            android:pathData="M545,48 L695,48 Q715,48 715,68 L715,244 Q715,264 695,264 L545,264 Q525,264 525,244 L525,68 Q525,48 545,48 Z"
+            android:strokeWidth="1.5"
+            android:strokeColor="#4438BDF8">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:startX="525"
+                    android:startY="48"
+                    android:endX="715"
+                    android:endY="264"
+                    android:type="linear">
+                    <item android:offset="0" android:color="#3338BDF8" />
+                    <item android:offset="1" android:color="#1A0F172A" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+
+    <!-- Foreground crisp PDF document card -->
+    <path
+        android:pathData="M562,46 L682,46 L724,88 L724,250 Q724,268 706,268 L562,268 Q544,268 544,250 L544,64 Q544,46 562,46 Z"
+        android:strokeWidth="1.8"
+        android:strokeColor="#77E0F2FE">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="544"
+                android:startY="46"
+                android:endX="724"
+                android:endY="268"
+                android:type="linear">
+                <item android:offset="0" android:color="#CC1E293B" />
+                <item android:offset="1" android:color="#E60F172A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Folded corner highlight -->
+    <path
+        android:pathData="M682,46 L682,74 Q682,88 696,88 L724,88 Z"
+        android:fillColor="#4D38BDF8" />
+
+    <!-- Document header badge & content lines -->
+    <path
+        android:pathData="M568,78 L612,78 Q618,78 618,84 L618,96 Q618,102 612,102 L568,102 Q562,102 562,96 L562,84 Q562,78 568,78 Z"
+        android:fillColor="#FFEF4444" />
+    <path
+        android:pathData="M564,124 L696,124"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeColor="#88E2E8F0" />
+    <path
+        android:pathData="M564,146 L674,146"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeColor="#55CBD5E1" />
+    <path
+        android:pathData="M564,168 L688,168"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeColor="#44CBD5E1" />
+    <path
+        android:pathData="M564,190 L640,190"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeColor="#33CBD5E1" />
+
+    <!-- Precision scanner laser beam across the document -->
+    <path android:pathData="M526,148 L742,148 L742,162 L526,162 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="526"
+                android:startY="148"
+                android:endX="526"
+                android:endY="162"
+                android:type="linear">
+                <item android:offset="0" android:color="#0000D2B4" />
+                <item android:offset="0.5" android:color="#6600D2B4" />
+                <item android:offset="1" android:color="#0000D2B4" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M524,155 L744,155"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeColor="#FF2DD4BF" />
+
+    <!-- Floating emerald verification badge -->
+    <path
+        android:pathData="M716,228 m-24,0 a24,24 0 1,0 48,0 a24,24 0 1,0 -48,0"
+        android:fillColor="#FF10B981"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF0F172A" />
+    <path
+        android:pathData="M706,228 L713,235 L727,220"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeColor="#FFFFFFFF" />
+
+    <!-- Crisp geometric accent nodes -->
+    <path
+        android:pathData="M498,86 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
+        android:fillColor="#AA38BDF8" />
+    <path
+        android:pathData="M754,110 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0"
+        android:fillColor="#AA818CF8" />
+    <path
+        android:pathData="M512,248 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"
+        android:fillColor="#992DD4BF" />
+</vector>

@@ -15,6 +15,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCaseGroup
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
@@ -145,15 +146,16 @@ internal fun IdCardScanFlow(
             val m = Matrix().apply { postRotate(rotation) }
             Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, m, true).also { if (it !== raw) raw.recycle() }
         } else raw
-        val cropped = if (!cropToFrame) upright else {
-            // Crop to the centered ID-1 (1.586:1) guide frame area (86% width).
+        val frameCropped = if (!cropToFrame) upright else {
+            // Crop to the centered ID-1 (1.586:1) guide frame area (86% width, ViewPort-matched to PreviewView).
             val cw = (upright.width * 0.86f).toInt().coerceIn(1, upright.width)
             val ch = (cw / 1.586f).toInt().coerceIn(1, upright.height)
             val left = ((upright.width - cw) / 2).coerceAtLeast(0)
             val top = ((upright.height - ch) / 2).coerceAtLeast(0)
             Bitmap.createBitmap(upright, left, top, cw, ch).also { if (it !== upright) upright.recycle() }
         }
-        scaleDownToMaxEdge(cropped, ID_CARD_MAX_EDGE).also { if (it !== cropped) cropped.recycle() }
+        val edgeSnapped = snapToCardEdges(frameCropped).also { if (it !== frameCropped) frameCropped.recycle() }
+        scaleDownToMaxEdge(edgeSnapped, ID_CARD_MAX_EDGE).also { if (it !== edgeSnapped) edgeSnapped.recycle() }
     }.onFailure { AppDiagnostics.report("id_card_decode", it) }.getOrNull()
 
     fun decodeUri(uri: Uri): Bitmap? = runCatching {
@@ -225,7 +227,13 @@ internal fun IdCardScanFlow(
                                     CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
                                 val preview = Preview.Builder().build().also { it.surfaceProvider = surfaceProvider }
                                 provider.unbindAll()
-                                val bound = provider.bindToLifecycle(lifecycleOwner, selector, preview, imageCapture)
+                                val vp = viewPort
+                                val group = UseCaseGroup.Builder()
+                                    .addUseCase(preview)
+                                    .addUseCase(imageCapture)
+                                    .apply { if (vp != null) setViewPort(vp) }
+                                    .build()
+                                val bound = provider.bindToLifecycle(lifecycleOwner, selector, group)
                                 camera = bound
                                 if (flashOn && bound.cameraInfo.hasFlashUnit()) {
                                     runCatching { bound.cameraControl.enableTorch(true) }
@@ -530,5 +538,86 @@ private fun CardSlot(label: String, bmp: Bitmap?, filter: ScanFilter, modifier: 
                 QuietTonalButton(label, onPick)
             }
         }
+    }
+}
+
+/**
+ * Refines an ID card crop by finding the strongest outer border edges via luminance gradients
+ * on a downscaled copy. Falls back to [src] if the card boundary is not clearly separated.
+ */
+internal fun snapToCardEdges(src: Bitmap): Bitmap {
+    if (src.width < 80 || src.height < 80) return src
+    val work = scaleDownToMaxEdge(src, 320)
+    try {
+        val w = work.width
+        val h = work.height
+        val pixels = IntArray(w * h)
+        work.getPixels(pixels, 0, w, 0, 0, w, h)
+        val lum = IntArray(w * h) { i ->
+            val c = pixels[i]
+            (((c shr 16) and 0xFF) * 77 + ((c shr 8) and 0xFF) * 150 + (c and 0xFF) * 29) shr 8
+        }
+
+        val xMidStart = (w * 0.22f).toInt()
+        val xMidEnd = (w * 0.78f).toInt()
+        val yMidStart = (h * 0.22f).toInt()
+        val yMidEnd = (h * 0.78f).toInt()
+
+        fun rowEdgeScore(y: Int): Float {
+            if (y <= 1 || y >= h - 2) return 0f
+            var sum = 0L
+            for (x in xMidStart until xMidEnd) {
+                sum += kotlin.math.abs(lum[(y + 1) * w + x] - lum[(y - 1) * w + x])
+            }
+            return sum.toFloat() / (xMidEnd - xMidStart).coerceAtLeast(1)
+        }
+
+        fun colEdgeScore(x: Int): Float {
+            if (x <= 1 || x >= w - 2) return 0f
+            var sum = 0L
+            for (y in yMidStart until yMidEnd) {
+                sum += kotlin.math.abs(lum[y * w + (x + 1)] - lum[y * w + (x - 1)])
+            }
+            return sum.toFloat() / (yMidEnd - yMidStart).coerceAtLeast(1)
+        }
+
+        fun findPeak(range: IntProgression, scorer: (Int) -> Float): Int? {
+            var bestIdx = -1
+            var bestScore = 0f
+            var sum = 0f
+            var count = 0
+            for (i in range) {
+                val s = scorer(i)
+                sum += s
+                count++
+                if (s > bestScore) {
+                    bestScore = s
+                    bestIdx = i
+                }
+            }
+            val avg = if (count > 0) sum / count else 0f
+            return if (bestIdx >= 0 && bestScore >= maxOf(14f, avg * 2.1f)) bestIdx else null
+        }
+
+        val top = findPeak(2..(h * 0.24f).toInt(), ::rowEdgeScore) ?: 0
+        val bottom = findPeak((h - 3) downTo (h * 0.76f).toInt(), ::rowEdgeScore) ?: (h - 1)
+        val left = findPeak(2..(w * 0.24f).toInt(), ::colEdgeScore) ?: 0
+        val right = findPeak((w - 3) downTo (w * 0.76f).toInt(), ::colEdgeScore) ?: (w - 1)
+
+        if (top == 0 && bottom == h - 1 && left == 0 && right == w - 1) return src
+        val cw = right - left + 1
+        val ch = bottom - top + 1
+        if (cw < w * 0.50f || ch < h * 0.50f) return src
+        val ratio = cw.toFloat() / ch.toFloat()
+        val validCardRatio = ratio in 1.25f..1.95f || ratio in 0.51f..0.80f
+        if (!validCardRatio) return src
+
+        val sx = (left.toFloat() / w * src.width).toInt().coerceIn(0, src.width - 2)
+        val sy = (top.toFloat() / h * src.height).toInt().coerceIn(0, src.height - 2)
+        val sw = (cw.toFloat() / w * src.width).toInt().coerceIn(1, src.width - sx)
+        val sh = (ch.toFloat() / h * src.height).toInt().coerceIn(1, src.height - sy)
+        return Bitmap.createBitmap(src, sx, sy, sw, sh)
+    } finally {
+        if (work !== src) work.recycle()
     }
 }

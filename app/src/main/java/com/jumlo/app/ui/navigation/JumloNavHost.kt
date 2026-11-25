@@ -684,6 +684,10 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                             toolId = "scan_doc"
                                         )
                                         if (scannedOutputs.isEmpty()) {
+                                            LaunchedEffect(scannedOutputIds) {
+                                                kotlinx.coroutines.delay(2500L)
+                                                scannedOutputIds = emptyList()
+                                            }
                                             Box(
                                                 Modifier.fillMaxWidth().weight(1f).padding(20.dp),
                                                 contentAlignment = androidx.compose.ui.Alignment.Center

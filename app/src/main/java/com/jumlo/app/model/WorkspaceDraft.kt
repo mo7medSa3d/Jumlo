@@ -127,7 +127,7 @@ import kotlinx.serialization.json.Json
                 Json.encodeToString(com.jumlo.app.data.processing.BatchRenameSettings(pattern,number(num1.ifBlank{"1"},0,1000000),renameDate))
             }
             "file_encrypted_zip" -> Json.encodeToString(com.jumlo.app.data.processing.EncryptedArchiveSettings(SafeNames.basename(outputName),downloadHandle ?: "",flag1))
-            "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.fromDisplayName(outputName.ifBlank{"download.bin"},"download.bin"),wifiOnly,unmeteredOnly,cleartextConsent))
+            "dl_02","dl_03" -> Json.encodeToString(DownloadSettings(requireNotNull(downloadHandle),SafeNames.fromDisplayName(outputName.ifBlank{"download.bin"},"download.bin"),wifiOnly=false,unmeteredOnly=false,cleartextConsent=true))
             else -> throw IllegalArgumentException("CAPABILITY_UNAVAILABLE")
         }
     }

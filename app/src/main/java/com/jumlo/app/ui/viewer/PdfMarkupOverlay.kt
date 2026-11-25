@@ -295,26 +295,31 @@ internal fun PdfMarkupPageLayer(
                             }
                             if (!cancelledByPinch && !movedTooFar) {
                                 latestOnSelect(null)
-                                val nx = (lastPos.x / w).coerceIn(0.02f, 0.88f)
-                                val ny = (lastPos.y / h).coerceIn(0.02f, 0.90f)
+                                val nx = (lastPos.x / w).coerceIn(0f, 1f)
+                                val ny = (lastPos.y / h).coerceIn(0f, 1f)
                                 when (activeTool) {
                                     PdfMarkupTool.TEXT -> latestOnRequestText(pageIndex, nx, ny)
                                     PdfMarkupTool.DATE -> {
                                         val today = SimpleDateFormat("yyyy/MM/dd", Locale.ROOT).format(Date())
+                                        val draft = PdfMarkupItem.TextBox(
+                                            UUID.randomUUID().toString(),
+                                            pageIndex,
+                                            nx,
+                                            ny,
+                                            today,
+                                            latestColor.toArgb(),
+                                            latestTextSize
+                                        )
+                                        val b = PdfMarkupPolicy.boundingBox(draft)
                                         latestOnAdd(
-                                            PdfMarkupItem.TextBox(
-                                                UUID.randomUUID().toString(),
-                                                pageIndex,
-                                                nx,
-                                                ny,
-                                                today,
-                                                latestColor.toArgb(),
-                                                latestTextSize
+                                            draft.copy(
+                                                normX = (nx - b.width * 0.5f).coerceIn(0.02f, (1f - b.width).coerceAtLeast(0.02f)),
+                                                normY = (ny - b.height * 0.5f).coerceIn(0.02f, (1f - b.height).coerceAtLeast(0.02f))
                                             )
                                         )
                                     }
-                                    PdfMarkupTool.CHECK -> latestOnAdd(
-                                        PdfMarkupItem.CheckMark(
+                                    PdfMarkupTool.CHECK -> {
+                                        val draft = PdfMarkupItem.CheckMark(
                                             UUID.randomUUID().toString(),
                                             pageIndex,
                                             nx,
@@ -323,7 +328,14 @@ internal fun PdfMarkupPageLayer(
                                             latestColor.toArgb(),
                                             latestCheckSize
                                         )
-                                    )
+                                        val b = PdfMarkupPolicy.boundingBox(draft)
+                                        latestOnAdd(
+                                            draft.copy(
+                                                normX = (nx - b.width * 0.5f).coerceIn(0.02f, (1f - b.width).coerceAtLeast(0.02f)),
+                                                normY = (ny - b.height * 0.5f).coerceIn(0.02f, (1f - b.height).coerceAtLeast(0.02f))
+                                            )
+                                        )
+                                    }
                                     PdfMarkupTool.SIGNATURE -> {
                                         val sigPath = latestSigPath
                                         if (sigPath != null) {

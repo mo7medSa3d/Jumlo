@@ -397,7 +397,7 @@ private val ConvertSheetOptions = listOf(
     "pdf_to_docx" to R.string.modern_pdf_word,
     "pdf_to_pptx" to R.string.modern_pdf_powerpoint,
     "office_to_pdf" to R.string.modern_office_to_pdf,
-    "pdf_long_image" to R.string.modern_pdf_images,
+    "pdf_07" to R.string.modern_pdf_images,
     "img_04" to R.string.modern_convert_images
 )
 

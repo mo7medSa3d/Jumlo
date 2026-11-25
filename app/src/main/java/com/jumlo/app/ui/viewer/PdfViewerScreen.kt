@@ -932,15 +932,20 @@ private fun PdfViewerContent(
                     TextButton(onClick = {
                         val trimmed = textInput.trim()
                         if (trimmed.isNotEmpty()) {
+                            val draft = PdfMarkupItem.TextBox(
+                                java.util.UUID.randomUUID().toString(),
+                                pIdx,
+                                nx,
+                                ny,
+                                trimmed,
+                                activeColor.toArgb(),
+                                textSizePt
+                            )
+                            val b = com.jumlo.app.core.PdfMarkupPolicy.boundingBox(draft)
                             commitMarkup(
-                                markupItems + PdfMarkupItem.TextBox(
-                                    java.util.UUID.randomUUID().toString(),
-                                    pIdx,
-                                    nx,
-                                    ny,
-                                    trimmed,
-                                    activeColor.toArgb(),
-                                    textSizePt
+                                markupItems + draft.copy(
+                                    normX = (nx - b.width * 0.5f).coerceIn(0.02f, (1f - b.width).coerceAtLeast(0.02f)),
+                                    normY = (ny - b.height * 0.5f).coerceIn(0.02f, (1f - b.height).coerceAtLeast(0.02f))
                                 )
                             )
                         }

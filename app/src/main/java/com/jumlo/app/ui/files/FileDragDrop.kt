@@ -13,7 +13,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -209,18 +208,37 @@ fun Modifier.fileDragSource(
             itemOrigin[1] = pos.y
         }
         .pointerInput(itemId, dragState) {
-            // Replaces per-item detectDragGesturesAfterLongPress so opening folders never cancels an active drag.
+            // Detect long-press in Initial pass so child clickables/swipes and parent tap detectors cannot cancel drag start.
             awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false)
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 if (dragState.isDragging) return@awaitEachGesture
-                val longPress = awaitLongPressOrCancellation(down.id)
-                if (longPress != null && !dragState.isDragging) {
+                var lastPos = down.position
+                var cancelled = false
+                withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.count { it.pressed } > 1) {
+                            cancelled = true
+                            break
+                        }
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            cancelled = true
+                            break
+                        }
+                        lastPos = change.position
+                        if ((lastPos - down.position).getDistance() > viewConfiguration.touchSlop) {
+                            cancelled = true
+                            break
+                        }
+                    }
+                }
+                if (!cancelled && !dragState.isDragging) {
                     val ids = latestResolve()
                     if (ids.isNotEmpty()) {
-                        longPress.consume()
                         latestStartHaptic()
-                        val startInRoot = Offset(itemOrigin[0], itemOrigin[1]) + longPress.position
-                        dragState.startDrag(longPress.id, ids, latestLabel, startInRoot)
+                        val startInRoot = Offset(itemOrigin[0], itemOrigin[1]) + lastPos
+                        dragState.startDrag(down.id, ids, latestLabel, startInRoot)
                     }
                 }
             }
