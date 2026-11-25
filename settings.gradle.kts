@@ -22,6 +22,7 @@ dependencyResolutionManagement {
             content {
                 includeGroupByRegex("com\\.github\\..*")
                 includeGroupByRegex("io\\.github\\.junkfood02.*")
+                includeGroupByRegex("cz\\.adaptech\\..*")
             }
         }
     }
