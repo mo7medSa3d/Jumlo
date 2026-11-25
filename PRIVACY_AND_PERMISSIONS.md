@@ -18,6 +18,7 @@ The merged debug manifest was inspected during this execution. Release must be c
 | `FOREGROUND_SERVICE_DATA_SYNC` | Transfers and user-requested file import/export/processing on Android 14+ | Must match the Play Console foreground-service declaration and demonstration video. |
 | `CAMERA` | CameraX document-scanning fallback | Requested only when entering the fallback. The primary Play-services document scanner does not need this app permission. Camera hardware is optional. Denial retains gallery/file import. |
 | `VIBRATE` | System haptic feedback on supported actions | A Settings control selects haptic intensity (Off/Light/Medium/Strong); vibration follows that preference. |
+| `USE_BIOMETRIC` | Optional biometric lock for private folders (`BiometricVaultGuard`) | Normal permission; authentication is handled by Android `BiometricPrompt` / OS keystore and biometric data is never accessed by Jumlo. |
 | `WAKE_LOCK` | Added by WorkManager for scheduled work | Normal permission; avoid additional application-owned indefinite wake locks. |
 | `RECEIVE_BOOT_COMPLETED` | Added by WorkManager to reconcile persisted work | Does not grant permission to start unrestricted foreground services at boot. Verify scheduling/timeout behavior on current Android. |
 | `${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | AndroidX-generated signature permission for internal receiver isolation | Not a user data permission. |
@@ -65,7 +66,7 @@ Generic cleartext HTTP file downloads remain a deliberate compatibility path con
 | Target API | `compileSdk=36`, `targetSdk=36`, `minSdk=26` | Recheck Play requirements at upload. Current requirement for ordinary new apps/updates is API 36. |
 | Native runtime and 16 KB pages | Pinned full ARM64 native payload; repacker and `inspect-media-artifact.py` validate nested ELF alignment/closure | Final artifact inspection plus actual ARM64 16 KB device execution. Static ELF checks do not establish runtime compatibility. |
 | Data safety and privacy policy | Local-first processing, minimal permissions, encrypted credentials, no default analytics/crash upload | Publish an owner-completed privacy URL and complete the Console form against the actual shipped SDKs, providers and optional service configuration. |
-| Retired legacy tools | Webpage→PDF, authenticated Drive (`file_drive`), and vault entries are removed from the current 21-primary-tool catalogue (33 registered tool IDs) | Any future re-introduction requires full security, privacy, and backend qualification. |
+| Retired legacy tools | Webpage→PDF, authenticated Drive (`file_drive`), and vault entries are removed from the current 22-primary-tool catalogue (34 registered tool IDs) | Any future re-introduction requires full security, privacy, and backend qualification. |
 
 Primary policy references, checked on the review date:
 
@@ -78,7 +79,7 @@ Primary policy references, checked on the review date:
 
 No Play Console submission, rights determination, physical-device qualification or legal approval is claimed.
 
-Revision note: Updated to match the current 21-primary-tool catalogue (33 registered tool IDs) where `file_drive` (`GoogleDriveClient.kt`), `webpage_pdf`, and `xf_05` are retired and absent. Runtime results and unresolved release gates have no current evidence file in this tree; regenerate them for the release candidate.
+Revision note: Updated to match the current 22-primary-tool catalogue (34 registered tool IDs) where `file_drive` (`GoogleDriveClient.kt`), `webpage_pdf`, and `xf_05` are retired and absent. Runtime results and unresolved release gates have no current evidence file in this tree; regenerate them for the release candidate.
 
 ## 2026-10-28 — Reader bookmarks
 

@@ -347,7 +347,7 @@ def run_bounded(command, directory, extra_environment, timeout=40, stdout_limit=
 
 
 def extractor_identity():
-    props = dict(line.split('=', 1) for line in (ASSETS / 'extractor.properties').read_text().splitlines()
+    props = dict(line.split('=', 1) for line in (ASSETS / 'extractor.properties').read_text(encoding='utf-8').splitlines()
                  if line and not line.startswith('#'))
     actual = hashlib.sha256((ASSETS / 'yt-dlp').read_bytes()).hexdigest()
     if actual != props['sha256']:

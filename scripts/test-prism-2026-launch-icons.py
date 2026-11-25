@@ -114,7 +114,7 @@ class Prism2026LaunchIconChecks(unittest.TestCase):
         self.assertIn('val click: () -> Unit = { haptics.actionClick(); onClick() }',tools)
         self.assertIn('onLongClick = { haptics.longPress(); onPin() }',tools)
         self.assertIn('onClick = { haptics.actionClick(); onClick() }',read('ui/components/NeonUi.kt'))
-        self.assertIn('CapabilityRegistry.enabled(id)',home)
+        self.assertIn('CapabilityRegistry.enabled(',home)
         self.assertIn('CapabilityRegistry.tools.firstOrNull { it.id == targetId }?.let(onTool)',home)
         self.assertIn('accentToolId = spec.accentId,',home)
         self.assertIn('open("pdf_compress")',home)

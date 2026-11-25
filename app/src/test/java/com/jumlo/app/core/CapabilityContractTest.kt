@@ -9,7 +9,8 @@ import org.junit.Test
 class CapabilityContractTest {
     @Test fun allRegisteredCapabilitiesAreVisibleAndHaveExplicitKinds() {
         val registered = CapabilityRegistry.tools
-        assertEquals("Jumlo must expose the curated 33 capabilities", 33, registered.size)
+        assertEquals("Jumlo must expose the curated 34 capabilities", 34, registered.size)
+        assertTrue("scan_id_card must be registered", registered.any { it.id == "scan_id_card" })
         assertEquals("Capability ID must be unique", registered.size, registered.map { it.id }.distinct().size)
         registered.forEach { tool ->
             val policy = CapabilityRegistry.availability(tool.id)
@@ -44,7 +45,7 @@ class CapabilityContractTest {
     }
 
     @Test fun navigationOnlyCapabilitiesCannotBeSubmittedAsWork() {
-        listOf("pdf_01", "scan_doc").forEach { id ->
+        listOf("pdf_01", "scan_doc", "scan_id_card").forEach { id ->
             assertEquals("$id must remain navigation-only", CapabilityKind.NAVIGATION, CapabilityRegistry.availability(id).kind)
             assertFalse("$id must never reach an operation handler", CapabilityRegistry.canProcess(id))
         }

@@ -29,6 +29,7 @@ internal fun curatedIcon(name: String, mirrored: Boolean = false): ImageVector =
 
 private val paths: Map<String, List<Pair<Float, String>>> = mapOf(
     "add" to listOf(1.0f to "M10.5 3h3v7.5H21v3h-7.5V21h-3v-7.5H3v-3h7.5z"),
+    "select_cursor" to listOf(1.0f to "M5 3l14 9-6.2 1.8L10 20 5 3z"),
     "remove" to listOf(1.0f to "M3 10.5h18v3H3z"),
     "close" to listOf(1.0f to "M5 3l7 7 7-7 2 2-7 7 7 7-2 2-7-7-7 7-2-2 7-7-7-7z"),
     "check" to listOf(1.0f to "M2.5 12.5l2.2-2.2 4.6 4.6L19.4 4.8l2.2 2.2L9.3 19.3z"),

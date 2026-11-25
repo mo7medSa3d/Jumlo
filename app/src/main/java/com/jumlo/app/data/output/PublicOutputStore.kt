@@ -1,5 +1,6 @@
 package com.jumlo.app.data.output
 
+import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
@@ -30,6 +31,26 @@ interface PublicOutputPublisher {
     fun deleteIfOwned(publicUri:String?)
 }
 
+internal fun copyVerifiedContent(resolver:ContentResolver,uri:Uri,file:File,sha256:String,check:()->Unit) {
+    file.inputStream().use { input ->
+        (resolver.openOutputStream(uri,"wt") ?: resolver.openOutputStream(uri))?.use { output ->
+            val buffer=ByteArray(64*1024)
+            while(true) {
+                check()
+                val count=input.read(buffer)
+                if(count<0) break
+                if(count>0) output.write(buffer,0,count)
+            }
+            output.flush()
+        } ?: error("DESTINATION_WRITE_UNAVAILABLE")
+    }
+    check()
+    val actual=resolver.openInputStream(uri)?.use { Hashing.sha256(it,check) }
+        ?: error("DESTINATION_VERIFY_UNAVAILABLE")
+    check(actual==sha256) { "DESTINATION_VERIFY_FAILED" }
+    check()
+}
+
 /** Durable private publication stays authoritative; a verified visible copy is also created. */
 @Singleton class PublicOutputStore @Inject constructor(
     @ApplicationContext private val app:Context,
@@ -49,24 +70,7 @@ interface PublicOutputPublisher {
         else saveLegacy(file,name,safeMime,sha256,subfolder,check)
     }
     private fun copyVerified(uri:Uri,file:File,sha256:String,check:()->Unit) {
-        val resolver=app.contentResolver
-        file.inputStream().use { input ->
-            (resolver.openOutputStream(uri,"wt") ?: resolver.openOutputStream(uri))?.use { output ->
-                val buffer=ByteArray(64*1024)
-                while(true) {
-                    check()
-                    val count=input.read(buffer)
-                    if(count<0) break
-                    if(count>0) output.write(buffer,0,count)
-                }
-                output.flush()
-            } ?: error("DESTINATION_WRITE_UNAVAILABLE")
-        }
-        check()
-        val actual=resolver.openInputStream(uri)?.use { Hashing.sha256(it,check) }
-            ?: error("DESTINATION_VERIFY_UNAVAILABLE")
-        check(actual==sha256) { "DESTINATION_VERIFY_FAILED" }
-        check()
+        copyVerifiedContent(app.contentResolver,uri,file,sha256,check)
     }
     private fun saveSaf(rootUri:Uri,file:File,name:String,mime:String,sha256:String,subfolder:String?=null,check:()->Unit):String {
         check()

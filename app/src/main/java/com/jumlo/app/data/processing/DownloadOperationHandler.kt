@@ -324,10 +324,12 @@ class DownloadOperationHandler @Inject constructor(
                                 val choice=DownloadCompressionPolicy.choose(name,resolvedMime,result.bytes,if(candidate.isFile) candidate.length() else result.bytes)
                                 val ticket=context.outputs.reserve(request.id,key,choice.filename,choice.mimeType)
                                 val source=if(choice.useCompressed) candidate else partial
-                                moveSafely(source, ticket.stageFile)
-                                val output=context.outputs.publish(ticket) { file ->
-                                    context.outputs.inspect(file,ticket.mimeType,originalSizeBytes=result.bytes)
-                                }
+                                val output=try {
+                                    moveSafely(source, ticket.stageFile)
+                                    context.outputs.publish(ticket) { file ->
+                                        context.outputs.inspect(file,ticket.mimeType,originalSizeBytes=result.bytes)
+                                    }
+                                } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                                 partial.delete()
                                 journal.delete()
                                 outcomes += ItemOutcome(key, ItemStatus.CREATED, output.id)
@@ -361,11 +363,13 @@ class DownloadOperationHandler @Inject constructor(
                         else -> {
                             val ticket=context.outputs.reserve(request.id,key,SafeNames.basename(name),resolvedMime)
                             // Same internal storage volume. Atomic move avoids duplicating a large download.
-                            moveSafely(partial, ticket.stageFile)
-                            val output=context.outputs.publish(ticket) { file ->
-                                require(file.length()==result.bytes) { "DOWNLOAD_VERIFY_FAILED" }
-                                context.outputs.inspect(file, resolvedMime)
-                            }
+                            val output=try {
+                                moveSafely(partial, ticket.stageFile)
+                                context.outputs.publish(ticket) { file ->
+                                    require(file.length()==result.bytes) { "DOWNLOAD_VERIFY_FAILED" }
+                                    context.outputs.inspect(file, resolvedMime)
+                                }
+                            } catch (t: Throwable) { ticket.stageFile.delete(); throw t }
                             journal.delete()
                             outcomes+=ItemOutcome(key,ItemStatus.CREATED,output.id)
                         }
@@ -377,6 +381,9 @@ class DownloadOperationHandler @Inject constructor(
                     val code=if(stableError(error)=="MISSING_RESUME_VALIDATOR") "DOWNLOAD_RESTART_REQUIRED" else stableError(error)
                     if(code in setOf("WIFI_REQUIRED","UNMETERED_NETWORK_REQUIRED","DOWNLOAD_RESTART_REQUIRED")) throw OperationFailure(code)
                     outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=code)
+                }
+                catch(_:OutOfMemoryError) {
+                    outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode="LOW_MEMORY")
                 }
             }
             // URL ownership is released only after JobStore commits a terminal state.

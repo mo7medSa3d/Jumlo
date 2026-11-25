@@ -1,6 +1,7 @@
 package com.jumlo.app.core
 
 import java.io.*
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Properties
@@ -29,6 +30,13 @@ class DurablePublication(private val root: File) {
     }
     private fun <T> locked(block: () -> T): T = lock.withLock {
         RandomAccessFile(File(root,"publication.lock"),"rw").use { f -> f.channel.lock().use { block() } }
+    }
+    private fun moveWithFallback(source: File, target: File) {
+        try {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
     }
     fun reserve(job: String,key: String,name: String,mime: String): PublicationTicket = locked {
         val id=identity(job,key); val safeName=SafeNames.basename(name)
@@ -81,6 +89,96 @@ class DurablePublication(private val root: File) {
         val record=prepareLocked(ticket)
         finish(record,ticket.stageFile)
         record
+    }
+    /** Atomically replaces an existing published file's bytes and journal digest while preserving its identity and path. */
+    fun replacePublished(job: String, key: String, replacementFile: File, metadataJson: String): PublishedFile =
+        replacePublishedInternal(job, key, replacementFile, metadataJson)
+
+    internal fun replacePublishedInternal(
+        job: String,
+        key: String,
+        replacementFile: File,
+        metadataJson: String,
+        onBeforeJournalCommit: () -> Unit = {}
+    ): PublishedFile = locked {
+        val idKey = identity(job, key)
+        require(metadataJson.length <= 16384) { "OUTPUT_METADATA_TOO_LARGE" }
+        require(replacementFile.isFile) { "OUTPUT_MISSING" }
+        val log = File(journal, "$idKey.properties")
+        require(log.isFile) { "OUTPUT_MISSING" }
+        val current = read(log)
+        check(current.jobId == job && current.itemKey == key) { "OUTPUT_IDENTITY_CONFLICT" }
+        require(current.file.parentFile.mkdirs() || current.file.parentFile.isDirectory)
+        val opId = UUID.randomUUID().toString()
+        val staged = File(current.file.parentFile, ".replace-$opId.tmp")
+        val backupFile = File(current.file.parentFile, ".backup-$opId.tmp")
+        val pendingLog = File(journal, "$idKey.pending")
+        val backupLog = File(journal, "$idKey.backup-$opId.tmp")
+        val hadOriginalFile = current.file.exists()
+        var backupFileCreated = false
+        var payloadSwapped = false
+        var logSwapped = false
+        try {
+            replacementFile.inputStream().use { input ->
+                FileOutputStream(staged).use { output ->
+                    input.copyTo(output)
+                    output.fd.sync()
+                }
+            }
+            val size = staged.length()
+            val hash = Hashing.sha256(staged)
+            val updated = current.copy(sizeBytes = size, sha256 = hash, metadataJson = metadataJson)
+            val data = Properties().apply {
+                setProperty("id", updated.id); setProperty("job", updated.jobId); setProperty("key", updated.itemKey)
+                setProperty("name", updated.displayName); setProperty("mime", updated.mimeType)
+                setProperty("metadata", updated.metadataJson)
+                setProperty("size", updated.sizeBytes.toString()); setProperty("sha256", updated.sha256)
+                setProperty("created", updated.createdAtEpochMs.toString())
+            }
+            FileOutputStream(pendingLog).use { data.store(it, "Jumlo publication v1"); it.fd.sync() }
+            log.inputStream().use { input ->
+                FileOutputStream(backupLog).use { output ->
+                    input.copyTo(output)
+                    output.fd.sync()
+                }
+            }
+            if (hadOriginalFile) {
+                moveWithFallback(current.file, backupFile)
+                backupFileCreated = true
+            }
+            moveWithFallback(staged, current.file)
+            payloadSwapped = true
+            onBeforeJournalCommit()
+            moveWithFallback(pendingLog, log)
+            logSwapped = true
+            check(current.file.isFile && current.file.length() == size && Hashing.sha256(current.file) == hash) { "PUBLICATION_INTEGRITY_ERROR" }
+            runCatching { backupFile.delete() }
+            runCatching { backupLog.delete() }
+            updated
+        } catch (t: Throwable) {
+            var logRestored = !logSwapped
+            if (logSwapped && backupLog.isFile) {
+                runCatching {
+                    moveWithFallback(backupLog, log)
+                    logRestored = true
+                }.onFailure { t.addSuppressed(it) }
+            }
+            var fileRestored = !backupFileCreated
+            if (backupFileCreated && backupFile.exists()) {
+                runCatching {
+                    moveWithFallback(backupFile, current.file)
+                    fileRestored = true
+                }.onFailure { t.addSuppressed(it) }
+            } else if (!hadOriginalFile && payloadSwapped) {
+                runCatching { current.file.delete() }.onFailure { t.addSuppressed(it) }
+            }
+            runCatching { staged.delete() }.onFailure { t.addSuppressed(it) }
+            runCatching { pendingLog.delete() }.onFailure { t.addSuppressed(it) }
+            if (fileRestored) runCatching { backupFile.delete() }.onFailure { t.addSuppressed(it) }
+            if (logRestored) runCatching { backupLog.delete() }.onFailure { t.addSuppressed(it) }
+            // Rethrow CancellationException and all other failures without masking.
+            throw t
+        }
     }
     private fun finish(record: PublishedFile,stage: File) {
         if(!record.file.exists()) {

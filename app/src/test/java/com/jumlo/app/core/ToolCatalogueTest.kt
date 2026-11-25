@@ -22,14 +22,14 @@ class ToolCatalogueTest {
 
     @Test fun theVisibleSurfaceIsSmallEnoughToScan() {
         val primary = ToolCatalogue.primaryTools()
-        assertEquals("the catalogue must expose exactly 21 primary tiles", 21, primary.size)
+        assertEquals("the catalogue must expose exactly 22 primary tiles", 22, primary.size)
         assertTrue(
             "the catalogue shows ${primary.size} tiles; it must stay a scannable list",
             primary.size in 12..24
         )
         assertTrue(
             primary.containsAll(
-                listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr", "pdf_05", "pdf_long_image", "img_04", "file_07", "dl_media")
+                listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr", "pdf_05", "pdf_long_image", "img_04", "file_07", "dl_media", "scan_id_card")
             )
         )
     }
@@ -77,7 +77,7 @@ class ToolCatalogueTest {
             assertTrue("$id must not be listed", !ToolCatalogue.isListed(id))
             assertTrue("$id must not be searchable", !ToolCatalogue.isSearchable(id))
         }
-        for (id in listOf("pdf_03", "pdf_05", "pdf_long_image", "pdf_ocr", "scan_doc", "dl_media", "img_04", "file_07", "office_to_pdf")) {
+        for (id in listOf("pdf_03", "pdf_05", "pdf_long_image", "pdf_ocr", "scan_doc", "scan_id_card", "dl_media", "img_04", "file_07", "office_to_pdf")) {
             assertTrue("$id must remain reachable from the Tools grid", ToolCatalogue.isListed(id))
             assertTrue("$id must remain searchable", ToolCatalogue.isSearchable(id))
         }

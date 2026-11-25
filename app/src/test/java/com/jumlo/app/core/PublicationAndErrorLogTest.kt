@@ -58,6 +58,58 @@ class PublicationRecoveryTest {
     }
 
     @Test
+    fun replace_published_updates_bytes_digest_and_metadata_in_place_without_duplicating() {
+        val dir = root()
+        val jobId = "66666666-6666-4666-8666-666666666666"
+        val pub = DurablePublication(dir)
+        val ticket = pub.reserve(jobId, "document", "out.pdf", "application/pdf")
+        ticket.stageFile.writeBytes("v1-bytes".toByteArray())
+        val initial = pub.publish(ticket)
+
+        val replacement = File(temporary.newFolder(), "replacement.pdf").apply { writeBytes("v2-updated-bytes".toByteArray()) }
+        val updated = pub.replacePublished(jobId, "document", replacement, """{"pageCount":3}""")
+
+        assertEquals(initial.id, updated.id)
+        assertEquals(initial.file.canonicalPath, updated.file.canonicalPath)
+        assertEquals(initial.createdAtEpochMs, updated.createdAtEpochMs)
+        assertEquals("v2-updated-bytes".length.toLong(), updated.sizeBytes)
+        assertEquals(Hashing.sha256(replacement), updated.sha256)
+        assertEquals("""{"pageCount":3}""", updated.metadataJson)
+        assertEquals("v2-updated-bytes", updated.file.readText())
+
+        val reconciled = DurablePublication(dir).reconcile()
+        assertEquals(1, reconciled.size)
+        assertEquals(updated.sha256, reconciled.single().sha256)
+        assertEquals("""{"pageCount":3}""", reconciled.single().metadataJson)
+    }
+
+    @Test
+    fun replace_published_rejects_missing_file_missing_record_and_oversized_metadata() {
+        val dir = root()
+        val jobId = "77777777-7777-4777-8777-777777777777"
+        val pub = DurablePublication(dir)
+        val ticket = pub.reserve(jobId, "document", "out.pdf", "application/pdf")
+        ticket.stageFile.writeBytes("v1".toByteArray())
+        pub.publish(ticket)
+
+        val missingFile = File(temporary.newFolder(), "absent.pdf")
+        assertEquals(
+            "OUTPUT_MISSING",
+            runCatching { pub.replacePublished(jobId, "document", missingFile, "{}") }.exceptionOrNull()?.message
+        )
+
+        val validFile = File(temporary.newFolder(), "valid.pdf").apply { writeBytes("v2".toByteArray()) }
+        assertEquals(
+            "OUTPUT_MISSING",
+            runCatching { pub.replacePublished(jobId, "unknown-key", validFile, "{}") }.exceptionOrNull()?.message
+        )
+        assertEquals(
+            "OUTPUT_METADATA_TOO_LARGE",
+            runCatching { pub.replacePublished(jobId, "document", validFile, "a".repeat(16385)) }.exceptionOrNull()?.message
+        )
+    }
+
+    @Test
     fun download_resume_after_process_death_preserves_partial_bytes_with_matching_validator() {
         val dir = root()
         val partial = File(dir, "0.part")

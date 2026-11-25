@@ -35,7 +35,7 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
         require(request.toolId in setOf("pdf_to_docx", "pdf_to_pptx")) { "CAPABILITY_UNAVAILABLE" }
         val key = "document"
         context.outputs.find(request.id, key)?.let { return@withContext listOf(ItemOutcome(key, ItemStatus.CREATED, it.id)) }
-        val settings = JSONObject(request.settingsJson)
+        val settings = JSONObject(request.settingsJson.ifBlank { "{}" })
         val ocrScript = OcrScript.fromId(settings.optString("ocrScript", "AUTO"))
         val source = context.sources.get(request.sourceIds.single())
         val word = request.toolId == "pdf_to_docx"

@@ -245,7 +245,7 @@ class RemoteExtractorRuntimeTest {
     }
 
     @Test fun theChosenStreamIsDownloadedToTheDevice() {
-        val dir = File(System.getProperty("java.io.tmpdir"), "media-${System.nanoTime()}").apply { mkdirs() }
+        val dir = java.nio.file.Files.createTempDirectory("media-").toFile()
         try {
             val format = MediaFormat(id = "137", extension = "mp4", videoCodec = "avc1", audioCodec = "none", height = 720)
             val choice = MediaChoice(key = "video:137", mode = MediaMode.VIDEO, formats = listOf(format),
@@ -268,7 +268,7 @@ class RemoteExtractorRuntimeTest {
     }
 
     @Test fun aVideoAndAnAudioTrackAreAskedForTogether() {
-        val dir = File(System.getProperty("java.io.tmpdir"), "media-mux-${System.nanoTime()}").apply { mkdirs() }
+        val dir = java.nio.file.Files.createTempDirectory("media-mux-").toFile()
         try {
             val video = MediaFormat(id = "137", extension = "mp4", videoCodec = "avc1", audioCodec = "none", height = 720)
             val audio = MediaFormat(id = "140", extension = "m4a", videoCodec = "none", audioCodec = "mp4a")

@@ -31,9 +31,21 @@ class AppHaptics(
         view.isHapticFeedbackEnabled && (Build.VERSION.SDK_INT >= 33 || legacySystemHapticsAllowed())
 
     @Suppress("DEPRECATION")
-    private fun deviceVibrator():Vibrator? = if(Build.VERSION.SDK_INT>=31)
-        context.getSystemService(VibratorManager::class.java)?.defaultVibrator
-    else context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+    private val vibrator: Vibrator? by lazy(LazyThreadSafetyMode.NONE) {
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 31) {
+                context.getSystemService(VibratorManager::class.java)?.defaultVibrator
+            } else {
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+        }.getOrNull()
+    }
+
+    private val touchAttributes: VibrationAttributes? by lazy(LazyThreadSafetyMode.NONE) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_TOUCH).build()
+        } else null
+    }
 
     private fun effect(event:Event) {
         if(!allowed()) return
@@ -48,8 +60,9 @@ class AppHaptics(
             view.performHapticFeedback(fallback)
             return
         }
-        val vibrator=deviceVibrator()
-        if(vibrator?.hasVibrator()!=true) {view.performHapticFeedback(fallback);return}
+        val activeVibrator=vibrator
+        val hasVibrator=runCatching { activeVibrator?.hasVibrator()==true }.getOrDefault(false)
+        if(!hasVibrator || activeVibrator==null) {view.performHapticFeedback(fallback);return}
         val multiplier=if(intensity==HapticIntensity.STRONG) 1.0 else .65
         val (timings,amplitudes)=when(event) {
             Event.SUCCESS -> longArrayOf(0,18,35,28) to intArrayOf(0, (90*multiplier).toInt(),0,(140*multiplier).toInt())
@@ -62,12 +75,12 @@ class AppHaptics(
         }
         runCatching {
             val waveform = VibrationEffect.createWaveform(timings,amplitudes,-1)
-            if (Build.VERSION.SDK_INT >= 33) {
+            val attrs = touchAttributes
+            if (Build.VERSION.SDK_INT >= 33 && attrs != null) {
                 // On Android 13+, OS applies global touch feedback preference via USAGE_TOUCH.
-                val attrs = VibrationAttributes.Builder().setUsage(VibrationAttributes.USAGE_TOUCH).build()
-                vibrator.vibrate(waveform, attrs)
+                activeVibrator.vibrate(waveform, attrs)
             } else {
-                vibrator.vibrate(waveform)
+                activeVibrator.vibrate(waveform)
             }
         }.onFailure {view.performHapticFeedback(fallback)}
     }
@@ -76,20 +89,21 @@ class AppHaptics(
         effect(event)
         if(cue!=null) sound?.play(cue,soundEnabled)
     }
-    fun navigationTab()=trigger(Event.TICK,null)
+    fun navigationTab()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
+    fun screenTransition()=trigger(Event.TICK,UiSoundPlayer.Cue.TRANSITION)
     fun toolExecute()=trigger(Event.START,UiSoundPlayer.Cue.START)
-    fun toolSelect()=trigger(Event.TICK,null)
+    fun toolSelect()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
     fun selectionToggle()=trigger(Event.TICK,UiSoundPlayer.Cue.TOGGLE)
     fun secondaryAction()=trigger(Event.DELETE,UiSoundPlayer.Cue.DELETE)
-    fun actionClick()=trigger(Event.TICK,null)
+    fun actionClick()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
     fun longPress()=trigger(Event.HOLD,null)
     fun sliderTick()=trigger(Event.TICK,null)
     /** A drag was picked up. Distinct from the click tick so lifts feel different from taps. */
-    fun dragStart()=trigger(Event.DRAG,null)
+    fun dragStart()=trigger(Event.DRAG,UiSoundPlayer.Cue.TOGGLE)
     /** A drag was released. */
-    fun dragEnd()=trigger(Event.TICK,null)
+    fun dragEnd()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
     /** A value snapped to a step, grid line or neighbour. */
-    fun snap()=trigger(Event.TICK,null)
+    fun snap()=trigger(Event.TICK,UiSoundPlayer.Cue.TOGGLE)
     fun downloadComplete()=trigger(Event.SUCCESS,UiSoundPlayer.Cue.SUCCESS)
     fun error()=trigger(Event.ERROR,UiSoundPlayer.Cue.ERROR)
 }

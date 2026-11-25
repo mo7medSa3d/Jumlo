@@ -100,16 +100,16 @@ class JumloUiTest {
         }
     }
 
-    @Test fun toolsSearchSurvivesTabSwitchAndActivityRecreation() {
-        compose.onNodeWithTag("nav.TOOLS").performClick()
+    @Test fun homeToolSearchSurvivesTabSwitchAndActivityRecreation() {
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
         toolsSearch().performTextReplacement("pdf")
         compose.onNodeWithTag("nav.FILES").performClick()
         compose.onNodeWithTag("files.screen").assertIsDisplayed()
-        compose.onNodeWithTag("nav.TOOLS").performClick()
+        compose.onNodeWithTag("nav.HOME").performClick()
         toolsSearch().assertTextEquals("pdf")
         compose.activityRule.scenario.recreate()
         compose.waitForIdle()
-        compose.onNodeWithTag("tools.screen").assertIsDisplayed()
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
         toolsSearch().assertTextEquals("pdf")
     }
 
@@ -168,8 +168,8 @@ class JumloUiTest {
 
     @Test fun imageToolWithoutInputsShowsImportAndKeepsExecuteDisabled() {
         compose.onNodeWithTag("nav.TOOLS").performClick()
-        toolsSearch().performTextReplacement("resize")
-        compose.onNodeWithTag("tool.img_02").performScrollTo().performClick()
+        compose.onNodeWithTag("tools.grid").performScrollToNode(hasTestTag("tool.img_02"))
+        compose.onNodeWithTag("tool.img_02").performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
         compose.onNodeWithText(compose.activity.getString(R.string.workspace_action_resize_images)).assertIsNotEnabled()
         val importPrompt = compose.activity.getString(R.string.ui_choose_inputs)

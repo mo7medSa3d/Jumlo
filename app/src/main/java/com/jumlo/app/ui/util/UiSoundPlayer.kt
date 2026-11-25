@@ -8,44 +8,79 @@ import com.jumlo.app.R
 
 /** Preloaded tiny self-generated WAVs: no streaming, network, media-session, or UI thread decoding. */
 class UiSoundPlayer(context: Context) {
-    enum class Cue { TAP, TOGGLE, START, SUCCESS, ERROR, DELETE }
-    private val audio=context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-    private val pool=SoundPool.Builder().setMaxStreams(2).setAudioAttributes(
-        AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build()
-    private val loaded=mutableSetOf<Int>()
-    @Volatile private var released=false
-    private val soundIds: Map<Cue,Int>
+    enum class Cue { TAP, TOGGLE, TRANSITION, START, SUCCESS, ERROR, DELETE }
+
+    private val audio = runCatching {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }.getOrNull()
+
+    // USAGE_MEDIA avoids OEM STREAM_SYSTEM attenuation/muting while CONTENT_TYPE_SONIFICATION tags UI cues.
+    private val pool: SoundPool? = if (audio == null) null else runCatching {
+        SoundPool.Builder()
+            .setMaxStreams(4)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            .build()
+    }.getOrNull()
+
+    private val loaded = mutableSetOf<Int>()
+    @Volatile private var released = false
+    private val soundIds: Map<Cue, Int>
+
     init {
-        pool.setOnLoadCompleteListener { _,sampleId,status ->
-            if(status==0) synchronized(loaded) {loaded+=sampleId}
-        }
-        soundIds=mapOf(
-            Cue.TAP to pool.load(context,R.raw.jumlo_tap,1),
-            Cue.TOGGLE to pool.load(context,R.raw.jumlo_toggle,1),
-            Cue.START to pool.load(context,R.raw.jumlo_start,1),
-            Cue.SUCCESS to pool.load(context,R.raw.jumlo_success,1),
-            Cue.ERROR to pool.load(context,R.raw.jumlo_error,1),
-            Cue.DELETE to pool.load(context,R.raw.jumlo_delete,1)
-        )
+        val activePool = pool
+        soundIds = if (activePool == null) emptyMap() else runCatching {
+            activePool.setOnLoadCompleteListener { _, sampleId, status ->
+                if (status == 0 && !released) synchronized(loaded) { loaded += sampleId }
+            }
+            mapOf(
+                Cue.TAP to activePool.load(context, R.raw.jumlo_tap, 1),
+                Cue.TOGGLE to activePool.load(context, R.raw.jumlo_toggle, 1),
+                Cue.TRANSITION to activePool.load(context, R.raw.jumlo_transition, 1),
+                Cue.START to activePool.load(context, R.raw.jumlo_start, 1),
+                Cue.SUCCESS to activePool.load(context, R.raw.jumlo_success, 1),
+                Cue.ERROR to activePool.load(context, R.raw.jumlo_error, 1),
+                Cue.DELETE to activePool.load(context, R.raw.jumlo_delete, 1)
+            )
+        }.getOrDefault(emptyMap())
     }
-    fun play(cue:Cue, enabled:Boolean) {
-        if(released) return
-        val manager=audio ?: return
-        if(!enabled || manager.ringerMode!=AudioManager.RINGER_MODE_NORMAL || manager.getStreamVolume(AudioManager.STREAM_SYSTEM)==0) return
-        val sample=soundIds[cue] ?: return
-        val gain=when(cue) {
-            Cue.TAP -> 0.06f
-            Cue.TOGGLE -> 0.09f
-            Cue.START -> 0.10f
-            Cue.SUCCESS -> 0.13f
-            Cue.ERROR -> 0.11f
-            Cue.DELETE -> 0.09f
+
+    fun play(cue: Cue, enabled: Boolean) {
+        if (released || !enabled) return
+        val activePool = pool ?: return
+        val manager = audio ?: return
+        val audible = runCatching {
+            manager.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
+                !manager.isStreamMute(AudioManager.STREAM_MUSIC) &&
+                manager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0
+        }.getOrDefault(false)
+        if (!audible) return
+        val sample = soundIds[cue] ?: return
+        val gain = when (cue) {
+            Cue.TAP -> 0.26f
+            Cue.TOGGLE -> 0.30f
+            Cue.TRANSITION -> 0.22f
+            Cue.START -> 0.34f
+            Cue.SUCCESS -> 0.44f
+            Cue.ERROR -> 0.38f
+            Cue.DELETE -> 0.30f
         }
-        if(synchronized(loaded) {sample in loaded}) runCatching { pool.play(sample,gain,gain,1,0,1f) }
+        if (synchronized(loaded) { !released && sample in loaded }) {
+            runCatching { activePool.play(sample, gain, gain, 1, 0, 1f) }
+        }
     }
+
     fun release() {
-        released=true
-        runCatching { pool.release() }
+        if (released) return
+        released = true
+        synchronized(loaded) { loaded.clear() }
+        pool?.let { activePool ->
+            runCatching { activePool.setOnLoadCompleteListener(null) }
+            runCatching { activePool.release() }
+        }
     }
 }

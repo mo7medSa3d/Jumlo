@@ -10,7 +10,6 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -87,8 +86,7 @@ fun NeonSectionHeader(
         if (action != null && onAction != null) {
             TextButton(onClick = onAction, modifier = Modifier.pressFeedback().sizeIn(minHeight = 48.dp)) {
                 Text(action, style = QuietTheme.typography.metadataStrong)
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(17.dp))
+
             }
         }
     }

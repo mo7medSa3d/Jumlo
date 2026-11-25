@@ -51,7 +51,7 @@ object PdfRedactionEngine {
                             val size = raster.pageSize(pageIndex)
                             val bmp = raster.render(pageIndex, 2000, minOf(maxBitmapBytes / 2, 24L * 1024 * 1024))
                             try {
-                                val mutable = if (bmp.isMutable) bmp else bmp.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
+                                val mutable = if (bmp.isMutable) bmp else bmp.copy(android.graphics.Bitmap.Config.ARGB_8888, true) ?: throw OutOfMemoryError("LOW_MEMORY")
                                 try {
                                     val canvas = Canvas(mutable)
                                     val paint = Paint().apply {

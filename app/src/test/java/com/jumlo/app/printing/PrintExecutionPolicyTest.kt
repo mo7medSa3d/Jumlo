@@ -22,7 +22,7 @@ class PrintExecutionPolicyTest {
             if(index%2==0) gate.cancel()
             if(gate.finish(if(index%3==0) PrintCallbackGate.Result.SUCCESS else PrintCallbackGate.Result.FAILURE)!=null) delivered.incrementAndGet()
         }.also {it.start()}}
-        start.countDown();threads.forEach {it.join()}
+        start.countDown();threads.forEach {it.join(5_000);assertFalse("worker thread did not finish",it.isAlive)}
         assertEquals(1,delivered.get())
     }
     @Test fun completedWriteCannotEmitAnotherCallbackAfterLateCancellation() {

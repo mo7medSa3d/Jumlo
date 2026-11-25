@@ -27,6 +27,7 @@ class InstallableArtifactContractTest(unittest.TestCase):
 
     def test_optimized_artifact_is_separate_and_installable(self):
         prepare = step("Verify and prepare optimized ARM64 installer")
+        self.assertIn('app/build/outputs/apk/direct/compact/app-direct-compact.apk', prepare)
         self.assertIn('apksigner', prepare)
         self.assertIn('verify --verbose --print-certs "$apk"', prepare)
         self.assertIn('build/optimized-installer/Jumlo-Optimized-ARM64.apk.sha256', WORKFLOW)
@@ -34,11 +35,11 @@ class InstallableArtifactContractTest(unittest.TestCase):
         upload = step("Upload optimized installable APK (ARM64)")
         self.assertIn('name: Jumlo-Optimized-Installable-ARM64-', upload)
         self.assertIn('Jumlo-Optimized-ARM64.apk', upload)
-        self.assertNotIn('app-debug.apk', upload)
-        self.assertNotIn('app-release.apk', upload)
+        self.assertNotIn('app-direct-debug.apk', upload)
+        self.assertNotIn('app-direct-release.apk', upload)
         debug = step("Upload media debug APK separately")
-        self.assertIn('app-debug.apk', debug)
-        self.assertNotIn('app-compact.apk', debug)
+        self.assertIn('app/build/outputs/apk/direct/debug/app-direct-debug.apk', debug)
+        self.assertNotIn('app-direct-compact.apk', debug)
 
     def test_download_link_is_present_in_workflow_summary(self):
         upload = step("Upload optimized installable APK (ARM64)")
@@ -55,11 +56,12 @@ class InstallableArtifactContractTest(unittest.TestCase):
         build = step("Build and verify owner-signed Release APK")
         self.assertIn("steps.owner_signing.outputs.enabled == 'true'", build)
         self.assertIn(':app:verifyPublishableRelease', build)
+        self.assertIn('app/build/outputs/apk/direct/release/app-direct-release.apk', build)
         self.assertIn('apksigner', build)
         upload = step("Upload owner-signed Release APK")
         self.assertIn("steps.owner_signing.outputs.enabled == 'true'", upload)
-        self.assertNotIn('app-debug.apk', upload)
-        self.assertNotIn('app-compact.apk', upload)
+        self.assertNotIn('app-direct-debug.apk', upload)
+        self.assertNotIn('app-direct-compact.apk', upload)
         self.assertIn('Jumlo-Owner-Signed-Release-ARM64.apk', upload)
         cleanup = step("Remove temporary owner signing keystore")
         self.assertIn('always()', cleanup)
@@ -67,8 +69,9 @@ class InstallableArtifactContractTest(unittest.TestCase):
 
     def test_existing_build_and_size_gates_remain(self):
         for task in (
-            ':app:assembleDebug', ':app:verifyCompactApkSize',
-            ':app:verifyReleaseApkSize', ':app:testDebugUnitTest', ':app:lintRelease'
+            ':app:assembleDirectDebug', ':app:verifyCompactApkSize',
+            ':app:verifyReleaseApkSize', ':app:testDirectDebugUnitTest',
+            ':app:lintDirectDebug', ':app:lintDirectRelease'
         ):
             self.assertIn(task, WORKFLOW)
         self.assertIn('maxFullMediaApkBytes = 70_000_000L', GRADLE)

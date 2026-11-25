@@ -25,8 +25,8 @@
     <string name="media_error_url">Enter one complete HTTP or HTTPS link.</string>
     <string name="media_error_runtime">The media engine could not start. Update or reinstall Jumlo, then retry.</string>
     <string name="media_error_abi">The built-in media engine is not available for this device processor. Install the Jumlo build matching your device or use a direct file link.</string>
-    <string name="media_error_native_repair">The bundled media repair does not match this build. Update Jumlo, then retry.</string>
-    <string name="media_error_native_repair_unavailable">The bundled media repair for this processor is missing. Update Jumlo, then retry.</string>
+    <string name="media_error_native_repair">The built-in media repair tool does not match this build. Update Jumlo, then retry.</string>
+    <string name="media_error_native_repair_unavailable">The built-in media repair tool is not available for this device. Update Jumlo, then retry.</string>
     <string name="media_error_live">Live streams cannot be downloaded because they have no end yet. Try again after the stream ends, or use a finished video.</string>
     <string name="media_error_generic">This media could not be read or downloaded. The site or content may not be supported — try a direct file link from the source.</string>
     <string name="media_select_type">Download type</string>

@@ -15,10 +15,11 @@ import kotlin.coroutines.resumeWithException
 @Singleton
 class PlayIntegrityVerifier @Inject constructor(@ApplicationContext private val context: Context) {
     private val manager: StandardIntegrityManager = IntegrityManagerFactory.createStandard(context)
-    @Volatile private var provider: StandardIntegrityManager.StandardIntegrityTokenProvider? = null
+    @Volatile private var cachedProvider: Pair<Long, StandardIntegrityManager.StandardIntegrityTokenProvider>? = null
 
     suspend fun requestToken(cloudProjectNumber: Long, requestHash: String): Result<String> = try {
-        val tokenProvider = provider ?: prepareProvider(cloudProjectNumber).also { provider = it }
+        val tokenProvider = cachedProvider?.takeIf { it.first == cloudProjectNumber }?.second
+            ?: prepareProvider(cloudProjectNumber).also { cachedProvider = cloudProjectNumber to it }
         val token = suspendCancellableCoroutine { cont ->
             tokenProvider.request(
                 StandardIntegrityManager.StandardIntegrityTokenRequest.builder()
@@ -28,12 +29,15 @@ class PlayIntegrityVerifier @Inject constructor(@ApplicationContext private val 
                 if (cont.isActive) cont.resume(resp.token())
             }.addOnFailureListener { err ->
                 if (cont.isActive) cont.resumeWithException(err)
+            }.addOnCanceledListener {
+                if (cont.isActive) cont.cancel()
             }
         }.takeIf { it.isNotBlank() } ?: error("INTEGRITY_TOKEN_UNAVAILABLE")
         Result.success(token)
     } catch (cancel: CancellationException) {
         throw cancel
     } catch (error: Exception) {
+        cachedProvider = null
         Result.failure(error)
     }
 
@@ -45,5 +49,6 @@ class PlayIntegrityVerifier @Inject constructor(@ApplicationContext private val 
                     .build()
             ).addOnSuccessListener { p -> if (cont.isActive) cont.resume(p) }
              .addOnFailureListener { e -> if (cont.isActive) cont.resumeWithException(e) }
+             .addOnCanceledListener { if (cont.isActive) cont.cancel() }
         }
 }

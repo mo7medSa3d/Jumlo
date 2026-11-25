@@ -100,8 +100,8 @@ internal fun ImageResultPreview(vm:AppViewModel,sourceIds:List<String>,draft:Wor
         Text(stringResource(if(joined) R.string.interactive_layout_preview else R.string.interactive_result_preview),style=QuietTheme.typography.sectionTitle)
         val shown=if(showOriginal && !joined) frame?.getOrNull()?.let {ImageResult(it.bitmap,it.width,it.height)} else result?.getOrNull()
         if(shown!=null && !shown.bitmap.isRecycled) {
-            if(joined && sizes?.isSuccess==true) {
-                val dimensions=sizes!!.getOrThrow()
+            val dimensions=if(joined) sizes?.getOrNull() else null
+            if(dimensions!=null) {
                 val layout=draft.text1.ifBlank {"GRID2"}
                 val plan=ImageJoinPolicy.plan(dimensions,layout,draftNumber(draft.num1,8),0)
                 val cells=plan.placements.mapIndexed {index,placement->

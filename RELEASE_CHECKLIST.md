@@ -44,7 +44,7 @@ This is a release gate, not a claim of Play approval. The former `TEST_REPORT.md
 - [ ] **OkHttp `4.12.0` → `4.12.1` (still 4.12.0 in `gradle/libs.versions.toml`)**: 4.12.1 blocks eight compromised eMudhra intermediate CAs on JVM/AOSP clients; Google Play Services already auto-blocked them on GMS devices. Do not attribute `CVE-2026-129482` to this upgrade: that CVE is a CertificatePinner trailing-dot hostname bypass (affects OkHttp through 5.5.1, fix pending upstream), and a source scan found no `CertificatePinner` use in this app. Re-check if pinning is introduced before release signing.
 - [ ] **Room upgrade candidate (`2.7.2` → `2.8.3`)**: Evaluate and validate `androidx.room` `2.8.3` to pick up the auto-close `Flow` deadlock fix (`b/446643789`) and Cursor JNI performance improvements; re-run DAO and migration instrumentation tests after upgrading.
 - [ ] **Zip4j CVE verification (`2.11.5`)**: Confirm `net.lingala.zip4j:zip4j` remains at `2.11.5` or newer (verified past `CVE-2023-22899`).
-- [ ] **Room v2 schema export**: Run `./gradlew :app:kspDebugKotlin` to regenerate and commit `app/schemas/com.jumlo.app.data.local.AppDatabase/2.json`, then verify `python3 -B scripts/test-source-static.py` passes `test_current_room_schema_and_legacy_structural_fixture_are_packaged`.
+- [ ] **Room v2 schema export**: Run `./gradlew :app:kspDirectDebugKotlin` to regenerate and commit `app/schemas/com.jumlo.app.data.local.AppDatabase/2.json`, then verify `python3 -B scripts/test-source-static.py` passes `test_current_room_schema_is_packaged`.
 - [ ] **Android 16 (API 36) compliance verification**: Confirm on an API 36 device/emulator:
   - Mandatory edge-to-edge rendering with proper window insets across all tabs, dialogs, and RTL/200% font layouts.
   - Predictive back gestures and state preservation across root tabs and nested studios.
@@ -63,7 +63,7 @@ This is a release gate, not a claim of Play approval. The former `TEST_REPORT.md
 
 ## Manual smoke checklist
 
-- [ ] Confirm the tool matrix covers every registered ID × four scenarios (33×4 = 132 cases: 124 processing NOT_RUN, 8 navigation N/A; 21 primary tools, 5 folded PDF actions, 7 internal legacy aliases) until real evidence exists. The authenticated Drive transfer cases are retired; never count archived IDs or N/A cases as PASS.
+- [ ] Confirm the tool matrix covers every registered ID × four scenarios (34×4 = 136 cases: 124 processing NOT_RUN, 12 navigation N/A; 22 primary tools, 5 folded PDF actions, 7 internal legacy aliases) until real evidence exists. The authenticated Drive transfer cases are retired; never count archived IDs or N/A cases as PASS.
 
 - [ ] Verify UI sounds on/off with normal, silent and muted Android system modes; relaunch and check restored setting, Arabic RTL and large text.
 

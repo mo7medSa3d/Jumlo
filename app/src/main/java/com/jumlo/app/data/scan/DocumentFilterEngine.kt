@@ -11,6 +11,7 @@ enum class ScanFilter { ORIGINAL, CLEAN_DOCUMENT, CRISP_BW, MAGIC_COLOR }
 /** On-device document enhancement filters (shadow lift, crisp B&W print, magic color). */
 object DocumentFilterEngine {
     fun apply(source: Bitmap, filter: ScanFilter): Bitmap {
+        require(!source.isRecycled) { "BITMAP_RECYCLED" }
         if (filter == ScanFilter.ORIGINAL) return source
         val out = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
         try {

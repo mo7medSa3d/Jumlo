@@ -246,7 +246,7 @@ object MediaLinks {
                 (a == 198 && b in 18..19)
         }
         // Reject shorthand/octal/hex IPv4 forms (e.g. 127.1, 0x7f000001) or single-label hosts.
-        if (parts.size < 2 || parts.last().all { it.isDigit() } ||
+        if (parts.size < 2 || parts.any { it.isEmpty() } || parts.last().all { it.isDigit() } ||
             parts.all { it.all(Char::isDigit) || it.startsWith("0x") }) return true
         return false
     }
@@ -275,7 +275,7 @@ object MediaArguments {
     private val muxContainers = setOf("mp4", "webm", "mkv")
     private fun isYouTubeUrl(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")
-        return host == "youtu.be" || host == "youtube.com" || host.endsWith(".youtube.com") || host.endsWith(".youtube-nocookie.com")
+        return host == "youtu.be" || host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtube-nocookie.com" || host.endsWith(".youtube-nocookie.com")
     }
     private fun isTikTokUrl(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host.orEmpty().lowercase(Locale.ROOT) }.getOrDefault("")

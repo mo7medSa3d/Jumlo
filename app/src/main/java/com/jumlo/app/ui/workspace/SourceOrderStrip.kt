@@ -71,9 +71,10 @@ internal fun SourceOrderStrip(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.interactive_input_order), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })
             if (sources.isNotEmpty() && sources.all { it.mimeType == "application/pdf" }) {
+                val totalPages = pageCount?.getOrNull()
                 when {
                     pageCount == null -> Text(stringResource(R.string.studio_merge_counting), style = QuietTheme.typography.metadata)
-                    pageCount?.isSuccess == true -> Text(stringResource(R.string.studio_merge_pages, sources.size, pageCount!!.getOrThrow()), style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
+                    totalPages != null -> Text(stringResource(R.string.studio_merge_pages, sources.size, totalPages), style = QuietTheme.typography.metadataStrong, color = MaterialTheme.colorScheme.primary)
                     else -> Text(stringResource(R.string.msg_preview_unavailable), style = QuietTheme.typography.metadata, color = MaterialTheme.colorScheme.error)
                 }
             }

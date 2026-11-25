@@ -25,6 +25,7 @@ object CapabilityRegistry {
         UtilityTool("office_to_pdf", "office_to_pdf", PillarCategory.PDF, "Office to PDF", "\u200F\u2066Office\u2069 إلى \u2066PDF\u2069", "Turn Word, Excel and slides into a clean PDF", "حوّل Word وExcel والشرائح إلى PDF نظيف", "description"),
         UtilityTool("pdf_ocr", "tools/pdf/ocr", PillarCategory.PDF, "Extract Text", "استخراج النص", "Extract text from images and PDFs", "استخرج النص من الصور و\u2066PDF\u2069 بدقة عالية", "text_fields"),
         UtilityTool("scan_doc", "tools/scan", PillarCategory.PDF, "Smart Scan", "المسح الذكي", "Scan a stack of pages into one PDF", "امسح عدة صفحات في PDF واحد", "document_scanner"),
+        UtilityTool("scan_id_card", "tools/scan/id_card", PillarCategory.PDF, "ID Card Scan", "مسح البطاقة", "Scan front & back onto one A4 PDF", "مسح الوجهين في صفحة A4 واحدة", "badge"),
 
         UtilityTool("img_01", "convert_images", PillarCategory.IMAGES, "Convert Images", "تحويل الصور", "Convert images in batches, fast", "حوّل الصور دفعات وبسرعة", "photo_library"),
         UtilityTool("img_02", "resize_images", PillarCategory.IMAGES, "Resize Images", "تغيير أبعاد الصور", "Resize images to exactly the size you need", "غيّر حجم الصور إلى المقاس المطلوب تمامًا", "aspect_ratio"),
@@ -43,9 +44,11 @@ object CapabilityRegistry {
         UtilityTool("file_batch_rename", "batch_rename", PillarCategory.FILES, "Batch Rename (copies)", "إعادة تسمية دفعية", "Rename hundreds of files in one go", "أعد تسمية مئات الملفات دفعة واحدة", "drive_file_rename_outline")
     )
     val tools get() = allTools
-    fun availability(id:String) = CapabilityPolicy.availability(id)
-    fun visible(id:String):Boolean = if (id.startsWith("dl_") && !com.jumlo.app.BuildConfig.ENABLE_MEDIA_DOWNLOADER) false else availability(id).visible
-    fun enabled(id:String):Boolean = availability(id).enabled
+    // scan_id_card shares navigation availability with scan_doc so it stays visible & enabled without modifying CapabilityPolicy.
+    fun availability(id:String) = CapabilityPolicy.availability(if (id == "scan_id_card") "scan_doc" else id)
+    private fun isDownloadBlocked(id:String):Boolean = id.startsWith("dl_") && !com.jumlo.app.BuildConfig.ENABLE_MEDIA_DOWNLOADER
+    fun visible(id:String):Boolean = if (isDownloadBlocked(id)) false else availability(id).visible
+    fun enabled(id:String):Boolean = if (isDownloadBlocked(id)) false else availability(id).enabled
     fun canProcess(id:String):Boolean = CapabilityPolicy.canProcess(id)
     fun reason(id:String):String = availability(id).reason.orEmpty()
 }

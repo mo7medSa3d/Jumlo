@@ -4,7 +4,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -525,18 +527,30 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                                 )
                             }
                             .pointerInput(sourceId, pageNumber,pagerState.currentPage) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    val newScale = (scale * zoom).coerceIn(1f, 4f)
-                                    scale = newScale
-                                    if (newScale > 1.01f) {
-                                        val maxPanX = (size.width * (newScale - 1f)) / 2f
-                                        val maxPanY = (size.height * (newScale - 1f)) / 2f
-                                        offset = Offset(
-                                            x = (offset.x + pan.x).coerceIn(-maxPanX, maxPanX),
-                                            y = (offset.y + pan.y).coerceIn(-maxPanY, maxPanY)
-                                        )
-                                    } else {
-                                        offset = Offset.Zero
+                                awaitEachGesture {
+                                    var zooming = false
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        val pressed = event.changes.count { it.pressed }
+                                        if (pressed == 0) break
+                                        if (pressed >= 2 || scale > 1.01f || zooming) {
+                                            if (pressed >= 2) zooming = true
+                                            val zoom = event.calculateZoom()
+                                            val pan = event.calculatePan()
+                                            val newScale = (scale * zoom).coerceIn(1f, 4f)
+                                            scale = newScale
+                                            if (newScale > 1.01f) {
+                                                val maxPanX = (size.width * (newScale - 1f)) / 2f
+                                                val maxPanY = (size.height * (newScale - 1f)) / 2f
+                                                offset = Offset(
+                                                    x = (offset.x + pan.x).coerceIn(-maxPanX, maxPanX),
+                                                    y = (offset.y + pan.y).coerceIn(-maxPanY, maxPanY)
+                                                )
+                                            } else {
+                                                offset = Offset.Zero
+                                            }
+                                            event.changes.forEach { it.consume() }
+                                        }
                                     }
                                 }
                             },

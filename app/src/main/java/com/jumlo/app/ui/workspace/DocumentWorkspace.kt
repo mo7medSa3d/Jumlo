@@ -47,9 +47,11 @@ import kotlinx.coroutines.CancellationException
                 catch(failure:Exception) { error=stableError(failure) }
             }
             Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                val currentUri = uri
+                val currentError = error
                 when {
-                    uri!=null -> PdfViewerScreen(uri!!,source.displayName,onBack,onOpenFile,{u,_->vm.importForPrint(com.jumlo.app.ui.intake.Intake(listOf(u),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},Modifier.fillMaxSize())
-                    error!=null -> Text(stringResource(userMessageResource(error!!)),modifier=Modifier.padding(24.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                    currentUri!=null -> PdfViewerScreen(currentUri,source.displayName,onBack,onOpenFile,{u,_->vm.importForPrint(com.jumlo.app.ui.intake.Intake(listOf(u),android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,null))},Modifier.fillMaxSize())
+                    currentError!=null -> Text(stringResource(userMessageResource(currentError)),modifier=Modifier.padding(24.dp).semantics { liveRegion = LiveRegionMode.Polite })
                     else -> CircularProgressIndicator()
                 }
             }

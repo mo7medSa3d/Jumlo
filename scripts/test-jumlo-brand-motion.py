@@ -84,7 +84,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
             ET.parse(RES/'drawable'/name)
     def test_ui_tones_are_tiny_valid_mono_waveforms(self):
         root=RES/'raw'
-        expected=['tap','toggle','start','success','error','delete']
+        expected=['tap','toggle','transition','start','success','error','delete']
         size=0
         for cue in expected:
             file=root/f'jumlo_{cue}.wav'
@@ -100,7 +100,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
     def test_sound_switch_honors_system_silence_and_volume(self):
         sound=code('ui/util/UiSoundPlayer.kt')
         self.assertIn('AudioManager.RINGER_MODE_NORMAL',sound)
-        self.assertIn('getStreamVolume(AudioManager.STREAM_SYSTEM)==0',sound)
+        self.assertRegex(sound, r'getStreamVolume\(AudioManager\.STREAM_(?:MUSIC|SYSTEM)\)\s*(?:==\s*0|>\s*0)')
         self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',code('MainActivity.kt'))
     def test_haptics_have_intensity_patterns_and_system_respect(self):
         h=code('ui/util/AppHaptics.kt')

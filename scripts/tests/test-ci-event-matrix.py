@@ -29,7 +29,7 @@ class CiEventMatrixTests(unittest.TestCase):
         self.assertIn("lite_build:", self.header)
         self.assertIn(":app:verifyCompactApkSize", self.workflow)
         self.assertIn(":app:verifyReleaseApkSize", self.workflow)
-        self.assertIn(":app:lintRelease", self.workflow)
+        self.assertIn(":app:lintDirectRelease", self.workflow)
         self.assertIn("scripts/tests/test-ci-event-matrix.py", self.workflow)
 
 if __name__ == "__main__":

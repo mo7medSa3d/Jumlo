@@ -37,7 +37,7 @@ object PlatformHeaderPolicy {
             !initial.host.isNullOrBlank() &&
             initial.host.equals(request.host, ignoreCase = true) &&
             initial.rawUserInfo == null && request.rawUserInfo == null &&
-            port(initial) > 0 && port(initial) == port(request)
+            port(initial) in 1..65535 && port(initial) == port(request)
     }
 
     fun headersFor(
@@ -52,7 +52,8 @@ object PlatformHeaderPolicy {
         val uri = runCatching { URI(url) }.getOrNull()
             ?: throw IllegalArgumentException("INVALID_URL")
         require(uri.scheme?.lowercase(Locale.ROOT) in httpSchemes &&
-            !uri.host.isNullOrBlank() && uri.rawUserInfo == null) { "INVALID_URL" }
+            !uri.host.isNullOrBlank() && uri.rawUserInfo == null &&
+            (uri.port == -1 || uri.port in 1..65535)) { "INVALID_URL" }
 
         val allowOriginExtras = sameOrigin(customHeaderOrigin, url)
         val agent = customUserAgent.trim().takeIf {

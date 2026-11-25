@@ -42,9 +42,9 @@ Build the debug and instrumentation APKs on a configured Android SDK 36
 installation, install the debug app, and connect one authorized emulator/device:
 
 ```bash
-./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+./gradlew :app:assembleDirectDebug :app:assembleDirectDebugAndroidTest
 adb devices -l
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/direct/debug/app-direct-debug.apk
 adb shell df -h /data /sdcard
 df -h "$HOME/.android/avd" /tmp
 ```
@@ -78,7 +78,7 @@ Do not stage previously compressed `*-out.pdf` outputs in place of inputs.
 ## 3. Run, collect and qualify the device measurements
 
 ```bash
-./gradlew :app:connectedDebugAndroidTest \
+./gradlew :app:connectedDirectDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=com.jumlo.app.pdf.PdfCompressionDeviceTest
 adb pull "$DEST/device-compression-report.txt" device-compression-report.txt
 adb shell dumpsys meminfo com.jumlo.app.debug > device-meminfo.txt

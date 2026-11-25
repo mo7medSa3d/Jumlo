@@ -390,6 +390,6 @@ class PdfOfficeHandlerTest {
     }
 
     private fun part(file: File, path: String) = ZipFile(file).use { zip ->
-        zip.getInputStream(zip.getEntry(path)).use { input -> DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }.newDocumentBuilder().parse(input) }
+        zip.getInputStream(zip.getEntry(path)).use { input -> DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true; isExpandEntityReferences = false; runCatching { setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true) }; runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) } }.newDocumentBuilder().parse(input) }
     }
 }

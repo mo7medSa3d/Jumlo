@@ -5,15 +5,15 @@ import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 import android.text.format.Formatter
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
@@ -54,6 +54,7 @@ import com.jumlo.app.ui.components.QuietIconTile
         modifier = modifier.fillMaxWidth(),
         shape = QuietTheme.shapes.card,
         color = pillars.cardSurface,
+        border = BorderStroke(0.5.dp, pillars.cardBorder),
         shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.fillMaxWidth(), content = content)
@@ -64,7 +65,7 @@ import com.jumlo.app.ui.components.QuietIconTile
     HorizontalDivider(
         modifier = Modifier.padding(start = 62.dp, end = 14.dp),
         thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
     )
 }
 
@@ -107,16 +108,12 @@ import com.jumlo.app.ui.components.QuietIconTile
                     Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 }
             }
-            Spacer(Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Rounded.ChevronRight, null,
-                Modifier.size(18.dp), tint = colors.onSurfaceVariant.copy(alpha = 0.55f)
-            )
+
         }
     }
     if (grouped) {
         Box(
-            modifier = modifier.fillMaxWidth()
+            modifier = modifier.fillMaxWidth().pressFeedback()
                 .clickable(enabled = enabled, role = Role.Button, onClick = {
                     if (destructive) haptics.secondaryAction() else haptics.actionClick()
                     onClick()
@@ -181,7 +178,7 @@ import com.jumlo.app.ui.components.QuietIconTile
     }
     if (grouped) {
         Box(
-            modifier = modifier.fillMaxWidth()
+            modifier = modifier.fillMaxWidth().pressFeedback()
                 .toggleable(value = checked, role = Role.Switch, onValueChange = onToggle)
         ) { rowContent() }
     } else {
@@ -225,7 +222,7 @@ import com.jumlo.app.ui.components.QuietIconTile
             if(outputFiles.isNotEmpty()) {
                 HorizontalDivider()
                 Text(stringResource(R.string.redesign_storage_by_type),style=MaterialTheme.typography.titleSmall,modifier=Modifier.semantics { heading() })
-                val groups=outputFiles.groupBy { StoragePaths.category(it.mimeType) }
+                val groups=remember(outputFiles) { outputFiles.groupBy { StoragePaths.category(it.mimeType) } }
                 listOf("Video","Audio","PDF","Images","Documents").forEach {category->
                     val bytes=groups[category].orEmpty().sumOf { it.sizeBytes }
                     if(bytes>0L) {

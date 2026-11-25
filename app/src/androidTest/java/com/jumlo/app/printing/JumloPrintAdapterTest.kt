@@ -82,14 +82,20 @@ class JumloPrintAdapterTest {
     private fun write(adapter:JumloPrintAdapter,ranges:Array<PageRange>):Pair<File,List<PageRange>> {
         val file=File.createTempFile("adapter-write-",".pdf",context.cacheDir)
         val descriptor=ParcelFileDescriptor.open(file,ParcelFileDescriptor.MODE_WRITE_ONLY or ParcelFileDescriptor.MODE_TRUNCATE)
-        val latch=CountDownLatch(1);val outcomes=CopyOnWriteArrayList<String>();var reported=emptyList<PageRange>()
-        instrumentation.runOnMainSync {adapter.onWrite(ranges,descriptor,CancellationSignal(),PrintAdapterHelper.createWriteCallback(object:PrintAdapterHelper.WriteCallback {
-            override fun onWriteFinished(pages:Array<out PageRange>) {reported=pages.toList();outcomes+="success";latch.countDown()}
-            override fun onWriteFailed(error:CharSequence?) {outcomes+="failure";latch.countDown()}
-        }))}
-        assertTrue(latch.await(10,TimeUnit.SECONDS));instrumentation.waitForIdleSync()
-        assertEquals(listOf("success"),outcomes.toList());assertFalse(descriptor.fileDescriptor.valid())
-        return file to reported
+        try {
+            val latch=CountDownLatch(1);val outcomes=CopyOnWriteArrayList<String>();var reported=emptyList<PageRange>()
+            instrumentation.runOnMainSync {adapter.onWrite(ranges,descriptor,CancellationSignal(),PrintAdapterHelper.createWriteCallback(object:PrintAdapterHelper.WriteCallback {
+                override fun onWriteFinished(pages:Array<out PageRange>) {reported=pages.toList();outcomes+="success";latch.countDown()}
+                override fun onWriteFailed(error:CharSequence?) {outcomes+="failure";latch.countDown()}
+            }))}
+            assertTrue(latch.await(10,TimeUnit.SECONDS));instrumentation.waitForIdleSync()
+            assertEquals(listOf("success"),outcomes.toList());assertFalse(descriptor.fileDescriptor.valid())
+            return file to reported
+        } catch(error:Throwable) {
+            runCatching {descriptor.close()}
+            file.delete()
+            throw error
+        }
     }
     private class FixtureEngine:PrintEngine {
         val writes=CopyOnWriteArrayList<List<PrintPage>>()

@@ -24,9 +24,8 @@ import com.jumlo.app.ui.AppViewModel
 import com.jumlo.app.ui.components.NeonPanel
 import com.jumlo.app.ui.components.SaveFolderCard
 import com.jumlo.app.ui.components.formatBytes
-import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.theme.QuietTheme
+import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.util.rememberAppHaptics
 
 private val TYPE_CATEGORIES = listOf("PDF", "Images", "Video", "Audio", "Documents")
@@ -177,6 +176,7 @@ private fun StorageCategory(
         modifier = modifier
             .fillMaxWidth()
             .clip(QuietTheme.shapes.inputField)
+            .pressFeedback()
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 4.dp, horizontal = 2.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp)
@@ -188,12 +188,7 @@ private fun StorageCategory(
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
             )
             Text(formatBytes(bytes), style = QuietTheme.typography.metadataStrong.copy(textDirection = TextDirection.Ltr))
-            Icon(
-                Icons.AutoMirrored.Rounded.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-            )
+
         }
         LinearProgressIndicator(
             progress = { if (total > 0L) (bytes.toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f },

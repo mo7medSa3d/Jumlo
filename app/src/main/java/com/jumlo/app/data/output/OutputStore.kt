@@ -4,6 +4,7 @@ import com.jumlo.app.data.pdf.PdfRendererFactory
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.ParcelFileDescriptor
 import androidx.core.content.FileProvider
 import com.jumlo.app.core.*
@@ -15,6 +16,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -40,11 +42,13 @@ import javax.inject.Singleton
     private val _trashed=MutableStateFlow<List<OutputRecord>>(emptyList())
     val trashed=_trashed.asStateFlow()
 
+    private fun verifyLocalFile(record:OutputRecord):File {
+        val file=File(File(resultsDir,record.id),SafeNames.basename(record.displayName))
+        require(file.isFile && file.length()==record.sizeBytes && Hashing.sha256(file)==record.sha256) { "PUBLICATION_INTEGRITY_ERROR" }
+        return file
+    }
     suspend fun find(job:String,key:String):OutputRecord?=withContext(Dispatchers.IO) { db.processingDao().output(job,key)?.let {
-        json.decodeFromString<OutputRecord>(it.recordJson).also { record ->
-            val file=File(File(resultsDir,record.id),SafeNames.basename(record.displayName))
-            require(file.isFile && file.length()==record.sizeBytes && Hashing.sha256(file)==record.sha256) { "PUBLICATION_INTEGRITY_ERROR" }
-        }
+        json.decodeFromString<OutputRecord>(it.recordJson).also { record -> verifyLocalFile(record) }
     } }
     suspend fun reserve(jobId:String,itemKey:String,displayName:String,mimeType:String):OutputTicket=withContext(Dispatchers.IO) {
         publisher.reserve(jobId,itemKey,displayName,mimeType).let { OutputTicket(it.jobId,it.itemKey,it.stageFile,it.displayName,it.mimeType) }
@@ -99,20 +103,82 @@ import javax.inject.Singleton
             currentCoroutineContext().ensureActive()
             val record=json.decodeFromString<OutputRecord>(row.recordJson)
             if(!record.publicUri.isNullOrBlank()) continue
-            val verified=find(record.jobId,record.itemKey) ?: continue
-            val file=File(File(resultsDir,verified.id),SafeNames.basename(verified.displayName))
-            recordPublicCopy(verified,file)
+            val file=verifyLocalFile(record)
+            recordPublicCopy(record,file)
         }
     } }
     /** A created private file with no visible copy is a partial save, never chosen-folder success. */
-    suspend fun reportPublicSaveFailures(outcomes:List<ItemOutcome>):List<ItemOutcome> = outcomes.map { outcome ->
-        if(outcome.outputId==null || outcome.status in setOf(ItemStatus.FAILED,ItemStatus.CANCELLED)) outcome
-        else {
-            val record=db.processingDao().outputById(outcome.outputId)?.let { json.decodeFromString<OutputRecord>(it.recordJson) }
-            if(record!=null && record.publicUri.isNullOrBlank()) outcome.copy(status=ItemStatus.FAILED,errorCode="DESTINATION_SAVE_FAILED")
-            else outcome
+    suspend fun reportPublicSaveFailures(outcomes:List<ItemOutcome>):List<ItemOutcome> {
+        val candidateIds=outcomes.asSequence()
+            .filter { it.outputId!=null && it.status !in setOf(ItemStatus.FAILED,ItemStatus.CANCELLED) }
+            .mapNotNull { it.outputId }
+            .distinct()
+            .toList()
+        if(candidateIds.isEmpty()) return outcomes
+        // Chunk below SQLite's 999 bind-parameter ceiling on older Android APIs.
+        val recordsById=candidateIds.chunked(500)
+            .flatMap { db.processingDao().outputsByIds(it) }
+            .associate { it.id to json.decodeFromString<OutputRecord>(it.recordJson) }
+        return outcomes.map { outcome ->
+            val id=outcome.outputId
+            if(id==null || outcome.status in setOf(ItemStatus.FAILED,ItemStatus.CANCELLED)) outcome
+            else {
+                val record=recordsById[id]
+                if(record!=null && record.publicUri.isNullOrBlank()) outcome.copy(status=ItemStatus.FAILED,errorCode="DESTINATION_SAVE_FAILED")
+                else outcome
+            }
         }
     }
+    /** Replaces an existing Jumlo-managed output file in place (private bytes, journal digest, Room row, and visible public copy) without creating a duplicate file. */
+    suspend fun replaceInPlace(sourceUri:String,replacementFile:File,validate:suspend (File)->OutputMetadata):OutputRecord?=withContext(Dispatchers.IO) { mutations.withLock {
+        val current=db.processingDao().outputs().first()
+            .asSequence()
+            .map { json.decodeFromString<OutputRecord>(it.recordJson) }
+            .firstOrNull { it.uri==sourceUri || it.publicUri==sourceUri }
+            ?: return@withLock null
+        currentCoroutineContext().ensureActive()
+        val inspected=validate(replacementFile)
+        val mergedMeta=inspected.copy(subfolder=inspected.subfolder ?: current.metadata.subfolder)
+        currentCoroutineContext().ensureActive()
+        val published=publisher.replacePublished(current.jobId,current.itemKey,replacementFile,json.encodeToString(mergedMeta))
+        val existingPublic=current.publicUri
+        var publicError:String?=current.publicSaveError
+        var cancelled:CancellationException?=null
+        if(!existingPublic.isNullOrBlank()) {
+            val parsed=Uri.parse(existingPublic)
+            val coroutine=currentCoroutineContext()
+            val check:()->Unit={ coroutine.ensureActive() }
+            val synced=try {
+                when(parsed.scheme) {
+                    "content" -> {
+                        copyVerifiedContent(context.contentResolver,parsed,published.file,published.sha256,check)
+                        true
+                    }
+                    "file" -> {
+                        val root=context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)?.canonicalFile
+                        val target=File(parsed.path.orEmpty()).canonicalFile
+                        if(root!=null && target.path.startsWith(root.path+File.separator)) {
+                            VerifiedFileCopy.copy(published.file,target,published.sha256,check)
+                            true
+                        } else false
+                    }
+                    else -> false
+                }
+            } catch(cancel:CancellationException) {
+                cancelled=cancel
+                false
+            } catch(_:Exception) {
+                false
+            }
+            publicError=if(synced) null else "DESTINATION_SAVE_FAILED"
+        }
+        val updated=current.copy(sizeBytes=published.sizeBytes,sha256=published.sha256,metadata=mergedMeta,publicSaveError=publicError)
+        withContext(NonCancellable) {
+            require(db.processingDao().updateOutputRecord(updated.id,json.encodeToString(updated))==1) { "OUTPUT_DATABASE_FAILED" }
+        }
+        cancelled?.let { throw it }
+        updated
+    } }
     suspend fun discardIncomplete(jobId:String):Unit=withContext(Dispatchers.IO) { publisher.discardIncomplete(jobId); Unit }
     private fun trashEntry(record:OutputRecord)=TrashEntry(record.id,record.displayName,record.sizeBytes,record.sha256,json.encodeToString(record),
         Hashing.sha256(java.io.ByteArrayInputStream("${record.jobId}\u0000${record.itemKey}".toByteArray())))

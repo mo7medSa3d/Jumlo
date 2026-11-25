@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="studio_frequently_used">Your frequent tools</string>
     <string name="studio_signature_pad">Signature drawing pad. Drag to draw a stroke.</string>
     <string name="studio_pen_thickness">Pen thickness · %1$d dp</string>
     <string name="studio_ink_black">Black ink</string>
@@ -67,7 +66,7 @@
     <string name="studio_ocr_copy">Copy text</string>
     <string name="studio_ocr_export">Export text</string>
     <string name="studio_ocr_wait">Recognizing text on this page…</string>
-    <string name="studio_ocr_empty">No text was recognized</string>
+    <string name="studio_ocr_empty">No text was recognized. Try a clearer or better-lit page.</string>
     <string name="msg_invalid_media_service_url">Use an HTTPS service address without sign-in details, query parameters, or a fragment.</string>
     <string name="msg_invalid_media_service_token">The service token is invalid. Check it and enter it again.</string>
     <string name="msg_media_service_credentials_unavailable">The saved service token could not be unlocked. Enter the token again in settings.</string>

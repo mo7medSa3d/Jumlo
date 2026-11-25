@@ -215,7 +215,8 @@ class MediaPoliciesTest {
             "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
             "https://youtu.be/dQw4w9WgXcQ",
             "https://m.youtube.com/shorts/abcdef12345",
-            "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
+            "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+            "https://youtube-nocookie.com/embed/dQw4w9WgXcQ"
         )
         for (url in youtubeUrls) {
             val probeArgs = MediaArguments.probe(url)
@@ -301,5 +302,12 @@ class MediaPoliciesTest {
             sizeIsApproximate = false
         )
         assertNull(MediaCatalog.displayBytes(choice, durationSeconds = 1e20))
+    }
+
+    @Test
+    fun mediaLinksRejectsEmptyHostLabels() {
+        assertThrows(IllegalArgumentException::class.java) {
+            MediaLinks.normalize("https://example..com/video", allowHttp = true)
+        }
     }
 }

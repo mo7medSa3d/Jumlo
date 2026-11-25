@@ -72,10 +72,11 @@ object ToolIconColors {
         "scan_id_card" to Color(0xFF0D9488),
         "convert" to Color(0xFFFF6D00),            // Convert vivid deep orange
         "all_tools" to Color(0xFF6D28D9),          // All Tools deep violet
+        "explore_tools" to Color(0xFF6D28D9),      // Explore Tools deep violet
     )
 
     private fun pillarCenter(toolId: String): Float = when {
-        toolId == "scan_doc" || toolId == "scan" || toolId == "id_card" -> 195f
+        toolId == "scan_doc" || toolId == "scan" || toolId == "id_card" || toolId == "scan_id_card" -> 195f
         toolId.startsWith("pdf_") || toolId == "office_to_pdf" || toolId == "convert" -> 12f
         toolId.startsWith("img_") -> 148f
         toolId.startsWith("dl_") -> 212f

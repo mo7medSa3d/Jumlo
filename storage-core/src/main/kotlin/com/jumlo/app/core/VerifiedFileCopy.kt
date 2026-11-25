@@ -4,6 +4,8 @@ import java.io.File
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
+import java.security.MessageDigest
+import java.util.Locale
 
 /** Verified public copy; a failed write must never remove an existing output. */
 object VerifiedFileCopy {
@@ -28,7 +30,8 @@ object VerifiedFileCopy {
             }
             check()
             val actual=target.inputStream().use { Hashing.sha256(it,check) }
-            check(actual==expectedSha256) { "DESTINATION_VERIFY_FAILED" }
+            val expected=expectedSha256.trim().lowercase(Locale.ROOT)
+            check(MessageDigest.isEqual(actual.toByteArray(Charsets.US_ASCII), expected.toByteArray(Charsets.US_ASCII))) { "DESTINATION_VERIFY_FAILED" }
             check()
         } catch(error:Throwable) {
             if(ownsTarget) target.delete()

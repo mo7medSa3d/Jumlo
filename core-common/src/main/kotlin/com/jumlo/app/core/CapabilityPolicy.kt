@@ -18,7 +18,7 @@ data class CapabilityAvailability(
  * removed from the registry rather than exposed as blocked (see DECISIONS.md).
  */
 object CapabilityPolicy {
-    private val navigation = setOf("pdf_01", "scan_doc")
+    private val navigation = setOf("pdf_01", "scan_doc", "scan_id_card")
     // Tools whose correctness is proven by an executed test suite against the real backend.
     private val hostCoreTested = setOf(
         "file_07", "file_08", "dl_02", "dl_03",

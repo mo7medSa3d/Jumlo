@@ -109,6 +109,7 @@ internal fun VisualDocumentEditor(
             failed = true
         }
     }
+    DisposeOwnedPreviewBitmap(preview?.bitmap)
     var perPageCrop by rememberSaveable(sourceId, tool) { mutableStateOf(draft.cropOverrides.isNotEmpty()) }
     var rect by remember(sourceId, tool) { mutableStateOf(draft.cropRectFor(currentPage, perPageCrop)) }
     val historyModel: VisualDocumentEditorSession = androidx.lifecycle.viewmodel.compose.viewModel(key = "visual-document-editor-session")

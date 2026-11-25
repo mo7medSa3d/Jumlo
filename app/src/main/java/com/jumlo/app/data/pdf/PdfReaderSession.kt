@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import com.jumlo.app.core.ResourceBudgetPolicy
 import com.jumlo.app.core.office.DocumentRenderPolicy
 import com.jumlo.app.data.jobs.OperationFailure
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
@@ -20,6 +21,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 /** A single serialized PdfRenderer with a byte-bounded cache. Displayed bitmaps are GC-owned. */
 class PdfReaderSession private constructor(
@@ -31,19 +33,50 @@ class PdfReaderSession private constructor(
     data class Frame(val bitmap: Bitmap, val width: Int, val height: Int)
     private data class Key(val page: Int, val maxEdge: Int)
     private val lock = Mutex()
-    private val cache = LinkedHashMap<Key, Frame>(8, .75f, true)
+    private val cacheLock = Any()
+    private val cache = LinkedHashMap<Key, Frame>(12, .75f, true)
+    private val pageRatios = ConcurrentHashMap<Int, Float>().apply {
+        if (firstPageRatio.isFinite() && firstPageRatio > 0f) put(0, firstPageRatio)
+    }
     private var bytes = 0L
-    private var closed = false
-    private val cacheLimit = minOf(Runtime.getRuntime().maxMemory() / 8, 32L * 1024 * 1024).coerceAtLeast(4L * 1024 * 1024)
+    @Volatile private var closed = false
+    private val cacheLimit = minOf(Runtime.getRuntime().maxMemory() / 6, 48L * 1024 * 1024).coerceAtLeast(8L * 1024 * 1024)
+
+    fun cachedRatio(page: Int): Float = pageRatios[page] ?: firstPageRatio
+
+    fun peekCached(page: Int, maxEdge: Int): Frame? {
+        if (closed || page !in 0 until pageCount) return null
+        val key = Key(page, maxEdge.coerceIn(96, 2400))
+        return synchronized(cacheLock) {
+            if (closed) null else cache[key]?.takeUnless { it.bitmap.isRecycled }
+        }
+    }
+
+    suspend fun prefetch(page: Int, maxEdge: Int) {
+        if (closed || page !in 0 until pageCount) return
+        if (peekCached(page, maxEdge) != null) return
+        try {
+            render(page, maxEdge)
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (_: Throwable) {
+            // Best-effort prefetch; visible ReaderPage surfaces real errors on demand.
+        }
+    }
 
     suspend fun render(page: Int, maxEdge: Int): Frame = withContext(Dispatchers.IO) {
+        val key = Key(page, maxEdge.coerceIn(96, 2400))
+        peekCached(page, key.maxEdge)?.let { return@withContext it }
         lock.withLock {
             currentCoroutineContext().ensureActive()
             check(!closed) { "PREVIEW_UNAVAILABLE" }
             require(page in 0 until pageCount) { "PAGE_OUT_OF_RANGE" }
-            val key = Key(page, maxEdge.coerceIn(96, 2400))
-            cache[key]?.let { return@withLock it }
+            synchronized(cacheLock) { cache[key]?.takeUnless { it.bitmap.isRecycled } }?.let { return@withLock it }
             val frame = renderer.openPage(page).use { input ->
+                if (input.height > 0) {
+                    val ratio = input.width.toFloat() / input.height
+                    if (ratio.isFinite() && ratio > 0f) pageRatios[page] = ratio
+                }
                 val (width, height) = DocumentRenderPolicy.dimensions(input.width, input.height, key.maxEdge, minOf(cacheLimit / 2, 16L * 1024 * 1024))
                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                 try {
@@ -53,14 +86,18 @@ class PdfReaderSession private constructor(
                     Frame(bitmap, input.width, input.height)
                 } catch (error: Throwable) { bitmap.recycle(); throw error }
             }
-            cache[key] = frame
-            bytes += frame.bitmap.allocationByteCount
-            while (bytes > cacheLimit && cache.size > 1) {
-                val iterator = cache.entries.iterator()
-                val old = iterator.next().value
-                bytes -= old.bitmap.allocationByteCount
-                iterator.remove()
-                // Compose/RenderThread may still display an evicted page. Never recycle it here.
+            synchronized(cacheLock) {
+                cache.put(key, frame)?.let { previous ->
+                    bytes = (bytes - previous.bitmap.allocationByteCount).coerceAtLeast(0L)
+                }
+                bytes += frame.bitmap.allocationByteCount
+                while (bytes > cacheLimit && cache.size > 1) {
+                    val iterator = cache.entries.iterator()
+                    val old = iterator.next().value
+                    bytes -= old.bitmap.allocationByteCount
+                    iterator.remove()
+                    // Compose/RenderThread may still display an evicted page. Never recycle it here.
+                }
             }
             frame
         }
@@ -70,8 +107,10 @@ class PdfReaderSession private constructor(
         lock.withLock {
             if (!closed) {
                 closed = true
-                cache.clear()
-                bytes = 0
+                synchronized(cacheLock) {
+                    cache.clear()
+                    bytes = 0
+                }
                 try { renderer.close() } finally { copiedInput?.delete() }
             }
         }
@@ -99,8 +138,8 @@ class PdfReaderSession private constructor(
                         // When a password is provided, decrypt into a private temp copy so Android PdfRenderer can render it.
                         if (password != null) {
                             val rawIn = File.createTempFile("pdf-enc-", ".pdf", context.cacheDir)
-                            copied = File.createTempFile("pdf-dec-", ".pdf", context.cacheDir)
                             try {
+                                copied = File.createTempFile("pdf-dec-", ".pdf", context.cacheDir)
                                 (context.contentResolver.openInputStream(uri) ?: error("ACCESS_LOST")).use { input ->
                                     FileOutputStream(rawIn).use { output ->
                                         val buffer = ByteArray(64 * 1024)

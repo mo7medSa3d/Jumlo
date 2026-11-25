@@ -62,16 +62,17 @@ internal val toolIconResources: Map<String, Int> = linkedMapOf(
     "zip_studio" to R.drawable.ic_prism_zip_studio,
     "zip_unified" to R.drawable.ic_prism_zip_studio,
     "file_archive" to R.drawable.ic_prism_zip_studio,
-    // Home quick actions
-    "id_card" to R.drawable.ic_prism_id_card,
-    "scan_id_card" to R.drawable.ic_prism_id_card,
-    "all_tools" to R.drawable.ic_prism_all_tools,
+    // Home quick actions & dedicated ID Card / Explore vectors
+    "id_card" to R.drawable.ic_tool_scan_id_card,
+    "scan_id_card" to R.drawable.ic_tool_scan_id_card,
+    "all_tools" to R.drawable.ic_tool_explore,
+    "explore_tools" to R.drawable.ic_tool_explore,
     "convert" to R.drawable.ic_prism_convert,
 )
 
 @DrawableRes
 fun toolIconRes(toolId: String): Int =
-    toolIconResources[toolId] ?: R.drawable.ic_prism_all_tools
+    toolIconResources[toolId] ?: R.drawable.ic_tool_explore
 
 @Composable
 fun ToolIcon(

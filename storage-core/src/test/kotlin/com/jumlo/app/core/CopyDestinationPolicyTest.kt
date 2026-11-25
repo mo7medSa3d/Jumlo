@@ -26,6 +26,8 @@ class CopyDestinationPolicyTest {
         assertEquals("PDF", StoragePaths.category("Application/PDF; charset=utf-8"))
         assertEquals("Images", StoragePaths.category("IMAGE/JPEG"))
         assertEquals(".pdf (2)", StoragePaths.uniqueName(".pdf", setOf(".pdf")))
+        assertEquals("caf\u00e9 (2).pdf", StoragePaths.uniqueName("caf\u00e9.pdf", setOf("cafe\u0301.pdf")))
+        assertNull(CopyDestinationPolicy.name("source-a", "caf\u00e9.pdf", listOf("source-b" to "cafe\u0301.pdf"), move = false, policy = CollisionPolicy.SKIP))
     }
 
     @Test fun moveToSameDocumentAndUnsafeAtomicReplaceFailClosed() {
@@ -58,6 +60,12 @@ class CopyDestinationPolicyTest {
                 trash.entries()
             }
             assertEquals("INVALID_TRASH_RECORD", corruptTrash.message)
+
+            val src = File(root, "src.bin").apply { writeBytes("verified-copy".toByteArray(Charsets.UTF_8)) }
+            val dst = File(root, "dst.bin")
+            val upperDigest = Hashing.sha256(src).uppercase(java.util.Locale.ROOT)
+            VerifiedFileCopy.copy(src, dst, upperDigest)
+            assertEquals("verified-copy", dst.readText(Charsets.UTF_8))
         } finally {
             root.deleteRecursively()
         }

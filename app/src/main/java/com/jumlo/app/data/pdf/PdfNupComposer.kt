@@ -44,6 +44,7 @@ object PdfNupComposer {
         var outPages = 0
 
         PdfBoxBackend.open(inputPdf, null).use { src ->
+            require(!src.isEncrypted) { "PDF_ENCRYPTED" }
             val total = src.numberOfPages
             require(total > 0) { "EMPTY_PDF" }
             PDDocument(MemoryUsageSetting.setupTempFileOnly()).use { dst ->

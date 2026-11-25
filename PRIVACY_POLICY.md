@@ -28,7 +28,7 @@ Download credentials and optional service tokens are protected locally using And
 
 ## Permissions
 
-Jumlo uses internet/network access for requested transfers and component downloads, notifications and foreground-service support for visible ongoing tasks, and system file/folder grants for the items you select. Camera access is requested only for the CameraX scanner fallback. The primary Play-services scanner manages its own capture UI. Declining camera access leaves file/gallery import available. Haptics and WorkManager may use vibration, wake-lock and boot-reconciliation permissions.
+Jumlo uses internet/network access for requested transfers and component downloads, notifications and foreground-service support for visible ongoing tasks, and system file/folder grants for the items you select. Camera access is requested only for the CameraX scanner fallback. The primary Play-services scanner manages its own capture UI. Declining camera access leaves file/gallery import available. Optional biometric folder locking uses Android's system biometric prompt (`USE_BIOMETRIC`); biometric credentials stay within Android and are never accessed by Jumlo. Haptics and WorkManager may use vibration, wake-lock and boot-reconciliation permissions.
 
 Jumlo does not request contacts, location, microphone, broad storage-management access or an advertising identifier in the reviewed build. See the complete permission explanation in the app's published support documentation.
 

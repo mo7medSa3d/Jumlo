@@ -1,5 +1,6 @@
 package com.jumlo.app.core
 
+import java.text.Normalizer
 import java.util.Locale
 
 /** Pure path policy used by MediaStore and the user's optional SAF destination. */
@@ -26,7 +27,7 @@ object StoragePaths {
         saved?.takeIf { it.startsWith("content://") } ?: "Download/Jumlo"
     fun uniqueName(desired:String,existing:Set<String>):String {
         val name=SafeNames.basename(desired)
-        val folded = existing.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
+        val folded = existing.mapTo(HashSet()) { Normalizer.normalize(it, Normalizer.Form.NFC).lowercase(Locale.ROOT) }
         if(name.lowercase(Locale.ROOT) !in folded) return name
         val dot=name.lastIndexOf('.').takeIf { it > 0 && name.length - it <= 12 }
         val base=if(dot != null) name.substring(0, dot) else name

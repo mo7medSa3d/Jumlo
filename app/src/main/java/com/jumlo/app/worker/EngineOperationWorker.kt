@@ -1,7 +1,9 @@
 package com.jumlo.app.worker
 
 import android.content.Context
+import android.os.Build
 import android.os.SystemClock
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -50,11 +52,14 @@ class EngineOperationWorker @AssistedInject constructor(
                 AppDiagnostics.reportFailure("worker_foreground_degraded", "FOREGROUND_SERVICE_DEGRADED", elapsedMs(), error)
             }
 
+            if (isStopped) throw CancellationException("WORKER_STOPPED")
+
             val ok = coroutineScope {
                 val progressJob = launch {
                     var lastPercent: Int? = Int.MIN_VALUE
                     var lastPostedAtMs = 0L
                     jobs.observe(id).collect { snap ->
+                        if (isStopped) return@collect
                         val p = snap.progress
                         if (p.stage == JobStage.COMPLETED || p.stage == JobStage.FAILED || p.stage == JobStage.CANCELLED) {
                             return@collect
@@ -114,6 +119,10 @@ class EngineOperationWorker @AssistedInject constructor(
                 Result.success()
             } else Result.retry()
         } catch (cancel: CancellationException) {
+            if (isStopped) {
+                val stopCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && stopReason >= 0) "WORKER_STOPPED_$stopReason" else "WORKER_STOPPED"
+                AppDiagnostics.reportFailure("worker_stopped", stopCode, elapsedMs())
+            }
             throw cancel
         } catch (error: Exception) {
             AppDiagnostics.reportFailure("worker_start", stableError(error), elapsedMs(), error)
@@ -139,7 +148,9 @@ class EngineOperationWorker @AssistedInject constructor(
     private fun localizedToolTitle(toolId: String?): String? {
         if (toolId.isNullOrBlank()) return null
         val tool = CapabilityRegistry.allTools.firstOrNull { it.id == toolId } ?: return null
-        val isArabic = applicationContext.resources.configuration.locales.get(0)?.language == "ar"
+        val language = AppCompatDelegate.getApplicationLocales().get(0)?.language
+            ?: applicationContext.resources.configuration.locales.get(0)?.language
+        val isArabic = language == "ar"
         return if (isArabic) tool.titleAr else tool.titleEn
     }
 

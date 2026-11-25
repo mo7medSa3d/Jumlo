@@ -47,7 +47,7 @@ class PdfSecurityQualificationTest {
     private lateinit var dir: File
 
     @Before fun setup() {
-        dir = File(System.getProperty("java.io.tmpdir"), "pdfsec-${System.nanoTime()}").apply { mkdirs() }
+        dir = java.nio.file.Files.createTempDirectory("pdfsec-").toFile()
     }
 
     @After fun teardown() {

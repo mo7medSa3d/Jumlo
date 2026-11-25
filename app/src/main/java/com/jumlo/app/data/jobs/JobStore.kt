@@ -197,6 +197,15 @@ import javax.inject.Singleton
             if(dao.updateOwned(jobId,owner,json.encodeToString(next),progress.stage.name)!=1) throw CancellationException("JOB_LEASE_LOST")
             snapshot=next
         }
+        suspend fun markInterrupted() {
+            withContext(NonCancellable+Dispatchers.IO) {
+                val current=dao.job(jobId)
+                if(current?.stage !in NON_EXECUTABLE_STAGES) {
+                    val interrupted=snapshot.copy(progress=snapshot.progress.copy(stage=JobStage.INTERRUPTED),updatedAtEpochMs=System.currentTimeMillis())
+                    dao.updateOwned(jobId,owner,json.encodeToString(interrupted),JobStage.INTERRUPTED.name)
+                }
+            }
+        }
         var heartbeat:Job?=null
         try {
             // Cover the suspending claim too: its SQL update may commit immediately
@@ -233,21 +242,29 @@ import javax.inject.Singleton
             save(snapshot.progress.copy(stage=state),outcomes)
             true
         } catch(cancel:CancellationException) {
-            withContext(NonCancellable+Dispatchers.IO) {
-                val current=dao.job(jobId)
-                if(current?.stage !in NON_EXECUTABLE_STAGES) {
-                    val interrupted=snapshot.copy(progress=snapshot.progress.copy(stage=JobStage.INTERRUPTED),updatedAtEpochMs=System.currentTimeMillis())
-                    dao.updateOwned(jobId,owner,json.encodeToString(interrupted),JobStage.INTERRUPTED.name)
-                }
-            }
+            markInterrupted()
             throw cancel
         } catch(oom:OutOfMemoryError) {
-            save(snapshot.progress.copy(stage=JobStage.FAILED),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode="LOW_MEMORY"))
+            try {
+                save(snapshot.progress.copy(stage=JobStage.FAILED),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode="LOW_MEMORY"))
+            } catch(cancel:CancellationException) {
+                markInterrupted()
+                throw cancel
+            }
             true
         } catch(e:Exception) {
+            if(!runningContext.isActive || !leased.get()) {
+                markInterrupted()
+                throw CancellationException("JOB_INTERRUPTED")
+            }
             val code=stableError(e)
             val state=if(code in WAITING_FOR_INPUT_CODES) JobStage.WAITING_FOR_INPUT else JobStage.FAILED
-            save(JobProgress(state,snapshot.progress.completedUnits,snapshot.progress.totalUnits),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode=code))
+            try {
+                save(JobProgress(state,snapshot.progress.completedUnits,snapshot.progress.totalUnits),snapshot.outcomes+ItemOutcome("job",ItemStatus.FAILED,errorCode=code))
+            } catch(cancel:CancellationException) {
+                markInterrupted()
+                throw cancel
+            }
             true
         } finally {
             withContext(NonCancellable+Dispatchers.IO) {

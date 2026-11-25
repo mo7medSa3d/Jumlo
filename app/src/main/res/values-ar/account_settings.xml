@@ -2,14 +2,12 @@
 <resources>
     <string name="account_storage">استخدام التخزين</string>
     <string name="account_privacy">الخصوصية</string>
-    <string name="account_help_about">المساعدة وعن التطبيق</string>
     <string name="account_language_system">حسب إعداد الجهاز</string>
     <string name="account_language_en">English</string>
     <string name="account_language_ar">العربية</string>
     <string name="account_done">تم</string>
     <string name="account_cancel">إلغاء</string>
     <string name="account_privacy_body">أدوات PDF والصور تعالج المستندات على هذا الجهاز. تتصل التنزيلات المباشرة بالعناوين التي تختارها فقط، ولا يرفع جملو مستنداتك تلقائيًا.\n\nتتغير الملفات الأصلية خارج التطبيق فقط بإجراءات تؤكدها في المجلدات المسموح بها. تبقى عناصر السلة إلى أن تؤكد حذفها نهائيًا. يحتوي سجل التشخيص المحلي على الأوقات ورموز الأخطاء، دون محتوى المستندات أو كلمات المرور أو الروابط.</string>
-    <string name="account_about_body">جملو · الإصدار %1$s\n\nاختر أداة، وأضف ملفاتك، وراجع المعاينة والإعدادات، ثم أنشئ النتيجة. افتح النتيجة أو شاركها أو صدّرها من الملفات.\n\nتُستعاد إعدادات المسودة والملفات المختارة محليًا. لا تُحفظ روابط التنزيل أو كلمات المرور أو رموز الحساب في المسودات؛ أدخلها مجددًا بعد إعادة تشغيل التطبيق. تعمل أدوات PDF والصور دون حساب جملو.</string>
     <string name="storage_results">النتائج المحفوظة</string>
     <string name="storage_transfers">التنزيلات القابلة للاستئناف</string>
     <string name="storage_temporary">الملفات المؤقتة</string>

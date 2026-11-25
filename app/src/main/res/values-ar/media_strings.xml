@@ -25,8 +25,8 @@
     <string name="media_error_no_media">لم يتم العثور على مقطع فيديو أو صوت قابل للتنزيل في هذا الرابط. تأكد من أن المنشور يحتوي على فيديو.</string>
     <string name="media_error_runtime">تعذر تشغيل محرك الوسائط. حدّث جملو أو أعد تثبيته ثم حاول مجددًا.</string>
     <string name="media_error_abi">محرك الوسائط المدمج غير متاح لمعالج هذا الجهاز. ثبّت إصدار Jumlo المناسب لجهازك أو استخدم رابط ملف مباشر.</string>
-    <string name="media_error_native_repair">إصلاح الوسائط المدمج لا يطابق هذا الإصدار. حدّث جملو ثم حاول مجددًا.</string>
-    <string name="media_error_native_repair_unavailable">إصلاح الوسائط المدمج لمعالج هذا الجهاز غير موجود. حدّث جملو ثم حاول مجددًا.</string>
+    <string name="media_error_native_repair">أداة إصلاح الوسائط المدمجة لا تطابق هذا الإصدار. حدّث جملو ثم حاول مجددًا.</string>
+    <string name="media_error_native_repair_unavailable">أداة إصلاح الوسائط المدمجة غير متوفرة لهذا الجهاز. حدّث جملو ثم حاول مجددًا.</string>
     <string name="media_error_live">لا يمكن تنزيل البث المباشر لأنه بلا نهاية بعد. حاول بعد انتهاء البث أو استخدم فيديو مكتملًا.</string>
     <string name="media_error_generic">تعذرت قراءة هذه الوسائط أو تنزيلها. قد لا يكون الموقع أو المحتوى مدعومًا — جرّب رابط ملف مباشرًا من المصدر.</string>
     <string name="media_select_type">نوع التنزيل</string>

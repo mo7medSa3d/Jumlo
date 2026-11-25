@@ -191,14 +191,11 @@ class MlKitOcrEngine @Inject constructor(
 
     private fun prepareForAccuracy(source: Bitmap): Bitmap {
         val maxSide = maxOf(source.width, source.height)
-        if (maxSide in 1200..2400) return source
-        if (maxSide < 1200 && maxSide > 0) {
-            val scale = (1600f / maxSide).coerceAtMost(2.5f)
-            val w = (source.width * scale).toInt().coerceAtLeast(1)
-            val h = (source.height * scale).toInt().coerceAtLeast(1)
-            return runCatching { Bitmap.createScaledBitmap(source, w, h, true) }.getOrDefault(source)
-        }
-        return source
+        if (maxSide in 1200..2400 || maxSide <= 0) return source
+        val scale = if (maxSide < 1200) (1600f / maxSide).coerceAtMost(2.5f) else 2400f / maxSide
+        val w = (source.width * scale).toInt().coerceAtLeast(1)
+        val h = (source.height * scale).toInt().coerceAtLeast(1)
+        return runCatching { Bitmap.createScaledBitmap(source, w, h, true) }.getOrDefault(source)
     }
 
     private fun enhanceContrast(source: Bitmap): Bitmap {

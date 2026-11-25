@@ -15,7 +15,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 private fun xml(file:File,part:String)=ZipFile(file).use { zip ->
     val entry=checkNotNull(zip.getEntry(part)) { "Missing part $part" }
-    zip.getInputStream(entry).use { DocumentBuilderFactory.newInstance().apply { isNamespaceAware=true }.newDocumentBuilder().parse(it) }
+    zip.getInputStream(entry).use { DocumentBuilderFactory.newInstance().apply { isNamespaceAware=true; isExpandEntityReferences=false; runCatching { setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING,true) }; runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl",true) } }.newDocumentBuilder().parse(it) }
 }
 private var checks=0
 private fun verify(name:String,block:()->Unit) { block(); checks++;println("PASS $name") }

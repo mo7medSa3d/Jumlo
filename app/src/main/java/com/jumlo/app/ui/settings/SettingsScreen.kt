@@ -1,7 +1,13 @@
 package com.jumlo.app.ui.settings
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
@@ -19,6 +25,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
@@ -31,6 +42,16 @@ import com.jumlo.app.ui.theme.settingsIconStyleFor
 
 private val SIMPLE_THEMES = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
 
+private fun areNotificationsGranted(context: Context): Boolean {
+    val managerEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val postPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
+    return managerEnabled && postPermissionGranted
+}
+
 /** Preferences that change an everyday action. Platform and scheduler policy stay out of this page. */
 @Composable
 fun SettingsScreen(
@@ -40,15 +61,32 @@ fun SettingsScreen(
     onChooseDownloadFolder: () -> Unit,
     onOpenSavedFolder: () -> Unit,
     onShowGuide: () -> Unit = {},
-    onOpenStorage: (() -> Unit)? = null
+    onOpenStorage: (() -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState(),
+    resetToRootEpoch: Int = 0
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val storage by viewModel.storage.collectAsStateWithLifecycle()
     val outputs by viewModel.outputs.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val proEntitlement by viewModel.proEntitlement.collectAsStateWithLifecycle()
+    val notificationEpoch by viewModel.notificationPermissionEpoch.collectAsStateWithLifecycle()
     var proSheetOpen by rememberSaveable { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var notificationsOn by remember { mutableStateOf(areNotificationsGranted(context)) }
+    LaunchedEffect(notificationEpoch) {
+        notificationsOn = areNotificationsGranted(context)
+    }
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsOn = areNotificationsGranted(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val hostActivity = remember(context) {
         generateSequence<android.content.Context>(context) { c -> (c as? android.content.ContextWrapper)?.baseContext?.takeUnless { it === c } }
             .filterIsInstance<android.app.Activity>().firstOrNull()
@@ -59,9 +97,16 @@ fun SettingsScreen(
         storage.outputs + storage.partials + storage.temporary + storage.trash
     }
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(resetToRootEpoch) {
+        if (resetToRootEpoch > 0) {
+            panel = null
+            listState.animateScrollToItem(0)
+        }
+    }
     LaunchedEffect(Unit) { viewModel.refreshStorage() }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -121,11 +166,10 @@ fun SettingsScreen(
             }
             item("alerts-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_alerts_feedback)) }
             item("alerts-group", contentType = "group") {
-                val notificationsOn = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
                 PreferenceGroup {
                     PreferenceRow(
                         stringResource(R.string.pref_notifications),
-                        stringResource(if (notificationsOn) R.string.pref_on else R.string.pref_off),
+                        stringResource(if (notificationsOn) R.string.pref_enabled else R.string.pref_disabled),
                         Icons.Rounded.Notifications,
                         onRequestNotifications,
                         Modifier.testTag("settings.notifications"),

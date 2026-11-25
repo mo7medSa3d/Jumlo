@@ -39,6 +39,7 @@ data class DraftEntity(@PrimaryKey val id:String,val requestJson:String)
     @Insert(onConflict=OnConflictStrategy.IGNORE) suspend fun insertOutput(output:OutputEntity):Long
     @Query("SELECT * FROM outputs WHERE jobId=:job AND itemKey=:key") suspend fun output(job:String,key:String):OutputEntity?
     @Query("SELECT * FROM outputs WHERE id=:id") suspend fun outputById(id:String):OutputEntity?
+    @Query("SELECT * FROM outputs WHERE id IN (:ids)") suspend fun outputsByIds(ids:List<String>):List<OutputEntity>
     @Query("SELECT * FROM outputs WHERE jobId=:jobId") suspend fun outputsForJob(jobId:String):List<OutputEntity>
     @Query("UPDATE outputs SET recordJson=:recordJson WHERE id=:id") suspend fun updateOutputRecord(id:String,recordJson:String):Int
     @Query("DELETE FROM outputs WHERE id=:id") suspend fun deleteOutput(id:String):Int

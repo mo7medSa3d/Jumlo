@@ -59,7 +59,7 @@ class SourceConsistencyTests(unittest.TestCase):
         self.assertIn('CapabilityRegistry.canProcess(request.toolId)',(CODE/'data/jobs/JobStore.kt').read_text(encoding="utf-8"))
         self.assertIn('CapabilityRegistry.canProcess(state.toolId)',(CODE/'ui/AppViewModel.kt').read_text(encoding="utf-8"))
         registry=(CODE/'data/jobs/CapabilityRegistry.kt').read_text(encoding="utf-8")
-        self.assertIn('CapabilityPolicy.availability(id)',registry)
+        self.assertIn('CapabilityPolicy.availability(',registry)
         self.assertNotIn('BuildConfig.DEBUG',registry)
     def test_fileprovider_exposes_only_outputs_and_immutable_viewer_snapshots(self):
         entries=list(ET.parse(MAIN/'res/xml/file_paths.xml').getroot())

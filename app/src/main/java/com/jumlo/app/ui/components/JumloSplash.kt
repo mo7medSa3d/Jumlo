@@ -50,12 +50,6 @@ import com.jumlo.app.ui.theme.LocalColorSystem
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 
-/** The splash follows the chosen color system (ColorSystems.kt): a dark,
- *  luxurious gradient from the system's own ramp, so the first screen already
- *  wears the system the user picked. Outside JumloTheme this reads the
- *  default system (Sunset). */
-
-
 /**
  * Branded start screen drawn entirely by Compose using a vector mark.
  * No blocking timer lives here: MainActivity owns readiness and cold-start duration.

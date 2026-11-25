@@ -19,6 +19,7 @@ import com.jumlo.app.R
     code=="OFFICE_EMPTY_TEXT_PAGES" -> R.string.rebuild_office_empty_pages
     code=="OFFICE_OCR_REVIEW" -> R.string.rebuild_office_ocr_review
     code=="OFFICE_INVALID" -> R.string.rebuild_office_invalid
+    code=="DOCUMENT_UNREADABLE" -> R.string.viewer_office_error_open
     code=="OFFICE_NO_CONTENT" -> R.string.rebuild_office_empty
     code=="OFFICE_RASTER_TEXT" -> R.string.rebuild_office_raster
     code=="OFFICE_UNSUPPORTED_CONTENT" -> R.string.rebuild_office_unsupported

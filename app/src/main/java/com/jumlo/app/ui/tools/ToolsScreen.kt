@@ -9,8 +9,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as rowItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Star
 import com.jumlo.app.ui.icons.rounded.Search
@@ -53,16 +55,30 @@ import com.jumlo.app.ui.util.rememberAppHaptics
 /** Every available tool has one tile; the catalogue is grouped into sections and
  *  the persisted usage ranking orders the tiles within each section. */
 @Composable
-fun ToolsScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit) {
+fun ToolsScreen(
+    vm: AppViewModel,
+    onTool: (UtilityTool) -> Unit,
+    gridState: LazyGridState = rememberLazyGridState(),
+    resetToRootEpoch: Int = 0
+) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     var search by rememberSaveable { mutableStateOf("") }
     val eligible = remember { CapabilityRegistry.tools.filter {
         CapabilityRegistry.visible(it.id) && CapabilityRegistry.enabled(it.id) && ToolCatalogue.isListed(it.id)
     } }
-    ToolsCatalogue(eligible, settings.language, settings.rankedToolIds,
-        settings.quickActionIds, settings.recentToolIds, search, { search = it },
+    ToolsCatalogue(
+        tools = eligible,
+        language = settings.language,
+        rankedToolIds = settings.rankedToolIds,
+        pinnedToolIds = settings.quickActionIds,
+        recentToolIds = settings.recentToolIds,
+        search = search,
+        onSearch = { search = it },
         onTool = onTool,
-        onPin = { tool -> vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) })
+        onPin = { tool -> vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) },
+        gridState = gridState,
+        resetToRootEpoch = resetToRootEpoch
+    )
 }
 
 /** One catalogue group: a header and the tool IDs it contains. */
@@ -74,7 +90,7 @@ private data class ToolSection(val key: String, val titleEn: String, val titleAr
  */
 private val toolSections = listOf(
     ToolSection("scan", "Scan & Convert", "المسح والتحويل",
-        setOf("scan_doc", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_long_image")),
+        setOf("scan_doc", "scan_id_card", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx", "office_to_pdf", "pdf_02", "pdf_long_image")),
     ToolSection("edit", "PDF Edit & Security", "تحرير وحماية PDF",
         setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
     ToolSection("optimize", "Images", "الصور",
@@ -122,7 +138,9 @@ internal fun ToolsCatalogue(
     search: String,
     onSearch: (String) -> Unit,
     onTool: (UtilityTool) -> Unit,
-    onPin: (UtilityTool) -> Unit = {}
+    onPin: (UtilityTool) -> Unit = {},
+    gridState: LazyGridState = rememberLazyGridState(),
+    resetToRootEpoch: Int = 0
 ) {
     val byId = remember(tools) { tools.associateBy { it.id } }
     val canonicalRanked = remember(rankedToolIds) { rankedToolIds.map(ToolCatalogue::canonicalId).distinct() }
@@ -179,6 +197,13 @@ internal fun ToolsCatalogue(
     }
     val largeText = LocalDensity.current.fontScale >= 1.6f
     val reduceMotion = LocalReducedMotion.current
+    LaunchedEffect(resetToRootEpoch) {
+        if (resetToRootEpoch > 0) {
+            onSearch("")
+            selectedSectionKey = null
+            if (reduceMotion) gridState.scrollToItem(0) else gridState.animateScrollToItem(0)
+        }
+    }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("tools.screen")) {
         val columns = when {
             maxWidth >= 1200.dp -> if (largeText) 4 else 6
@@ -188,6 +213,7 @@ internal fun ToolsCatalogue(
             else -> 4
         }
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Fixed(columns),
             modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp,
@@ -435,6 +461,7 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "pdf_signature" -> "Sign" to "توقيع"
         "pdf_crop" -> "Crop pages" to "قص الصفحات"
         "scan_doc" -> "Smart Scan" to "مسح ذكي"
+        "scan_id_card" -> "ID Card" to "مسح البطاقة"
         "img_01" -> "Convert images" to "تحويل الصور"
         "img_02" -> "Resize" to "تغيير الحجم"
         "img_03" -> "Crop & rotate" to "قص وتدوير"

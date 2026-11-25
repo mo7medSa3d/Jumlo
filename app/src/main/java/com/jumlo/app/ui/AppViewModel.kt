@@ -11,6 +11,7 @@ import android.graphics.*
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import androidx.compose.runtime.Immutable
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -53,14 +54,14 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 enum class DataLoadStatus { LOADING, READY, ERROR }
-data class RenameUndo(val id:String,val previousName:String?,val newName:String)
+@Immutable data class RenameUndo(val id:String,val previousName:String?,val newName:String)
 
 data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:Int,val height:Int)
-data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0,val trash:Long=0)
+@Immutable data class StorageUsage(val sources:Long=0,val outputs:Long=0,val partials:Long=0,val temporary:Long=0,val trash:Long=0)
 /** What the compression slider needs to estimate the output size. */
-data class CompressionProfile(val originalBytes:Long,val imageBytes:Long,val measuredBytes:Long?=null)
+@Immutable data class CompressionProfile(val originalBytes:Long,val imageBytes:Long,val measuredBytes:Long?=null)
 /** Bounded text for an interactive result panel; the original output remains available for export. */
-data class TextOutputPreview(val text:String,val truncated:Boolean)
+@Immutable data class TextOutputPreview(val text:String,val truncated:Boolean)
 
 @OptIn(FlowPreview::class,ExperimentalCoroutinesApi::class)
 @HiltViewModel class AppViewModel @Inject constructor(
@@ -385,7 +386,7 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
     }
     /** Navigation-only catalogue entries count as use without replacing a working draft. */
     fun recordToolOpen(id:String) {
-        if(id == "scan_doc") rememberLastTool(id)
+        if(id == "scan_doc" || id == "scan_id_card") rememberLastTool(id)
         if(CapabilityRegistry.enabled(id)) savePreference { preferences.recordToolOpen(id) }
     }
     /** Explicit handoff only, e.g. a result's "Use in another tool" action. */
@@ -612,8 +613,11 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                     com.jumlo.app.data.pdf.PdfMarkupFlattener.flatten(tempIn, tempOut, items) { coroutine.ensureActive() }
                 }
                 require(tempOut.isFile && tempOut.length() > 0L) { "MARKUP_SAVE_FAILED" }
-                val isAppImmutableProvider = parsedUri.authority == "${app.packageName}.fileprovider"
-                val wroteInPlace = if (!isAppImmutableProvider && parsedUri.scheme == "content") {
+                val replacedManaged = outputStore.replaceInPlace(sourceUri, tempOut) {
+                    outputStore.inspect(it, "application/pdf", originalSizeBytes = tempIn.length())
+                }
+                val isAppFileProvider = parsedUri.authority == "${app.packageName}.fileprovider"
+                val wroteExternalInPlace = if (replacedManaged == null && !isAppFileProvider && parsedUri.scheme == "content") {
                     withContext(Dispatchers.IO) {
                         runCatching {
                             app.contentResolver.openOutputStream(parsedUri, "wt")?.use { out ->
@@ -624,7 +628,18 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                         }.getOrDefault(false)
                     }
                 } else false
-                if (wroteInPlace) {
+                if (replacedManaged != null) {
+                    refreshStorage()
+                    if (replacedManaged.publicSaveError != null) notifyMessage("DESTINATION_SAVE_FAILED")
+                    else notifyMessage("MARKUP_SAVED_IN_PLACE")
+                    savedResult = com.jumlo.app.ui.viewer.MarkupSaveResult(
+                        uri = replacedManaged.uri,
+                        displayName = replacedManaged.displayName,
+                        sizeBytes = replacedManaged.sizeBytes,
+                        locationLabel = replacedManaged.metadata.subfolder,
+                        savedInPlace = true
+                    )
+                } else if (wroteExternalInPlace) {
                     notifyMessage("MARKUP_SAVED_IN_PLACE")
                     savedResult = com.jumlo.app.ui.viewer.MarkupSaveResult(
                         uri = sourceUri,
@@ -762,13 +777,13 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         androidx.core.content.FileProvider.getUriForFile(app,"${app.packageName}.fileprovider",File(printable.path)).toString()
     }
     /** Imports a SAF provider entry and opens the matching tool only after true MIME inspection finishes. */
-    fun importProviderEntryToWorkspace(uri:String,offeredFlags:Int,onReady:()->Unit) {
+    fun importProviderEntryToWorkspace(uri:String,offeredFlags:Int,targetTool:String?=null,onReady:()->Unit) {
         operationScope.launch {
             initialized.await()
             beginBusy()
             try {
                 val source=sources.inspect(uri,offeredFlags)
-                val tool=OutputWorkflowPolicy.reuseTool(source.mimeType.orEmpty())
+                val tool=targetTool ?: OutputWorkflowPolicy.reuseTool(source.mimeType.orEmpty())
                 require(chooseToolWithSources(tool,listOf(source.id))) { "CAPABILITY_UNAVAILABLE" }
                 refreshStorage()
                 onReady()
@@ -1105,7 +1120,10 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         try {
             if(job.request.toolId.startsWith("dl_") && replacementUrls!=null) {
                 val config=Json.decodeFromString<DownloadSettings>(job.request.settingsJson)
-                replacementUrls.toCharArray().let { chars -> try { secrets.replaceDownload(config.urlSecretHandle,chars) } finally { chars.fill('\u0000') } }
+                val lines=replacementUrls.take(100000).lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+                require(lines.isNotEmpty() && lines.size<=100 && (job.request.toolId=="dl_03" || lines.size==1)) { "INVALID_DOWNLOAD_LIST" }
+                lines.forEach { line -> HttpPolicy.url(DownloadLinkPolicy.resolveDirectUrl(line), config.allowHttp) }
+                lines.joinToString("\n").toCharArray().let { chars -> try { secrets.replaceDownload(config.urlSecretHandle,chars) } finally { chars.fill('\u0000') } }
             }
             jobStore.retryFailed(job.request.id)
         } catch(cancel:CancellationException) { throw cancel }
@@ -1159,7 +1177,12 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
         catch(error:Exception) { _message.value=stableError(error) }
     } }
     fun resetDownloadDestinationFolder() = savePreference { preferences.resetDownloadDestinationFolder() }
-    fun notificationsGranted(granted:Boolean) = savePreference { preferences.setNotificationsGranted(granted) }
+    private val _notificationPermissionEpoch = MutableStateFlow(0)
+    val notificationPermissionEpoch: StateFlow<Int> = _notificationPermissionEpoch.asStateFlow()
+    fun notificationsGranted(granted:Boolean) {
+        _notificationPermissionEpoch.value += 1
+        savePreference { preferences.setNotificationsGranted(granted) }
+    }
     fun prepareExport(output:OutputRecord) { pendingExport=output }
     fun prepareErrorLogExport() { pendingErrorLogExport=true }
     fun exportErrorLog(target:String?) {
@@ -1258,10 +1281,14 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
                     com.jumlo.app.data.pdf.PdfBoxBackend.open(file, null).use { it.isEncrypted }
                 } catch (_: com.tom_roush.pdfbox.pdmodel.encryption.InvalidPasswordException) {
                     true
+                } catch (cancel: CancellationException) {
+                    throw cancel
                 } catch (_: Exception) {
                     false
                 }
             }
+        } catch (cancel: CancellationException) {
+            throw cancel
         } catch (_: Exception) {
             false
         }
@@ -1422,5 +1449,4 @@ data class TextOutputPreview(val text:String,val truncated:Boolean)
             }
         }
     }
-    override fun onCleared() { super.onCleared() }
 }

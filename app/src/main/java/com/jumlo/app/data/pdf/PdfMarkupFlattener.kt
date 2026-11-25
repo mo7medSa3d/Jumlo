@@ -38,6 +38,7 @@ object PdfMarkupFlattener {
         val byPage = items.groupBy { it.pageIndex }
         val pageCount: Int
         PdfBoxBackend.open(inputPdf, null).use { doc ->
+            require(!doc.isEncrypted) { "PDF_ENCRYPTED" }
             pageCount = doc.numberOfPages
             require(pageCount > 0) { "EMPTY_PDF" }
             for ((pageIndex, pageItems) in byPage) {
@@ -91,7 +92,17 @@ object PdfMarkupFlattener {
         val tempOut = File(context.cacheDir, "jumlo-inplace-out-$id.pdf")
         return try {
             val input = context.contentResolver.openInputStream(uri) ?: return false
-            input.use { src -> tempIn.outputStream().use { dst -> src.copyTo(dst) } }
+            input.use { src ->
+                tempIn.outputStream().use { dst ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        checkCancel()
+                        val n = src.read(buf)
+                        if (n < 0) break
+                        if (n > 0) dst.write(buf, 0, n)
+                    }
+                }
+            }
             flatten(tempIn, tempOut, items, checkCancel)
             val output = try {
                 context.contentResolver.openOutputStream(uri, "wt")

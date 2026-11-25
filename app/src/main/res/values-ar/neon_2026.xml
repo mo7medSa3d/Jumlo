@@ -1,15 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="neon_home_subtitle">امسح · حوّل · عدّل · نظّم</string>
-    <string name="neon_hero_title">كل شيء يبدأ بمسح مستند</string>
-    <string name="neon_hero_body">صوّر الصفحات وحوّلها إلى ملف PDF مرتب.</string>
-    <string name="neon_start_scan">ابدأ المسح</string>
-    <string name="neon_quick_actions">إجراءات سريعة</string>
     <string name="neon_show_all">عرض الكل</string>
     <string name="neon_recent">الملفات الأخيرة</string>
-    <string name="neon_recent_empty">ستظهر الملفات المكتملة هنا.</string>
-    <string name="neon_smart_tools">استكشف الأدوات</string>
-    <string name="neon_tools_import">استيراد</string>
 
     <string name="neon_tools_search">ابحث عن أداة</string>
     <string name="neon_download_headline">احتفظ به لوقت لاحق</string>

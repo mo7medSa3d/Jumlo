@@ -4,13 +4,13 @@ import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import java.io.File
 
-@Serializable data class SourceRef(
+@Immutable @Serializable data class SourceRef(
     val id:String,val uri:String,val displayName:String,val mimeType:String?,val sizeBytes:Long?,
     val readable:Boolean,val writable:Boolean,val persistedReadGrant:Boolean,val modifiedAtEpochMs:Long?
 )
 @Serializable data class JobRequest(val id:String,val toolId:String,val sourceIds:List<String>,val schemaVersion:Int,val settingsJson:String,val submittedAtEpochMs:Long)
 @Serializable enum class JobStage { VALIDATING, QUEUED, RUNNING, FINALIZING, COMPLETED, PARTIAL, FAILED, CANCELLED, INTERRUPTED, PAUSED, WAITING_FOR_INPUT }
-@Serializable data class JobProgress(val stage:JobStage,val completedUnits:Long,val totalUnits:Long?)
+@Immutable @Serializable data class JobProgress(val stage:JobStage,val completedUnits:Long,val totalUnits:Long?)
 @Immutable @Serializable data class OutputMetadata(
     val pageCount:Int?=null,
     val width:Int?=null,
@@ -22,5 +22,5 @@ import java.io.File
 data class OutputTicket(val jobId:String,val itemKey:String,val stageFile:File,val displayName:String,val mimeType:String)
 @Immutable @Serializable data class OutputRecord(val id:String,val jobId:String,val itemKey:String,val uri:String,val displayName:String,val mimeType:String,val sizeBytes:Long,val sha256:String,val metadata:OutputMetadata,val createdAtEpochMs:Long,val publicUri:String?=null,val publicSaveError:String?=null)
 @Serializable enum class ItemStatus { CREATED, FAILED, CANCELLED, SKIPPED, UNCHANGED, LARGER }
-@Serializable data class ItemOutcome(val itemKey:String,val status:ItemStatus,val outputId:String?=null,val errorCode:String?=null)
+@Immutable @Serializable data class ItemOutcome(val itemKey:String,val status:ItemStatus,val outputId:String?=null,val errorCode:String?=null)
 @Serializable data class JobSnapshot(val request:JobRequest,val progress:JobProgress,val outcomes:List<ItemOutcome>,val updatedAtEpochMs:Long,val downloadRestartGeneration:Long=0)

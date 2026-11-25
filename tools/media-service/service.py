@@ -101,7 +101,10 @@ _SECURITY_HEADERS = (
     ("Content-Security-Policy", "default-src 'none'"),
     ("Permissions-Policy", "interest-cohort=()"),
 )
+SERVICE_VERSION = "1.0"
 _VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+_MIN_NON_LOOPBACK_TOKEN_LEN = 16
+_PLACEHOLDER_TOKENS = frozenset({"replace-with-strong-random-token"})
 _MAX_URL_LENGTH = 8192
 _MAX_QUERY_FIELDS = 32
 _ERROR_CODE_RE = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
@@ -147,10 +150,14 @@ def _validate_host(raw: str) -> str:
 
 
 def _validate_cors_origin(raw: str) -> str:
-    origin = str(raw or "").strip()
-    if not origin or origin == "*":
+    if raw is None or raw == "":
+        return ""
+    origin = str(raw)
+    if any(c.isspace() for c in origin):
+        raise ValueError("JUMLO_MEDIA_CORS_ORIGIN must be '*', empty, or a valid http(s)://origin")
+    if origin == "*":
         return origin
-    if not _is_safe_header_value(origin, max_len=256) or any(c in origin for c in (" ", "\t", "?", "#")):
+    if not _is_safe_header_value(origin, max_len=256) or any(c in origin for c in ("?", "#")):
         raise ValueError("JUMLO_MEDIA_CORS_ORIGIN must be '*', empty, or a valid http(s)://origin")
     parsed = urllib.parse.urlsplit(origin)
     try:
@@ -215,11 +222,17 @@ def parse_config(argv: list[str] | None = None, environ: dict[str, str] | None =
     args.cors_origin = _validate_cors_origin(args.cors_origin)
     if args.token and (not _is_safe_header_value(args.token, max_len=1024) or any(c.isspace() for c in args.token)):
         raise ValueError("JUMLO_MEDIA_TOKEN must be printable ASCII without whitespace")
-    if not _is_loopback_host(args.host) and not args.token and not args.allow_unauthenticated:
-        raise ValueError(
-            "JUMLO_MEDIA_TOKEN is required when binding to a non-loopback host "
-            "(or pass --allow-unauthenticated)"
-        )
+    if not _is_loopback_host(args.host) and not args.allow_unauthenticated:
+        if not args.token:
+            raise ValueError(
+                "JUMLO_MEDIA_TOKEN is required when binding to a non-loopback host "
+                "(or pass --allow-unauthenticated)"
+            )
+        if args.token.lower() in _PLACEHOLDER_TOKENS or len(args.token) < _MIN_NON_LOOPBACK_TOKEN_LEN:
+            raise ValueError(
+                f"JUMLO_MEDIA_TOKEN must be at least {_MIN_NON_LOOPBACK_TOKEN_LEN} characters and not the default "
+                "placeholder when binding to a non-loopback host"
+            )
     return args
 
 
@@ -232,11 +245,16 @@ class _RateLimiter:
         self.max_keys = max(1, max_keys)
         self._lock = threading.Lock()
         self._hits: OrderedDict[str, deque[float]] = OrderedDict()
+        self._last_sweep = time.monotonic()
 
     def allow(self, key: str) -> tuple[bool, int]:
         with self._lock:
             now = time.monotonic()
             cutoff = now - self.window
+            if now - self._last_sweep >= self.window:
+                for stale_key in [k for k, q in self._hits.items() if not q or q[-1] <= cutoff]:
+                    del self._hits[stale_key]
+                self._last_sweep = now
             bucket = self._hits.get(key)
             if bucket is not None:
                 self._hits.move_to_end(key)
@@ -365,14 +383,15 @@ def classify(message: str) -> str:
 
 
 _FORBIDDEN_YTDLP_OPTS = (
-    "-n", "--netrc", "--netrc-location", "--netrc-cmd",
+    "-n", "-a", "--netrc", "--netrc-location", "--netrc-cmd",
     "--config-location", "--config-locations", "--plugin-dirs",
-    "--exec", "--exec-before-download", "--cookies", "--cookies-from-browser", "--batch-file",
+    "--exec", "--exec-before-download", "--cookies", "--cookies-from-browser",
+    "--batch-file", "--alias", "--load-info-json",
 )
 _FORBIDDEN_YTDLP_PREFIXES = (
-    "--netrc-location=", "--netrc-cmd=", "--config-location=", "--config-locations=",
+    "-a", "--netrc-location=", "--netrc-cmd=", "--config-location=", "--config-locations=",
     "--plugin-dirs=", "--exec=", "--exec-before-download=", "--cookies=",
-    "--cookies-from-browser=", "--batch-file=",
+    "--cookies-from-browser=", "--batch-file=", "--alias=", "--load-info-json=",
 )
 
 
@@ -399,14 +418,16 @@ def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProces
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        start_new_session=True,
+        encoding="utf-8",
+        errors="replace",
+        start_new_session=(os.name != "nt"),
     )
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
     except BaseException:
         try:
             os.killpg(proc.pid, signal.SIGKILL)
-        except OSError:
+        except (OSError, AttributeError):
             proc.kill()
         proc.communicate()
         raise
@@ -415,7 +436,10 @@ def run_ytdlp(args: list[str], timeout: int = 120) -> subprocess.CompletedProces
 
 def ytdlp_version() -> str:
     try:
-        result = subprocess.run(["yt-dlp", "--version"], capture_output=True, text=True, timeout=30, check=False)
+        result = subprocess.run(
+            ["yt-dlp", "--version"], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=30, check=False,
+        )
         return (result.stdout or "").strip() or "unknown"
     except Exception:
         return "unavailable"
@@ -606,6 +630,7 @@ class MediaHTTPServer(ThreadingHTTPServer):
     ):
         self.expected_authorization = f"Bearer {token}" if token else None
         self.rate_limiter = _RateLimiter(rate_limit)
+        self.max_concurrent = max_concurrent
         self.concurrency_semaphore = threading.BoundedSemaphore(max_concurrent)
         self.shutting_down = False
         self.log_level = log_level
@@ -614,6 +639,7 @@ class MediaHTTPServer(ThreadingHTTPServer):
         self._started_at = time.monotonic()
         self._metrics_lock = threading.Lock()
         self._requests_total = 0
+        self._extractions_total = 0
         self._errors_total = 0
         self._rate_limited_total = 0
         self._active_extractions = 0
@@ -655,6 +681,8 @@ class MediaHTTPServer(ThreadingHTTPServer):
 
     def change_active_extractions(self, delta: int) -> None:
         with self._metrics_lock:
+            if delta > 0:
+                self._extractions_total += delta
             self._active_extractions = max(0, self._active_extractions + delta)
 
     def metrics_snapshot(self) -> dict[str, int]:
@@ -665,6 +693,20 @@ class MediaHTTPServer(ThreadingHTTPServer):
                 "rate_limited_total": self._rate_limited_total,
                 "active_extractions": self._active_extractions,
             }
+
+    def metrics_payload_bytes(self) -> bytes:
+        with self._metrics_lock:
+            payload = {
+                "uptime_seconds": max(0, int(time.monotonic() - self._started_at)),
+                "requests_total": self._requests_total,
+                "extractions_total": self._extractions_total,
+                "errors_total": self._errors_total,
+                "rate_limited_total": self._rate_limited_total,
+                "active_extractions": self._active_extractions,
+                "max_concurrent": self.max_concurrent,
+                "version": SERVICE_VERSION,
+            }
+        return json.dumps(payload).encode("utf-8")
 
     def health_payload_bytes(self) -> bytes:
         version, ffmpeg = self.probe_dependencies()
@@ -701,8 +743,12 @@ class MediaHTTPServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "JumloMediaService/1.0"
+    server_version = f"JumloMediaService/{SERVICE_VERSION}"
+    sys_version = ""
     protocol_version = "HTTP/1.1"
+
+    def version_string(self) -> str:
+        return self.server_version
 
     def setup(self) -> None:
         self.request.settimeout(30)
@@ -730,6 +776,10 @@ class Handler(BaseHTTPRequestHandler):
         for name, value in _SECURITY_HEADERS:
             self.send_header(name, value)
         self.send_header("X-Request-Id", self._get_request_id())
+        headers = getattr(self, "headers", None)
+        forwarded_proto = headers.get("X-Forwarded-Proto") if headers is not None and hasattr(headers, "get") else ""
+        if isinstance(forwarded_proto, str) and forwarded_proto.split(",", 1)[0].strip().lower() == "https":
+            self.send_header("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
         cors_origin = getattr(getattr(self, "server", None), "cors_origin", "")
         if cors_origin:
             self.send_header("Access-Control-Allow-Origin", cors_origin)
@@ -788,7 +838,7 @@ class Handler(BaseHTTPRequestHandler):
         # and client address. /stream carries a signed source URL in its query.
         # Only a fixed route vocabulary and numeric status may cross this boundary.
         path = getattr(self, "path", "").split("?", 1)[0]
-        route = path if path in ("/extract", "/stream", "/health", "/ready") else "unknown"
+        route = path if path in ("/extract", "/stream", "/health", "/ready", "/metrics") else "unknown"
         status = int(code) if str(code).isdigit() and 100 <= int(code) <= 599 else None
         server = getattr(self, "server", None)
         if server is not None and hasattr(server, "record_response"):
@@ -835,6 +885,12 @@ class Handler(BaseHTTPRequestHandler):
         safe_code = code if _ERROR_CODE_RE.fullmatch(code or "") else "MEDIA_EXTRACTION_FAILED"
         self._json(status, {"error": safe_code}, extra_headers=extra_headers)
 
+    def send_error(self, code: int, message: str | None = None, explain: str | None = None) -> None:
+        # Return JSON with security headers instead of BaseHTTPRequestHandler's HTML page.
+        self.close_connection = True
+        error_code = "MEDIA_OUTPUT_LIMIT" if code == 414 else "MEDIA_SITE_UNSUPPORTED"
+        self._error(error_code, code)
+
     def _handle_probe(self, path: str) -> bool:
         server = getattr(self, "server", None)
         if path == "/health":
@@ -855,6 +911,21 @@ class Handler(BaseHTTPRequestHandler):
                 200 if ready else 503,
                 {"ready": ready, "shutting_down": shutting_down, "ytdlp": version, "ffmpeg": ffmpeg},
             )
+            return True
+        if path == "/metrics":
+            if server is not None and hasattr(server, "metrics_payload_bytes"):
+                self._json_bytes(200, server.metrics_payload_bytes())
+            else:
+                self._json(200, {
+                    "uptime_seconds": 0,
+                    "requests_total": 0,
+                    "extractions_total": 0,
+                    "errors_total": 0,
+                    "rate_limited_total": 0,
+                    "active_extractions": 0,
+                    "max_concurrent": 0,
+                    "version": SERVICE_VERSION,
+                })
             return True
         return False
 
@@ -947,7 +1018,7 @@ class Handler(BaseHTTPRequestHandler):
         if os.path.isfile(direct):
             self._proxy_file(direct, name, content_type)
             return
-        if urllib.parse.urlsplit(direct).scheme.lower() not in ("http", "https"):
+        if not _is_public_web_url(direct):
             self._error("MEDIA_SITE_UNSUPPORTED", 422)
             return
         start = 0
@@ -1115,11 +1186,14 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(payload, dict):
             self._error("MEDIA_SITE_UNSUPPORTED", 400)
             return
+        raw_url = payload.get("url")
+        if not isinstance(raw_url, str) or not raw_url:
+            self._error("MEDIA_SITE_UNSUPPORTED", 400)
+            return
         if not self._acquire_concurrency():
             return
         try:
-            url = str(payload.get("url") or "")
-            result = extract(url)
+            result = extract(raw_url)
             if "error" in result:
                 self._error(result["error"])
                 return

@@ -68,9 +68,16 @@ private val SIGNATURE_INKS = listOf(
 @Composable
 fun ScanScreen(
     onScannedPdf: (File) -> Unit, onScannedJpegs: (List<File>) -> Unit = {},
-    onBack: () -> Unit, externalBusy: Boolean = false, initialMode: String? = null
+    onBack: () -> Unit, externalBusy: Boolean = false, initialMode: String? = null,
+    onBackInterceptChange: ((Boolean) -> Unit)? = null
 ) {
     var format by rememberSaveable(initialMode) { mutableStateOf<String?>(initialMode) }
+    val scanOwnsBack = format == "id_card" && initialMode != "id_card"
+    androidx.activity.compose.BackHandler(enabled = scanOwnsBack) { format = null }
+    DisposableEffect(scanOwnsBack) {
+        onBackInterceptChange?.invoke(scanOwnsBack)
+        onDispose { onBackInterceptChange?.invoke(false) }
+    }
     if (format == null) {
         var selectedMode by rememberSaveable { mutableStateOf("pdf") }
         Surface(Modifier.fillMaxSize(), color = androidx.compose.ui.graphics.Color(0xFF0B0E14)) {
@@ -101,12 +108,15 @@ fun ScanScreen(
                     if (externalBusy) LinearProgressIndicator(Modifier.fillMaxWidth(0.7f))
                 }
                 Spacer(Modifier.weight(1f))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.padding(bottom = 18.dp)) {
-                    items(listOf(
+                val scanModes = remember {
+                    listOf(
                         Triple("pdf", R.string.scan_save_pdf, "scan.format.pdf"),
                         Triple("jpg", R.string.scan_save_jpg, "scan.format.jpg"),
                         Triple("id_card", R.string.scan_id_card_title, "scan.format.idcard")
-                    ), key = { it.first }) { (mode, labelRes, tag) ->
+                    )
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.padding(bottom = 18.dp)) {
+                    items(scanModes, key = { it.first }, contentType = { "scan-mode-chip" }) { (mode, labelRes, tag) ->
                         val active = selectedMode == mode
                         Surface(
                             onClick = { selectedMode = mode; format = mode },

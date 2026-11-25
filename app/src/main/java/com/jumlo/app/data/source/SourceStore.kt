@@ -54,7 +54,7 @@ import javax.inject.Singleton
                     resolver.openInputStream(parsed)?.use { source ->
                         FileOutputStream(partial).use { sink -> boundedCopy(source,sink,partial); sink.fd.sync() }
                     } ?: throw OperationFailure("ACCESS_LOST")
-                    java.nio.file.Files.move(partial.toPath(),dest.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    moveSafely(partial,dest)
                     cached=dest.absolutePath; size=dest.length()
                 } finally { partial.delete() }
             }
@@ -78,7 +78,7 @@ import javax.inject.Singleton
         val dest=File(inbound,"$id.bin"); val partial=File(inbound,"$id.part")
         try {
             file.inputStream().use { source -> FileOutputStream(partial).use { sink -> boundedCopy(source,sink,partial); sink.fd.sync() } }
-            java.nio.file.Files.move(partial.toPath(),dest.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            moveSafely(partial,dest)
             val header=dest.inputStream().use { input ->
                 val buf=ByteArray(32); val n=input.read(buf)
                 if(n>0) buf.copyOf(n) else ByteArray(0)
@@ -138,6 +138,13 @@ import javax.inject.Singleton
             openRead(sourceId).use { source -> FileOutputStream(temp).use { sink -> boundedCopy(source,sink,temp); sink.fd.sync() } }
             block(temp)
         } finally { temp.delete(); if(dir.list().isNullOrEmpty()) dir.delete() }
+    }
+    private fun moveSafely(source:File,target:File) {
+        try {
+            java.nio.file.Files.move(source.toPath(),target.toPath(),java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } catch(_:java.nio.file.AtomicMoveNotSupportedException) {
+            java.nio.file.Files.move(source.toPath(),target.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
     }
     private suspend fun cleanupUnregistered(id:String,file:File) = withContext(NonCancellable+Dispatchers.IO) {
         // A cancelled DAO continuation may already have committed its immutable source row.

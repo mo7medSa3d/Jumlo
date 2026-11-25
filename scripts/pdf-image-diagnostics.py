@@ -18,7 +18,8 @@ def norm_cs(v):
     return str(v)
 
 def walk_images(resources, prefix="", depth=0, seen=None):
-    seen = seen or set()
+    if seen is None:
+        seen = set()
     out = []
     if resources is None: return out
     xo = resources.get("/XObject")
@@ -29,7 +30,8 @@ def walk_images(resources, prefix="", depth=0, seen=None):
         subtype = str(obj.get("/Subtype"))
         if subtype == "/Form":
             if depth < 8:
-                out += walk_images(obj, prefix=f"{prefix}{name}/", depth=depth+1, seen=seen)
+                form_res = obj.get("/Resources")
+                out += walk_images(form_res.get_object() if form_res is not None else None, prefix=f"{prefix}{name}/", depth=depth+1, seen=seen)
         elif subtype == "/Image":
             key = id(obj)
             if key in seen:
@@ -39,7 +41,12 @@ def walk_images(resources, prefix="", depth=0, seen=None):
     return out
 
 def placements(contents):
-    data = contents.get_data() if contents is not None else b""
+    if contents is None:
+        data = b""
+    elif isinstance(contents, list):
+        data = b"\n".join(c.get_object().get_data() for c in contents)
+    else:
+        data = contents.get_object().get_data()
     current = (1.0,0.0,0.0,1.0,0.0,0.0)
     result = {}
     # sequential scan for cm and Do

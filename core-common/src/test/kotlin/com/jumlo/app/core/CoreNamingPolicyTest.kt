@@ -32,6 +32,7 @@ class CoreNamingPolicyTest {
 
     @Test fun filenameCollisionIsCaseInsensitiveAndDeterministic() {
         assertEquals("Report (1).pdf", SafeNames.unique(setOf("report.pdf"), "Report.pdf"))
+        assertEquals("caf\u00e9 (1).pdf", SafeNames.unique(setOf("cafe\u0301.pdf"), "caf\u00e9.pdf"))
         assertEquals("folder report", AutoOutputName.cleanBaseName("folder\\report.pdf"))
         val longSuffixName = "a." + "b".repeat(197)
         val uniqueLong = SafeNames.unique(setOf(longSuffixName), longSuffixName)

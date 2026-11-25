@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +27,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -36,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,6 +64,7 @@ import com.jumlo.app.model.FileFolder
 import com.jumlo.app.model.OutputRecord
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.icons.automirrored.rounded.Sort
 import com.jumlo.app.ui.icons.rounded.Add
 import com.jumlo.app.ui.icons.rounded.CheckCircle
@@ -215,117 +221,216 @@ fun FolderBreadcrumbBar(
     onToggleSelect: (() -> Unit)? = null,
     selecting: Boolean = false,
     onSelectAll: (() -> Unit)? = null,
+    ancestors: List<FileFolder> = emptyList(),
+    onNavigateToFolder: ((String?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
+    val pillars = QuietTheme.pillars
     val isRootDropHovered = dragState.isDragging && dragState.hoveredTargetId == ROOT_DROP_TARGET_ID
+    val pathSegments = if (ancestors.isNotEmpty()) ancestors else listOf(folder)
+    val breadcrumbScroll = rememberScrollState()
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .fileDropTarget(ROOT_DROP_TARGET_ID, dragState)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    LaunchedEffect(pathSegments.size, folder.id) {
+        breadcrumbScroll.animateScrollTo(breadcrumbScroll.maxValue)
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Surface(
-            onClick = onBackToRoot,
-            shape = CircleShape,
-            color = if (isRootDropHovered) colors.primaryContainer else colors.surfaceContainer,
-            border = if (isRootDropHovered) BorderStroke(1.5.dp, colors.primary) else null,
-            modifier = Modifier.size(40.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.files_folder_all_files),
-                    tint = colors.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-        Text(
-            text = if (isRootDropHovered) stringResource(R.string.files_folder_drop_to_root) else folder.name,
-            style = QuietTheme.typography.sectionTitle.copy(textDirection = TextDirection.Content),
-            color = if (isRootDropHovered) colors.primary else colors.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).semantics { heading() }
-        )
-        if (onCreateSubfolder != null) {
             Surface(
-                onClick = onCreateSubfolder,
+                onClick = onBackToRoot,
                 shape = CircleShape,
                 color = colors.surfaceContainer,
-                modifier = Modifier.size(38.dp)
+                modifier = Modifier.size(40.dp)
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.files_folder_all_files),
+                        tint = colors.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Text(
+                text = folder.name,
+                style = QuietTheme.typography.sectionTitle.copy(textDirection = TextDirection.Content),
+                color = colors.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).semantics { heading() }
+            )
+            if (onCreateSubfolder != null) {
+                Surface(
+                    onClick = onCreateSubfolder,
+                    shape = CircleShape,
+                    color = colors.surfaceContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Folder,
+                            contentDescription = stringResource(R.string.files_folder_create_title),
+                            tint = colors.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+            if (onImport != null) {
+                Surface(
+                    onClick = onImport,
+                    shape = CircleShape,
+                    color = colors.primary,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = stringResource(R.string.import_device_files),
+                            tint = colors.onPrimary,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                }
+            }
+            if (onToggleSearch != null) {
+                Surface(
+                    onClick = onToggleSearch,
+                    shape = CircleShape,
+                    color = colors.surfaceContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = stringResource(R.string.ui_search_files),
+                            tint = colors.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+            if (selecting && onSelectAll != null) {
+                TextButton(onClick = onSelectAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Text(stringResource(R.string.redesign_select_all), style = QuietTheme.typography.metadataStrong)
+                }
+            }
+            if (onToggleSelect != null) {
+                TextButton(onClick = onToggleSelect, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Text(stringResource(if (selecting) R.string.action_cancel else R.string.ui_select_files), style = QuietTheme.typography.metadataStrong)
+                }
+            }
+            if (onOpenFolderActions != null && !selecting) {
+                Surface(
+                    onClick = onOpenFolderActions,
+                    shape = CircleShape,
+                    color = colors.surfaceContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.files_folder_actions_title),
+                            tint = colors.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(breadcrumbScroll)
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Surface(
+                onClick = { onNavigateToFolder?.invoke(null) ?: onBackToRoot() },
+                shape = QuietTheme.shapes.pill,
+                color = if (isRootDropHovered) colors.primaryContainer else colors.surfaceContainerLow,
+                border = BorderStroke(
+                    width = if (isRootDropHovered) 2.dp else 1.dp,
+                    color = if (isRootDropHovered) colors.primary else pillars.cardBorder
+                ),
+                shadowElevation = if (isRootDropHovered) 6.dp else 0.dp,
+                modifier = Modifier.fileDropTarget(ROOT_DROP_TARGET_ID, dragState)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.Folder,
-                        contentDescription = stringResource(R.string.files_folder_create_title),
-                        tint = colors.primary,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = null,
+                        tint = if (isRootDropHovered) colors.primary else colors.onSurfaceVariant,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.nav_files),
+                        style = QuietTheme.typography.metadataStrong,
+                        color = if (isRootDropHovered) colors.primary else colors.onSurfaceVariant,
+                        maxLines = 1
                     )
                 }
             }
-        }
-        if (onImport != null) {
-            Surface(
-                onClick = onImport,
-                shape = CircleShape,
-                color = colors.primary,
-                modifier = Modifier.size(38.dp)
-            ) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = stringResource(R.string.import_device_files),
-                        tint = colors.onPrimary,
-                        modifier = Modifier.size(19.dp)
-                    )
-                }
-            }
-        }
-        if (onToggleSearch != null) {
-            Surface(
-                onClick = onToggleSearch,
-                shape = CircleShape,
-                color = colors.surfaceContainer,
-                modifier = Modifier.size(38.dp)
-            ) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.Search,
-                        contentDescription = stringResource(R.string.ui_search_files),
-                        tint = colors.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-        }
-        if (selecting && onSelectAll != null) {
-            TextButton(onClick = onSelectAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text(stringResource(R.string.redesign_select_all), style = QuietTheme.typography.metadataStrong)
-            }
-        }
-        if (onToggleSelect != null) {
-            TextButton(onClick = onToggleSelect, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text(stringResource(if (selecting) R.string.action_cancel else R.string.ui_select_files), style = QuietTheme.typography.metadataStrong)
-            }
-        }
-        if (onOpenFolderActions != null && !selecting) {
-            Surface(
-                onClick = onOpenFolderActions,
-                shape = CircleShape,
-                color = colors.surfaceContainer,
-                modifier = Modifier.size(38.dp)
-            ) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.MoreVert,
-                        contentDescription = stringResource(R.string.files_folder_actions_title),
-                        tint = colors.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+            pathSegments.forEachIndexed { index, segment ->
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = colors.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
+                val isCurrent = index == pathSegments.lastIndex
+                if (!isCurrent) {
+                    val isSegHovered = dragState.isDragging && dragState.hoveredTargetId == segment.id
+                    Surface(
+                        onClick = { onNavigateToFolder?.invoke(segment.id) },
+                        shape = QuietTheme.shapes.pill,
+                        color = if (isSegHovered) colors.primaryContainer else colors.surfaceContainerLow,
+                        border = BorderStroke(
+                            width = if (isSegHovered) 2.dp else 1.dp,
+                            color = if (isSegHovered) colors.primary else pillars.cardBorder
+                        ),
+                        shadowElevation = if (isSegHovered) 6.dp else 0.dp,
+                        modifier = Modifier.fileDropTarget(segment.id, dragState)
+                    ) {
+                        Text(
+                            text = segment.name,
+                            style = QuietTheme.typography.metadataStrong.copy(textDirection = TextDirection.Content),
+                            color = if (isSegHovered) colors.primary else colors.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .widthIn(max = 160.dp)
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = segment.name,
+                        style = QuietTheme.typography.metadataStrong.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            textDirection = TextDirection.Content
+                        ),
+                        color = colors.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .widthIn(max = 180.dp)
+                            .padding(horizontal = 6.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -364,6 +469,7 @@ fun FolderActionsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -605,7 +711,10 @@ fun MoveToFolderDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 if (currentFolderId != null) {
                     SheetActionRow(
                         icon = Icons.Rounded.FolderOpen,

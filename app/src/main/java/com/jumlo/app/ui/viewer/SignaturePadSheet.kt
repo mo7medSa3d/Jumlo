@@ -34,6 +34,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
@@ -43,6 +46,9 @@ import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Close
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -58,8 +64,14 @@ internal fun SignaturePadSheet(
 ) {
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
-    val inkColors = remember { listOf(Color(0xFF0E142B), Color(0xFF2E67FF), Color(0xFFD32F2F)) }
-    var activeColor by remember { mutableStateOf(inkColors.first()) }
+    val inkColors = remember {
+        listOf(
+            Color(0xFF0E142B) to R.string.studio_ink_black,
+            Color(0xFF2E67FF) to R.string.studio_ink_blue,
+            Color(0xFFD32F2F) to R.string.studio_ink_red
+        )
+    }
+    var activeColor by remember { mutableStateOf(inkColors.first().first) }
     val strokes = remember { mutableStateListOf<Pair<Int, List<Offset>>>() }
     var currentStroke by remember { mutableStateOf<List<Offset>>(emptyList()) }
     var padSize by remember { mutableStateOf(IntSize.Zero) }
@@ -77,10 +89,12 @@ internal fun SignaturePadSheet(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.markup_signature_title), style = QuietTheme.typography.sectionTitle, color = colors.onSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    inkColors.forEach { ink ->
+                    inkColors.forEach { (ink, labelRes) ->
+                        val inkLabel = stringResource(labelRes)
                         Box(
                             Modifier.size(26.dp).clip(CircleShape).background(ink)
                                 .border(if (activeColor == ink) 2.5.dp else 1.dp, if (activeColor == ink) colors.primary else pillars.cardBorder, CircleShape)
+                                .semantics { contentDescription = inkLabel; selected = activeColor == ink }
                                 .clickable { activeColor = ink }
                         )
                     }
@@ -91,8 +105,15 @@ internal fun SignaturePadSheet(
             }
             if (saved.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(saved, key = { it.id }) { sig ->
-                        val preview = remember(sig.file.absolutePath) { runCatching { BitmapFactory.decodeFile(sig.file.absolutePath) }.getOrNull() }
+                    items(saved, key = { it.id }, contentType = { "saved-signature" }) { sig ->
+                        val preview by produceState<Bitmap?>(null, sig.file.absolutePath) {
+                            value = withContext(Dispatchers.IO) {
+                                try { BitmapFactory.decodeFile(sig.file.absolutePath) }
+                                catch (cancel: CancellationException) { throw cancel }
+                                catch (_: Exception) { null }
+                                catch (_: OutOfMemoryError) { null }
+                            }
+                        }
                         DisposeOwnedPreviewBitmap(preview)
                         Surface(
                             onClick = { onPickSaved(sig) },
@@ -102,8 +123,10 @@ internal fun SignaturePadSheet(
                             modifier = Modifier.width(124.dp).height(58.dp)
                         ) {
                             Box(Modifier.fillMaxSize()) {
-                                if (preview != null && !preview.isRecycled) {
-                                    Image(preview.asImageBitmap(), null, Modifier.fillMaxSize().padding(6.dp), contentScale = ContentScale.Fit)
+                                val readyPreview = preview
+                                if (readyPreview != null && !readyPreview.isRecycled) {
+                                    val imageBitmap = remember(readyPreview) { readyPreview.asImageBitmap() }
+                                    Image(imageBitmap, stringResource(R.string.studio_use_signature), Modifier.fillMaxSize().padding(6.dp), contentScale = ContentScale.Fit)
                                 }
                                 IconButton(onClick = { onDeleteSaved(sig) }, modifier = Modifier.align(Alignment.TopEnd).size(24.dp)) {
                                     Icon(Icons.Rounded.Close, stringResource(R.string.action_delete), Modifier.size(14.dp), tint = colors.onSurfaceVariant)

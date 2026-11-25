@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="studio_frequently_used">أدواتك الأكثر استخدامًا</string>
     <string name="studio_signature_pad">لوحة رسم التوقيع. اسحب لرسم خط.</string>
     <string name="studio_pen_thickness">سُمك القلم · %1$d dp</string>
     <string name="studio_ink_black">حبر أسود</string>
@@ -67,7 +66,7 @@
     <string name="studio_ocr_copy">نسخ النص</string>
     <string name="studio_ocr_export">تصدير النص</string>
     <string name="studio_ocr_wait">جارٍ التعرّف على نص هذه الصفحة…</string>
-    <string name="studio_ocr_empty">لم يُتعرّف على نص</string>
+    <string name="studio_ocr_empty">لم يُتعرّف على نص. جرّب صفحة أوضح أو بإضاءة أفضل.</string>
     <string name="msg_invalid_media_service_url">استخدم عنوان خدمة HTTPS بلا بيانات دخول أو معاملات استعلام أو جزء إضافي.</string>
     <string name="msg_invalid_media_service_token">رمز الخدمة غير صالح. تحقّق منه وأدخله مرة أخرى.</string>
     <string name="msg_media_service_credentials_unavailable">تعذّر فتح رمز الخدمة المحفوظ. أدخل الرمز مرة أخرى في الإعدادات.</string>

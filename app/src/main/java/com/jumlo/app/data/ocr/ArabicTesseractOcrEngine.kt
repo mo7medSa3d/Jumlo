@@ -38,15 +38,19 @@ import javax.inject.Singleton
  */
 @Singleton
 class ArabicTesseractOcrEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val baseClient: OkHttpClient
 ) {
+    constructor(context: Context) : this(context, OkHttpClient())
+
     private val http by lazy {
-        OkHttpClient.Builder()
+        baseClient.newBuilder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)
             .callTimeout(180, TimeUnit.SECONDS)
             .followRedirects(true)
+            .followSslRedirects(false)
             .build()
     }
 
@@ -64,8 +68,11 @@ class ArabicTesseractOcrEngine @Inject constructor(
         currentCoroutineContext().ensureActive()
         val (dataRoot, langSpec) = ensureModelsReady(includeEnglish, onProgress)
         withContext(Dispatchers.Default) {
-            val processed = preprocessForArabic(bitmap)
+            var processed: Bitmap? = null
             try {
+                currentCoroutineContext().ensureActive()
+                val prepared = preprocessForArabic(bitmap)
+                processed = prepared
                 currentCoroutineContext().ensureActive()
                 val raw = synchronized(apiLock) {
                     val api = obtainApi(dataRoot, langSpec)
@@ -73,7 +80,7 @@ class ArabicTesseractOcrEngine @Inject constructor(
                         api.setVariable("user_defined_dpi", "300")
                         api.setVariable("preserve_interword_spaces", "1")
                         api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
-                        api.setImage(processed)
+                        api.setImage(prepared)
                         api.utF8Text.orEmpty()
                     } catch (oom: OutOfMemoryError) {
                         releaseApiLocked()
@@ -97,7 +104,7 @@ class ArabicTesseractOcrEngine @Inject constructor(
                 AppDiagnostics.report("ocr_recognize", error)
                 throw OperationFailure("OCR_FAILED")
             } finally {
-                if (processed !== bitmap) processed.recycle()
+                if (processed != null && processed !== bitmap) processed.recycle()
             }
         }
     }
@@ -268,10 +275,10 @@ class ArabicTesseractOcrEngine @Inject constructor(
                 val downloaded = try {
                     onDownloadProgress(-1f)
                     call.execute().use { resp ->
-                        if (!resp.isSuccessful) return@use false
+                        if (!resp.isSuccessful || !resp.request.url.isHttps) return@use false
                         val body = resp.body ?: return@use false
                         val expectedLength = body.contentLength()
-                        if (expectedLength in 1 until minBytes) return@use false
+                        if (expectedLength in 1 until minBytes || expectedLength > MAX_MODEL_BYTES) return@use false
                         if (expectedLength > 0L) onDownloadProgress(0f)
                         val digest = MessageDigest.getInstance("SHA-256")
                         body.byteStream().use { input ->
@@ -283,9 +290,10 @@ class ArabicTesseractOcrEngine @Inject constructor(
                                     ctx.ensureActive()
                                     val n = input.read(buf)
                                     if (n < 0) break
+                                    total += n
+                                    if (total > MAX_MODEL_BYTES) return@use false
                                     digest.update(buf, 0, n)
                                     output.write(buf, 0, n)
-                                    total += n
                                     if (expectedLength > 0L) {
                                         val frac = (total.toFloat() / expectedLength.toFloat()).coerceIn(0f, 1f)
                                         if (frac - lastReported >= 0.02f || frac >= 1f) {
@@ -403,6 +411,7 @@ class ArabicTesseractOcrEngine @Inject constructor(
         private const val MAX_PREPROCESS_PIXELS = 16_000_000L
         private const val MIN_ARA_BYTES = 1_000_000L
         private const val MIN_ENG_BYTES = 2_500_000L
+        private const val MAX_MODEL_BYTES = 32L * 1024 * 1024
         private const val MAX_TESSDATA_ENTRIES = 64
         private val HEX_CHARS = "0123456789abcdef".toCharArray()
 

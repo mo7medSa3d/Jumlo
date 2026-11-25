@@ -87,7 +87,9 @@ data class MediaUiState(
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            runtime.warmup()
+            try { runtime.warmup() }
+            catch (cancel: CancellationException) { throw cancel }
+            catch (error: Exception) { AppDiagnostics.report("media_warmup", error) }
         }
     }
     private val submissions=MediaSubmissionSlot<JobRequest>()

@@ -1,15 +1,24 @@
 package com.jumlo.app.ui.files
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -31,6 +40,10 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -43,13 +56,17 @@ import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.Folder
+import com.jumlo.app.ui.icons.rounded.FolderOpen
 import com.jumlo.app.ui.icons.rounded.InsertDriveFile
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 
 const val ROOT_DROP_TARGET_ID = "__root__"
 
 @Stable
 class FileDragDropState {
+    var activePointerId by mutableStateOf<PointerId?>(null)
+        private set
     var draggingIds by mutableStateOf<Set<String>>(emptySet())
         private set
     var draggingLabel by mutableStateOf("")
@@ -73,17 +90,18 @@ class FileDragDropState {
         if (hoveredTargetId == id) hoveredTargetId = null
     }
 
-    fun startDrag(ids: Set<String>, label: String, startInRoot: Offset) {
+    fun startDrag(pointerId: PointerId, ids: Set<String>, label: String, startInRoot: Offset) {
         if (ids.isEmpty()) return
+        activePointerId = pointerId
         draggingIds = ids
         draggingLabel = label
         pointerInRoot = startInRoot
         hoveredTargetId = hitTest(startInRoot)
     }
 
-    fun updateDrag(delta: Offset, onHoverChanged: () -> Unit) {
+    fun updateDragPosition(pointInRoot: Offset, onHoverChanged: () -> Unit) {
         if (!isDragging) return
-        pointerInRoot += delta
+        pointerInRoot = pointInRoot
         val next = hitTest(pointerInRoot)
         if (next != hoveredTargetId) {
             hoveredTargetId = next
@@ -94,6 +112,7 @@ class FileDragDropState {
     fun finishDrag(): Pair<Set<String>, String?> {
         val ids = draggingIds
         val target = hoveredTargetId
+        activePointerId = null
         draggingIds = emptySet()
         draggingLabel = ""
         hoveredTargetId = null
@@ -101,13 +120,16 @@ class FileDragDropState {
     }
 
     fun cancelDrag() {
+        activePointerId = null
         draggingIds = emptySet()
         draggingLabel = ""
         hoveredTargetId = null
     }
 
-    private fun hitTest(point: Offset): String? =
-        dropTargets.entries.firstOrNull { (_, rect) -> rect.inflate(48f).contains(point) }?.key
+    private fun hitTest(point: Offset): String? {
+        dropTargets.entries.firstOrNull { (_, rect) -> rect.contains(point) }?.let { return it.key }
+        return dropTargets.entries.firstOrNull { (_, rect) -> rect.inflate(32f).contains(point) }?.key
+    }
 }
 
 @Composable
@@ -125,20 +147,60 @@ fun Modifier.fileDropTarget(
     }
 }
 
+/**
+ * Root-level pointer tracker attached above LazyColumn.
+ * Tracks and consumes ONLY dragState.activePointerId in PointerEventPass.Initial so other pointers
+ * (e.g. a second finger) remain unconsumed to tap folders, tap breadcrumbs, or scroll while dragging.
+ */
+fun Modifier.fileDragDropContainer(
+    dragState: FileDragDropState,
+    onHoverHaptic: () -> Unit,
+    onDrop: (Set<String>, String) -> Unit
+): Modifier = composed {
+    val latestHoverHaptic by rememberUpdatedState(onHoverHaptic)
+    val latestOnDrop by rememberUpdatedState(onDrop)
+
+    this.pointerInput(dragState) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val trackedId = dragState.activePointerId ?: continue
+                val trackedChange = event.changes.firstOrNull { it.id == trackedId }
+                if (trackedChange == null) {
+                    if (event.changes.none { it.pressed }) dragState.cancelDrag()
+                    continue
+                }
+                trackedChange.consume()
+                when {
+                    event.type == PointerEventType.Cancel -> dragState.cancelDrag()
+                    trackedChange.changedToUpIgnoreConsumed() || !trackedChange.pressed -> {
+                        val (ids, target) = dragState.finishDrag()
+                        if (ids.isNotEmpty() && target != null) {
+                            latestOnDrop(ids, target)
+                        }
+                    }
+                    else -> {
+                        val posInRoot = dragState.containerOriginInRoot + trackedChange.position
+                        dragState.updateDragPosition(posInRoot, latestHoverHaptic)
+                    }
+                }
+            }
+        }
+    }
+}
+
 fun Modifier.fileDragSource(
     itemId: String,
     itemLabel: String,
     dragState: FileDragDropState,
     resolveDragIds: () -> Set<String>,
     onDragStartHaptic: () -> Unit,
-    onHoverHaptic: () -> Unit,
-    onDrop: (Set<String>, String) -> Unit
+    onHoverHaptic: () -> Unit = {},
+    onDrop: (Set<String>, String) -> Unit = { _, _ -> }
 ): Modifier = composed {
     val itemOrigin = remember { floatArrayOf(0f, 0f) }
     val latestResolve by rememberUpdatedState(resolveDragIds)
     val latestStartHaptic by rememberUpdatedState(onDragStartHaptic)
-    val latestHoverHaptic by rememberUpdatedState(onHoverHaptic)
-    val latestOnDrop by rememberUpdatedState(onDrop)
     val latestLabel by rememberUpdatedState(itemLabel)
 
     this
@@ -148,29 +210,112 @@ fun Modifier.fileDragSource(
             itemOrigin[1] = pos.y
         }
         .pointerInput(itemId, dragState) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = { localOffset ->
+            // Replaces per-item detectDragGesturesAfterLongPress so opening folders never cancels an active drag.
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                if (dragState.isDragging) return@awaitEachGesture
+                val longPress = awaitLongPressOrCancellation(down.id)
+                if (longPress != null && !dragState.isDragging) {
                     val ids = latestResolve()
                     if (ids.isNotEmpty()) {
+                        longPress.consume()
                         latestStartHaptic()
-                        dragState.startDrag(ids, latestLabel, Offset(itemOrigin[0], itemOrigin[1]) + localOffset)
+                        val startInRoot = Offset(itemOrigin[0], itemOrigin[1]) + longPress.position
+                        dragState.startDrag(longPress.id, ids, latestLabel, startInRoot)
                     }
-                },
-                onDrag = { change, dragAmount ->
-                    change.consume()
-                    dragState.updateDrag(dragAmount, latestHoverHaptic)
-                },
-                onDragEnd = {
-                    val (ids, target) = dragState.finishDrag()
-                    if (ids.isNotEmpty() && target != null) {
-                        latestOnDrop(ids, target)
-                    }
-                },
-                onDragCancel = {
-                    dragState.cancelDrag()
                 }
-            )
+            }
         }
+}
+
+@Composable
+fun ActiveDragDropBanner(
+    dragState: FileDragDropState,
+    activeFolderId: String?,
+    activeFolderName: String?,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val reduced = LocalReducedMotion.current
+    val targetId = activeFolderId ?: ROOT_DROP_TARGET_ID
+    val isHovered = dragState.isDragging && dragState.hoveredTargetId == targetId
+    val count = dragState.draggingIds.size
+    val scale by animateFloatAsState(
+        targetValue = if (isHovered && !reduced) 1.02f else 1f,
+        animationSpec = if (reduced) snap() else spring(dampingRatio = 0.72f, stiffness = 420f),
+        label = "dropBannerScale"
+    )
+
+    AnimatedVisibility(
+        visible = dragState.isDragging,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .fileDropTarget(targetId, dragState),
+            shape = QuietTheme.shapes.card,
+            color = if (isHovered) colors.primaryContainer else colors.primaryContainer.copy(alpha = 0.55f),
+            contentColor = colors.onPrimaryContainer,
+            border = BorderStroke(
+                width = if (isHovered) 2.5.dp else 1.5.dp,
+                color = if (isHovered) colors.primary else colors.primary.copy(alpha = 0.65f)
+            ),
+            shadowElevation = if (isHovered) 10.dp else 4.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = if (isHovered) Icons.Rounded.FolderOpen else Icons.Rounded.Folder,
+                    contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = if (activeFolderName != null) stringResource(R.string.files_drop_here, activeFolderName)
+                        else stringResource(R.string.files_drop_root),
+                        style = QuietTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            textDirection = TextDirection.Content
+                        ),
+                        color = if (isHovered) colors.primary else colors.onPrimaryContainer,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = stringResource(R.string.files_dragging_hint),
+                        style = QuietTheme.typography.metadata,
+                        color = colors.onPrimaryContainer.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (count > 0) {
+                    Surface(
+                        shape = QuietTheme.shapes.pill,
+                        color = colors.primary,
+                        contentColor = colors.onPrimary
+                    ) {
+                        Text(
+                            text = count.toString(),
+                            style = QuietTheme.typography.badge,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -232,8 +377,7 @@ fun FloatingDragGhost(
                             shape = QuietTheme.shapes.pill,
                             color = if (isOverTarget) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f)
                             else MaterialTheme.colorScheme.primary,
-                            contentColor = if (isOverTarget) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onPrimary
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ) {
                             Text(
                                 text = count.toString(),

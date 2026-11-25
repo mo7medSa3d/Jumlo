@@ -1,11 +1,21 @@
 # Changelog
 
+## 2026-11-25 — iOS 27 Viewer, PDF Markup, Motion/Sound & Build Hygiene
+
+### Added & Updated
+- **Multi-format Office & text viewer:** Added Apple iOS 27-inspired on-device document viewing for `.docx`, `.pptx`, `.xlsx`, `.txt`, `.md`, `.csv`, and `.json` (`DocumentViewerLoader`, `OfficeDocumentViewerScreen`).
+- **In-place PDF markup & Select tool:** Added in-place PDF markup flattening/saving (`PdfMarkupFlattener`) and the `SELECT` tool alongside Pen, Highlighter, Eraser, Text, Date, Check, and Signature overlays (`PdfMarkupModel`, `PdfMarkupOverlay`).
+- **UI polish, motion & sound:** Added Home hero banner (`HomeScreen`), minimal iOS-style Trash management (`FilesScreen`), centralized iOS 27 spring-physics motion (`JumloMotion`), and preloaded `SoundPool` UI cues (`UiSoundPlayer`).
+- **Build & CI hygiene:** Scoped `packaging.jniLibs.useLegacyPackaging = extendedMedia` in `app/build.gradle.kts` so `-PextendedMedia=false` builds use uncompressed 16 KB-aligned `.so` packaging while full-media builds keep native binary extraction for `youtubedl-android`; added `scripts/test-source-static.py` to `.github/workflows/ci.yml`.
+- **CI media-service gate & standalone deployment docs:** Added `tools/media-service/test_service.py` to `.github/workflows/ci.yml` and added hardened `systemd` deployment instructions alongside Docker in `README.md`.
+- **CI flavor alignment & `/metrics` observability:** Updated `.github/workflows/ci.yml` and CI contract tests (`scripts/tests/test-release-apk-artifacts.py`, `scripts/test-ksp-ci-serialization.py`, `scripts/tests/test-ci-event-matrix.py`) to match the `direct` and `play` distribution flavors (`:app:assembleDirectDebug`, `:app:testDirectDebugUnitTest`, `:app:lintDirectDebug`, `:app:lintDirectRelease`, `:app:assemblePlayDebug`, `:app:connectedDirectDebugAndroidTest`, and flavored `app/build/outputs/apk/{direct,play}/...` paths); documented the companion media service `GET`/`HEAD /metrics` observability endpoint in `README.md`.
+
 ## 2026-11-22 — Release Verification & Documentation Hygiene
 
 ### Changed & Cleaned
 - **Verification artifacts:** Removed 4 unreferenced scratch/stale files under `verification/current/platform-matrix/` (`android-qualification-plan.csv`, `host-probe.json`, `inputs.template.json`, `probe-inputs.json`) while retaining all 11 referenced `docs/**` specs/templates and `verification/current/device/preflight-source/README.md`.
 - **Documentation:** Polished `README.md` configuration table to cross-reference both `.env.example` and `tools/media-service/.env.example`, and documented the Docker media service non-root runtime and `HEALTHCHECK`.
-- **Build & CI verification:** Audited `.env.example`, `app/build.gradle.kts` (`versionCode=10844`, `versionName=1.6-tools`, R8 minification & resource shrinking), `gradle/libs.versions.toml` (all versions pinned), and `.github/workflows/*.yml` (lint, unit tests, media-service tests, APK/AAB build gates).
+- **Build & CI verification:** Restored root `.env.example`, fixed `.gitignore` (`0644`, `design_ex/`, `.superpowers/`), aligned full-media size-gate comments/installer text in `.github/workflows/ci.yml` to `70,000,000` bytes, and synced tool counts across `README.md`, `RELEASE_CHECKLIST.md`, `PRIVACY_AND_PERMISSIONS.md`, and `docs/testing/TOOL_QUALIFICATION.md` to match `scan_id_card` (22 primary tools / 34 registered IDs / 136 matrix rows).
 
 ## 2026-11-21 — Production Release Hardening
 

@@ -29,6 +29,7 @@ class StreamTransfer(private val transport:HttpTransport) {
     }
     fun execute(request:TransferRequest,checkCancel:()->Unit={},progress:(Long,Long?)->Unit={_,_->},onMetadata:(TransferMetadata)->Unit={}):TransferResult {
         require(request.offset>=0 && (request.offset==0L || request.partialFile.length()==request.offset)) { "PARTIAL_OFFSET_MISMATCH" }
+        if(request.offset==0L && request.partialFile.exists()) require(request.partialFile.delete()) { "DOWNLOAD_RESTART_FAILED" }
         var current=request.copy(url=DownloadLinkPolicy.resolveDirectUrl(request.url))
         var attempt=0
         var latestMetadata:TransferMetadata?=null
@@ -82,7 +83,13 @@ class StreamTransfer(private val transport:HttpTransport) {
         val end=System.currentTimeMillis()+ms
         while(System.currentTimeMillis()<end) {
             checkCancel()
-            Thread.sleep(minOf(25L,maxOf(1L,end-System.currentTimeMillis())))
+            try {
+                Thread.sleep(minOf(25L,maxOf(1L,end-System.currentTimeMillis())))
+            } catch(e:InterruptedException) {
+                Thread.currentThread().interrupt()
+                checkCancel()
+                throw InterruptedIOException("TRANSFER_INTERRUPTED").apply { initCause(e) }
+            }
         }
     }
 
@@ -90,14 +97,16 @@ class StreamTransfer(private val transport:HttpTransport) {
 
     private fun executeSingleAttempt(request:TransferRequest,checkCancel:()->Unit,progress:(Long,Long?)->Unit,onMetadata:(TransferMetadata)->Unit):TransferResult {
         var current=HttpPolicy.url(request.url,request.cleartextConsent)
+        // Scope cookies by full origin (scheme + host + port) so redirects across host, port, or scheme never replay cookies.
         val cookieJar=mutableMapOf<String,MutableMap<String,String>>()
         repeat(11) { redirects ->
             checkCancel()
             val hostKey=current.host?.lowercase(Locale.ROOT).orEmpty()
-            val hostCookies=cookieJar[hostKey]
+            val originKey=HttpPolicy.origin(current)
+            val originCookies=cookieJar[originKey]
             val headers=mutableMapOf("Accept-Encoding" to "identity")
-            if(!hostCookies.isNullOrEmpty()) {
-                headers["Cookie"]=hostCookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
+            if(!originCookies.isNullOrEmpty()) {
+                headers["Cookie"]=originCookies.entries.joinToString("; ") { "${it.key}=${it.value}" }
             }
             if(request.offset>0) {
                 headers["Range"]="bytes=${request.offset}-"
@@ -106,10 +115,18 @@ class StreamTransfer(private val transport:HttpTransport) {
                 headers["If-Range"]=validator
             }
             val response=transport.open(current.toString(),headers)
+            var responseClosed=false
+            fun closeResponse() {
+                if(!responseClosed) {
+                    responseClosed=true
+                    runCatching { response.body.close() }
+                    runCatching { response.close() }
+                }
+            }
             fun header(name:String):String? = response.headers[name] ?: response.headers.entries.firstOrNull { it.key.equals(name,ignoreCase=true) }?.value
             try {
                 header("set-cookie")?.takeIf { it.length <= MAX_COOKIE_HEADER_LENGTH }?.let { cookieHeader ->
-                    val jar = cookieJar.getOrPut(hostKey) { mutableMapOf() }
+                    val jar = cookieJar.getOrPut(originKey) { mutableMapOf() }
                     cookieHeader.split(SET_COOKIE_SPLIT).forEach { entry ->
                         val pair = entry.substringBefore(';').trim()
                         val eq = pair.indexOf('=')
@@ -138,7 +155,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                         if(n<0) break
                         read+=n
                     }
-                    response.close()
+                    closeResponse()
                     if(read>0) {
                         val html=String(sample,0,read,Charsets.UTF_8)
                         val confirmed=DriveLink.parseConfirmationUrl(html,current)
@@ -157,7 +174,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                     // The server ignored the Range header and is sending the whole
                     // representation. Restart the transfer from byte 0 instead of
                     // failing the whole download.
-                    response.close()
+                    closeResponse()
                     require(!request.partialFile.exists() || request.partialFile.delete()) { "DOWNLOAD_RESTART_FAILED" }
                     // The replacement may have no validators at all. Never carry
                     // the old representation's ETag into a later resumed request.
@@ -212,7 +229,7 @@ class StreamTransfer(private val transport:HttpTransport) {
                 if(written==0L) throw IOException("EMPTY_HTTP_BODY")
                 if(total!=null && written!=total) throw IOException(if(written<total) "TRUNCATED_HTTP_BODY" else "OVERFLOW_HTTP_BODY")
                 return TransferResult(written,total,etag ?: request.strongEtag,modified ?: request.lastModified,finalDigest,mime,disposition)
-            } finally { response.close() }
+            } finally { closeResponse() }
         }
         throw IllegalArgumentException("TOO_MANY_REDIRECTS")
     }

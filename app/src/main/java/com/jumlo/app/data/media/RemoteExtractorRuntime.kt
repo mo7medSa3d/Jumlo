@@ -173,7 +173,7 @@ internal class RemoteExtractorRuntime(
         }
         if (formats.isEmpty()) throw OperationFailure("MEDIA_NO_USABLE_FORMAT")
         return MediaAsset(
-            id = root["id"]?.jsonPrimitive?.content ?: urlFallback(),
+            id = root["id"]?.jsonPrimitive?.content ?: "remote",
             extractor = root["extractor"]?.jsonPrimitive?.content ?: "remote",
             title = root["title"]?.jsonPrimitive?.content ?: "media",
             durationSeconds = (root["duration"] as? JsonPrimitive)?.doubleOrNull?.takeIf { it.isFinite() && it>=0 },
@@ -186,8 +186,6 @@ internal class RemoteExtractorRuntime(
             }
         )
     }
-
-    private fun urlFallback(): String = "remote"
 
     override fun download(
         url: String, choice: MediaChoice, audio: AudioOutput, bitrate: Int,

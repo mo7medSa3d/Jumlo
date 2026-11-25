@@ -371,7 +371,7 @@ internal fun CompletedResultCard(
     modifier: Modifier = Modifier,
     newRunLabel: String? = null
 ) {
-    val primary = outputs.first()
+    val primary = outputs.firstOrNull() ?: return
     val sizeSummary = if (outputs.size > 1) formatBytes(outputs.sumOf { it.sizeBytes }) else formatOutputSizeSummary(primary)
     // formatOutputSizeSummary already appends the subfolder when present.
     val metadataLine = if (primary.metadata.subfolder.isNullOrBlank()) {

@@ -297,7 +297,6 @@ data class PrintUiState(
         if(_state.value.error=="PRINT_STORAGE") observeSavedData()
         else if(_state.value.source!=null) inspect()
     }
-    fun clearError() {_state.update {it.copy(error=null)}}
     suspend fun renderPage(source:PrintSource,options:PrintOptions,page:PrintPage,layout:PrintLayout,maxEdge:Int):Bitmap {
         var bitmap:Bitmap?=null
         try {

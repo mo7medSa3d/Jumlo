@@ -208,7 +208,8 @@ android {
     }
 
     packaging {
-        jniLibs.useLegacyPackaging = true
+        // youtubedl-android executes extracted binaries from nativeLibraryDir; lite builds use uncompressed 16 KB-aligned .so packaging.
+        jniLibs.useLegacyPackaging = extendedMedia
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             // Post-quantum parameter tables of bcprov: PDF/ZIP features ride the

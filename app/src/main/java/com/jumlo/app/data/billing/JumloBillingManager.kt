@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,6 +32,7 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
     val entitlement: StateFlow<ProEntitlement> = _entitlement.asStateFlow()
     private val productDetailsMap = ConcurrentHashMap<String, ProductDetails>()
     private val entitlementLock = Any()
+    private val connecting = AtomicBoolean(false)
     @Volatile private var hasLifetime = false
     @Volatile private var hasAnnual = false
 
@@ -41,14 +43,18 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
 
     fun connect() {
         if (client.isReady) { queryProducts(); restorePurchases(); return }
+        if (!connecting.compareAndSet(false, true)) return
         client.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
+                connecting.set(false)
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     queryProducts()
                     restorePurchases()
                 }
             }
-            override fun onBillingServiceDisconnected() = Unit
+            override fun onBillingServiceDisconnected() {
+                connecting.set(false)
+            }
         })
     }
 
@@ -70,7 +76,7 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
             if (res.responseCode == BillingClient.BillingResponseCode.OK) {
                 val item = list.firstOrNull() ?: return@queryProductDetailsAsync
                 productDetailsMap[SKU_ANNUAL] = item
-                val price = item.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+                val price = item.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
                 _entitlement.update { it.copy(annualPrice = price) }
             }
         }
@@ -78,7 +84,7 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
 
     fun launchPurchase(activity: Activity, sku: String): Boolean {
         if (!client.isReady) { connect(); return false }
-        val details = productDetailsMap[sku] ?: return false
+        val details = productDetailsMap[sku] ?: run { queryProducts(); return false }
         val offerToken = if (sku == SKU_ANNUAL) details.subscriptionOfferDetails?.firstOrNull()?.offerToken else null
         if (sku == SKU_ANNUAL && offerToken == null) return false
         val productParam = BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -108,20 +114,14 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
     private fun processPurchases(purchases: List<Purchase>, productTypeScope: String?) {
         var foundLifetime = false
         var foundAnnual = false
+        val pendingAcks = mutableListOf<Triple<String, Boolean, Boolean>>()
         for (p in purchases) {
             if (p.purchaseState == Purchase.PurchaseState.PURCHASED) {
                 val grantsLifetime = SKU_LIFETIME in p.products
                 val grantsAnnual = SKU_ANNUAL in p.products
                 if (!p.isAcknowledged) {
-                    val ack = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.purchaseToken).build()
-                    client.acknowledgePurchase(ack) { ackRes ->
-                        if (ackRes.responseCode == BillingClient.BillingResponseCode.OK) {
-                            synchronized(entitlementLock) {
-                                if (grantsLifetime) hasLifetime = true
-                                if (grantsAnnual) hasAnnual = true
-                            }
-                            publishEntitlement()
-                        }
+                    if (grantsLifetime || grantsAnnual) {
+                        pendingAcks += Triple(p.purchaseToken, grantsLifetime, grantsAnnual)
                     }
                 } else {
                     if (grantsLifetime) foundLifetime = true
@@ -129,6 +129,7 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
                 }
             }
         }
+        // Apply acknowledged snapshot before launching async acks so a fast ack callback cannot be overwritten.
         synchronized(entitlementLock) {
             when (productTypeScope) {
                 BillingClient.ProductType.INAPP -> hasLifetime = foundLifetime
@@ -140,11 +141,22 @@ class JumloBillingManager @Inject constructor(@ApplicationContext private val co
             }
         }
         publishEntitlement()
+        for ((token, grantsLifetime, grantsAnnual) in pendingAcks) {
+            val ack = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(token).build()
+            client.acknowledgePurchase(ack) { ackRes ->
+                if (ackRes.responseCode == BillingClient.BillingResponseCode.OK) {
+                    synchronized(entitlementLock) {
+                        if (grantsLifetime) hasLifetime = true
+                        if (grantsAnnual) hasAnnual = true
+                    }
+                    publishEntitlement()
+                }
+            }
+        }
     }
 
     private fun publishEntitlement() {
-        val lifetime = hasLifetime
-        val pro = lifetime || hasAnnual
+        val (lifetime, pro) = synchronized(entitlementLock) { hasLifetime to (hasLifetime || hasAnnual) }
         _entitlement.update { it.copy(isPro = pro, isLifetime = lifetime) }
     }
 }

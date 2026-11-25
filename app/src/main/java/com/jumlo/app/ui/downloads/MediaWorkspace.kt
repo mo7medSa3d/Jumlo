@@ -100,7 +100,6 @@ private val IMAGE_DIRECT_MODES = listOf(
     val readClipboard = remember(clipboard) {
         { try { clipboard.getText()?.text?.take(32768) } catch (_:RuntimeException) { null } }
     }
-    val clipboardSuggestion: String? = null
     val onAnalyze = remember(viewModel) { { viewModel.analyze() } }
     val onAnalyzeWithHaptics = remember(haptics, viewModel) { { haptics.actionClick(); viewModel.analyze() } }
     val onUrlChange = remember(editUrl) { { value: String -> clipboardEmpty = false; editUrl(value) } }
@@ -224,13 +223,6 @@ private val IMAGE_DIRECT_MODES = listOf(
                         }
                     }
                 }
-            }
-            if(state.url.isEmpty() && clipboardSuggestion!=null) item("clipboard", contentType = "clipboard") {
-                val onUseSuggestion = remember(clipboardSuggestion, haptics, editUrl, viewModel) {
-                    { haptics.actionClick(); editUrl(clipboardSuggestion); viewModel.analyze() }
-                }
-                SuggestionChip(onClick=onUseSuggestion,
-                    label={Text(stringResource(R.string.redesign_paste_suggestion))},icon={Icon(Icons.Rounded.ContentPaste,null)})
             }
             if(state.analyzing) item("loading", contentType = "loading") {
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {

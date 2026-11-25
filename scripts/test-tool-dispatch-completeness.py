@@ -39,6 +39,9 @@ def main():
     nav_match = re.search(r'private val navigation = setOf\(([^)]*)\)', policy)
     assert nav_match, "navigation set not found in CapabilityPolicy"
     navigation = set(re.findall(r'"([a-z0-9_]+)"', nav_match.group(1)))
+    for alias, target in re.findall(r'if\s*\(\s*id\s*==\s*"([a-z0-9_]+)"\s*\)\s*"([a-z0-9_]+)"', registry):
+        if target in navigation:
+            navigation.add(alias)
     processing = registry_ids - navigation
     assert processing, "no processing tools found"
 

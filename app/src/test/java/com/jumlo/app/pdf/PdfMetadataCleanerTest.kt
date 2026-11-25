@@ -23,7 +23,7 @@ class PdfMetadataCleanerTest {
     private lateinit var dir: File
 
     @Before fun setup() {
-        dir = File(System.getProperty("java.io.tmpdir"), "pdfclean-${System.nanoTime()}").apply { mkdirs() }
+        dir = java.nio.file.Files.createTempDirectory("pdfclean-").toFile()
     }
 
     @After fun teardown() {

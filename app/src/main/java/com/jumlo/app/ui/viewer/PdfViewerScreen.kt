@@ -12,8 +12,6 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -82,6 +80,7 @@ import com.jumlo.app.ui.downloads.CompletedResultCard
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.rounded.*
+import com.jumlo.app.ui.theme.JumloMotion
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import kotlinx.coroutines.CancellationException
@@ -138,12 +137,13 @@ fun PdfViewerScreen(
     onSaveInPlace: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null,
     onSaveMarkupResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
     onSaveInPlaceResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
-    onOpenSavedOutput: ((String, String) -> Unit)? = null
+    onOpenSavedOutput: ((String, String) -> Unit)? = null,
+    onBackInterceptChange: ((Boolean) -> Unit)? = null
 ) {
     key(uri) {
         PdfViewerContent(
             uri, title, onBack, onOpenFile, onPrint, modifier,
-            onSaveMarkup, onSaveInPlace, onSaveMarkupResult, onSaveInPlaceResult, onOpenSavedOutput
+            onSaveMarkup, onSaveInPlace, onSaveMarkupResult, onSaveInPlaceResult, onOpenSavedOutput, onBackInterceptChange
         )
     }
 }
@@ -161,7 +161,8 @@ private fun PdfViewerContent(
     onSaveInPlace: ((String, String, List<PdfMarkupItem>, () -> Unit) -> Unit)? = null,
     onSaveMarkupResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
     onSaveInPlaceResult: ((String, String, List<PdfMarkupItem>, (MarkupSaveResult?) -> Unit) -> Unit)? = null,
-    onOpenSavedOutput: ((String, String) -> Unit)? = null
+    onOpenSavedOutput: ((String, String) -> Unit)? = null,
+    onBackInterceptChange: ((Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val defaultEdge = with(LocalDensity.current) { 960.dp.roundToPx() }.coerceIn(1280, 1800)
@@ -178,7 +179,6 @@ private fun PdfViewerContent(
 
     var chromeVisible by remember { mutableStateOf(true) }
     LaunchedEffect(session) { if (session == null) chromeVisible = true }
-    var pageObserved by remember { mutableStateOf(false) }
     var nightMode by rememberSaveable { mutableStateOf(false) }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var thumbsOpen by rememberSaveable { mutableStateOf(false) }
@@ -209,6 +209,8 @@ private fun PdfViewerContent(
     var markupItems by remember(uri) { mutableStateOf<List<PdfMarkupItem>>(emptyList()) }
     val history = remember(uri) { UndoRedoStack<PdfMarkupItem>() }
     var markupSaving by remember { mutableStateOf(false) }
+    var confirmDiscardMarkup by rememberSaveable(uri) { mutableStateOf(false) }
+    var pendingExitAfterSave by remember(uri) { mutableStateOf(false) }
     var completedMarkup by rememberSaveable(uri, stateSaver = markupSaveResultSaver) { mutableStateOf<MarkupSaveResult?>(null) }
     var saveFeedback by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var feedbackJob by remember { mutableStateOf<Job?>(null) }
@@ -217,7 +219,8 @@ private fun PdfViewerContent(
     var pendingTextPos by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }
     var textInput by remember { mutableStateOf("") }
     val sigStore = remember(context) { SavedSignatureStore(context) }
-    var savedSignatures by remember(uri) { mutableStateOf(sigStore.list()) }
+    var savedSignatures by remember(uri) { mutableStateOf<List<com.jumlo.app.data.pdf.SavedSignature>>(emptyList()) }
+    LaunchedEffect(uri) { savedSignatures = withContext(Dispatchers.IO) { sigStore.list() } }
 
     val canAnnotate = onSaveMarkup != null || onSaveInPlace != null || onSaveMarkupResult != null || onSaveInPlaceResult != null
 
@@ -247,17 +250,37 @@ private fun PdfViewerContent(
             history.clear()
             markupMode = false
             if (reloadDocument) retry++
-            if (result != null) completedMarkup = result else showFeedback(label, isError = false)
+            if (pendingExitAfterSave) {
+                pendingExitAfterSave = false
+                onBack()
+                return
+            }
+            if (result != null && !result.savedInPlace) {
+                completedMarkup = result
+            } else {
+                showFeedback(label, isError = false)
+            }
         }
 
         fun handleStructuredResult(result: MarkupSaveResult?) {
             if (result != null) {
-                finishSaved(
-                    context.getString(if (result.savedInPlace) R.string.s8_markup_saved else R.string.s8_markup_saved_copy),
-                    reloadDocument = result.savedInPlace,
-                    result = result
-                )
+                val switchedFromReadOnly = preferInPlace && !result.savedInPlace && onOpenSavedOutput != null
+                if (switchedFromReadOnly) {
+                    markupSaving = false
+                    markupItems = emptyList()
+                    selectedItemId = null
+                    history.clear()
+                    markupMode = false
+                    onOpenSavedOutput?.invoke(result.uri, result.displayName)
+                } else {
+                    finishSaved(
+                        context.getString(if (result.savedInPlace) R.string.s8_markup_saved else R.string.s8_markup_saved_copy),
+                        reloadDocument = result.savedInPlace,
+                        result = result
+                    )
+                }
             } else {
+                pendingExitAfterSave = false
                 markupSaving = false
                 showFeedback(context.getString(R.string.s8_markup_save_failed), isError = true)
             }
@@ -336,6 +359,21 @@ private fun PdfViewerContent(
         chromeVisible = !chromeVisible
         if (chromeVisible) wake() else hideJob?.cancel()
     }
+    val viewerOwnsBack = searchOpen || markupMode || markupItems.isNotEmpty()
+    fun handleBack() {
+        menuOpen = false
+        when {
+            searchOpen -> { searchOpen = false; searchText = ""; searchResults = emptyList() }
+            markupItems.isNotEmpty() -> confirmDiscardMarkup = true
+            markupMode -> { markupMode = false; selectedItemId = null }
+            else -> onBack()
+        }
+    }
+    androidx.activity.compose.BackHandler(enabled = viewerOwnsBack) { handleBack() }
+    DisposableEffect(viewerOwnsBack) {
+        onBackInterceptChange?.invoke(viewerOwnsBack)
+        onDispose { onBackInterceptChange?.invoke(false) }
+    }
 
     LaunchedEffect(uri, retry, unlockPassword) {
         var opened: PdfReaderSession? = null
@@ -352,8 +390,6 @@ private fun PdfViewerContent(
     }
 
     val currentPage by remember { derivedStateOf { list.firstVisibleItemIndex } }
-    // Skip the first emission so the document opens full-screen; real scrolling still reveals chrome.
-    LaunchedEffect(currentPage) { if (pageObserved) wake() else pageObserved = true }
 
     LaunchedEffect(infoOpen, uri) {
         if (infoOpen && info.isEmpty() && !infoError) {
@@ -377,6 +413,12 @@ private fun PdfViewerContent(
     }
 
     val document = session
+    LaunchedEffect(document, currentPage) {
+        val doc = document ?: return@LaunchedEffect
+        delay(120)
+        if (currentPage + 1 < doc.pageCount) doc.prefetch(currentPage + 1, defaultEdge)
+        if (currentPage - 1 >= 0) doc.prefetch(currentPage - 1, defaultEdge)
+    }
     LaunchedEffect(uri, document) {
         restoredPage = false
         document?.let { doc ->
@@ -484,7 +526,7 @@ private fun PdfViewerContent(
                                     onAddItem = { item -> commitMarkup(markupItems + item) },
                                     onRequestTextAt = { p, x, y -> pendingTextPos = Triple(p, x, y); textInput = "" },
                                     onMoveItem = { id, dx, dy ->
-                                        markupItems = markupItems.map { item ->
+                                        commitMarkup(markupItems.map { item ->
                                             if (item.id != id) item else when (item) {
                                                 is PdfMarkupItem.TextBox -> item.copy(
                                                     normX = (item.normX + dx).coerceIn(0f, 0.92f),
@@ -498,18 +540,35 @@ private fun PdfViewerContent(
                                                     normX = (item.normX + dx).coerceIn(0f, (1f - item.normW).coerceAtLeast(0f)),
                                                     normY = (item.normY + dy).coerceIn(0f, (1f - item.normH).coerceAtLeast(0f))
                                                 )
-                                                else -> item
+                                                is PdfMarkupItem.InkStroke -> {
+                                                    val minX = item.points.minOfOrNull { it.x } ?: 0f
+                                                    val maxX = item.points.maxOfOrNull { it.x } ?: 1f
+                                                    val minY = item.points.minOfOrNull { it.y } ?: 0f
+                                                    val maxY = item.points.maxOfOrNull { it.y } ?: 1f
+                                                    val clampedDx = dx.coerceIn(-minX, 1f - maxX)
+                                                    val clampedDy = dy.coerceIn(-minY, 1f - maxY)
+                                                    item.copy(points = item.points.map { com.jumlo.app.core.NormPoint(it.x + clampedDx, it.y + clampedDy) })
+                                                }
+                                                is PdfMarkupItem.HighlightStroke -> {
+                                                    val minX = item.points.minOfOrNull { it.x } ?: 0f
+                                                    val maxX = item.points.maxOfOrNull { it.x } ?: 1f
+                                                    val minY = item.points.minOfOrNull { it.y } ?: 0f
+                                                    val maxY = item.points.maxOfOrNull { it.y } ?: 1f
+                                                    val clampedDx = dx.coerceIn(-minX, 1f - maxX)
+                                                    val clampedDy = dy.coerceIn(-minY, 1f - maxY)
+                                                    item.copy(points = item.points.map { com.jumlo.app.core.NormPoint(it.x + clampedDx, it.y + clampedDy) })
+                                                }
                                             }
-                                        }
+                                        })
                                     },
                                     onResizeSignature = { id, dNormW, dNormH ->
-                                        markupItems = markupItems.map { item ->
+                                        commitMarkup(markupItems.map { item ->
                                             if (item.id != id || item !is PdfMarkupItem.SavedSignatureStamp) item else {
                                                 val nextW = (item.normW + dNormW).coerceIn(0.08f, (1f - item.normX).coerceAtMost(0.85f))
                                                 val nextH = (item.normH + dNormH).coerceIn(0.04f, (1f - item.normY).coerceAtMost(0.55f))
                                                 item.copy(normW = nextW, normH = nextH)
                                             }
-                                        }
+                                        })
                                     },
                                     onDeleteItem = { id ->
                                         if (selectedItemId == id) selectedItemId = null
@@ -526,8 +585,8 @@ private fun PdfViewerContent(
         AnimatedVisibility(
             visible = chromeVisible,
             modifier = Modifier.align(Alignment.TopCenter),
-            enter = if (reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { -it },
-            exit = if (reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { -it }
+            enter = JumloMotion.topChromeEnter(reducedMotion),
+            exit = JumloMotion.topChromeExit(reducedMotion)
         ) {
             Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Surface(
@@ -541,7 +600,7 @@ private fun PdfViewerContent(
                         Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { onBack(); menuOpen = false }, modifier = Modifier.size(42.dp).testTag("pdf.back")) {
+                        IconButton(onClick = ::handleBack, modifier = Modifier.size(42.dp).testTag("pdf.back")) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.reader_back), modifier = Modifier.size(21.dp))
                         }
                         Text(
@@ -638,8 +697,8 @@ private fun PdfViewerContent(
         AnimatedVisibility(
             visible = chromeVisible && !markupMode && document != null,
             modifier = Modifier.align(Alignment.BottomCenter),
-            enter = if (reducedMotion) EnterTransition.None else fadeIn() + slideInVertically { it },
-            exit = if (reducedMotion) ExitTransition.None else fadeOut() + slideOutVertically { it }
+            enter = JumloMotion.bottomChromeEnter(reducedMotion),
+            exit = JumloMotion.bottomChromeExit(reducedMotion)
         ) {
             Surface(
                 shape = QuietTheme.shapes.pill,
@@ -693,6 +752,7 @@ private fun PdfViewerContent(
                 saving = markupSaving,
                 onSelectTool = { t ->
                     activeToolName = t.name
+                    if (t != PdfMarkupTool.SELECT) selectedItemId = null
                     if (t == PdfMarkupTool.HIGHLIGHTER && activeColorArgb == 0xFF2E67FF.toInt()) activeColorArgb = 0xFFFFD60A.toInt()
                     if (t == PdfMarkupTool.SIGNATURE) signatureSheetOpen = true
                 },
@@ -771,14 +831,24 @@ private fun PdfViewerContent(
                 saved = savedSignatures,
                 onPickSaved = { sig -> pendingSignaturePath = sig.file.absolutePath; signatureSheetOpen = false },
                 onSaveNew = { bytes ->
-                    val saved = runCatching { sigStore.save(bytes) }.getOrNull()
-                    if (saved != null) {
-                        savedSignatures = sigStore.list()
-                        pendingSignaturePath = saved.file.absolutePath
-                    }
                     signatureSheetOpen = false
+                    scope.launch {
+                        val (saved, updated) = withContext(Dispatchers.IO) {
+                            val created = runCatching { sigStore.save(bytes) }.getOrNull()
+                            created to sigStore.list()
+                        }
+                        savedSignatures = updated
+                        if (saved != null) pendingSignaturePath = saved.file.absolutePath
+                    }
                 },
-                onDeleteSaved = { sig -> sigStore.delete(sig.id); savedSignatures = sigStore.list() },
+                onDeleteSaved = { sig ->
+                    scope.launch {
+                        savedSignatures = withContext(Dispatchers.IO) {
+                            sigStore.delete(sig.id)
+                            sigStore.list()
+                        }
+                    }
+                },
                 onDismiss = { signatureSheetOpen = false }
             )
         }
@@ -819,6 +889,39 @@ private fun PdfViewerContent(
                     }
                 }
             }
+        }
+        if (confirmDiscardMarkup) {
+            AlertDialog(
+                onDismissRequest = { confirmDiscardMarkup = false },
+                title = { Text(stringResource(R.string.ui_unsaved_title)) },
+                text = { Text(stringResource(R.string.ui_unsaved_body)) },
+                confirmButton = {
+                    TextButton(
+                        enabled = !markupSaving,
+                        onClick = {
+                            confirmDiscardMarkup = false
+                            pendingExitAfterSave = true
+                            executeSave(preferInPlace = true)
+                        }
+                    ) { Text(stringResource(R.string.ui_save_leave)) }
+                },
+                dismissButton = {
+                    Column {
+                        TextButton(onClick = { confirmDiscardMarkup = false }) { Text(stringResource(R.string.ui_keep_editing)) }
+                        TextButton(
+                            enabled = !markupSaving,
+                            onClick = {
+                                confirmDiscardMarkup = false
+                                markupItems = emptyList()
+                                history.clear()
+                                markupMode = false
+                                selectedItemId = null
+                                onBack()
+                            }
+                        ) { Text(stringResource(R.string.ui_discard_leave)) }
+                    }
+                }
+            )
         }
         pendingTextPos?.let { (pIdx, nx, ny) ->
             AlertDialog(
@@ -974,15 +1077,21 @@ private fun ReaderPage(
     markupEnabled: Boolean = false,
     markupOverlay: @Composable () -> Unit = {}
 ) {
-    var frame by remember(document, page) { mutableStateOf<PdfReaderSession.Frame?>(null) }
+    var scale by rememberSaveable(page) { mutableFloatStateOf(1f) }
+    val rasterEdge = if (scale > 1.5f) 2400 else defaultEdge
+    var frame by remember(document, page) { mutableStateOf(document.peekCached(page, rasterEdge)) }
     var failure by remember(document, page) { mutableStateOf<String?>(null) }
     var pageRetry by remember(document, page) { mutableIntStateOf(0) }
-    var scale by rememberSaveable(page) { mutableFloatStateOf(1f) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
+    var pan by remember(document, page) { mutableStateOf(Offset.Zero) }
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     val latestOnTap by rememberUpdatedState(onTap)
-    val rasterEdge = if (scale > 1.5f) 2400 else defaultEdge
     LaunchedEffect(document, page, rasterEdge, pageRetry) {
+        val cached = if (pageRetry == 0) document.peekCached(page, rasterEdge) else null
+        if (cached != null) {
+            frame = cached
+            failure = null
+            return@LaunchedEffect
+        }
         try { frame = document.render(page, rasterEdge); failure = null }
         catch (cancel: CancellationException) { throw cancel }
         catch (error: Exception) { failure = stableError(error) }
@@ -1004,7 +1113,7 @@ private fun ReaderPage(
     val transform = rememberTransformableState { zoom, offset, _ -> applyTransform(zoom, offset) }
     val pageLabel = stringResource(R.string.reader_page, page + 1)
     val fitLabel = stringResource(R.string.ui_preview_reset_zoom)
-    val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.firstPageRatio)
+    val pageRatio = (frame?.let { if (it.height > 0) it.width.toFloat() / it.height else null } ?: document.cachedRatio(page))
         .takeIf { it.isFinite() && it > 0f } ?: 0.707f
 
     Box(Modifier.fillMaxWidth()) {
@@ -1022,16 +1131,15 @@ private fun ReaderPage(
                         )
                     }
                 }
-                // In markup mode, intercept 2-finger pinch-zoom & pan on Initial pass while letting 1-finger gestures draw.
+                // Intercept 2-finger pinch-zoom on Initial pass in markup mode or at 1x scale so 1-finger drags always scroll LazyColumn cleanly.
                 .pointerInput(page, markupEnabled) {
-                    if (!markupEnabled) return@pointerInput
                     awaitEachGesture {
                         var zooming = false
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             val pressedCount = event.changes.count { it.pressed }
                             if (pressedCount == 0) break
-                            if (pressedCount >= 2) {
+                            if (pressedCount >= 2 && (markupEnabled || scale <= 1.01f || zooming)) {
                                 zooming = true
                                 val zoomChange = event.calculateZoom()
                                 val panChange = event.calculatePan()
@@ -1040,7 +1148,7 @@ private fun ReaderPage(
                                 }
                                 event.changes.forEach { it.consume() }
                             } else if (zooming) {
-                                // Keep consuming remaining lift events after a pinch so lifting 1 finger doesn't leave a stray dot.
+                                // Keep consuming remaining lift events after a pinch so lifting 1 finger doesn't leave a stray dot or jerk scroll.
                                 event.changes.forEach { it.consume() }
                             }
                         }
@@ -1051,7 +1159,13 @@ private fun ReaderPage(
                     stateDescription = "${(scale * 100).toInt()}%"
                     customActions = listOf(CustomAccessibilityAction(fitLabel) { reset(); true })
                 }
-                .transformable(transform, enabled = !markupEnabled, canPan = { scale > 1f && !markupEnabled }),
+                .then(
+                    if (!markupEnabled && scale > 1.01f) {
+                        Modifier.transformable(transform, enabled = true, canPan = { scale > 1.01f && !markupEnabled })
+                    } else {
+                        Modifier
+                    }
+                ),
             contentAlignment = Alignment.Center
         ) {
             // Shared transform container so PDF bitmap and normalized [0..1] markup overlay zoom/pan in lockstep.
@@ -1099,7 +1213,7 @@ private fun ReaderPage(
 
 @Composable
 private fun ReaderThumbnail(document: PdfReaderSession, page: Int, selected: Boolean, onClick: () -> Unit) {
-    var frame by remember(document, page) { mutableStateOf<PdfReaderSession.Frame?>(null) }
+    var frame by remember(document, page) { mutableStateOf(document.peekCached(page, 180)) }
     LaunchedEffect(document, page) {
         try { frame = document.render(page, 180) }
         catch (cancel: CancellationException) { throw cancel }

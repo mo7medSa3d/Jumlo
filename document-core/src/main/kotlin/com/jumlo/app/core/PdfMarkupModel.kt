@@ -10,7 +10,7 @@ data class NormPoint(val x: Float, val y: Float)
 data class PdfRect(val x: Float, val y: Float, val width: Float, val height: Float)
 
 enum class PdfMarkupTool {
-    NONE, PEN, HIGHLIGHTER, ERASER, TEXT, DATE, CHECK, SIGNATURE
+    NONE, SELECT, PEN, HIGHLIGHTER, ERASER, TEXT, DATE, CHECK, SIGNATURE
 }
 
 @Serializable
@@ -151,19 +151,59 @@ object PdfMarkupPolicy {
         return when (item) {
             is PdfMarkupItem.InkStroke -> hitTestPolyline(item.points, normX, normY, r + item.widthNorm * 0.5f)
             is PdfMarkupItem.HighlightStroke -> hitTestPolyline(item.points, normX, normY, r + item.widthNorm * 0.5f)
-            is PdfMarkupItem.CheckMark -> {
-                val s = item.sizeNorm
-                normX in (item.normX - r)..(item.normX + s + r) && normY in (item.normY - r)..(item.normY + s + r)
-            }
-            is PdfMarkupItem.TextBox -> {
-                val estW = (item.text.length.coerceIn(2, 24) * 0.012f * (item.fontSizePt / 14f)).coerceIn(0.05f, 0.55f)
-                val estH = (0.028f * (item.fontSizePt / 14f)).coerceIn(0.02f, 0.12f)
-                normX in (item.normX - r)..(item.normX + estW + r) && normY in (item.normY - r)..(item.normY + estH + r)
-            }
-            is PdfMarkupItem.SavedSignatureStamp -> {
-                normX in (item.normX - r)..(item.normX + item.normW + r) && normY in (item.normY - r)..(item.normY + item.normH + r)
+            else -> {
+                val b = boundingBox(item)
+                normX in (b.x - r)..(b.x + b.width + r) && normY in (b.y - r)..(b.y + b.height + r)
             }
         }
+    }
+
+    /** Normalized bounding box (top-left origin) for any markup item, used for iOS-style selection frames and edge clamping. */
+    fun boundingBox(item: PdfMarkupItem): PdfRect = when (item) {
+        is PdfMarkupItem.InkStroke -> polylineBounds(item.points, item.widthNorm * 0.5f + 0.012f)
+        is PdfMarkupItem.HighlightStroke -> polylineBounds(item.points, item.widthNorm * 0.5f + 0.012f)
+        is PdfMarkupItem.CheckMark -> {
+            val s = item.sizeNorm.coerceIn(0.025f, 0.14f)
+            PdfRect(item.normX, item.normY, s, s)
+        }
+        is PdfMarkupItem.TextBox -> {
+            val lines = item.text.split('\n')
+            val maxChars = lines.maxOfOrNull { it.length }?.coerceIn(2, 32) ?: 4
+            val estW = (maxChars * 0.013f * (item.fontSizePt / 14f) + 0.03f).coerceIn(0.07f, 0.72f)
+            val estH = (lines.size.coerceAtLeast(1) * 0.032f * (item.fontSizePt / 14f) + 0.014f).coerceIn(0.032f, 0.30f)
+            PdfRect(item.normX, item.normY, estW, estH)
+        }
+        is PdfMarkupItem.SavedSignatureStamp -> PdfRect(item.normX, item.normY, item.normW, item.normH)
+    }
+
+    /** Returns true if a tap/drag start at (normX, normY) hits the markup item in Select mode. */
+    fun hitTestItem(item: PdfMarkupItem, normX: Float, normY: Float, padNorm: Float = 0.024f): Boolean {
+        val pad = padNorm.coerceIn(0.008f, 0.08f)
+        return when (item) {
+            is PdfMarkupItem.InkStroke -> hitTestPolyline(item.points, normX, normY, pad + item.widthNorm * 0.5f)
+            is PdfMarkupItem.HighlightStroke -> hitTestPolyline(item.points, normX, normY, pad + item.widthNorm * 0.5f)
+            else -> {
+                val b = boundingBox(item)
+                normX in (b.x - pad)..(b.x + b.width + pad) && normY in (b.y - pad)..(b.y + b.height + pad)
+            }
+        }
+    }
+
+    private fun polylineBounds(points: List<NormPoint>, pad: Float): PdfRect {
+        if (points.isEmpty()) return PdfRect(0f, 0f, 0.04f, 0.04f)
+        var minX = points[0].x; var maxX = points[0].x
+        var minY = points[0].y; var maxY = points[0].y
+        for (p in points) {
+            if (p.x < minX) minX = p.x
+            if (p.x > maxX) maxX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.y > maxY) maxY = p.y
+        }
+        val left = (minX - pad).coerceIn(0f, 0.96f)
+        val top = (minY - pad).coerceIn(0f, 0.96f)
+        val right = (maxX + pad).coerceIn(left + 0.03f, 1f)
+        val bottom = (maxY + pad).coerceIn(top + 0.03f, 1f)
+        return PdfRect(left, top, right - left, bottom - top)
     }
 
     private fun hitTestPolyline(points: List<NormPoint>, x: Float, y: Float, threshold: Float): Boolean {

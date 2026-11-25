@@ -116,7 +116,7 @@ class PrismSourceContracts(unittest.TestCase):
     def test_navigation_and_direct_mlkit_scan_leave_actions_wired(self):
         nav = read('ui/components/QuietNavigation.kt')
         scan = read('ui/scan/SmartDocumentScanButton.kt')
-        self.assertIn('if (reduced) snap()',nav)
+        self.assertTrue('if (reduced) snap()' in nav or ('JumloMotion.fluidSpring(reduced)' in nav and 'JumloMotion.bouncySpring(reduced)' in nav))
         self.assertIn('onScan: () -> Unit',nav)
         self.assertIn('GmsDocumentScanning.getClient(options)',scan)
         self.assertIn('.setGalleryImportAllowed(true)',scan)

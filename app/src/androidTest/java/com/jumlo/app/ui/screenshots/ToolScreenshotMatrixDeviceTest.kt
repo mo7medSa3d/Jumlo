@@ -226,7 +226,7 @@ class ToolScreenshotMatrixDeviceTest {
         hostPdfUnavailable && tool == "signature_pad" -> "HOST_PDF_RENDERER_UNAVAILABLE"
         tool == "signature_pad" -> null
         !CapabilityRegistry.visible(tool) || !CapabilityRegistry.enabled(tool) -> "CAPABILITY_UNAVAILABLE"
-        tool == "scan_doc" -> "EXTERNAL_ML_KIT_SCANNER_FLOW_NOT_CAPTURED"
+        tool == "scan_doc" || tool == "scan_id_card" -> "EXTERNAL_ML_KIT_SCANNER_FLOW_NOT_CAPTURED"
         state == "loaded" && tool == "dl_media" -> "REAL_NETWORK_METADATA_FIXTURE_REQUIRED"
         hostPdfUnavailable && state == "loaded" && fixtureKeys(tool).any { it.startsWith("pdf") } -> "HOST_PDF_RENDERER_UNAVAILABLE"
         else -> null

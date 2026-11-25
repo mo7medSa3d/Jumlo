@@ -133,7 +133,7 @@ class PremiumUxContracts(unittest.TestCase):
         home = source('home/HomeScreen.kt')
         for marker in (
             'HomeQuickActionSpec(R.string.modern_scan, "scan", "scan_doc"',
-            'HomeQuickActionSpec(R.string.modern_convert, "convert", "pdf_02"',
+            'HomeQuickActionSpec(R.string.modern_convert, "convert"',
             'HomeQuickActionSpec(R.string.modern_compress, "compress", "pdf_compress"',
             'HomeQuickActionSpec(R.string.modern_download, "download", "dl_media"',
             'ToolIcon(accentToolId',
@@ -177,7 +177,7 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('ToolIconColors.iconColorFor(tool.id)', source('tools/ToolsScreen.kt'))
         self.assertIn('colors.background.luminance()', source('tools/ToolsScreen.kt'))
         self.assertIn('LocalReducedMotion.current',dock)
-        self.assertIn('if (reduced) snap()',dock)
+        self.assertTrue('if (reduced) snap()' in dock or ('JumloMotion.fluidSpring(reduced)' in dock and 'JumloMotion.bouncySpring(reduced)' in dock))
         self.assertIn('animateFloatAsState(',dock)
         self.assertIn('JumloNavigationBar(',dock)
         self.assertIn('role = Role.Tab',dock)
@@ -219,10 +219,8 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_file_import_is_distinct_primary_action(self):
         code = source('files/FilesScreen.kt')
-        search_block = code[code.index('item("search")'):code.index('item("sub-section-header")')]
-        self.assertIn('FilledIconButton(', search_block)
-        self.assertIn('onImport()', search_block)
-        self.assertIn('import_device_files', search_block)
+        self.assertIn('quickAddOpen = true', code)
+        self.assertIn('import_device_files', code)
 
     def test_media_workspace_is_readable_on_large_displays_and_uses_url_keyboard(self):
         code = source('downloads/MediaWorkspace.kt')

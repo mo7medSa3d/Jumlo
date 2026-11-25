@@ -1,5 +1,6 @@
 package com.jumlo.app.ui.viewer
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color as AndroidColor
 import androidx.compose.animation.AnimatedVisibility
@@ -30,11 +31,15 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +59,9 @@ import com.jumlo.app.ui.icons.automirrored.rounded.Undo
 import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
 import com.jumlo.app.ui.theme.QuietTheme
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -87,11 +95,30 @@ internal fun PdfMarkupPageLayer(
     onDeleteItem: (String) -> Unit
 ) {
     var boxSize by remember { mutableStateOf(IntSize.Zero) }
-    var livePoints by remember { mutableStateOf<List<NormPoint>>(emptyList()) }
-    var eraserCursor by remember { mutableStateOf<NormPoint?>(null) }
+    var livePoints by remember(pageIndex) { mutableStateOf<List<NormPoint>>(emptyList()) }
+    var eraserCursor by remember(pageIndex) { mutableStateOf<NormPoint?>(null) }
+    // Local GPU-only drag/resize state tracked in stationary page coordinates: zero layout oscillation, 120fps iOS glide.
+    var draggingItemId by remember(pageIndex) { mutableStateOf<String?>(null) }
+    var dragDeltaPx by remember(pageIndex) { mutableStateOf(Offset.Zero) }
+    var resizingItemId by remember(pageIndex) { mutableStateOf<String?>(null) }
+    var resizeDeltaPx by remember(pageIndex) { mutableStateOf(Offset.Zero) }
     val density = LocalDensity.current
+    val haptics = LocalHapticFeedback.current
+    val isSelectMode = activeTool == PdfMarkupTool.SELECT
+
+    LaunchedEffect(activeTool) {
+        livePoints = emptyList()
+        eraserCursor = null
+        if (activeTool != PdfMarkupTool.SELECT) {
+            draggingItemId = null
+            dragDeltaPx = Offset.Zero
+            resizingItemId = null
+            resizeDeltaPx = Offset.Zero
+        }
+    }
 
     val latestItems by rememberUpdatedState(items)
+    val latestSelectedId by rememberUpdatedState(selectedItemId)
     val latestColor by rememberUpdatedState(activeColor)
     val latestPenWidth by rememberUpdatedState(penWidthNorm)
     val latestHlWidth by rememberUpdatedState(highlighterWidthNorm)
@@ -103,6 +130,8 @@ internal fun PdfMarkupPageLayer(
     val latestOnSelect by rememberUpdatedState(onSelectItem)
     val latestOnAdd by rememberUpdatedState(onAddItem)
     val latestOnRequestText by rememberUpdatedState(onRequestTextAt)
+    val latestOnMove by rememberUpdatedState(onMoveItem)
+    val latestOnResize by rememberUpdatedState(onResizeSignature)
     val latestOnDelete by rememberUpdatedState(onDeleteItem)
 
     Box(
@@ -119,6 +148,68 @@ internal fun PdfMarkupPageLayer(
                     if (w <= 0f || h <= 0f) return@awaitEachGesture
 
                     when (activeTool) {
+                        PdfMarkupTool.SELECT -> {
+                            // If a child control (delete button or resize handle) already consumed down, yield cleanly.
+                            if (down.isConsumed) return@awaitEachGesture
+                            val startNx = (down.position.x / w).coerceIn(0f, 1f)
+                            val startNy = (down.position.y / h).coerceIn(0f, 1f)
+                            val currentSel = latestSelectedId
+                            val hit = latestItems.firstOrNull { it.id == currentSel && PdfMarkupPolicy.hitTestItem(it, startNx, startNy) }
+                                ?: latestItems.asReversed().firstOrNull { PdfMarkupPolicy.hitTestItem(it, startNx, startNy) }
+
+                            if (hit == null) {
+                                // Empty space: never consume drag so 1-finger PDF scrolling stays completely smooth; tap clears selection.
+                                var moved = false
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.count { it.pressed } >= 2) return@awaitEachGesture
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) moved = true
+                                    if (!change.pressed) break
+                                }
+                                if (!moved && latestSelectedId != null) latestOnSelect(null)
+                                return@awaitEachGesture
+                            }
+
+                            // Hit an item: select immediately and track butter-smooth GPU drag in stationary page coordinates.
+                            down.consume()
+                            if (latestSelectedId != hit.id) {
+                                latestOnSelect(hit.id)
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            }
+                            draggingItemId = hit.id
+                            dragDeltaPx = Offset.Zero
+                            var totalDelta = Offset.Zero
+                            var movedBeyondSlop = false
+                            var cancelledByPinch = false
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.changes.count { it.pressed } >= 2) {
+                                    cancelledByPinch = true
+                                    break
+                                }
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) {
+                                    change.consume()
+                                    break
+                                }
+                                change.consume()
+                                val delta = change.position - down.position
+                                if (!movedBeyondSlop && delta.getDistance() > viewConfiguration.touchSlop) {
+                                    movedBeyondSlop = true
+                                }
+                                if (movedBeyondSlop) {
+                                    totalDelta = delta
+                                    dragDeltaPx = delta
+                                }
+                            }
+                            if (!cancelledByPinch && movedBeyondSlop && totalDelta != Offset.Zero) {
+                                latestOnMove(hit.id, totalDelta.x / w, totalDelta.y / h)
+                            }
+                            draggingItemId = null
+                            dragDeltaPx = Offset.Zero
+                        }
+
                         PdfMarkupTool.PEN, PdfMarkupTool.HIGHLIGHTER -> {
                             down.consume()
                             val pts = mutableListOf(NormPoint((down.position.x / w).coerceIn(0f, 1f), (down.position.y / h).coerceIn(0f, 1f)))
@@ -250,7 +341,6 @@ internal fun PdfMarkupPageLayer(
                                                     sigH
                                                 )
                                             )
-                                            latestOnSelect(newId)
                                         }
                                     }
                                     else -> Unit
@@ -292,9 +382,22 @@ internal fun PdfMarkupPageLayer(
                 )
             }
             items.forEach { item ->
+                val isDragging = draggingItemId == item.id && dragDeltaPx != Offset.Zero
                 when (item) {
-                    is PdfMarkupItem.InkStroke -> drawNormStroke(item.points, item.colorArgb, item.widthNorm, 1f)
-                    is PdfMarkupItem.HighlightStroke -> drawNormStroke(item.points, item.colorArgb, item.widthNorm, item.alpha)
+                    is PdfMarkupItem.InkStroke -> {
+                        if (isDragging) translate(dragDeltaPx.x, dragDeltaPx.y) {
+                            drawNormStroke(item.points, item.colorArgb, item.widthNorm, 1f)
+                        } else {
+                            drawNormStroke(item.points, item.colorArgb, item.widthNorm, 1f)
+                        }
+                    }
+                    is PdfMarkupItem.HighlightStroke -> {
+                        if (isDragging) translate(dragDeltaPx.x, dragDeltaPx.y) {
+                            drawNormStroke(item.points, item.colorArgb, item.widthNorm, item.alpha)
+                        } else {
+                            drawNormStroke(item.points, item.colorArgb, item.widthNorm, item.alpha)
+                        }
+                    }
                     else -> Unit
                 }
             }
@@ -315,20 +418,33 @@ internal fun PdfMarkupPageLayer(
             }
         }
         if (boxSize.width > 0 && boxSize.height > 0) {
-            val interactive = activeTool != PdfMarkupTool.NONE && activeTool != PdfMarkupTool.ERASER
             items.forEach { item ->
+                key(item.id) {
+                val isDragging = draggingItemId == item.id
+                val isSelected = isSelectMode && selectedItemId == item.id
+                val gpuTransform = Modifier.graphicsLayer {
+                    if (isDragging) {
+                        translationX = dragDeltaPx.x
+                        translationY = dragDeltaPx.y
+                        scaleX = 1.02f
+                        scaleY = 1.02f
+                    }
+                }
                 when (item) {
                     is PdfMarkupItem.TextBox -> {
                         Box(
-                            Modifier.absoluteOffset { IntOffset((item.normX * boxSize.width).roundToInt(), (item.normY * boxSize.height).roundToInt()) }
+                            Modifier
+                                .absoluteOffset { IntOffset((item.normX * boxSize.width).roundToInt(), (item.normY * boxSize.height).roundToInt()) }
+                                .then(gpuTransform)
                                 .then(
-                                    if (interactive) {
-                                        Modifier.singleFingerDrag(item.id) { dx, dy ->
-                                            onMoveItem(item.id, dx / boxSize.width, dy / boxSize.height)
-                                        }
-                                    } else Modifier
+                                    if (isSelected) {
+                                        Modifier
+                                            .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                    } else {
+                                        Modifier.background(Color.White.copy(alpha = 0.72f), QuietTheme.shapes.chip)
+                                    }
                                 )
-                                .background(Color.White.copy(alpha = 0.72f), QuietTheme.shapes.chip)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -343,12 +459,15 @@ internal fun PdfMarkupPageLayer(
                     is PdfMarkupItem.CheckMark -> {
                         val sizeSp = (item.sizeNorm * 480f).coerceIn(14f, 44f).sp
                         Box(
-                            Modifier.absoluteOffset { IntOffset((item.normX * boxSize.width).roundToInt(), (item.normY * boxSize.height).roundToInt()) }
+                            Modifier
+                                .absoluteOffset { IntOffset((item.normX * boxSize.width).roundToInt(), (item.normY * boxSize.height).roundToInt()) }
+                                .then(gpuTransform)
                                 .then(
-                                    if (interactive) {
-                                        Modifier.singleFingerDrag(item.id) { dx, dy ->
-                                            onMoveItem(item.id, dx / boxSize.width, dy / boxSize.height)
-                                        }
+                                    if (isSelected) {
+                                        Modifier
+                                            .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 4.dp)
                                     } else Modifier
                                 )
                         ) {
@@ -362,123 +481,158 @@ internal fun PdfMarkupPageLayer(
                     }
 
                     is PdfMarkupItem.SavedSignatureStamp -> {
-                        val bmp = remember(item.signaturePath) { runCatching { BitmapFactory.decodeFile(item.signaturePath) }.getOrNull() }
+                        val bmp by produceState<Bitmap?>(null, item.signaturePath) {
+                            value = withContext(Dispatchers.IO) {
+                                try { BitmapFactory.decodeFile(item.signaturePath) }
+                                catch (cancel: CancellationException) { throw cancel }
+                                catch (_: Exception) { null }
+                                catch (_: OutOfMemoryError) { null }
+                            }
+                        }
                         DisposeOwnedPreviewBitmap(bmp)
-                        val wDp = with(density) { (item.normW * boxSize.width).toDp() }
-                        val hDp = with(density) { (item.normH * boxSize.height).toDp() }
-                        val isSelected = interactive && selectedItemId == item.id
-                        if (bmp != null && !bmp.isRecycled) {
+                        val isResizing = resizingItemId == item.id
+                        val liveW = (item.normW * boxSize.width + if (isResizing) resizeDeltaPx.x else 0f).coerceIn(boxSize.width * 0.08f, boxSize.width * 0.85f)
+                        val liveH = (item.normH * boxSize.height + if (isResizing) resizeDeltaPx.y else 0f).coerceIn(boxSize.height * 0.04f, boxSize.height * 0.55f)
+                        val wDp = with(density) { liveW.toDp() }
+                        val hDp = with(density) { liveH.toDp() }
+                        val readyBmp = bmp
+                        if (readyBmp != null && !readyBmp.isRecycled) {
+                            val imageBitmap = remember(readyBmp) { readyBmp.asImageBitmap() }
                             Box(
                                 Modifier
                                     .absoluteOffset { IntOffset((item.normX * boxSize.width).roundToInt(), (item.normY * boxSize.height).roundToInt()) }
+                                    .then(gpuTransform)
                                     .size(wDp, hDp)
                                     .then(
                                         if (isSelected) {
-                                            Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
-                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f), RoundedCornerShape(6.dp))
-                                        } else if (interactive) {
-                                            Modifier.border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                                        } else Modifier
-                                    )
-                                    .then(
-                                        if (interactive) {
-                                            Modifier.singleFingerDrag(item.id, onTap = { onSelectItem(item.id) }) { dx, dy ->
-                                                onSelectItem(item.id)
-                                                onMoveItem(item.id, dx / boxSize.width, dy / boxSize.height)
-                                            }
+                                            Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f), RoundedCornerShape(8.dp))
                                         } else Modifier
                                     )
                             ) {
                                 Image(
-                                    bitmap = bmp.asImageBitmap(),
+                                    bitmap = imageBitmap,
                                     contentDescription = null,
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize().padding(3.dp)
                                 )
-                                if (interactive) {
-                                    Surface(
-                                        onClick = { onDeleteItem(item.id) },
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.errorContainer,
-                                        shadowElevation = 2.dp,
-                                        modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).size(22.dp)
-                                    ) {
-                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Rounded.Close,
-                                                contentDescription = stringResource(R.string.s8_markup_delete_item),
-                                                tint = MaterialTheme.colorScheme.onErrorContainer,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
-                                    }
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shadowElevation = 3.dp,
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .offset(x = 6.dp, y = 6.dp)
-                                            .size(24.dp)
-                                            .singleFingerDrag("resize-${item.id}") { dx, dy ->
-                                                onSelectItem(item.id)
-                                                onResizeSignature(item.id, dx / boxSize.width, dy / boxSize.height)
-                                            }
-                                    ) {
-                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                Icons.Rounded.ZoomOutMap,
-                                                contentDescription = stringResource(R.string.s8_markup_resize_signature),
-                                                tint = MaterialTheme.colorScheme.onPrimary,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
 
                     else -> Unit
                 }
+                }
+            }
+
+            // Selection frame and handles are visible only in Select mode (all item types).
+            if (isSelectMode && selectedItemId != null) {
+                val selected = items.firstOrNull { it.id == selectedItemId }
+                if (selected != null) {
+                    val b = PdfMarkupPolicy.boundingBox(selected)
+                    val isDraggingSel = draggingItemId == selected.id
+                    val isResizingSel = resizingItemId == selected.id
+                    val frameW = (b.width * boxSize.width + if (isResizingSel) resizeDeltaPx.x else 0f).coerceAtLeast(with(density) { 36.dp.toPx() })
+                    val frameH = (b.height * boxSize.height + if (isResizingSel) resizeDeltaPx.y else 0f).coerceAtLeast(with(density) { 28.dp.toPx() })
+                    val frameWDp = with(density) { frameW.toDp() }
+                    val frameHDp = with(density) { frameH.toDp() }
+                    val isStroke = selected is PdfMarkupItem.InkStroke || selected is PdfMarkupItem.HighlightStroke
+
+                    Box(
+                        Modifier
+                            .absoluteOffset { IntOffset((b.x * boxSize.width).roundToInt(), (b.y * boxSize.height).roundToInt()) }
+                            .graphicsLayer {
+                                if (isDraggingSel) {
+                                    translationX = dragDeltaPx.x
+                                    translationY = dragDeltaPx.y
+                                }
+                            }
+                            .size(frameWDp, frameHDp)
+                            .then(
+                                if (isStroke) {
+                                    Modifier
+                                        .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+                                } else Modifier
+                            )
+                    ) {
+                        Surface(
+                            onClick = { latestOnDelete(selected.id) },
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.error,
+                            shadowElevation = 4.dp,
+                            modifier = Modifier.align(AbsoluteAlignment.TopRight).absoluteOffset(x = 10.dp, y = (-10).dp).size(24.dp)
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.s8_markup_delete_item),
+                                    tint = MaterialTheme.colorScheme.onError,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+
+                        // Bottom-end smooth resize handle for signatures (accumulates delta cleanly without oscillation)
+                        if (selected is PdfMarkupItem.SavedSignatureStamp) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                shadowElevation = 4.dp,
+                                modifier = Modifier
+                                    .align(AbsoluteAlignment.BottomRight)
+                                    .absoluteOffset(x = 10.dp, y = 10.dp)
+                                    .size(26.dp)
+                                    .pointerInput("resize-${selected.id}", boxSize) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            if (currentEvent.changes.count { it.pressed } >= 2) return@awaitEachGesture
+                                            down.consume()
+                                            resizingItemId = selected.id
+                                            resizeDeltaPx = Offset.Zero
+                                            var accum = Offset.Zero
+                                            var cancelled = false
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                if (event.changes.count { it.pressed } >= 2) {
+                                                    cancelled = true
+                                                    break
+                                                }
+                                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                                if (!change.pressed) {
+                                                    change.consume()
+                                                    break
+                                                }
+                                                val step = change.position - change.previousPosition
+                                                change.consume()
+                                                accum += step
+                                                resizeDeltaPx = accum
+                                            }
+                                            if (!cancelled && accum != Offset.Zero && boxSize.width > 0 && boxSize.height > 0) {
+                                                latestOnResize(selected.id, accum.x / boxSize.width, accum.y / boxSize.height)
+                                            }
+                                            resizingItemId = null
+                                            resizeDeltaPx = Offset.Zero
+                                        }
+                                    }
+                            ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Rounded.ZoomOutMap,
+                                        contentDescription = stringResource(R.string.s8_markup_resize_signature),
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/** 1-finger drag/tap modifier that yields cleanly whenever a 2nd finger lands for pinch-zoom. */
-private fun Modifier.singleFingerDrag(
-    key: Any,
-    onTap: (() -> Unit)? = null,
-    onDrag: (Float, Float) -> Unit
-): Modifier = pointerInput(key) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        if (currentEvent.changes.count { it.pressed } >= 2) return@awaitEachGesture
-        down.consume()
-        var prev = down.position
-        var totalMove = 0f
-        while (true) {
-            val event = awaitPointerEvent()
-            if (event.changes.count { it.pressed } >= 2) break
-            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-            if (!change.pressed) {
-                change.consume()
-                if (totalMove < viewConfiguration.touchSlop) onTap?.invoke()
-                break
-            }
-            val delta = change.position - prev
-            prev = change.position
-            totalMove += delta.getDistance()
-            if (delta != Offset.Zero) {
-                change.consume()
-                onDrag(delta.x, delta.y)
-            }
-        }
-    }
-}
-
-/** iOS 27 Liquid Glass floating markup toolbar with full HSV color wheel, size sliders, and Save options. */
 @Composable
 internal fun PdfMarkupFloatingBar(
     activeTool: PdfMarkupTool,
@@ -539,7 +693,7 @@ internal fun PdfMarkupFloatingBar(
             )
         }
 
-        if (activeTool != PdfMarkupTool.NONE) {
+        if (activeTool != PdfMarkupTool.NONE && activeTool != PdfMarkupTool.SELECT) {
             Surface(
                 shape = QuietTheme.shapes.pill,
                 color = colors.surfaceContainerHigh.copy(alpha = 0.90f),
@@ -595,7 +749,7 @@ internal fun PdfMarkupFloatingBar(
                         PdfMarkupTool.TEXT, PdfMarkupTool.DATE -> Triple(textSizePt, 8f..36f, onTextSizeChange)
                         PdfMarkupTool.CHECK -> Triple(checkSizeNorm, 0.022f..0.085f, onCheckSizeChange)
                         PdfMarkupTool.SIGNATURE -> Triple(signatureScaleNorm, 0.12f..0.60f, onSignatureScaleChange)
-                        PdfMarkupTool.NONE -> null
+                        PdfMarkupTool.NONE, PdfMarkupTool.SELECT -> null
                     }
                     if (sliderConfig != null) {
                         val (value, range, onChange) = sliderConfig
@@ -628,6 +782,7 @@ internal fun PdfMarkupFloatingBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
+                MarkupToolChip(Icons.Rounded.NearMe, stringResource(R.string.markup_tool_select), activeTool == PdfMarkupTool.SELECT) { onSelectTool(PdfMarkupTool.SELECT) }
                 MarkupToolChip(Icons.Rounded.Edit, stringResource(R.string.markup_tool_pen), activeTool == PdfMarkupTool.PEN) { onSelectTool(PdfMarkupTool.PEN) }
                 MarkupToolChip(Icons.Rounded.AutoAwesome, stringResource(R.string.markup_tool_highlight), activeTool == PdfMarkupTool.HIGHLIGHTER) { onSelectTool(PdfMarkupTool.HIGHLIGHTER) }
                 MarkupToolChip(Icons.Rounded.CleaningServices, stringResource(R.string.s8_markup_tool_eraser), activeTool == PdfMarkupTool.ERASER) { onSelectTool(PdfMarkupTool.ERASER) }
@@ -681,7 +836,6 @@ internal fun PdfMarkupFloatingBar(
     }
 }
 
-/** Full Compose Canvas HSV Color Wheel + Value (brightness) slider for unlimited color selection. */
 @Composable
 private fun HsvColorWheelCard(
     color: Color,

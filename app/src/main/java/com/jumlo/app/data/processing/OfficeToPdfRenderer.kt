@@ -23,7 +23,6 @@ import com.tom_roush.pdfbox.pdmodel.font.PDFont
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.font.encoding.WinAnsiEncoding
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
-import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory
 import java.io.Closeable
 import kotlin.math.min
 
@@ -690,6 +689,7 @@ object OfficeToPdfRenderer {
                     val bitmap = decodeEmbeddedRaster(block.bytes)
                     try {
                         if (bitmap.hasAlpha()) {
+                            ImageWorkPolicy.requireFits(bitmap.width, bitmap.height, bitmap.allocationByteCount.toLong(), maxBitmapBytes)
                             val flat = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
                             try {
                                 val c = Canvas(flat)

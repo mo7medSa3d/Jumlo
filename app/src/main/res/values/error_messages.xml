@@ -17,7 +17,7 @@
     <string name="msg_choose_files">Choose the files required for this tool.</string>
     <string name="msg_choose_folder">Choose a device folder first.</string>
     <string name="msg_access_lost">File access was lost. Select the file or folder again.</string>
-    <string name="msg_provider_unavailable">This storage provider does not allow that action. Choose another destination.</string>
+    <string name="msg_provider_unavailable">This folder doesn\'t allow that action. Choose another destination.</string>
     <string name="msg_no_viewer">Could not open this file. Check file access and that a compatible app is installed.</string>
     <string name="msg_preview_unavailable">Preview unavailable for this file. Open it in another app to view.</string>
     <string name="msg_size_limit">The operation could not complete with the resources available on this device. Check free storage or try lower image resolution. Your original was preserved.</string>

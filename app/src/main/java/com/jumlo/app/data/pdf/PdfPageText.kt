@@ -149,14 +149,6 @@ object PdfPageText {
             .replace(ZERO_WIDTH_REGEX, "")
     }
 
-    internal fun cleanExtractedText(raw: String): String {
-        if (raw.isBlank() || isLikelyGarbled(raw)) return ""
-        return raw.split('\n')
-            .joinToString("\n") { line -> cleanLine(line, restoreVisualRtl = hasArabicPresentationForms(line)) }
-            .replace(TRAILING_SPACES_REGEX, "\n")
-            .trim()
-    }
-
     internal fun hasArabicPresentationForms(text: String): Boolean = text.any { ch ->
         ch in '\uFB50'..'\uFDFF' || ch in '\uFE70'..'\uFEFC'
     }

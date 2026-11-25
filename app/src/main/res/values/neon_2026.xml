@@ -1,15 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="neon_home_subtitle">Scan · Convert · Edit · Organize</string>
-    <string name="neon_hero_title">Everything starts with a scan</string>
-    <string name="neon_hero_body">Capture pages, then turn them into a beautiful PDF.</string>
-    <string name="neon_start_scan">Start scanning</string>
-    <string name="neon_quick_actions">Quick actions</string>
     <string name="neon_show_all">See all</string>
     <string name="neon_recent">Recent files</string>
-    <string name="neon_recent_empty">Your finished files will appear here.</string>
-    <string name="neon_smart_tools">Explore tools</string>
-    <string name="neon_tools_import">Import</string>
 
     <string name="neon_tools_search">Find a tool</string>
     <string name="neon_download_headline">Save it for later</string>

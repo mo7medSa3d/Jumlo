@@ -144,7 +144,7 @@ object SafeNames {
     }
     fun unique(existing: Set<String>, desired: String): String {
         val safe = basename(desired)
-        val folded = existing.mapTo(HashSet()) { it.lowercase(Locale.ROOT) }
+        val folded = existing.mapTo(HashSet()) { Normalizer.normalize(it, Normalizer.Form.NFC).lowercase(Locale.ROOT) }
         if (safe.lowercase(Locale.ROOT) !in folded) return safe
         val dot = safe.lastIndexOf('.').takeIf { it > 0 && safe.length - it <= 16 && safe.substring(it).toByteArray(Charsets.UTF_8).size <= 64 } ?: safe.length
         val suffixPart = safe.drop(dot)

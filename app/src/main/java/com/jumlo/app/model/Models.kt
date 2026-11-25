@@ -1,5 +1,6 @@
 package com.jumlo.app.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 enum class PillarCategory(val labelEn: String, val labelAr: String) {
@@ -63,6 +64,7 @@ enum class FittingStrategy(val labelEn: String, val descEn: String) {
     STRETCH("Stretch", "Distorts proportions")
 }
 
+@Immutable
 data class UtilityTool(
     val id: String,
     val route: String,
@@ -76,6 +78,7 @@ data class UtilityTool(
     val conceptCode: String? = null
 )
 
+@Immutable
 data class ManagedFileItem(
     val id: String,
     val name: String,
@@ -97,6 +100,7 @@ data class ManagedFileItem(
     val uncompressedBytes: Long? = null
 )
 
+@Immutable
 data class ParsedUrlCandidate(
     val lineNumber: Int,
     val rawUrl: String,
@@ -111,6 +115,7 @@ enum class UrlValidationStatus {
     VALID, DUPLICATE, UNSUPPORTED_PROTOCOL, MALFORMED
 }
 
+@Immutable
 @Serializable
 data class FileFolder(
     val id: String,

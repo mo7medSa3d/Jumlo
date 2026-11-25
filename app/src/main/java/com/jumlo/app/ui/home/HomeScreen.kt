@@ -1,18 +1,25 @@
 package com.jumlo.app.ui.home
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -34,12 +41,11 @@ import com.jumlo.app.ui.DataLoadStatus
 import com.jumlo.app.ui.components.*
 import com.jumlo.app.ui.files.fileDateLabel
 import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ArrowForward
 import com.jumlo.app.ui.icons.rounded.DocumentScanner
+import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.ToolIconColors
 import com.jumlo.app.ui.theme.pressFeedback
-import com.jumlo.app.ui.tools.ToolTile
 import com.jumlo.app.ui.tools.shortToolLabel
 
 private data class HomeQuickActionSpec(
@@ -51,9 +57,20 @@ private data class HomeQuickActionSpec(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> Unit,
-    onJob: (String) -> Unit, onOutput: (OutputRecord) -> Unit, onDraft: () -> Unit,
-    onFiles: () -> Unit, onScan: () -> Unit, onDownloads: () -> Unit, onScanIdCard: () -> Unit = onScan) {
+fun HomeScreen(
+    vm: AppViewModel,
+    onTool: (UtilityTool) -> Unit,
+    onTools: () -> Unit,
+    onJob: (String) -> Unit,
+    onOutput: (OutputRecord) -> Unit,
+    onDraft: () -> Unit,
+    onFiles: () -> Unit,
+    onScan: () -> Unit,
+    onDownloads: () -> Unit,
+    onScanIdCard: () -> Unit = onScan,
+    listState: LazyListState = rememberLazyListState(),
+    resetToRootEpoch: Int = 0
+) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val outputs by vm.outputs.collectAsStateWithLifecycle()
     val outputLoad by vm.outputLoad.collectAsStateWithLifecycle()
@@ -62,8 +79,15 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
     val form by vm.form.collectAsStateWithLifecycle()
     val pillars = QuietTheme.pillars
     val colors = MaterialTheme.colorScheme
+    val reduceMotion = LocalReducedMotion.current
     var showConvert by rememberSaveable { mutableStateOf(false) }
     var homeSearch by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(resetToRootEpoch) {
+        if (resetToRootEpoch > 0) {
+            homeSearch = ""
+            if (reduceMotion) listState.scrollToItem(0) else listState.animateScrollToItem(0)
+        }
+    }
     val searchResults = remember(homeSearch) {
         val q = homeSearch.trim()
         if (q.isEmpty()) emptyList()
@@ -76,52 +100,94 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                 ).any { it.contains(q, true) }
         }.take(8)
     }
-    val pinned = remember(settings.quickActionIds) {
-        settings.quickActionIds.map(ToolCatalogue::canonicalId).distinct().mapNotNull { id ->
-            CapabilityRegistry.tools.firstOrNull {
-                it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) && ToolCatalogue.isListed(id)
-            }
-        }
-    }
-    val frequent = remember(settings.rankedToolIds) {
-        settings.rankedToolIds.map(ToolCatalogue::canonicalId).distinct().mapNotNull { id ->
-            CapabilityRegistry.tools.firstOrNull {
-                it.id == id && CapabilityRegistry.visible(id) && CapabilityRegistry.enabled(id) && ToolCatalogue.isListed(id)
-            }
-        }.take(4)
-    }
     val active = remember(jobs) { jobs.filter { it.isActive() }.take(2) }
-    val recentOutputs = remember(outputs) { outputs.take(6) }
-    val visibleRecent = remember(recentOutputs, settings.outputFolderIds, settings.lockedFolderIds) { recentOutputs.filter { out -> val fid = settings.outputFolderIds[out.id]; fid == null || fid !in settings.lockedFolderIds } }
-    val pinnedSet = remember(settings.quickActionIds) { settings.quickActionIds.map(ToolCatalogue::canonicalId).toSet() }
+    val visibleRecent = remember(outputs, settings.outputFolderIds, settings.lockedFolderIds) {
+        outputs.filter { out ->
+            val fid = settings.outputFolderIds[out.id]
+            fid == null || fid !in settings.lockedFolderIds
+        }.take(6)
+    }
     val sourceNamesById = remember(sources) { sources.associate { it.id to it.displayName } }
     fun open(id: String) {
         val targetId = ToolCatalogue.canonicalId(id)
         CapabilityRegistry.tools.firstOrNull { it.id == targetId }?.let(onTool)
     }
+    // Exactly 8 balanced quick actions in a 4x2 grid: 7 core tools + Explore Tools.
     val actions = remember(onScan, onScanIdCard, onTool, onTools) {
         listOf(
             HomeQuickActionSpec(R.string.modern_scan, "scan", "scan_doc", onScan),
-            HomeQuickActionSpec(R.string.modern_convert, "convert", "pdf_02", { showConvert = true }),
+            HomeQuickActionSpec(R.string.tool_scan_id_card_title, "id_card", "scan_id_card", onScanIdCard),
+            HomeQuickActionSpec(R.string.modern_convert, "convert", "convert", { showConvert = true }),
             HomeQuickActionSpec(R.string.modern_compress, "compress", "pdf_compress", { open("pdf_compress") }),
-            HomeQuickActionSpec(R.string.modern_download, "download", "dl_media", { open("dl_media") }),
-            HomeQuickActionSpec(R.string.home_quick_id_card, "id_card", "scan_doc", onScanIdCard),
-            HomeQuickActionSpec(R.string.home_quick_ocr, "ocr", "pdf_ocr", { open("pdf_ocr") }),
             HomeQuickActionSpec(R.string.modern_pdf_word, "pdf_word", "pdf_to_docx", { open("pdf_to_docx") }),
-            HomeQuickActionSpec(R.string.modern_all_tools, "all_tools", "pdf_01", onTools)
+            HomeQuickActionSpec(R.string.home_quick_ocr, "ocr", "pdf_ocr", { open("pdf_ocr") }),
+            HomeQuickActionSpec(R.string.modern_download, "download", "dl_media", { open("dl_media") }),
+            HomeQuickActionSpec(R.string.home_explore_tools, "all_tools", "explore_tools", onTools)
         )
     }
     Box(Modifier.fillMaxSize().testTag("home.screen")) {
         val actionColumns = 4
-        val frequentColumns = 4
         val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
-        val pinnedRows = remember(pinned, actionColumns) { pinned.chunked(actionColumns) }
-        val frequentRows = remember(frequent, frequentColumns) { frequent.chunked(frequentColumns) }
-        LazyColumn(Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             item("hero", contentType = "hero") {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Surface(
+                        shape = QuietTheme.shapes.heroCard,
+                        color = Color(0xFF0A1020),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+                        shadowElevation = 4.dp,
+                        modifier = Modifier.fillMaxWidth().height(156.dp).testTag("home.hero.card")
+                    ) {
+                        val isRtl = settings.language.isRtl
+                        Box(Modifier.fillMaxSize()) {
+                            Image(
+                                painter = painterResource(R.drawable.home_hero_banner),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { scaleX = if (isRtl) -1f else 1f }
+                            )
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colors = if (isRtl) listOf(Color.Transparent, Color(0xCC070C18))
+                                            else listOf(Color(0xCC070C18), Color.Transparent)
+                                        )
+                                    )
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .fillMaxWidth(0.66f)
+                                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.home_hero_title),
+                                    style = QuietTheme.typography.sectionTitle.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.semantics { heading() }
+                                )
+                                Text(
+                                    text = stringResource(R.string.home_hero_subtitle),
+                                    style = QuietTheme.typography.metadata,
+                                    color = Color.White.copy(alpha = 0.82f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
                     QuietSearchBar(
                         query = homeSearch,
                         placeholder = stringResource(R.string.neon_tools_search),
@@ -137,60 +203,29 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                                 Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     searchResults.forEach { matched ->
                                         Row(
-                                            Modifier.fillMaxWidth().clip(QuietTheme.shapes.inputField).clickable { homeSearch = ""; onTool(matched) }.padding(horizontal = 12.dp, vertical = 10.dp),
+                                            Modifier.fillMaxWidth().clip(QuietTheme.shapes.inputField).pressFeedback().clickable { homeSearch = ""; onTool(matched) }.padding(horizontal = 12.dp, vertical = 10.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
                                             Text(shortToolLabel(matched, settings.language), style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = colors.onSurface, modifier = Modifier.weight(1f))
-                                            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, Modifier.size(16.dp), tint = colors.onSurfaceVariant)
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    actionRows.forEach { row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { spec ->
-                                HomeQuickAction(
-                                    label = stringResource(spec.labelRes),
-                                    accentToolId = spec.accentId,
-                                    onClick = spec.onClick,
-                                    modifier = Modifier.weight(1f).testTag("home.action.${spec.tag}")
-                                )
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        actionRows.forEach { row ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { spec ->
+                                    HomeQuickAction(
+                                        label = stringResource(spec.labelRes),
+                                        accentToolId = spec.accentId,
+                                        onClick = spec.onClick,
+                                        modifier = Modifier.weight(1f).testTag("home.action.${spec.tag}")
+                                    )
+                                }
                             }
-                        }
-                    }
-                }
-            }
-            if (pinned.isNotEmpty()) item("pinned-tools", contentType = "pinned-tools") {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    NeonSectionHeader(stringResource(R.string.tools_section_pinned),
-                        action = stringResource(R.string.modern_all_tools), onAction = onTools)
-                    pinnedRows.forEach { row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { tool ->
-                                ToolTile(
-                                    tool, settings.language, { onTool(tool) }, Modifier.weight(1f),
-                                    onPin = { vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) },
-                                    isPinned = true
-                                )
-                            }
-                            repeat(actionColumns - row.size) { Spacer(Modifier.weight(1f)) }
-                        }
-                    }
-                }
-            }
-            if (frequent.isNotEmpty()) item("frequent-tools", contentType = "frequent-tools") {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    NeonSectionHeader(stringResource(R.string.studio_frequently_used),
-                        action = stringResource(R.string.modern_all_tools), onAction = onTools)
-                    frequentRows.forEach { row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { tool -> ToolTile(tool, settings.language, { onTool(tool) }, Modifier.weight(1f),
-                                onPin = { vm.setQuickActionIds(HomeActionPolicy.togglePin(settings.quickActionIds, tool.id)) },
-                                isPinned = tool.id in pinnedSet) }
-                            repeat(frequentColumns - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
@@ -221,24 +256,40 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                 }
             }
             if (active.isNotEmpty()) {
-                item("active-heading", contentType = "section-heading") { NeonSectionHeader(stringResource(R.string.ui_active_tasks),
-                    action = stringResource(R.string.neon_show_all), onAction = onDownloads) }
+                item("active-heading", contentType = "section-heading") {
+                    NeonSectionHeader(
+                        stringResource(R.string.ui_active_tasks),
+                        action = stringResource(R.string.neon_show_all),
+                        onAction = onDownloads
+                    )
+                }
                 items(active, key = { "job-${it.request.id}" }, contentType = { "active-job" }) { job ->
-                    TransferRow(job, settings.language, { onJob(job.request.id) },
+                    TransferRow(
+                        job, settings.language, { onJob(job.request.id) },
                         { vm.pause(job.request.id) }, { vm.cancel(job.request.id) }, { vm.retry(job) },
-                        sourceName = job.request.sourceIds.singleOrNull()?.let { sourceNamesById[it] })
+                        sourceName = job.request.sourceIds.singleOrNull()?.let { sourceNamesById[it] }
+                    )
                 }
             }
-            item("recent-heading", contentType = "section-heading") { NeonSectionHeader(stringResource(R.string.neon_recent),
-                action = stringResource(R.string.neon_show_all), onAction = onFiles) }
+            item("recent-heading", contentType = "section-heading") {
+                NeonSectionHeader(
+                    stringResource(R.string.neon_recent),
+                    action = stringResource(R.string.neon_show_all),
+                    onAction = onFiles
+                )
+            }
             item("recent-files", contentType = "recent-files") {
                 when {
                     outputLoad != DataLoadStatus.READY -> DocumentLoadState(outputLoad, vm::reloadSavedData)
-                    visibleRecent.isEmpty() -> QuietStateCard(stringResource(R.string.modern_recent_empty),
-                        stringResource(R.string.modern_recent_empty_body), stringResource(R.string.modern_scan), onScan,
-                        icon = Icons.Rounded.DocumentScanner)
+                    visibleRecent.isEmpty() -> QuietStateCard(
+                        stringResource(R.string.modern_recent_empty),
+                        stringResource(R.string.modern_recent_empty_body),
+                        stringResource(R.string.modern_scan),
+                        onScan,
+                        icon = Icons.Rounded.DocumentScanner
+                    )
                     else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(recentOutputs.filter { out -> val fid = settings.outputFolderIds[out.id]; fid == null || fid !in settings.lockedFolderIds }, key = { it.id }, contentType = { "recent-output" }) { output ->
+                        items(visibleRecent, key = { it.id }, contentType = { "recent-output" }) { output ->
                             Surface(
                                 onClick = { onOutput(output) },
                                 modifier = Modifier.width(156.dp).height(196.dp).pressFeedback(),
@@ -248,8 +299,12 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                             ) {
                                 Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     NeonOutputPreview(output, Modifier.fillMaxWidth().height(104.dp))
-                                    Text(output.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                        style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, textDirection = TextDirection.Content))
+                                    Text(
+                                        output.displayName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, textDirection = TextDirection.Content)
+                                    )
                                     Text(
                                         formatOutputSizeSummary(output) + " · " + fileDateLabel(output.createdAtEpochMs),
                                         style = QuietTheme.typography.metadata,
@@ -263,35 +318,34 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                     }
                 }
             }
-            // Tools tab in the bottom navigation bar and section header already provide instant access.
         }
     }
     if (showConvert) Dialog(onDismissRequest = { showConvert = false }) {
         Surface(
             shape = QuietTheme.shapes.heroCard,
             color = colors.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, pillars.cardBorder),
+            border = BorderStroke(1.dp, pillars.cardBorder),
             shadowElevation = 16.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
-        Column(
-            Modifier.fillMaxWidth().padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.modern_convert),
-                style = QuietTheme.typography.sectionTitle,
-                color = colors.onSurface,
-                modifier = Modifier.padding(bottom = 6.dp).semantics { heading() }
-            )
-            val convertOptions = remember {
-                ConvertSheetOptions.mapNotNull { (id, label) ->
-                    val canonical = ToolCatalogue.canonicalId(id)
-                    if (!CapabilityRegistry.visible(canonical) || !CapabilityRegistry.enabled(canonical) || !ToolCatalogue.isListed(canonical)) null
-                    else Triple(canonical, label, CapabilityRegistry.tools.firstOrNull { it.id == canonical })
+            Column(
+                Modifier.fillMaxWidth().padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    stringResource(R.string.modern_convert),
+                    style = QuietTheme.typography.sectionTitle,
+                    color = colors.onSurface,
+                    modifier = Modifier.padding(bottom = 6.dp).semantics { heading() }
+                )
+                val convertOptions = remember {
+                    ConvertSheetOptions.mapNotNull { (id, label) ->
+                        val canonical = ToolCatalogue.canonicalId(id)
+                        if (!CapabilityRegistry.visible(canonical) || !CapabilityRegistry.enabled(canonical) || !ToolCatalogue.isListed(canonical)) null
+                        else Triple(canonical, label, CapabilityRegistry.tools.firstOrNull { it.id == canonical })
+                    }
                 }
-            }
-            convertOptions.forEach { (id, label, tool) ->
+                convertOptions.forEach { (id, label, tool) ->
                     val accent = remember(id) { ToolIconColors.iconColorFor(id) }
                     val glyph = remember(accent) { ToolIconColors.glyphOn(accent) }
                     Surface(
@@ -329,16 +383,11 @@ fun HomeScreen(vm: AppViewModel, onTool: (UtilityTool) -> Unit, onTools: () -> U
                                     )
                                 }
                             }
-                            Icon(
-                                Icons.AutoMirrored.Rounded.ArrowForward,
-                                null,
-                                Modifier.size(18.dp),
-                                tint = colors.onSurfaceVariant
-                            )
+
                         }
                     }
+                }
             }
-        }
         }
     }
 }
@@ -352,7 +401,8 @@ private val ConvertSheetOptions = listOf(
     "img_04" to R.string.modern_convert_images
 )
 
-@Composable private fun HomeQuickAction(
+@Composable
+private fun HomeQuickAction(
     label: String,
     accentToolId: String,
     onClick: () -> Unit,

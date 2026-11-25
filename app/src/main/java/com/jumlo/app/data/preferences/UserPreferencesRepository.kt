@@ -291,6 +291,7 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun toggleFolderLock(folderId: String) {
+        if (folderId.isBlank()) return
         context.dataStore.edit { prefs ->
             val current = prefs[Keys.LOCKED_FOLDER_IDS].orEmpty()
             prefs[Keys.LOCKED_FOLDER_IDS] = if (folderId in current) current - folderId else current + folderId

@@ -95,7 +95,7 @@ import kotlin.math.roundToInt
     }
 
     private suspend fun structural(request:JobRequest,context:ExecutionContext,kind:String):List<ItemOutcome> {
-        val json: (String) -> JSONObject = { JSONObject(it) }
+        val json: (String) -> JSONObject = { JSONObject(it.ifBlank { "{}" }) }
         val s = json(request.settingsJson)
         val firstSourceName = request.sourceIds.firstOrNull()?.let { id -> runCatching { context.sources.get(id).displayName }.getOrNull() }
         fun name(fallback:String):String {
@@ -389,7 +389,7 @@ import kotlin.math.roundToInt
                                         val effectiveOwner = if (owner.isNotEmpty()) owner else if (user.isNotEmpty()) java.util.UUID.randomUUID().toString() else ""
                                         require(effectiveOwner.isNotEmpty()){"OWNER_PASSWORD_REQUIRED"}
                                         val userArr=user.toCharArray(); val ownerArr=effectiveOwner.toCharArray()
-                                        try { PdfBoxBackend.protect(doc,userArr,ownerArr.copyOf(),out, PdfProtectionPermissions(
+                                        try { PdfBoxBackend.protect(doc,userArr,ownerArr,out, PdfProtectionPermissions(
                                             allowPrinting = s.optBoolean("allowPrinting", true),
                                             allowCopy = s.optBoolean("allowCopy", true),
                                             allowModify = s.optBoolean("allowModify", false),
@@ -551,7 +551,7 @@ import kotlin.math.roundToInt
         }
         val record=context.outputs.publish(ticket) { file -> context.outputs.inspect(file,"application/pdf",originalSizeBytes=totalInputBytes).also { require(it.pageCount==request.sourceIds.size) { "PDF_VERIFY_FAILED" } } }
         return listOf(ItemOutcome("document",ItemStatus.CREATED,record.id))
-        } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
+        } catch(t:Throwable) { ticket.stageFile.delete(); if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY"); throw t }
     }
 
     private suspend fun pagesToImages(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
@@ -663,7 +663,7 @@ import kotlin.math.roundToInt
                                         throw OperationFailure("DISK_BUDGET_EXCEEDED")
                                 }
                                 context.outputs.publish(ticket) { context.outputs.inspect(it,"application/zip",subfolder=originalPdfFolder) }
-                            } catch(t:Throwable) { ticket.stageFile.delete(); throw t }
+                            } catch(t:Throwable) { ticket.stageFile.delete(); if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY"); throw t }
                             listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
                         }
                     } else {
@@ -683,6 +683,7 @@ import kotlin.math.roundToInt
                                 outcomes+=ItemOutcome(key,ItemStatus.CREATED,record.id)
                             } catch(cancel:CancellationException) { throw cancel }
                             catch(e:Exception) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode=stableError(e)) }
+                            catch(_:OutOfMemoryError) { outcomes+=ItemOutcome(key,ItemStatus.FAILED,errorCode="LOW_MEMORY") }
                             context.report(JobProgress(JobStage.RUNNING,(index+1).toLong(),pages.size.toLong()))
                         }
                         outcomes

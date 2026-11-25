@@ -261,10 +261,6 @@ object PdfBoxBackend {
         PdfImageCompressor.compress(doc, maxDpi, jpegQuality, onPage, codec ?: AndroidImageCodec(maxBitmapBytes),
             maxBitmapBytes, checkCancel)
 
-    fun overlayText(doc: PDDocument, zeroBasedPages: List<Int>, text: String, xNorm: Double, yNormTop: Double, fontSize: Float = 12f, gray: Float = 0.1f, colorHex:String="") {
-        stampText(doc, zeroBasedPages, text, xNorm, yNormTop, fontSize, gray,colorHex)
-    }
-
     /**
      * Rasterize only the watermark overlay (never PDF pages). Android text shaping
      * preserves Arabic/Unicode and a shared transparent image is reused for all
@@ -422,13 +418,6 @@ object PdfBoxBackend {
             lines.forEachIndexed { i, line -> if (i > 0) cs.newLineAtOffset(0f, -fontSize * 1.2f); cs.showText(line) }
             cs.endText()
         }
-    }
-
-    /** Places an upright image in a normalized visible top-left rectangle. */
-    fun stampImage(doc: PDDocument, zeroBasedPage: Int, imageFile: File, left: Double, top: Double, right: Double, bottom: Double, rotationDegrees: Float = 0f) {
-        require(zeroBasedPage in 0 until doc.pages.count) { "INVALID_PAGE_INDEX" }
-        val image=PDImageXObject.createFromFile(imageFile.path,doc)
-        stampImageObject(doc,zeroBasedPage,image,left,top,right,bottom,rotationDegrees)
     }
 
     fun stampImages(doc:PDDocument,imageFile:File,placements:List<PdfImageOverlay>,checkCancellation:()->Unit={}) {

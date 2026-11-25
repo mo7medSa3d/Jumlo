@@ -1,6 +1,8 @@
 # Jumlo Android
 
-Bilingual (EN/AR — Jumlo / جملو) Kotlin Android utilities app with **21 primary tools** (plus 5 PDF Studio actions and 7 internal legacy aliases; 33 registered tool IDs total) covering PDF editing and signing, document scanning and OCR, format conversion, image editing, file archiving, printing, and on-device media/internet downloads. Built with Jetpack Compose, Material 3, Hilt, Room, DataStore, and WorkManager across four JVM core modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) plus an optional Python companion media service (`tools/media-service`).
+Bilingual (EN/AR — Jumlo / جملو) Kotlin Android utilities app with **22 primary tools** (plus 5 PDF Studio actions and 7 legacy aliases; 34 registered tool IDs total) for PDF editing and in-place markup (Select, Pen, Highlighter, Eraser, Text, Date, Check, Signature), Office/text viewing (`.docx`, `.pptx`, `.xlsx`, `.txt`, `.md`, `.csv`, `.json`), scanning/OCR, format conversion, image editing, archiving, recoverable Trash, printing, and on-device media downloads.
+
+Built with Jetpack Compose, Material 3, Hilt, Room, DataStore, and WorkManager across four JVM core modules (`core-common`, `downloader-core`, `document-core`, `storage-core`) plus an optional Python companion media service (`tools/media-service`).
 
 ## Requirements
 
@@ -31,7 +33,7 @@ Environment variables take precedence over `keystore.properties`. Never commit `
 | `JUMLO_MEDIA_HOST` | `.env.example`, `tools/media-service/.env.example` | `127.0.0.1` | Bind address for `tools/media-service` (Docker: `0.0.0.0`) |
 | `JUMLO_MEDIA_PORT` | `.env.example`, `tools/media-service/.env.example` | `8787` | Listen port for `tools/media-service` (`1`–`65535`) |
 | `JUMLO_MEDIA_TOKEN` | `.env.example`, `tools/media-service/.env.example` | *(required off-loopback)* | Bearer secret (`Authorization: Bearer <token>`) for `tools/media-service` (legacy alias: `JUMLO_SERVICE_TOKEN`) |
-| `JUMLO_MEDIA_RATE_LIMIT` | `.env.example`, `tools/media-service/.env.example` | `60` | Per-IP sliding-window limit per 60s (`/health` and `/ready` exempt) |
+| `JUMLO_MEDIA_RATE_LIMIT` | `.env.example`, `tools/media-service/.env.example` | `60` | Per-IP sliding-window limit per 60s (`/health`, `/ready`, and `/metrics` exempt) |
 | `JUMLO_MEDIA_MAX_CONCURRENT` | `.env.example`, `tools/media-service/.env.example` | `8` | Max concurrent `/extract` and `/stream` operations |
 | `JUMLO_MEDIA_LOG_LEVEL` | `.env.example`, `tools/media-service/.env.example` | `INFO` | Structured log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `JUMLO_MEDIA_CORS_ORIGIN` | `.env.example`, `tools/media-service/.env.example` | *(empty — disabled)* | Optional `Access-Control-Allow-Origin` value; empty disables CORS |
@@ -46,8 +48,8 @@ Environment variables take precedence over `keystore.properties`. Never commit `
 # Verify JDK 17/21 build environment
 bash scripts/check-build-env.sh
 
-# Build debug APK
-./gradlew :app:assembleDebug
+# Build direct-flavor debug APK
+./gradlew :app:assembleDirectDebug
 
 # Run optional companion media service locally (loopback only)
 JUMLO_MEDIA_TOKEN="replace-with-strong-random-token" \
@@ -77,7 +79,7 @@ PYTHONDONTWRITEBYTECODE=1 bash -c 'for t in scripts/test*.py scripts/tests/test*
 PYTHONDONTWRITEBYTECODE=1 python3 tools/media-service/test_service.py
 
 # JVM unit tests and instrumentation test APK
-./gradlew :core-common:test :downloader-core:test :document-core:test :storage-core:test :app:testDebugUnitTest :app:assembleDebugAndroidTest
+./gradlew :core-common:test :downloader-core:test :document-core:test :storage-core:test :app:testDirectDebugUnitTest :app:assembleDirectDebugAndroidTest
 
 # Size gates (70,000,000-byte ARM64 cap), Play bundle, and release lint
 ./gradlew :app:verifyCompactApkSize :app:verifyReleaseApkSize :app:bundlePlayRelease :app:lintPlayRelease
@@ -86,7 +88,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/media-service/test_service.py
 ./gradlew :app:verifyPublishableRelease
 
 # Connected device / emulator tests (complete verification/current/device/preflight-source/README.md first)
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:connectedDirectDebugAndroidTest
 ```
 
 ## Deploy
@@ -102,18 +104,41 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/media-service/test_service.py
    - **Optimized test installer**: Every `main` run publishes `Jumlo-Optimized-Installable-ARM64-*` (`Jumlo-Optimized-ARM64.apk`, SHA-256 checksum, `INSTALLATION.txt`) — R8-minified with the full local media engine (70,000,000-byte gate), signed with the Android testing key.
    - **Owner-signed production APK**: Configure `JUMLO_KEYSTORE_BASE64`, `JUMLO_STORE_PASSWORD`, `JUMLO_KEY_ALIAS`, and `JUMLO_KEY_PASSWORD` in GitHub Actions secrets. On `main` pushes, `v*` tags, or manual dispatch, CI runs `:app:verifyPublishableRelease`, verifies signatures with `apksigner`, and uploads `Jumlo-Owner-Signed-Release-ARM64-*`.
 
-### Docker Media Service (`tools/media-service`)
+### Standalone Media Service (`tools/media-service`)
 
-The Android app runs its on-device extractor behind `MediaRuntime` (`docs/media/UNIVERSAL_ENGINE.md`). To deploy the optional companion service in Docker (non-root `jumlo` user, pinned `yt-dlp==2026.10.26`, built-in `HEALTHCHECK`):
+The Android app runs its on-device extractor behind `MediaRuntime` (`docs/media/UNIVERSAL_ENGINE.md`). Deploy the optional companion service via Docker or `systemd`:
 
+**Docker** (non-root `jumlo` user, pinned `yt-dlp==2026.10.26`, built-in `HEALTHCHECK`):
 ```sh
 docker build -f tools/media-service/Dockerfile -t jumlo-media-service .
 docker run --rm --env-file .env -e JUMLO_MEDIA_HOST=0.0.0.0 -p 8787:8787 jumlo-media-service
 ```
 
-Health and readiness probes (require `Authorization: Bearer <JUMLO_MEDIA_TOKEN>` when a token is configured):
-- `GET` / `HEAD /health` — liveness probe returning `200` with `yt-dlp` version and `ffmpeg` availability.
+**systemd** (install `yt-dlp` and `ffmpeg`, copy `tools/media-service/.env.example` to `/etc/jumlo/media-service.env` with mode `0600` and a strong `JUMLO_MEDIA_TOKEN`):
+```ini
+[Unit]
+Description=Jumlo Companion Media Service
+After=network-online.target
+
+[Service]
+Type=simple
+User=jumlo
+EnvironmentFile=/etc/jumlo/media-service.env
+ExecStart=/usr/bin/python3 -B /opt/jumlo/service.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Health, readiness, and metrics endpoints (rate-limit-exempt; require `Authorization: Bearer <JUMLO_MEDIA_TOKEN>` when a token is configured):
+- `GET` / `HEAD /health` — liveness probe returning `200` with `yt-dlp` version, `ffmpeg` availability, `uptime_seconds`, and embedded `metrics`.
 - `GET` / `HEAD /ready` — readiness probe returning `200` when `yt-dlp` is available and not shutting down (`503` otherwise).
+- `GET` / `HEAD /metrics` — JSON observability snapshot (`uptime_seconds`, `requests_total`, `extractions_total`, `errors_total`, `rate_limited_total`, `active_extractions`, `max_concurrent`, `version`).
 
 ## Operational Docs & Known Limits
 

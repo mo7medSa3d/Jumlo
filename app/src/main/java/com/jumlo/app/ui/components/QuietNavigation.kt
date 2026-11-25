@@ -2,9 +2,6 @@ package com.jumlo.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -49,6 +46,7 @@ import com.jumlo.app.R
 import com.jumlo.app.model.AppLanguage
 import com.jumlo.app.model.DockTab
 import com.jumlo.app.ui.theme.JumloMotion
+import com.jumlo.app.ui.theme.pressFeedback
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.util.rememberAppHaptics
@@ -99,7 +97,7 @@ fun JumloNavigationBar(
             .testTag("navigation.bar"),
         shape = CircleShape,
         color = capsuleColor,
-        border = BorderStroke(1.dp, capsuleBorder),
+        border = remember(capsuleBorder) { BorderStroke(1.dp, capsuleBorder) },
         shadowElevation = 0.dp
     ) {
         Row(
@@ -113,29 +111,23 @@ fun JumloNavigationBar(
                 val label = if (language.isRtl) destination.labelAr else destination.labelEn
                 val iconScaleState = animateFloatAsState(
                     targetValue = if (active) 1.08f else 0.94f,
-                    animationSpec = if (reduced) snap() else spring(
-                        dampingRatio = JumloMotion.bouncyDamping,
-                        stiffness = JumloMotion.bouncyStiffness
-                    ),
+                    animationSpec = JumloMotion.bouncySpring(reduced),
                     label = "nav-icon-scale-${destination.name}"
                 )
                 val iconLiftState = animateFloatAsState(
                     targetValue = if (active && !reduced) -1.5f else 0f,
-                    animationSpec = if (reduced) snap() else spring(
-                        dampingRatio = JumloMotion.fluidDamping,
-                        stiffness = JumloMotion.fluidStiffness
-                    ),
+                    animationSpec = JumloMotion.fluidSpring(reduced),
                     label = "nav-icon-lift-${destination.name}"
                 )
                 val interactionSource = remember { MutableInteractionSource() }
                 val tintState = animateColorAsState(
                     targetValue = if (active) pillars.activePillContent else colors.onSurfaceVariant,
-                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs, easing = JumloMotion.iosEase),
+                    animationSpec = JumloMotion.fluidSpring(reduced),
                     label = "nav-tint-${destination.name}"
                 )
                 val pillBgState = animateColorAsState(
                     targetValue = if (active) activePillBg else Color.Transparent,
-                    animationSpec = if (reduced) snap() else tween(JumloMotion.stateChangeMs, easing = JumloMotion.iosEase),
+                    animationSpec = JumloMotion.fluidSpring(reduced),
                     label = "nav-pill-${destination.name}"
                 )
                 Box(
@@ -143,13 +135,14 @@ fun JumloNavigationBar(
                         .weight(1f)
                         .height(52.dp)
                         .clip(CircleShape)
+                        .pressFeedback()
                         .drawBehind { drawRect(pillBgState.value) }
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
                             onClick = {
                                 haptics.navigationTab()
-                                if (!active) onSelectTab(destination)
+                                onSelectTab(destination)
                             }
                         )
                         .testTag("nav.${destination.name}")

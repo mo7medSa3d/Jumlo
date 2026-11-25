@@ -40,7 +40,7 @@ class MediaSessionStore @Inject constructor(@ApplicationContext context: Context
 
     fun cookieHeaderFor(url: String): String? {
         host(url) ?: return null
-        return CookieManager.getInstance().getCookie(url)?.takeIf {
+        return runCatching { CookieManager.getInstance().getCookie(url) }.getOrNull()?.takeIf {
             it.isNotBlank() && it.length <= 65536 && it.none(Char::isISOControl)
         }
     }

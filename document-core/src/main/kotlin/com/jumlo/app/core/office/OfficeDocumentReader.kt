@@ -236,10 +236,14 @@ object OfficeDocumentReader {
 
     /** Resolve a relationship target against the part that owns the rels file. */
     private fun resolve(basePart: String, target: String): String {
-        if (target.startsWith("/")) return target.removePrefix("/")
-        val dir = basePart.substringBeforeLast('/', "")
+        val combined = if (target.startsWith("/")) {
+            target.removePrefix("/")
+        } else {
+            val dir = basePart.substringBeforeLast('/', "")
+            if (dir.isEmpty()) target else "$dir/$target"
+        }
         val parts = ArrayDeque<String>()
-        (if (dir.isEmpty()) target else "$dir/$target").split('/').forEach { segment ->
+        combined.split('/').forEach { segment ->
             when (segment) {
                 "", "." -> Unit
                 ".." -> parts.removeLastOrNull()

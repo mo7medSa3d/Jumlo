@@ -51,7 +51,7 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
                     PrintDocumentInfo((0 until doc.numberOfPages).map { i -> check(); info(doc.getPage(i)) })
                 }
             } catch (_: InvalidPasswordException) {
-                throw IllegalArgumentException("PRINT_PERMISSION")
+                throw IllegalArgumentException("PRINT_PASSWORD")
             }
         } else {
             require(source.mimeType.startsWith("image/", ignoreCase = true)) { "PRINT_UNSUPPORTED" }
@@ -88,7 +88,7 @@ data class PrintLayout(val paper:PrintSize,val margins:PrintMargins,val grayscal
         try {
             progress(0,pages.size)
             if(source.mimeType.equals("application/pdf", ignoreCase = true)) {
-                val loadedOriginal = try { PDDocument.load(file,memory()) } catch (_: InvalidPasswordException) { throw IllegalArgumentException("PRINT_PERMISSION") }
+                val loadedOriginal = try { PDDocument.load(file,memory()) } catch (_: InvalidPasswordException) { throw IllegalArgumentException("PRINT_PASSWORD") }
                 loadedOriginal.use { original ->
                     require(original.currentAccessPermission.canPrint()) { "PRINT_PERMISSION" }
                     val ordered=PrintRanges.sourcePages(pages,original.numberOfPages)

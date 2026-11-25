@@ -47,14 +47,14 @@ internal class BenchmarkUi(private val device:UiDevice) {
     fun home() {
         dismissOnboarding()
         await(description("nav_home"),"Home navigation is unavailable").click()
-        await(text("modern_home_title"),"Home hero did not appear")
+        await(text("home_hero_title"),"Home hero did not appear")
     }
 
     fun tools(requireContent:Boolean=true) {
         dismissOnboarding()
         await(description("nav_tools"),"Tools navigation is unavailable").click()
         scrollToTop()
-        await(description("neon_tools_search"),"Tools search did not appear").text=""
+        await(text("ui_all"),"Tools category bar did not appear").click()
         device.waitForIdle()
         if(requireContent) {
             val names=linkedSetOf<String>()
@@ -76,14 +76,21 @@ internal class BenchmarkUi(private val device:UiDevice) {
 
     fun openCropWorkspaceAndReturn() {
         tools(requireContent=false)
-        await(description("neon_tools_search"),"Tools search is unavailable").text="crop"
-        device.waitForIdle()
-        await(By.pkg(TARGET_PACKAGE).text(exact(listOf("Crop pages","قص الصفحات"))),
-            "Actual Crop pages tool tile did not appear").click()
+        val cropTile=By.pkg(TARGET_PACKAGE).text(exact(listOf("Crop pages","قص الصفحات")))
+        var target=device.findObject(cropTile)
+        repeat(20) {
+            if(target!=null) return@repeat
+            val before=snapshot()
+            verticalList().scroll(Direction.DOWN,.7f)
+            device.waitForIdle()
+            target=device.findObject(cropTile)
+            if(target==null) check(snapshot()!=before) {"Actual Crop pages tool tile did not appear"}
+        }
+        checkNotNull(target) {"Actual Crop pages tool tile did not appear"}.click()
         await(By.pkg(TARGET_PACKAGE).text(exact(listOf("Crop PDF Pages","قص صفحات \u2066PDF\u2069"))),
             "Crop workspace did not open")
         await(description("scan_back"),"Workspace Back action is unavailable").click()
-        await(description("neon_tools_search"),"Back did not return to Tools").text=""
+        await(text("ui_all"),"Back did not return to Tools")
         device.waitForIdle()
     }
 

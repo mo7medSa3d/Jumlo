@@ -1,6 +1,6 @@
 # Tool qualification handoff
 
-This is an execution template, **not a release pass**. [tool-matrix.template.csv](tool-matrix.template.csv) covers the **33 currently registered tool IDs** (21 primary tools, 5 folded PDF actions, 7 internal legacy aliases) **× normal, large, encrypted and corrupt input** (132 cases), validated against the [registry](../../app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt) and [capability policy](../../core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt) by `scripts/test-tool-matrix-contract.py`. Retired IDs (including `file_drive`, `webpage_pdf`, and `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv). No case is a device PASS.
+This is an execution template, **not a release pass**. [tool-matrix.template.csv](tool-matrix.template.csv) covers the **34 currently registered tool IDs** (22 primary tools, 5 folded PDF actions, 7 internal legacy aliases) **× normal, large, encrypted and corrupt input** (136 cases), validated against the [registry](../../app/src/main/java/com/jumlo/app/data/jobs/CapabilityRegistry.kt) and [capability policy](../../core-common/src/main/kotlin/com/jumlo/app/core/CapabilityPolicy.kt) by `scripts/test-tool-matrix-contract.py`. Retired IDs (including `file_drive`, `webpage_pdf`, and `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv). No case is a device PASS.
 
 The eight historical N/A scenarios for two unregistered IDs (`webpage_pdf`, `xf_05`) are preserved in [tool-matrix-retired-ids.csv](tool-matrix-retired-ids.csv) rather than being silently counted as current registered capabilities. This does not remove any user-facing registered tool.
 
@@ -25,7 +25,7 @@ For **encrypted** cases, PDF processing generally requires a separate unlock ope
 
 For **corrupt** cases, parsers/decoders must fail safely. Copy/hash/archive-creation tools may correctly preserve malformed document bytes; test exact-byte behavior and failed reads instead of demanding document validation.
 
-Use `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, or `N/A`. `PASS` requires all row assertions plus device/output evidence. Record concrete reasons for `BLOCKED`/`N/A`; missing hardware, skipped tests, unsupported providers and timeouts are never passes. Source availability labels such as `HOST_CORE_TESTED` do not set matrix status. `img_compare` is an enabled processing entry exposed by the flat catalogue; its visible input form and shared comparison-component regression do not establish that its full processing workflow passed.
+Use `PASS`, `FAIL`, `BLOCKED`, `NOT_RUN`, or `N/A`. `PASS` requires all row assertions plus device/output evidence. Record concrete reasons for `BLOCKED`/`N/A`; missing hardware, skipped tests, unsupported providers and timeouts are never passes. Source availability labels such as `HOST_CORE_TESTED` do not set matrix status.
 
 ## Retired Google Drive processing
 
@@ -39,6 +39,7 @@ Their four input rows are `N/A` because they are not dispatcher processing jobs.
 | --- | --- |
 | `pdf_01` | Reader route. Open normal/large/encrypted/corrupt PDFs; verify scrolling, zoom, thumbnails, dark mode and safe failure. |
 | `scan_doc` | ML Kit launcher. On supported hardware verify camera/gallery, multiple pages, cancellation/model availability, saved PDF and source preservation. |
+| `scan_id_card` | ID card scanner launcher. On supported hardware verify front/back capture, layout preview, cancellation/model availability, saved output and source preservation. |
 
 ## Existing related tests: scope matters
 

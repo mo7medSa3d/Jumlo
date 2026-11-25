@@ -7,14 +7,12 @@
     <string name="modern_about_body">Jumlo %1$s\nDocuments, images, and downloads — done beautifully, on your device. Your files stay under your control.</string>
     <string name="modern_chosen_folder">Selected folder</string>
     <string name="modern_change_folder">Change folder</string>
-    <string name="modern_home_title">Every file task,\nin one place.</string>
     <string name="modern_scan">Scan</string>
     <string name="modern_convert">Convert</string>
     <string name="modern_compress">Compress</string>
     <string name="modern_download">Download</string>
     <string name="modern_recent_empty">Your next document starts here</string>
     <string name="modern_recent_empty_body">Scan a page or open a tool — your first file is one tap away.</string>
-    <string name="modern_all_tools">Explore tools</string>
     <string name="modern_images_pdf">Images to PDF</string>
     <string name="modern_pdf_word">PDF to Word</string>
     <string name="modern_pdf_powerpoint">PDF to PowerPoint</string>

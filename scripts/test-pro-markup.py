@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 class ProMarkupContractTest(unittest.TestCase):
     def test_markup_model_and_rotation_mapping(self):
         src = (ROOT / "document-core/src/main/kotlin/com/jumlo/app/core/PdfMarkupModel.kt").read_text(encoding="utf-8")
-        for sym in ("InkStroke", "HighlightStroke", "TextBox", "CheckMark", "SavedSignatureStamp", "UndoRedoStack", "toPdfPoint", "toPdfRect"):
+        for sym in ("SELECT", "InkStroke", "HighlightStroke", "TextBox", "CheckMark", "SavedSignatureStamp", "UndoRedoStack", "toPdfPoint", "toPdfRect", "boundingBox", "hitTestItem"):
             self.assertIn(sym, src)
         for rot in ("90 ->", "180 ->", "270 ->"):
             self.assertIn(rot, src)
@@ -29,9 +29,18 @@ class ProMarkupContractTest(unittest.TestCase):
         self.assertIn("PdfMarkupFloatingBar", viewer)
         self.assertIn("SignaturePadSheet", viewer)
         self.assertIn("pdf.markup.toggle", viewer)
+        overlay = (ROOT / "app/src/main/java/com/jumlo/app/ui/viewer/PdfMarkupOverlay.kt").read_text(encoding="utf-8")
+        self.assertIn("val isSelectMode = activeTool == PdfMarkupTool.SELECT", overlay)
+        self.assertIn("dragDeltaPx", overlay)
+        self.assertIn("R.string.markup_tool_select", overlay)
         vm = (ROOT / "app/src/main/java/com/jumlo/app/ui/AppViewModel.kt").read_text(encoding="utf-8")
         self.assertIn("fun flattenPdfMarkup", vm)
         self.assertIn("PdfMarkupFlattener.flatten", vm)
+        self.assertIn("outputStore.replaceInPlace", vm)
+        pub = (ROOT / "storage-core/src/main/kotlin/com/jumlo/app/core/Publication.kt").read_text(encoding="utf-8")
+        self.assertIn("fun replacePublished", pub)
+        out_store = (ROOT / "app/src/main/java/com/jumlo/app/data/output/OutputStore.kt").read_text(encoding="utf-8")
+        self.assertIn("suspend fun replaceInPlace", out_store)
 
 if __name__ == "__main__":
     unittest.main()

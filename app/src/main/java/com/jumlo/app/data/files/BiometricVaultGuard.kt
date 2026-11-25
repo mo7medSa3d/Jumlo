@@ -15,11 +15,6 @@ object BiometricVaultGuard {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) BIOMETRIC_STRONG or DEVICE_CREDENTIAL
         else BIOMETRIC_WEAK or DEVICE_CREDENTIAL
 
-    fun isAvailable(activity: FragmentActivity): Boolean {
-        val status = BiometricManager.from(activity).canAuthenticate(allowedAuthenticators())
-        return status == BiometricManager.BIOMETRIC_SUCCESS
-    }
-
     fun authenticate(
         activity: FragmentActivity,
         title: String,

@@ -114,7 +114,7 @@ internal fun OcrWorkspacePanel(
                                     }
                                 }
                                 recognized?.isFailure == true -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    val errorCode = stableError(recognized!!.exceptionOrNull()!!)
+                                    val errorCode = recognized?.exceptionOrNull()?.let(::stableError) ?: "OCR_FAILED"
                                     val errorMessage = if (errorCode == "OCR_ARABIC_MODEL_MISSING") {
                                         stringResource(R.string.ocr_arabic_model_missing_actionable)
                                     } else {

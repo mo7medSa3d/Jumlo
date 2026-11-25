@@ -51,7 +51,7 @@ object ToolCatalogue {
         ),
         WorkspaceEntry(
             ToolWorkspace.SCANNER,
-            primary = listOf("scan_doc"),
+            primary = listOf("scan_doc", "scan_id_card"),
             merged = emptyList()
         ),
         WorkspaceEntry(
@@ -121,6 +121,7 @@ object ToolCatalogue {
 
     /** Extra EN/AR search terms so merged capabilities and dual-mode tools remain discoverable. */
     fun searchAliases(toolId: String): String = when (toolId) {
+        "scan_id_card" -> "id card passport front back بطاقة هوية جواز"
         "img_04" -> "convert crop rotate flip optimize compress تحويل قص تدوير قلب تعديل ضغط"
         "file_07" -> "encrypt encrypted password aes archive zip مشفر كلمة مرور أرشيف ضغط"
         "dl_media" -> "direct link batch url links video audio download رابط مباشر دفعة روابط فيديو صوت تنزيل"
