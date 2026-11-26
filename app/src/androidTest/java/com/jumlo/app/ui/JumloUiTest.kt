@@ -77,12 +77,7 @@ class JumloUiTest {
             compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
             assertNoInspectedFormats()
 
-            val retryHint = compose.activity.getString(R.string.redesign_download_retry_hint)
-            // Loading/error is index 1 directly below the link input item.
-            compose.waitUntil(30_000) {
-                compose.onAllNodesWithText(retryHint).fetchSemanticsNodes().isNotEmpty()
-            }
-            compose.onNodeWithText(retryHint).assertExists()
+            // Pasting does not auto-inspect; the link stays editable and no probe is shown.
             compose.onNodeWithText(compose.activity.getString(R.string.media_analyzing)).assertDoesNotExist()
             mediaLink().assertTextEquals(pastedUrl).assertIsEnabled()
             compose.onNodeWithTag("route.workspace").assertIsDisplayed()
@@ -92,7 +87,6 @@ class JumloUiTest {
             compose.onNodeWithContentDescription(compose.activity.getString(R.string.signature_clear))
                 .performClick()
             mediaLink().assertTextEquals("")
-            compose.onNodeWithText(retryHint).assertDoesNotExist()
             compose.onNodeWithTag("nav.FILES").performClick()
             compose.onNodeWithTag("files.screen").assertIsDisplayed()
         } finally {
@@ -175,7 +169,9 @@ class JumloUiTest {
         compose.onNodeWithTag("tools.grid").performScrollToNode(hasTestTag("tool.img_02"))
         compose.onNodeWithTag("tool.img_02").performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
-        compose.onNodeWithText(compose.activity.getString(R.string.workspace_action_resize_images)).assertIsNotEnabled()
+        val resizeAction = compose.activity.getString(R.string.workspace_action_resize_images)
+        workspaceList().performScrollToNode(hasText(resizeAction))
+        compose.onNodeWithText(resizeAction).assertIsNotEnabled()
         val importPrompt = compose.activity.getString(R.string.ui_choose_inputs)
         // The lazy empty state follows presets and import actions on compact screens.
         workspaceList().performScrollToNode(hasText(importPrompt))
