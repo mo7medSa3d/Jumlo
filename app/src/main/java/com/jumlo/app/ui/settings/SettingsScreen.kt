@@ -107,34 +107,43 @@ fun SettingsScreen(
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
+            modifier = Modifier.fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item("pro-banner", contentType = "pro") {
+                val colors = MaterialTheme.colorScheme
                 Surface(
                     onClick = { proSheetOpen = true },
                     shape = QuietTheme.shapes.card,
-                    color = androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.14f),
-                    border = androidx.compose.foundation.BorderStroke(1.2.dp, androidx.compose.ui.graphics.Color(0xFFD4A017).copy(alpha = 0.45f)),
+                    color = colors.surfaceContainerHigh,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.45f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(16.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(Icons.Rounded.AutoAwesome, null, tint = androidx.compose.ui.graphics.Color(0xFFD4A017), modifier = Modifier.size(28.dp))
+                        Surface(
+                            shape = QuietTheme.shapes.iconTile,
+                            color = colors.primaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.Star, null, tint = colors.primary, modifier = Modifier.size(22.dp))
+                            }
+                        }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
                                 stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
                                 style = QuietTheme.typography.sectionTitle,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = colors.onSurface
                             )
                             Text(
                                 stringResource(R.string.pro_upgrade_subtitle),
                                 style = QuietTheme.typography.metadata,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = colors.onSurfaceVariant
                             )
                         }
                     }
@@ -174,16 +183,6 @@ fun SettingsScreen(
                         onRequestNotifications,
                         Modifier.testTag("settings.notifications"),
                         iconStyle = settingsIconStyleFor("notifications", dark),
-                        grouped = true
-                    )
-                    PreferenceGroupDivider()
-                    PreferenceToggleRow(
-                        title = stringResource(R.string.settings_ui_sounds),
-                        checked = settings.soundsEnabled,
-                        onCheckedChange = viewModel::setSoundsEnabled,
-                        modifier = Modifier.testTag("settings.sounds"),
-                        icon = Icons.Rounded.Audiotrack,
-                        iconStyle = settingsIconStyleFor("sounds", dark),
                         grouped = true
                     )
                     PreferenceGroupDivider()

@@ -100,7 +100,7 @@ import kotlinx.serialization.json.Json
                 SafeNames.basename(outputName),downloadHandle ?: "",flag1,
                 allowPrinting,allowCopy,allowModify,allowAnnotations,allowForms))
             "office_to_pdf" -> Json.encodeToString(com.jumlo.app.data.processing.OfficeToPdfSettings(SafeNames.basename(outputName)))
-            "pdf_nup" -> Json.encodeToString(com.jumlo.app.data.processing.PdfNupSettings(SafeNames.basename(outputName),if(num1=="4") 4 else 2,grayscale,number(num2.ifBlank{"10"},0,48)))
+            "pdf_nup" -> Json.encodeToString(com.jumlo.app.data.processing.PdfNupSettings(SafeNames.basename(outputName),if(num1=="4") 4 else 2,grayscale,number(num2.ifBlank{"10"},0,48),number(num2.ifBlank{"10"},0,48),number(num3.ifBlank{"10"},0,48)))
             "pdf_privacy_redact" -> {
                 val l=fraction(cropLeft);val t=fraction(cropTop);val r=fraction(cropRight);val b=fraction(cropBottom)
                 require(l<r && t<b && cropOverrides.size<=10000) { "INVALID_CROP" }

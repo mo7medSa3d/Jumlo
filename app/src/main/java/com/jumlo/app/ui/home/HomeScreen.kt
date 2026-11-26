@@ -130,7 +130,7 @@ fun HomeScreen(
         val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
         LazyColumn(
             state = listState,
-            modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -164,21 +164,12 @@ fun HomeScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Surface(
-                            shape = QuietTheme.shapes.iconTile,
-                            color = colors.primaryContainer.copy(alpha = 0.55f),
-                            border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.16f)),
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Image(
-                                    painter = painterResource(R.drawable.ic_prism_brand_mark),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(34.dp)
-                                )
-                            }
-                        }
+                        Image(
+                            painter = painterResource(R.drawable.ic_prism_brand_mark),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(44.dp)
+                        )
                     }
                     QuietSearchBar(
                         query = homeSearch,

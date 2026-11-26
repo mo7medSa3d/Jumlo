@@ -351,4 +351,8 @@
     <string name="viewer_office_prev_slide">Previous slide</string>
     <string name="viewer_office_next_slide">Next slide</string>
     <string name="field_nup_gap">Page spacing (pt)</string>
+    <string name="field_nup_col_gap">Horizontal spacing (pt)</string>
+    <string name="field_nup_row_gap">Vertical spacing (pt)</string>
+    <string name="field_keep_original_quality">Keep original quality</string>
+    <string name="scan_id_scan_now">Scan with ML edge detection</string>
 </resources>

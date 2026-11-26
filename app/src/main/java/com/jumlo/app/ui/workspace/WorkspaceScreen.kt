@@ -797,9 +797,20 @@ internal fun passwordStrength(value:String):Int = when {
                         selected=f.orientation
                     ) {v->edit {it.copy(orientation=v)}}
                     Toggle(stringResource(R.string.field_fill_page),f.fill) {v->edit {it.copy(fill=v)}}
+                    Toggle(stringResource(R.string.field_keep_original_quality), f.flag1) { v ->
+                        edit { it.copy(flag1 = v, quality = if (v) "100" else "85") }
+                    }
                 }
                 "pdf_07","pdf_long_image" -> {
                     PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
+                    if (f.toolId == "pdf_07") {
+                        Toggle(stringResource(R.string.field_keep_original_quality), f.flag1) { v ->
+                            edit {
+                                if (v) it.copy(flag1 = true, format = "PNG", quality = "100", dpi = "300")
+                                else it.copy(flag1 = false)
+                            }
+                        }
+                    }
                     val defaultDpi = if(f.toolId=="pdf_long_image") 300 else 144
                     val defaultQ = if(f.toolId=="pdf_long_image") 100 else 85
                     InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(f.dpi,defaultDpi),36,600,defaultDpi) {v->edit {it.copy(dpi=v.toString())}}
@@ -845,7 +856,10 @@ internal fun passwordStrength(value:String):Int = when {
                 "pdf_crop" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }
                 "pdf_nup" -> {
                     Options(stringResource(R.string.field_nup_count), listOf("2", "4"), f.num1.ifBlank { "2" }) { v -> edit { it.copy(num1 = v) } }
-                    InteractiveIntSlider(stringResource(R.string.field_nup_gap), draftNumber(f.num2, 10), 0, 36, 10) { v -> edit { it.copy(num2 = v.toString()) } }
+                    InteractiveIntSlider(stringResource(R.string.field_nup_col_gap), draftNumber(f.num2, 10), 0, 36, 10) { v -> edit { it.copy(num2 = v.toString()) } }
+                    if (f.num1 == "4") {
+                        InteractiveIntSlider(stringResource(R.string.field_nup_row_gap), draftNumber(f.num3, 10), 0, 36, 10) { v -> edit { it.copy(num3 = v.toString()) } }
+                    }
                     Toggle(stringResource(R.string.field_grayscale), f.grayscale) { v -> edit { it.copy(grayscale = v) } }
                 }
                 "pdf_privacy_redact" -> {

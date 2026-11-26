@@ -364,7 +364,7 @@ import com.jumlo.app.model.*
         settings.fileFolders.filter { it.parentId == activeFolderId }
     }
     val folderRows = remember(currentFolders, columns) { currentFolders.chunked(columns) }
-    Column(modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter)) {
+    Column(modifier = Modifier.fillMaxSize().align(Alignment.TopCenter)) {
     LazyColumn(
         state=listState,
         modifier=Modifier.weight(1f).fillMaxWidth(),

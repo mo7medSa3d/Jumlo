@@ -50,8 +50,27 @@ class UiSoundPlayer(context: Context) {
     }
 
     fun play(cue: Cue, enabled: Boolean) {
-        // UI touch sounds are disabled globally so interactions stay silent.
-        return
+        if (released) return
+        // Play only meaningful operation lifecycle cues; keep all UI tap/toggle/navigation sounds silent.
+        if (cue != Cue.START && cue != Cue.SUCCESS && cue != Cue.ERROR) return
+        val activePool = pool ?: return
+        val manager = audio ?: return
+        val audible = runCatching {
+            manager.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
+                !manager.isStreamMute(AudioManager.STREAM_MUSIC) &&
+                manager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0
+        }.getOrDefault(false)
+        if (!audible) return
+        val sample = soundIds[cue] ?: return
+        val gain = when (cue) {
+            Cue.START -> 0.34f
+            Cue.SUCCESS -> 0.44f
+            Cue.ERROR -> 0.38f
+            else -> return
+        }
+        if (synchronized(loaded) { !released && sample in loaded }) {
+            runCatching { activePool.play(sample, gain, gain, 1, 0, 1f) }
+        }
     }
 
     fun release() {

@@ -26,7 +26,7 @@ object PdfLongImageComposer {
     private const val MAX_JPEG_CANVAS_HEIGHT = 65_500
     private const val MAX_PNG_CANVAS_HEIGHT = 131_000
     private const val MAX_OOM_RETRIES = 5
-    private const val PAGE_GAP_PX = 12
+    private const val PAGE_GAP_PX = 0
 
     private data class SinglePageImage(val name: COSName, val width: Int, val height: Int, val rotation: Int)
 

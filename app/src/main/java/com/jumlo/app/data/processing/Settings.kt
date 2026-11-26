@@ -44,5 +44,5 @@ import kotlinx.serialization.Serializable
     val mode:String="VIDEO",val audioOutput:String="ORIGINAL",val audioBitrate:Int=192
 )
 
-@Serializable data class PdfNupSettings(val displayName:String="PrintLayout.pdf", val pagesPerSheet:Int=2, val grayscale:Boolean=false, val gapPt:Int=10)
+@Serializable data class PdfNupSettings(val displayName:String="PrintLayout.pdf", val pagesPerSheet:Int=2, val grayscale:Boolean=false, val gapPt:Int=10, val colGapPt:Int=gapPt, val rowGapPt:Int=gapPt)
 @Serializable data class PdfRedactSettings(val displayName:String="Redacted.pdf", val pages:String="1", val left:Double=0.1, val top:Double=0.1, val right:Double=0.9, val bottom:Double=0.25, val fillBlack:Boolean=true, val overrides:List<PdfCropOverride> = emptyList())

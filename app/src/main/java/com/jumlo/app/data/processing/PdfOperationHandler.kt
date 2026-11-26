@@ -289,7 +289,7 @@ import kotlin.math.roundToInt
                         val explicitTarget = s.optLong("targetBytes", 0L)
                         val strengthPct = (((95 - reqQuality.coerceIn(8, 95)) * 99.0 / 87.0).toInt() + 1).coerceIn(1, 100)
                         val autoTarget = if (explicitTarget > 0L) explicitTarget
-                            else (src.length() * (100 - strengthPct).coerceIn(10, 95) / 100.0).toLong().coerceAtLeast(16_384L)
+                            else (src.length() * (100 - strengthPct).coerceIn(1, 95) / 100.0).toLong().coerceAtLeast(8_192L)
                         skippedImages=compressPdfGuaranteedSmaller(src,ticket.stageFile,reqDpi,reqQuality,autoTarget,context)
                     }
                     // Only measured output bytes decide whether compression saved space.
@@ -707,7 +707,7 @@ import kotlin.math.roundToInt
         try {
             context.sources.withSeekable(source.id,request.id) { input ->
                 origBytes=input.length()
-                com.jumlo.app.data.pdf.PdfNupComposer.compose(input,ticket.stageFile,s.pagesPerSheet,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation,s.gapPt.toFloat())
+                com.jumlo.app.data.pdf.PdfNupComposer.compose(input,ticket.stageFile,s.pagesPerSheet,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation,s.gapPt.toFloat(),s.colGapPt.toFloat(),s.rowGapPt.toFloat())
             }
             val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/pdf",originalSizeBytes=origBytes) }
             return listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))

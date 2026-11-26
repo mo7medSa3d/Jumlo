@@ -215,7 +215,7 @@ internal fun ToolsCatalogue(
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Fixed(columns),
-            modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
+            modifier = Modifier.fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp,
                 bottom = QuietTheme.spacing.listBottomBuffer),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

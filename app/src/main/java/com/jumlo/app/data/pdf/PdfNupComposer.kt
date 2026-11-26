@@ -31,7 +31,9 @@ object PdfNupComposer {
         grayscale: Boolean,
         maxBitmapBytes: Long,
         checkCancel: () -> Unit = {},
-        gapPt: Float = GAP_PT
+        gapPt: Float = GAP_PT,
+        colGapPt: Float = gapPt,
+        rowGapPt: Float = gapPt
     ): Int {
         require(pagesPerSheet in setOf(2, 4)) { "INVALID_NUP_COUNT" }
         val sheetW = if (pagesPerSheet == 2) 842f else 595f
@@ -39,9 +41,10 @@ object PdfNupComposer {
         val cols = 2
         val rows = if (pagesPerSheet == 2) 1 else 2
         val margin = MARGIN_PT
-        val gap = gapPt.coerceIn(0f, 48f)
-        val cellW = (sheetW - margin * 2 - gap * (cols - 1)) / cols
-        val cellH = (sheetH - margin * 2 - gap * (rows - 1)) / rows
+        val colGap = colGapPt.coerceIn(0f, 48f)
+        val rowGap = rowGapPt.coerceIn(0f, 48f)
+        val cellW = (sheetW - margin * 2 - colGap * (cols - 1)) / cols
+        val cellH = (sheetH - margin * 2 - rowGap * (rows - 1)) / rows
         var outPages = 0
 
         PdfBoxBackend.open(inputPdf, null).use { src ->
@@ -69,8 +72,8 @@ object PdfNupComposer {
                                 val form = layer.importPageAsForm(src, idx)
                                 val c = slot % cols
                                 val r = slot / cols
-                                val ox = margin + c * (cellW + gap)
-                                val oy = sheetH - margin - (r + 1) * cellH - r * gap
+                                val ox = margin + c * (cellW + colGap)
+                                val oy = sheetH - margin - (r + 1) * cellH - r * rowGap
                                 val scale = min(cellW / effW, cellH / effH)
                                 val dx = ox + (cellW - effW * scale) / 2f
                                 val dy = oy + (cellH - effH * scale) / 2f
@@ -110,8 +113,8 @@ object PdfNupComposer {
                                     val img = renderGrayscalePageWithRetry(dst, raster, idx, GRAYSCALE_MAX_EDGE, renderBudget)
                                     val c = slot % cols
                                     val r = slot / cols
-                                    val ox = margin + c * (cellW + gap)
-                                    val oy = sheetH - margin - (r + 1) * cellH - r * gap
+                                    val ox = margin + c * (cellW + colGap)
+                                    val oy = sheetH - margin - (r + 1) * cellH - r * rowGap
                                     val scale = min(cellW / img.width, cellH / img.height)
                                     val w = img.width * scale
                                     val h = img.height * scale

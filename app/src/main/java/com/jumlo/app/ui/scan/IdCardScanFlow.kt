@@ -1,27 +1,16 @@
 package com.jumlo.app.ui.scan
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.Camera
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.core.UseCaseGroup
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -31,24 +20,18 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import com.jumlo.app.R
 import com.jumlo.app.core.ResourceBudgetPolicy
 import com.jumlo.app.data.scan.DocumentFilterEngine
@@ -60,12 +43,9 @@ import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
-import com.jumlo.app.ui.icons.rounded.*
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -82,7 +62,11 @@ private fun scaleDownToMaxEdge(src: Bitmap, maxEdge: Int): Bitmap {
     return Bitmap.createScaledBitmap(src, targetW, targetH, true)
 }
 
-/** CamScanner-style live CameraX ID Card / Passport scanner with corner-bracket overlay, flash, and A4 2-in-1 preview. */
+/**
+ * ML Kit Document Scanner-powered ID Card / Passport flow:
+ * uses on-device ML edge detection & perspective correction for front and back,
+ * then composes an exact A4 2-in-1 PDF.
+ */
 @Composable
 internal fun IdCardScanFlow(
     onPdfReady: (File) -> Unit,
@@ -90,42 +74,26 @@ internal fun IdCardScanFlow(
     externalBusy: Boolean = false
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val activity = remember(context) {
+        generateSequence<Context>(context) { current -> (current as? ContextWrapper)?.baseContext?.takeUnless { it === current } }
+            .filterIsInstance<Activity>().firstOrNull()
+    }
+    val playServicesAvailable = remember(context) {
+        GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+    }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
-    val pillars = QuietTheme.pillars
-
-    var hasCamera by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
-    }
-    val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasCamera = granted
-    }
-    LaunchedEffect(Unit) { if (!hasCamera) permLauncher.launch(Manifest.permission.CAMERA) }
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                hasCamera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     var frontBmp by remember { mutableStateOf<Bitmap?>(null) }
     var backBmp by remember { mutableStateOf<Bitmap?>(null) }
     var filter by rememberSaveable { mutableStateOf(ScanFilter.CLEAN_DOCUMENT) }
-    var flashOn by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var scannerLaunched by rememberSaveable { mutableStateOf(false) }
+    var autoLaunchedOnce by rememberSaveable { mutableStateOf(false) }
     var errorRes by remember { mutableStateOf<Int?>(null) }
     var capturingFront by rememberSaveable { mutableStateOf(true) }
-    var camera by remember { mutableStateOf<Camera?>(null) }
-    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
-    val imageCapture = remember {
-        ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build()
-    }
 
-    fun decodeAndCropCard(file: File, cropToFrame: Boolean): Bitmap? = runCatching {
+    fun decodeCardFile(file: File, snapEdges: Boolean): Bitmap? = runCatching {
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, opts)
         val maxSide = maxOf(opts.outWidth, opts.outHeight)
@@ -147,19 +115,13 @@ internal fun IdCardScanFlow(
             val m = Matrix().apply { postRotate(rotation) }
             Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, m, true).also { if (it !== raw) raw.recycle() }
         } else raw
-        val frameCropped = if (!cropToFrame) upright else {
-            // Crop to the centered ID-1 (1.586:1) guide frame area (86% width, ViewPort-matched to PreviewView).
-            val cw = (upright.width * 0.86f).toInt().coerceIn(1, upright.width)
-            val ch = (cw / 1.586f).toInt().coerceIn(1, upright.height)
-            val left = ((upright.width - cw) / 2).coerceAtLeast(0)
-            val top = ((upright.height - ch) / 2).coerceAtLeast(0)
-            Bitmap.createBitmap(upright, left, top, cw, ch).also { if (it !== upright) upright.recycle() }
+        val processed = if (!snapEdges) upright else {
+            snapToCardEdges(upright).also { if (it !== upright) upright.recycle() }
         }
-        val edgeSnapped = snapToCardEdges(frameCropped).also { if (it !== frameCropped) frameCropped.recycle() }
-        scaleDownToMaxEdge(edgeSnapped, ID_CARD_MAX_EDGE).also { if (it !== edgeSnapped) edgeSnapped.recycle() }
+        scaleDownToMaxEdge(processed, ID_CARD_MAX_EDGE).also { if (it !== processed) processed.recycle() }
     }.onFailure { AppDiagnostics.report("id_card_decode", it) }.getOrNull()
 
-    fun decodeUri(uri: Uri): Bitmap? = runCatching {
+    fun decodeUri(uri: Uri, snapEdges: Boolean): Bitmap? = runCatching {
         val tmp = File(context.cacheDir, "id-import-${System.currentTimeMillis()}.jpg")
         try {
             val input = context.contentResolver.openInputStream(uri) ?: return null
@@ -175,7 +137,7 @@ internal fun IdCardScanFlow(
                     }
                 }
             }
-            decodeAndCropCard(tmp, cropToFrame = false)
+            decodeCardFile(tmp, snapEdges = snapEdges)
         } finally { tmp.delete() }
     }.onFailure { AppDiagnostics.report("id_card_import", it) }.getOrNull()
 
@@ -183,7 +145,7 @@ internal fun IdCardScanFlow(
         if (uri != null) {
             errorRes = null
             scope.launch {
-                val bmp = withContext(Dispatchers.IO) { decodeUri(uri) }
+                val bmp = withContext(Dispatchers.IO) { decodeUri(uri, snapEdges = true) }
                 if (bmp != null) {
                     if (capturingFront) { frontBmp = bmp; capturingFront = false }
                     else { backBmp = bmp }
@@ -194,207 +156,96 @@ internal fun IdCardScanFlow(
         }
     }
 
-    // Never recycle bitmaps held in Compose state; detach references and unbind CameraX cleanly.
-    DisposableEffect(Unit) {
-        onDispose {
-            runCatching { camera?.cameraControl?.enableTorch(false) }
-            runCatching { cameraProvider?.unbindAll() }
-            camera = null
-            cameraProvider = null
-            frontBmp = null
-            backBmp = null
+    val mlScannerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
+        scannerLaunched = false
+        if (activityResult.resultCode != Activity.RESULT_OK) {
+            busy = false
+            if (frontBmp == null && backBmp == null) onBack()
+            return@rememberLauncherForActivityResult
+        }
+        val scanResult = GmsDocumentScanningResult.fromActivityResultIntent(activityResult.data)
+        val pageUris = scanResult?.pages?.mapNotNull { it.imageUri }.orEmpty()
+        if (pageUris.isEmpty()) {
+            busy = false
+            errorRes = R.string.scan_capture_failed
+            return@rememberLauncherForActivityResult
+        }
+        busy = true
+        errorRes = null
+        scope.launch {
+            val decoded = withContext(Dispatchers.IO) {
+                pageUris.take(2).mapNotNull { uri -> decodeUri(uri, snapEdges = false) }
+            }
+            busy = false
+            when {
+                decoded.size >= 2 -> {
+                    frontBmp = decoded[0]
+                    backBmp = decoded[1]
+                }
+                decoded.size == 1 -> {
+                    if (capturingFront) {
+                        frontBmp = decoded[0]
+                        if (backBmp == null) capturingFront = false
+                    } else {
+                        backBmp = decoded[0]
+                    }
+                }
+                else -> errorRes = R.string.scan_capture_failed
+            }
         }
     }
 
-    val bothReady = frontBmp != null && backBmp != null
-
-    if (!bothReady && hasCamera) {
-        Box(Modifier.fillMaxSize().background(Color.Black).testTag("scan.idcard.screen")) {
-            var previewReleased by remember { mutableStateOf(false) }
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    previewReleased = false
-                    PreviewView(ctx).apply {
-                        scaleType = PreviewView.ScaleType.FILL_CENTER
-                        val future = ProcessCameraProvider.getInstance(ctx)
-                        future.addListener({
-                            if (previewReleased) return@addListener
-                            runCatching {
-                                val provider = future.get()
-                                if (previewReleased) return@addListener
-                                cameraProvider = provider
-                                val selector = if (provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA))
-                                    CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
-                                val preview = Preview.Builder().build().also { it.surfaceProvider = surfaceProvider }
-                                provider.unbindAll()
-                                val vp = viewPort
-                                val group = UseCaseGroup.Builder()
-                                    .addUseCase(preview)
-                                    .addUseCase(imageCapture)
-                                    .apply { if (vp != null) setViewPort(vp) }
-                                    .build()
-                                val bound = provider.bindToLifecycle(lifecycleOwner, selector, group)
-                                camera = bound
-                                if (flashOn && bound.cameraInfo.hasFlashUnit()) {
-                                    runCatching { bound.cameraControl.enableTorch(true) }
-                                }
-                            }.onFailure {
-                                AppDiagnostics.report("id_card_camera_bind", it)
-                                errorRes = R.string.scan_capture_failed
-                            }
-                        }, ContextCompat.getMainExecutor(ctx))
-                    }
-                },
-                onRelease = {
-                    previewReleased = true
-                    runCatching { camera?.cameraControl?.enableTorch(false) }
-                    flashOn = false
-                    runCatching { cameraProvider?.unbindAll() }
-                    camera = null
-                }
-            )
-            Canvas(Modifier.fillMaxSize()) {
-                val frameW = size.width * 0.86f
-                val frameH = frameW / 1.586f
-                val left = (size.width - frameW) / 2f
-                val top = (size.height - frameH) / 2f
-                val bracket = 28.dp.toPx()
-                val stroke = 3.5.dp.toPx()
-                val accent = Color(0xFF00D2B4)
-                drawRect(Color.Black.copy(alpha = 0.52f), Offset.Zero, Size(size.width, top))
-                drawRect(Color.Black.copy(alpha = 0.52f), Offset(0f, top + frameH), Size(size.width, size.height - top - frameH))
-                drawRect(Color.Black.copy(alpha = 0.52f), Offset(0f, top), Size(left, frameH))
-                drawRect(Color.Black.copy(alpha = 0.52f), Offset(left + frameW, top), Size(size.width - left - frameW, frameH))
-                fun corner(x: Float, y: Float, dx: Float, dy: Float) {
-                    drawLine(accent, Offset(x, y), Offset(x + dx, y), stroke, StrokeCap.Round)
-                    drawLine(accent, Offset(x, y), Offset(x, y + dy), stroke, StrokeCap.Round)
-                }
-                corner(left, top, bracket, bracket)
-                corner(left + frameW, top, -bracket, bracket)
-                corner(left, top + frameH, bracket, -bracket)
-                corner(left + frameW, top + frameH, -bracket, -bracket)
-            }
-            Row(
-                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.scan_back), tint = Color.White)
-                }
-                Surface(shape = QuietTheme.shapes.pill, color = Color.Black.copy(alpha = 0.65f)) {
-                    Text(
-                        stringResource(if (capturingFront) R.string.scan_id_front else R.string.scan_id_back),
-                        style = QuietTheme.typography.metadataStrong,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp)
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        val cam = camera
-                        if (cam != null && cam.cameraInfo.hasFlashUnit()) {
-                            flashOn = !flashOn
-                            runCatching { cam.cameraControl.enableTorch(flashOn) }
-                        }
-                    },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(Icons.Rounded.AutoAwesome, stringResource(R.string.scan_flash), tint = if (flashOn) Color(0xFFFFD54F) else Color.White)
-                }
-            }
-            Column(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(bottom = 24.dp, start = 24.dp, end = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                errorRes?.let { msgRes ->
-                    Surface(shape = QuietTheme.shapes.pill, color = colors.errorContainer) {
-                        Text(
-                            stringResource(msgRes),
-                            style = QuietTheme.typography.metadataStrong,
-                            color = colors.onErrorContainer,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-                Text(
-                    stringResource(if (capturingFront) R.string.scan_id_hint_front else R.string.scan_id_hint_back),
-                    style = QuietTheme.typography.metadata,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-                        frontBmp?.takeUnless { it.isRecycled }?.let { thumb ->
-                            Surface(
-                                onClick = { if (!busy) capturingFront = true },
-                                shape = QuietTheme.shapes.thumbnail,
-                                border = BorderStroke(1.5.dp, Color.White),
-                                modifier = Modifier.size(52.dp)
-                            ) {
-                                Image(thumb.asImageBitmap(), stringResource(R.string.scan_id_front), contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            }
-                        }
-                    }
-                    val captureLabel = stringResource(R.string.scan_capture)
-                    Surface(
-                        onClick = {
-                            if (busy) return@Surface
-                            val targetFront = capturingFront
-                            busy = true
-                            errorRes = null
-                            val tmp = File(context.cacheDir, "id-cap-${System.currentTimeMillis()}.jpg")
-                            val outOpts = ImageCapture.OutputFileOptions.Builder(tmp).build()
-                            imageCapture.takePicture(outOpts, ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageSavedCallback {
-                                override fun onImageSaved(res: ImageCapture.OutputFileResults) {
-                                    if (!scope.isActive) { tmp.delete(); return }
-                                    scope.launch {
-                                        val bmp = try {
-                                            withContext(Dispatchers.IO) { decodeAndCropCard(tmp, cropToFrame = true) }
-                                        } finally {
-                                            withContext(NonCancellable + Dispatchers.IO) { tmp.delete() }
-                                        }
-                                        busy = false
-                                        if (bmp != null) {
-                                            if (targetFront) { frontBmp = bmp; capturingFront = false }
-                                            else { backBmp = bmp }
-                                        } else {
-                                            errorRes = R.string.scan_capture_failed
-                                        }
-                                    }
-                                }
-                                override fun onError(e: ImageCaptureException) {
-                                    tmp.delete()
-                                    busy = false
-                                    AppDiagnostics.report("id_card_capture", e)
-                                    errorRes = R.string.scan_capture_failed
-                                }
-                            })
-                        },
-                        shape = CircleShape,
-                        color = Color.White,
-                        border = BorderStroke(4.dp, Color(0xFF00D2B4)),
-                        modifier = Modifier.size(72.dp).semantics { contentDescription = captureLabel }
-                    ) {}
-                    Surface(
-                        onClick = { galleryPicker.launch("image/*") },
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.16f),
-                        modifier = Modifier.size(52.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.PhotoLibrary, stringResource(R.string.scan_gallery_short), tint = Color.White, modifier = Modifier.size(24.dp))
-                        }
-                    }
-                }
-            }
+    fun launchMlIdScanner(maxPages: Int) {
+        if (busy || externalBusy || scannerLaunched) return
+        if (!playServicesAvailable || activity == null) {
+            galleryPicker.launch("image/*")
+            return
         }
-        return
+        busy = true
+        errorRes = null
+        val options = GmsDocumentScannerOptions.Builder()
+            .setGalleryImportAllowed(true)
+            .setPageLimit(maxPages)
+            .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+            .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+            .build()
+        try {
+            GmsDocumentScanning.getClient(options).getStartScanIntent(activity)
+                .addOnSuccessListener { sender ->
+                    try {
+                        scannerLaunched = true
+                        mlScannerLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                    } catch (e: Exception) {
+                        scannerLaunched = false
+                        busy = false
+                        AppDiagnostics.report("id_card_ml_launch", e)
+                        errorRes = R.string.scan_capture_failed
+                    }
+                }
+                .addOnFailureListener { e ->
+                    busy = false
+                    AppDiagnostics.report("id_card_ml_intent", e)
+                    errorRes = R.string.scan_capture_failed
+                }
+        } catch (e: Exception) {
+            busy = false
+            AppDiagnostics.report("id_card_ml_client", e)
+            errorRes = R.string.scan_capture_failed
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!autoLaunchedOnce && frontBmp == null && backBmp == null && playServicesAvailable) {
+            autoLaunchedOnce = true
+            launchMlIdScanner(maxPages = 2)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            frontBmp = null
+            backBmp = null
+        }
     }
 
     val filterChoices = remember {
@@ -414,38 +265,6 @@ internal fun IdCardScanFlow(
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.scan_back))
             }
             Text(stringResource(R.string.scan_id_card_title), style = QuietTheme.typography.sectionTitle, color = colors.onSurface)
-        }
-        if (!hasCamera && !bothReady) {
-            Surface(
-                shape = QuietTheme.shapes.card,
-                color = pillars.cardSurface,
-                border = BorderStroke(1.dp, pillars.cardBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.scan_camera_permission_title), style = QuietTheme.typography.sectionTitle, color = colors.onSurface)
-                    Text(stringResource(R.string.scan_camera_permission_body), style = QuietTheme.typography.metadata, color = colors.onSurfaceVariant)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuietPrimaryButton(
-                            text = stringResource(R.string.scan_open_settings),
-                            onClick = {
-                                runCatching {
-                                    context.startActivity(
-                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
-                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    )
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        QuietTonalButton(
-                            text = stringResource(R.string.scan_gallery_short),
-                            onClick = { galleryPicker.launch("image/*") },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
         }
         errorRes?.let { msgRes ->
             Surface(
@@ -474,8 +293,8 @@ internal fun IdCardScanFlow(
                     }
                 },
                 onPick = {
-                    frontBmp = null; capturingFront = true; errorRes = null
-                    if (!hasCamera) galleryPicker.launch("image/*")
+                    capturingFront = true; errorRes = null
+                    launchMlIdScanner(maxPages = if (backBmp == null) 2 else 1)
                 }
             )
             CardSlot(
@@ -490,9 +309,29 @@ internal fun IdCardScanFlow(
                     }
                 },
                 onPick = {
-                    backBmp = null; capturingFront = false; errorRes = null
-                    if (!hasCamera) galleryPicker.launch("image/*")
+                    capturingFront = false; errorRes = null
+                    launchMlIdScanner(maxPages = 1)
                 }
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            QuietTonalButton(
+                text = stringResource(R.string.scan_id_scan_now),
+                enabled = !busy && !externalBusy,
+                onClick = {
+                    capturingFront = frontBmp == null
+                    launchMlIdScanner(maxPages = if (frontBmp == null && backBmp == null) 2 else 1)
+                },
+                modifier = Modifier.weight(1f)
+            )
+            QuietTonalButton(
+                text = stringResource(R.string.scan_gallery_short),
+                enabled = !busy && !externalBusy,
+                onClick = {
+                    capturingFront = frontBmp == null
+                    galleryPicker.launch("image/*")
+                },
+                modifier = Modifier.weight(1f)
             )
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

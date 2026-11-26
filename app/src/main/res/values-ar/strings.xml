@@ -352,4 +352,8 @@
     <string name="viewer_office_prev_slide">الشريحة السابقة</string>
     <string name="viewer_office_next_slide">الشريحة التالية</string>
     <string name="field_nup_gap">المسافة بين الصفحات (pt)</string>
+    <string name="field_nup_col_gap">المسافة الأفقية بين الصفحات (pt)</string>
+    <string name="field_nup_row_gap">المسافة الرأسية بين الصفحات (pt)</string>
+    <string name="field_keep_original_quality">الحفاظ على الجودة الأصلية</string>
+    <string name="scan_id_scan_now">مسح ذكي بتحديد الحواف</string>
 </resources>
