@@ -30,7 +30,8 @@ object PdfNupComposer {
         pagesPerSheet: Int,
         grayscale: Boolean,
         maxBitmapBytes: Long,
-        checkCancel: () -> Unit = {}
+        checkCancel: () -> Unit = {},
+        gapPt: Float = GAP_PT
     ): Int {
         require(pagesPerSheet in setOf(2, 4)) { "INVALID_NUP_COUNT" }
         val sheetW = if (pagesPerSheet == 2) 842f else 595f
@@ -38,7 +39,7 @@ object PdfNupComposer {
         val cols = 2
         val rows = if (pagesPerSheet == 2) 1 else 2
         val margin = MARGIN_PT
-        val gap = GAP_PT
+        val gap = gapPt.coerceIn(0f, 48f)
         val cellW = (sheetW - margin * 2 - gap * (cols - 1)) / cols
         val cellH = (sheetH - margin * 2 - gap * (rows - 1)) / rows
         var outPages = 0

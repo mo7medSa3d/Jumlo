@@ -351,4 +351,5 @@
     <string name="viewer_office_page_break">صفحة %1$d</string>
     <string name="viewer_office_prev_slide">الشريحة السابقة</string>
     <string name="viewer_office_next_slide">الشريحة التالية</string>
+    <string name="field_nup_gap">المسافة بين الصفحات (pt)</string>
 </resources>

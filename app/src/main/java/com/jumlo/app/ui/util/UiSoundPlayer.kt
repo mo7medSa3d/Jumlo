@@ -50,28 +50,8 @@ class UiSoundPlayer(context: Context) {
     }
 
     fun play(cue: Cue, enabled: Boolean) {
-        if (released || !enabled) return
-        val activePool = pool ?: return
-        val manager = audio ?: return
-        val audible = runCatching {
-            manager.ringerMode == AudioManager.RINGER_MODE_NORMAL &&
-                !manager.isStreamMute(AudioManager.STREAM_MUSIC) &&
-                manager.getStreamVolume(AudioManager.STREAM_MUSIC) > 0
-        }.getOrDefault(false)
-        if (!audible) return
-        val sample = soundIds[cue] ?: return
-        val gain = when (cue) {
-            Cue.TAP -> 0.26f
-            Cue.TOGGLE -> 0.30f
-            Cue.TRANSITION -> 0.22f
-            Cue.START -> 0.34f
-            Cue.SUCCESS -> 0.44f
-            Cue.ERROR -> 0.38f
-            Cue.DELETE -> 0.30f
-        }
-        if (synchronized(loaded) { !released && sample in loaded }) {
-            runCatching { activePool.play(sample, gain, gain, 1, 0, 1f) }
-        }
+        // UI touch sounds are disabled globally so interactions stay silent.
+        return
     }
 
     fun release() {

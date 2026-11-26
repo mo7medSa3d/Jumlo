@@ -28,15 +28,6 @@ object PdfLongImageComposer {
     private const val MAX_OOM_RETRIES = 5
     private const val PAGE_GAP_PX = 12
 
-    data class PartResult(
-        val partIndex: Int,
-        val totalParts: Int,
-        val pageCount: Int,
-        val widthPx: Int,
-        val heightPx: Int,
-        val file: File
-    )
-
     private data class SinglePageImage(val name: COSName, val width: Int, val height: Int, val rotation: Int)
 
     /** Backward-compatible single-file entry point; renders all selected pages into [outputFile]. */
@@ -82,110 +73,6 @@ object PdfLongImageComposer {
                 return selected.size
             }
         }
-    }
-
-    /**
-     * Stitches selected pages at full requested DPI/native image resolution, automatically partitioning
-     * into contiguous Part 1..N chunks so every part stays within format height and bitmap RAM limits
-     * without silently downscaling multi-page documents.
-     */
-    fun composeParts(
-        inputPdf: File,
-        outputFileForPart: (partIndex: Int, totalParts: Int) -> File,
-        pagesSpec: String,
-        asJpeg: Boolean,
-        quality: Int,
-        dpi: Int = 300,
-        grayscale: Boolean = false,
-        maxBitmapBytes: Long,
-        checkCancel: () -> Unit = {},
-        keepOriginalImageQuality: Boolean = true
-    ): List<PartResult> {
-        val clampedDpi = dpi.coerceIn(72, 600)
-        val clampedQuality = quality.coerceIn(1, 100)
-        val effectiveBudget = ImageWorkPolicy.effectiveBudget(maxBitmapBytes)
-        val maxCanvasBytes = maxOf(64L * 1024 * 1024, (effectiveBudget * 75L) / 100L)
-        val maxCanvasHeight = if (asJpeg) MAX_JPEG_CANVAS_HEIGHT else MAX_PNG_CANVAS_HEIGHT
-
-        PdfBoxBackend.open(inputPdf, null).use { doc ->
-            val selected = selectPages(doc, pagesSpec)
-            val singleImages = inspectSingleImages(doc, selected, keepOriginalImageQuality, checkCancel)
-            PdfPageRasterizer(inputPdf, checkCancel).use { raster ->
-                val dims = measurePages(selected, singleImages, raster, clampedDpi, checkCancel)
-                val chunks = partitionFullQualityChunks(dims, maxCanvasHeight, maxCanvasBytes)
-                val totalParts = chunks.size
-                val results = ArrayList<PartResult>(totalParts)
-                chunks.forEachIndexed { chunkIdx, pageIndices ->
-                    checkCancel()
-                    val partIndex = chunkIdx + 1
-                    val outFile = outputFileForPart(partIndex, totalParts)
-                    val (wPx, hPx) = renderChunk(
-                        doc = doc,
-                        raster = raster,
-                        selected = selected,
-                        singleImages = singleImages,
-                        dims = dims,
-                        chunkIndices = pageIndices,
-                        outputFile = outFile,
-                        asJpeg = asJpeg,
-                        clampedQuality = clampedQuality,
-                        grayscale = grayscale,
-                        effectiveBudget = effectiveBudget,
-                        maxCanvasBytes = maxCanvasBytes,
-                        maxCanvasHeight = maxCanvasHeight,
-                        checkCancel = checkCancel
-                    )
-                    results += PartResult(
-                        partIndex = partIndex,
-                        totalParts = totalParts,
-                        pageCount = pageIndices.size,
-                        widthPx = wPx,
-                        heightPx = hPx,
-                        file = outFile
-                    )
-                }
-                return results
-            }
-        }
-    }
-
-    internal fun partitionFullQualityChunks(
-        dims: List<Pair<Int, Int>>,
-        maxCanvasHeight: Int,
-        maxCanvasBytes: Long,
-        maxWidth: Int = ImageWorkPolicy.MAX_EDGE_PX,
-        gap: Int = PAGE_GAP_PX
-    ): List<List<Int>> {
-        if (dims.isEmpty()) return emptyList()
-        val chunks = mutableListOf<List<Int>>()
-        var chunk = mutableListOf<Int>()
-        var curW = 0L
-        var curH = 0L
-        for (i in dims.indices) {
-            val pw = dims[i].first.coerceAtLeast(1).toLong()
-            val ph = dims[i].second.coerceAtLeast(1).toLong()
-            val nextW = maxOf(curW, pw)
-            val nextH = if (chunk.isEmpty()) ph else curH + gap + ph
-            val nextBytes = nextW * nextH * 4L
-            val exceeds = chunk.isNotEmpty() && (
-                nextH > maxCanvasHeight.toLong() ||
-                    nextW > maxWidth.toLong() ||
-                    nextBytes > maxCanvasBytes ||
-                    nextBytes > Int.MAX_VALUE.toLong()
-                )
-            if (exceeds) {
-                chunks += chunk
-                chunk = mutableListOf(i)
-                curW = pw
-                curH = ph
-            } else {
-                chunk += i
-                curW = nextW
-                curH = nextH
-            }
-        }
-        if (chunk.isNotEmpty()) chunks += chunk
-        return chunks
     }
 
     private fun selectPages(doc: PDDocument, pagesSpec: String): List<Int> {

@@ -324,6 +324,12 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             }
         }
         val decoded = decodeHtmlEntities(html)
+            .replace("\\/", "/")
+            .replace("\\u002F", "/")
+            .replace("\\u002f", "/")
+            .replace("\\u0026", "&")
+            .replace("\\u003D", "=")
+            .replace("\\u003d", "=")
         val target = LINKEDIN_POST_URL_REGEX.find(decoded)?.value?.trimEnd('"', '\'', ')', ']')
             ?: LINKEDIN_SESSION_REDIRECT_REGEX.find(decoded)?.groupValues?.getOrNull(1)
                 ?.let { decodeUrlSafe(it).trimEnd('"', '\'', ')', ']') }
@@ -364,6 +370,12 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     /** Extract public LinkedIn video streams (sorted by highest bitrate/resolution), PDF carousel documents, and photo posts. */
     private fun extractLinkedInCandidates(pageUrl: String, html: String, allowHttp: Boolean): LinkedInScanResult {
         val decoded = decodeHtmlEntities(html)
+            .replace("\\/", "/")
+            .replace("\\u002F", "/")
+            .replace("\\u002f", "/")
+            .replace("\\u0026", "&")
+            .replace("\\u003D", "=")
+            .replace("\\u003d", "=")
         val title = Html5MediaDiscovery.title(html)?.take(180)?.ifBlank { "LinkedIn media" } ?: "LinkedIn media"
         val videosByUrl = linkedMapOf<String, RankedVideo>()
         var sawHls = false
@@ -486,6 +498,11 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
                 found["bundle"] = Remote("bundle:" + images.joinToString("\n"), "zip", "$title (${images.size} photos)", null)
             } else if (images.size == 1) {
                 found[images[0]] = Remote(images[0], "jpg", title, null)
+            } else {
+                val ogThumb = runCatching { Html5MediaDiscovery.thumbnail(pageUrl, html) }.getOrNull()
+                if (ogThumb != null && ogThumb.contains("licdn.com", ignoreCase = true) && !ogThumb.contains("profile-displayphoto", ignoreCase = true)) {
+                    found[ogThumb] = Remote(ogThumb, "jpg", title, null)
+                }
             }
         }
         return LinkedInScanResult(found.values.toList(), hasHlsOnly = found.isEmpty() && sawHls)
@@ -540,7 +557,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         fun tryEmbed(urn: String): Inspection? {
             if (!triedEmbedUrns.add(urn)) return null
             val embedUrl = "https://www.linkedin.com/embed/feed/update/$urn"
-            for (ua in LINKEDIN_FALLBACK_UAS.take(2)) {
+            for (ua in LINKEDIN_FALLBACK_UAS) {
                 check()
                 val page = readLinkedInPage(embedUrl, ua) ?: continue
                 analyzePage(page)?.let { return it }

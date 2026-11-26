@@ -125,8 +125,8 @@ fun HomeScreen(
             HomeQuickActionSpec(R.string.home_explore_tools, "all_tools", "explore_tools", onTools)
         )
     }
-    Box(Modifier.fillMaxSize().testTag("home.screen")) {
-        val actionColumns = 4
+    BoxWithConstraints(Modifier.fillMaxSize().testTag("home.screen")) {
+        val actionColumns = if (maxWidth >= 600.dp) 8 else 4
         val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
         LazyColumn(
             state = listState,
@@ -136,54 +136,46 @@ fun HomeScreen(
         ) {
             item("hero", contentType = "hero") {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Surface(
-                        shape = QuietTheme.shapes.heroCard,
-                        color = Color(0xFF0A1020),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
-                        shadowElevation = 4.dp,
-                        modifier = Modifier.fillMaxWidth().height(156.dp).testTag("home.hero.card")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp, bottom = 2.dp)
+                            .testTag("home.hero.card"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        val isRtl = settings.language.isRtl
-                        Box(Modifier.fillMaxSize()) {
-                            Image(
-                                painter = painterResource(R.drawable.home_hero_banner),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer { scaleX = if (isRtl) -1f else 1f }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.home_hero_title),
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = colors.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.semantics { heading() }
                             )
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            colors = if (isRtl) listOf(Color.Transparent, Color(0xCC070C18))
-                                            else listOf(Color(0xCC070C18), Color.Transparent)
-                                        )
-                                    )
+                            Text(
+                                text = stringResource(R.string.home_hero_subtitle),
+                                style = QuietTheme.typography.metadata,
+                                color = colors.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.CenterStart)
-                                    .fillMaxWidth(0.66f)
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.home_hero_title),
-                                    style = QuietTheme.typography.sectionTitle.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.semantics { heading() }
-                                )
-                                Text(
-                                    text = stringResource(R.string.home_hero_subtitle),
-                                    style = QuietTheme.typography.metadata,
-                                    color = Color.White.copy(alpha = 0.82f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
+                        }
+                        Surface(
+                            shape = QuietTheme.shapes.iconTile,
+                            color = colors.primaryContainer.copy(alpha = 0.55f),
+                            border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.16f)),
+                            modifier = Modifier.size(56.dp)
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Image(
+                                    painter = painterResource(R.drawable.ic_prism_brand_mark),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(34.dp)
                                 )
                             }
                         }

@@ -1332,8 +1332,8 @@ data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:I
                 com.jumlo.app.data.pdf.PdfPageText.extract(document,page-1) { active.ensureActive() }
             } else ""
         }
-        if(embedded.isNotBlank()) embedded else BitmapWorkGate.run {
-            val frame=previewSized(sourceId,page,2400)
+        if(embedded.isNotBlank()) embedded else {
+            val frame = BitmapWorkGate.run { previewSized(sourceId, page, 2400) }
             try { ocr.recognize(frame.bitmap, script).also { active.ensureActive() } }
             finally { frame.bitmap.recycle() }
         }

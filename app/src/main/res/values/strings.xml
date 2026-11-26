@@ -350,4 +350,5 @@
     <string name="viewer_office_page_break">Page %1$d</string>
     <string name="viewer_office_prev_slide">Previous slide</string>
     <string name="viewer_office_next_slide">Next slide</string>
+    <string name="field_nup_gap">Page spacing (pt)</string>
 </resources>

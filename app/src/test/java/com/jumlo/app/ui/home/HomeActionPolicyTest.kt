@@ -31,7 +31,7 @@ class HomeActionPolicyTest {
             HomeActionPolicy.togglePin(listOf("img_01", "img_04"), "pdf_06")
         )
         assertEquals(
-            listOf("pdf_06", "pdf_07", "file_encrypted_zip", "dl_02", "scan_doc"),
+            listOf("pdf_06", "pdf_07", "file_07", "dl_media", "scan_doc"),
             HomeActionPolicy.togglePin(
                 listOf("pdf_06", "pdf_07", "file_encrypted_zip", "dl_02"),
                 "scan_doc"

@@ -163,7 +163,7 @@ class MlKitOcrEngine @Inject constructor(
                 // installModules() acknowledges the request; only the status callback proves completion.
                 val response = modules.installModules(ModuleInstallRequest.newBuilder().addApi(recognizer).setListener(listener).build()).awaitCancelable()
                 if (!response.areModulesAlreadyInstalled()) {
-                    try { withTimeout(120_000) { installed.await() } }
+                    try { withTimeout(25_000) { installed.await() } }
                     catch (timeout: TimeoutCancellationException) {
                         currentCoroutineContext().ensureActive()
                         throw OperationFailure("OCR_MODEL_UNAVAILABLE")

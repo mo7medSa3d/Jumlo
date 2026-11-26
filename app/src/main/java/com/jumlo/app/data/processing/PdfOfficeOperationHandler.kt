@@ -47,6 +47,7 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
         var pageCount = 0
         var ocrPages = 0
         var emptyPages = 0
+        var arabicModelMissing = false
         var originalBytes = 0L
         try {
             context.sources.withSeekable(source.id, request.id) { input ->
@@ -72,6 +73,11 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
                             throw c
                         } catch (oom: OutOfMemoryError) {
                             throw oom
+                        } catch (failure: OperationFailure) {
+                            if (failure.code == "OCR_ARABIC_MODEL_MISSING" || failure.code == "OCR_MODEL_UNAVAILABLE") {
+                                arabicModelMissing = true
+                            }
+                            ""
                         } catch (_: Exception) {
                             ""
                         }
@@ -128,13 +134,17 @@ class PdfOfficeOperationHandler @Inject constructor(private val ocr: MlKitOcrEng
                 }
             }
             context.checkCancellation()
-            require(!word || emptyPages < pageCount) { "OCR_NO_TEXT" }
+            if (word && emptyPages >= pageCount) {
+                if (arabicModelMissing) throw OperationFailure("OCR_ARABIC_MODEL_MISSING")
+                throw OperationFailure("OCR_NO_TEXT")
+            }
             val record = context.outputs.publish(ticket) { output ->
                 if (word) OfficePackageValidator.validateDocx(output, pageCount, context.checkCancellation)
                 else OfficePackageValidator.validatePptx(output, pageCount, context.checkCancellation)
                 OutputMetadata(pageCount = pageCount, originalSizeBytes = originalBytes)
             }
             listOf(ItemOutcome(key, ItemStatus.CREATED, record.id, when {
+                emptyPages > 0 && arabicModelMissing -> "OCR_ARABIC_MODEL_MISSING"
                 emptyPages > 0 -> "OFFICE_EMPTY_TEXT_PAGES"
                 ocrPages > 0 -> "OFFICE_OCR_REVIEW"
                 else -> null

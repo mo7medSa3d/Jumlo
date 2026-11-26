@@ -22,10 +22,10 @@ class ToolCatalogueTest {
 
     @Test fun theVisibleSurfaceIsSmallEnoughToScan() {
         val primary = ToolCatalogue.primaryTools()
-        assertEquals("the catalogue must expose all 29 primary tiles", 29, primary.size)
+        assertEquals("the catalogue must expose all 25 primary tiles", 25, primary.size)
         assertTrue(
             "the catalogue shows ${primary.size} tiles; it must stay a scannable list",
-            primary.size in 12..30
+            primary.size in 12..26
         )
         assertTrue(
             primary.containsAll(
@@ -83,14 +83,28 @@ class ToolCatalogueTest {
         }
     }
 
-    @Test fun allRestoredToolsAreListedAndSearchable() {
-        val restored = listOf("img_01", "img_03", "file_encrypted_zip", "dl_02", "dl_03", "pdf_06", "pdf_07", "pdf_long_image")
-        assertTrue(ToolCatalogue.hiddenTools().isEmpty())
-        restored.forEach { id ->
+    @Test fun allRestoredToolsAndAliasesAreConsistent() {
+        val visiblePdfAndImage = listOf("img_01", "pdf_06", "pdf_07", "pdf_long_image")
+        val expectedAliases = mapOf(
+            "img_03" to "img_04",
+            "file_encrypted_zip" to "file_07",
+            "dl_02" to "dl_media",
+            "dl_03" to "dl_media"
+        )
+        assertEquals(expectedAliases.keys, ToolCatalogue.hiddenTools())
+        visiblePdfAndImage.forEach { id ->
             assertEquals("$id must resolve to itself", id, ToolCatalogue.canonicalId(id))
             assertTrue("$id must be listed", ToolCatalogue.isListed(id))
             assertTrue("$id must be searchable", ToolCatalogue.isSearchable(id))
             assertTrue("$id must be primary", ToolCatalogue.isPrimary(id))
+        }
+        expectedAliases.forEach { (legacy, canonical) ->
+            assertEquals("$legacy must resolve to $canonical", canonical, ToolCatalogue.canonicalId(legacy))
+            assertFalse("$legacy must not be listed", ToolCatalogue.isListed(legacy))
+            assertFalse("$legacy must not be searchable", ToolCatalogue.isSearchable(legacy))
+            assertFalse("$legacy must not be primary", ToolCatalogue.isPrimary(legacy))
+            assertTrue("$canonical must be primary", ToolCatalogue.isPrimary(canonical))
+            assertTrue("$canonical must be listed", ToolCatalogue.isListed(canonical))
         }
         assertTrue(ToolCatalogue.searchAliases("pdf_05").contains("extract pages", ignoreCase = true))
         assertTrue(ToolCatalogue.searchAliases("pdf_05").contains("استخراج صفحات"))
@@ -98,14 +112,13 @@ class ToolCatalogueTest {
         assertTrue(ToolCatalogue.searchAliases("pdf_long_image").contains("تحويل صور"))
     }
 
-    @Test fun downloadsExposeMediaAndDirectTools() {
+    @Test fun downloadsHaveOneUserVisibleTool() {
         val downloads = ToolCatalogue.entry(ToolWorkspace.DOWNLOADS)!!
-        assertEquals(listOf("dl_media", "dl_02", "dl_03"), downloads.primary)
-        assertTrue("direct/batch tools are primary tiles", downloads.merged.isEmpty())
-        for (id in listOf("dl_media", "dl_02", "dl_03")) {
-            assertTrue("$id must be listed", ToolCatalogue.isListed(id))
-            assertTrue("$id must be searchable", ToolCatalogue.isSearchable(id))
-        }
+        assertEquals(listOf("dl_media"), downloads.primary)
+        assertTrue("direct/batch tools must not be tiles", downloads.merged.isEmpty())
+        assertTrue(ToolCatalogue.isListed("dl_media"))
+        assertTrue("direct/batch ids must stay internal-only", !ToolCatalogue.isListed("dl_02") && !ToolCatalogue.isListed("dl_03"))
+        assertTrue("direct/batch ids must stay out of search", !ToolCatalogue.isSearchable("dl_02") && !ToolCatalogue.isSearchable("dl_03"))
     }
 
     @Test fun theScannerIsItsOwnWorkspace() {

@@ -454,7 +454,7 @@ internal fun PdfMarkupPageLayer(
                                             .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
                                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
                                     } else {
-                                        Modifier.background(Color.White.copy(alpha = 0.72f), QuietTheme.shapes.chip)
+                                        Modifier
                                     }
                                 )
                                 .padding(horizontal = 6.dp, vertical = 2.dp)

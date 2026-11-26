@@ -167,7 +167,7 @@ object PdfMarkupFlattener {
             setNonStrokingAlphaConstant(alpha.coerceIn(0.05f, 1f))
         }
         cs.setGraphicsStateParameters(gs)
-        cs.setStrokingColor(Color.red(colorArgb), Color.green(colorArgb), Color.blue(colorArgb))
+        cs.setStrokingColor(Color.red(colorArgb) / 255f, Color.green(colorArgb) / 255f, Color.blue(colorArgb) / 255f)
         cs.setLineWidth((widthNorm * minOf(fw, fh)).coerceIn(0.75f, 48f))
         cs.setLineCapStyle(1)
         cs.setLineJoinStyle(1)
@@ -212,7 +212,7 @@ object PdfMarkupFlattener {
         val (x, yTop) = toDisplayPoint(frame, item.normX, item.normY)
         val y = (yTop - side).coerceAtLeast(0f)
         cs.saveGraphicsState()
-        cs.setStrokingColor(Color.red(item.colorArgb), Color.green(item.colorArgb), Color.blue(item.colorArgb))
+        cs.setStrokingColor(Color.red(item.colorArgb) / 255f, Color.green(item.colorArgb) / 255f, Color.blue(item.colorArgb) / 255f)
         cs.setLineWidth((side * 0.14f).coerceIn(1.5f, 6f))
         cs.setLineCapStyle(1)
         cs.setLineJoinStyle(1)
@@ -246,7 +246,7 @@ object PdfMarkupFlattener {
         if (text.all { it in ' '..'~' || it == '\n' }) {
             val lines = text.lines()
             cs.saveGraphicsState()
-            cs.setNonStrokingColor(Color.red(item.colorArgb), Color.green(item.colorArgb), Color.blue(item.colorArgb))
+            cs.setNonStrokingColor(Color.red(item.colorArgb) / 255f, Color.green(item.colorArgb) / 255f, Color.blue(item.colorArgb) / 255f)
             cs.beginText()
             cs.setFont(PDType1Font.HELVETICA_BOLD, fontSize)
             cs.newLineAtOffset(tx, (ty - fontSize).coerceAtLeast(0f))

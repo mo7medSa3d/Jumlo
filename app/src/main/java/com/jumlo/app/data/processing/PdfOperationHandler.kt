@@ -707,7 +707,7 @@ import kotlin.math.roundToInt
         try {
             context.sources.withSeekable(source.id,request.id) { input ->
                 origBytes=input.length()
-                com.jumlo.app.data.pdf.PdfNupComposer.compose(input,ticket.stageFile,s.pagesPerSheet,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation)
+                com.jumlo.app.data.pdf.PdfNupComposer.compose(input,ticket.stageFile,s.pagesPerSheet,s.grayscale,context.budget.maxBitmapBytes,context.checkCancellation,s.gapPt.toFloat())
             }
             val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,"application/pdf",originalSizeBytes=origBytes) }
             return listOf(ItemOutcome(key,ItemStatus.CREATED,rec.id))
@@ -742,7 +742,6 @@ import kotlin.math.roundToInt
     private suspend fun pdfToLongImage(request:JobRequest,context:ExecutionContext):List<ItemOutcome> {
         require(request.sourceIds.size==1) { "ONE_PDF_REQUIRED" }
         val s=Json.decodeFromString<PdfImagesSettings>(request.settingsJson)
-        if (s.separateImages) return pagesToImages(request, context)
         context.outputs.find(request.id,"image")?.let { return listOf(ItemOutcome("image",ItemStatus.CREATED,it.id)) }
         val source=context.sources.get(request.sourceIds.single())
         val base=com.jumlo.app.core.AutoOutputName.cleanBaseName(source.displayName,"Document")
@@ -752,24 +751,15 @@ import kotlin.math.roundToInt
         val customBase = s.displayName.substringBeforeLast('.', s.displayName).trim()
             .takeUnless { it.isEmpty() || it.equals("download", true) || it.equals("Long", true) || it.equals("Document", true) }
         val effectiveBase = if (customBase != null) com.jumlo.app.core.AutoOutputName.cleanBaseName(customBase, base) else "$base - Long"
-        val tickets = linkedMapOf<Int, OutputTicket>()
-        val publishedParts = mutableSetOf<Int>()
+        val outName=SafeNames.basename("$effectiveBase.$ext")
+        val ticket=context.outputs.reserve(request.id,"image",outName,mime)
         var origBytes=0L
         try {
-            val parts = context.sources.withSeekable(source.id,request.id) { input ->
+            val pageCount=context.sources.withSeekable(source.id,request.id) { input ->
                 origBytes=input.length()
-                com.jumlo.app.data.pdf.PdfLongImageComposer.composeParts(
+                com.jumlo.app.data.pdf.PdfLongImageComposer.compose(
                     inputPdf = input,
-                    outputFileForPart = { partIndex, totalParts ->
-                        val key = if (totalParts == 1) "image" else "part:$partIndex"
-                        val outName = SafeNames.basename(
-                            if (totalParts == 1) "$effectiveBase.$ext"
-                            else "$effectiveBase - Part $partIndex of $totalParts.$ext"
-                        )
-                        val ticket = runBlocking { context.outputs.reserve(request.id, key, outName, mime) }
-                        tickets[partIndex] = ticket
-                        ticket.stageFile
-                    },
+                    outputFile = ticket.stageFile,
                     pagesSpec = s.pages,
                     asJpeg = asJpeg,
                     quality = s.quality,
@@ -780,20 +770,11 @@ import kotlin.math.roundToInt
                     keepOriginalImageQuality = s.keepOriginalImageQuality
                 )
             }
-            val outcomes = mutableListOf<ItemOutcome>()
-            for (part in parts) {
-                context.checkCancellation()
-                val ticket = requireNotNull(tickets[part.partIndex])
-                val rec = context.outputs.publish(ticket) {
-                    context.outputs.inspect(it, mime, originalSizeBytes = if (parts.size == 1) origBytes else null)
-                }
-                publishedParts += part.partIndex
-                outcomes += ItemOutcome(ticket.itemKey, ItemStatus.CREATED, rec.id)
-                context.report(JobProgress(JobStage.RUNNING, part.partIndex.toLong(), part.totalParts.toLong()))
-            }
-            return outcomes
+            val rec=context.outputs.publish(ticket) { context.outputs.inspect(it,mime,originalSizeBytes=origBytes) }
+            context.report(JobProgress(JobStage.RUNNING, pageCount.toLong(), pageCount.toLong()))
+            return listOf(ItemOutcome("image",ItemStatus.CREATED,rec.id))
         } catch(t:Throwable) {
-            tickets.forEach { (idx, ticket) -> if (idx !in publishedParts) ticket.stageFile.delete() }
+            ticket.stageFile.delete()
             if (t is OutOfMemoryError) throw OperationFailure("LOW_MEMORY")
             throw t
         }

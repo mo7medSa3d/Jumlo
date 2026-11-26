@@ -799,21 +799,13 @@ internal fun passwordStrength(value:String):Int = when {
                     Toggle(stringResource(R.string.field_fill_page),f.fill) {v->edit {it.copy(fill=v)}}
                 }
                 "pdf_07","pdf_long_image" -> {
-                    if(f.toolId=="pdf_long_image") LabeledOptions(
-                        label=stringResource(R.string.p2_pdf_images_mode_label),
-                        options=listOf(
-                            "LONG" to stringResource(R.string.p2_pdf_images_mode_long),
-                            "SEPARATE" to stringResource(R.string.p2_pdf_images_mode_separate)
-                        ),
-                        selected=if(f.flag2) "SEPARATE" else "LONG"
-                    ) {v->edit {it.copy(flag2=v=="SEPARATE")}}
                     PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true)
                     val defaultDpi = if(f.toolId=="pdf_long_image") 300 else 144
                     val defaultQ = if(f.toolId=="pdf_long_image") 100 else 85
                     InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(f.dpi,defaultDpi),36,600,defaultDpi) {v->edit {it.copy(dpi=v.toString())}}
                     Options(stringResource(R.string.field_output_format),listOf("PNG","JPEG"),f.format) {v->edit {it.copy(format=v)}}
                     if(f.format=="JPEG") InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(f.quality,defaultQ),1,100,defaultQ) {v->edit {it.copy(quality=v.toString())}}
-                    if(f.toolId=="pdf_long_image" && !f.flag2) Toggle(stringResource(R.string.s10_keep_original_image_quality),f.flag1) {v->edit {it.copy(flag1=v)}}
+                    if(f.toolId=="pdf_long_image") Toggle(stringResource(R.string.s10_keep_original_image_quality),f.flag1) {v->edit {it.copy(flag1=v)}}
                     Toggle(stringResource(R.string.field_grayscale),f.grayscale) {v->edit {it.copy(grayscale=v)}}
                     Text(stringResource(R.string.field_raster_note),style=QuietTheme.typography.metadata)
                 }
@@ -853,6 +845,7 @@ internal fun passwordStrength(value:String):Int = when {
                 "pdf_crop" -> { PageSelectionSummary(f.pages,R.string.ui_pages_selection_title,true); Text(stringResource(R.string.field_crop_hint),style=QuietTheme.typography.metadata) }
                 "pdf_nup" -> {
                     Options(stringResource(R.string.field_nup_count), listOf("2", "4"), f.num1.ifBlank { "2" }) { v -> edit { it.copy(num1 = v) } }
+                    InteractiveIntSlider(stringResource(R.string.field_nup_gap), draftNumber(f.num2, 10), 0, 36, 10) { v -> edit { it.copy(num2 = v.toString()) } }
                     Toggle(stringResource(R.string.field_grayscale), f.grayscale) { v -> edit { it.copy(grayscale = v) } }
                 }
                 "pdf_privacy_redact" -> {

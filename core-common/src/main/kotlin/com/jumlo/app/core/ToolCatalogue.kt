@@ -61,8 +61,7 @@ object ToolCatalogue {
             primary = listOf(
                 "img_01",        // convert images
                 "img_02",        // resize
-                "img_03",        // crop, rotate & flip
-                "img_04",        // compress / optimize
+                "img_04",        // edit, crop, rotate & compress
                 "img_join",
                 "img_watermark"
             ),
@@ -71,16 +70,15 @@ object ToolCatalogue {
         WorkspaceEntry(
             ToolWorkspace.FILES,
             primary = listOf(
-                "file_07",           // create an archive
+                "file_07",           // create an archive (standard or encrypted)
                 "file_08",           // extract an archive
-                "file_encrypted_zip",// encrypted ZIP (AES)
                 "file_batch_rename"
             ),
             merged = emptyList()
         ),
         WorkspaceEntry(
             ToolWorkspace.DOWNLOADS,
-            primary = listOf("dl_media", "dl_02", "dl_03"),
+            primary = listOf("dl_media"),
             merged = emptyList()
         )
     )
@@ -90,9 +88,14 @@ object ToolCatalogue {
     private val mergedIds = entries.flatMap { it.merged }.toSet()
 
     /** Maps consolidated legacy tool IDs to their unified user-facing target ID. */
-    private val legacyAliases: Map<String, String> = emptyMap()
+    private val legacyAliases: Map<String, String> = mapOf(
+        "img_03" to "img_04",
+        "file_encrypted_zip" to "file_07",
+        "dl_02" to "dl_media",
+        "dl_03" to "dl_media"
+    )
 
-    private val hidden: Set<String> = emptySet()
+    private val hidden: Set<String> = legacyAliases.keys
 
     fun all(): List<WorkspaceEntry> = entries
 

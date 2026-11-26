@@ -94,9 +94,9 @@ private val toolSections = listOf(
     ToolSection("edit", "PDF Edit & Security", "تحرير وحماية PDF",
         setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_06", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
     ToolSection("optimize", "Images", "الصور",
-        setOf("img_01", "img_02", "img_03", "img_04", "img_watermark", "img_join")),
+        setOf("img_01", "img_02", "img_04", "img_watermark", "img_join")),
     ToolSection("files", "Files & Download", "الملفات والتنزيل",
-        setOf("dl_media", "dl_02", "dl_03", "file_07", "file_08", "file_encrypted_zip", "file_batch_rename"))
+        setOf("dl_media", "file_07", "file_08", "file_batch_rename"))
 )
 
 private fun sectionTitle(section: ToolSection, language: AppLanguage): String =
@@ -441,39 +441,35 @@ internal fun ToolTile(tool: UtilityTool, language: AppLanguage, onClick: () -> U
 /** Concise task labels; full catalogue titles still support search and workspace headings. */
 internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
     val labels = when (tool.id) {
-        "pdf_01" -> "Reader" to "عارض PDF"
-        "pdf_02" -> "Images → PDF" to "صور → PDF"
-        "pdf_03" -> "Merge" to "دمج"
+        "pdf_01" -> "PDF Reader" to "عارض PDF"
+        "pdf_02" -> "Images to PDF" to "صور إلى PDF"
+        "pdf_03" -> "Merge PDF" to "دمج PDF"
         "pdf_04" -> "Organize" to "ترتيب"
-        "pdf_05" -> "Split" to "تقسيم"
+        "pdf_05" -> "Split PDF" to "تقسيم PDF"
         "pdf_06" -> "Extract" to "استخراج"
-        "pdf_07" -> "PDF Images" to "صور PDF"
+        "pdf_07" -> "PDF to Images" to "PDF إلى صور"
         "pdf_long_image" -> "Long Image" to "صورة مطولة"
         "pdf_to_docx" -> "Word" to "Word"
         "pdf_to_pptx" -> "PowerPoint" to "PowerPoint"
-        "office_to_pdf" -> "Office → PDF" to "أوفيس → PDF"
-        "pdf_ocr" -> "OCR Text" to "استخراج نص"
-        "pdf_compress" -> "Compress" to "ضغط"
-        "pdf_protect" -> "Protect" to "حماية"
-        "pdf_nup" -> "2/4-in-1" to "2/4 في 1"
+        "office_to_pdf" -> "Office to PDF" to "أوفيس إلى PDF"
+        "pdf_ocr" -> "Extract Text" to "استخراج نص"
+        "pdf_compress" -> "Compress" to "ضغط PDF"
+        "pdf_protect" -> "Protect" to "حماية PDF"
+        "pdf_nup" -> "2/4 per Sheet" to "2/4 في صفحة"
         "pdf_privacy_redact" -> "Redact" to "طمس"
         "pdf_stamp" -> "Watermark" to "علامة مائية"
-        "pdf_signature" -> "Sign" to "توقيع"
-        "pdf_crop" -> "Crop" to "قص"
+        "pdf_signature" -> "Sign PDF" to "توقيع PDF"
+        "pdf_crop" -> "Crop PDF" to "قص PDF"
         "scan_doc" -> "Smart Scan" to "مسح ذكي"
         "scan_id_card" -> "ID Card" to "البطاقة"
-        "img_01" -> "Convert" to "تحويل"
+        "img_01" -> "Convert" to "تحويل الصور"
         "img_02" -> "Resize" to "تغيير الحجم"
-        "img_03" -> "Crop & Rotate" to "قص وتدوير"
-        "img_04" -> "Compress" to "ضغط الصور"
+        "img_04" -> "Edit & Compress" to "تعديل وضغط"
         "img_watermark" -> "Watermark" to "علامة مائية"
         "img_join" -> "Collage" to "كولاج"
         "dl_media" -> "Download" to "تنزيل"
-        "dl_02" -> "Direct Link" to "رابط مباشر"
-        "dl_03" -> "Batch Links" to "دفعة روابط"
-        "file_07" -> "Zip" to "إنشاء ZIP"
-        "file_08" -> "Unzip" to "فك ZIP"
-        "file_encrypted_zip" -> "Locked ZIP" to "ZIP مشفر"
+        "file_07" -> "Create ZIP" to "إنشاء ZIP"
+        "file_08" -> "Extract ZIP" to "فك ZIP"
         "file_batch_rename" -> "Rename" to "إعادة تسمية"
         else -> tool.titleEn to tool.titleAr
     }
