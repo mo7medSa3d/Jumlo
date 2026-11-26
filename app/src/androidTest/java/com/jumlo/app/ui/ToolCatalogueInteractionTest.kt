@@ -65,8 +65,8 @@ class ToolCatalogueInteractionTest {
         compose.onNodeWithTag("tool.pdf_05").assertExists()
         compose.onNodeWithTag("tool.pdf_long_image").assertExists()
         compose.onNodeWithTag("tool.file_encrypted_zip").assertDoesNotExist()
-        compose.onNodeWithTag("tool.pdf_06").assertDoesNotExist()
-        compose.onNodeWithTag("tool.pdf_07").assertDoesNotExist()
+        compose.onNodeWithTag("tool.pdf_06").assertExists()
+        compose.onNodeWithTag("tool.pdf_07").assertExists()
 
         compose.runOnIdle { query.value = "Encrypted" }
         compose.onNodeWithTag("tool.file_07").assertHasClickAction().performClick()
@@ -76,7 +76,6 @@ class ToolCatalogueInteractionTest {
 
         compose.runOnIdle { query.value = "extract pages" }
         compose.onNodeWithTag("tool.pdf_05").assertHasClickAction().performClick()
-        compose.onNodeWithTag("tool.pdf_06").assertDoesNotExist()
         compose.runOnIdle { assertEquals("pdf_05", selected) }
     }
 

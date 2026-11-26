@@ -512,7 +512,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             onDispose { childBackOwners.remove(backOwnerKey) }
         }
         val root = shellRoute in ROOT_ROUTES
-        val showDock = root
+        val showDock = root || shellRoute in setOf("workspace", "activity")
         val headerToolId=entryToolId ?: formToolId
         val headerTool=remember(shellRoute, headerToolId) {
             if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null

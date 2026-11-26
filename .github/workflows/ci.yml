@@ -95,12 +95,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/inspect-media-artifact.py \
-            app/build/outputs/apk/compact/app-compact.apk \
-            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/direct/compact/app-direct-compact.apk \
+            app/build/outputs/apk/direct/debug/app-direct-debug.apk
           python3 scripts/tests/test-media-artifact.py 2>&1
           python3 scripts/test-compact-configuration.py 2>&1
-          (cd app/build/outputs/apk/compact && sha256sum app-compact.apk > app-compact.apk.sha256)
-          (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
+          (cd app/build/outputs/apk/direct/compact && sha256sum app-direct-compact.apk > app-direct-compact.apk.sha256)
+          (cd app/build/outputs/apk/direct/debug && sha256sum app-direct-debug.apk > app-direct-debug.apk.sha256)
 
       # Always publish the compact *installable* variant separately. It uses
       # release minification, resource shrinking and ARM64 only, but is signed
@@ -109,7 +109,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk=app/build/outputs/apk/compact/app-compact.apk
+          apk=app/build/outputs/apk/direct/compact/app-direct-compact.apk
           test -s "$apk"
           sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
           signer="$sdk/build-tools/36.0.0/apksigner"
@@ -167,8 +167,8 @@ jobs:
         with:
           name: Jumlo-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/debug/app-debug.apk.sha256
+            app/build/outputs/apk/direct/debug/app-direct-debug.apk
+            app/build/outputs/apk/direct/debug/app-direct-debug.apk.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -211,7 +211,7 @@ jobs:
           ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true \
             :app:verifyPublishableRelease --no-parallel --max-workers=1 \
             --no-daemon --console=plain 2>&1 | tee gradle-owner-release.log
-          apk=app/build/outputs/apk/release/app-release.apk
+          apk=app/build/outputs/apk/direct/release/app-direct-release.apk
           test -s "$apk"
           sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
           mkdir -p build/owner-release-installer
@@ -303,7 +303,7 @@ jobs:
           chmod +x gradlew
           ./gradlew -PextendedMedia=false :app:assembleDebug \
             --no-daemon --console=plain 2>&1 | tee gradle-lite.log
-          apk=app/build/outputs/apk/debug/app-debug.apk
+          apk=app/build/outputs/apk/direct/debug/app-direct-debug.apk
           test -s "$apk"
           bytes=$(stat -c '%s' "$apk")
           echo "### Lite APK: $bytes / 60000000 bytes" >> "$GITHUB_STEP_SUMMARY"
@@ -317,17 +317,17 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/inspect-standard-artifact.py \
-            app/build/outputs/apk/debug/app-debug.apk \
+            app/build/outputs/apk/direct/debug/app-direct-debug.apk \
             --output standard-artifact-report.json
-          (cd app/build/outputs/apk/debug && sha256sum app-debug.apk > app-debug.apk.sha256)
+          (cd app/build/outputs/apk/direct/debug && sha256sum app-direct-debug.apk > app-direct-debug.apk.sha256)
 
       - name: Upload lite debug APK
         uses: actions/upload-artifact@v7
         with:
           name: Jumlo-Lite-Debug-APK-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
-            app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/debug/app-debug.apk.sha256
+            app/build/outputs/apk/direct/debug/app-direct-debug.apk
+            app/build/outputs/apk/direct/debug/app-direct-debug.apk.sha256
             standard-artifact-report.json
           if-no-files-found: error
           compression-level: 0
