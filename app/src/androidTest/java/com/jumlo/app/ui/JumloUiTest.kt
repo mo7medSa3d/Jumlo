@@ -77,8 +77,12 @@ class JumloUiTest {
             compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
             assertNoInspectedFormats()
 
-            // Pasting does not auto-inspect; the link stays editable and no probe is shown.
-            compose.onNodeWithText(compose.activity.getString(R.string.media_analyzing)).assertDoesNotExist()
+            // A failed probe must finish and leave the link editable.
+            val analyzing = compose.activity.getString(R.string.media_analyzing)
+            compose.waitUntil(30_000) {
+                compose.onAllNodesWithText(analyzing).fetchSemanticsNodes().isEmpty()
+            }
+            compose.onNodeWithText(analyzing).assertDoesNotExist()
             mediaLink().assertTextEquals(pastedUrl).assertIsEnabled()
             compose.onNodeWithTag("route.workspace").assertIsDisplayed()
             assertNoInspectedFormats()
@@ -172,7 +176,7 @@ class JumloUiTest {
         val resizeAction = compose.activity.getString(R.string.workspace_action_resize_images)
         workspaceList().performScrollToNode(hasText(resizeAction))
         compose.onNodeWithText(resizeAction).assertIsNotEnabled()
-        val importPrompt = compose.activity.getString(R.string.ui_choose_inputs)
+        val importPrompt = compose.activity.getString(R.string.ui_choose_images)
         // The lazy empty state follows presets and import actions on compact screens.
         workspaceList().performScrollToNode(hasText(importPrompt))
         compose.onNodeWithText(importPrompt).assertIsDisplayed()
