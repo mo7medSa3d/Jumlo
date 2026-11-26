@@ -187,6 +187,16 @@ fun SettingsScreen(
                     )
                     PreferenceGroupDivider()
                     PreferenceToggleRow(
+                        title = stringResource(R.string.settings_ui_sounds),
+                        checked = settings.soundsEnabled,
+                        onCheckedChange = viewModel::setSoundsEnabled,
+                        modifier = Modifier.testTag("settings.sounds"),
+                        icon = Icons.Rounded.Audiotrack,
+                        iconStyle = settingsIconStyleFor("sounds", dark),
+                        grouped = true
+                    )
+                    PreferenceGroupDivider()
+                    PreferenceToggleRow(
                         title = stringResource(R.string.pref_haptics),
                         checked = settings.hapticFeedbackOnCommit,
                         onCheckedChange = viewModel::setHapticFeedback,

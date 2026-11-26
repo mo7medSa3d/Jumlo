@@ -33,6 +33,6 @@ if [[ "$ready" != "1" ]]; then
   adb shell dumpsys activity processes 2>&1 | head -n 70 >&2 || true
   exit 1
 fi
-./gradlew -PextendedMedia=true :app:connectedDebugAndroidTest \
+./gradlew -PextendedMedia=true :app:connectedDirectDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=com.jumlo.app.ui.JumloUiTest,com.jumlo.app.ui.WorkspaceRecoveryInteractionTest,com.jumlo.app.ui.ToolCatalogueInteractionTest,com.jumlo.app.ui.ScreenConfigSemanticsTest,com.jumlo.app.ui.PdfViewerInteractionTest,com.jumlo.app.ui.StudioGestureInteractionTest,com.jumlo.app.data.PreferencesPersistenceTest,com.jumlo.app.data.PdfHandlerReliabilityTest,com.jumlo.app.data.PdfOfficeHandlerTest,com.jumlo.app.data.ImageProcessingReliabilityTest,com.jumlo.app.data.ArchiveHandlerTest,com.jumlo.app.data.SourceAndPublicationTest,com.jumlo.app.data.PdfReaderAndScanStoreTest,com.jumlo.app.printing.JumloPrintAdapterTest \
   --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee android-smoke.log

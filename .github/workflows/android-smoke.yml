@@ -50,7 +50,7 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           ./gradlew -Dorg.gradle.jvmargs="-Xmx3072m -Dfile.encoding=UTF-8" -PextendedMedia=true \
-            :app:assembleDebug :app:assembleDebugAndroidTest \
+            :app:assembleDirectDebug :app:assembleDirectDebugAndroidTest \
             --no-parallel --max-workers=1 --no-daemon --console=plain
 
       - name: Validate emulator script shell and real test selection

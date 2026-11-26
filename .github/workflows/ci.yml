@@ -85,9 +85,9 @@ jobs:
           # CI-only heap increase: full-media R8 release shrinker ran out of 2560 MB
           # in run 40644691679. Do not disable minification, tests or 60 MB limits.
           # --max-workers=1 prevents concurrent multi-GB Gradle workers.
-          ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true :app:assembleDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
+          ./gradlew -Dorg.gradle.jvmargs="-Xmx4096m -Dfile.encoding=UTF-8" -PextendedMedia=true :app:assembleDirectDebug :app:verifyCompactApkSize :app:verifyReleaseApkSize \
             :core-common:test :downloader-core:test :document-core:test :storage-core:test \
-            :app:testDebugUnitTest :app:lintDebug :app:lintRelease \
+            :app:testDirectDebugUnitTest :app:lintDirectDebug :app:lintDirectRelease \
             --no-parallel --max-workers=1 --no-daemon --console=plain 2>&1 | tee gradle.log
 
       - name: Inspect the packaged media runtime
@@ -374,4 +374,4 @@ jobs:
           disable-animations: true
           script: |
             chmod +x gradlew
-            ./gradlew :app:connectedDebugAndroidTest --no-daemon --console=plain
+            ./gradlew :app:connectedDirectDebugAndroidTest --no-daemon --console=plain
