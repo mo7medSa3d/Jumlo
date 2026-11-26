@@ -19,18 +19,26 @@ import java.nio.charset.CodingErrorAction
 import java.util.Locale
 import kotlin.coroutines.CoroutineContext
 
-enum class DocumentViewerKind { PDF, WORD, PRESENTATION, SPREADSHEET, TEXT }
+enum class DocumentViewerKind { PDF, WORD, PRESENTATION, SPREADSHEET, TEXT, IMAGE, AUDIO, VIDEO, ARCHIVE }
 
 object DocumentViewerFormats {
     private val TEXT_MIME_TYPES = setOf(
-        "text/plain",
-        "text/markdown",
-        "text/csv",
-        "text/tab-separated-values",
-        "application/json"
+        "application/json",
+        "application/xml",
+        "application/xhtml+xml",
+        "application/javascript",
+        "application/x-yaml"
     )
 
-    private val TEXT_EXTENSIONS = setOf("txt", "md", "csv", "json", "log")
+    private val TEXT_EXTENSIONS = setOf(
+        "txt", "md", "csv", "tsv", "json", "log",
+        "xml", "html", "htm", "yaml", "yml", "ini", "conf",
+        "sql", "kt", "java", "py", "js", "ts"
+    )
+
+    private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
+    private val AUDIO_EXTENSIONS = setOf("mp3", "m4a", "aac", "wav", "ogg", "opus", "flac")
+    private val VIDEO_EXTENSIONS = setOf("mp4", "mkv", "webm", "mov", "3gp", "m4v")
 
     fun detect(mimeType: String?, fileName: String?): DocumentViewerKind? {
         val normalizedMime = mimeType
@@ -39,12 +47,16 @@ object DocumentViewerFormats {
             ?.lowercase(Locale.ROOT)
             ?.takeIf { it.isNotEmpty() }
 
-        when (normalizedMime) {
-            "application/pdf" -> return DocumentViewerKind.PDF
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> return DocumentViewerKind.WORD
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> return DocumentViewerKind.PRESENTATION
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> return DocumentViewerKind.SPREADSHEET
-            in TEXT_MIME_TYPES -> return DocumentViewerKind.TEXT
+        when {
+            normalizedMime == "application/pdf" -> return DocumentViewerKind.PDF
+            normalizedMime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> return DocumentViewerKind.WORD
+            normalizedMime == "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> return DocumentViewerKind.PRESENTATION
+            normalizedMime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> return DocumentViewerKind.SPREADSHEET
+            normalizedMime == "application/zip" || normalizedMime == "application/x-zip-compressed" -> return DocumentViewerKind.ARCHIVE
+            normalizedMime?.startsWith("image/") == true -> return DocumentViewerKind.IMAGE
+            normalizedMime?.startsWith("audio/") == true -> return DocumentViewerKind.AUDIO
+            normalizedMime?.startsWith("video/") == true -> return DocumentViewerKind.VIDEO
+            normalizedMime?.startsWith("text/") == true || normalizedMime in TEXT_MIME_TYPES -> return DocumentViewerKind.TEXT
         }
 
         val ext = fileName
@@ -58,6 +70,10 @@ object DocumentViewerFormats {
             "docx" -> DocumentViewerKind.WORD
             "pptx" -> DocumentViewerKind.PRESENTATION
             "xlsx" -> DocumentViewerKind.SPREADSHEET
+            "zip" -> DocumentViewerKind.ARCHIVE
+            in IMAGE_EXTENSIONS -> DocumentViewerKind.IMAGE
+            in AUDIO_EXTENSIONS -> DocumentViewerKind.AUDIO
+            in VIDEO_EXTENSIONS -> DocumentViewerKind.VIDEO
             in TEXT_EXTENSIONS -> DocumentViewerKind.TEXT
             else -> null
         }

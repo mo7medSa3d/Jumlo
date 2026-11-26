@@ -1162,21 +1162,27 @@ import com.jumlo.app.model.*
         }
     }
     fileToolsTarget?.let { target ->
-        val adaptiveToolIds = remember(target.mimeType) {
+        val adaptiveToolIds = remember(target.mimeType, target.displayName) {
+            val mime = target.mimeType.lowercase()
+            val ext = target.displayName.substringAfterLast('.', "").lowercase()
             when {
-                target.mimeType == "application/pdf" -> listOf(
+                mime == "application/pdf" || ext == "pdf" -> listOf(
                     "pdf_signature", "pdf_compress", "pdf_ocr", "pdf_to_docx", "pdf_to_pptx",
-                    "pdf_long_image", "pdf_protect", "pdf_stamp", "pdf_privacy_redact", "pdf_05", "pdf_04"
+                    "pdf_07", "pdf_long_image", "pdf_protect", "pdf_nup", "pdf_stamp",
+                    "pdf_privacy_redact", "pdf_05", "pdf_06", "pdf_04", "pdf_crop"
                 )
-                target.mimeType.startsWith("image/") -> listOf(
-                    "pdf_02", "img_04", "img_02", "img_watermark", "pdf_ocr"
+                mime.startsWith("image/") || ext in setOf("jpg", "jpeg", "png", "webp", "heic", "heif", "bmp") -> listOf(
+                    "pdf_02", "img_04", "img_01", "img_02", "img_watermark", "img_join", "pdf_ocr"
                 )
-                target.mimeType.contains("word") || target.mimeType.contains("spreadsheet") ||
-                    target.mimeType.contains("presentation") || target.mimeType.contains("officedocument") -> listOf(
-                    "office_to_pdf", "file_07"
+                mime.contains("word") || mime.contains("spreadsheet") ||
+                    mime.contains("presentation") || mime.contains("officedocument") ||
+                    mime.contains("msword") || mime.contains("ms-excel") || mime.contains("ms-powerpoint") ||
+                    mime == "text/plain" || mime == "text/csv" ||
+                    ext in setOf("doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp", "rtf", "csv", "txt", "md") -> listOf(
+                    "office_to_pdf", "file_07", "file_batch_rename"
                 )
-                target.mimeType.contains("zip") || target.mimeType.contains("archive") -> listOf(
-                    "file_08", "file_07"
+                mime.contains("zip") || mime.contains("archive") || ext == "zip" -> listOf(
+                    "file_08", "file_07", "file_batch_rename"
                 )
                 else -> listOf("file_07", "file_batch_rename")
             }

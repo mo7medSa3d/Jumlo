@@ -90,6 +90,7 @@ internal fun PdfMarkupPageLayer(
     onSelectItem: (String?) -> Unit,
     onAddItem: (PdfMarkupItem) -> Unit,
     onRequestTextAt: (Int, Float, Float) -> Unit,
+    onEditTextItem: (PdfMarkupItem.TextBox) -> Unit = {},
     onMoveItem: (String, Float, Float) -> Unit,
     onResizeSignature: (String, Float, Float) -> Unit,
     onDeleteItem: (String) -> Unit
@@ -130,6 +131,7 @@ internal fun PdfMarkupPageLayer(
     val latestOnSelect by rememberUpdatedState(onSelectItem)
     val latestOnAdd by rememberUpdatedState(onAddItem)
     val latestOnRequestText by rememberUpdatedState(onRequestTextAt)
+    val latestOnEditText by rememberUpdatedState(onEditTextItem)
     val latestOnMove by rememberUpdatedState(onMoveItem)
     val latestOnResize by rememberUpdatedState(onResizeSignature)
     val latestOnDelete by rememberUpdatedState(onDeleteItem)
@@ -582,6 +584,25 @@ internal fun PdfMarkupPageLayer(
                                     tint = MaterialTheme.colorScheme.onError,
                                     modifier = Modifier.size(14.dp)
                                 )
+                            }
+                        }
+
+                        if (selected is PdfMarkupItem.TextBox) {
+                            Surface(
+                                onClick = { latestOnEditText(selected) },
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.align(AbsoluteAlignment.TopLeft).absoluteOffset(x = (-10).dp, y = (-10).dp).size(24.dp)
+                            ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Rounded.Edit,
+                                        contentDescription = stringResource(R.string.markup_tool_text),
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
                             }
                         }
 

@@ -159,7 +159,11 @@ import kotlin.math.roundToInt
                                 effectiveBudget, maxEdge = formatMaxEdge
                             ).use { cropped ->
                                 context.checkCancellation()
-                                if (isEncodePipeline) {
+                                if (request.toolId == "img_04" && originalSize > 0L && output.quality < 96) {
+                                    val targetBytes = (originalSize * output.quality.coerceIn(1, 95) / 100.0).toLong().coerceAtLeast(4096L)
+                                    BitmapTransforms.compressToTarget(cropped.bitmap, ticket.stageFile, output.copy(format = effectiveFormat), targetBytes,
+                                        effectiveBudget, checkCancel = context.checkCancellation)
+                                } else if (isEncodePipeline) {
                                     ImageOutputEncoder.encode(cropped.bitmap, ticket.stageFile, request.toolId, output, originalSize,
                                         effectiveBudget, checkCancel = context.checkCancellation)
                                 } else {
@@ -171,8 +175,8 @@ import kotlin.math.roundToInt
                             decodeForWork(file, effectiveBudget, maxEdge = formatMaxEdge).use { decoded ->
                                 val bmp = decoded.bitmap
                                 context.checkCancellation()
-                                if (request.toolId == "img_04" && originalSize > 0L) {
-                                    val targetBytes = (originalSize * output.quality.coerceIn(5, 98) / 100.0).toLong().coerceAtLeast(4096L)
+                                if (request.toolId == "img_04" && originalSize > 0L && output.quality < 96) {
+                                    val targetBytes = (originalSize * output.quality.coerceIn(1, 95) / 100.0).toLong().coerceAtLeast(4096L)
                                     BitmapTransforms.compressToTarget(bmp, ticket.stageFile, output.copy(format = effectiveFormat), targetBytes,
                                         effectiveBudget, checkCancel = context.checkCancellation)
                                 } else if (isEncodePipeline) {

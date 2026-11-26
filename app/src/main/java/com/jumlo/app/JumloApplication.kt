@@ -58,6 +58,24 @@ class JumloApplication : Application(), Configuration.Provider, ImageLoaderFacto
             override fun onActivityDestroyed(activity: Activity) = Unit
         })
         AppDiagnostics.install(this)
+        // Proactively warm up Google ML Kit Document Scanner (SCANNER_MODE_FULL) so Smart Scan & ID Card open fast.
+        runCatching {
+            val scanner = com.google.mlkit.vision.documentscanner.GmsDocumentScanning.getClient(
+                com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.Builder()
+                    .setScannerMode(com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                    .build()
+            )
+            val installer = com.google.android.gms.common.moduleinstall.ModuleInstall.getClient(this)
+            installer.areModulesAvailable(scanner).addOnSuccessListener { avail ->
+                if (!avail.areModulesAvailable()) {
+                    installer.installModules(
+                        com.google.android.gms.common.moduleinstall.ModuleInstallRequest.newBuilder()
+                            .addApi(scanner)
+                            .build()
+                    )
+                }
+            }
+        }
         runCatching { PDFBoxResourceLoader.init(applicationContext) }
             .onFailure { AppDiagnostics.report("startup", it) }
         if (BuildConfig.DEBUG) {

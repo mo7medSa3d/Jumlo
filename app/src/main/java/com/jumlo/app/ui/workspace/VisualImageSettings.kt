@@ -106,9 +106,21 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 Text(stringResource(R.string.field_compress_note), style = QuietTheme.typography.metadata)
             }
             if(tool=="pdf_07" || tool=="pdf_long_image") {
-                PresetChoices(stringResource(R.string.field_output_format),PDF_IMAGE_FORMATS,draft.format) {v->edit {it.copy(format=v)}}
-                InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(draft.dpi,144),36,600,144) {v->edit {it.copy(dpi=v.toString())}}
-                ChoiceValues(DPI_PRESETS,draftNumber(draft.dpi,144),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
+                if(tool=="pdf_07") {
+                    InteractiveToggle(stringResource(R.string.field_keep_original_quality), draft.flag1) { v ->
+                        edit {
+                            if (v) it.copy(flag1 = true, format = "PNG", dpi = "300", quality = "100")
+                            else it.copy(flag1 = false)
+                        }
+                    }
+                } else {
+                    InteractiveToggle(stringResource(R.string.s10_keep_original_image_quality), draft.flag1) { v ->
+                        edit { it.copy(flag1 = v) }
+                    }
+                }
+                PresetChoices(stringResource(R.string.field_output_format),PDF_IMAGE_FORMATS,draft.format) {v->edit {it.copy(format=v, flag1=if(v=="JPEG") false else it.flag1)}}
+                InteractiveIntSlider(stringResource(R.string.field_dpi),draftNumber(draft.dpi,if(tool=="pdf_long_image") 300 else 144),36,600,if(tool=="pdf_long_image") 300 else 144) {v->edit {it.copy(dpi=v.toString())}}
+                ChoiceValues(DPI_PRESETS,draftNumber(draft.dpi,if(tool=="pdf_long_image") 300 else 144),{"$it DPI"}) {v->edit {it.copy(dpi=v.toString())}}
                 InteractiveToggle(stringResource(R.string.field_grayscale),draft.grayscale) {v->edit {it.copy(grayscale=v)}}
             }
             if(tool=="pdf_02") VisualChoiceCards(PAPER_MODES,draft.paperMode,paper=true) {v->edit {it.copy(paperMode=v)}}
@@ -123,6 +135,11 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
             }
             val imageOutput=tool.startsWith("img_")
             if(imageOutput) {
+                if(tool=="img_01" || tool=="img_02") {
+                    InteractiveToggle(stringResource(R.string.field_keep_original_quality), draft.flag1) { v ->
+                        edit { it.copy(flag1 = v, quality = if (v) "100" else "85") }
+                    }
+                }
                 Text(stringResource(R.string.field_output_format),style=QuietTheme.typography.metadataStrong)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     items(IMAGE_OUTPUT_FORMATS,key={it},contentType={"format-chip"}) {format ->
@@ -130,7 +147,7 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                     }
                 }
             }
-            if((imageOutput || tool=="pdf_07" || tool=="pdf_long_image") && draft.format!="PNG")
+            if((imageOutput || tool=="pdf_07" || tool=="pdf_long_image") && draft.format!="PNG" && !(tool in setOf("img_01","img_02","pdf_07") && draft.flag1))
                 InteractiveIntSlider(stringResource(R.string.field_quality),draftNumber(draft.quality,85),1,100,85) {v->edit {it.copy(quality=v.toString())}}
             if(tool=="img_04") Text(stringResource(R.string.interactive_compression_format_note),style=QuietTheme.typography.metadata)
         }

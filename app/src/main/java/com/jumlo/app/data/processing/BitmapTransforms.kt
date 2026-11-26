@@ -358,15 +358,18 @@ object BitmapTransforms {
         checkCancel()
         val effectiveFmt = if (settings.format.uppercase() == "PNG") "WEBP" else settings.format
         val base = settings.copy(format = effectiveFmt)
-        var low = 12
-        var high = base.quality.coerceIn(12, 95)
-        var bestFile: File? = null
+        if (base.quality >= 96) {
+            encode(bitmap, destination, base, maxBitmapBytes, checkCancel)
+            return destination.length()
+        }
+        var low = 5
+        var high = base.quality.coerceIn(5, 95)
         var bestSize = Long.MAX_VALUE
         val tmp = File(destination.parentFile, ".cmp-${java.util.UUID.randomUUID()}.tmp")
         try {
-            // Binary search quality first (max 5 passes) to hit targetBytes cleanly.
+            // Binary search quality first (max 6 passes) to hit targetBytes accurately.
             var attempts = 0
-            while (low <= high && attempts < 5) {
+            while (low <= high && attempts < 6) {
                 checkCancel()
                 attempts++
                 val mid = (low + high) / 2
@@ -375,7 +378,6 @@ object BitmapTransforms {
                 if (sz < bestSize) {
                     bestSize = sz
                     tmp.copyTo(destination, overwrite = true)
-                    bestFile = destination
                 }
                 if (sz <= targetBytes) {
                     low = mid + 1
@@ -383,27 +385,34 @@ object BitmapTransforms {
                     high = mid - 1
                 }
             }
-            if (bestSize > targetBytes && bitmap.width > 640 && bitmap.height > 640) {
-                checkCancel()
-                val ratio = kotlin.math.sqrt(targetBytes.toDouble() / bestSize.toDouble()).toFloat().coerceIn(0.45f, 0.90f)
-                val nw = (bitmap.width * ratio).toInt().coerceAtLeast(480)
-                val nh = (bitmap.height * ratio).toInt().coerceAtLeast(480)
-                val scaled = Bitmap.createScaledBitmap(bitmap, nw, nh, true).also {
-                    if (!bitmap.hasAlpha()) it.setHasAlpha(false)
-                }
-                try {
-                    encode(scaled, tmp, base.copy(quality = base.quality.coerceIn(25, 80)), maxBitmapBytes, checkCancel)
+            var current = bitmap
+            var ownedCurrent = false
+            try {
+                for (scaleStep in 0 until 2) {
+                    if (bestSize <= targetBytes || current.width <= 256 || current.height <= 256) break
+                    checkCancel()
+                    val ratio = kotlin.math.sqrt(targetBytes.toDouble() / bestSize.toDouble()).toFloat().coerceIn(0.25f, 0.92f)
+                    val nw = (current.width * ratio).toInt().coerceAtLeast(256)
+                    val nh = (current.height * ratio).toInt().coerceAtLeast(256)
+                    if (nw == current.width && nh == current.height) break
+                    val scaled = Bitmap.createScaledBitmap(current, nw, nh, true).also {
+                        if (!current.hasAlpha()) it.setHasAlpha(false)
+                    }
+                    if (ownedCurrent && !current.isRecycled) current.recycle()
+                    current = scaled
+                    ownedCurrent = true
+                    val stepQuality = base.quality.coerceIn(10, 80)
+                    encode(current, tmp, base.copy(quality = stepQuality), maxBitmapBytes, checkCancel)
                     val sz = tmp.length()
                     if (sz < bestSize) {
                         bestSize = sz
                         tmp.copyTo(destination, overwrite = true)
-                        bestFile = destination
                     }
-                } finally {
-                    if (scaled !== bitmap && !scaled.isRecycled) scaled.recycle()
                 }
+            } finally {
+                if (ownedCurrent && !current.isRecycled) current.recycle()
             }
-            if (bestFile == null || !destination.exists() || destination.length() <= 0L) {
+            if (!destination.exists() || destination.length() <= 0L) {
                 encode(bitmap, destination, base, maxBitmapBytes, checkCancel)
             }
             return destination.length()

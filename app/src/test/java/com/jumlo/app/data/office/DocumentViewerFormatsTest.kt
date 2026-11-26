@@ -42,19 +42,23 @@ class DocumentViewerFormatsTest {
         assertEquals(DocumentViewerKind.TEXT, DocumentViewerFormats.detect("text/csv", null))
         assertEquals(DocumentViewerKind.TEXT, DocumentViewerFormats.detect("text/tab-separated-values", null))
         assertEquals(DocumentViewerKind.TEXT, DocumentViewerFormats.detect("application/json", null))
-        for (name in listOf("notes.txt", "README.md", "export.csv", "data.json", "app.log")) {
+        for (name in listOf("notes.txt", "README.md", "export.csv", "data.json", "app.log", "config.xml", "index.html", "spec.yaml")) {
             assertEquals(DocumentViewerKind.TEXT, DocumentViewerFormats.detect(null, name))
             assertTrue(DocumentViewerFormats.supportsInAppViewer(null, name))
         }
 
-        // Legacy binary Office and non-document formats must return null.
+        assertEquals(DocumentViewerKind.IMAGE, DocumentViewerFormats.detect("image/png", "photo.png"))
+        assertEquals(DocumentViewerKind.IMAGE, DocumentViewerFormats.detect(null, "scan.webp"))
+        assertEquals(DocumentViewerKind.AUDIO, DocumentViewerFormats.detect("audio/mpeg", "voice.mp3"))
+        assertEquals(DocumentViewerKind.AUDIO, DocumentViewerFormats.detect(null, "memo.m4a"))
+        assertEquals(DocumentViewerKind.VIDEO, DocumentViewerFormats.detect("video/mp4", "clip.mp4"))
+        assertEquals(DocumentViewerKind.ARCHIVE, DocumentViewerFormats.detect("application/zip", "archive.zip"))
+
+        // Legacy binary Office formats remain external-only.
         assertNull(DocumentViewerFormats.detect("application/msword", "legacy.doc"))
         assertNull(DocumentViewerFormats.detect("application/vnd.ms-powerpoint", "legacy.ppt"))
         assertNull(DocumentViewerFormats.detect("application/vnd.ms-excel", "legacy.xls"))
-        assertNull(DocumentViewerFormats.detect("image/png", "photo.png"))
-        assertNull(DocumentViewerFormats.detect("application/zip", "archive.zip"))
-        assertNull(DocumentViewerFormats.detect("video/mp4", "clip.mp4"))
-        assertFalse(DocumentViewerFormats.supportsInAppViewer("application/zip", "archive.zip"))
+        assertTrue(DocumentViewerFormats.supportsInAppViewer("application/zip", "archive.zip"))
     }
 
     @Test

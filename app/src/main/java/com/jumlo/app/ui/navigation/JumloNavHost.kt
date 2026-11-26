@@ -512,7 +512,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             onDispose { childBackOwners.remove(backOwnerKey) }
         }
         val root = shellRoute in ROOT_ROUTES
-        val showDock = root || shellRoute in setOf("workspace", "activity")
+        val showDock = root
         val headerToolId=entryToolId ?: formToolId
         val headerTool=remember(shellRoute, headerToolId) {
             if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null
@@ -647,6 +647,24 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                             navController.navigate(ViewerRoute(savedUri, savedTitle)) { launchSingleTop = true }
                                         },
                                         onBackInterceptChange = onBackIntercept
+                                    )
+                                } else if (viewerKind in setOf(DocumentViewerKind.IMAGE, DocumentViewerKind.AUDIO, DocumentViewerKind.VIDEO, DocumentViewerKind.ARCHIVE)) {
+                                    com.jumlo.app.ui.viewer.MediaAndArchiveViewerScreen(
+                                        uri = it.uri,
+                                        title = it.title,
+                                        kind = viewerKind,
+                                        onBack = ::goBack,
+                                        onShare = { launchExternal(it.uri, it.mimeType, true) },
+                                        onOpenExternal = { launchExternal(it.uri, it.mimeType, false) },
+                                        onImagesToPdf = if (viewerKind == DocumentViewerKind.IMAGE) {
+                                            { viewModel.importProviderEntryToWorkspace(it.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION, targetTool = "pdf_02") { navigateTo("workspace") } }
+                                        } else null,
+                                        onEditImage = if (viewerKind == DocumentViewerKind.IMAGE) {
+                                            { viewModel.importProviderEntryToWorkspace(it.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION, targetTool = "img_04") { navigateTo("workspace") } }
+                                        } else null,
+                                        onExtractZip = if (viewerKind == DocumentViewerKind.ARCHIVE) {
+                                            { viewModel.importProviderEntryToWorkspace(it.uri, Intent.FLAG_GRANT_READ_URI_PERMISSION, targetTool = "file_08") { navigateTo("workspace") } }
+                                        } else null
                                     )
                                 } else {
                                     OfficeDocumentViewerScreen(

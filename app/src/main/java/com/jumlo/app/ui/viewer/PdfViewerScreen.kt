@@ -205,6 +205,7 @@ private fun PdfViewerContent(
     var checkSizeNorm by rememberSaveable { mutableFloatStateOf(0.042f) }
     var signatureScaleNorm by rememberSaveable { mutableFloatStateOf(0.28f) }
     var selectedItemId by remember(uri) { mutableStateOf<String?>(null) }
+    var editingTextItemId by remember(uri) { mutableStateOf<String?>(null) }
 
     var markupItems by remember(uri) { mutableStateOf<List<PdfMarkupItem>>(emptyList()) }
     val history = remember(uri) { UndoRedoStack<PdfMarkupItem>() }
@@ -524,7 +525,8 @@ private fun PdfViewerContent(
                                     selectedItemId = selectedItemId,
                                     onSelectItem = { selectedItemId = it },
                                     onAddItem = { item -> commitMarkup(markupItems + item) },
-                                    onRequestTextAt = { p, x, y -> pendingTextPos = Triple(p, x, y); textInput = "" },
+                                    onRequestTextAt = { p, x, y -> editingTextItemId = null; pendingTextPos = Triple(p, x, y); textInput = "" },
+                                    onEditTextItem = { tb -> editingTextItemId = tb.id; pendingTextPos = Triple(tb.pageIndex, tb.normX, tb.normY); textInput = tb.text },
                                     onMoveItem = { id, dx, dy ->
                                         commitMarkup(markupItems.map { item ->
                                             if (item.id != id) item else when (item) {
@@ -925,34 +927,42 @@ private fun PdfViewerContent(
         }
         pendingTextPos?.let { (pIdx, nx, ny) ->
             AlertDialog(
-                onDismissRequest = { pendingTextPos = null },
+                onDismissRequest = { editingTextItemId = null; pendingTextPos = null },
                 title = { Text(stringResource(R.string.markup_tool_text)) },
                 text = { OutlinedTextField(value = textInput, onValueChange = { textInput = it.take(300) }, singleLine = false, maxLines = 4) },
                 confirmButton = {
                     TextButton(onClick = {
                         val trimmed = textInput.trim()
+                        val editId = editingTextItemId
                         if (trimmed.isNotEmpty()) {
-                            val draft = PdfMarkupItem.TextBox(
-                                java.util.UUID.randomUUID().toString(),
-                                pIdx,
-                                nx,
-                                ny,
-                                trimmed,
-                                activeColor.toArgb(),
-                                textSizePt
-                            )
-                            val b = com.jumlo.app.core.PdfMarkupPolicy.boundingBox(draft)
-                            commitMarkup(
-                                markupItems + draft.copy(
-                                    normX = (nx - b.width * 0.5f).coerceIn(0.02f, (1f - b.width).coerceAtLeast(0.02f)),
-                                    normY = (ny - b.height * 0.5f).coerceIn(0.02f, (1f - b.height).coerceAtLeast(0.02f))
+                            if (editId != null) {
+                                commitMarkup(markupItems.map { item ->
+                                    if (item.id == editId && item is PdfMarkupItem.TextBox) item.copy(text = trimmed) else item
+                                })
+                            } else {
+                                val draft = PdfMarkupItem.TextBox(
+                                    java.util.UUID.randomUUID().toString(),
+                                    pIdx,
+                                    nx,
+                                    ny,
+                                    trimmed,
+                                    activeColor.toArgb(),
+                                    textSizePt
                                 )
-                            )
+                                val b = com.jumlo.app.core.PdfMarkupPolicy.boundingBox(draft)
+                                commitMarkup(
+                                    markupItems + draft.copy(
+                                        normX = (nx - b.width * 0.5f).coerceIn(0.02f, (1f - b.width).coerceAtLeast(0.02f)),
+                                        normY = (ny - b.height * 0.5f).coerceIn(0.02f, (1f - b.height).coerceAtLeast(0.02f))
+                                    )
+                                )
+                            }
                         }
+                        editingTextItemId = null
                         pendingTextPos = null
                     }) { Text(stringResource(R.string.action_save)) }
                 },
-                dismissButton = { TextButton(onClick = { pendingTextPos = null }) { Text(stringResource(R.string.action_cancel)) } }
+                dismissButton = { TextButton(onClick = { editingTextItemId = null; pendingTextPos = null }) { Text(stringResource(R.string.action_cancel)) } }
             )
         }
     }

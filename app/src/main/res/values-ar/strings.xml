@@ -356,4 +356,5 @@
     <string name="field_nup_row_gap">المسافة الرأسية بين الصفحات (pt)</string>
     <string name="field_keep_original_quality">الحفاظ على الجودة الأصلية</string>
     <string name="scan_id_scan_now">مسح ذكي بتحديد الحواف</string>
+    <string name="workspace_action_unlock_pdf">فك حماية PDF</string>
 </resources>

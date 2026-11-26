@@ -18,33 +18,33 @@ object ToolIconColors {
         "pdf_to_pptx" to Color(0xFFEA580C),        // PowerPoint burnt orange
         "office_to_pdf" to Color(0xFFDC2626),      // Office crimson red
         "pdf_ocr" to Color(0xFFE11D48),            // OCR rose red
-        "pdf_02" to Color(0xFFF97316),             // Images to PDF tangerine
-        "pdf_07" to Color(0xFFF59E0B),             // PDF to Images amber
-        "pdf_long_image" to Color(0xFFD97706),     // Long Image golden ochre
+        "pdf_02" to Color(0xFFEA580C),             // Images to PDF burnt orange
+        "pdf_07" to Color(0xFFB45309),             // PDF to Images rich amber
+        "pdf_long_image" to Color(0xFFC2410C),     // Long Image deep ochre
         "scan_doc" to Color(0xFF0284C7),           // Smart Scan ocean blue
         "scan" to Color(0xFF0284C7),
 
         // PDF edit, organize & security
         "pdf_01" to Color(0xFFEF4444),             // View PDF scarlet
         "pdf_03" to Color(0xFFEC4899),             // Merge PDF hot pink
-        "pdf_04" to Color(0xFFEAB308),             // Organize Pages vivid gold
+        "pdf_04" to Color(0xFFD97706),             // Organize Pages amber gold
         "pdf_05" to Color(0xFFF43F5E),             // Split PDF coral red
-        "pdf_06" to Color(0xFFCA8A04),             // Extract Pages warm mustard
+        "pdf_06" to Color(0xFF9A3412),             // Extract Pages warm sienna
         "pdf_compress" to Color(0xFFBE123C),       // Compress PDF ruby
-        "pdf_crop" to Color(0xFFFB7185),           // Crop PDF salmon
-        "pdf_stamp" to Color(0xFFFB923C),          // Watermark PDF warm orange
-        "pdf_signature" to Color(0xFFC2410C),      // Sign PDF terracotta
+        "pdf_crop" to Color(0xFFE11D48),           // Crop PDF crimson rose
+        "pdf_stamp" to Color(0xFFF97316),          // Watermark PDF tangerine
+        "pdf_signature" to Color(0xFFB91C1C),      // Sign PDF deep red
         "pdf_protect" to Color(0xFFDB2777),        // Lock PDF magenta
-        "pdf_nup" to Color(0xFFFACC15),            // 2/4 per page sunflower
-        "pdf_privacy_redact" to Color(0xFFB91C1C), // Redact deep crimson
+        "pdf_nup" to Color(0xFF0E7490),            // 2/4 per page deep cyan
+        "pdf_privacy_redact" to Color(0xFF991B1B), // Redact deep crimson
 
-        // Images & unified image studio (greens & teals)
-        "img_01" to Color(0xFF10B981),             // Convert Images emerald
-        "img_02" to Color(0xFF14B8A6),             // Resize Images teal
-        "img_03" to Color(0xFF22C55E),             // Crop & Rotate bright green
-        "img_04" to Color(0xFF84CC16),             // Compress Images lime
-        "img_watermark" to Color(0xFF059669),      // Watermark Images jade
-        "img_join" to Color(0xFF06B6D4),           // Join / Collage cyan
+        // Images & unified image studio (rich greens & teals with crisp white glyphs)
+        "img_01" to Color(0xFF059669),             // Convert Images emerald
+        "img_02" to Color(0xFF0F766E),             // Resize Images deep teal
+        "img_03" to Color(0xFF16A34A),             // Crop & Rotate rich green
+        "img_04" to Color(0xFF15803D),             // Compress & Edit forest green
+        "img_watermark" to Color(0xFF047857),      // Watermark Images jade
+        "img_join" to Color(0xFF0891B2),           // Join / Collage cyan-teal
         "img_studio" to Color(0xFF16A34A),         // Unified Image Studio vivid green
         "img_unified" to Color(0xFF16A34A),
         "img_editor" to Color(0xFF16A34A),
