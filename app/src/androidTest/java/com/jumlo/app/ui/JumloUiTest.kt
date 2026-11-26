@@ -54,6 +54,8 @@ class JumloUiTest {
     }
 
     @Test fun clipboardPasteKeepsWorkspaceUsableAfterRecoverableInspectionFailure() {
+        compose.onNodeWithTag("nav.HOME").performClick()
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
         compose.onNodeWithTag("home.action.download").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
         mediaLink().assertTextEquals("")
@@ -167,6 +169,8 @@ class JumloUiTest {
     }
 
     @Test fun imageToolWithoutInputsShowsImportAndKeepsExecuteDisabled() {
+        compose.onNodeWithTag("nav.HOME").performClick()
+        compose.onNodeWithTag("home.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.TOOLS").performClick()
         compose.onNodeWithTag("tools.grid").performScrollToNode(hasTestTag("tool.img_02"))
         compose.onNodeWithTag("tool.img_02").performClick()
