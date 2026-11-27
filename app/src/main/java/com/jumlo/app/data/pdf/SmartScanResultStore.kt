@@ -1,6 +1,7 @@
 package com.jumlo.app.data.pdf
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.jumlo.app.core.ResourceBudgetPolicy
@@ -47,16 +48,33 @@ object SmartScanResultStore {
                     PDDocument(memory).use { document ->
                         for (image in pages) {
                             check()
-                            BitmapTransforms.decodeSampled(image, bitmapBudget).use { decoded ->
-                                check()
-                                val bitmap = decoded.bitmap
-                                val scale = 842f / maxOf(bitmap.width, bitmap.height)
-                                val width = bitmap.width * scale
-                                val height = bitmap.height * scale
+                            val info = BitmapTransforms.inspect(image)
+                            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                            BitmapFactory.decodeFile(image.path, bounds)
+                            val isPlainJpeg = bounds.outMimeType == "image/jpeg" && info.orientation == 1 &&
+                                maxOf(info.width, info.height) <= 3200
+                            if (isPlainJpeg) {
+                                val scale = 842f / maxOf(info.width, info.height)
+                                val width = info.width * scale
+                                val height = info.height * scale
                                 val page = PDPage(PDRectangle(width, height))
                                 document.addPage(page)
-                                val embedded = JPEGFactory.createFromImage(document, bitmap, .9f)
+                                val embedded = image.inputStream().use { stream ->
+                                    JPEGFactory.createFromStream(document, stream)
+                                }
                                 PDPageContentStream(document, page).use { it.drawImage(embedded, 0f, 0f, width, height) }
+                            } else {
+                                BitmapTransforms.decodeSampled(image, bitmapBudget).use { decoded ->
+                                    check()
+                                    val bitmap = decoded.bitmap
+                                    val scale = 842f / maxOf(bitmap.width, bitmap.height)
+                                    val width = bitmap.width * scale
+                                    val height = bitmap.height * scale
+                                    val page = PDPage(PDRectangle(width, height))
+                                    document.addPage(page)
+                                    val embedded = JPEGFactory.createFromImage(document, bitmap, .96f)
+                                    PDPageContentStream(document, page).use { it.drawImage(embedded, 0f, 0f, width, height) }
+                                }
                             }
                         }
                         check()

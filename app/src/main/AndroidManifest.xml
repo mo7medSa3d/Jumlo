@@ -38,8 +38,8 @@
         android:theme="@style/Theme.Jumlo"
         tools:targetApi="36">
 
-        <!-- Ask Play services to prepare the small unbundled Latin OCR model. -->
-        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ocr" />
+        <!-- Ask Play services to prepare unbundled OCR and Subject Segmentation models dynamically. -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ocr,subject_segment" />
 
         <activity
             android:name=".MainActivity"

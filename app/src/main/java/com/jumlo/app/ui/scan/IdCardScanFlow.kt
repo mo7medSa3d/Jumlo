@@ -43,6 +43,7 @@ import com.jumlo.app.ui.components.QuietTonalButton
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.automirrored.rounded.ArrowBack
 import com.jumlo.app.ui.icons.automirrored.rounded.RotateRight
+import com.jumlo.app.ui.icons.rounded.Crop
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.workspace.DisposeOwnedPreviewBitmap
 import kotlinx.coroutines.Dispatchers
@@ -50,8 +51,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private const val ID_CARD_MAX_EDGE = 1600
-private const val PREVIEW_FILTER_MAX_EDGE = 720
+private const val ID_CARD_MAX_EDGE = 2400
+private const val PREVIEW_FILTER_MAX_EDGE = 960
 
 private fun scaleDownToMaxEdge(src: Bitmap, maxEdge: Int): Bitmap {
     val longest = maxOf(src.width, src.height)
@@ -92,6 +93,7 @@ internal fun IdCardScanFlow(
     var autoLaunchedOnce by rememberSaveable { mutableStateOf(false) }
     var errorRes by remember { mutableStateOf<Int?>(null) }
     var capturingFront by rememberSaveable { mutableStateOf(true) }
+    var cropPendingSide by remember { mutableStateOf<Pair<Boolean, Bitmap>?>(null) }
 
     fun decodeCardFile(file: File, snapEdges: Boolean): Bitmap? = runCatching {
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -145,10 +147,9 @@ internal fun IdCardScanFlow(
         if (uri != null) {
             errorRes = null
             scope.launch {
-                val bmp = withContext(Dispatchers.IO) { decodeUri(uri, snapEdges = true) }
+                val bmp = withContext(Dispatchers.IO) { decodeUri(uri, snapEdges = false) }
                 if (bmp != null) {
-                    if (capturingFront) { frontBmp = bmp; capturingFront = false }
-                    else { backBmp = bmp }
+                    cropPendingSide = capturingFront to bmp
                 } else {
                     errorRes = R.string.scan_capture_failed
                 }
@@ -292,6 +293,9 @@ internal fun IdCardScanFlow(
                         frontBmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
                     }
                 },
+                onCrop = {
+                    frontBmp?.takeUnless { it.isRecycled }?.let { src -> cropPendingSide = true to src }
+                },
                 onPick = {
                     capturingFront = true; errorRes = null
                     launchMlIdScanner(maxPages = if (backBmp == null) 2 else 1)
@@ -307,6 +311,9 @@ internal fun IdCardScanFlow(
                         val m = Matrix().apply { postRotate(90f) }
                         backBmp = Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
                     }
+                },
+                onCrop = {
+                    backBmp?.takeUnless { it.isRecycled }?.let { src -> cropPendingSide = false to src }
                 },
                 onPick = {
                     capturingFront = false; errorRes = null
@@ -371,10 +378,44 @@ internal fun IdCardScanFlow(
             modifier = Modifier.fillMaxWidth()
         )
     }
+
+    cropPendingSide?.let { (isFrontSide, sourceBitmap) ->
+        InteractiveDocumentCropDialog(
+            initialBitmap = sourceBitmap,
+            autoDetectInitial = true,
+            onApply = { cropped ->
+                if (isFrontSide) {
+                    frontBmp = cropped
+                    if (backBmp == null) capturingFront = false
+                } else {
+                    backBmp = cropped
+                }
+                cropPendingSide = null
+            },
+            onDismiss = {
+                // Keep original uncropped frame if user cancels manual corner adjustment so nothing is ever lost.
+                if (isFrontSide && frontBmp == null) {
+                    frontBmp = sourceBitmap
+                    if (backBmp == null) capturingFront = false
+                } else if (!isFrontSide && backBmp == null) {
+                    backBmp = sourceBitmap
+                }
+                cropPendingSide = null
+            }
+        )
+    }
 }
 
 @Composable
-private fun CardSlot(label: String, bmp: Bitmap?, filter: ScanFilter, modifier: Modifier, onRotate: (() -> Unit)? = null, onPick: () -> Unit) {
+private fun CardSlot(
+    label: String,
+    bmp: Bitmap?,
+    filter: ScanFilter,
+    modifier: Modifier,
+    onRotate: (() -> Unit)? = null,
+    onCrop: (() -> Unit)? = null,
+    onPick: () -> Unit
+) {
     val pillars = QuietTheme.pillars
     val filtered by produceState<Bitmap?>(initialValue = bmp, key1 = bmp, key2 = filter) {
         value = if (bmp == null || bmp.isRecycled) null else withContext(Dispatchers.Default) {
@@ -398,15 +439,32 @@ private fun CardSlot(label: String, bmp: Bitmap?, filter: ScanFilter, modifier: 
             if (readyBitmap != null && !readyBitmap.isRecycled) {
                 val imageBitmap = remember(readyBitmap) { readyBitmap.asImageBitmap() }
                 Image(imageBitmap, label, Modifier.fillMaxSize().padding(8.dp), contentScale = ContentScale.Fit)
-                if (onRotate != null) {
-                    Surface(
-                        onClick = onRotate,
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(32.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.AutoMirrored.Rounded.RotateRight, stringResource(R.string.visual_rotate), modifier = Modifier.size(18.dp))
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (onCrop != null) {
+                        Surface(
+                            onClick = onCrop,
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.Crop, stringResource(R.string.scan_crop_action), modifier = Modifier.size(17.dp))
+                            }
+                        }
+                    }
+                    if (onRotate != null) {
+                        Surface(
+                            onClick = onRotate,
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.AutoMirrored.Rounded.RotateRight, stringResource(R.string.visual_rotate), modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                 }
@@ -419,148 +477,11 @@ private fun CardSlot(label: String, bmp: Bitmap?, filter: ScanFilter, modifier: 
 
 /**
  * Refines an ID card crop by finding the strongest outer border edges via luminance gradients
- * on a downscaled copy. Falls back to [src] if the card boundary is not clearly separated.
+ * on a downscaled copy. Falls back cleanly to [src] if the card boundary is not clearly separated.
  */
 internal fun snapToCardEdges(src: Bitmap): Bitmap {
     if (src.width < 80 || src.height < 80) return src
-    val work = scaleDownToMaxEdge(src, 320)
-    try {
-        val w = work.width
-        val h = work.height
-        val pixels = IntArray(w * h)
-        work.getPixels(pixels, 0, w, 0, 0, w, h)
-        val lum = IntArray(w * h) { i ->
-            val c = pixels[i]
-            (((c shr 16) and 0xFF) * 77 + ((c shr 8) and 0xFF) * 150 + (c and 0xFF) * 29) shr 8
-        }
-
-        val xMidStart = (w * 0.22f).toInt()
-        val xMidEnd = (w * 0.78f).toInt()
-        val yMidStart = (h * 0.22f).toInt()
-        val yMidEnd = (h * 0.78f).toInt()
-
-        fun rowEdgeScore(y: Int, x0: Int, x1: Int): Float {
-            if (y <= 1 || y >= h - 2 || x1 <= x0) return 0f
-            var sum = 0L
-            for (x in x0 until x1) {
-                sum += kotlin.math.abs(lum[(y + 1) * w + x] - lum[(y - 1) * w + x])
-            }
-            return sum.toFloat() / (x1 - x0)
-        }
-
-        fun colEdgeScore(x: Int, y0: Int, y1: Int): Float {
-            if (x <= 1 || x >= w - 2 || y1 <= y0) return 0f
-            var sum = 0L
-            for (y in y0 until y1) {
-                sum += kotlin.math.abs(lum[y * w + (x + 1)] - lum[y * w + (x - 1)])
-            }
-            return sum.toFloat() / (y1 - y0)
-        }
-
-        fun findPeak(range: IntProgression, scorer: (Int) -> Float): Int? {
-            var bestIdx = -1
-            var bestScore = 0f
-            var sum = 0f
-            var count = 0
-            for (i in range) {
-                val s = scorer(i)
-                sum += s
-                count++
-                if (s > bestScore) {
-                    bestScore = s
-                    bestIdx = i
-                }
-            }
-            val avg = if (count > 0) sum / count else 0f
-            return if (bestIdx >= 0 && bestScore >= maxOf(14f, avg * 2.1f)) bestIdx else null
-        }
-
-        // Try 4-corner perspective rectification first when the card is tilted.
-        val xL0 = (w * 0.18f).toInt(); val xL1 = (w * 0.46f).toInt()
-        val xR0 = (w * 0.54f).toInt(); val xR1 = (w * 0.82f).toInt()
-        val yT0 = (h * 0.18f).toInt(); val yT1 = (h * 0.46f).toInt()
-        val yB0 = (h * 0.54f).toInt(); val yB1 = (h * 0.82f).toInt()
-        val topL = findPeak(2..(h * 0.26f).toInt()) { rowEdgeScore(it, xL0, xL1) }
-        val topR = findPeak(2..(h * 0.26f).toInt()) { rowEdgeScore(it, xR0, xR1) }
-        val botL = findPeak((h - 3) downTo (h * 0.74f).toInt()) { rowEdgeScore(it, xL0, xL1) }
-        val botR = findPeak((h - 3) downTo (h * 0.74f).toInt()) { rowEdgeScore(it, xR0, xR1) }
-        val leftT = findPeak(2..(w * 0.26f).toInt()) { colEdgeScore(it, yT0, yT1) }
-        val leftB = findPeak(2..(w * 0.26f).toInt()) { colEdgeScore(it, yB0, yB1) }
-        val rightT = findPeak((w - 3) downTo (w * 0.74f).toInt()) { colEdgeScore(it, yT0, yT1) }
-        val rightB = findPeak((w - 3) downTo (w * 0.74f).toInt()) { colEdgeScore(it, yB0, yB1) }
-
-        if (topL != null && topR != null && botL != null && botR != null &&
-            leftT != null && leftB != null && rightT != null && rightB != null
-        ) {
-            val tilted = kotlin.math.abs(topL - topR) >= 3 || kotlin.math.abs(botL - botR) >= 3 ||
-                kotlin.math.abs(leftT - leftB) >= 3 || kotlin.math.abs(rightT - rightB) >= 3
-            if (tilted) {
-                fun intersect(
-                    ax1: Float, ay1: Float, ax2: Float, ay2: Float,
-                    bx1: Float, by1: Float, bx2: Float, by2: Float
-                ): Pair<Float, Float>? {
-                    val denom = (ax1 - ax2) * (by1 - by2) - (ay1 - ay2) * (bx1 - bx2)
-                    if (kotlin.math.abs(denom) < 1e-3f) return null
-                    val px = ((ax1 * ay2 - ay1 * ax2) * (bx1 - bx2) - (ax1 - ax2) * (bx1 * by2 - by1 * bx2)) / denom
-                    val py = ((ax1 * ay2 - ay1 * ax2) * (by1 - by2) - (ay1 - ay2) * (bx1 * by2 - by1 * bx2)) / denom
-                    return px to py
-                }
-                val xA = (xL0 + xL1) * 0.5f; val xB = (xR0 + xR1) * 0.5f
-                val yA = (yT0 + yT1) * 0.5f; val yB = (yB0 + yB1) * 0.5f
-                val tl = intersect(xA, topL.toFloat(), xB, topR.toFloat(), leftT.toFloat(), yA, leftB.toFloat(), yB)
-                val tr = intersect(xA, topL.toFloat(), xB, topR.toFloat(), rightT.toFloat(), yA, rightB.toFloat(), yB)
-                val br = intersect(xA, botL.toFloat(), xB, botR.toFloat(), rightT.toFloat(), yA, rightB.toFloat(), yB)
-                val bl = intersect(xA, botL.toFloat(), xB, botR.toFloat(), leftT.toFloat(), yA, leftB.toFloat(), yB)
-                if (tl != null && tr != null && br != null && bl != null) {
-                    val corners = listOf(tl, tr, br, bl)
-                    val inBounds = corners.all { (cx, cy) -> cx in -w * 0.05f..w * 1.05f && cy in -h * 0.05f..h * 1.05f }
-                    val qW = ((tr.first - tl.first) + (br.first - bl.first)) * 0.5f
-                    val qH = ((bl.second - tl.second) + (br.second - tr.second)) * 0.5f
-                    val qRatio = if (qH > 1f) qW / qH else 0f
-                    if (inBounds && qW >= w * 0.50f && qH >= h * 0.50f && (qRatio in 1.25f..1.95f || qRatio in 0.51f..0.80f)) {
-                        val sxScale = src.width.toFloat() / w
-                        val syScale = src.height.toFloat() / h
-                        val srcPts = floatArrayOf(
-                            tl.first * sxScale, tl.second * syScale,
-                            tr.first * sxScale, tr.second * syScale,
-                            br.first * sxScale, br.second * syScale,
-                            bl.first * sxScale, bl.second * syScale
-                        )
-                        val outW = (qW * sxScale).toInt().coerceIn(80, src.width)
-                        val outH = (qH * syScale).toInt().coerceIn(80, src.height)
-                        val dstPts = floatArrayOf(0f, 0f, outW.toFloat(), 0f, outW.toFloat(), outH.toFloat(), 0f, outH.toFloat())
-                        val warp = Matrix()
-                        if (warp.setPolyToPoly(srcPts, 0, dstPts, 0, 4)) {
-                            val warped = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
-                            val canvas = android.graphics.Canvas(warped)
-                            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG or android.graphics.Paint.FILTER_BITMAP_FLAG)
-                            canvas.drawBitmap(src, warp, paint)
-                            return warped
-                        }
-                    }
-                }
-            }
-        }
-
-        val top = findPeak(2..(h * 0.24f).toInt()) { rowEdgeScore(it, xMidStart, xMidEnd) } ?: 0
-        val bottom = findPeak((h - 3) downTo (h * 0.76f).toInt()) { rowEdgeScore(it, xMidStart, xMidEnd) } ?: (h - 1)
-        val left = findPeak(2..(w * 0.24f).toInt()) { colEdgeScore(it, yMidStart, yMidEnd) } ?: 0
-        val right = findPeak((w - 3) downTo (w * 0.76f).toInt()) { colEdgeScore(it, yMidStart, yMidEnd) } ?: (w - 1)
-
-        if (top == 0 && bottom == h - 1 && left == 0 && right == w - 1) return src
-        val cw = right - left + 1
-        val ch = bottom - top + 1
-        if (cw < w * 0.50f || ch < h * 0.50f) return src
-        val ratio = cw.toFloat() / ch.toFloat()
-        val validCardRatio = ratio in 1.25f..1.95f || ratio in 0.51f..0.80f
-        if (!validCardRatio) return src
-
-        val sx = (left.toFloat() / w * src.width).toInt().coerceIn(0, src.width - 2)
-        val sy = (top.toFloat() / h * src.height).toInt().coerceIn(0, src.height - 2)
-        val sw = (cw.toFloat() / w * src.width).toInt().coerceIn(1, src.width - sx)
-        val sh = (ch.toFloat() / h * src.height).toInt().coerceIn(1, src.height - sy)
-        return Bitmap.createBitmap(src, sx, sy, sw, sh)
-    } finally {
-        if (work !== src) work.recycle()
-    }
+    val quad = DocumentQuadProcessor.detectConservativeQuad(src)
+    if (quad.isFullFrame() || !DocumentQuadGeometry.isValid(quad)) return src
+    return DocumentQuadProcessor.warp(src, quad, maxEdge = maxOf(src.width, src.height))
 }

@@ -13,7 +13,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.icons.rounded.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -108,44 +117,83 @@ fun SettingsScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().align(Alignment.TopCenter).testTag("settings.screen"),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item("pro-banner", contentType = "pro") {
                 val colors = MaterialTheme.colorScheme
+                val goldBorder = Color(0xFFD4A017)
+                val goldDeep = Color(0xFFB47B00)
+                val goldLight = Color(0xFFFFE58F)
+                val proBg = if (dark) {
+                    Brush.horizontalGradient(listOf(Color(0xFF211A0B), Color(0xFF2C220B)))
+                } else {
+                    Brush.horizontalGradient(listOf(Color(0xFFFFFBF0), Color(0xFFFFF3CF)))
+                }
                 Surface(
                     onClick = { proSheetOpen = true },
-                    shape = QuietTheme.shapes.card,
-                    color = colors.surfaceContainerHigh,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.45f)),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = QuietTheme.shapes.heroCard,
+                    color = Color.Transparent,
+                    border = BorderStroke(1.2.dp, goldBorder.copy(alpha = if (dark) 0.55f else 0.45f)),
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth().clip(QuietTheme.shapes.heroCard)
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .background(proBg)
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Surface(
                             shape = QuietTheme.shapes.iconTile,
-                            color = colors.primaryContainer,
-                            modifier = Modifier.size(40.dp)
+                            color = goldBorder.copy(alpha = if (dark) 0.22f else 0.16f),
+                            border = BorderStroke(1.dp, goldBorder.copy(alpha = 0.35f)),
+                            modifier = Modifier.size(46.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Rounded.Star, null, tint = colors.primary, modifier = Modifier.size(22.dp))
+                                Image(
+                                    painter = painterResource(R.drawable.ic_pro_crown),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                         }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
-                                style = QuietTheme.typography.sectionTitle,
-                                color = colors.onSurface
-                            )
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    stringResource(if (proEntitlement.isPro) R.string.pro_active_badge else R.string.pro_title),
+                                    style = QuietTheme.typography.sectionTitle.copy(fontWeight = FontWeight.Bold),
+                                    color = if (dark) Color(0xFFFFF8E1) else Color(0xFF2A1E00)
+                                )
+                                Surface(
+                                    shape = QuietTheme.shapes.pill,
+                                    color = goldBorder
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.pro_badge_short),
+                                        style = QuietTheme.typography.badge.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFF1A1200),
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                             Text(
                                 stringResource(R.string.pro_upgrade_subtitle),
                                 style = QuietTheme.typography.metadata,
-                                color = colors.onSurfaceVariant
+                                color = if (dark) goldLight.copy(alpha = 0.8f) else goldDeep
                             )
                         }
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ChevronRight,
+                            contentDescription = null,
+                            tint = if (dark) goldLight else goldDeep,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
@@ -261,13 +309,11 @@ fun SettingsScreen(
             settings.language.ordinal, { viewModel.setLanguage(AppLanguage.entries[it]); panel = null }, { panel = null })
         "storage" -> StorageOverviewDialog(storage, { panel = null },
             onClean = { panel = null; viewModel.cleanTemporary() }, outputFiles = outputs)
-        "about" -> AlertDialog(onDismissRequest = { panel = null },
-            title = { Text(stringResource(R.string.modern_about), modifier = Modifier.semantics { heading() }) },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.modern_about_body, com.jumlo.app.BuildConfig.VERSION_NAME))
-                TextButton(onClick = { panel = null; onShowGuide() }) { Text(stringResource(R.string.quick_start_replay)) }
-                TextButton(onClick = { panel = "privacy" }) { Text(stringResource(R.string.account_privacy)) }
-            } }, confirmButton = { TextButton(onClick = { panel = null }) { Text(stringResource(R.string.account_done)) } })
+        "about" -> JumloAboutDialog(
+            onReplayGuide = { panel = null; onShowGuide() },
+            onOpenPrivacy = { panel = "privacy" },
+            onDismiss = { panel = null }
+        )
         "privacy" -> PrivacyDialog { panel = null }
         "cache" -> AlertDialog(onDismissRequest = { panel = null },
             title = { Text(stringResource(R.string.modern_clear_cache), modifier = Modifier.semantics { heading() }) },

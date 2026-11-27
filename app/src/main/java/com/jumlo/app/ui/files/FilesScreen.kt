@@ -10,9 +10,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -338,6 +344,7 @@ import com.jumlo.app.model.*
             .onGloballyPositioned { dragState.containerOriginInRoot = it.positionInRoot() }
             .fileDragDropContainer(
                 dragState = dragState,
+                currentFolderId = activeFolderId,
                 onHoverHaptic = { haptics.snap() },
                 onDrop = ::handleFileDrop
             )
@@ -364,12 +371,20 @@ import com.jumlo.app.model.*
         settings.fileFolders.filter { it.parentId == activeFolderId }
     }
     val folderRows = remember(currentFolders, columns) { currentFolders.chunked(columns) }
+    val navBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(modifier = Modifier.fillMaxSize().align(Alignment.TopCenter)) {
+        if (section == "outputs") {
+            ActiveDragDropBanner(
+                dragState = dragState,
+                activeFolderId = activeFolderId,
+                activeFolderName = activeFolder?.name
+            )
+        }
     LazyColumn(
         state=listState,
         modifier=Modifier.weight(1f).fillMaxWidth(),
         contentPadding=PaddingValues(start=20.dp,end=20.dp,top=10.dp,
-            bottom=QuietTheme.spacing.listBottomBuffer + if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) 88.dp else 0.dp),
+            bottom=QuietTheme.spacing.listBottomBuffer + navBottomPadding + if(section=="outputs" && selecting && selectedOutputs.isNotEmpty()) 88.dp else 0.dp),
         verticalArrangement=Arrangement.spacedBy(12.dp)
     ) {
         if(selecting && (section=="outputs" || section=="trash")) {
@@ -702,6 +717,7 @@ import com.jumlo.app.model.*
                                 itemId = output.id,
                                 itemLabel = output.displayName,
                                 dragState = dragState,
+                                currentFolderId = activeFolderId,
                                 resolveDragIds = { if (selecting && output.id in selected) selected else setOf(output.id) },
                                 onDragStartHaptic = { haptics.dragStart() },
                                 onHoverHaptic = { haptics.snap() },
@@ -731,6 +747,7 @@ import com.jumlo.app.model.*
                                         itemId = output.id,
                                         itemLabel = output.displayName,
                                         dragState = dragState,
+                                        currentFolderId = activeFolderId,
                                         resolveDragIds = { if (selecting && output.id in selected) selected else setOf(output.id) },
                                         onDragStartHaptic = { haptics.dragStart() },
                                         onHoverHaptic = { haptics.snap() },
@@ -1069,20 +1086,47 @@ import com.jumlo.app.model.*
             }
         }
     }
-    if (!selecting && section == "outputs") {
-        FloatingActionButton(
+    val fabExpanded by remember(listState) {
+        derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 36 }
+    }
+    val reduceMotion = com.jumlo.app.ui.theme.LocalReducedMotion.current
+    AnimatedVisibility(
+        visible = !selecting && section == "outputs" && !dragState.isDragging,
+        enter = if (reduceMotion) androidx.compose.animation.EnterTransition.None else fadeIn() + scaleIn(initialScale = 0.85f),
+        exit = if (reduceMotion) androidx.compose.animation.ExitTransition.None else fadeOut() + scaleOut(targetScale = 0.85f),
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .navigationBarsPadding()
+            .padding(end = 20.dp, bottom = QuietTheme.spacing.dockHeight + QuietTheme.spacing.dockBottomOffset + 12.dp)
+    ) {
+        ExtendedFloatingActionButton(
             onClick = { haptics.actionClick(); quickAddOpen = true },
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            expanded = fabExpanded,
+            icon = {
+                Icon(
+                    Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.files_quick_add_title),
+                    modifier = Modifier.size(22.dp)
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.files_fab_add),
+                    style = QuietTheme.typography.button
+                )
+            },
+            shape = RoundedCornerShape(18.dp),
+            containerColor = colors.primary,
+            contentColor = colors.onPrimary,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 4.dp,
+                pressedElevation = 8.dp,
+                hoveredElevation = 6.dp
+            ),
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = QuietTheme.spacing.listBottomBuffer - 12.dp)
                 .pressFeedback()
                 .testTag("files.fab.add")
-        ) {
-            Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.files_quick_add_title))
-        }
+        )
     }
     FloatingDragGhost(dragState = dragState, modifier = Modifier.align(AbsoluteAlignment.TopLeft))
     }
@@ -1172,7 +1216,7 @@ import com.jumlo.app.model.*
                     "pdf_privacy_redact", "pdf_05", "pdf_06", "pdf_04", "pdf_crop"
                 )
                 mime.startsWith("image/") || ext in setOf("jpg", "jpeg", "png", "webp", "heic", "heif", "bmp") -> listOf(
-                    "pdf_02", "img_04", "img_01", "img_02", "img_watermark", "img_join", "pdf_ocr"
+                    "pdf_02", "img_bg_remove", "img_04", "img_01", "img_02", "img_watermark", "img_join", "pdf_ocr"
                 )
                 mime.contains("word") || mime.contains("spreadsheet") ||
                     mime.contains("presentation") || mime.contains("officedocument") ||

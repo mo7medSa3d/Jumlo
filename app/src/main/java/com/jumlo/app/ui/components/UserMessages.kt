@@ -140,6 +140,8 @@ import com.jumlo.app.R
     code=="SHA256_MISMATCH" -> R.string.msg_sha256_mismatch
     code in setOf("NO_ACROFORM","FORM_FIELD_NOT_FOUND") -> R.string.msg_no_acroform
     code=="ANIMATED_IMAGE_UNSUPPORTED" -> R.string.msg_animated_image_unsupported
+    code=="BG_REMOVE_MODEL_UNAVAILABLE" -> R.string.msg_bg_remove_model_unavailable
+    code=="BG_REMOVE_NO_SUBJECT" -> R.string.msg_bg_remove_no_subject
     code in setOf("MALFORMED_IMAGE","IMAGE_DECODE_FAILED","IMAGE_ENCODE_FAILED","IMAGE_VERIFY_FAILED") -> R.string.msg_image_corrupt
     code in setOf("EMPTY_PDF","PDF_VERIFY_FAILED","INVALID_PDF_PAGE_GEOMETRY") -> R.string.msg_pdf_corrupt
     code=="ONE_PDF_REQUIRED" || code=="ONE_ZIP_REQUIRED" || code=="ONE_SOURCE_REQUIRED" -> R.string.msg_one_file

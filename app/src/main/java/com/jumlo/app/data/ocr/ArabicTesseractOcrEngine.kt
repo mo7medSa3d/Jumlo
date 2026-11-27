@@ -79,6 +79,7 @@ class ArabicTesseractOcrEngine @Inject constructor(
                     try {
                         api.setVariable("user_defined_dpi", "300")
                         api.setVariable("preserve_interword_spaces", "1")
+                        api.setVariable("tessedit_do_invert", "0")
                         api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
                         api.setImage(prepared)
                         api.utF8Text.orEmpty()
@@ -233,7 +234,12 @@ class ArabicTesseractOcrEngine @Inject constructor(
         onDownloadProgress: (Float) -> Unit
     ): Boolean {
         val target = File(tessDir, "$code.traineddata")
-        if (isValidTrainedData(target, minBytes) && verifyFileChecksum(target, code)) return true
+        val cacheKey = "${target.absolutePath}:$minBytes"
+        if (cacheKey in verifiedModels && target.isFile) return true
+        if (isValidTrainedData(target, minBytes) && verifyFileChecksum(target, code)) {
+            verifiedModels.add(cacheKey)
+            return true
+        }
         if (target.exists()) target.delete()
 
         val temp = File(tessDir, "$code-${UUID.randomUUID()}.tmp")
@@ -406,9 +412,10 @@ class ArabicTesseractOcrEngine @Inject constructor(
     }
 
     companion object {
-        private const val TARGET_WIDTH_PX = 2400
-        private const val MAX_UPSCALE_FACTOR = 3.0f
-        private const val MAX_PREPROCESS_PIXELS = 16_000_000L
+        private const val TARGET_WIDTH_PX = 1800
+        private const val MAX_UPSCALE_FACTOR = 2.5f
+        private const val MAX_PREPROCESS_PIXELS = 6_000_000L
+        private val verifiedModels: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
         private const val MIN_ARA_BYTES = 1_000_000L
         private const val MIN_ENG_BYTES = 2_500_000L
         private const val MAX_MODEL_BYTES = 32L * 1024 * 1024

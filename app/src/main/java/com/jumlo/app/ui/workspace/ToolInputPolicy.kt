@@ -74,7 +74,7 @@ object ToolInputPolicy {
             allowMultiple = false,
             showPhotoGallery = true
         )
-        "pdf_02", "img_01", "img_02", "img_03", "img_04", "img_watermark", "img_join" -> ToolInputSpec(
+        "pdf_02", "img_01", "img_02", "img_03", "img_04", "img_bg_remove", "img_watermark", "img_join" -> ToolInputSpec(
             kind = ToolInputKind.IMAGES,
             mimeTypes = listOf("image/*"),
             allowMultiple = true,

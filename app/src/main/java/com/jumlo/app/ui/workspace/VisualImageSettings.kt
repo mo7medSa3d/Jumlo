@@ -22,6 +22,13 @@ import com.jumlo.app.model.WorkspaceDraft
 import com.jumlo.app.ui.theme.QuietTheme
 
 private val IMAGE_OUTPUT_FORMATS = listOf("JPEG","PNG","WEBP")
+private val ALPHA_IMAGE_FORMATS = listOf("PNG","WEBP")
+private val BG_MODES = listOf(
+    "TRANSPARENT" to R.string.bg_mode_transparent,
+    "WHITE" to R.string.bg_mode_white,
+    "DARK" to R.string.bg_mode_dark,
+    "BLUE" to R.string.bg_mode_blue
+)
 private val VISUAL_PDF_TOOLS = setOf("pdf_02","pdf_07","pdf_long_image","pdf_compress")
 private val SCALE_PRESETS = listOf(25,50,75,100,150,200)
 private val EDGE_PRESETS = listOf(640,1280,1920,2560,4096)
@@ -88,6 +95,21 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                 VisualChoiceCards(JOIN_LAYOUTS,draft.text1.ifBlank {"GRID2"},paper=false) {v->edit {it.copy(text1=v)}}
                 InteractiveIntSlider(stringResource(R.string.field_gap_px),draftNumber(draft.num1,8),0,500,8) {v->edit {it.copy(num1=v.toString())}}
             }
+            if(tool=="img_bg_remove") {
+                val activeBgMode = draft.text1.ifBlank { "TRANSPARENT" }
+                PresetChoices(stringResource(R.string.field_bg_backdrop), BG_MODES, activeBgMode) { mode ->
+                    edit { current ->
+                        val nextFormat = if (mode == "TRANSPARENT" && current.format == "JPEG") "PNG" else current.format
+                        current.copy(text1 = mode, format = nextFormat)
+                    }
+                }
+                InteractiveToggle(stringResource(R.string.field_bg_trim), draft.flag1) { v ->
+                    edit { it.copy(flag1 = v) }
+                }
+                if (activeBgMode == "TRANSPARENT") {
+                    Text(stringResource(R.string.field_bg_transparent_note), style = QuietTheme.typography.metadata)
+                }
+            }
             // img_watermark opacity is already controlled in VisualWatermarkEditor.
             if(tool=="pdf_compress") {
                 val quality = draft.quality.toIntOrNull() ?: 52
@@ -141,8 +163,9 @@ internal fun VisualImageSettings(draft:WorkspaceDraft,edit:((WorkspaceDraft)->Wo
                     }
                 }
                 Text(stringResource(R.string.field_output_format),style=QuietTheme.typography.metadataStrong)
+                val formats = if (tool == "img_bg_remove" && draft.text1.ifBlank { "TRANSPARENT" } == "TRANSPARENT") ALPHA_IMAGE_FORMATS else IMAGE_OUTPUT_FORMATS
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    items(IMAGE_OUTPUT_FORMATS,key={it},contentType={"format-chip"}) {format ->
+                    items(formats,key={it},contentType={"format-chip"}) {format ->
                         FilterChip(draft.format==format,shape=QuietTheme.shapes.pill,border=null,onClick={edit {it.copy(format=format)}},label={Text(format)})
                     }
                 }

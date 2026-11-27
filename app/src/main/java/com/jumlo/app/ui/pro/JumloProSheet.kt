@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -14,7 +15,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -25,25 +28,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.jumlo.app.R
 import com.jumlo.app.data.billing.JumloBillingManager
 import com.jumlo.app.data.billing.ProEntitlement
 import com.jumlo.app.ui.icons.Icons
+import com.jumlo.app.ui.icons.rounded.AutoAwesome
 import com.jumlo.app.ui.icons.rounded.Bolt
-import com.jumlo.app.ui.icons.rounded.Check
+import com.jumlo.app.ui.icons.rounded.CheckCircle
 import com.jumlo.app.ui.icons.rounded.Close
 import com.jumlo.app.ui.icons.rounded.DocumentScanner
 import com.jumlo.app.ui.icons.rounded.Lock
 import com.jumlo.app.ui.icons.rounded.Security
+import com.jumlo.app.ui.icons.rounded.Star
 import com.jumlo.app.ui.settings.PrivacyDialog
 import com.jumlo.app.ui.theme.QuietTheme
 
+private val GoldLight = Color(0xFFFFE58F)
 private val GoldPrimary = Color(0xFFD4A017)
+private val GoldDeep = Color(0xFFB47B00)
 private val GoldOnButton = Color(0xFF1A1200)
 
-/** Scrollable iOS-style Pro paywall dialog with custom geometric emblem, value list, plans, and offline legal dialogs. */
+/** Scrollable luxury champagne-gold Pro upgrade sheet with bespoke crown emblem, benefit cards, and plan selector. */
 @Composable
 fun JumloProSheet(
     entitlement: ProEntitlement,
@@ -56,6 +64,16 @@ fun JumloProSheet(
     var showTerms by rememberSaveable { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
+    val isDark = colors.background.luminance() < 0.5f
+
+    val sheetBg = if (isDark) Color(0xFF12100B) else colors.surfaceContainerLow
+    val goldSweep = Brush.verticalGradient(
+        listOf(
+            GoldPrimary.copy(alpha = if (isDark) 0.22f else 0.14f),
+            Color.Transparent
+        )
+    )
+    val buttonGradient = Brush.horizontalGradient(listOf(GoldLight, GoldPrimary, Color(0xFFC88A04)))
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -63,166 +81,235 @@ fun JumloProSheet(
     ) {
         Surface(
             shape = QuietTheme.shapes.heroCard,
-            color = colors.surfaceContainerLow,
-            border = BorderStroke(1.2.dp, GoldPrimary.copy(alpha = 0.45f)),
+            color = sheetBg,
+            border = BorderStroke(1.25.dp, GoldPrimary.copy(alpha = 0.52f)),
             shadowElevation = 24.dp,
             modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 24.dp)
-                .widthIn(max = 420.dp)
+                .padding(horizontal = 18.dp, vertical = 22.dp)
+                .widthIn(max = 430.dp)
                 .fillMaxWidth()
                 .testTag("pro.sheet")
         ) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(22.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(Modifier.fillMaxWidth()) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_pro_hero_badge),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(72.dp)
-                    )
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.align(Alignment.TopEnd).size(40.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            stringResource(R.string.action_close),
-                            tint = colors.onSurfaceVariant
-                        )
-                    }
-                }
-
+            Box(Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(210.dp)
+                        .background(goldSweep)
+                )
                 Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 22.dp, vertical = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.pro_hero_headline),
-                        style = QuietTheme.typography.sectionTitle.copy(fontWeight = FontWeight.Bold),
-                        color = colors.onSurface,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.semantics { heading() }
-                    )
-                    Text(
-                        text = stringResource(R.string.pro_hero_subheadline),
-                        style = QuietTheme.typography.metadata,
-                        color = colors.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                    Box(Modifier.fillMaxWidth()) {
+                        Surface(
+                            shape = QuietTheme.shapes.pill,
+                            color = GoldPrimary.copy(alpha = 0.16f),
+                            border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.4f)),
+                            modifier = Modifier.align(Alignment.Center)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.pro_eyebrow),
+                                style = QuietTheme.typography.badge.copy(letterSpacing = 1.2.sp),
+                                color = if (isDark) GoldLight else GoldDeep,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                        Surface(
+                            onClick = onDismiss,
+                            shape = CircleShape,
+                            color = colors.onSurface.copy(alpha = 0.08f),
+                            modifier = Modifier.align(Alignment.CenterEnd).size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    stringResource(R.string.action_close),
+                                    tint = colors.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
 
-                Surface(
-                    shape = QuietTheme.shapes.card,
-                    color = pillars.cardSurface,
-                    border = BorderStroke(1.dp, pillars.cardBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_pro_crown),
+                        contentDescription = null,
+                        modifier = Modifier.size(84.dp)
+                    )
+
                     Column(
-                        Modifier.fillMaxWidth().padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(11.dp)
-                    ) {
-                        ProBenefitRow(Icons.Rounded.Bolt, stringResource(R.string.pro_benefit_offline))
-                        ProBenefitRow(Icons.Rounded.DocumentScanner, stringResource(R.string.pro_benefit_ocr))
-                        ProBenefitRow(Icons.Rounded.Lock, stringResource(R.string.pro_benefit_vault))
-                        ProBenefitRow(Icons.Rounded.Security, stringResource(R.string.pro_benefit_privacy))
-                    }
-                }
-
-                if (entitlement.isPro) {
-                    Surface(shape = QuietTheme.shapes.pill, color = GoldPrimary.copy(alpha = 0.16f)) {
-                        Text(
-                            stringResource(R.string.pro_active_badge),
-                            style = QuietTheme.typography.metadataStrong.copy(fontWeight = FontWeight.Bold),
-                            color = GoldPrimary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        PlanCard(
-                            title = stringResource(R.string.pro_lifetime),
-                            price = entitlement.lifetimePrice ?: stringResource(R.string.pro_one_time),
-                            badge = stringResource(R.string.pro_best_value),
-                            selected = selectedId == JumloBillingManager.SKU_LIFETIME,
-                            onClick = { selectedId = JumloBillingManager.SKU_LIFETIME },
-                            modifier = Modifier.weight(1f)
-                        )
-                        PlanCard(
-                            title = stringResource(R.string.pro_annual),
-                            price = entitlement.annualPrice ?: stringResource(R.string.pro_yearly),
-                            badge = null,
-                            selected = selectedId == JumloBillingManager.SKU_ANNUAL,
-                            onClick = { selectedId = JumloBillingManager.SKU_ANNUAL },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Button(
-                        onClick = { onPurchase(selectedId) },
-                        shape = QuietTheme.shapes.pill,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GoldPrimary,
-                            contentColor = GoldOnButton
-                        ),
-                        modifier = Modifier.fillMaxWidth().height(52.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.pro_unlock_action),
-                            style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                            text = stringResource(R.string.pro_hero_headline),
+                            style = QuietTheme.typography.screenTitle.copy(fontWeight = FontWeight.Bold),
+                            color = colors.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.semantics { heading() }
                         )
-                    }
-                    Text(
-                        text = stringResource(R.string.pro_billing_note),
-                        style = QuietTheme.typography.metadata,
-                        color = colors.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
-                    )
-                    TextButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            stringResource(R.string.pro_restore),
-                            style = QuietTheme.typography.metadataStrong,
-                            color = colors.onSurfaceVariant
+                            text = stringResource(R.string.pro_hero_subheadline),
+                            style = QuietTheme.typography.bodyMedium,
+                            color = colors.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 6.dp)
                         )
                     }
-                }
 
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.pro_legal_privacy),
-                        style = QuietTheme.typography.metadata,
-                        color = colors.onSurfaceVariant,
-                        modifier = Modifier
-                            .clip(QuietTheme.shapes.pill)
-                            .clickable { showPrivacy = true }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Text(
-                        text = "·",
-                        style = QuietTheme.typography.metadata,
-                        color = colors.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(horizontal = 2.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.pro_legal_terms),
-                        style = QuietTheme.typography.metadata,
-                        color = colors.onSurfaceVariant,
-                        modifier = Modifier
-                            .clip(QuietTheme.shapes.pill)
-                            .clickable { showTerms = true }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Surface(
+                        shape = QuietTheme.shapes.card,
+                        color = if (isDark) Color(0xFF1A1710) else pillars.cardSurface,
+                        border = BorderStroke(1.dp, GoldPrimary.copy(alpha = 0.24f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ProBenefitRow(Icons.Rounded.DocumentScanner, stringResource(R.string.pro_benefit_offline))
+                            HorizontalDivider(color = GoldPrimary.copy(alpha = 0.12f))
+                            ProBenefitRow(Icons.Rounded.AutoAwesome, stringResource(R.string.pro_benefit_ocr))
+                            HorizontalDivider(color = GoldPrimary.copy(alpha = 0.12f))
+                            ProBenefitRow(Icons.Rounded.Lock, stringResource(R.string.pro_benefit_vault))
+                            HorizontalDivider(color = GoldPrimary.copy(alpha = 0.12f))
+                            ProBenefitRow(Icons.Rounded.Security, stringResource(R.string.pro_benefit_privacy))
+                        }
+                    }
+
+                    if (entitlement.isPro) {
+                        Surface(
+                            shape = QuietTheme.shapes.card,
+                            color = GoldPrimary.copy(alpha = 0.16f),
+                            border = BorderStroke(1.5.dp, GoldPrimary),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.ic_pro_crown),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                                Text(
+                                    stringResource(R.string.pro_active_badge),
+                                    style = QuietTheme.typography.sectionTitle,
+                                    color = if (isDark) GoldLight else GoldDeep
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            PlanCard(
+                                title = stringResource(R.string.pro_lifetime),
+                                subtitle = stringResource(R.string.pro_lifetime_subtitle),
+                                price = entitlement.lifetimePrice ?: "$14.99",
+                                badge = stringResource(R.string.pro_best_value),
+                                selected = selectedId == JumloBillingManager.SKU_LIFETIME,
+                                isDark = isDark,
+                                onClick = { selectedId = JumloBillingManager.SKU_LIFETIME },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            PlanCard(
+                                title = stringResource(R.string.pro_annual),
+                                subtitle = stringResource(R.string.pro_annual_subtitle),
+                                price = entitlement.annualPrice ?: "$4.99 / yr",
+                                badge = null,
+                                selected = selectedId == JumloBillingManager.SKU_ANNUAL,
+                                isDark = isDark,
+                                onClick = { selectedId = JumloBillingManager.SKU_ANNUAL },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        Surface(
+                            onClick = { onPurchase(selectedId) },
+                            shape = QuietTheme.shapes.pill,
+                            shadowElevation = 8.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .clip(QuietTheme.shapes.pill)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(buttonGradient),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(Icons.Rounded.Star, null, tint = GoldOnButton, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = stringResource(
+                                            if (selectedId == JumloBillingManager.SKU_LIFETIME) R.string.pro_unlock_lifetime
+                                            else R.string.pro_unlock_annual
+                                        ),
+                                        style = QuietTheme.typography.button.copy(fontWeight = FontWeight.Bold),
+                                        color = GoldOnButton
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = stringResource(R.string.pro_billing_note),
+                            style = QuietTheme.typography.metadata,
+                            color = colors.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                        )
+                        TextButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                stringResource(R.string.pro_restore),
+                                style = QuietTheme.typography.metadataStrong,
+                                color = if (isDark) GoldLight else GoldDeep
+                            )
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.pro_legal_privacy),
+                            style = QuietTheme.typography.metadata,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier
+                                .clip(QuietTheme.shapes.pill)
+                                .clickable { showPrivacy = true }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                        Text(
+                            text = "·",
+                            style = QuietTheme.typography.metadata,
+                            color = colors.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.pro_legal_terms),
+                            style = QuietTheme.typography.metadata,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier
+                                .clip(QuietTheme.shapes.pill)
+                                .clickable { showTerms = true }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
         }
@@ -265,9 +352,9 @@ private fun ProBenefitRow(icon: ImageVector, label: String) {
     ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(34.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(GoldPrimary.copy(alpha = 0.14f)),
+                .background(GoldPrimary.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -289,69 +376,72 @@ private fun ProBenefitRow(icon: ImageVector, label: String) {
 @Composable
 private fun PlanCard(
     title: String,
+    subtitle: String,
     price: String,
     badge: String?,
     selected: Boolean,
+    isDark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier
 ) {
     val colors = MaterialTheme.colorScheme
     val pillars = QuietTheme.pillars
+    val selectedBg = GoldPrimary.copy(alpha = if (isDark) 0.16f else 0.12f)
+    val baseBg = if (isDark) Color(0xFF1A1710) else pillars.cardSurface
     Surface(
         onClick = onClick,
         shape = QuietTheme.shapes.card,
-        color = if (selected) GoldPrimary.copy(alpha = 0.13f) else pillars.cardSurface,
+        color = if (selected) selectedBg else baseBg,
         border = if (selected) BorderStroke(2.dp, GoldPrimary) else BorderStroke(1.dp, pillars.cardBorder),
         modifier = modifier
     ) {
-        Column(
-            Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+        Row(
+            Modifier.fillMaxWidth().padding(15.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (badge != null) {
-                Surface(
-                    shape = QuietTheme.shapes.pill,
-                    color = GoldPrimary
+            Icon(
+                imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.Bolt,
+                contentDescription = null,
+                tint = if (selected) GoldPrimary else colors.onSurfaceVariant.copy(alpha = 0.65f),
+                modifier = Modifier.size(22.dp)
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = badge,
-                        style = QuietTheme.typography.metadata.copy(fontWeight = FontWeight.Bold),
-                        color = GoldOnButton,
+                        text = title,
+                        style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = colors.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        overflow = TextOverflow.Ellipsis
                     )
+                    if (badge != null) {
+                        Surface(shape = QuietTheme.shapes.pill, color = GoldPrimary) {
+                            Text(
+                                text = badge,
+                                style = QuietTheme.typography.badge.copy(fontWeight = FontWeight.Bold),
+                                color = GoldOnButton,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
-            } else {
-                Spacer(Modifier.height(20.dp))
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
                 Text(
-                    title,
-                    style = QuietTheme.typography.metadataStrong,
-                    color = colors.onSurface,
+                    text = subtitle,
+                    style = QuietTheme.typography.metadata,
+                    color = colors.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+                    overflow = TextOverflow.Ellipsis
                 )
-                if (selected) {
-                    Icon(
-                        Icons.Rounded.Check,
-                        contentDescription = null,
-                        tint = GoldPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
             }
             Text(
-                price,
+                text = price,
                 style = QuietTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                color = if (selected) GoldPrimary else colors.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = if (selected) (if (isDark) GoldLight else GoldDeep) else colors.onSurface,
+                maxLines = 1
             )
         }
     }

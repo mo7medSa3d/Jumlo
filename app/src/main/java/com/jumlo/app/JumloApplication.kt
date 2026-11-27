@@ -65,12 +65,19 @@ class JumloApplication : Application(), Configuration.Provider, ImageLoaderFacto
                     .setScannerMode(com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL)
                     .build()
             )
+            val segmenter = com.google.mlkit.vision.segmentation.subject.SubjectSegmentation.getClient(
+                com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions.Builder()
+                    .enableForegroundBitmap()
+                    .enableForegroundConfidenceMask()
+                    .build()
+            )
             val installer = com.google.android.gms.common.moduleinstall.ModuleInstall.getClient(this)
-            installer.areModulesAvailable(scanner).addOnSuccessListener { avail ->
+            installer.areModulesAvailable(scanner, segmenter).addOnSuccessListener { avail ->
                 if (!avail.areModulesAvailable()) {
                     installer.installModules(
                         com.google.android.gms.common.moduleinstall.ModuleInstallRequest.newBuilder()
                             .addApi(scanner)
+                            .addApi(segmenter)
                             .build()
                     )
                 }

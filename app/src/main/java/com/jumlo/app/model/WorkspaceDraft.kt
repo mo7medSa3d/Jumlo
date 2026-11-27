@@ -121,6 +121,20 @@ import kotlinx.serialization.json.Json
                     fraction(num2.ifBlank{"0.5"}),fraction(num3.ifBlank{"0.5"}),watermarkScale,number(text4.ifBlank{"0"},-180,180),text2=="TILE",text3.ifBlank{"#FFFFFF"},watermarkFont))
             }
             "img_join" -> Json.encodeToString(com.jumlo.app.data.processing.ImageJoinSettings(text1.ifBlank{"GRID2"},number(num1.ifBlank{"8"},0,500),0,converted))
+            "img_bg_remove" -> {
+                val mode = when (text1.trim().uppercase()) {
+                    "WHITE" -> "WHITE"
+                    "DARK" -> "DARK"
+                    "BLUE" -> "BLUE"
+                    else -> "TRANSPARENT"
+                }
+                val bgOut = if (mode == "TRANSPARENT" && converted.format.equals("JPEG", ignoreCase = true)) {
+                    converted.copy(format = "PNG")
+                } else {
+                    converted
+                }
+                Json.encodeToString(com.jumlo.app.data.processing.ImageBgRemoveSettings(mode, flag1, bgOut))
+            }
             "file_batch_rename" -> {
                 val pattern=text1.ifBlank{"file-{n}"}
                 require(pattern.length<=200) { "INVALID_RENAME_PATTERN" }
@@ -133,10 +147,11 @@ import kotlinx.serialization.json.Json
     }
     companion object {
         fun normalizeDigits(text:String):String=text.trim().map { c -> when(c) { in '\u0660'..'\u0669' -> '0'+(c-'\u0660');in '\u06f0'..'\u06f9' -> '0'+(c-'\u06f0');'\u066b' -> '.';else->c } }.joinToString("")
-        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_to_docx"->"Document.docx";"pdf_to_pptx"->"Document.pptx";"pdf_ocr"->"Extracted.txt";"pdf_02"->"Images.pdf";"pdf_03"->"Merged.pdf";"pdf_04"->"Organized.pdf";"pdf_05"->"Split.pdf";"pdf_06"->"Extracted.pdf";"pdf_long_image"->"Long.png";"pdf_crop","pdf_compress","pdf_stamp","pdf_signature","pdf_protect","pdf_nup","pdf_privacy_redact","office_to_pdf"->"Document.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07" || id=="pdf_long_image") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";else->"converted_" },dpi=if(id=="pdf_long_image") "300" else "144",quality=when(id) { "img_04"->"75"; "pdf_long_image"->"100"; else->"85" },flag1=id=="pdf_long_image").let { initial ->
+        fun forTool(id:String,sources:List<String>)=WorkspaceDraft(toolId=id,sourceIds=sources,outputName=when(id) { "pdf_to_docx"->"Document.docx";"pdf_to_pptx"->"Document.pptx";"pdf_ocr"->"Extracted.txt";"pdf_02"->"Images.pdf";"pdf_03"->"Merged.pdf";"pdf_04"->"Organized.pdf";"pdf_05"->"Split.pdf";"pdf_06"->"Extracted.pdf";"pdf_long_image"->"Long.png";"pdf_crop","pdf_compress","pdf_stamp","pdf_signature","pdf_protect","pdf_nup","pdf_privacy_redact","office_to_pdf"->"Document.pdf";"file_07","file_08","file_encrypted_zip"->"Archive.zip";else->"download.bin" },format=if(id=="pdf_07" || id=="pdf_long_image" || id=="img_bg_remove") "PNG" else "JPEG",prefix=when(id) { "img_02"->"resized_";"img_03"->"cropped_";"img_04"->"compressed_";"img_bg_remove"->"nobg_";else->"converted_" },dpi=if(id=="pdf_long_image") "300" else "144",quality=when(id) { "img_04"->"75"; "pdf_long_image","img_bg_remove"->"95".takeIf { id == "img_bg_remove" } ?: "100"; else->"85" },flag1=id=="pdf_long_image").let { initial ->
             when(id) {
                 "pdf_signature" -> initial.copy(cropLeft="0.6",cropTop="0.75",cropRight="0.95",cropBottom="0.95")
                 "pdf_compress" -> initial.copy(num1="180",quality="75")
+                "img_bg_remove" -> initial.copy(text1="TRANSPARENT")
                 "file_batch_rename" -> initial.copy(renameDate=java.time.LocalDate.now().toString())
                 else -> initial
             }

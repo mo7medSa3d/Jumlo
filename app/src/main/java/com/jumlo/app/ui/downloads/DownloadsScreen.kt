@@ -64,7 +64,7 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     Box(Modifier.fillMaxSize()) {
     LazyColumn(
         modifier=Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),
-        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=QuietTheme.spacing.listBottomBuffer),
+        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
         verticalArrangement=Arrangement.spacedBy(14.dp)
     ) {
         item("download-summary") {

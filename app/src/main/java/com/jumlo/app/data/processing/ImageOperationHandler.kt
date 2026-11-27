@@ -17,7 +17,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
 
-@Singleton class ImageOperationHandler @Inject constructor():OperationHandler {
+@Singleton class ImageOperationHandler @Inject constructor(
+    private val segmentation: SubjectSegmentationEngine
+):OperationHandler {
+    private val lenientJson = Json { ignoreUnknownKeys = true }
     private fun resolveOutputFileName(output: ImageConversionSettings, sourceDisplayName: String, index: Int, totalCount: Int, extOverride: String? = null): String {
         val ext = (extOverride ?: BitmapTransforms.extension(output.format)).trimStart('.')
         val custom = output.customOutputName.substringBeforeLast('.', output.customOutputName).trim()
@@ -50,7 +53,6 @@ import kotlin.math.roundToInt
 
     override suspend fun execute(request:JobRequest,context:ExecutionContext):List<ItemOutcome> = withContext(Dispatchers.IO) {
         require(request.sourceIds.isNotEmpty()) { "NO_SOURCES" }
-        val lenientJson = Json { ignoreUnknownKeys = true }
         val resize=if(request.toolId=="img_02") lenientJson.decodeFromString<ImageResizeSettings>(request.settingsJson) else null
         val compress=if(request.toolId=="img_04") lenientJson.decodeFromString<ImageCompressionSettings>(request.settingsJson) else null
         val crop=when(request.toolId) {
@@ -65,7 +67,7 @@ import kotlin.math.roundToInt
             "img_02" -> resize!!.output
             "img_03" -> crop!!.output
             "img_04" -> compress!!.output
-            "img_watermark","img_join" -> return@withContext extras(request,context)
+            "img_bg_remove","img_watermark","img_join" -> return@withContext extras(request,context)
             else -> throw OperationFailure("CAPABILITY_UNAVAILABLE")
         }
         require(output.stripMetadata) { "METADATA_PRESERVATION_UNQUALIFIED" }
@@ -259,6 +261,49 @@ import kotlin.math.roundToInt
             return ItemOutcome(key,ItemStatus.CREATED,rec.id)
         }
         when(request.toolId){
+            "img_bg_remove" -> {
+                val settings = lenientJson.decodeFromString<ImageBgRemoveSettings>(request.settingsJson)
+                require(settings.output.stripMetadata) { "METADATA_PRESERVATION_UNQUALIFIED" }
+                val mode = SubjectSegmentationEngine.normalizeMode(settings.backgroundMode)
+                val outSettings = if (mode == SubjectSegmentationEngine.MODE_TRANSPARENT &&
+                    settings.output.format.equals("JPEG", ignoreCase = true)
+                ) {
+                    settings.output.copy(format = "PNG")
+                } else {
+                    settings.output
+                }
+                val totalCount = request.sourceIds.size
+                request.sourceIds.forEachIndexed { index, id ->
+                    val key = "image:$index"
+                    try {
+                        val source = context.sources.get(id)
+                        val name = resolveOutputFileName(outSettings, source.displayName, index, totalCount)
+                        outcomes += publishBytes(key, name, BitmapTransforms.mime(outSettings.format), source.sizeBytes) { stage ->
+                            context.sources.withSeekable(id, request.id) { f ->
+                                decodeForWork(f, effectiveBudget, maxEdge = 2400).use { decoded ->
+                                    val cut = segmentation.removeBackground(
+                                        source = decoded.bitmap,
+                                        backgroundMode = mode,
+                                        trimTransparent = settings.trimTransparent
+                                    )
+                                    try {
+                                        encodeWithOomRetry(cut, stage, outSettings, effectiveBudget, context.checkCancellation)
+                                    } finally {
+                                        if (!cut.isRecycled) cut.recycle()
+                                    }
+                                }
+                            }
+                        }
+                    } catch (cancel: CancellationException) {
+                        throw cancel
+                    } catch (e: Exception) {
+                        outcomes += ItemOutcome(key, ItemStatus.FAILED, errorCode = stableError(e))
+                    } catch (oom: OutOfMemoryError) {
+                        outcomes += ItemOutcome(key, ItemStatus.FAILED, errorCode = "LOW_MEMORY")
+                    }
+                    context.report(JobProgress(JobStage.RUNNING, (index + 1).toLong(), totalCount.toLong()))
+                }
+            }
             "img_watermark" -> {
                 val settings=Json.decodeFromString<ImageWatermarkSettings>(request.settingsJson)
                 require(settings.output.stripMetadata) { "METADATA_PRESERVATION_UNQUALIFIED" }

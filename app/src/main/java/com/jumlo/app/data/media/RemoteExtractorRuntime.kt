@@ -364,6 +364,10 @@ internal class RoutingMediaRuntime(private val engines: List<MediaRuntime>) : Me
                 }
                 if (firstError == null && code != "MEDIA_SITE_UNSUPPORTED") {
                     firstError = failure
+                } else if (code.startsWith("LINKEDIN_") && firstError?.message in setOf(
+                        "MEDIA_EXTRACTION_FAILED", "MEDIA_EXTRACTOR_CHANGED", "MEDIA_NO_USABLE_FORMAT", "MEDIA_SOURCE_REJECTED"
+                    )) {
+                    firstError = failure
                 }
                 // Hard access-control or consent refusals are terminal; extractor/client
                 // compatibility errors (e.g. site layout change or 403 on one client) fall through

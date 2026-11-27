@@ -33,7 +33,7 @@ object IdCardA4Composer {
         var clean: Bitmap? = null
         try {
             clean = DocumentFilterEngine.apply(land, filter)
-            return JPEGFactory.createFromImage(doc, clean, 0.92f)
+            return JPEGFactory.createFromImage(doc, clean, 0.95f)
         } finally {
             if (clean != null && clean !== land) clean.recycle()
             if (land !== source) land.recycle()

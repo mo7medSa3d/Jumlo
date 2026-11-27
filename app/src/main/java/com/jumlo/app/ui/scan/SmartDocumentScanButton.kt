@@ -93,6 +93,40 @@ internal fun SmartDocumentScanLauncher(
                         busy = false
                     }
                 }
+            } else if (!jpegOutput && jpegUris.isNotEmpty()) {
+                // Build PDF directly from the scanner's full-resolution cropped JPEG pages instead of Play Services' downscaled PDF output.
+                busy = true
+                scope.launch {
+                    var jpegs: List<File>? = null
+                    var ownedPdf: File? = null
+                    try {
+                        jpegs = SmartScanResultStore.copyJpegPages(context, jpegUris)
+                        ownedPdf = SmartScanResultStore.createPdfFromImages(context, jpegs)
+                        if (active) {
+                            latestResult(requireNotNull(ownedPdf))
+                            ownedPdf = null
+                        }
+                    } catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) {
+                        if (pdf != null && pdf.pageCount > 0) {
+                            runCatching { SmartScanResultStore.copyPdf(context, pdf.uri, pdf.pageCount) }
+                                .onSuccess { fallbackPdf ->
+                                    if (active) latestResult(fallbackPdf) else fallbackPdf.delete()
+                                }
+                                .onFailure { error = true }
+                        } else {
+                            error = true
+                        }
+                    } catch (_: OutOfMemoryError) {
+                        error = true
+                    } finally {
+                        withContext(NonCancellable + Dispatchers.IO) {
+                            jpegs?.forEach { it.delete() }
+                            ownedPdf?.delete()
+                        }
+                        busy = false
+                    }
+                }
             } else if (pdf == null || pdf.pageCount <= 0) error = true
             else {
                 busy = true

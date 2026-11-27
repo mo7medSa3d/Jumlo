@@ -62,6 +62,7 @@ object ToolCatalogue {
                 "img_01",        // convert images
                 "img_02",        // resize
                 "img_04",        // edit, crop, rotate & compress
+                "img_bg_remove", // remove background
                 "img_join",
                 "img_watermark"
             ),
@@ -117,6 +118,7 @@ object ToolCatalogue {
     fun searchAliases(toolId: String): String = when (toolId) {
         "scan_id_card" -> "id card passport front back بطاقة هوية جواز"
         "img_04" -> "convert crop rotate flip optimize compress تحويل قص تدوير قلب تعديل ضغط"
+        "img_bg_remove" -> "remove background cutout transparent eraser png خلفية إزالة تفريغ شفافية"
         "file_07" -> "encrypt encrypted password aes archive zip مشفر كلمة مرور أرشيف ضغط"
         "dl_media" -> "direct link batch url links video audio download رابط مباشر دفعة روابط فيديو صوت تنزيل"
         "pdf_protect" -> "unlock decrypt remove password lock protect فك قفل إزالة كلمة المرور حماية"

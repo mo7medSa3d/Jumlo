@@ -49,6 +49,7 @@ import com.jumlo.app.core.media.*
 import com.jumlo.app.ui.components.QuietBadge
 import com.jumlo.app.ui.components.QuietShimmerSkeleton
 import com.jumlo.app.ui.components.QuietTonalButton
+import com.jumlo.app.ui.components.userMessageResource
 import com.jumlo.app.ui.theme.LocalReducedMotion
 import com.jumlo.app.ui.theme.QuietTheme
 import com.jumlo.app.ui.theme.pressFeedback
@@ -236,21 +237,47 @@ private val IMAGE_DIRECT_MODES = listOf(
                     }
                 }
             }
-            state.error?.let { item("error", contentType = "error") {
+            state.error?.let { code -> item("error", contentType = "error") {
+                val errorText = stringResource(userMessageResource(code))
                 Surface(
                     shape = QuietTheme.shapes.card,
-                    color = QuietTheme.pillars.cardSurface,
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.25f)),
                     modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }
                 ) {
-                    Box(
-                        Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "null",
-                            style = QuietTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = errorText,
+                                style = QuietTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (state.url.isNotBlank() && !state.analyzing) {
+                            FilledTonalButton(
+                                onClick = onAnalyzeWithHaptics,
+                                shape = QuietTheme.shapes.activeIndicatorPill,
+                                modifier = Modifier.align(Alignment.End).heightIn(min = 44.dp)
+                            ) {
+                                Icon(Icons.Rounded.Refresh, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.reader_retry), style = QuietTheme.typography.metadataStrong)
+                            }
+                        }
                     }
                 }
             }}

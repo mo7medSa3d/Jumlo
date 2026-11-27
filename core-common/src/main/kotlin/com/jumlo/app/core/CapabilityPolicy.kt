@@ -34,7 +34,7 @@ object CapabilityPolicy {
         "pdf_02", "pdf_07", "pdf_03", "pdf_04", "pdf_05", "pdf_06",
         "pdf_compress", "pdf_crop", "pdf_stamp", "pdf_signature",
         "office_to_pdf", "pdf_to_docx", "pdf_to_pptx", "pdf_ocr",
-        "img_01", "img_02", "img_03", "img_04", "img_watermark", "img_join"
+        "img_01", "img_02", "img_03", "img_04", "img_bg_remove", "img_watermark", "img_join"
     )
     fun availability(id: String): CapabilityAvailability = when {
         id in navigation -> CapabilityAvailability(true, true, null, CapabilityKind.NAVIGATION, CapabilityEvidence.DEVICE_PENDING)

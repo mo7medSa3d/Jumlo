@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="80"
+    android:viewportHeight="80">
+    <!-- Subtle champagne-gold ambient ring -->
+    <path
+        android:fillColor="#22D4A017"
+        android:pathData="M40,40 m-35,0 a35,35 0 1,0 70,0 a35,35 0 1,0 -70,0" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#55E6B83A"
+        android:strokeWidth="1.2"
+        android:pathData="M40,40 m-31,0 a31,31 0 1,0 62,0 a31,31 0 1,0 -62,0" />
+
+    <!-- Crown main faceted gold body -->
+    <path
+        android:fillColor="#FFD4A017"
+        android:pathData="M16,52 L14,27 L29,37 L40,20 L51,37 L66,27 L64,52 Z" />
+    <!-- Left sunlit gold highlight facet -->
+    <path
+        android:fillColor="#FFFFE58F"
+        android:pathData="M16,52 L14,27 L29,37 L40,20 L40,52 Z" />
+    <!-- Right deeper antique-gold facet -->
+    <path
+        android:fillColor="#FFB97A00"
+        android:pathData="M40,20 L51,37 L66,27 L64,52 L40,52 Z" />
+    <!-- Base metallic band -->
+    <path
+        android:fillColor="#FF8C5A00"
+        android:pathData="M16,53.5 L64,53.5 A2.5,2.5 0 0 1 66.5,56 A2.5,2.5 0 0 1 64,58.5 L16,58.5 A2.5,2.5 0 0 1 13.5,56 A2.5,2.5 0 0 1 16,53.5 Z" />
+    <path
+        android:fillColor="#FFFFE082"
+        android:pathData="M16,53.5 L64,53.5 L64,55.2 L16,55.2 Z" />
+
+    <!-- Three crown crest jewels -->
+    <path
+        android:fillColor="#FFFFF4CC"
+        android:pathData="M40,18 m-3.2,0 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" />
+    <path
+        android:fillColor="#FFFFE082"
+        android:pathData="M14,25 m-2.6,0 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0" />
+    <path
+        android:fillColor="#FFFFE082"
+        android:pathData="M66,25 m-2.6,0 a2.6,2.6 0 1,0 5.2,0 a2.6,2.6 0 1,0 -5.2,0" />
+</vector>

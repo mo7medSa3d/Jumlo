@@ -11,7 +11,7 @@ object OutputWorkflowPolicy {
     // Align with JobStore admission. Large byte counts are constrained by real free space at processing time.
     private const val maxFiles = 1000
     private val zipMimes = setOf("application/zip", "application/x-zip-compressed")
-    private val supportedTools = setOf("file_07", "pdf_02", "pdf_03", "pdf_04", "img_01", "img_04", "file_08")
+    private val supportedTools = setOf("file_07", "pdf_02", "pdf_03", "pdf_04", "img_01", "img_04", "img_bg_remove", "file_08")
 
     fun reuseTool(mimeType: String): String = when {
         mimeType.equals("application/pdf", ignoreCase = true) -> "pdf_04"
@@ -35,7 +35,7 @@ object OutputWorkflowPolicy {
             "pdf_02" -> allImages
             "pdf_03" -> files.size >= 2 && allPdf
             "pdf_04" -> one && allPdf
-            "img_01", "img_04" -> one && allImages
+            "img_01", "img_04", "img_bg_remove" -> one && allImages
             "file_08" -> one && allArchives
             else -> false
         }

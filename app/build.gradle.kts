@@ -289,6 +289,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition.devanagari)
     implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.mlkit.text.recognition.korean)
+    implementation(libs.mlkit.subject.segmentation)
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation(libs.androidx.profileinstaller)
 

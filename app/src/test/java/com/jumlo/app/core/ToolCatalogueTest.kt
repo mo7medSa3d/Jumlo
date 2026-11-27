@@ -22,14 +22,14 @@ class ToolCatalogueTest {
 
     @Test fun theVisibleSurfaceIsSmallEnoughToScan() {
         val primary = ToolCatalogue.primaryTools()
-        assertEquals("the catalogue must expose all 25 primary tiles", 25, primary.size)
+        assertEquals("the catalogue must expose all 26 primary tiles", 26, primary.size)
         assertTrue(
             "the catalogue shows ${primary.size} tiles; it must stay a scannable list",
             primary.size in 12..26
         )
         assertTrue(
             primary.containsAll(
-                listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr", "pdf_05", "pdf_long_image", "img_04", "file_07", "dl_media", "scan_id_card")
+                listOf("pdf_to_docx", "pdf_to_pptx", "pdf_ocr", "pdf_05", "pdf_long_image", "img_04", "img_bg_remove", "file_07", "dl_media", "scan_id_card")
             )
         )
     }
@@ -84,7 +84,7 @@ class ToolCatalogueTest {
     }
 
     @Test fun allRestoredToolsAndAliasesAreConsistent() {
-        val visiblePdfAndImage = listOf("img_01", "pdf_06", "pdf_07", "pdf_long_image")
+        val visiblePdfAndImage = listOf("img_01", "img_bg_remove", "pdf_06", "pdf_07", "pdf_long_image")
         val expectedAliases = mapOf(
             "img_03" to "img_04",
             "file_encrypted_zip" to "file_07",

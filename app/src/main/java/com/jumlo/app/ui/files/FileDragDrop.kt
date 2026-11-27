@@ -62,6 +62,15 @@ import com.jumlo.app.ui.theme.QuietTheme
 
 const val ROOT_DROP_TARGET_ID = "__root__"
 
+internal object DragDropTargetResolver {
+    /** Resolves final drop target ID: explicit hovered target wins; otherwise a navigated folder becomes the implicit drop target. */
+    fun resolve(hoveredTargetId: String?, startFolderId: String?, currentFolderId: String?): String? {
+        if (hoveredTargetId != null) return hoveredTargetId
+        if (currentFolderId != startFolderId) return currentFolderId ?: ROOT_DROP_TARGET_ID
+        return null
+    }
+}
+
 @Stable
 class FileDragDropState {
     var activePointerId by mutableStateOf<PointerId?>(null)
@@ -74,6 +83,8 @@ class FileDragDropState {
         private set
     var containerOriginInRoot by mutableStateOf(Offset.Zero)
     var hoveredTargetId by mutableStateOf<String?>(null)
+        private set
+    var startFolderId by mutableStateOf<String?>(null)
         private set
 
     private val dropTargets = HashMap<String, Rect>()
@@ -89,12 +100,13 @@ class FileDragDropState {
         if (hoveredTargetId == id) hoveredTargetId = null
     }
 
-    fun startDrag(pointerId: PointerId, ids: Set<String>, label: String, startInRoot: Offset) {
+    fun startDrag(pointerId: PointerId, ids: Set<String>, label: String, startInRoot: Offset, currentFolderId: String? = null) {
         if (ids.isEmpty()) return
         activePointerId = pointerId
         draggingIds = ids
         draggingLabel = label
         pointerInRoot = startInRoot
+        startFolderId = currentFolderId
         hoveredTargetId = hitTest(startInRoot)
     }
 
@@ -108,13 +120,14 @@ class FileDragDropState {
         }
     }
 
-    fun finishDrag(): Pair<Set<String>, String?> {
+    fun finishDrag(currentFolderId: String? = startFolderId): Pair<Set<String>, String?> {
         val ids = draggingIds
-        val target = hoveredTargetId
+        val target = DragDropTargetResolver.resolve(hoveredTargetId, startFolderId, currentFolderId)
         activePointerId = null
         draggingIds = emptySet()
         draggingLabel = ""
         hoveredTargetId = null
+        startFolderId = null
         return ids to target
     }
 
@@ -123,6 +136,7 @@ class FileDragDropState {
         draggingIds = emptySet()
         draggingLabel = ""
         hoveredTargetId = null
+        startFolderId = null
     }
 
     private fun hitTest(point: Offset): String? {
@@ -153,11 +167,13 @@ fun Modifier.fileDropTarget(
  */
 fun Modifier.fileDragDropContainer(
     dragState: FileDragDropState,
+    currentFolderId: String?,
     onHoverHaptic: () -> Unit,
     onDrop: (Set<String>, String) -> Unit
 ): Modifier = composed {
     val latestHoverHaptic by rememberUpdatedState(onHoverHaptic)
     val latestOnDrop by rememberUpdatedState(onDrop)
+    val latestFolderId by rememberUpdatedState(currentFolderId)
 
     this.pointerInput(dragState) {
         awaitPointerEventScope {
@@ -172,7 +188,7 @@ fun Modifier.fileDragDropContainer(
                 trackedChange.consume()
                 when {
                     trackedChange.changedToUpIgnoreConsumed() || !trackedChange.pressed -> {
-                        val (ids, target) = dragState.finishDrag()
+                        val (ids, target) = dragState.finishDrag(latestFolderId)
                         if (ids.isNotEmpty() && target != null) {
                             latestOnDrop(ids, target)
                         }
@@ -191,6 +207,7 @@ fun Modifier.fileDragSource(
     itemId: String,
     itemLabel: String,
     dragState: FileDragDropState,
+    currentFolderId: String? = null,
     resolveDragIds: () -> Set<String>,
     onDragStartHaptic: () -> Unit,
     onHoverHaptic: () -> Unit = {},
@@ -200,6 +217,7 @@ fun Modifier.fileDragSource(
     val latestResolve by rememberUpdatedState(resolveDragIds)
     val latestStartHaptic by rememberUpdatedState(onDragStartHaptic)
     val latestLabel by rememberUpdatedState(itemLabel)
+    val latestFolderId by rememberUpdatedState(currentFolderId)
 
     this
         .onGloballyPositioned { coords ->
@@ -238,7 +256,7 @@ fun Modifier.fileDragSource(
                     if (ids.isNotEmpty()) {
                         latestStartHaptic()
                         val startInRoot = Offset(itemOrigin[0], itemOrigin[1]) + lastPos
-                        dragState.startDrag(down.id, ids, latestLabel, startInRoot)
+                        dragState.startDrag(down.id, ids, latestLabel, startInRoot, latestFolderId)
                     }
                 }
             }
@@ -255,7 +273,8 @@ fun ActiveDragDropBanner(
     val colors = MaterialTheme.colorScheme
     val reduced = LocalReducedMotion.current
     val targetId = activeFolderId ?: ROOT_DROP_TARGET_ID
-    val isHovered = dragState.isDragging && dragState.hoveredTargetId == targetId
+    val navigatedAway = dragState.isDragging && activeFolderId != dragState.startFolderId
+    val isHovered = dragState.isDragging && (dragState.hoveredTargetId == targetId || (dragState.hoveredTargetId == null && navigatedAway))
     val count = dragState.draggingIds.size
     val scale by animateFloatAsState(
         targetValue = if (isHovered && !reduced) 1.02f else 1f,
@@ -310,9 +329,9 @@ fun ActiveDragDropBanner(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = stringResource(R.string.files_dragging_hint),
+                        text = stringResource(if (navigatedAway) R.string.files_drop_release_here else R.string.files_dragging_hint),
                         style = QuietTheme.typography.metadata,
-                        color = colors.onPrimaryContainer.copy(alpha = 0.8f),
+                        color = colors.onPrimaryContainer.copy(alpha = 0.85f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

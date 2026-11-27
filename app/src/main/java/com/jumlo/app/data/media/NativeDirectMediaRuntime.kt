@@ -31,7 +31,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     private val http = client.newBuilder().followRedirects(false).followSslRedirects(false)
         .cookieJar(CookieJar.NO_COOKIES)
         .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).writeTimeout(15, TimeUnit.SECONDS).build()
-    private companion object {
+    internal companion object {
         val AUDIO_EXT = setOf("m4a", "mp3", "ogg", "opus", "flac", "wav", "aac")
         val VIDEO_EXT = setOf("mp4", "m4v", "mov", "webm", "mkv", "ts")
         val MIME_TO_EXT = mapOf(
@@ -48,6 +48,8 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val LINKEDIN_FALLBACK_UAS = listOf(
             LINKEDIN_DESKTOP_UA,
             "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+            "LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)",
+            "WhatsApp/2.24.16.76 A",
             "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
             "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
         )
@@ -60,15 +62,15 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val LINKEDIN_POST_ACTIVITY_REGEX = Regex("(?:activity|ugcPost|share)[-:]([0-9]{15,22})", RegexOption.IGNORE_CASE)
         val LINKEDIN_DATA_SOURCES_REGEX = Regex("""data-sources\s*=\s*["'](\[[\s\S]*?\])["']""", RegexOption.IGNORE_CASE)
         val LINKEDIN_JSONLD_SCRIPT_REGEX = Regex("""<script[^>]+type=["']application/ld\+json["'][^>]*>([\s\S]*?)</script>""", RegexOption.IGNORE_CASE)
-        val LINKEDIN_PROGRESSIVE_STREAMS_REGEX = Regex(""""progressiveStreams"\s*:\s*(\[[\s\S]*?\])\s*[,}]""")
-        val LINKEDIN_VIDEO_REGEX = Regex("https://(?:dms|media)\\.licdn\\.com/(?:playlist/|dms/)?(?:prv/)?vid/[^\\s\"'<>\\\\]+")
-        val LINKEDIN_DOC_REGEX = Regex("https://media\\.licdn\\.com/dms/document/[^\\s\"'<>\\\\]+")
-        val LINKEDIN_IMG_REGEX = Regex("https://media\\.licdn\\.com/dms/image/[^\\s\"'<>\\\\]+(?:feedshare|article-cover|document-images)[^\\s\"'<>\\\\]*")
-        val LINKEDIN_POST_URL_REGEX = Regex("""https://(?:www\.|m\.)?linkedin\.com/(?:posts|feed/update|embed/feed/update|pulse|video)/[^\s"'<>]+""")
+        val LINKEDIN_PROGRESSIVE_STREAMS_KEY_REGEX = Regex(""""progressiveStreams"\s*:\s*\[""")
+        val LINKEDIN_VIDEO_REGEX = Regex("https://(?:dms|dms-uploads|media|media-exp\\d*)\\.licdn\\.com/(?:playlist/|dms/)?(?:prv/)?vid/[^\\s\"'<>\\\\]+")
+        val LINKEDIN_DOC_REGEX = Regex("https://(?:media|media-exp\\d*)\\.licdn\\.com/dms/document/[^\\s\"'<>\\\\]+")
+        val LINKEDIN_IMG_REGEX = Regex("https://(?:media|media-exp\\d*)\\.licdn\\.com/dms/image/[^\\s\"'<>\\\\]+(?:feedshare|article-cover|document-images)[^\\s\"'<>\\\\]*")
+        val LINKEDIN_POST_URL_REGEX = Regex("""https://(?:[a-z]{2,3}\.|www\.|m\.|mobile\.)?linkedin\.com/(?:posts|feed/update|embed/feed/update|pulse|video)/[^\s"'<>]+""")
         val LINKEDIN_JSONLD_VIDEO_REGEX = Regex("\\\\?\"(?:contentUrl|src)\\\\?\"\\s*:\\s*\\\\?\"(https://[^\"\\\\]+(?:licdn\\.com|\\.mp4)[^\"\\\\]*)")
-        val LINKEDIN_OG_VIDEO_REGEX = Regex("<meta[^>]+property=[\"']og:video(?::secure_url)?[\"'][^>]+content=[\"'](https://[^\"']+)[\"']", RegexOption.IGNORE_CASE)
+        val LINKEDIN_OG_VIDEO_REGEX = Regex("""<meta[^>]+(?:property|name)=["'](?:og:video(?::secure_url)?|twitter:player:stream)["'][^>]+content=["'](https://[^"']+)["']|<meta[^>]+content=["'](https://[^"']+)["'][^>]+(?:property|name)=["'](?:og:video(?::secure_url)?|twitter:player:stream)["']""", RegexOption.IGNORE_CASE)
         val LINKEDIN_RES_HINT_REGEX = Regex("""mp4-(\d{3,4})p""", RegexOption.IGNORE_CASE)
-        val LINKEDIN_HLS_REGEX = Regex("https://(?:dms|media)\\.licdn\\.com/[^\\s\"'<>\\\\]+(?:\\.m3u8|/hls-[^\\s\"'<>\\\\]*)", RegexOption.IGNORE_CASE)
+        val LINKEDIN_HLS_REGEX = Regex("https://(?:dms|dms-uploads|media|media-exp\\d*)\\.licdn\\.com/[^\\s\"'<>\\\\]+(?:\\.m3u8|/hls-[^\\s\"'<>\\\\]*)", RegexOption.IGNORE_CASE)
         val LINKEDIN_SESSION_REDIRECT_REGEX = Regex("""(?:sessionRedirect|session_redirect)=([^&"'\s<>]+)""", RegexOption.IGNORE_CASE)
         val LINKEDIN_HTTP_AUTH_CODES = setOf("HTTP_401", "HTTP_403", "HTTP_999")
         val LINKEDIN_POST_CONTENT_MARKERS = listOf(
@@ -86,12 +88,68 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         val UNIVERSAL_META_IMAGE_REGEX = Regex("""(?:og:image|twitter:image)["'][^>]*content=["'](https://[^"']+)["']|content=["'](https://[^"']+)["'][^>]*property=["'](?:og:image|twitter:image)["']""", RegexOption.IGNORE_CASE)
         val UNIVERSAL_MEDIA_EXTS = setOf("mp4", "m4v", "webm", "m4a", "mp3", "pdf")
         val PLATFORM_JSON_VIDEO_REGEX = Regex(""""(?:playable_url_quality_hd|browser_native_hd_url|playable_url|browser_native_sd_url|video_url|fallback_url|contentUrl|hd_src|sd_src)"\s*:\s*"(https://[^"\s<>]+)"""")
+
+        /** Parses a JSON array starting at [openBracketIndex] with full nested-bracket awareness. */
+        internal fun extractBalancedJsonArray(text: String, openBracketIndex: Int): String? {
+            if (openBracketIndex !in text.indices || text[openBracketIndex] != '[') return null
+            var depth = 0
+            var inString = false
+            var escaped = false
+            for (i in openBracketIndex until text.length) {
+                val c = text[i]
+                if (escaped) {
+                    escaped = false
+                    continue
+                }
+                if (c == '\\' && inString) {
+                    escaped = true
+                    continue
+                }
+                if (c == '"') {
+                    inString = !inString
+                    continue
+                }
+                if (!inString) {
+                    if (c == '[') depth++
+                    else if (c == ']') {
+                        depth--
+                        if (depth == 0) return text.substring(openBracketIndex, i + 1)
+                    }
+                }
+            }
+            return null
+        }
+
+        internal fun normalizeLinkedInUrl(rawUrl: String, allowHttp: Boolean): String {
+            val base = runCatching { MediaLinks.normalize(rawUrl, allowHttp) }.getOrDefault(rawUrl)
+            val uri = runCatching { URI(base) }.getOrNull() ?: return base
+            val host = uri.host.orEmpty().lowercase(Locale.ROOT)
+            if (host == "lnkd.in") return base
+            val cleanHost = when {
+                host == "linkedin.com" || host.endsWith(".linkedin.com") -> "www.linkedin.com"
+                else -> host
+            }
+            val keptQuery = uri.rawQuery?.split('&')?.filter { part ->
+                val key = part.substringBefore('=').lowercase(Locale.ROOT)
+                key.isNotBlank() && key !in LINKEDIN_TRACKING_PARAMS && !key.startsWith("utm_")
+            }?.joinToString("&")?.takeIf { it.isNotBlank() }
+            val rebuilt = URI(
+                uri.scheme ?: "https",
+                null,
+                cleanHost,
+                uri.port,
+                uri.rawPath?.ifBlank { "/" } ?: "/",
+                keptQuery,
+                null
+            ).toString()
+            return runCatching { MediaLinks.normalize(rebuilt, allowHttp) }.getOrDefault(base)
+        }
     }
-    private data class Remote(val url: String, val extension: String, val title: String, val size: Long?)
+    internal data class Remote(val url: String, val extension: String, val title: String, val size: Long?)
     private data class RankedVideo(val url: String, val bitrate: Long, val resolution: Int, val isProgressive: Boolean)
     private data class Inspection(val name: String, val extractor: String, val streams: List<Remote>, val thumbnailUrl: String? = null)
     private data class PageRead(val url: String, val html: String, val profileIndex: Int)
-    private data class LinkedInScanResult(val streams: List<Remote>, val hasHlsOnly: Boolean)
+    internal data class LinkedInScanResult(val streams: List<Remote>, val hasHlsOnly: Boolean)
 
     private fun headers(url: String, profileIndex: Int = 0, origin: String = url): Map<String, String> {
         val custom = sessions.getExtraHeaders().lineSequence().map(String::trim)
@@ -253,32 +311,6 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         return LINKEDIN_AUTHWALL_HTML_MARKERS.any { html.contains(it, ignoreCase = true) }
     }
 
-    /** Strip tracking query parameters and normalize mobile/bare linkedin.com hosts to www.linkedin.com. */
-    private fun normalizeLinkedInUrl(rawUrl: String, allowHttp: Boolean): String {
-        val base = runCatching { MediaLinks.normalize(rawUrl, allowHttp) }.getOrDefault(rawUrl)
-        val uri = runCatching { URI(base) }.getOrNull() ?: return base
-        val host = uri.host.orEmpty().lowercase(Locale.ROOT)
-        if (host == "lnkd.in") return base
-        val cleanHost = when {
-            host == "linkedin.com" || host == "m.linkedin.com" || host == "mobile.linkedin.com" -> "www.linkedin.com"
-            else -> host
-        }
-        val keptQuery = uri.rawQuery?.split('&')?.filter { part ->
-            val key = part.substringBefore('=').lowercase(Locale.ROOT)
-            key.isNotBlank() && key !in LINKEDIN_TRACKING_PARAMS && !key.startsWith("utm_")
-        }?.joinToString("&")?.takeIf { it.isNotBlank() }
-        val rebuilt = URI(
-            uri.scheme ?: "https",
-            null,
-            cleanHost,
-            uri.port,
-            uri.rawPath?.ifBlank { "/" } ?: "/",
-            keptQuery,
-            null
-        ).toString()
-        return runCatching { MediaLinks.normalize(rebuilt, allowHttp) }.getOrDefault(base)
-    }
-
     private fun decodeUrlSafe(raw: String): String {
         var current = raw
         // Decode up to twice for double-encoded sessionRedirect URNs (e.g. %253A -> %3A -> :).
@@ -368,7 +400,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
     }
 
     /** Extract public LinkedIn video streams (sorted by highest bitrate/resolution), PDF carousel documents, and photo posts. */
-    private fun extractLinkedInCandidates(pageUrl: String, html: String, allowHttp: Boolean): LinkedInScanResult {
+    internal fun extractLinkedInCandidates(pageUrl: String, html: String, allowHttp: Boolean): LinkedInScanResult {
         val decoded = decodeHtmlEntities(html)
             .replace("\\/", "/")
             .replace("\\u002F", "/")
@@ -412,9 +444,11 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             }
         }
 
-        // 2. progressiveStreams JSON arrays embedded in LinkedIn Voyager/SSR payloads
-        for (m in LINKEDIN_PROGRESSIVE_STREAMS_REGEX.findAll(decoded)) {
-            val arr = runCatching { JSONArray(m.groupValues[1]) }.getOrNull() ?: continue
+        // 2. progressiveStreams JSON arrays embedded in LinkedIn Voyager/SSR payloads (supports nested streamingLocations arrays).
+        for (m in LINKEDIN_PROGRESSIVE_STREAMS_KEY_REGEX.findAll(decoded)) {
+            val openBracketIdx = m.range.last
+            val jsonArrayText = extractBalancedJsonArray(decoded, openBracketIdx) ?: continue
+            val arr = runCatching { JSONArray(jsonArrayText) }.getOrNull() ?: continue
             for (i in 0 until arr.length()) {
                 val obj = arr.optJSONObject(i) ?: continue
                 val bitrate = obj.optLong("bitRate", obj.optLong("bitrate", 0L))
@@ -435,7 +469,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
         }
 
         // 3. JSON-LD <script type="application/ld+json"> VideoObject / SocialMediaPosting
-        for (m in LINKEDIN_JSONLD_SCRIPT_REGEX.findAll(html)) {
+        for (m in LINKEDIN_JSONLD_SCRIPT_REGEX.findAll(decoded)) {
             val jsonText = m.groupValues[1].trim()
             val root = runCatching { JSONObject(jsonText) }.getOrNull() ?: continue
             fun scanJsonLd(obj: JSONObject) {
@@ -449,7 +483,7 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             scanJsonLd(root)
         }
 
-        // 4. Direct dms.licdn.com / media.licdn.com video URLs, JSON-LD regex fallback, and og:video
+        // 4. Direct licdn video URLs, HTML5 <video>/<source> elements, JSON-LD regex fallback, and og:video
         for (m in LINKEDIN_VIDEO_REGEX.findAll(decoded)) {
             addVideo(m.value)
         }
@@ -457,7 +491,14 @@ internal class NativeDirectMediaRuntime(client: OkHttpClient, private val sessio
             addVideo(m.groupValues[1])
         }
         for (m in LINKEDIN_OG_VIDEO_REGEX.findAll(decoded)) {
-            addVideo(m.groupValues[1])
+            val u = m.groupValues[1].ifBlank { m.groupValues[2] }
+            if (u.isNotBlank()) addVideo(u)
+        }
+        for (src in Html5MediaDiscovery.discover(pageUrl, html, allowHttp)) {
+            val mime = src.mimeType.orEmpty()
+            if (src.extension in VIDEO_EXT || mime.startsWith("video/", ignoreCase = true)) {
+                addVideo(src.url, mimeType = mime)
+            }
         }
         if (videosByUrl.isEmpty() && !sawHls) {
             if (LINKEDIN_HLS_REGEX.containsMatchIn(decoded) ||

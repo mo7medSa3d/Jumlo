@@ -9,7 +9,7 @@ import org.junit.Test
 class CapabilityContractTest {
     @Test fun allRegisteredCapabilitiesAreVisibleAndHaveExplicitKinds() {
         val registered = CapabilityRegistry.tools
-        assertEquals("Jumlo must expose the curated 34 capabilities", 34, registered.size)
+        assertEquals("Jumlo must expose the curated 35 capabilities", 35, registered.size)
         assertTrue("scan_id_card must be registered", registered.any { it.id == "scan_id_card" })
         assertEquals("Capability ID must be unique", registered.size, registered.map { it.id }.distinct().size)
         registered.forEach { tool ->
@@ -61,7 +61,7 @@ class CapabilityContractTest {
 
     @Test fun representativeRealOperationsRemainEnabled() {
         listOf("pdf_03", "pdf_protect", "pdf_to_docx", "pdf_long_image", "pdf_nup", "pdf_privacy_redact",
-            "file_encrypted_zip", "dl_media", "dl_02", "img_04", "img_join").forEach { id ->
+            "file_encrypted_zip", "dl_media", "dl_02", "img_04", "img_bg_remove", "img_join").forEach { id ->
             assertEquals("$id lost its handler policy", CapabilityKind.PROCESSING, CapabilityRegistry.availability(id).kind)
             assertTrue("$id must remain executable", CapabilityRegistry.canProcess(id))
         }

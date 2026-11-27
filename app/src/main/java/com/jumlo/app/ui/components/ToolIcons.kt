@@ -41,6 +41,7 @@ internal val toolIconResources: Map<String, Int> = linkedMapOf(
     "img_02" to R.drawable.ic_tool_img_02,
     "img_03" to R.drawable.ic_tool_img_03,
     "img_04" to R.drawable.ic_tool_img_04,
+    "img_bg_remove" to R.drawable.ic_tool_img_bg_remove,
     "img_watermark" to R.drawable.ic_tool_img_watermark,
     "img_join" to R.drawable.ic_tool_img_join,
     "img_studio" to R.drawable.ic_prism_image_studio,

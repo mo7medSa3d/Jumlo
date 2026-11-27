@@ -36,6 +36,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class OfficeToPdfSettings(val displayName:String="Document.pdf")
 @Serializable data class ImageWatermarkSettings(val text:String="", val opacityPercent:Int=40, val useLogo:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(quality=98,namePrefix="watermarked_"), val centerX:Double=0.5, val centerY:Double=0.5, val scale:Double=1.0, val rotationDegrees:Int=0, val tiled:Boolean=false, val colorHex:String="#FFFFFF", val fontFamily:String="sans")
 @Serializable data class ImageJoinSettings(val layout:String="GRID2", val gapPx:Int=8, val overlapPx:Int=0, val output:ImageConversionSettings=ImageConversionSettings(format="PNG", namePrefix="joined_"))
+@Serializable data class ImageBgRemoveSettings(val backgroundMode:String="TRANSPARENT", val trimTransparent:Boolean=false, val output:ImageConversionSettings=ImageConversionSettings(format="PNG", quality=95, namePrefix="nobg_"))
 @Serializable data class BatchRenameSettings(val pattern:String="file-{n}", val startAt:Int=1, val date:String="")
 @Serializable data class EncryptedArchiveSettings(val displayName:String="Archive.zip", val secretHandle:String="", val extract:Boolean=false)
 

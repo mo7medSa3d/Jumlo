@@ -76,11 +76,13 @@ object PdfCompressionRunner {
             val originalBytes = source.length()
             val pageCount = open(source, directory, minFreeBytes).use { it.numberOfPages }
             require(pageCount > 0 && originalBytes > 0L) { "EMPTY_PDF" }
-            // Always honor the user's exact slider (dpi, quality) first. When a byte budget is set,
-            // step down from the user's chosen ceiling only if the first pass does not meet targetBytes.
+            // Honor the user's exact slider first, then at most two smart adaptive step-downs when targeting bytes.
             val profiles = if (targetBytes > 0L) {
-                (listOf(dpi to quality) + PdfCompressionPolicy.targetProfiles(quality)
-                    .map { (d, q) -> minOf(d, dpi) to minOf(q, quality) }).distinct()
+                listOf(
+                    dpi to quality,
+                    minOf(140, dpi) to minOf(62, quality),
+                    minOf(96, dpi) to minOf(45, quality)
+                ).distinct()
             } else {
                 listOf(dpi to quality)
             }
@@ -118,6 +120,8 @@ object PdfCompressionRunner {
                     selectedReport = lastReport
                     if (PdfCompressionPolicy.meetsTarget(bestBytes, targetBytes)) break
                 }
+                // Vector/text-only PDFs contain zero embedded images to resample further.
+                if (lastReport?.replaced == 0 && lastReport?.skipped.isNullOrEmpty()) break
             }
             check()
             val ready = if (best.isFile) best else File(directory, "unchanged.pdf").also { copy(source, it, ::check) }

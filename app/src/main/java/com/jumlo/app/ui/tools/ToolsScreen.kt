@@ -94,7 +94,7 @@ private val toolSections = listOf(
     ToolSection("edit", "PDF Edit & Security", "تحرير وحماية PDF",
         setOf("pdf_signature", "pdf_stamp", "pdf_03", "pdf_05", "pdf_06", "pdf_04", "pdf_crop", "pdf_compress", "pdf_protect", "pdf_privacy_redact", "pdf_nup", "pdf_01")),
     ToolSection("optimize", "Images", "الصور",
-        setOf("img_01", "img_02", "img_04", "img_watermark", "img_join")),
+        setOf("img_01", "img_02", "img_04", "img_bg_remove", "img_watermark", "img_join")),
     ToolSection("files", "Files & Download", "الملفات والتنزيل",
         setOf("dl_media", "file_07", "file_08", "file_batch_rename"))
 )
@@ -217,7 +217,7 @@ internal fun ToolsCatalogue(
             columns = GridCells.Fixed(columns),
             modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp,
-                bottom = QuietTheme.spacing.listBottomBuffer),
+                bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -465,6 +465,7 @@ internal fun shortToolLabel(tool: UtilityTool, language: AppLanguage): String {
         "img_01" -> "Convert" to "تحويل الصور"
         "img_02" -> "Resize" to "تغيير الحجم"
         "img_04" -> "Edit & Compress" to "تعديل وضغط"
+        "img_bg_remove" -> "Remove BG" to "إزالة الخلفية"
         "img_watermark" -> "Watermark" to "علامة مائية"
         "img_join" -> "Collage" to "كولاج"
         "dl_media" -> "Download" to "تنزيل"

@@ -43,6 +43,7 @@ object ToolIconColors {
         "img_02" to Color(0xFF0F766E),             // Resize Images deep teal
         "img_03" to Color(0xFF16A34A),             // Crop & Rotate rich green
         "img_04" to Color(0xFF15803D),             // Compress & Edit forest green
+        "img_bg_remove" to Color(0xFF0D7377),      // Remove Background deep sea teal
         "img_watermark" to Color(0xFF047857),      // Watermark Images jade
         "img_join" to Color(0xFF0891B2),           // Join / Collage cyan-teal
         "img_studio" to Color(0xFF16A34A),         // Unified Image Studio vivid green

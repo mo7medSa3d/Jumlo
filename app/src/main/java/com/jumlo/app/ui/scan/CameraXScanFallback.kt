@@ -7,16 +7,27 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.view.MotionEvent
 import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import com.jumlo.app.data.scan.DocumentFilterEngine
+import com.jumlo.app.data.scan.ScanFilter
+import com.jumlo.app.ui.icons.rounded.AutoAwesome
+import com.jumlo.app.ui.icons.rounded.Crop
+import java.io.FileOutputStream
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -116,14 +127,41 @@ internal fun CameraXScanFallback(
             scaleType = PreviewView.ScaleType.FILL_CENTER
         }
     }
-    val capture = remember {
+    val highResSelector = remember {
+        ResolutionSelector.Builder()
+            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+            .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
+            .build()
+    }
+    val capture = remember(highResSelector) {
         ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setJpegQuality(95)
+            .setResolutionSelector(highResSelector)
+            .setJpegQuality(96)
             .setFlashMode(ImageCapture.FLASH_MODE_AUTO)
             .build()
     }
+    var reviewEditEpoch by remember { mutableIntStateOf(0) }
+    var cropTargetBitmap by remember { mutableStateOf<Pair<String, Bitmap>?>(null) }
+    var activeFilter by rememberSaveable(sessionId) { mutableStateOf(ScanFilter.ORIGINAL) }
     val mainExecutor = remember { ContextCompat.getMainExecutor(context) }
+
+    LaunchedEffect(boundCamera, previewView) {
+        val cam = boundCamera
+        if (cam != null) {
+            previewView.setOnTouchListener { v, event ->
+                if (event.action == MotionEvent.ACTION_UP) {
+                    val point = previewView.meteringPointFactory.createPoint(event.x, event.y)
+                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE).build()
+                    runCatching { cam.cameraControl.startFocusAndMetering(action) }
+                    v.performClick()
+                }
+                true
+            }
+        } else {
+            previewView.setOnTouchListener(null)
+        }
+    }
 
     LaunchedEffect(flashMode, boundCamera) {
         capture.flashMode = flashMode
@@ -177,10 +215,17 @@ internal fun CameraXScanFallback(
                         provider = cameraProvider
                         val selector = if (cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA))
                             CameraSelector.DEFAULT_BACK_CAMERA else CameraSelector.DEFAULT_FRONT_CAMERA
-                        val cameraPreview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
+                        val cameraPreview = Preview.Builder()
+                            .setResolutionSelector(highResSelector)
+                            .build()
+                            .also { it.setSurfaceProvider(previewView.surfaceProvider) }
                         preview = cameraPreview
                         capture.targetRotation = previewView.display?.rotation ?: Surface.ROTATION_0
-                        boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, cameraPreview, capture)
+                        val groupBuilder = UseCaseGroup.Builder()
+                            .addUseCase(cameraPreview)
+                            .addUseCase(capture)
+                        previewView.viewPort?.let { groupBuilder.setViewPort(it) }
+                        boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, groupBuilder.build())
                         cameraReady = true
                     } catch (_: Exception) {
                         error = true
@@ -326,15 +371,38 @@ internal fun CameraXScanFallback(
     ) {
         if (currentReview != null) {
             val path = pagePaths[currentReview]
-            val bitmap by produceState<Bitmap?>(null, path) {
+            val bitmap by produceState<Bitmap?>(null, path, reviewEditEpoch) {
                 value = withContext(Dispatchers.IO) {
-                    try { BitmapTransforms.decodeSampled(File(path), 8L * 1024 * 1024, maxEdge = 1440).bitmap }
+                    try { BitmapTransforms.decodeSampled(File(path), 12L * 1024 * 1024, maxEdge = 2400).bitmap }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { null }
                     catch (_: OutOfMemoryError) { null }
                 }
             }
             DisposeOwnedPreviewBitmap(bitmap)
+
+            cropTargetBitmap?.let { (targetPath, targetBmp) ->
+                InteractiveDocumentCropDialog(
+                    initialBitmap = targetBmp,
+                    autoDetectInitial = true,
+                    onApply = { warped ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                runCatching {
+                                    FileOutputStream(File(targetPath)).use { out ->
+                                        warped.compress(Bitmap.CompressFormat.JPEG, 96, out)
+                                        out.fd.sync()
+                                    }
+                                }
+                            }
+                            if (!warped.isRecycled) warped.recycle()
+                            cropTargetBitmap = null
+                            reviewEditEpoch++
+                        }
+                    },
+                    onDismiss = { cropTargetBitmap = null }
+                )
+            }
 
             Column(
                 Modifier
@@ -370,7 +438,10 @@ internal fun CameraXScanFallback(
                         onClick = {
                             haptics.actionClick()
                             pagePaths = pagePaths.filterNot { it == path }
-                            scope.launch(Dispatchers.IO) { File(path).delete() }
+                            scope.launch(Dispatchers.IO) {
+                                File(path).delete()
+                                File("$path.orig").delete()
+                            }
                             reviewIndex = null
                         },
                         shape = QuietTheme.shapes.pill,
@@ -427,7 +498,7 @@ internal fun CameraXScanFallback(
                                     pagePaths = pagePaths.toMutableList().apply { add(currentReview - 1, removeAt(currentReview)) }
                                     reviewIndex = currentReview - 1
                                 },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(Icons.AutoMirrored.Rounded.NavigateBefore, stringResource(R.string.jumlo_move_earlier), tint = Color.White)
                             }
@@ -438,9 +509,68 @@ internal fun CameraXScanFallback(
                                     pagePaths = pagePaths.toMutableList().apply { add(currentReview + 1, removeAt(currentReview)) }
                                     reviewIndex = currentReview + 1
                                 },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(Icons.AutoMirrored.Rounded.NavigateNext, stringResource(R.string.jumlo_move_later), tint = Color.White)
+                            }
+                            IconButton(
+                                enabled = bitmap?.isRecycled == false && !busy && !externalBusy,
+                                onClick = {
+                                    val bmp = bitmap?.takeUnless { it.isRecycled } ?: return@IconButton
+                                    haptics.actionClick()
+                                    cropTargetBitmap = path to bmp
+                                },
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Icon(Icons.Rounded.Crop, stringResource(R.string.scan_crop_action), tint = Color.White)
+                            }
+                            IconButton(
+                                enabled = bitmap?.isRecycled == false && !busy && !externalBusy,
+                                onClick = {
+                                    val srcBmp = bitmap?.takeUnless { it.isRecycled } ?: return@IconButton
+                                    haptics.selectionToggle()
+                                    val nextFilter = when (activeFilter) {
+                                        ScanFilter.ORIGINAL -> ScanFilter.CLEAN_DOCUMENT
+                                        ScanFilter.CLEAN_DOCUMENT -> ScanFilter.CRISP_BW
+                                        ScanFilter.CRISP_BW -> ScanFilter.MAGIC_COLOR
+                                        ScanFilter.MAGIC_COLOR -> ScanFilter.ORIGINAL
+                                    }
+                                    activeFilter = nextFilter
+                                    busy = true
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                val pageFile = File(path)
+                                                val origFile = File("$path.orig")
+                                                if (!origFile.isFile) pageFile.copyTo(origFile, overwrite = true)
+                                                if (nextFilter == ScanFilter.ORIGINAL) {
+                                                    origFile.copyTo(pageFile, overwrite = true)
+                                                } else {
+                                                    BitmapTransforms.decodeSampled(origFile, 12L * 1024 * 1024, maxEdge = 2400).use { rawDecoded ->
+                                                        val enhanced = DocumentFilterEngine.apply(rawDecoded.bitmap, nextFilter)
+                                                        try {
+                                                            FileOutputStream(pageFile).use { out ->
+                                                                enhanced.compress(Bitmap.CompressFormat.JPEG, 96, out)
+                                                                out.fd.sync()
+                                                            }
+                                                        } finally {
+                                                            if (enhanced !== rawDecoded.bitmap && !enhanced.isRecycled) enhanced.recycle()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        busy = false
+                                        reviewEditEpoch++
+                                    }
+                                },
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AutoAwesome,
+                                    stringResource(R.string.scan_filter_clean),
+                                    tint = if (activeFilter == ScanFilter.ORIGINAL) Color.White else MaterialTheme.colorScheme.primary
+                                )
                             }
                             IconButton(
                                 enabled = !busy && !externalBusy,
@@ -448,7 +578,7 @@ internal fun CameraXScanFallback(
                                     haptics.actionClick()
                                     if (jpegOutput) saveAsJpegs() else saveAsPdf()
                                 },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(
                                     if (jpegOutput) Icons.Rounded.Image else Icons.Rounded.PictureAsPdf,
@@ -461,9 +591,12 @@ internal fun CameraXScanFallback(
                                 onClick = {
                                     haptics.secondaryAction()
                                     pagePaths = pagePaths.filterNot { it == path }
-                                    scope.launch(Dispatchers.IO) { File(path).delete() }
+                                    scope.launch(Dispatchers.IO) {
+                                File(path).delete()
+                                File("$path.orig").delete()
+                            }
                                 },
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(Icons.Rounded.Delete, stringResource(R.string.action_delete), tint = MaterialTheme.colorScheme.error)
                             }

@@ -31,6 +31,7 @@ object CapabilityRegistry {
         UtilityTool("img_02", "resize_images", PillarCategory.IMAGES, "Resize Images", "تغيير أبعاد الصور", "Resize images to exactly the size you need", "غيّر حجم الصور إلى المقاس المطلوب تمامًا", "aspect_ratio"),
         UtilityTool("img_03", "crop_rotate_flip", PillarCategory.IMAGES, "Crop, Rotate & Flip", "قص وتدوير وقلب الصور", "Crop, rotate, and flip with confidence", "اقصص ودوّر واقلِب بثقة", "crop"),
         UtilityTool("img_04", "compress_images", PillarCategory.IMAGES, "Compress Images", "ضغط الصور", "Smaller images, same great look", "صور أصغر بنفس المظهر الرائع", "compress"),
+        UtilityTool("img_bg_remove", "remove_background", PillarCategory.IMAGES, "Remove Background", "إزالة الخلفية", "Clean AI cutout on transparent or custom backdrops", "تفريغ احترافي للخلفية بشفافية أو خلفيات جاهزة", "auto_fix_high"),
         UtilityTool("img_watermark", "img_watermark", PillarCategory.IMAGES, "Watermark Images", "علامة مائية للصور", "Protect your images with your mark", "احمِ صورك بعلامتك", "approval"),
         UtilityTool("img_join", "img_join", PillarCategory.IMAGES, "Join / Collage", "دمج الصور", "Build beautiful collages in minutes", "أنشئ كولاجات جميلة في دقائق", "grid_view"),
 

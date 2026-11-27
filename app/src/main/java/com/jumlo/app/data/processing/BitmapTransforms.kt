@@ -367,9 +367,9 @@ object BitmapTransforms {
         var bestSize = Long.MAX_VALUE
         val tmp = File(destination.parentFile, ".cmp-${java.util.UUID.randomUUID()}.tmp")
         try {
-            // Binary search quality first (max 6 passes) to hit targetBytes accurately.
+            // Binary search quality first (max 4 passes, stopping once safely within 85..100% of targetBytes).
             var attempts = 0
-            while (low <= high && attempts < 6) {
+            while (low <= high && attempts < 4) {
                 checkCancel()
                 attempts++
                 val mid = (low + high) / 2
@@ -377,8 +377,13 @@ object BitmapTransforms {
                 val sz = tmp.length()
                 if (sz < bestSize) {
                     bestSize = sz
-                    tmp.copyTo(destination, overwrite = true)
+                    java.nio.file.Files.move(
+                        tmp.toPath(),
+                        destination.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                    )
                 }
+                if (sz <= targetBytes && sz >= (targetBytes * 85L) / 100L) break
                 if (sz <= targetBytes) {
                     low = mid + 1
                 } else {
@@ -406,7 +411,11 @@ object BitmapTransforms {
                     val sz = tmp.length()
                     if (sz < bestSize) {
                         bestSize = sz
-                        tmp.copyTo(destination, overwrite = true)
+                        java.nio.file.Files.move(
+                            tmp.toPath(),
+                            destination.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                        )
                     }
                 }
             } finally {

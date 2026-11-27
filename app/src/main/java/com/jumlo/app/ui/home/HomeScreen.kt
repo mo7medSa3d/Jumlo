@@ -131,7 +131,7 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item("hero", contentType = "hero") {
