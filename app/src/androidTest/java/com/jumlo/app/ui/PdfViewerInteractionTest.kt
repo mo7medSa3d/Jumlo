@@ -61,7 +61,8 @@ class PdfViewerInteractionTest {
                 compose.onAllNodesWithTag("pdf.thumbnail.1").fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithTag("pdf.thumbnail.1").assertHasClickAction().performClick()
-            compose.waitUntil(15_000) {
+            compose.onNodeWithTag("pdf.pages").performScrollToIndex(1)
+            compose.waitUntil(30_000) {
                 compose.onAllNodesWithTag("pdf.page.image.1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithTag("pdf.thumbnail.1").assertIsSelected()

@@ -32,8 +32,7 @@ class JumloUiTest {
     @Test fun homeQuickActionOpensWorkspaceAndBackReturnsHome() {
         compose.onNodeWithTag("home.action.compress").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
-        compose.onNodeWithTag("nav.DOWNLOADS").assertDoesNotExist()
-        compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
+        compose.onNodeWithTag("navigation.bar").assertDoesNotExist()
         pressBack()
         compose.onNodeWithTag("home.screen").assertIsDisplayed()
         compose.onNodeWithTag("nav.HOME").assertIsSelected()
@@ -42,7 +41,7 @@ class JumloUiTest {
     @Test fun homeDownloadOpensEmptyWorkspaceAndInvalidInputDoesNotCrash() {
         compose.onNodeWithTag("home.action.download").performScrollTo().performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
-        compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
+        compose.onNodeWithTag("navigation.bar").assertDoesNotExist()
         val field = mediaLink()
         field.assertIsDisplayed().assertIsEnabled().assertTextEquals("")
         compose.onNodeWithText(compose.activity.getString(R.string.redesign_download_now)).assertIsNotEnabled()
@@ -74,7 +73,7 @@ class JumloUiTest {
                 .assertIsDisplayed().assertIsEnabled().performClick()
             mediaLink().assertTextEquals(pastedUrl).assertIsEnabled()
             compose.onNodeWithTag("route.workspace").assertIsDisplayed()
-            compose.onNodeWithTag("nav.TOOLS").assertIsSelected()
+            compose.onNodeWithTag("navigation.bar").assertDoesNotExist()
             assertNoInspectedFormats()
 
             // A failed probe must finish and leave the link editable.
@@ -91,6 +90,7 @@ class JumloUiTest {
             compose.onNodeWithContentDescription(compose.activity.getString(R.string.signature_clear))
                 .performClick()
             mediaLink().assertTextEquals("")
+            pressBack()
             compose.onNodeWithTag("nav.FILES").performClick()
             compose.onNodeWithTag("files.screen").assertIsDisplayed()
         } finally {
@@ -116,8 +116,8 @@ class JumloUiTest {
     @Test fun settingsTabAndStorageBackReturnToSettings() {
         compose.onNodeWithTag("nav.SETTINGS").performClick()
         compose.onNodeWithTag("settings.screen").assertIsDisplayed()
-        compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.storage"))
-        compose.onNodeWithTag("settings.storage").performClick()
+        compose.onNodeWithTag("settings.screen").performScrollToNode(hasTestTag("settings.about"))
+        compose.onNodeWithTag("settings.storage").performScrollTo().performClick()
         // Navigation animations settle asynchronously; wait for the destination to be laid out.
         compose.waitUntil(15_000) {
             runCatching { compose.onNodeWithTag("storage.screen").assertIsDisplayed() }.isSuccess
@@ -133,9 +133,8 @@ class JumloUiTest {
 
     @Test fun existingDownloadSessionSurvivesTabsAndFreshEntryIsEmpty() {
         compose.onNodeWithTag("home.action.download").performScrollTo().performClick()
+        compose.onNodeWithTag("navigation.bar").assertDoesNotExist()
         mediaLink().performTextInput("a draft link")
-        compose.onNodeWithTag("nav.FILES").performClick()
-        compose.onNodeWithTag("nav.TOOLS").performClick()
         compose.onNodeWithTag("route.workspace").assertIsDisplayed()
         mediaLink().assertTextEquals("a draft link")
         // The edited media link must make the shared workspace dirty before
