@@ -91,6 +91,17 @@ class JumloUiTest {
                 .performClick()
             mediaLink().assertTextEquals("")
             pressBack()
+            val unsavedTitle = compose.activity.getString(R.string.ui_unsaved_title)
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText(unsavedTitle).fetchSemanticsNodes().isNotEmpty() ||
+                    compose.onAllNodesWithTag("nav.FILES").fetchSemanticsNodes().isNotEmpty()
+            }
+            if (compose.onAllNodesWithText(unsavedTitle).fetchSemanticsNodes().isNotEmpty()) {
+                compose.onNodeWithText(compose.activity.getString(R.string.ui_discard_leave)).performClick()
+            }
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithTag("nav.FILES").fetchSemanticsNodes().isNotEmpty()
+            }
             compose.onNodeWithTag("nav.FILES").performClick()
             compose.onNodeWithTag("files.screen").assertIsDisplayed()
         } finally {
