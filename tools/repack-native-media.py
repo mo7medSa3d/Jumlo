@@ -44,7 +44,7 @@ KEEP_RE = re.compile(
 # libandroid-support, libandroid-glob and libgcc_s are NOT platform exemptions.
 SYS_LIBS = {'libc.so', 'libm.so', 'libdl.so', 'libstdc++.so',
             'liblog.so', 'libOpenSLES.so', 'libEGL.so', 'libGLESv2.so',
-            'libvulkan.so', 'libnativewindow.so', 'libsync.so',
+            'libGLESv3.so', 'libvulkan.so', 'libnativewindow.so', 'libsync.so',
             # Public bitmap JNI API since API 8; used by CameraX's image helper.
             # https://developer.android.com/ndk/guides/stable_apis#bitmaps
             'libandroid.so', 'libjnigraphics.so',

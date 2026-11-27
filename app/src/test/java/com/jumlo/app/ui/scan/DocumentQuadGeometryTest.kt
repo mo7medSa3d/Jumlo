@@ -59,4 +59,23 @@ class DocumentQuadGeometryTest {
             DocumentQuadGeometry.detectQuadFromLuma(flatLum, w, h).isFullFrame()
         )
     }
+
+    @Test fun detectQuadFromLumaFitsAngledPerspectiveTrapezoid() {
+        val w = 120
+        val h = 120
+        // Bright perspective trapezoid slightly tilted on dark table
+        val lum = IntArray(w * h) { idx ->
+            val x = idx % w
+            val y = idx / w
+            val topY = 12 + (x - 60) * 0.06f
+            val botY = 106 - (x - 60) * 0.04f
+            val leftX = 14 + (y - 60) * 0.05f
+            val rightX = 104 - (y - 60) * 0.05f
+            if (x >= leftX && x <= rightX && y >= topY && y <= botY) 240 else 20
+        }
+        val quad = DocumentQuadGeometry.detectQuadFromLuma(lum, w, h)
+        assertTrue(DocumentQuadGeometry.isValid(quad))
+        assertTrue("Top edge should slant down cleanly (tl.y < tr.y)", quad.tl.y < quad.tr.y)
+        assertTrue("Top corners shouldn't stay strictly rectangular", quad.tr.y - quad.tl.y > 0.015f)
+    }
 }

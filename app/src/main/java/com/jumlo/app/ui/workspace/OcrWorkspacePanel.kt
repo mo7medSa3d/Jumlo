@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -21,8 +23,10 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.jumlo.app.R
+import com.jumlo.app.core.DocumentContentAnalyzer
 import com.jumlo.app.data.jobs.stableError
 import com.jumlo.app.data.ocr.ArabicTesseractOcrEngine
 import com.jumlo.app.data.ocr.OcrScript
@@ -77,16 +81,29 @@ internal fun OcrWorkspacePanel(
             }
             @Composable fun TextPanel(modifier: Modifier) {
                 val extractedText = recognized?.getOrNull().orEmpty()
+                val isRtlUi = LocalLayoutDirection.current == LayoutDirection.Rtl
+                val docAnalysis = remember(extractedText, isRtlUi) {
+                    if (extractedText.isBlank()) null else DocumentContentAnalyzer.analyze(extractedText, isRtl = isRtlUi)
+                }
                 Surface(modifier, shape = QuietTheme.shapes.card, color = pillars.cardSurface) {
                     Column(Modifier.heightIn(min = 180.dp, max = 320.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(stringResource(R.string.studio_ocr_text), style = QuietTheme.typography.sectionTitle, color = colors.onSurface, modifier = Modifier.semantics { heading() })
-                            Text(
-                                stringResource(R.string.ocr_auto_detect_status),
-                                style = QuietTheme.typography.metadata,
-                                color = colors.onSurfaceVariant,
-                                modifier = Modifier.testTag("ocr.auto-status")
-                            )
+                            if (docAnalysis != null) {
+                                val categoryName = if (isRtlUi) docAnalysis.category.labelAr else docAnalysis.category.labelEn
+                                Text(
+                                    stringResource(R.string.ocr_detected_doc_badge, categoryName, docAnalysis.suggestedBaseName),
+                                    style = QuietTheme.typography.metadataStrong,
+                                    color = colors.primary
+                                )
+                            } else {
+                                Text(
+                                    stringResource(R.string.ocr_auto_detect_status),
+                                    style = QuietTheme.typography.metadata,
+                                    color = colors.onSurfaceVariant,
+                                    modifier = Modifier.testTag("ocr.auto-status")
+                                )
+                            }
                         }
                         Box(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState())) {
                             when {

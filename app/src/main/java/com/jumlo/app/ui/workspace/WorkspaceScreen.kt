@@ -216,7 +216,13 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
         (if(download) urls.isNotBlank() else queue.size>=minimum)
     val inputSpec = remember(tool, form.watermarkUseImage, form.flag1) { ToolInputPolicy.resolve(tool, form) }
     Column(Modifier.fillMaxSize().imePadding()) {
-        LazyColumn(Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally).testTag("workspace.scroll"),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val wide = maxWidth >= 680.dp
+            LazyColumn(
+                Modifier.fillMaxSize().testTag("workspace.scroll"),
+                contentPadding = PaddingValues(horizontal = if (wide) 24.dp else 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             if(!CapabilityRegistry.enabled(tool)) item(key="tool-unavailable",contentType="notice") {Text(stringResource(R.string.ui_tool_unavailable),color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion = LiveRegionMode.Polite })}
             if(!download) {
                 val emptyTitleRes = when(inputSpec.kind) {
@@ -430,6 +436,7 @@ private val RENAME_TOKEN_CHIPS = listOf("{name}","{n}","{date}")
                     },onClick=onExecute,modifier=Modifier.fillMaxWidth(),enabled=ready)
                 }
             }
+        }
         }
     }
     previewId?.let {id->AlertDialog(onDismissRequest={previewId=null},title={Text(stringResource(R.string.dialog_preview_title),modifier=Modifier.semantics { heading() })},text={InputPreview(vm,id,reduceMotion,isFullViewer=true)},confirmButton={TextButton(onClick={previewId=null},modifier=Modifier.heightIn(min=48.dp)) {Text(stringResource(R.string.action_close))}})}

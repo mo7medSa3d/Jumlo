@@ -121,13 +121,18 @@ class PremiumUxContracts(unittest.TestCase):
         self.assertIn('LocalDensity.current.fontScale >= 1.6f', code)
         self.assertRegex(code, r'largeText\s*->\s*3')
         self.assertNotIn('primary.chunked(', code)
-        self.assertIn('widthIn(max = 1000.dp)', code)
+        self.assertNotIn('widthIn(max = 1000.dp)', code)
         self.assertIn('maxWidth >= 600.dp', code)
 
-    def test_home_and_tools_centered_width_caps_are_applied_before_filling(self):
-        # An outer fillMaxSize prevents a later widthIn from constraining the child.
-        self.assertIn('Modifier.widthIn(max = 980.dp).fillMaxSize()', source('home/HomeScreen.kt'))
-        self.assertIn('Modifier.widthIn(max = 1000.dp).fillMaxSize()', source('tools/ToolsScreen.kt'))
+    def test_home_and_tools_use_full_available_landscape_width(self):
+        # Full-bleed responsive containers across portrait and landscape without legacy caps.
+        home = source('home/HomeScreen.kt')
+        tools = source('tools/ToolsScreen.kt')
+        self.assertIn('BoxWithConstraints(Modifier.fillMaxSize()', home)
+        self.assertIn('modifier = Modifier.fillMaxSize()', home)
+        self.assertNotIn('widthIn(max = 980.dp)', home)
+        self.assertIn('modifier = Modifier.fillMaxSize().testTag("tools.grid")', tools)
+        self.assertNotIn('widthIn(max = 1000.dp)', tools)
 
     def test_home_quick_actions_have_four_distinct_filled_icons(self):
         home = source('home/HomeScreen.kt')
@@ -224,7 +229,8 @@ class PremiumUxContracts(unittest.TestCase):
 
     def test_media_workspace_is_readable_on_large_displays_and_uses_url_keyboard(self):
         code = source('downloads/MediaWorkspace.kt')
-        self.assertIn('widthIn(max=840.dp)', code)
+        self.assertIn('BoxWithConstraints(Modifier.weight(1f).fillMaxWidth())', code)
+        self.assertNotIn('widthIn(max=840.dp)', code)
         self.assertIn('KeyboardType.Uri', code)
         self.assertIn('ImeAction.Go', code)
         self.assertIn('KeyboardActions(onGo', code)

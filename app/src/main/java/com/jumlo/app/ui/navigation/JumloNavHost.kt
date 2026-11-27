@@ -161,7 +161,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     LaunchedEffect(route, selectedJob, activeToolId) { ActiveTaskTracker.updateNavigation(route, selectedJob, activeToolId) }
     var filesInitialFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(route) { if (route == "storage") filesInitialFilter = null }
+    LaunchedEffect(route) { if (route !in setOf("files", "files_overview")) filesInitialFilter = null }
     fun tabDestination(next: DockTab): Any = when (next) {
         DockTab.TOOLS -> ToolsRoute
         DockTab.FILES -> FilesRoute
@@ -245,21 +245,23 @@ fun JumloNavHost(viewModel:AppViewModel) {
             launchSingleTop = true
         }
     }
+    fun openScan(mode: String? = null, originOverride: String? = null) {
+        val origin = originOverride ?: currentToolOrigin() ?: tab.route
+        viewModel.recordToolOpen(if (mode == "id_card") "scan_id_card" else "scan_doc")
+        if (originOverride == null && tab != DockTab.TOOLS) switchTab(DockTab.TOOLS)
+        navController.navigate(ScanRoute(origin, initialMode = mode)) {
+            if (originOverride == null) popUpTo(ToolsRoute)
+            launchSingleTop = true
+        }
+    }
+
     fun navigateTo(name: String) {
         appHaptics.screenTransition()
         when (name) {
             "workspace" -> openWorkspace()
             "settings" -> switchTab(DockTab.SETTINGS)
             "storage" -> navController.navigate(StorageRoute) { launchSingleTop = true }
-            "scan" -> {
-                val origin=currentToolOrigin() ?: tab.route
-                viewModel.recordToolOpen("scan_doc")
-                if (tab != DockTab.TOOLS) switchTab(DockTab.TOOLS)
-                navController.navigate(ScanRoute(origin)) {
-                    popUpTo(ToolsRoute)
-                    launchSingleTop = true
-                }
-            }
+            "scan" -> openScan()
             "activity" -> navController.navigate(selectedJob?.let { JobRoute(it) } ?: ActivityRoute) { launchSingleTop = true }
             "files", "files_overview" -> switchTab(DockTab.FILES)
             "tools", "tools_catalog" -> switchTab(DockTab.TOOLS)
@@ -470,9 +472,17 @@ fun JumloNavHost(viewModel:AppViewModel) {
     }
     fun openOutput(output: OutputRecord) {
         if (DocumentViewerFormats.supportsInAppViewer(output.mimeType, output.displayName)) {
-            navController.navigate(ViewerRoute(output.uri, output.displayName, mimeType = output.mimeType)) { launchSingleTop = true }
+            navController.navigate(
+                ViewerRoute(
+                    output.uri,
+                    output.displayName,
+                    returnTab = if (route in ROOT_ROUTES) tab.route else null,
+                    mimeType = output.mimeType
+                )
+            ) { launchSingleTop = true }
         } else launchExternal(output.uri, output.mimeType, false)
     }
+
     fun exportOutput(output:OutputRecord) {
         viewModel.prepareExport(output)
         exportPicker.safeLaunch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE);type=output.mimeType;putExtra(Intent.EXTRA_TITLE,output.displayName) })
@@ -482,16 +492,8 @@ fun JumloNavHost(viewModel:AppViewModel) {
             viewModel.notifyMessage("CAPABILITY_UNAVAILABLE");return
         }
         when(tool.id) {
-            "scan_doc" -> navigateTo("scan")
-            "scan_id_card" -> {
-                val origin = currentToolOrigin() ?: tab.route
-                viewModel.recordToolOpen("scan_id_card")
-                if (tab != DockTab.TOOLS) switchTab(DockTab.TOOLS)
-                navController.navigate(ScanRoute(origin, initialMode = "id_card")) {
-                    popUpTo(ToolsRoute)
-                    launchSingleTop = true
-                }
-            }
+            "scan_doc" -> openScan()
+            "scan_id_card" -> openScan(mode = "id_card")
             "dl_settings" -> {viewModel.recordToolOpen(tool.id);navigateTo("settings")}
             "file_02" -> {viewModel.recordToolOpen(tool.id);navigateTo("files_overview")}
             else -> if(viewModel.chooseTool(tool.id)) navigateTo("workspace")
@@ -512,7 +514,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
             onDispose { childBackOwners.remove(backOwnerKey) }
         }
         val root = shellRoute in ROOT_ROUTES
-        val showDock = root || shellRoute in setOf("workspace", "activity")
+        val showDock = root
         val headerToolId=entryToolId ?: formToolId
         val headerTool=remember(shellRoute, headerToolId) {
             if (shellRoute == "workspace") CapabilityRegistry.tools.firstOrNull { it.id == headerToolId } else null
@@ -557,7 +559,15 @@ fun JumloNavHost(viewModel:AppViewModel) {
                         toolId=when(shellRoute) { "workspace" -> headerToolId; "scan" -> "scan_doc"; else -> null }
                     )
                     DropFilesTarget(enabled=shellRoute in DROP_TARGET_ROUTES,
-                        modifier=Modifier.weight(1f).fillMaxWidth(),
+                        modifier=Modifier.weight(1f).fillMaxWidth().let { base ->
+                            if (shellRoute != "scan") {
+                                base.windowInsetsPadding(
+                                    androidx.compose.foundation.layout.WindowInsets.safeDrawing.only(
+                                        androidx.compose.foundation.layout.WindowInsetsSides.Horizontal
+                                    )
+                                )
+                            } else base
+                        },
                         onDropFiles={uris,release -> viewModel.intake(
                             Intake(uris,Intent.FLAG_GRANT_READ_URI_PERMISSION,null),
                             attachToWorkspace=shellRoute=="workspace",onFinished=release)},
@@ -569,9 +579,9 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                  {openOutput(it)},
                                  {navigateTo("workspace")},
                                  {navigateTab(DockTab.FILES)},
-                                 {navigateTo("scan")},
+                                 { openScan(originOverride = "home") },
                                  {navigateTab(DockTab.DOWNLOADS)},
-                                 onScanIdCard = { viewModel.recordToolOpen("scan_id_card"); navController.navigate(ScanRoute("home", initialMode = "id_card")) { launchSingleTop = true } },
+                                 onScanIdCard = { openScan(mode = "id_card", originOverride = "home") },
                                  listState = homeListState,
                                  resetToRootEpoch = homeResetEpoch)
                             "tools" -> com.jumlo.app.ui.tools.ToolsScreen(viewModel,::openTool, gridState = toolsGridState, resetToRootEpoch = toolsResetEpoch)
@@ -593,7 +603,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 {chosen,toolId->viewModel.prepareOutputWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 {chosen,toolId->viewModel.prepareSourceBatchWorkflow(toolId,chosen) {navigateTo("workspace")} },
                                 onPrint=viewModel::printOutput,onPrintSource={viewModel.printSource(it)},
-                                onChangeSaveFolder=::pickDownloadDestination,onStorage={navigateTo("storage")},onImportToFolder={importLibraryFiles(it)}, onScan = { navigateTo("scan") }, initialFilter = filesInitialFilter, resetToRootEpoch = filesResetEpoch, listState = filesListState, onBackInterceptChange = onBackIntercept)
+                                onChangeSaveFolder=::pickDownloadDestination,onStorage={navigateTo("storage")},onImportToFolder={importLibraryFiles(it)}, onScan = { openScan(originOverride = "files") }, initialFilter = filesInitialFilter, resetToRootEpoch = filesResetEpoch, listState = filesListState, onBackInterceptChange = onBackIntercept)
                             "print" -> com.jumlo.app.printing.PrintScreen(
                                 source=printSource,onBack=::goBack,onPickDocument=::importPrintDocument,
                                 modifier=Modifier.padding(bottom=QuietTheme.spacing.listBottomBuffer))
@@ -641,10 +651,30 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                         onBack = ::goBack,
                                         onOpenFile = { if (!navController.popBackStack<FilesRoute>(inclusive = false)) { navController.popBackStack(); switchTab(DockTab.FILES) } },
                                         onPrint = { u, _ -> viewModel.importForPrint(Intake(listOf(u), Intent.FLAG_GRANT_READ_URI_PERMISSION, null)) },
-                                        onSaveMarkupResult = { u, t, items, done -> viewModel.flattenPdfMarkup(u, t, items, onResult = done) },
-                                        onSaveInPlaceResult = { u, t, items, done -> viewModel.flattenPdfMarkupInPlace(u, t, items, onResult = done) },
+                                        onSaveMarkupResult = { u, t, items, done ->
+                                            viewModel.flattenPdfMarkup(u, t, items) { result ->
+                                                if (result != null) latestHaptics.downloadComplete() else latestHaptics.error()
+                                                done(result)
+                                            }
+                                        },
+                                        onSaveInPlaceResult = { u, t, items, done ->
+                                            viewModel.flattenPdfMarkupInPlace(u, t, items) { result ->
+                                                if (result != null) latestHaptics.downloadComplete() else latestHaptics.error()
+                                                done(result)
+                                            }
+                                        },
                                         onOpenSavedOutput = { savedUri, savedTitle ->
-                                            navController.navigate(ViewerRoute(savedUri, savedTitle)) { launchSingleTop = true }
+                                            navController.navigate(
+                                                ViewerRoute(
+                                                    savedUri,
+                                                    savedTitle,
+                                                    returnTab = it.returnTab,
+                                                    mimeType = "application/pdf"
+                                                )
+                                            ) {
+                                                popUpTo<ViewerRoute> { inclusive = true }
+                                                launchSingleTop = true
+                                            }
                                         },
                                         onBackInterceptChange = onBackIntercept
                                     )
@@ -717,16 +747,30 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                             verticalArrangement = Arrangement.spacedBy(14.dp)
                                         ) {
                                             val primary = scannedOutputs.first()
+                                            fun proceedToTool(nextToolId: String) {
+                                                viewModel.prepareOutputWorkflow(nextToolId, listOf(primary)) {
+                                                    navController.popBackStack()
+                                                    navigateTo("workspace")
+                                                }
+                                            }
                                             com.jumlo.app.ui.downloads.CompletedResultCard(
                                                 outputs = scannedOutputs,
                                                 onOpen = {
-                                                    scannedOutputIds = emptyList()
-                                                    if (primary.mimeType.equals("application/pdf", ignoreCase = true)) {
-                                                        navController.navigate(ViewerRoute(primary.uri, primary.displayName, returnTab = transitionOrigin)) {
+                                                    if (DocumentViewerFormats.supportsInAppViewer(primary.mimeType, primary.displayName)) {
+                                                        navController.navigate(
+                                                            ViewerRoute(
+                                                                primary.uri,
+                                                                primary.displayName,
+                                                                returnTab = transitionOrigin,
+                                                                mimeType = primary.mimeType
+                                                            )
+                                                        ) {
                                                             popUpTo<ScanRoute> { inclusive = true }
                                                             launchSingleTop = true
                                                         }
-                                                    } else openOutput(primary)
+                                                    } else {
+                                                        openOutput(primary)
+                                                    }
                                                 },
                                                 onShare = { launchExternal(primary.uri, primary.mimeType, true) },
                                                 onNewRun = {
@@ -739,35 +783,17 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                     QuietTonalButton(
                                                         stringResource(R.string.scan_next_ocr),
-                                                        onClick = {
-                                                            viewModel.prepareOutputWorkflow("pdf_ocr", listOf(primary)) {
-                                                                scannedOutputIds = emptyList()
-                                                                navController.popBackStack()
-                                                                navigateTo("workspace")
-                                                            }
-                                                        },
+                                                        onClick = { proceedToTool("pdf_ocr") },
                                                         modifier = Modifier.weight(1f)
                                                     )
                                                     QuietTonalButton(
                                                         stringResource(R.string.scan_next_compress),
-                                                        onClick = {
-                                                            viewModel.prepareOutputWorkflow("pdf_compress", listOf(primary)) {
-                                                                scannedOutputIds = emptyList()
-                                                                navController.popBackStack()
-                                                                navigateTo("workspace")
-                                                            }
-                                                        },
+                                                        onClick = { proceedToTool("pdf_compress") },
                                                         modifier = Modifier.weight(1f)
                                                     )
                                                     QuietTonalButton(
                                                         stringResource(R.string.scan_next_redact),
-                                                        onClick = {
-                                                            viewModel.prepareOutputWorkflow("pdf_privacy_redact", listOf(primary)) {
-                                                                scannedOutputIds = emptyList()
-                                                                navController.popBackStack()
-                                                                navigateTo("workspace")
-                                                            }
-                                                        },
+                                                        onClick = { proceedToTool("pdf_privacy_redact") },
                                                         modifier = Modifier.weight(1f)
                                                     )
                                                 }
@@ -784,6 +810,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                                     navController.currentDestination?.hasRoute<ScanRoute>() == true &&
                                                     outputs.isNotEmpty()
                                                 ) {
+                                                    latestHaptics.downloadComplete()
                                                     scannedOutputIds = outputs.map { it.id }
                                                 }
                                             }
@@ -794,6 +821,7 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                                 if (navController.currentBackStackEntry?.id == entryId &&
                                                     navController.currentDestination?.hasRoute<ScanRoute>() == true
                                                 ) {
+                                                    latestHaptics.downloadComplete()
                                                     scannedOutputIds = listOf(output.id)
                                                 }
                                             }
@@ -822,18 +850,22 @@ fun JumloNavHost(viewModel:AppViewModel) {
                                 selectedJob = null
                                 viewModel.allowNewRun()
                                 when {
-                                    targetToolId == "scan_doc" -> navigateTo("scan")
-                                    targetToolId == "scan_id_card" -> {
-                                        val origin = currentToolOrigin() ?: tab.route
-                                        viewModel.recordToolOpen("scan_id_card")
-                                        if (tab != DockTab.TOOLS) switchTab(DockTab.TOOLS)
-                                        navController.navigate(ScanRoute(origin, initialMode = "id_card")) {
-                                            popUpTo(ToolsRoute)
-                                            launchSingleTop = true
-                                        }
+                                    targetToolId == "scan_doc" -> {
+                                        navController.popBackStack()
+                                        openScan()
                                     }
-                                    targetToolId != null && viewModel.chooseTool(targetToolId) -> navigateTo("workspace")
-                                    else -> navigateTo("tools")
+                                    targetToolId == "scan_id_card" -> {
+                                        navController.popBackStack()
+                                        openScan(mode = "id_card")
+                                    }
+                                    targetToolId != null && viewModel.chooseTool(targetToolId) -> {
+                                        navController.popBackStack()
+                                        navigateTo("workspace")
+                                    }
+                                    else -> {
+                                        navController.popBackStack()
+                                        navigateTo("tools")
+                                    }
                                 }
                             },onShowAll=if(jobId!=null) ({selectedJob=null;navController.navigate(ActivityRoute) { launchSingleTop=true }}) else null,onPrint=viewModel::printOutput)
                         }

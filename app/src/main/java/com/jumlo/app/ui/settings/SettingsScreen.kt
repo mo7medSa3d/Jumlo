@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import com.jumlo.app.ui.icons.Icons
-import com.jumlo.app.ui.icons.automirrored.rounded.ChevronRight
 import com.jumlo.app.ui.icons.rounded.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -188,12 +187,6 @@ fun SettingsScreen(
                                 color = if (dark) goldLight.copy(alpha = 0.8f) else goldDeep
                             )
                         }
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ChevronRight,
-                            contentDescription = null,
-                            tint = if (dark) goldLight else goldDeep,
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
             }
@@ -221,7 +214,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            item("alerts-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_alerts_feedback)) }
+            item("alerts-heading", contentType = "heading") { PreferenceHeading(stringResource(R.string.pref_notifications)) }
             item("alerts-group", contentType = "group") {
                 PreferenceGroup {
                     PreferenceRow(
@@ -231,27 +224,7 @@ fun SettingsScreen(
                         onRequestNotifications,
                         Modifier.testTag("settings.notifications"),
                         iconStyle = settingsIconStyleFor("notifications", dark),
-                        grouped = true
-                    )
-                    PreferenceGroupDivider()
-                    PreferenceToggleRow(
-                        title = stringResource(R.string.settings_ui_sounds),
-                        checked = settings.soundsEnabled,
-                        onCheckedChange = viewModel::setSoundsEnabled,
-                        modifier = Modifier.testTag("settings.sounds"),
-                        icon = Icons.Rounded.Audiotrack,
-                        iconStyle = settingsIconStyleFor("sounds", dark),
-                        grouped = true
-                    )
-                    PreferenceGroupDivider()
-                    PreferenceToggleRow(
-                        title = stringResource(R.string.pref_haptics),
-                        checked = settings.hapticFeedbackOnCommit,
-                        onCheckedChange = viewModel::setHapticFeedback,
-                        modifier = Modifier.testTag("settings.haptics"),
-                        icon = Icons.Rounded.Bolt,
-                        iconStyle = settingsIconStyleFor("haptics", dark),
-                        grouped = true
+                        grouped = false
                     )
                 }
             }

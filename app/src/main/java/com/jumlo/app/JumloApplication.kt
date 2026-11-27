@@ -71,13 +71,19 @@ class JumloApplication : Application(), Configuration.Provider, ImageLoaderFacto
                     .enableForegroundConfidenceMask()
                     .build()
             )
+            val faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(
+                com.google.mlkit.vision.face.FaceDetectorOptions.Builder()
+                    .setPerformanceMode(com.google.mlkit.vision.face.FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                    .build()
+            )
             val installer = com.google.android.gms.common.moduleinstall.ModuleInstall.getClient(this)
-            installer.areModulesAvailable(scanner, segmenter).addOnSuccessListener { avail ->
+            installer.areModulesAvailable(scanner, segmenter, faceDetector).addOnSuccessListener { avail ->
                 if (!avail.areModulesAvailable()) {
                     installer.installModules(
                         com.google.android.gms.common.moduleinstall.ModuleInstallRequest.newBuilder()
                             .addApi(scanner)
                             .addApi(segmenter)
+                            .addApi(faceDetector)
                             .build()
                     )
                 }

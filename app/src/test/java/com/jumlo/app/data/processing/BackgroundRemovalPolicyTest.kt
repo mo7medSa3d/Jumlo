@@ -88,4 +88,30 @@ class BackgroundRemovalPolicyTest {
         assertNull(SubjectSegmentationEngine.backdropColorForMode("TRANSPARENT"))
         assertEquals(Color.WHITE, SubjectSegmentationEngine.backdropColorForMode("WHITE"))
     }
+
+    @Test fun isolatedMicroNoiseIslandsArePrunedWhileMainSubjectRemainsIntact() {
+        val w = 10
+        val h = 10
+        val pixels = IntArray(w * h) { Color.WHITE }
+        val conf = FloatArray(w * h) { 0.0f }
+        // Main subject block (4x4 = 16 px)
+        for (y in 2..5) {
+            for (x in 2..5) {
+                pixels[y * w + x] = Color.BLUE
+                conf[y * w + x] = 0.98f
+            }
+        }
+        // Stray isolated 1px & 2px noise specks at far corner
+        pixels[0] = Color.DKGRAY
+        conf[0] = 0.90f
+        pixels[9 * w + 9] = Color.DKGRAY
+        pixels[9 * w + 8] = Color.DKGRAY
+        conf[9 * w + 9] = 0.90f
+        conf[9 * w + 8] = 0.90f
+
+        val stats = SubjectSegmentationEngine.applyConfidenceMaskAndDecontaminate(pixels, conf, w, h)
+        assertEquals(16, stats.foregroundPixels)
+        assertEquals("Isolated corner speck should be pruned", 0, (pixels[0] ushr 24) and 0xFF)
+        assertEquals("Isolated 2px dust speck should be pruned", 0, (pixels[9 * w + 9] ushr 24) and 0xFF)
+    }
 }

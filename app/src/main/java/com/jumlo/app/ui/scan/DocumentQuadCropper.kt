@@ -139,8 +139,9 @@ internal object DocumentQuadGeometry {
 
     /**
      * Conservative outer-boundary document detector on a luminance grid.
-     * Scans strictly from perimeter inward so interior tables/headers never cause self-cropping;
-     * falls back to FULL whenever borders are weak or coverage would be below 42%.
+     * Combines 2D Sobel gradient scoring across 6 perimeter bands per side with outlier-pruned
+     * linear least-squares fitting and 4-line corner intersections so angled pages snap accurately
+     * without ever shrinking onto interior tables/text. Falls back to FULL on weak edges (< 42% area).
      */
     fun detectQuadFromLuma(lum: IntArray, w: Int, h: Int): NormalizedQuad {
         if (w < 40 || h < 40 || lum.size < w * h) return NormalizedQuad.FULL
@@ -148,14 +149,22 @@ internal object DocumentQuadGeometry {
         fun rowGradient(y: Int, x0: Int, x1: Int): Float {
             if (y <= 1 || y >= h - 2 || x1 <= x0) return 0f
             var sum = 0L
-            for (x in x0 until x1) sum += abs(lum[(y + 1) * w + x] - lum[(y - 1) * w + x])
+            for (x in x0 until x1) {
+                val dy = abs(lum[(y + 1) * w + x] - lum[(y - 1) * w + x])
+                val dx = abs(lum[y * w + (x + 1)] - lum[y * w + (x - 1)]) / 3
+                sum += dy + dx
+            }
             return sum.toFloat() / (x1 - x0)
         }
 
         fun colGradient(x: Int, y0: Int, y1: Int): Float {
             if (x <= 1 || x >= w - 2 || y1 <= y0) return 0f
             var sum = 0L
-            for (y in y0 until y1) sum += abs(lum[y * w + (x + 1)] - lum[y * w + (x - 1)])
+            for (y in y0 until y1) {
+                val dx = abs(lum[y * w + (x + 1)] - lum[y * w + (x - 1)])
+                val dy = abs(lum[(y + 1) * w + x] - lum[(y - 1) * w + x]) / 3
+                sum += dx + dy
+            }
             return sum.toFloat() / (y1 - y0)
         }
 
@@ -173,67 +182,92 @@ internal object DocumentQuadGeometry {
             val maxScore = scores.maxOfOrNull { it.second } ?: 0f
             val threshold = max(14f, avg * 2.0f)
             if (maxScore < threshold) return null
-            // Pick the outermost strong edge (within 78% of global maximum) so inner text never steals the edge.
             val outerThreshold = max(threshold, maxScore * 0.72f)
             return scores.firstOrNull { it.second >= outerThreshold }?.first
         }
 
-        fun median3(a: Int?, b: Int?, c: Int?, fallback: Int): Int {
-            val list = listOfNotNull(a, b, c).sorted()
-            return if (list.size >= 2) list[list.size / 2] else fallback
+        // Fit dependent = slope * independent + intercept with median outlier rejection.
+        fun fitLine(samples: List<Pair<Float, Float>>, maxResidual: Float, fallbackConst: Float): Pair<Float, Float> {
+            if (samples.size < 3) return 0f to fallbackConst
+            val sortedDep = samples.map { it.second }.sorted()
+            val medianDep = sortedDep[sortedDep.size / 2]
+            fun ols(pts: List<Pair<Float, Float>>): Pair<Float, Float> {
+                val n = pts.size.toDouble()
+                var sx = 0.0; var sy = 0.0; var sxx = 0.0; var sxy = 0.0
+                for ((x, y) in pts) {
+                    sx += x; sy += y; sxx += x * x; sxy += x * y
+                }
+                val denom = n * sxx - sx * sx
+                if (abs(denom) < 1e-4) return 0f to (sy / n).toFloat()
+                val slope = ((n * sxy - sx * sy) / denom).toFloat().coerceIn(-0.45f, 0.45f)
+                val intercept = ((sy - slope * sx) / n).toFloat()
+                return slope to intercept
+            }
+            val initial = ols(samples)
+            val inliers = samples.filter { (x, y) ->
+                abs(y - (initial.first * x + initial.second)) <= maxResidual
+            }
+            return when {
+                inliers.size >= 3 -> ols(inliers)
+                else -> 0f to medianDep
+            }
         }
 
         val maxInY = (h * 0.28f).toInt().coerceAtLeast(4)
         val maxInX = (w * 0.28f).toInt().coerceAtLeast(4)
-        val segX1 = (w * 0.20f).toInt() to (w * 0.40f).toInt()
-        val segX2 = (w * 0.40f).toInt() to (w * 0.60f).toInt()
-        val segX3 = (w * 0.60f).toInt() to (w * 0.80f).toInt()
-        val segY1 = (h * 0.20f).toInt() to (h * 0.40f).toInt()
-        val segY2 = (h * 0.40f).toInt() to (h * 0.60f).toInt()
-        val segY3 = (h * 0.60f).toInt() to (h * 0.80f).toInt()
+        val sliceCount = 6
 
-        val topPts = listOf(
-            outerEdgePeak(2..maxInY) { rowGradient(it, segX1.first, segX1.second) },
-            outerEdgePeak(2..maxInY) { rowGradient(it, segX2.first, segX2.second) },
-            outerEdgePeak(2..maxInY) { rowGradient(it, segX3.first, segX3.second) }
-        )
-        val botPts = listOf(
-            outerEdgePeak((h - 3) downTo (h - 1 - maxInY)) { rowGradient(it, segX1.first, segX1.second) },
-            outerEdgePeak((h - 3) downTo (h - 1 - maxInY)) { rowGradient(it, segX2.first, segX2.second) },
-            outerEdgePeak((h - 3) downTo (h - 1 - maxInY)) { rowGradient(it, segX3.first, segX3.second) }
-        )
-        val leftPts = listOf(
-            outerEdgePeak(2..maxInX) { colGradient(it, segY1.first, segY1.second) },
-            outerEdgePeak(2..maxInX) { colGradient(it, segY2.first, segY2.second) },
-            outerEdgePeak(2..maxInX) { colGradient(it, segY3.first, segY3.second) }
-        )
-        val rightPts = listOf(
-            outerEdgePeak((w - 3) downTo (w - 1 - maxInX)) { colGradient(it, segY1.first, segY1.second) },
-            outerEdgePeak((w - 3) downTo (w - 1 - maxInX)) { colGradient(it, segY2.first, segY2.second) },
-            outerEdgePeak((w - 3) downTo (w - 1 - maxInX)) { colGradient(it, segY3.first, segY3.second) }
-        )
+        val topSamples = mutableListOf<Pair<Float, Float>>()
+        val botSamples = mutableListOf<Pair<Float, Float>>()
+        for (i in 0 until sliceCount) {
+            val f0 = 0.16f + (0.68f * i / sliceCount)
+            val f1 = 0.16f + (0.68f * (i + 1) / sliceCount)
+            val x0 = (w * f0).toInt().coerceIn(2, w - 3)
+            val x1 = (w * f1).toInt().coerceIn(x0 + 1, w - 2)
+            val midX = (x0 + x1) * 0.5f
+            outerEdgePeak(2..maxInY) { rowGradient(it, x0, x1) }?.let { topSamples += midX to it.toFloat() }
+            outerEdgePeak((h - 3) downTo (h - 1 - maxInY)) { rowGradient(it, x0, x1) }?.let { botSamples += midX to it.toFloat() }
+        }
 
-        val topY = median3(topPts[0], topPts[1], topPts[2], 0)
-        val botY = median3(botPts[0], botPts[1], botPts[2], h - 1)
-        val leftX = median3(leftPts[0], leftPts[1], leftPts[2], 0)
-        val rightX = median3(rightPts[0], rightPts[1], rightPts[2], w - 1)
+        val leftSamples = mutableListOf<Pair<Float, Float>>()
+        val rightSamples = mutableListOf<Pair<Float, Float>>()
+        for (i in 0 until sliceCount) {
+            val f0 = 0.16f + (0.68f * i / sliceCount)
+            val f1 = 0.16f + (0.68f * (i + 1) / sliceCount)
+            val y0 = (h * f0).toInt().coerceIn(2, h - 3)
+            val y1 = (h * f1).toInt().coerceIn(y0 + 1, h - 2)
+            val midY = (y0 + y1) * 0.5f
+            outerEdgePeak(2..maxInX) { colGradient(it, y0, y1) }?.let { leftSamples += midY to it.toFloat() }
+            outerEdgePeak((w - 3) downTo (w - 1 - maxInX)) { colGradient(it, y0, y1) }?.let { rightSamples += midY to it.toFloat() }
+        }
 
-        if (topY == 0 && botY == h - 1 && leftX == 0 && rightX == w - 1) return NormalizedQuad.FULL
-        // Use outer corners if tilted consistently, else conservative rectangle.
-        val tL = (topPts[0] ?: topY).toFloat() / (h - 1)
-        val tR = (topPts[2] ?: topY).toFloat() / (h - 1)
-        val bL = (botPts[0] ?: botY).toFloat() / (h - 1)
-        val bR = (botPts[2] ?: botY).toFloat() / (h - 1)
-        val lT = (leftPts[0] ?: leftX).toFloat() / (w - 1)
-        val lB = (leftPts[2] ?: leftX).toFloat() / (w - 1)
-        val rT = (rightPts[0] ?: rightX).toFloat() / (w - 1)
-        val rB = (rightPts[2] ?: rightX).toFloat() / (w - 1)
+        if (topSamples.size < 3 && botSamples.size < 3 && leftSamples.size < 3 && rightSamples.size < 3) {
+            return NormalizedQuad.FULL
+        }
 
+        val topLine = fitLine(topSamples, max(3f, h * 0.035f), 0f)
+        val botLine = fitLine(botSamples, max(3f, h * 0.035f), (h - 1).toFloat())
+        val leftLine = fitLine(leftSamples, max(3f, w * 0.035f), 0f)
+        val rightLine = fitLine(rightSamples, max(3f, w * 0.035f), (w - 1).toFloat())
+
+        fun intersect(horiz: Pair<Float, Float>, vert: Pair<Float, Float>): QuadPoint {
+            val a = horiz.first; val b = horiz.second
+            val c = vert.first; val d = vert.second
+            val denom = 1f - a * c
+            val x = if (abs(denom) > 1e-4f) (c * b + d) / denom else d
+            val y = a * x + b
+            return QuadPoint((x / (w - 1)).coerceIn(0f, 1f), (y / (h - 1)).coerceIn(0f, 1f))
+        }
+
+        val tl = intersect(topLine, leftLine)
+        val tr = intersect(topLine, rightLine)
+        val br = intersect(botLine, rightLine)
+        val bl = intersect(botLine, leftLine)
         val quad = NormalizedQuad(
-            tl = QuadPoint(lT.coerceIn(0f, 0.35f), tL.coerceIn(0f, 0.35f)),
-            tr = QuadPoint(rT.coerceIn(0.65f, 1f), tR.coerceIn(0f, 0.35f)),
-            br = QuadPoint(rB.coerceIn(0.65f, 1f), bR.coerceIn(0.65f, 1f)),
-            bl = QuadPoint(lB.coerceIn(0f, 0.35f), bL.coerceIn(0.65f, 1f))
+            tl = QuadPoint(tl.x.coerceIn(0f, 0.35f), tl.y.coerceIn(0f, 0.35f)),
+            tr = QuadPoint(tr.x.coerceIn(0.65f, 1f), tr.y.coerceIn(0f, 0.35f)),
+            br = QuadPoint(br.x.coerceIn(0.65f, 1f), br.y.coerceIn(0.65f, 1f)),
+            bl = QuadPoint(bl.x.coerceIn(0f, 0.35f), bl.y.coerceIn(0.65f, 1f))
         )
         return if (isValid(quad) && area(quad) >= 0.42f) quad else NormalizedQuad.FULL
     }

@@ -61,10 +61,12 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
             ?: CapabilityRegistry.tools.find {it.id=="dl_02" && CapabilityRegistry.enabled(it.id)}
     }
     val batchTool=remember {CapabilityRegistry.tools.find {it.id=="dl_03" && CapabilityRegistry.enabled(it.id)}}
-    Box(Modifier.fillMaxSize()) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    val wide = maxWidth >= 680.dp
+    val horizontalPad = if (wide) 24.dp else 20.dp
     LazyColumn(
-        modifier=Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),
-        contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+        modifier=Modifier.fillMaxSize(),
+        contentPadding=PaddingValues(start=horizontalPad,end=horizontalPad,top=14.dp,bottom=24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
         verticalArrangement=Arrangement.spacedBy(14.dp)
     ) {
         item("download-summary") {
@@ -111,42 +113,59 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
                                 )
                             }
                         }
-                        if (!selecting && mediaTool != null) {
-                            Button(
-                                onClick = { haptics.toolExecute(); onTool(mediaTool) },
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).pressFeedback(),
-                                shape = QuietTheme.shapes.button,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = colors.primary,
-                                    contentColor = colors.onPrimary
-                                )
-                            ) {
-                                Icon(Icons.Rounded.Download, null, Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.ui_new_download), style = QuietTheme.typography.button)
-                            }
-                        }
-                        if (!selecting && batchTool != null) {
-                            Surface(
-                                onClick = { haptics.actionClick(); onTool(batchTool) },
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).pressFeedback(),
-                                shape = QuietTheme.shapes.button,
-                                color = colors.surfaceContainer,
-                                contentColor = colors.onSurface
-                            ) {
-                                Row(
-                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Rounded.Link, null, Modifier.size(18.dp), tint = colors.primary)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        stringResource(R.string.ui_batch_download),
-                                        style = QuietTheme.typography.metadataStrong,
-                                        color = colors.onSurface
+                        if (!selecting) {
+                            @Composable
+                            fun NewDownloadButton(tool: com.jumlo.app.model.UtilityTool, buttonModifier: Modifier) {
+                                Button(
+                                    onClick = { haptics.toolExecute(); onTool(tool) },
+                                    modifier = buttonModifier.heightIn(min = 52.dp).pressFeedback(),
+                                    shape = QuietTheme.shapes.button,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = colors.primary,
+                                        contentColor = colors.onPrimary
                                     )
+                                ) {
+                                    Icon(Icons.Rounded.Download, null, Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(stringResource(R.string.ui_new_download), style = QuietTheme.typography.button)
                                 }
+                            }
+                            @Composable
+                            fun BatchDownloadButton(tool: com.jumlo.app.model.UtilityTool, buttonModifier: Modifier) {
+                                Surface(
+                                    onClick = { haptics.actionClick(); onTool(tool) },
+                                    modifier = buttonModifier.heightIn(min = 52.dp).pressFeedback(),
+                                    shape = QuietTheme.shapes.button,
+                                    color = colors.surfaceContainer,
+                                    contentColor = colors.onSurface
+                                ) {
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Rounded.Link, null, Modifier.size(18.dp), tint = colors.primary)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            stringResource(R.string.ui_batch_download),
+                                            style = QuietTheme.typography.metadataStrong,
+                                            color = colors.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                            if (wide && mediaTool != null && batchTool != null) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    NewDownloadButton(mediaTool, Modifier.weight(1f))
+                                    BatchDownloadButton(batchTool, Modifier.weight(1f))
+                                }
+                            } else {
+                                mediaTool?.let { NewDownloadButton(it, Modifier.fillMaxWidth()) }
+                                batchTool?.let { BatchDownloadButton(it, Modifier.fillMaxWidth()) }
                             }
                         }
                     }
@@ -273,8 +292,19 @@ import com.jumlo.app.data.jobs.CapabilityRegistry
     }
     val completedOutputsReady = focusJob?.progress?.stage == JobStage.COMPLETED && availableOutputs.isNotEmpty()
     val completedOutputsPending = waitingForOutputs && !finalizingTimedOut
-    Box(Modifier.fillMaxSize()) {
-    LazyColumn(Modifier.widthIn(max=820.dp).fillMaxSize().align(Alignment.TopCenter),contentPadding=PaddingValues(start=20.dp,end=20.dp,top=14.dp,bottom=QuietTheme.spacing.listBottomBuffer),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    val wide = maxWidth >= 680.dp
+    val horizontalPad = if (wide) 24.dp else 20.dp
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding=PaddingValues(
+            start=horizontalPad,
+            end=horizontalPad,
+            top=14.dp,
+            bottom=28.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        ),
+        verticalArrangement=Arrangement.spacedBy(12.dp)
+    ) {
         item("activity-summary") {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
                 Text(stringResource(R.string.jumlo_activity_summary, activeJobs.size, availableOutputs.size),

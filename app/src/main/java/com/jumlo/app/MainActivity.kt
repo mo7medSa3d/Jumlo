@@ -102,7 +102,7 @@ class MainActivity : AppCompatActivity() {
                 CompositionLocalProvider(
                     LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit,
                     LocalHapticIntensity provides settings.hapticIntensity,
-                    LocalAppSoundsEnabled provides settings.soundsEnabled,
+                    LocalAppSoundsEnabled provides true,
                     LocalUiSoundPlayer provides sound,
                     LocalReducedMotion provides (systemReduced || settings.respectReducedMotion)
                 ) {

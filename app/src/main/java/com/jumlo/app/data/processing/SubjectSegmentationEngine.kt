@@ -11,6 +11,8 @@ import com.google.android.gms.common.moduleinstall.ModuleInstallRequest
 import com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.InstallState
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenter
 import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions
@@ -25,6 +27,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.Executor
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,7 +45,8 @@ import kotlin.math.roundToInt
  */
 @Singleton
 class SubjectSegmentationEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val portraitSegmenter: LiteRtPortraitSegmenter
 ) {
     suspend fun removeBackground(
         source: Bitmap,
@@ -57,41 +61,64 @@ class SubjectSegmentationEngine @Inject constructor(
         var trimmed: Bitmap? = null
         var resultBitmap: Bitmap? = null
         try {
+            val w = working.width
+            val h = working.height
+            val total = w * h
+            val hasPortraitFace = hasDetectedPortraitFace(working)
+
             val options = SubjectSegmenterOptions.Builder()
                 .enableForegroundBitmap()
                 .enableForegroundConfidenceMask()
                 .build()
             segmenter = SubjectSegmentation.getClient(options)
-            ensureModuleInstalled(segmenter)
-            currentCoroutineContext().ensureActive()
 
-            val result = try {
-                segmenter.process(InputImage.fromBitmap(working, 0)).awaitNativeSegmentation()
+            var primaryConfidence: FloatArray? = null
+            var primaryError: OperationFailure? = null
+            try {
+                ensureModuleInstalled(segmenter)
+                currentCoroutineContext().ensureActive()
+                val result = segmenter.process(InputImage.fromBitmap(working, 0)).awaitNativeSegmentation()
+                mlForeground = result.foregroundBitmap
+                val mask = result.foregroundConfidenceMask
+                if (mask != null) {
+                    mask.rewind()
+                    if (mask.remaining() >= total) {
+                        primaryConfidence = FloatArray(total).also { mask.get(it, 0, total) }
+                    }
+                }
             } catch (cancel: CancellationException) {
                 throw cancel
             } catch (failure: OperationFailure) {
-                throw failure
+                primaryError = failure
             } catch (_: Exception) {
-                throw OperationFailure("BG_REMOVE_MODEL_UNAVAILABLE")
+                primaryError = OperationFailure("BG_REMOVE_MODEL_UNAVAILABLE")
             }
 
             currentCoroutineContext().ensureActive()
-            mlForeground = result.foregroundBitmap
-            val mask = result.foregroundConfidenceMask
-            val w = working.width
-            val h = working.height
 
-            cutout = if (mask != null) {
-                mask.rewind()
-                val total = w * h
-                if (mask.remaining() < total) {
-                    throw OperationFailure("BG_REMOVE_NO_SUBJECT")
+            // Specialized dual-model resilience & portrait hair-edge fusion via LiteRT selfie segmenter.
+            if (hasPortraitFace) {
+                val portraitMask = runCatching { portraitSegmenter.segmentMask(working) }.getOrNull()
+                if (portraitMask != null && portraitMask.size >= total) {
+                    primaryConfidence = if (primaryConfidence == null) {
+                        portraitMask
+                    } else {
+                        val merged = primaryConfidence!!
+                        for (i in 0 until total) {
+                            val m = merged[i]
+                            if (m in 0.08f..0.92f) {
+                                merged[i] = (0.70f * m + 0.30f * portraitMask[i]).coerceIn(0f, 1f)
+                            }
+                        }
+                        merged
+                    }
                 }
-                val confidence = FloatArray(total)
-                mask.get(confidence, 0, total)
+            }
+
+            cutout = if (primaryConfidence != null) {
                 val pixels = IntArray(total)
                 working.getPixels(pixels, 0, w, 0, 0, w, h)
-                val stats = applyConfidenceMaskAndDecontaminate(pixels, confidence, w, h)
+                val stats = applyConfidenceMaskAndDecontaminate(pixels, primaryConfidence!!, w, h)
                 if (stats.foregroundPixels == 0) {
                     throw OperationFailure("BG_REMOVE_NO_SUBJECT")
                 }
@@ -108,7 +135,7 @@ class SubjectSegmentationEngine @Inject constructor(
                 }
                 fg.copy(Bitmap.Config.ARGB_8888, false).apply { setHasAlpha(true) }
             } else {
-                throw OperationFailure("BG_REMOVE_NO_SUBJECT")
+                throw primaryError ?: OperationFailure("BG_REMOVE_NO_SUBJECT")
             }
 
             val cropped = if (trimTransparent) {
@@ -158,6 +185,23 @@ class SubjectSegmentationEngine @Inject constructor(
             if (working !== source && working !== resultBitmap && !working.isRecycled) working.recycle()
         }
     }
+
+    private suspend fun hasDetectedPortraitFace(bitmap: Bitmap): Boolean = withTimeoutOrNull(900L) {
+        val options = FaceDetectorOptions.Builder()
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+            .setMinFaceSize(0.10f)
+            .build()
+        val detector = FaceDetection.getClient(options)
+        try {
+            detector.process(InputImage.fromBitmap(bitmap, 0)).awaitNativeSegmentation().isNotEmpty()
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (_: Exception) {
+            false
+        } finally {
+            runCatching { detector.close() }
+        }
+    } ?: false
 
     private fun prepareWorkingBitmap(source: Bitmap): Bitmap {
         val minDim = min(source.width, source.height)
@@ -303,6 +347,55 @@ class SubjectSegmentationEngine @Inject constructor(
             if (foregroundPixels == 0) {
                 for (i in 0 until total) pixels[i] = 0
                 return CutoutStats(0, 0)
+            }
+
+            // Iterative BFS connected-component pruning strips isolated background specks while preserving all main subjects.
+            val minIslandSize = max(4, minOf(48, foregroundPixels / 300))
+            if (total >= 64) {
+                val visited = BooleanArray(total)
+                val queue = IntArray(total)
+                val component = IntArray(total)
+                for (start in 0 until total) {
+                    if (alphas[start] == 0 || visited[start]) continue
+                    var head = 0
+                    var tail = 0
+                    var compSize = 0
+                    visited[start] = true
+                    queue[tail++] = start
+                    while (head < tail) {
+                        val curr = queue[head++]
+                        component[compSize++] = curr
+                        val cx = curr % width
+                        val cy = curr / width
+                        if (cx > 0) {
+                            val n = curr - 1
+                            if (alphas[n] > 0 && !visited[n]) { visited[n] = true; queue[tail++] = n }
+                        }
+                        if (cx + 1 < width) {
+                            val n = curr + 1
+                            if (alphas[n] > 0 && !visited[n]) { visited[n] = true; queue[tail++] = n }
+                        }
+                        if (cy > 0) {
+                            val n = curr - width
+                            if (alphas[n] > 0 && !visited[n]) { visited[n] = true; queue[tail++] = n }
+                        }
+                        if (cy + 1 < height) {
+                            val n = curr + width
+                            if (alphas[n] > 0 && !visited[n]) { visited[n] = true; queue[tail++] = n }
+                        }
+                    }
+                    if (compSize < minIslandSize) {
+                        for (k in 0 until compSize) {
+                            val idx = component[k]
+                            if (alphas[idx] >= 96) foregroundPixels--
+                            alphas[idx] = 0
+                        }
+                    }
+                }
+                if (foregroundPixels <= 0) {
+                    for (i in 0 until total) pixels[i] = 0
+                    return CutoutStats(0, 0)
+                }
             }
 
             // Copy original pixels before modifying RGB on semi-transparent borders so neighbors read unshifted source colors.

@@ -247,7 +247,7 @@
     <string name="vault_lock_folder">Lock with Biometrics</string>
     <string name="vault_unlock_folder">Remove Folder Lock</string>
     <string name="pro_active_badge">Jumlo Pro Active</string>
-    <string name="pro_upgrade_subtitle" formatted="false">Lifetime one-time unlock · 100% offline</string>
+    <string name="pro_upgrade_subtitle" formatted="false">Studio AI scans, Arabic OCR &amp; unlimited exports</string>
     <string name="msg_vault_unavailable">Set up screen lock or biometrics in device settings to use Vault.</string>
     <string name="msg_vault_auth_failed">Authentication failed. Verify your identity and try again.</string>
     <string name="msg_redact_required">Select at least one region to redact.</string>
@@ -309,8 +309,8 @@
     <string name="scan_open_settings">Open Settings</string>
     <string name="scan_capture_failed">Could not capture image. Hold steady and try again.</string>
     <string name="scan_compose_failed">Could not create the A4 PDF. Check free storage and try again.</string>
-    <string name="pro_hero_headline">Unlock Jumlo Pro</string>
-    <string name="pro_hero_subheadline">Every document tool, unlimited speed, zero cloud uploads.</string>
+    <string name="pro_hero_headline">Upgrade to Jumlo Pro</string>
+    <string name="pro_hero_subheadline">Priority on-device AI for crisp scans, studio cutouts, and searchable PDFs without limits.</string>
     <string name="pro_best_value">Best Value</string>
     <string name="pro_benefit_offline">All Pro PDF, Scan &amp; Image tools unlocked</string>
     <string name="pro_benefit_ocr">High-accuracy Arabic &amp; multi-language OCR</string>
@@ -319,7 +319,7 @@
     <string name="pro_legal_privacy">Privacy Policy</string>
     <string name="pro_legal_terms">Terms of Service</string>
     <string name="pro_terms_body">Jumlo Pro unlocks all on-device features via Google Play Billing. Annual plans renew automatically unless canceled at least 24 hours before renewal in Google Play. Lifetime is a one-time purchase. Restore purchases anytime.</string>
-    <string name="pro_billing_note">Billed securely through Google Play. Cancel anytime.</string>
+    <string name="pro_billing_note">Instant sync with Google Play. Manage or cancel anytime.</string>
     <string name="pref_enabled">Enabled</string>
     <string name="pref_disabled">Disabled</string>
     <string name="viewer_office_badge_word">Word</string>
@@ -367,8 +367,8 @@
     <string name="pro_eyebrow">PREMIUM SUITE</string>
     <string name="pro_badge_short">PRO</string>
     <string name="pro_banner_cta">Explore plans</string>
-    <string name="pro_lifetime_subtitle">One-time purchase · Own forever</string>
-    <string name="pro_annual_subtitle">Yearly access · Cancel anytime</string>
+    <string name="pro_lifetime_subtitle">Full studio toolkit · Every pro release included</string>
+    <string name="pro_annual_subtitle">Flexible yearly access · Priority AI &amp; PDF suite</string>
     <string name="pro_unlock_lifetime">Unlock Lifetime</string>
     <string name="pro_unlock_annual">Start Annual Plan</string>
     <string name="about_version_label">Version %1$s (%2$d)</string>
@@ -394,4 +394,5 @@
     <string name="field_bg_trim">Auto-trim empty edges</string>
     <string name="field_bg_transparent_note">Transparent cutouts save as PNG with crisp anti-aliased alpha edges.</string>
     <string name="workspace_action_remove_bg">Remove Background</string>
+    <string name="ocr_detected_doc_badge">Detected: %1$s · Suggested: %2$s</string>
 </resources>

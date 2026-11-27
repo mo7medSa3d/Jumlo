@@ -248,7 +248,7 @@
     <string name="vault_lock_folder">قفل المجلد بالبصمة</string>
     <string name="vault_unlock_folder">إلغاء قفل المجلد</string>
     <string name="pro_active_badge">جملو Pro مفعّل</string>
-    <string name="pro_upgrade_subtitle" formatted="false">تفعيل مدى الحياة لمرة واحدة · 100% محلي</string>
+    <string name="pro_upgrade_subtitle" formatted="false">مسح ذكي بالذكاء الاصطناعي، OCR عربي، وتصدير بلا حدود</string>
     <string name="msg_vault_unavailable">فعّل قفل الشاشة أو البصمة من إعدادات الجهاز لاستخدام الخزنة.</string>
     <string name="msg_vault_auth_failed">تعذّر التحقق من الهوية. أعد التحقق وحاول مجددًا.</string>
     <string name="msg_redact_required">حدّد منطقة واحدة على الأقل للطمس.</string>
@@ -310,8 +310,8 @@
     <string name="scan_open_settings">فتح الإعدادات</string>
     <string name="scan_capture_failed">تعذّر التقاط الصورة. ثبّت يدك وحاول مجدداً.</string>
     <string name="scan_compose_failed">تعذّر إنشاء ملف PDF بحجم A4. تحقّق من مساحة التخزين وحاول مجدداً.</string>
-    <string name="pro_hero_headline">احصل على جملو برو</string>
-    <string name="pro_hero_subheadline">كل أدوات المستندات، سرعة بلا حدود، وخصوصية كاملة على جهازك.</string>
+    <string name="pro_hero_headline">ارتقِ إلى جملو Pro</string>
+    <string name="pro_hero_subheadline">ذكاء اصطناعي فائق الدقة للمسح الضوئي، تفريغ الخلفيات، ومعالجة PDF بلا حدود.</string>
     <string name="pro_best_value">أفضل قيمة</string>
     <string name="pro_benefit_offline">فتح جميع أدوات PDF والمسح والصور الاحترافية</string>
     <string name="pro_benefit_ocr">استخراج نص عربي ومتعدد اللغات بدقة عالية</string>
@@ -320,7 +320,7 @@
     <string name="pro_legal_privacy">سياسة الخصوصية</string>
     <string name="pro_legal_terms">شروط الاستخدام</string>
     <string name="pro_terms_body">يفتح جملو برو جميع الميزات المحلية عبر فواتير Google Play. تتجدد الباقة السنوية تلقائياً ما لم تُلغَ قبل 24 ساعة على الأقل من التجديد في Google Play. باقة مدى الحياة تُدفع لمرة واحدة ويمكنك استعادة مشترياتك في أي وقت.</string>
-    <string name="pro_billing_note">الفوترة آمنة عبر Google Play ويمكنك الإلغاء في أي وقت.</string>
+    <string name="pro_billing_note">تفعيل فوري عبر Google Play مع إدارة مرنة أو إلغاء في أي وقت.</string>
     <string name="pref_enabled">مفعّل</string>
     <string name="pref_disabled">معطّل</string>
     <string name="viewer_office_badge_word">وورد</string>
@@ -368,8 +368,8 @@
     <string name="pro_eyebrow">الباقة الاحترافية</string>
     <string name="pro_badge_short">PRO</string>
     <string name="pro_banner_cta">عرض الباقات</string>
-    <string name="pro_lifetime_subtitle">دفعة واحدة · تملك مدى الحياة</string>
-    <string name="pro_annual_subtitle">اشتراك سنوي · ألغِ في أي وقت</string>
+    <string name="pro_lifetime_subtitle">وصول كامل للاستوديو مع جميع التحديثات القادمة</string>
+    <string name="pro_annual_subtitle">اشتراك سنوي مرن · جميع أدوات PDF والذكاء الاصطناعي</string>
     <string name="pro_unlock_lifetime">فتح مدى الحياة</string>
     <string name="pro_unlock_annual">بدء الباقة السنوية</string>
     <string name="about_version_label">الإصدار %1$s (%2$d)</string>
@@ -395,4 +395,5 @@
     <string name="field_bg_trim">قص الفراغ الزائد حول العنصر</string>
     <string name="field_bg_transparent_note">تُحفظ الصور الشفافة بصيغة PNG عالية الدقة وبحواف ناعمة خالية من التسنن.</string>
     <string name="workspace_action_remove_bg">إزالة الخلفية</string>
+    <string name="ocr_detected_doc_badge">نوع المستند: %1$s · مقترح التسمية: %2$s</string>
 </resources>

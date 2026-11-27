@@ -89,21 +89,23 @@ class AppHaptics(
         effect(event)
         if(cue!=null) sound?.play(cue,soundEnabled)
     }
-    fun navigationTab()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
-    fun screenTransition()=trigger(Event.TICK,UiSoundPlayer.Cue.TRANSITION)
-    fun toolExecute()=trigger(Event.START,UiSoundPlayer.Cue.START)
-    fun toolSelect()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
-    fun selectionToggle()=trigger(Event.TICK,UiSoundPlayer.Cue.TOGGLE)
-    fun secondaryAction()=trigger(Event.DELETE,UiSoundPlayer.Cue.DELETE)
-    fun actionClick()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
+    fun navigationTab()=trigger(Event.TICK,null)
+    fun screenTransition()=trigger(Event.TICK,null)
+    fun toolExecute()=trigger(Event.START,null)
+    fun toolSelect()=trigger(Event.TICK,null)
+    fun selectionToggle()=trigger(Event.TICK,null)
+    fun secondaryAction()=trigger(Event.DELETE,null)
+    fun actionClick()=trigger(Event.TICK,null)
     fun longPress()=trigger(Event.HOLD,null)
     fun sliderTick()=trigger(Event.TICK,null)
     /** A drag was picked up. Distinct from the click tick so lifts feel different from taps. */
-    fun dragStart()=trigger(Event.DRAG,UiSoundPlayer.Cue.TOGGLE)
+    fun dragStart()=trigger(Event.DRAG,null)
     /** A drag was released. */
-    fun dragEnd()=trigger(Event.TICK,UiSoundPlayer.Cue.TAP)
+    fun dragEnd()=trigger(Event.TICK,null)
     /** A value snapped to a step, grid line or neighbour. */
-    fun snap()=trigger(Event.TICK,UiSoundPlayer.Cue.TOGGLE)
+    fun snap()=trigger(Event.TICK,null)
+    /** Camera/ML frame capture or scan page milestone. */
+    fun captureSuccess()=trigger(Event.START,UiSoundPlayer.Cue.CAPTURE)
     fun downloadComplete()=trigger(Event.SUCCESS,UiSoundPlayer.Cue.SUCCESS)
     fun error()=trigger(Event.ERROR,UiSoundPlayer.Cue.ERROR)
 }

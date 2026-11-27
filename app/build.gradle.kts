@@ -55,6 +55,7 @@ android {
 
     androidResources {
         localeFilters += listOf("en", "ar")
+        noCompress += listOf("tflite")
     }
 
     // pdfbox-android keeps standard-14 font metrics in AAR assets (loaded via
@@ -290,6 +291,8 @@ dependencies {
     implementation(libs.mlkit.text.recognition.japanese)
     implementation(libs.mlkit.text.recognition.korean)
     implementation(libs.mlkit.subject.segmentation)
+    implementation(libs.mlkit.face.detection)
+    implementation(libs.play.services.tflite.java)
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation(libs.androidx.profileinstaller)
 

@@ -126,19 +126,26 @@ fun HomeScreen(
         )
     }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("home.screen")) {
+        val isWide = maxWidth >= 680.dp
+        val recentColumns = when {
+            maxWidth >= 1040.dp -> 4
+            maxWidth >= 680.dp -> 3
+            else -> 1
+        }
+        val horizontalPad = if (isWide) 24.dp else 20.dp
         val actionColumns = if (maxWidth >= 600.dp) 8 else 4
         val actionRows = remember(actions, actionColumns) { actions.chunked(actionColumns) }
         LazyColumn(
             state = listState,
-            modifier = Modifier.widthIn(max = 980.dp).fillMaxSize().align(Alignment.TopCenter),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = horizontalPad, end = horizontalPad, top = 12.dp, bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item("hero", contentType = "hero") {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                @Composable
+                fun HeroGreetingRow(rowModifier: Modifier) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        modifier = rowModifier
                             .padding(top = 4.dp, bottom = 2.dp)
                             .testTag("home.hero.card"),
                         verticalAlignment = Alignment.CenterVertically,
@@ -171,13 +178,31 @@ fun HomeScreen(
                             modifier = Modifier.size(44.dp)
                         )
                     }
+                }
+                @Composable
+                fun HeroSearchBar(barModifier: Modifier) {
                     QuietSearchBar(
                         query = homeSearch,
                         placeholder = stringResource(R.string.neon_tools_search),
                         onQueryChange = { homeSearch = it },
                         onClear = { homeSearch = "" },
-                        modifier = Modifier.fillMaxWidth().testTag("home.search")
+                        modifier = barModifier.testTag("home.search")
                     )
+                }
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (isWide) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            HeroGreetingRow(Modifier.weight(1.1f))
+                            HeroSearchBar(Modifier.weight(1f))
+                        }
+                    } else {
+                        HeroGreetingRow(Modifier.fillMaxWidth())
+                        HeroSearchBar(Modifier.fillMaxWidth())
+                    }
                     if (homeSearch.isNotBlank()) {
                         if (searchResults.isEmpty()) {
                             Text(stringResource(R.string.tools_no_matching), style = QuietTheme.typography.metadata, color = colors.onSurfaceVariant)
@@ -271,11 +296,12 @@ fun HomeScreen(
                         onScan,
                         icon = Icons.Rounded.DocumentScanner
                     )
-                    else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(visibleRecent, key = { it.id }, contentType = { "recent-output" }) { output ->
+                    else -> {
+                        @Composable
+                        fun RecentOutputCard(output: com.jumlo.app.model.OutputRecord, cardModifier: Modifier) {
                             Surface(
                                 onClick = { onOutput(output) },
-                                modifier = Modifier.width(156.dp).height(196.dp).pressFeedback(),
+                                modifier = cardModifier.pressFeedback(),
                                 shape = QuietTheme.shapes.card,
                                 color = pillars.cardSurface,
                                 shadowElevation = 0.dp
@@ -295,6 +321,26 @@ fun HomeScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+                                }
+                            }
+                        }
+                        if (isWide) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                visibleRecent.chunked(recentColumns).forEach { rowOutputs ->
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        rowOutputs.forEach { output ->
+                                            RecentOutputCard(output, Modifier.weight(1f).height(188.dp))
+                                        }
+                                        repeat(recentColumns - rowOutputs.size) {
+                                            Spacer(Modifier.weight(1f))
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(visibleRecent, key = { it.id }, contentType = { "recent-output" }) { output ->
+                                    RecentOutputCard(output, Modifier.width(156.dp).height(196.dp))
                                 }
                             }
                         }

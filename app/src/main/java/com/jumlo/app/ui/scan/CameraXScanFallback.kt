@@ -14,8 +14,10 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
@@ -28,6 +30,7 @@ import com.jumlo.app.data.scan.ScanFilter
 import com.jumlo.app.ui.icons.rounded.AutoAwesome
 import com.jumlo.app.ui.icons.rounded.Crop
 import java.io.FileOutputStream
+import java.util.concurrent.Executors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -43,6 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
@@ -144,6 +150,7 @@ internal fun CameraXScanFallback(
     var reviewEditEpoch by remember { mutableIntStateOf(0) }
     var cropTargetBitmap by remember { mutableStateOf<Pair<String, Bitmap>?>(null) }
     var activeFilter by rememberSaveable(sessionId) { mutableStateOf(ScanFilter.ORIGINAL) }
+    var liveQuad by remember { mutableStateOf<NormalizedQuad?>(null) }
     val mainExecutor = remember { ContextCompat.getMainExecutor(context) }
 
     LaunchedEffect(boundCamera, previewView) {
@@ -204,8 +211,12 @@ internal fun CameraXScanFallback(
     DisposableEffect(permitted, lifecycleOwner) {
         var provider: ProcessCameraProvider? = null
         var preview: Preview? = null
+        var analysis: ImageAnalysis? = null
+        val analysisExecutor = Executors.newSingleThreadExecutor()
+        var lastAnalysisMs = 0L
         var disposed = false
         cameraReady = false
+        liveQuad = null
         if (permitted) {
             val future = ProcessCameraProvider.getInstance(context)
             future.addListener({
@@ -221,11 +232,44 @@ internal fun CameraXScanFallback(
                             .also { it.setSurfaceProvider(previewView.surfaceProvider) }
                         preview = cameraPreview
                         capture.targetRotation = previewView.display?.rotation ?: Surface.ROTATION_0
-                        val groupBuilder = UseCaseGroup.Builder()
+                        val imageAnalysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
+                            .also { analyzer ->
+                                analyzer.setAnalyzer(analysisExecutor) { proxy ->
+                                    try {
+                                        val now = android.os.SystemClock.elapsedRealtime()
+                                        if (!disposed && now - lastAnalysisMs >= 180L) {
+                                            lastAnalysisMs = now
+                                            val detected = detectLiveQuadFromYPlane(proxy)
+                                            mainExecutor.execute {
+                                                if (!disposed) liveQuad = detected
+                                            }
+                                        }
+                                    } finally {
+                                        proxy.close()
+                                    }
+                                }
+                            }
+                        analysis = imageAnalysis
+                        val groupWithAnalysis = UseCaseGroup.Builder()
                             .addUseCase(cameraPreview)
                             .addUseCase(capture)
-                        previewView.viewPort?.let { groupBuilder.setViewPort(it) }
-                        boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, groupBuilder.build())
+                            .addUseCase(imageAnalysis)
+                            .apply { previewView.viewPort?.let { setViewPort(it) } }
+                            .build()
+                        boundCamera = try {
+                            cameraProvider.bindToLifecycle(lifecycleOwner, selector, groupWithAnalysis)
+                        } catch (_: IllegalArgumentException) {
+                            // Low-tier Camera2 hardware supporting <= 2 surface streams binds Preview + ImageCapture cleanly.
+                            analysis = null
+                            val coreGroup = UseCaseGroup.Builder()
+                                .addUseCase(cameraPreview)
+                                .addUseCase(capture)
+                                .apply { previewView.viewPort?.let { setViewPort(it) } }
+                                .build()
+                            cameraProvider.bindToLifecycle(lifecycleOwner, selector, coreGroup)
+                        }
                         cameraReady = true
                     } catch (_: Exception) {
                         error = true
@@ -236,9 +280,16 @@ internal fun CameraXScanFallback(
         }
         onDispose {
             disposed = true
+            runCatching { analysis?.clearAnalyzer() }
+            runCatching { analysisExecutor.shutdown() }
             runCatching { boundCamera?.cameraControl?.enableTorch(false) }
             boundCamera = null
-            preview?.let { provider?.unbind(it, capture) }
+            liveQuad = null
+            preview?.let { p ->
+                runCatching {
+                    if (analysis != null) provider?.unbind(p, capture, analysis) else provider?.unbind(p, capture)
+                }
+            }
             cameraReady = false
         }
     }
@@ -346,11 +397,11 @@ internal fun CameraXScanFallback(
                 mainExecutor,
                 object : ImageCapture.OnImageSavedCallback {
                     override fun onImageSaved(result: ImageCapture.OutputFileResults) {
-                        if (active) { pagePaths = pagePaths + file.path; busy = false }
+                        if (active) { haptics.captureSuccess(); pagePaths = pagePaths + file.path; busy = false }
                         else Thread { runCatching { file.delete() } }.start()
                     }
                     override fun onError(exception: ImageCaptureException) {
-                        if (active) { busy = false; error = true }
+                        if (active) { haptics.error(); busy = false; error = true }
                         Thread { runCatching { file.delete() } }.start()
                     }
                 }
@@ -613,6 +664,7 @@ internal fun CameraXScanFallback(
                 )
             }
             val guideColor = Color.White.copy(alpha = 0.35f)
+            val detectedLive = liveQuad
             Canvas(Modifier.matchParentSize()) {
                 val frameInset = 16.dp.toPx()
                 inset(left = frameInset, right = frameInset, top = 64.dp.toPx(), bottom = 96.dp.toPx()) {
@@ -620,6 +672,24 @@ internal fun CameraXScanFallback(
                         color = guideColor,
                         cornerRadius = CornerRadius(16.dp.toPx()),
                         style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
+                if (detectedLive != null) {
+                    val path = Path().apply {
+                        moveTo(detectedLive.tl.x * size.width, detectedLive.tl.y * size.height)
+                        lineTo(detectedLive.tr.x * size.width, detectedLive.tr.y * size.height)
+                        lineTo(detectedLive.br.x * size.width, detectedLive.br.y * size.height)
+                        lineTo(detectedLive.bl.x * size.width, detectedLive.bl.y * size.height)
+                        close()
+                    }
+                    drawPath(
+                        path = path,
+                        color = Color(0xFF22C55E).copy(alpha = 0.14f)
+                    )
+                    drawPath(
+                        path = path,
+                        color = Color(0xFF22C55E),
+                        style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
                     )
                 }
             }
@@ -828,4 +898,43 @@ internal fun CameraXScanFallback(
             }
         }
     }
+}
+
+private fun detectLiveQuadFromYPlane(proxy: ImageProxy): NormalizedQuad? {
+    val plane = proxy.planes.firstOrNull() ?: return null
+    val srcW = proxy.width
+    val srcH = proxy.height
+    if (srcW < 64 || srcH < 64) return null
+    val rotation = ((proxy.imageInfo.rotationDegrees % 360) + 360) % 360
+    val rotated = rotation == 90 || rotation == 270
+    val rotW = if (rotated) srcH else srcW
+    val rotH = if (rotated) srcW else srcH
+    val targetLong = 96
+    val scale = targetLong.toFloat() / maxOf(rotW, rotH)
+    val outW = (rotW * scale).toInt().coerceAtLeast(48)
+    val outH = (rotH * scale).toInt().coerceAtLeast(48)
+
+    val buf = plane.buffer
+    val rowStride = plane.rowStride
+    val pixStride = plane.pixelStride
+    val limit = buf.limit()
+    val luma = IntArray(outW * outH)
+
+    for (oy in 0 until outH) {
+        val ry = oy * rotH / outH
+        val rowOut = oy * outW
+        for (ox in 0 until outW) {
+            val rx = ox * rotW / outW
+            val (sx, sy) = when (rotation) {
+                90 -> ry to (srcH - 1 - rx)
+                180 -> (srcW - 1 - rx) to (srcH - 1 - ry)
+                270 -> (srcW - 1 - ry) to rx
+                else -> rx to ry
+            }
+            val pos = sy * rowStride + sx * pixStride
+            luma[rowOut + ox] = if (pos in 0 until limit) buf.get(pos).toInt() and 0xFF else 0
+        }
+    }
+    val quad = DocumentQuadGeometry.detectQuadFromLuma(luma, outW, outH)
+    return if (!quad.isFullFrame() && DocumentQuadGeometry.isValid(quad)) quad else null
 }

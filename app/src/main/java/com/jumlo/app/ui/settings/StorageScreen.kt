@@ -56,55 +56,78 @@ fun StorageScreen(
             .mapValues { (_, files) -> files.sumOf { it.sizeBytes } } to outputs.sumOf { it.sizeBytes }
     }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            Modifier.widthIn(max = 760.dp).fillMaxSize().align(Alignment.TopCenter).testTag("storage.screen"),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 20.dp + navBottom),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item("storage-hero") {
-                val colors = MaterialTheme.colorScheme
-                val pillars = QuietTheme.pillars
-                Surface(
-                    shape = QuietTheme.shapes.heroCard,
-                    color = pillars.cardSurface,
-                    shadowElevation = 0.dp,
-                    modifier = Modifier.fillMaxWidth()
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth >= 700.dp
+        val horizontalPad = if (wide) 24.dp else 20.dp
+        @Composable
+        fun StorageHeroCard(cardModifier: Modifier) {
+            val colors = MaterialTheme.colorScheme
+            val pillars = QuietTheme.pillars
+            Surface(
+                shape = QuietTheme.shapes.heroCard,
+                color = pillars.cardSurface,
+                shadowElevation = 0.dp,
+                modifier = cardModifier
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    Text(
+                        stringResource(R.string.modern_storage_usage),
+                        style = QuietTheme.typography.metadataStrong,
+                        color = colors.onSurfaceVariant,
+                        modifier = Modifier.semantics { heading() }
+                    )
+                    Text(
+                        formatBytes(total),
+                        style = QuietTheme.typography.display.copy(textDirection = TextDirection.Ltr),
+                        color = colors.onSurface
+                    )
+                    Text(
+                        stringResource(R.string.storage_scope),
+                        style = QuietTheme.typography.metadata,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        @Composable
+        fun SaveFolderSection(sectionModifier: Modifier) {
+            Column(modifier = sectionModifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SaveFolderCard(settings.downloadDestinationFolder, onChooseFolder, onOpenFolder)
+                if (settings.downloadDestinationFolder.startsWith("content://")) {
+                    TextButton(
+                        onClick = vm::resetDownloadDestinationFolder,
+                        modifier = Modifier.testTag("storage.resetDownloadLocation")
                     ) {
-                        Text(
-                            stringResource(R.string.modern_storage_usage),
-                            style = QuietTheme.typography.metadataStrong,
-                            color = colors.onSurfaceVariant,
-                            modifier = Modifier.semantics { heading() }
-                        )
-                        Text(
-                            formatBytes(total),
-                            style = QuietTheme.typography.display.copy(textDirection = TextDirection.Ltr),
-                            color = colors.onSurface
-                        )
-                        Text(
-                            stringResource(R.string.storage_scope),
-                            style = QuietTheme.typography.metadata,
-                            color = colors.onSurfaceVariant
-                        )
+                        Text(stringResource(R.string.modern_reset_save_folder))
                     }
                 }
             }
-            item("save-folder") {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SaveFolderCard(settings.downloadDestinationFolder, onChooseFolder, onOpenFolder)
-                    if (settings.downloadDestinationFolder.startsWith("content://")) {
-                        TextButton(
-                            onClick = vm::resetDownloadDestinationFolder,
-                            modifier = Modifier.testTag("storage.resetDownloadLocation")
-                        ) {
-                            Text(stringResource(R.string.modern_reset_save_folder))
-                        }
+        }
+        LazyColumn(
+            Modifier.fillMaxSize().testTag("storage.screen"),
+            contentPadding = PaddingValues(start = horizontalPad, end = horizontalPad, top = 20.dp, bottom = 20.dp + navBottom),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (wide) {
+                item("storage-top-row") {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        StorageHeroCard(Modifier.weight(1f))
+                        SaveFolderSection(Modifier.weight(1f))
                     }
+                }
+            } else {
+                item("storage-hero") {
+                    StorageHeroCard(Modifier.fillMaxWidth())
+                }
+                item("save-folder") {
+                    SaveFolderSection(Modifier.fillMaxWidth())
                 }
             }
             item("categories") {

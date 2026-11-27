@@ -27,6 +27,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.exifinterface.media.ExifInterface
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -34,6 +37,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import com.jumlo.app.R
 import com.jumlo.app.core.ResourceBudgetPolicy
+import com.jumlo.app.data.scan.CardOrientationDetector
 import com.jumlo.app.data.scan.DocumentFilterEngine
 import com.jumlo.app.data.scan.IdCardA4Composer
 import com.jumlo.app.data.scan.ScanFilter
@@ -84,6 +88,7 @@ internal fun IdCardScanFlow(
     }
     val scope = rememberCoroutineScope()
     val colors = MaterialTheme.colorScheme
+    val haptics = com.jumlo.app.ui.util.rememberAppHaptics()
 
     var frontBmp by remember { mutableStateOf<Bitmap?>(null) }
     var backBmp by remember { mutableStateOf<Bitmap?>(null) }
@@ -95,7 +100,7 @@ internal fun IdCardScanFlow(
     var capturingFront by rememberSaveable { mutableStateOf(true) }
     var cropPendingSide by remember { mutableStateOf<Pair<Boolean, Bitmap>?>(null) }
 
-    fun decodeCardFile(file: File, snapEdges: Boolean): Bitmap? = runCatching {
+    suspend fun decodeCardFile(file: File, snapEdges: Boolean): Bitmap? = runCatching {
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, opts)
         val maxSide = maxOf(opts.outWidth, opts.outHeight)
@@ -113,17 +118,20 @@ internal fun IdCardScanFlow(
                 else -> 0f
             }
         }.getOrDefault(0f)
-        val upright = if (rotation != 0f) {
+        val exifFixed = if (rotation != 0f) {
             val m = Matrix().apply { postRotate(rotation) }
             Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, m, true).also { if (it !== raw) raw.recycle() }
         } else raw
-        val processed = if (!snapEdges) upright else {
-            snapToCardEdges(upright).also { if (it !== upright) upright.recycle() }
+        val mlOriented = CardOrientationDetector.autoOrientLandscape(exifFixed).also {
+            if (it !== exifFixed) exifFixed.recycle()
+        }
+        val processed = if (!snapEdges) mlOriented else {
+            snapToCardEdges(mlOriented).also { if (it !== mlOriented) mlOriented.recycle() }
         }
         scaleDownToMaxEdge(processed, ID_CARD_MAX_EDGE).also { if (it !== processed) processed.recycle() }
     }.onFailure { AppDiagnostics.report("id_card_decode", it) }.getOrNull()
 
-    fun decodeUri(uri: Uri, snapEdges: Boolean): Bitmap? = runCatching {
+    suspend fun decodeUri(uri: Uri, snapEdges: Boolean): Bitmap? = runCatching {
         val tmp = File(context.cacheDir, "id-import-${System.currentTimeMillis()}.jpg")
         try {
             val input = context.contentResolver.openInputStream(uri) ?: return null
@@ -180,10 +188,12 @@ internal fun IdCardScanFlow(
             busy = false
             when {
                 decoded.size >= 2 -> {
+                    haptics.captureSuccess()
                     frontBmp = decoded[0]
                     backBmp = decoded[1]
                 }
                 decoded.size == 1 -> {
+                    haptics.captureSuccess()
                     if (capturingFront) {
                         frontBmp = decoded[0]
                         if (backBmp == null) capturingFront = false
@@ -191,7 +201,7 @@ internal fun IdCardScanFlow(
                         backBmp = decoded[0]
                     }
                 }
-                else -> errorRes = R.string.scan_capture_failed
+                else -> { haptics.error(); errorRes = R.string.scan_capture_failed }
             }
         }
     }
@@ -235,10 +245,13 @@ internal fun IdCardScanFlow(
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (!autoLaunchedOnce && frontBmp == null && backBmp == null && playServicesAvailable) {
-            autoLaunchedOnce = true
-            launchMlIdScanner(maxPages = 2)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (!autoLaunchedOnce && frontBmp == null && backBmp == null && playServicesAvailable) {
+                autoLaunchedOnce = true
+                launchMlIdScanner(maxPages = 2)
+            }
         }
     }
 

@@ -59,6 +59,10 @@ class MlKitOcrEngine @Inject constructor(
 ) {
     constructor(context: Context) : this(context, ArabicTesseractOcrEngine(context))
 
+    fun close() {
+        arabicEngine.close()
+    }
+
     private fun createRecognizer(script: OcrScript): TextRecognizer = when (script) {
         OcrScript.AUTO, OcrScript.ARABIC, OcrScript.LATIN -> TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         OcrScript.CHINESE -> TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
@@ -110,18 +114,28 @@ class MlKitOcrEngine @Inject constructor(
             ensureModuleInstalled(recognizer)
             currentCoroutineContext().ensureActive()
             val prepared = prepareForAccuracy(bitmap)
+            var uprightBitmap: Bitmap? = null
             val mlResult = try {
-                val firstPass = runPass(recognizer, prepared)
-                if (firstPass.isNotBlank()) firstPass else {
-                    // Second pass with grayscale contrast boost for faint scans or low-contrast photos.
-                    val enhanced = enhanceContrast(prepared)
-                    try {
-                        runPass(recognizer, enhanced)
-                    } finally {
-                        enhanced.recycle()
+                val firstText = runPassRaw(recognizer, prepared)
+                val firstTurn = detectDominantQuarterTurn(firstText)
+                if (firstTurn != 0 && script in setOf(OcrScript.AUTO, OcrScript.LATIN)) {
+                    val m = android.graphics.Matrix().apply { postRotate(firstTurn.toFloat()) }
+                    uprightBitmap = Bitmap.createBitmap(prepared, 0, 0, prepared.width, prepared.height, m, true)
+                    formatReadingOrder(runPassRaw(recognizer, uprightBitmap))
+                } else {
+                    val formattedFirst = formatReadingOrder(firstText)
+                    if (formattedFirst.isNotBlank()) formattedFirst else {
+                        // Second pass with deskew + contrast boost for faint or tilted scans.
+                        val enhanced = OcrImageEnhancer.prepareDocumentForOcr(prepared, targetWidthPx = 1800, maxPixels = 6_000_000L, contrastGain = 1.50f)
+                        try {
+                            formatReadingOrder(runPassRaw(recognizer, enhanced))
+                        } finally {
+                            enhanced.recycle()
+                        }
                     }
                 }
             } finally {
+                if (uprightBitmap != null && uprightBitmap !== prepared && !uprightBitmap.isRecycled) uprightBitmap.recycle()
                 if (prepared !== bitmap) prepared.recycle()
             }
 
@@ -176,7 +190,7 @@ class MlKitOcrEngine @Inject constructor(
         }
     }
 
-    private suspend fun runPass(recognizer: TextRecognizer, bitmap: Bitmap): String {
+    private suspend fun runPassRaw(recognizer: TextRecognizer, bitmap: Bitmap): Text {
         currentCoroutineContext().ensureActive()
         val text = try {
             recognizer.process(InputImage.fromBitmap(bitmap, 0)).awaitNativeCompletion()
@@ -186,7 +200,24 @@ class MlKitOcrEngine @Inject constructor(
             throw OperationFailure("OCR_FAILED")
         }
         currentCoroutineContext().ensureActive()
-        return formatReadingOrder(text)
+        return text
+    }
+
+    private fun detectDominantQuarterTurn(result: Text): Int {
+        var sumDx = 0f
+        var sumDy = 0f
+        var count = 0
+        for (block in result.textBlocks) {
+            for (line in block.lines) {
+                val pts = line.cornerPoints ?: continue
+                if (pts.size < 2) continue
+                val w = maxOf(1, line.text.length)
+                sumDx += (pts[1].x - pts[0].x) * w
+                sumDy += (pts[1].y - pts[0].y) * w
+                count++
+            }
+        }
+        return if (count < 2) 0 else OcrImageEnhancer.quarterTurnFromBaselineVector(sumDx, sumDy)
     }
 
     private fun prepareForAccuracy(source: Bitmap): Bitmap {
@@ -196,31 +227,6 @@ class MlKitOcrEngine @Inject constructor(
         val w = (source.width * scale).toInt().coerceAtLeast(1)
         val h = (source.height * scale).toInt().coerceAtLeast(1)
         return runCatching { Bitmap.createScaledBitmap(source, w, h, true) }.getOrDefault(source)
-    }
-
-    private fun enhanceContrast(source: Bitmap): Bitmap {
-        val out = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
-        try {
-            val canvas = Canvas(out)
-            val contrast = 1.55f
-            val translate = (-0.5f * contrast + 0.5f) * 255f
-            val gray = ColorMatrix().apply { setSaturation(0f) }
-            val boost = ColorMatrix(floatArrayOf(
-                contrast, 0f, 0f, 0f, translate,
-                0f, contrast, 0f, 0f, translate,
-                0f, 0f, contrast, 0f, translate,
-                0f, 0f, 0f, 1f, 0f
-            ))
-            gray.postConcat(boost)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-                colorFilter = ColorMatrixColorFilter(gray)
-            }
-            canvas.drawBitmap(source, 0f, 0f, paint)
-            return out
-        } catch (t: Throwable) {
-            out.recycle()
-            throw t
-        }
     }
 
     private fun formatReadingOrder(result: Text): String {

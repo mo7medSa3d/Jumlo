@@ -75,9 +75,15 @@ data class PreviewFrame(val bitmap:Bitmap,val page:Int,val count:Int,val width:I
     private val treeStore:DocumentTreeStore,
     private val budget:WorkBudget,
     private val ocr:com.jumlo.app.data.ocr.MlKitOcrEngine,
+    private val portraitSegmenter:com.jumlo.app.data.processing.LiteRtPortraitSegmenter,
     private val billing:com.jumlo.app.data.billing.JumloBillingManager,
     private val savedState:SavedStateHandle
 ):AndroidViewModel(app) {
+    override fun onCleared() {
+        runCatching { ocr.close() }
+        runCatching { portraitSegmenter.close() }
+        super.onCleared()
+    }
     private val _message=MutableStateFlow<String?>(null)
     // Reuse the ViewModel's SupervisorJob so all guarded work is still cancelled on clear.
     private val operationScope=CoroutineScope(viewModelScope.coroutineContext + viewModelErrorBoundary("workspace") { error ->

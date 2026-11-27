@@ -26,12 +26,14 @@ androidxJunit = "1.2.1"
 espressoCore = "3.6.1"
 pdfboxAndroid = "2.0.27.0"
 zip4j = "2.11.5"
-mlkitTextRecognition = "19.0.1"
+mlkitTextRecognition = "19.0.2"
 mlkitSubjectSegmentation = "16.0.0-beta1"
+mlkitFaceDetection = "17.1.0"
+playServicesTflite = "16.4.0"
 androidxBiometric = "1.1.0"
 playBilling = "7.1.1"
 playIntegrity = "1.4.0"
-mlkitTextRecognitionScripts = "16.0.1"
+mlkitTextRecognitionScripts = "16.0.2"
 coreSplashscreen = "1.0.1"
 benchmarkMacro = "1.3.4"
 profileinstaller = "1.4.1"
@@ -78,6 +80,8 @@ pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "mlkitTextRecognition" }
 mlkit-subject-segmentation = { group = "com.google.android.gms", name = "play-services-mlkit-subject-segmentation", version.ref = "mlkitSubjectSegmentation" }
+mlkit-face-detection = { group = "com.google.android.gms", name = "play-services-mlkit-face-detection", version.ref = "mlkitFaceDetection" }
+play-services-tflite-java = { group = "com.google.android.gms", name = "play-services-tflite-java", version.ref = "playServicesTflite" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "androidxBiometric" }
 play-billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "playBilling" }
 play-integrity = { group = "com.google.android.play", name = "integrity", version.ref = "playIntegrity" }

@@ -2,11 +2,6 @@ package com.jumlo.app.data.ocr
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
 import com.googlecode.tesseract.android.TessBaseAPI
 import com.jumlo.app.core.OcrTextPolicy
 import com.jumlo.app.data.jobs.OperationFailure
@@ -145,50 +140,14 @@ class ArabicTesseractOcrEngine @Inject constructor(
         cachedLangSpec = null
     }
 
-    /** Upscales low-res inputs to ~2400px width and applies clean grayscale contrast onto ARGB_8888. */
-    private fun preprocessForArabic(source: Bitmap): Bitmap {
-        val srcW = source.width.coerceAtLeast(1)
-        val srcH = source.height.coerceAtLeast(1)
-        var targetW = srcW
-        var targetH = srcH
-        if (srcW < TARGET_WIDTH_PX) {
-            val scale = (TARGET_WIDTH_PX.toFloat() / srcW).coerceAtMost(MAX_UPSCALE_FACTOR)
-            targetW = (srcW * scale).toInt().coerceAtLeast(1)
-            targetH = (srcH * scale).toInt().coerceAtLeast(1)
-        }
-        val pixels = targetW.toLong() * targetH.toLong()
-        if (pixels > MAX_PREPROCESS_PIXELS) {
-            val shrink = kotlin.math.sqrt(MAX_PREPROCESS_PIXELS.toDouble() / pixels.toDouble())
-            targetW = (targetW * shrink).toInt().coerceAtLeast(1)
-            targetH = (targetH * shrink).toInt().coerceAtLeast(1)
-        }
-        val out = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)
-        try {
-            val canvas = Canvas(out)
-            canvas.drawColor(Color.WHITE)
-            val contrast = 1.35f
-            val translate = (-0.5f * contrast + 0.5f) * 255f
-            val gray = ColorMatrix().apply { setSaturation(0f) }
-            val boost = ColorMatrix(floatArrayOf(
-                contrast, 0f, 0f, 0f, translate,
-                0f, contrast, 0f, 0f, translate,
-                0f, 0f, contrast, 0f, translate,
-                0f, 0f, 0f, 1f, 0f
-            ))
-            gray.postConcat(boost)
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-                colorFilter = ColorMatrixColorFilter(gray)
-            }
-            if (targetW != srcW || targetH != srcH) {
-                canvas.scale(targetW.toFloat() / srcW, targetH.toFloat() / srcH)
-            }
-            canvas.drawBitmap(source, 0f, 0f, paint)
-            return out
-        } catch (t: Throwable) {
-            out.recycle()
-            throw t
-        }
-    }
+    /** Upscales low-res inputs, straightens minor page tilt, and applies clean grayscale contrast onto ARGB_8888. */
+    private fun preprocessForArabic(source: Bitmap): Bitmap = OcrImageEnhancer.prepareDocumentForOcr(
+        source = source,
+        targetWidthPx = TARGET_WIDTH_PX,
+        maxUpscale = MAX_UPSCALE_FACTOR,
+        maxPixels = MAX_PREPROCESS_PIXELS,
+        contrastGain = 1.38f
+    )
 
     private suspend fun ensureModelsReady(
         includeEnglish: Boolean,

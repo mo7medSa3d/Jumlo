@@ -84,7 +84,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
             ET.parse(RES/'drawable'/name)
     def test_ui_tones_are_tiny_valid_mono_waveforms(self):
         root=RES/'raw'
-        expected=['tap','toggle','transition','start','success','error','delete']
+        expected=['tap','toggle','transition','start','capture','success','error','delete']
         size=0
         for cue in expected:
             file=root/f'jumlo_{cue}.wav'
@@ -101,7 +101,7 @@ class JumloBrandMotionChecks(unittest.TestCase):
         sound=code('ui/util/UiSoundPlayer.kt')
         self.assertIn('AudioManager.RINGER_MODE_NORMAL',sound)
         self.assertRegex(sound, r'getStreamVolume\(AudioManager\.STREAM_(?:MUSIC|SYSTEM)\)\s*(?:==\s*0|>\s*0)')
-        self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',code('MainActivity.kt'))
+        self.assertIn('LocalAppSoundsEnabled provides true',code('MainActivity.kt'))
     def test_haptics_have_intensity_patterns_and_system_respect(self):
         h=code('ui/util/AppHaptics.kt')
         for part in ('HapticIntensity.STRONG','HapticIntensity.LIGHT','VibrationEffect.createWaveform','HAPTIC_FEEDBACK_ENABLED','Event.SUCCESS','Event.ERROR','Event.DELETE'):
@@ -120,9 +120,10 @@ class JumloBrandMotionChecks(unittest.TestCase):
             self.assertNotIn(key,settings)
         self.assertIn('LocalAppHapticsEnabled provides settings.hapticFeedbackOnCommit',main)
         self.assertIn('LocalHapticIntensity provides settings.hapticIntensity',main)
-        self.assertIn('LocalAppSoundsEnabled provides settings.soundsEnabled',main)
-        for key in ('settings.notifications','settings.sounds','settings.haptics'):
-            self.assertIn(key,settings)
+        self.assertIn('LocalAppSoundsEnabled provides true',main)
+        self.assertIn('settings.notifications',settings)
+        self.assertNotIn('settings.sounds',settings)
+        self.assertNotIn('settings.haptics',settings)
     def test_dock_indicates_selection_in_ltr_and_rtl(self):
         dock=code('ui/components/QuietNavigation.kt')
         for key in ('JumloNavigationBar(','role = Role.Tab','navigationBarsPadding()',

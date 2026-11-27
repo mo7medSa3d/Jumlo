@@ -137,11 +137,18 @@ private val IMAGE_DIRECT_MODES = listOf(
     }
     val unknownSizeLabel = stringResource(R.string.media_size_unknown)
     Column(Modifier.fillMaxSize().imePadding()) {
-        LazyColumn(
-            modifier=Modifier.weight(1f).widthIn(max=840.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
-            contentPadding=PaddingValues(horizontal=20.dp,vertical=20.dp),
-            verticalArrangement=Arrangement.spacedBy(16.dp)
-        ) {
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val wide = maxWidth >= 680.dp
+            LazyColumn(
+                modifier=Modifier.fillMaxSize(),
+                contentPadding=PaddingValues(
+                    start = if (wide) 24.dp else 20.dp,
+                    top = 20.dp,
+                    end = if (wide) 24.dp else 20.dp,
+                    bottom = 24.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                ),
+                verticalArrangement=Arrangement.spacedBy(16.dp)
+            ) {
             // Top bar already displays the tool title and subtitle; start directly with link input.
             item("input", contentType = "input") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -527,6 +534,7 @@ private val IMAGE_DIRECT_MODES = listOf(
                     )
                 }
             }
+        }
         }
     }
 

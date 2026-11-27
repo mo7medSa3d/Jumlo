@@ -36,11 +36,11 @@ import com.jumlo.app.data.billing.JumloBillingManager
 import com.jumlo.app.data.billing.ProEntitlement
 import com.jumlo.app.ui.icons.Icons
 import com.jumlo.app.ui.icons.rounded.AutoAwesome
-import com.jumlo.app.ui.icons.rounded.Bolt
 import com.jumlo.app.ui.icons.rounded.CheckCircle
 import com.jumlo.app.ui.icons.rounded.Close
 import com.jumlo.app.ui.icons.rounded.DocumentScanner
 import com.jumlo.app.ui.icons.rounded.Lock
+import com.jumlo.app.ui.icons.rounded.RadioButtonUnchecked
 import com.jumlo.app.ui.icons.rounded.Security
 import com.jumlo.app.ui.icons.rounded.Star
 import com.jumlo.app.ui.settings.PrivacyDialog
@@ -401,7 +401,7 @@ private fun PlanCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.Bolt,
+                imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                 contentDescription = null,
                 tint = if (selected) GoldPrimary else colors.onSurfaceVariant.copy(alpha = 0.65f),
                 modifier = Modifier.size(22.dp)

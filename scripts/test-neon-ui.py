@@ -19,13 +19,13 @@ class NeonReferenceRedesign(unittest.TestCase):
         self.assertIn('viewModel.publishScannedPdf(file, onFinished = { scanPublishing = false })', nav)
         self.assertRegex(nav, r'externalBusy\s*=\s*scanPublishing')
         self.assertRegex(nav, r'navController\.currentBackStackEntry\?\.id\s*==\s*entryId')
-        # A finished scan must keep its entry origin when the viewer replaces it.
+        # A finished scan must keep its entry origin & mimeType when the viewer replaces it.
         compact = re.sub(r'\s+', '', nav)
-        self.assertIn('navController.navigate(ViewerRoute(primary.uri,primary.displayName,returnTab=transitionOrigin))',compact)
+        self.assertIn('navController.navigate(ViewerRoute(primary.uri,primary.displayName,returnTab=transitionOrigin,mimeType=primary.mimeType))',compact)
         self.assertIn('popUpTo<ScanRoute>{inclusive=true}',compact)
         self.assertIn('entry.toRoute<ScanRoute>().transitionOrigin',compact)
-        self.assertIn('{navigateTo("scan")}',nav)
-        self.assertIn('"scan" -> {', nav)
+        self.assertIn('funopenScan(',compact)
+        self.assertIn('"scan"->openScan()',compact)
         self.assertIn('com.jumlo.app.ui.scan.ScanScreen(', nav)
         self.assertIn('onScan: () -> Unit', dock)
         # Home leads the four-root dock; Scan/Print and Downloads remain accessible outside its cells.
@@ -125,7 +125,8 @@ class NeonReferenceRedesign(unittest.TestCase):
         for obsolete in ('wifiOnlyDefault', 'maxConcurrentDownloads', 'allowHttp'):
             self.assertNotIn(obsolete, settings)
         self.assertIn('NeonPanel(', downloads)
-        self.assertIn('onTool(mediaTool)', downloads)
+        self.assertIn('NewDownloadButton(mediaTool', downloads)
+        self.assertIn('onTool(tool)', downloads)
         self.assertIn('items(activeDownloads', downloads)
         self.assertIn('items(previousDownloads', downloads)
 

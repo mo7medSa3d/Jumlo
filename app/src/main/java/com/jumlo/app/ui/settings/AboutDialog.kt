@@ -291,7 +291,8 @@ internal fun JumloAboutDialog(
                             "zip4j AES Archive Engine (Apache 2.0)\n" +
                             "OkHttp & Coil (Apache 2.0)\n" +
                             "Tesseract OCR / tesseract4android (Apache 2.0)\n" +
-                            "Google ML Kit Document Scanner, OCR & Subject Segmentation (Google APIs Terms)",
+                            "LiteRT & MediaPipe Selfie Segmentation (Apache 2.0)\n" +
+                            "Google ML Kit Document Scanner, OCR, Face Detection & Subject Segmentation (Google APIs Terms)",
                         style = QuietTheme.typography.metadata,
                         color = colors.onSurfaceVariant
                     )

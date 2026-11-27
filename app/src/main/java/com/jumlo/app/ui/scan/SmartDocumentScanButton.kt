@@ -21,6 +21,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -186,7 +189,12 @@ internal fun SmartDocumentScanLauncher(
         CameraXScanFallback(onScannedPdf=onScannedPdf,onScannedJpegs=onScannedJpegs,jpegOutput=jpegOutput,onBack=onBack,externalBusy=externalBusy)
         return
     }
-    LaunchedEffect(externalBusy) { if (!launched && !externalBusy && !error) startScan() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, externalBusy) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (!launched && !externalBusy && !error) startScan()
+        }
+    }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
         Text(stringResource(R.string.scan_title), style = QuietTheme.typography.sectionTitle, modifier = Modifier.semantics { heading() })

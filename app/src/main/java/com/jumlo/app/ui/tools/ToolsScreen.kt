@@ -205,9 +205,11 @@ internal fun ToolsCatalogue(
         }
     }
     BoxWithConstraints(Modifier.fillMaxSize().testTag("tools.screen")) {
+        val isWideLandscape = maxWidth >= 680.dp
         val columns = when {
-            maxWidth >= 1200.dp -> if (largeText) 4 else 6
-            maxWidth >= 900.dp -> if (largeText) 4 else 5
+            maxWidth >= 1200.dp -> if (largeText) 5 else 7
+            maxWidth >= 960.dp -> if (largeText) 4 else 6
+            maxWidth >= 680.dp -> if (largeText) 4 else 5
             maxWidth >= 600.dp -> if (largeText) 3 else 4
             largeText -> 3
             else -> 4
@@ -215,11 +217,15 @@ internal fun ToolsCatalogue(
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Fixed(columns),
-            modifier = Modifier.widthIn(max = 1000.dp).fillMaxSize().align(Alignment.TopCenter).testTag("tools.grid"),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp,
-                bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxSize().testTag("tools.grid"),
+            contentPadding = PaddingValues(
+                start = if (isWideLandscape) 24.dp else 16.dp,
+                end = if (isWideLandscape) 24.dp else 16.dp,
+                top = 12.dp,
+                bottom = QuietTheme.spacing.listBottomBuffer + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
+            horizontalArrangement = Arrangement.spacedBy(if (isWideLandscape) 10.dp else 8.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isWideLandscape) 14.dp else 12.dp)
         ) {
 
             if (search.isBlank() && availableSections.isNotEmpty()) {
